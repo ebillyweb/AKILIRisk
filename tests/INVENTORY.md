@@ -180,46 +180,7 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-### Minor: admin visibility toggle does not refresh the rendered list
-
-- **Where:** `src/lib/actions/admin-intake-questions-actions.ts` -
-  `setIntakePillarQuestionVisibility` calls `revalidateIntakeQuestionContent()`
-  then `redirect("/admin/intake/questions")` (back to the same URL).
-- **Expected:** After clicking "Hide from interview" / "Show in interview",
-  the list re-renders with updated counts and badges.
-- **Actual:** DB write succeeds but the rendered list is unchanged until the
-  user manually refreshes. The Next.js client router serves the prefetched
-  RSC payload for the same-URL navigation; `revalidatePath` busts the server
-  cache but the client-side cache survives.
-- **Severity:** Minor. Functional correctness intact (visibility actually
-  changes); UX bug only.
-- **Fix sketch:** Add `?saved=1` to the redirect target (forces a different
-  cache key) and surface the existing success Alert; or call
-  `router.refresh()` from the client side; or set `export const dynamic =
-  "force-dynamic"` on `/admin/intake/questions/page.tsx`.
-- **Test:** `admin-intake-script.spec.ts` `visibility toggle updates the
-  rendered counts without a hard reload` (test.fixme).
-
-### Minor: `?error=unauthorized` is set during cross-role redirects but never displayed
-
-- **Where:** `src/app/(protected)/advisor/layout.tsx` and
-  `src/app/(protected)/admin/layout.tsx` redirect to
-  `/dashboard?error=unauthorized` on role mismatch. No code reads the param.
-- **Expected:** A user who navigates to a route they don't have access to
-  should see some indication ("You don't have access to that page").
-- **Actual:**
-  - Client navigating to `/admin` lands on `/dashboard?error=unauthorized` -
-    the param is in the URL but no UI surfaces it.
-  - Advisor navigating to `/admin` is bounced through
-    `/dashboard?error=unauthorized` -> `/advisor` (the dashboard page's
-    role-router strips the query and forwards). Param is gone entirely.
-- **Severity:** Minor. Security holds (no unauthorized data exposure);
-  pure UX/discoverability.
-- **Fix sketch:** Add a small banner on `/dashboard` and `/advisor` that
-  reads `searchParams.error === "unauthorized"` and renders a dismissible
-  alert; preserve the param through the dashboard's role redirects.
-- **Test:** `auth-edge-cases.spec.ts` `advisor sees an unauthorized notice
-  after attempting /admin` (test.fixme).
+_None outstanding. See "Fixed" below._
 
 ## Fixed
 
@@ -245,6 +206,24 @@ the user in NOT_STARTED state.
   fixture (`advisor4` -> `disabled-tenant.akilirisk.com`,
   `isActive=false, dnsVerified=true`) and parameterized
   `subdomain-routing.spec.ts` cases keep both inactive states covered.
+- **Visibility toggle on `/admin/intake/questions` did not refresh** (487d209).
+  `setIntakePillarQuestionVisibility` redirected to the same URL the form
+  was submitted from, so the Next.js client router served the prefetched
+  RSC payload and the user saw no UI update until manual refresh. Action
+  now redirects to `/admin/intake/questions?saved=1` (different cache key,
+  surfaces the existing success Alert). Regression test in
+  `admin-intake-script.spec.ts` `visibility toggle updates the rendered
+  counts without a hard reload` is now green.
+- **`?error=unauthorized` set during cross-role redirects but never displayed** (a4ab170).
+  Client navigating to `/admin` landed on `/dashboard?error=unauthorized`
+  with no UI surfacing the param; advisor navigating to `/admin` lost the
+  param entirely on the secondary `/dashboard` -> `/advisor` redirect. New
+  `<UnauthorizedNotice />` client component renders a dismissible warning
+  Alert when `error === "unauthorized"`; rendered on `/dashboard` and
+  `/advisor`. Dashboard's role-router now forwards the query to
+  `/advisor` and `/admin`. Regression tests in `auth-edge-cases.spec.ts`
+  (`advisor sees an unauthorized notice...` + `client sees an unauthorized
+  notice...`) cover both flows.
 
 ## Process
 
@@ -252,3 +231,4 @@ the user in NOT_STARTED state.
 2. Fill in the BRD TC ID(s) it covers
 3. If a test is added that has no BRD TC, leave the column blank but keep the row
 4. If a feature is removed, delete the row outright (don't mark removed)
+5. If functionality is changed or added, ensure its aligns in BRD

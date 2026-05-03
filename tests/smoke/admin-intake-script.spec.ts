@@ -117,35 +117,23 @@ test.describe("admin intake script management", () => {
     ).toBe(initialShow);
   });
 
-  // Companion fixme that locks in the desired UX once the cache-busting bug
-  // is fixed. See tests/INVENTORY.md "Surfaced bugs".
-  test.fixme(
-    "visibility toggle updates the rendered counts without a hard reload",
-    async ({ page }) => {
-      await new SignInPage(page).signInAs("admin");
-      await page.goto("/admin/intake/questions");
+  test("visibility toggle updates the rendered counts without a hard reload", async ({ page }) => {
+    await new SignInPage(page).signInAs("admin");
+    await page.goto("/admin/intake/questions");
 
-      const initialHide = await page
-        .getByRole("button", { name: /hide from interview/i })
-        .count();
+    const hideButtons = page.getByRole("button", { name: /hide from interview/i });
+    const showButtons = page.getByRole("button", { name: /show in interview/i });
+    const initialHide = await hideButtons.count();
 
-      await page
-        .getByRole("button", { name: /hide from interview/i })
-        .first()
-        .click();
-      await page.waitForLoadState("networkidle");
+    await hideButtons.first().click();
+    // toHaveCount auto-retries until the post-redirect re-render lands.
+    // Plain count() can race past the navigation since the redirect target
+    // and submit URL are both /admin/intake/questions?saved=1.
+    await expect(hideButtons).toHaveCount(initialHide - 1);
+    await expect(page.getByText(/Intake script changes are live/i)).toBeVisible();
 
-      // Without a hard goto, the rendered count today does not change.
-      expect(
-        await page.getByRole("button", { name: /hide from interview/i }).count()
-      ).toBe(initialHide - 1);
-
-      // Restore for cleanliness if we ever reach this assertion.
-      await page
-        .getByRole("button", { name: /show in interview/i })
-        .first()
-        .click();
-      await page.waitForLoadState("networkidle");
-    }
-  );
+    // Restore so successive runs stay deterministic.
+    await showButtons.first().click();
+    await expect(hideButtons).toHaveCount(initialHide);
+  });
 });

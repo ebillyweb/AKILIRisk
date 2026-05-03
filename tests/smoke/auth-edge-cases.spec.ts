@@ -54,18 +54,25 @@ test.describe("auth edge cases", () => {
     ).not.toBeVisible();
   });
 
-  // Bug filed in tests/INVENTORY.md: advisor->/admin redirect chain swallows
-  // the ?error=unauthorized query param via /dashboard -> /advisor, so the
-  // advisor gets no signal that they tried to access something they can't.
-  // Even for the client case, no UI surfaces the param. Lock-in once fixed.
-  test.fixme(
-    "advisor sees an unauthorized notice after attempting /admin",
-    async ({ page }) => {
-      await new SignInPage(page).signInAs("advisor");
-      await page.goto("/admin");
-      await expect(
-        page.getByText(/unauthorized|don.t have access|access denied/i)
-      ).toBeVisible();
-    }
-  );
+  test("advisor sees an unauthorized notice after attempting /admin", async ({ page }) => {
+    await new SignInPage(page).signInAs("advisor");
+    await page.goto("/admin");
+    expect(new URL(page.url()).pathname).toBe("/advisor");
+    expect(new URL(page.url()).searchParams.get("error")).toBe("unauthorized");
+    await expect(
+      page.getByRole("heading", { name: /access denied/i })
+    ).toBeVisible();
+    await expect(
+      page.getByText(/don.t have permission to view that page/i)
+    ).toBeVisible();
+  });
+
+  test("client sees an unauthorized notice after attempting /admin", async ({ page }) => {
+    await new SignInPage(page).signInAs("client");
+    await page.goto("/admin");
+    expect(new URL(page.url()).searchParams.get("error")).toBe("unauthorized");
+    await expect(
+      page.getByRole("heading", { name: /access denied/i })
+    ).toBeVisible();
+  });
 });
