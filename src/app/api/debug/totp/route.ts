@@ -29,6 +29,13 @@ const totp = new TOTP({
 });
 
 export async function POST(req: NextRequest) {
+  // Production guard: this endpoint has no auth and logs raw secrets.
+  // Keep it reachable in local/dev only; in production it 404s like any
+  // unmapped route.
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const { secret, token } = body;
@@ -64,7 +71,7 @@ export async function POST(req: NextRequest) {
 
       const result = await totp.verify(token, {
         secret,
-        epochTolerance: 60, // 60 seconds = ±1 period
+        epochTolerance: 60, // 60 seconds = ±2 periods (period is 30s)
       });
 
       console.log(`[DEBUG TOTP] Verification result:`, result);
@@ -82,7 +89,7 @@ export async function POST(req: NextRequest) {
           algorithm: "sha1",
           digits: 6,
           period: 30,
-          tolerance: "60 seconds (±1 period)",
+          tolerance: "60 seconds (±2 periods of 30s)",
         },
       });
     }
@@ -119,6 +126,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
+  // Production guard: see POST handler.
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   return NextResponse.json({
     endpoint: "/api/debug/totp",
     methods: {
@@ -144,7 +156,7 @@ export async function GET() {
       algorithm: "sha1",
       digits: 6,
       period: 30,
-      tolerance: "30 seconds past and future",
+      tolerance: "60 seconds (±2 periods of 30s)",
     },
     warning: "This endpoint is for debugging only. Remove before production.",
   });

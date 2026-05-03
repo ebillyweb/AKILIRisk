@@ -30,7 +30,7 @@ Use these only in local/development. Ensure the app and database are running, th
 
 | Script | Purpose |
 |--------|--------|
-| `node scripts/seed-advisor-test-data.js` | Creates advisor user, two client users (including `client-mfa@test.com` for MFA testing), advisor profile, client–advisor assignments, and submitted intake interviews with sample responses. |
+| `node scripts/seed-advisor-test-data.js` | Creates the full test-fixture set: five advisors (`advisor`, `advisor2`, `advisor3`, `advisor4`, `advisor-unbranded`) with profiles, subscriptions, and white-label subdomains where applicable; four clients (`client`, `client-mfa`, `client-fresh`, `client-unbranded`) with profiles, assignments, and (for `client`/`client-mfa`) submitted intake interviews with sample responses. Idempotent. |
 | `node scripts/seed-invite-code.js` | Creates invite codes: **123456** (no prefill) and **BELV01** (prefills `buddy+belvcustomer@ebilly.com` on signup). Run with args: `node scripts/seed-invite-code.js [CODE] [PREFILL_EMAIL]`. |
 | `node scripts/set-advisor-role.js` | Sets `advisor@test.com` role to ADVISOR (run if the advisor menu is missing). |
 | `node scripts/set-admin-role.js` | Creates or updates `buddy@ebilly.com` as ADMIN (designated admin account). |

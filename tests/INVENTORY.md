@@ -29,15 +29,18 @@ under `tests/`.
 | `tests/smoke/client-portal-branding.spec.ts` | branded client sees advisor branding signals on /dashboard | TBD | Implemented |
 | `tests/smoke/tenant-isolation.spec.ts` | advisor cannot open another advisor's client via direct URL | TBD | Implemented |
 | `tests/smoke/subdomain-routing.spec.ts` | active subdomain serves the branded client portal | TBD | Implemented |
-| `tests/smoke/subdomain-routing.spec.ts` | unverified subdomain shows "Subdomain Not Available" | TBD | Implemented |
+| `tests/smoke/subdomain-routing.spec.ts` | "Subdomain Not Available" renders for both inactive-tenant (active+unverified) and disabled-tenant (verified+inactive) | TBD | Implemented |
 | `tests/smoke/auth-edge-cases.spec.ts` | wrong password shows credential error and stays on /signin | TBD | Implemented |
 | `tests/smoke/auth-edge-cases.spec.ts` | unauthenticated /dashboard sent to /signin with callbackUrl | TBD | Implemented |
 | `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /admin (redirected to dashboard) | TBD | Implemented |
 | `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /advisor (redirected to dashboard) | TBD | Implemented |
 | `tests/smoke/auth-edge-cases.spec.ts` | advisor cannot view admin content via direct /admin nav | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | advisor sees an unauthorized notice after attempting /admin | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | client sees an unauthorized notice after attempting /admin | TBD | Implemented |
 | `tests/smoke/admin-intake-script.spec.ts` | admin intake script list renders with edit + visibility controls | TBD | Implemented |
 | `tests/smoke/admin-intake-script.spec.ts` | admin can edit intake question; text round-trips through DB | TBD | Implemented |
-| `tests/smoke/admin-intake-script.spec.ts` | admin can toggle visibility (DB round-trips, UI requires hard reload) | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | admin can toggle visibility (DB round-trips) | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | visibility toggle updates the rendered counts without a hard reload | TBD | Implemented |
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | unauthenticated GET on /api/client/advisor-logo -> 401 | TBD | Implemented |
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | non-USER (admin) GET on /api/client/advisor-logo -> 403 | TBD | Implemented |
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | client GET returns image bytes with valid PNG/JPEG magic | TBD | Implemented |
@@ -244,4 +247,4 @@ _None outstanding. See "Fixed" below._
 2. Fill in the BRD TC ID(s) it covers
 3. If a test is added that has no BRD TC, leave the column blank but keep the row
 4. If a feature is removed, delete the row outright (don't mark removed)
-5. If functionality is changed or added, ensure its aligns in BRD
+5. If functionality is changed or added, ensure it aligns with BRD

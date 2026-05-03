@@ -46,8 +46,9 @@ test.describe("auth edge cases", () => {
     await page.goto("/admin");
 
     // Advisor is bounced via /dashboard?error=unauthorized -> /advisor by the
-    // dashboard page's role-router. Security is enforced; see "Surfaced bugs"
-    // in tests/INVENTORY.md for the missing UX feedback.
+    // dashboard page's role-router. The unauthorized notice that surfaces in
+    // the UI is verified by the next test ("advisor sees an unauthorized
+    // notice…"); this case only asserts the security redirect itself.
     expect(new URL(page.url()).pathname).toBe("/advisor");
     await expect(
       page.getByRole("heading", { name: /System Administration/i })

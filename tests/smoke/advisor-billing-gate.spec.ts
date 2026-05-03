@@ -21,7 +21,7 @@ test.describe("advisor billing gate", () => {
     await expect(page.getByRole("heading", { name: /^Billing$/ })).toBeVisible();
   });
 
-  test("/advisor and /advisor/pipeline both redirect the no-sub advisor to billing", async ({ page }) => {
+  test("/advisor, /advisor/pipeline, and /advisor/dashboard all redirect the no-sub advisor to billing", async ({ page }) => {
     await new SignInPage(page).signInAs("advisor3");
 
     for (const path of ["/advisor", "/advisor/pipeline", "/advisor/dashboard"]) {

@@ -88,11 +88,10 @@ test.describe("admin intake script management", () => {
       .click();
     await page.waitForLoadState("networkidle");
 
-    // Hard reload required to bust the Next.js client router cache - see
-    // "Surfaced bugs" in tests/INVENTORY.md: toggle action redirects to the
-    // same URL it submitted from, and the prefetched RSC payload sticks
-    // around so the user sees no UI update until manual refresh. The DB write
-    // itself happens, which is what we're verifying here.
+    // We do a fresh navigation here to isolate the DB round-trip from the
+    // client-router revalidation behavior. The "without a hard reload" case
+    // below covers the in-page re-render path (fixed in 487d209 by
+    // redirecting to ?saved=1 to bust the prefetched RSC cache).
     await page.goto("/admin/intake/questions");
 
     expect(
