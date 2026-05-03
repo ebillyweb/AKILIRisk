@@ -5,9 +5,15 @@ import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
 import { ADVISOR_PILLAR_SHORTCUTS } from "@/lib/advisor/pillar-shortcuts";
 import { NotificationBell } from "@/components/advisor/NotificationBell";
 import { Button } from "@/components/ui/button";
+import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
 
-export default async function AdvisorHomePage() {
-  const [dash, pipelineRes] = await Promise.all([
+export default async function AdvisorHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const [sp, dash, pipelineRes] = await Promise.all([
+    searchParams,
     getAdvisorDashboardData(),
     getClientPipelineData(),
   ]);
@@ -36,6 +42,7 @@ export default async function AdvisorHomePage() {
 
   return (
     <div className="space-y-8">
+      <UnauthorizedNotice error={sp.error} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <h2 className="text-lg font-semibold tracking-tight">Overview</h2>

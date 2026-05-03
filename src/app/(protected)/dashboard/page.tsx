@@ -16,13 +16,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
     return null;
   }
+
+  const sp = await searchParams;
+  // Forward to the role-appropriate landing while preserving the
+  // ?error=unauthorized signal so the destination can surface a notice.
+  const errorSuffix =
+    sp.error === "unauthorized" ? "?error=unauthorized" : "";
 
   // Advisors and admins land on the advisor hub instead of the client dashboard
   const role = session.user.role?.toString().toUpperCase();
@@ -40,10 +51,10 @@ export default async function DashboardPage() {
           : "/advisor/billing"
       );
     }
-    redirect("/advisor");
+    redirect(`/advisor${errorSuffix}`);
   }
   if (role === "ADMIN") {
-    redirect("/admin");
+    redirect(`/admin${errorSuffix}`);
   }
 
   // Latest intake (any status) for hero; assessment access from gate (approve or advisor waiver)
@@ -112,6 +123,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      <UnauthorizedNotice error={sp.error} />
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
         <div className="grid min-w-0 gap-6 sm:gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
           <div className="flex min-w-0 flex-col justify-center space-y-2 sm:space-y-3">
