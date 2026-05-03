@@ -20,7 +20,10 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Belvedere Risk Management",
+  title: {
+    default: "AKILI Risk Intelligence",
+    template: "%s | AKILI Risk Intelligence",
+  },
   description: "Family Governance Risk Assessment",
   icons: {
     icon: [

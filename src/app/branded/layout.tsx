@@ -1,9 +1,35 @@
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getAdvisorBrandingBySubdomain } from '@/lib/advisor/subdomain';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
 import { Toaster } from 'react-hot-toast';
 import '@/app/globals.css';
+
+const DEFAULT_BRANDED_TITLE = 'Risk Assessment Portal';
+
+/**
+ * Per-tenant <title> + description. Source: x-subdomain header set by
+ * src/proxy.ts when the advisor's subdomain is active and verified.
+ *
+ * Uses `title.absolute` so the root layout's "%s | AKILI Risk Intelligence"
+ * template doesn't co-brand a tenant's white-label portal.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const subdomain = headersList.get('x-subdomain');
+  if (!subdomain) {
+    return { title: { absolute: DEFAULT_BRANDED_TITLE } };
+  }
+  const branding = await getAdvisorBrandingBySubdomain(subdomain);
+  const brandName = branding?.brandName?.trim() || DEFAULT_BRANDED_TITLE;
+  return {
+    title: { absolute: brandName },
+    description:
+      branding?.tagline?.trim() ||
+      'Comprehensive risk assessment and family governance analysis',
+  };
+}
 
 export default async function BrandedLayout({
   children,
@@ -45,11 +71,6 @@ export default async function BrandedLayout({
   return (
     <html lang="en">
       <head>
-        <title>{branding.brandName || 'Risk Assessment Portal'}</title>
-        <meta
-          name="description"
-          content={branding.tagline || 'Comprehensive risk assessment and family governance analysis'}
-        />
         {branding.logoUrl && (
           <link rel="icon" href={branding.logoUrl} />
         )}
