@@ -30,10 +30,19 @@ function advisorHubAccessFromRow(
 ): boolean {
   if (!portalFlag) return false;
   const billingOn = isBillingEnabled();
-  if (!billingOn) {
+
+  // Local/staging convenience: when billing isn't wired up
+  // (`ENABLE_BILLING_FEATURES=false`), let portal-enabled advisors through
+  // without a subscription row so seeded fixtures still load the hub.
+  // Production never takes this shortcut — flipping billing off there must
+  // not silently grant every advisor full access regardless of subscription
+  // state. Mirrors `missingSubscriptionFallback()` in
+  // `@/lib/subscription/validation`.
+  if (!billingOn && process.env.NODE_ENV !== "production") {
     return true;
   }
-  return subscriptionQualifiesForPortalEnablement(subscription, true);
+
+  return subscriptionQualifiesForPortalEnablement(subscription, billingOn);
 }
 
 export type AdvisorHubBlockReason = "deactivated" | "disabled" | "subscription";

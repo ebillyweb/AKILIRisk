@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { processDocumentReminders } from "@/lib/reminders/document-reminders";
 
 /**
@@ -35,7 +36,16 @@ export async function GET(request: NextRequest) {
     }
 
     const providedSecret = authHeader.substring(7); // Remove "Bearer "
-    if (providedSecret !== expectedSecret) {
+    // Constant-time comparison so a network attacker can't recover the secret
+    // byte-by-byte from response timing. timingSafeEqual requires equal-length
+    // buffers, so we precheck the byte length (still safe — leaks only length,
+    // which the attacker can already infer from the secret format).
+    const providedBuf = Buffer.from(providedSecret, "utf8");
+    const expectedBuf = Buffer.from(expectedSecret, "utf8");
+    if (
+      providedBuf.length !== expectedBuf.length ||
+      !timingSafeEqual(providedBuf, expectedBuf)
+    ) {
       return NextResponse.json(
         { error: "Invalid cron secret" },
         { status: 401 }

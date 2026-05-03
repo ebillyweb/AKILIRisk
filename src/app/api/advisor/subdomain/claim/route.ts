@@ -15,6 +15,20 @@ const subdomainClaimSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Fail fast on missing config before we mutate any DB rows. Without
+    // PRODUCTION_DOMAIN we cannot return valid DNS instructions, and silently
+    // falling back to a placeholder domain (the previous behavior) handed
+    // advisors records pointing at a domain we don't own.
+    if (!process.env.PRODUCTION_DOMAIN?.trim()) {
+      console.error(
+        'PRODUCTION_DOMAIN environment variable is not configured; refusing to claim subdomain'
+      );
+      return NextResponse.json(
+        { success: false, error: 'Server misconfiguration' },
+        { status: 500 }
+      );
+    }
+
     // Verify advisor authentication and subdomain access
     const { userId } = await requireAdvisorRole();
     const { advisorId } = await requireSubdomainAccess(userId);
@@ -204,7 +218,24 @@ export async function DELETE(request: NextRequest) {
 }
 
 /**
- * Generate DNS setup instructions
+ * Sentinel error class so the POST handler can distinguish missing-env
+ * misconfiguration from user-input errors and return 500 instead of 4xx.
+ */
+class ServerMisconfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ServerMisconfigurationError';
+  }
+}
+
+/**
+ * Generate DNS setup instructions.
+ *
+ * Throws ServerMisconfigurationError if PRODUCTION_DOMAIN is unset — silently
+ * falling back to a placeholder domain would hand advisors DNS records that
+ * point at a domain we don't own, which is the original bug that motivated
+ * this guard. LOAD_BALANCER_IP is no longer consulted (we issue CNAME records,
+ * not A records), so it has been removed entirely.
  */
 function generateDNSInstructions(subdomain: string): {
   type: string;
@@ -212,9 +243,13 @@ function generateDNSInstructions(subdomain: string): {
   value: string;
   instructions: string;
 } {
-  // In production, this would point to your actual domain and load balancer
-  const productionDomain = process.env.PRODUCTION_DOMAIN || 'akiliplatform.com';
-  const loadBalancerIP = process.env.LOAD_BALANCER_IP || '1.2.3.4';
+  const productionDomain = process.env.PRODUCTION_DOMAIN?.trim();
+  if (!productionDomain) {
+    console.error(
+      'PRODUCTION_DOMAIN environment variable is not configured; refusing to emit DNS instructions'
+    );
+    throw new ServerMisconfigurationError('Server misconfiguration');
+  }
 
   return {
     type: 'CNAME',

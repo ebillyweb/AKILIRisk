@@ -26,11 +26,34 @@ const TIER_FEATURES = {
   },
 } as const;
 
-/** Used when no billing row exists yet (e.g. local dev) so advisor branding UI still loads */
+/** Used when no billing row exists yet (e.g. local dev) so advisor branding UI still loads.
+ *  Do NOT use directly as a fallback in production code paths — see
+ *  `missingSubscriptionFallback` below, which fails closed in production. */
 export const STARTER_SUBSCRIPTION_FEATURES: SubscriptionFeatures = {
   tier: 'STARTER',
   ...TIER_FEATURES.STARTER,
 };
+
+/** Fail-closed entitlement set: every paid feature off. Returned in production
+ *  when no Subscription row is found (or `getSubscriptionFeatures` errored).
+ *  `tier: 'STARTER'` is just a label so the type checks; every feature is false. */
+export const NO_SUBSCRIPTION_FEATURES: SubscriptionFeatures = {
+  tier: 'STARTER',
+  basicBrandingEnabled: false,
+  advancedBrandingEnabled: false,
+  customSubdomainEnabled: false,
+  whiteLabel: false,
+};
+
+/** Resolve the fallback to use when `getSubscriptionFeatures` returns null.
+ *  Production: fail closed (NO_SUBSCRIPTION_FEATURES).
+ *  Non-production: keep the dev-friendly STARTER fallback so local UIs still load
+ *  without a seeded Subscription row. */
+function missingSubscriptionFallback(): SubscriptionFeatures {
+  return process.env.NODE_ENV === 'production'
+    ? NO_SUBSCRIPTION_FEATURES
+    : STARTER_SUBSCRIPTION_FEATURES;
+}
 
 type SubscriptionRow = {
   tier: keyof typeof TIER_FEATURES;
@@ -84,7 +107,7 @@ export async function validateSubscriptionFeature(
   feature: keyof Omit<SubscriptionFeatures, 'tier'>
 ): Promise<boolean> {
   const features =
-    (await getSubscriptionFeatures(userId)) ?? STARTER_SUBSCRIPTION_FEATURES;
+    (await getSubscriptionFeatures(userId)) ?? missingSubscriptionFallback();
 
   return features[feature];
 }
@@ -99,7 +122,7 @@ export async function requireSubscriptionFeature(
   customErrorMessage?: string
 ): Promise<SubscriptionFeatures> {
   const features =
-    (await getSubscriptionFeatures(userId)) ?? STARTER_SUBSCRIPTION_FEATURES;
+    (await getSubscriptionFeatures(userId)) ?? missingSubscriptionFallback();
 
   if (!features[feature]) {
     const featureNames = {
