@@ -58,7 +58,13 @@ export async function setIntakePillarQuestionVisibility(formData: FormData) {
   });
 
   revalidateIntakeQuestionContent();
-  redirect("/admin/intake/questions");
+  // Same `?saved=1` redirect target the edit form uses. The query param
+  // gives Next.js's client router a different cache key from the page that
+  // submitted the form, which forces a fresh server render so the visibility
+  // change is visible immediately. Without it, the prefetched RSC payload
+  // for /admin/intake/questions sticks around and the user has to manually
+  // refresh to see the updated badges and counts.
+  redirect("/admin/intake/questions?saved=1");
 }
 
 export async function updateIntakePillarQuestionContent(formData: FormData) {
