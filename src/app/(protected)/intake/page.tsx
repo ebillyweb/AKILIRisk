@@ -5,6 +5,7 @@ import {
   getLatestIntakeInterviewAction,
   startIntakeInterview,
 } from "@/lib/actions/intake-actions";
+import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
 import { redirect } from "next/navigation";
 
 /**
@@ -31,6 +32,11 @@ export default async function IntakePage() {
     redirect("/intake/complete");
   }
 
+  // Source the count from the same loader the wizard uses so the landing
+  // copy stays in sync if questions are added/hidden in the pillar bank.
+  const intakeQuestions = await loadIntakeScriptQuestions();
+  const questionCount = intakeQuestions.length;
+
   // Server action to start a new interview
   async function handleStartInterview() {
     "use server";
@@ -55,7 +61,7 @@ export default async function IntakePage() {
             <div className="space-y-3 text-muted-foreground">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-primary rounded-full shrink-0" />
-                <span>10 focused questions about your family&apos;s governance approach</span>
+                <span>{questionCount} focused questions about your family&apos;s governance approach</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-primary rounded-full shrink-0" />
