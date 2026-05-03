@@ -630,6 +630,80 @@ async function main() {
   });
   console.log("✅ Created advisor4 + AdvisorSubdomain 'disabled-tenant' (verified, NOT active)");
 
+  // Fifth advisor with brandingEnabled=false, plus a client assigned to them.
+  // Used by the "default Akili branding fallback" test - the protected layout
+  // renders AkiliLogoLockup + the platform-name kicker when
+  // getAssignedAdvisorBrandingForClient returns null (which happens when the
+  // assigned advisor has brandingEnabled=false).
+  const advisorUnbrandedUser = await prisma.user.upsert({
+    where: { email: 'advisor-unbranded@test.com' },
+    update: {
+      password: hashedPassword,
+      name: 'Test Advisor Unbranded',
+      firstName: 'Unbranded',
+      lastName: 'Advisor',
+      role: 'ADVISOR'
+    },
+    create: {
+      email: 'advisor-unbranded@test.com',
+      password: hashedPassword,
+      name: 'Test Advisor Unbranded',
+      firstName: 'Unbranded',
+      lastName: 'Advisor',
+      role: 'ADVISOR'
+    }
+  });
+  const advisorUnbrandedProfile = await prisma.advisorProfile.upsert({
+    where: { userId: advisorUnbrandedUser.id },
+    update: {
+      firmName: 'Plain Advisory',
+      brandName: null,
+      brandingEnabled: false
+    },
+    create: {
+      userId: advisorUnbrandedUser.id,
+      firmName: 'Plain Advisory',
+      bio: 'Fifth test advisor with branding intentionally off',
+      brandingEnabled: false
+    }
+  });
+
+  const clientUnbrandedUser = await prisma.user.upsert({
+    where: { email: 'client-unbranded@test.com' },
+    update: {
+      password: hashedPassword,
+      name: 'Test Client (Unbranded)',
+      firstName: 'Unbranded',
+      lastName: 'Client',
+      role: 'USER'
+    },
+    create: {
+      email: 'client-unbranded@test.com',
+      password: hashedPassword,
+      name: 'Test Client (Unbranded)',
+      firstName: 'Unbranded',
+      lastName: 'Client',
+      role: 'USER'
+    }
+  });
+  await prisma.clientAdvisorAssignment.upsert({
+    where: {
+      clientId_advisorId: {
+        clientId: clientUnbrandedUser.id,
+        advisorId: advisorUnbrandedProfile.id
+      }
+    },
+    update: { status: 'ACTIVE' },
+    create: {
+      clientId: clientUnbrandedUser.id,
+      advisorId: advisorUnbrandedProfile.id,
+      status: 'ACTIVE',
+      assignedAt: new Date()
+    }
+  });
+
+  console.log(`✅ Created unbranded fixture: ${clientUnbrandedUser.email} -> ${advisorUnbrandedUser.email} (brandingEnabled=false)`);
+
   console.log('\n🎉 Test data seeded successfully!');
   console.log('\n📋 Verification credentials:');
   console.log(`   Advisor: advisor@test.com / testpassword123`);
