@@ -51,15 +51,19 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
       }
     });
 
-    // Validate subdomain is active and advisor has branding enabled
-    const result = advisorSubdomain?.isActive &&
-                  advisorSubdomain.advisor.brandingEnabled ? {
-      advisorId: advisorSubdomain.advisorId,
-      subdomain: advisorSubdomain.subdomain,
-      isActive: advisorSubdomain.isActive,
-      dnsVerified: advisorSubdomain.dnsVerified,
-      sslProvisioned: advisorSubdomain.sslProvisioned
-    } : null;
+    // Return the row whenever it exists and the advisor has branding enabled.
+    // The caller (proxy.ts) decides whether to rewrite (isActive && dnsVerified)
+    // or render the "Subdomain Not Available" page (anything else). Filtering
+    // on isActive here would short-circuit the proxy's not-available branch.
+    const result = advisorSubdomain && advisorSubdomain.advisor.brandingEnabled
+      ? {
+          advisorId: advisorSubdomain.advisorId,
+          subdomain: advisorSubdomain.subdomain,
+          isActive: advisorSubdomain.isActive,
+          dnsVerified: advisorSubdomain.dnsVerified,
+          sslProvisioned: advisorSubdomain.sslProvisioned,
+        }
+      : null;
 
     // Cache result
     setCacheWithTTL(subdomain, result);
@@ -75,12 +79,19 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
 }
 
 /**
- * Get advisor branding data for subdomain
+ * Get advisor branding data for subdomain. Only returns branding for
+ * subdomains that are both active and DNS-verified - inactive or unverified
+ * rows surface as null so callers don't accidentally render a portal for
+ * a subdomain that the proxy would otherwise 404.
  */
 export async function getAdvisorBrandingBySubdomain(subdomain: string) {
   const advisorData = await getAdvisorBySubdomain(subdomain);
 
   if (!advisorData) {
+    return null;
+  }
+
+  if (!advisorData.isActive || !advisorData.dnsVerified) {
     return null;
   }
 
