@@ -122,7 +122,8 @@ Use these credentials for local development testing:
 |------|--------|----------|--------|
 | **Advisor** | `advisor@test.com` | `testpassword123` | Access Advisor Hub/Portfolio |
 | **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Independent tenant; grace-period subscription; no client assignments. Owns active+verified subdomain `independent-wealth.akilirisk.com`. Used by tenant-isolation + active-subdomain tests. |
-| **Advisor (unverified subdomain)** | `advisor3@test.com` | `testpassword123` | Owns subdomain `inactive-tenant.akilirisk.com` with `dnsVerified=false`. Used by the "Subdomain Not Available" test. |
+| **Advisor (unverified subdomain)** | `advisor3@test.com` | `testpassword123` | Owns subdomain `inactive-tenant.akilirisk.com` (`isActive=true, dnsVerified=false`). |
+| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Owns subdomain `disabled-tenant.akilirisk.com` (`isActive=false, dnsVerified=true`). |
 | **Client** | `client@test.com` | `testpassword123` | Standard client account (SUBMITTED + Approved intake) |
 | **Client (MFA)** | `client-mfa@test.com` | `testpassword123` | For MFA flow testing |
 | **Client (fresh)** | `client-fresh@test.com` | `testpassword123` | No intake row; used by Playwright intake tests. Reset via `node scripts/reset-fresh-client-intake.js` |

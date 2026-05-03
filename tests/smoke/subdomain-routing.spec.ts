@@ -5,31 +5,40 @@ import { test, expect } from "@playwright/test";
  *
  * Architecture (Next.js 16 `proxy.ts` convention):
  *  - `src/proxy.ts` extracts subdomain from `Host`, looks up `AdvisorSubdomain`
- *    via `getAdvisorBySubdomain` (requires `isActive=true` AND `brandingEnabled=true`)
+ *    via `getAdvisorBySubdomain` (returns the row whenever `brandingEnabled`
+ *    on the advisor; the proxy decides what to do with it).
  *  - If `isActive && dnsVerified` -> rewrites to `/branded/<path>` with
  *    `x-advisor-id`/`x-subdomain` headers; the branded layout reads those
  *    and applies the advisor's branding.
- *  - If the row exists but `dnsVerified=false` -> static 404 HTML
- *    "Subdomain Not Available"
+ *  - Anything else (row exists but `dnsVerified=false`, or `isActive=false`)
+ *    -> static 404 HTML "Subdomain Not Available".
  *
  * Seeded fixtures (scripts/seed-advisor-test-data.js):
- *  - advisor2 -> AdvisorSubdomain `independent-wealth` (active+verified)
- *  - advisor3 -> AdvisorSubdomain `inactive-tenant` (active, NOT verified)
+ *  - advisor2 -> `independent-wealth` (active+verified)
+ *  - advisor3 -> `inactive-tenant` (active, NOT verified)
+ *  - advisor4 -> `disabled-tenant` (verified, NOT active)
  *
- * Vercel: both `<sub>.akilirisk.com` are bound to the staging branch.
+ * Vercel: each `<sub>.akilirisk.com` is bound to the staging branch.
  */
 
 const ACTIVE_SUBDOMAIN_URL = "https://independent-wealth.akilirisk.com/";
-const INACTIVE_SUBDOMAIN_URL = "https://inactive-tenant.akilirisk.com/";
+const NOT_AVAILABLE_CASES: { label: string; url: string }[] = [
+  {
+    label: "active but not dnsVerified",
+    url: "https://inactive-tenant.akilirisk.com/",
+  },
+  {
+    label: "dnsVerified but not active",
+    url: "https://disabled-tenant.akilirisk.com/",
+  },
+];
 
 test.describe("subdomain routing", () => {
   test("active subdomain serves the branded client portal", async ({ page }) => {
     const response = await page.goto(ACTIVE_SUBDOMAIN_URL);
     expect(response?.status()).toBe(200);
 
-    // Note: <title> is set to the root metadata "Belvedere Risk Management"
-    // because src/app/layout.tsx exports static metadata that overrides the
-    // branded layout's <title>. Body content reflects the correct advisor.
+    await expect(page).toHaveTitle(/Independent Wealth Group/i);
 
     await expect(
       page.getByRole("heading", { level: 1, name: /Independent Wealth Group/i })
@@ -53,19 +62,17 @@ test.describe("subdomain routing", () => {
     );
   });
 
-  test("subdomain row that is active but not dnsVerified shows the Not Available page", async ({ page }) => {
-    const response = await page.goto(INACTIVE_SUBDOMAIN_URL);
-    expect(response?.status()).toBe(404);
+  for (const { label, url } of NOT_AVAILABLE_CASES) {
+    test(`Not Available page renders when subdomain is ${label}`, async ({ page }) => {
+      const response = await page.goto(url);
+      expect(response?.status()).toBe(404);
 
-    await expect(
-      page.getByRole("heading", { name: /^Subdomain Not Available$/i })
-    ).toBeVisible();
-    await expect(
-      page.getByText(/This subdomain is not currently active/i)
-    ).toBeVisible();
-
-    await expect(
-      page.getByText(/Independent Wealth Group/i)
-    ).not.toBeVisible();
-  });
+      await expect(
+        page.getByRole("heading", { name: /^Subdomain Not Available$/i })
+      ).toBeVisible();
+      await expect(
+        page.getByText(/This subdomain is not currently active/i)
+      ).toBeVisible();
+    });
+  }
 });

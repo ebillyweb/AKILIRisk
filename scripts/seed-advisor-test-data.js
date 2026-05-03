@@ -581,6 +581,55 @@ async function main() {
   });
   console.log("✅ Created advisor3 + AdvisorSubdomain 'inactive-tenant' (active, NOT verified)");
 
+  // Fourth advisor wired to a verified-but-deactivated subdomain so the
+  // proxy returns "Subdomain Not Available" via the isActive=false branch.
+  // Bound in Vercel: `disabled-tenant.akilirisk.com` -> staging.
+  const advisor4User = await prisma.user.upsert({
+    where: { email: 'advisor4@test.com' },
+    update: {
+      password: hashedPassword,
+      name: 'Test Advisor Four',
+      firstName: 'Fourth',
+      lastName: 'Advisor',
+      role: 'ADVISOR'
+    },
+    create: {
+      email: 'advisor4@test.com',
+      password: hashedPassword,
+      name: 'Test Advisor Four',
+      firstName: 'Fourth',
+      lastName: 'Advisor',
+      role: 'ADVISOR'
+    }
+  });
+  const advisor4Profile = await prisma.advisorProfile.upsert({
+    where: { userId: advisor4User.id },
+    update: {
+      firmName: 'Disabled Test Firm',
+      brandName: 'Disabled Test Firm',
+      brandingEnabled: true
+    },
+    create: {
+      userId: advisor4User.id,
+      firmName: 'Disabled Test Firm',
+      brandName: 'Disabled Test Firm',
+      bio: 'Fourth test advisor whose subdomain is intentionally deactivated',
+      brandingEnabled: true
+    }
+  });
+  await prisma.advisorSubdomain.deleteMany({ where: { advisorId: advisor4Profile.id } });
+  await prisma.advisorSubdomain.create({
+    data: {
+      advisorId: advisor4Profile.id,
+      subdomain: 'disabled-tenant',
+      isActive: false,
+      dnsVerified: true,
+      sslProvisioned: true,
+      verifiedAt: new Date()
+    }
+  });
+  console.log("✅ Created advisor4 + AdvisorSubdomain 'disabled-tenant' (verified, NOT active)");
+
   console.log('\n🎉 Test data seeded successfully!');
   console.log('\n📋 Verification credentials:');
   console.log(`   Advisor: advisor@test.com / testpassword123`);

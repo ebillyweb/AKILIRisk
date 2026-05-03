@@ -131,16 +131,15 @@ Not Implemented (feature exists, not yet covered):
 - Advisor branding audit log entries created on update (`AdvisorBrandingAuditLog`)
 - `subscriptionQualifiesForPortalEnablement` gate: advisor without subscription redirected to `/advisor/billing`
 
-Subdomain routing - now exercisable thanks to two staging-bound subdomains:
-- `independent-wealth.akilirisk.com` -> advisor2, AdvisorSubdomain `isActive=true, dnsVerified=true` -> branded portal renders. *(covered by `subdomain-routing.spec.ts`)*
-- `inactive-tenant.akilirisk.com` -> advisor3, `isActive=true, dnsVerified=false` -> "Subdomain Not Available" 404. *(covered by `subdomain-routing.spec.ts`)*
+Subdomain routing - exercisable via three staging-bound subdomains:
+- `independent-wealth.akilirisk.com` -> advisor2, `isActive=true, dnsVerified=true` -> branded portal renders. *(covered by `subdomain-routing.spec.ts`)*
+- `inactive-tenant.akilirisk.com` -> advisor3, `isActive=true, dnsVerified=false` -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
+- `disabled-tenant.akilirisk.com` -> advisor4, `isActive=false, dnsVerified=true` -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
 
 Not Implemented (subdomain/custom-domain features still pending):
 - Reserved subdomain rejection (`www`, `app`, `api`, `admin` excluded by `extractSubdomain`). E2E test would require binding one of those names in Vercel which is invasive; consider a unit test against `extractSubdomain` instead.
-- `AdvisorSubdomain.isActive=false` path (proxy falls through to normal app instead of 404 because `getAdvisorBySubdomain` returns null when `isActive=false`). Covered case is `dnsVerified=false`, not `isActive=false`.
 - `customDomainEnabled` flag: routing logic for non-`*.akilirisk.com` hosts is not implemented in `proxy.ts` (flag-only, no domain mapping).
 - Subdomain claim/validate/release UX (`generateSubdomainSuggestions`, `isSubdomainReserved`, `validateSubdomainFormat`).
-- Per-tenant `<title>` (currently overridden by static `app/layout.tsx` metadata - real bug, see "Surfaced bugs" below).
 
 Not Implemented (no such feature in the app):
 - "Create tenant" admin flow - the platform has no tenant entity separate from `AdvisorProfile`
@@ -163,14 +162,32 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-- **Branded portal `<title>` is wrong.** `src/app/branded/layout.tsx` sets
-  `<title>{branding.brandName}</title>` in the `<head>`, but
-  `src/app/layout.tsx` exports `metadata.title = "Belvedere Risk Management"`,
-  which Next.js's Metadata API renders and overrides the manual tag. Result:
-  every branded subdomain shows "Belvedere Risk Management" in the browser
-  tab regardless of the advisor. Fix: have the branded route group export its
-  own `generateMetadata` (server-side, sourced from the same subdomain
-  branding lookup) instead of writing `<title>` in the layout body.
+_None outstanding. See "Fixed" below._
+
+## Fixed
+
+- **Branded portal `<title>` overridden by root metadata** (5184e47). Root
+  metadata hard-coded "Belvedere Risk Management" so Next.js's Metadata API
+  rendered it for every route, overriding the inline `<title>` in
+  `branded/layout.tsx`. Replaced with a root `title.default + template` and a
+  branded `generateMetadata` returning `title.absolute`. Regression test:
+  `subdomain-routing.spec.ts` now asserts the page title matches the
+  advisor's brandName on `independent-wealth.akilirisk.com`.
+- **`/intake` landing copy said "10 focused questions" while the wizard
+  rendered 18** (45dd46d). Landing now sources the count from
+  `loadIntakeScriptQuestions()` - same loader the wizard uses - so admin
+  changes to the pillar bank stay in sync.
+- **`AdvisorSubdomain.isActive=false` path was unreachable** (0d5a142).
+  `getAdvisorBySubdomain` short-circuited on `isActive`, so deactivated
+  subdomains fell through to normal routing instead of the
+  `proxy.ts`-served "Subdomain Not Available" page that already handled
+  `dnsVerified=false`. Helper now returns the row whenever
+  `brandingEnabled` is on and lets the proxy decide;
+  `getAdvisorBrandingBySubdomain` gained a defensive guard so an inactive
+  row can't render a portal even via a different code path. New seeded
+  fixture (`advisor4` -> `disabled-tenant.akilirisk.com`,
+  `isActive=false, dnsVerified=true`) and parameterized
+  `subdomain-routing.spec.ts` cases keep both inactive states covered.
 
 ## Process
 
