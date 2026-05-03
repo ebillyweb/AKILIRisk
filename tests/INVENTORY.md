@@ -30,6 +30,17 @@ under `tests/`.
 | `tests/smoke/tenant-isolation.spec.ts` | advisor cannot open another advisor's client via direct URL | TBD | Implemented |
 | `tests/smoke/subdomain-routing.spec.ts` | active subdomain serves the branded client portal | TBD | Implemented |
 | `tests/smoke/subdomain-routing.spec.ts` | unverified subdomain shows "Subdomain Not Available" | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | wrong password shows credential error and stays on /signin | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | unauthenticated /dashboard sent to /signin with callbackUrl | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /admin (redirected to dashboard) | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /advisor (redirected to dashboard) | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | advisor cannot view admin content via direct /admin nav | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | admin intake script list renders with edit + visibility controls | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | admin can edit intake question; text round-trips through DB | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | admin can toggle visibility (DB round-trips, UI requires hard reload) | TBD | Implemented |
+| `tests/smoke/advisor-logo-endpoint.spec.ts` | unauthenticated GET on /api/client/advisor-logo -> 401 | TBD | Implemented |
+| `tests/smoke/advisor-logo-endpoint.spec.ts` | non-USER (admin) GET on /api/client/advisor-logo -> 403 | TBD | Implemented |
+| `tests/smoke/advisor-logo-endpoint.spec.ts` | client GET returns image bytes with valid PNG/JPEG magic | TBD | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -39,7 +50,10 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Sign up with valid invite code (generic `123456`)
 - Sign up with prefilled invite code (`BELV01`)
 - Sign up rejects invalid/expired invite codes
-- Sign in rejects wrong password (error surfaces, no redirect)
+- ~~Sign in rejects wrong password (error surfaces, no redirect)~~ *(covered by `auth-edge-cases.spec.ts`)*
+- ~~Unauthenticated /dashboard redirected to /signin with callbackUrl~~ *(covered by `auth-edge-cases.spec.ts`)*
+- ~~Client cannot reach /admin or /advisor (role gate)~~ *(covered by `auth-edge-cases.spec.ts`)*
+- ~~Advisor cannot view admin content~~ *(covered by `auth-edge-cases.spec.ts`)*
 - Forgot password - request email
 - Reset password from emailed link
 - MFA enrollment flow (`/settings` Two-Factor)
@@ -89,6 +103,9 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 
 ### Admin Functions
 - ~~Admin can list advisors (`/admin/advisors`)~~ *(covered by `admin-advisors.spec.ts`)*
+- ~~Admin intake script list renders with edit + visibility controls~~ *(covered by `admin-intake-script.spec.ts`)*
+- ~~Admin can edit intake question text (DB round-trip)~~ *(covered by `admin-intake-script.spec.ts`)*
+- ~~Admin can toggle question visibility (DB round-trip)~~ *(covered by `admin-intake-script.spec.ts`)*
 - Admin can soft-delete an advisor
 - Admin can list clients (`/admin/clients`)
 - Admin can assign lead to advisor (`/admin/leads`)
@@ -126,7 +143,8 @@ Implemented:
 
 Not Implemented (feature exists, not yet covered):
 - Default Akili branding shown when client has no assigned advisor with `brandingEnabled`
-- `/api/client/advisor-logo` returns the advisor's actual S3 logo bytes (not just 200)
+- ~~`/api/client/advisor-logo` returns advisor's actual S3 logo bytes~~ *(covered by `advisor-logo-endpoint.spec.ts`)*
+- ~~`/api/client/advisor-logo` blocks non-USER and unauthenticated callers~~ *(covered by `advisor-logo-endpoint.spec.ts`)*
 - Advisor branding edit flow (admin or advisor sets `brandName`/colors/logo, change is reflected in client portal)
 - Advisor branding audit log entries created on update (`AdvisorBrandingAuditLog`)
 - `subscriptionQualifiesForPortalEnablement` gate: advisor without subscription redirected to `/advisor/billing`
@@ -162,7 +180,46 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-_None outstanding. See "Fixed" below._
+### Minor: admin visibility toggle does not refresh the rendered list
+
+- **Where:** `src/lib/actions/admin-intake-questions-actions.ts` -
+  `setIntakePillarQuestionVisibility` calls `revalidateIntakeQuestionContent()`
+  then `redirect("/admin/intake/questions")` (back to the same URL).
+- **Expected:** After clicking "Hide from interview" / "Show in interview",
+  the list re-renders with updated counts and badges.
+- **Actual:** DB write succeeds but the rendered list is unchanged until the
+  user manually refreshes. The Next.js client router serves the prefetched
+  RSC payload for the same-URL navigation; `revalidatePath` busts the server
+  cache but the client-side cache survives.
+- **Severity:** Minor. Functional correctness intact (visibility actually
+  changes); UX bug only.
+- **Fix sketch:** Add `?saved=1` to the redirect target (forces a different
+  cache key) and surface the existing success Alert; or call
+  `router.refresh()` from the client side; or set `export const dynamic =
+  "force-dynamic"` on `/admin/intake/questions/page.tsx`.
+- **Test:** `admin-intake-script.spec.ts` `visibility toggle updates the
+  rendered counts without a hard reload` (test.fixme).
+
+### Minor: `?error=unauthorized` is set during cross-role redirects but never displayed
+
+- **Where:** `src/app/(protected)/advisor/layout.tsx` and
+  `src/app/(protected)/admin/layout.tsx` redirect to
+  `/dashboard?error=unauthorized` on role mismatch. No code reads the param.
+- **Expected:** A user who navigates to a route they don't have access to
+  should see some indication ("You don't have access to that page").
+- **Actual:**
+  - Client navigating to `/admin` lands on `/dashboard?error=unauthorized` -
+    the param is in the URL but no UI surfaces it.
+  - Advisor navigating to `/admin` is bounced through
+    `/dashboard?error=unauthorized` -> `/advisor` (the dashboard page's
+    role-router strips the query and forwards). Param is gone entirely.
+- **Severity:** Minor. Security holds (no unauthorized data exposure);
+  pure UX/discoverability.
+- **Fix sketch:** Add a small banner on `/dashboard` and `/advisor` that
+  reads `searchParams.error === "unauthorized"` and renders a dismissible
+  alert; preserve the param through the dashboard's role redirects.
+- **Test:** `auth-edge-cases.spec.ts` `advisor sees an unauthorized notice
+  after attempting /admin` (test.fixme).
 
 ## Fixed
 
