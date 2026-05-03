@@ -430,6 +430,8 @@ model IntakeResponse {
   interviewId         String
   questionId          String
   audioUrl            String?
+  audioS3Key          String?
+  audioContentType    String?
   audioDuration       Float?
   transcription       String?
   transcriptionStatus TranscriptionStatus @default(PENDING)

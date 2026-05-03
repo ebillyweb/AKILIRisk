@@ -10,6 +10,11 @@ import { prisma } from "@/lib/db";
 
 type IntakeResponseInput = {
   audioUrl?: string;
+  /** S3 object key for the actual audio bytes. The `audioUrl` is the
+   *  client-facing URL of the authenticated streaming route; this is the
+   *  byte source the streaming + transcribe routes pass to S3. */
+  audioS3Key?: string;
+  audioContentType?: string;
   audioDuration?: number;
   transcription?: string;
   transcriptionStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
@@ -84,6 +89,8 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
       interviewId,
       questionId,
       audioUrl: data.audioUrl ?? null,
+      audioS3Key: data.audioS3Key ?? null,
+      audioContentType: data.audioContentType ?? null,
       audioDuration: data.audioDuration ?? null,
       transcription: transcriptionForCreate,
       transcriptionStatus: resolvedCreateStatus,
@@ -91,6 +98,8 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
     },
     update: {
       audioUrl: data.audioUrl ?? undefined,
+      audioS3Key: data.audioS3Key ?? undefined,
+      audioContentType: data.audioContentType ?? undefined,
       audioDuration: data.audioDuration ?? undefined,
       transcription:
         data.transcription === undefined

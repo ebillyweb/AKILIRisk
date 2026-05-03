@@ -52,6 +52,10 @@ under `tests/`.
 | `tests/smoke/public-signup.spec.ts` | invite redemption + signup creates user that lands on /intake | TBD | Implemented |
 | `tests/smoke/public-signup.spec.ts` | signup with existing email surfaces "Unable to create account" | TBD | Implemented |
 | `tests/smoke/public-signup.spec.ts` | signup form rejects mismatched passwords | TBD | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | owner client GET on /api/intake/[id]/audio/[questionId] returns audio bytes (200) | TBD | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | assigned advisor GET returns audio bytes (200) | TBD | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | unassigned advisor GET returns 404 (cross-tenant audio isolation) | TBD | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | unauthenticated GET returns 401 | TBD | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -79,7 +83,7 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - ~~Intake "Type" tab happy path: 18 questions → submit → `/intake/complete`~~ *(covered by `client-intake.spec.ts`)*
 - ~~Intake validation: Next + Save disabled until response saved~~ *(covered by `client-intake.spec.ts`)*
 - Client starts intake from dashboard CTA (vs. direct `/intake` navigation)
-- Intake "Voice" tab: AudioRecorder upload + transcription
+- Intake "Voice" tab: AudioRecorder upload + transcription *(upload + auth-gated playback covered by `intake-audio-endpoint.spec.ts`; transcription pipeline itself still uncovered)*
 - Intake save-and-resume across sessions (sign out mid-interview, sign back in, resume from last completed question)
 - Submitted intake moves to `IN_REVIEW` state and surfaces on advisor's review queue
 - Advisor approval unlocks assessment (`intakeGate.assessmentUnlocked`)

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getIntakeInterview, saveIntakeResponse } from '@/lib/data/intake';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { getIntakeAudioObjectBytes } from '@/lib/s3/intake-audio-uploads';
 
 export async function POST(
   request: NextRequest,
@@ -41,9 +40,9 @@ export async function POST(
       );
     }
 
-    // Find the response to get audio URL
+    // Find the response to get audio S3 key
     const existingResponse = interview.responses.find(r => r.questionId === questionId);
-    if (!existingResponse?.audioUrl) {
+    if (!existingResponse?.audioS3Key) {
       return NextResponse.json(
         { success: false, error: 'No audio file found for this question' },
         { status: 400 }
@@ -52,17 +51,20 @@ export async function POST(
 
     // Update status to PROCESSING
     await saveIntakeResponse(interviewId, questionId, {
-      audioUrl: existingResponse.audioUrl,
+      audioUrl: existingResponse.audioUrl ?? undefined,
+      audioS3Key: existingResponse.audioS3Key,
+      audioContentType: existingResponse.audioContentType ?? undefined,
       audioDuration: existingResponse.audioDuration ?? undefined,
       transcriptionStatus: 'PROCESSING',
     });
 
-    // Read audio file from disk
-    const audioPath = join(process.cwd(), 'public', existingResponse.audioUrl);
-    console.log('Attempting to read audio file from:', audioPath);
-
+    // Fetch audio bytes from S3 (private bucket; no public-read).
     try {
-      const audioBuffer = await readFile(audioPath);
+      const { data: audioBytes } = await getIntakeAudioObjectBytes(
+        existingResponse.audioS3Key
+      );
+      const audioBuffer = Buffer.from(audioBytes);
+      const audioMime = existingResponse.audioContentType ?? 'audio/webm';
 
       // Check if OpenAI API key is configured
       if (!process.env.OPENAI_API_KEY) {
@@ -82,9 +84,10 @@ export async function POST(
         });
       }
 
-      // Send to OpenAI Whisper API with timeout
+      // Send to OpenAI Whisper API with timeout. Match the stored MIME so
+      // iOS uploads (audio/mp4) aren't relabeled as webm in transit.
       const formData = new FormData();
-      const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
+      const audioBlob = new Blob([audioBuffer], { type: audioMime });
       formData.append('file', audioBlob, `${questionId}.webm`);
       formData.append('model', 'whisper-1');
 
