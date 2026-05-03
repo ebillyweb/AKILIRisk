@@ -41,13 +41,23 @@ under `tests/`.
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | unauthenticated GET on /api/client/advisor-logo -> 401 | TBD | Implemented |
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | non-USER (admin) GET on /api/client/advisor-logo -> 403 | TBD | Implemented |
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | client GET returns image bytes with valid PNG/JPEG magic | TBD | Implemented |
+| `tests/smoke/advisor-billing-gate.spec.ts` | advisor without active sub redirected to /advisor/billing on signin | TBD | Implemented |
+| `tests/smoke/advisor-billing-gate.spec.ts` | /advisor + /advisor/pipeline + /advisor/dashboard all redirect no-sub advisor to billing | TBD | Implemented |
+| `tests/smoke/default-branding-fallback.spec.ts` | client with brandingEnabled=false advisor sees the platform default | TBD | Implemented |
+| `tests/smoke/advisor-intake-review.spec.ts` | advisor navigates pipeline -> /advisor/review/[id] and sees transcripts | TBD | Implemented |
+| `tests/smoke/advisor-intake-review.spec.ts` | advisor cannot view another advisor's intake review via direct URL | TBD | Implemented |
+| `tests/smoke/public-signup.spec.ts` | invite redemption + signup creates user that lands on /intake | TBD | Implemented |
+| `tests/smoke/public-signup.spec.ts` | signup with existing email surfaces "Unable to create account" | TBD | Implemented |
+| `tests/smoke/public-signup.spec.ts` | signup form rejects mismatched passwords | TBD | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
 Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proceeds.
 
 ### Authentication & Access
-- Sign up with valid invite code (generic `123456`)
+- ~~Sign up with valid invite code (generic `123456`)~~ *(covered by `public-signup.spec.ts`)*
+- ~~Sign up rejects mismatched passwords~~ *(covered by `public-signup.spec.ts`)*
+- ~~Sign up with existing email surfaces an error~~ *(covered by `public-signup.spec.ts`)*
 - Sign up with prefilled invite code (`BELV01`)
 - Sign up rejects invalid/expired invite codes
 - ~~Sign in rejects wrong password (error surfaces, no redirect)~~ *(covered by `auth-edge-cases.spec.ts`)*
@@ -88,11 +98,12 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 ### Advisor Workflows
 - ~~Advisor portfolio lists assigned clients~~ *(covered by `advisor-clients.spec.ts`)*
 - ~~Open client detail from pipeline~~ *(covered by `advisor-clients.spec.ts`)*
+- ~~Review client intake submission (transcripts on /advisor/review/[id])~~ *(covered by `advisor-intake-review.spec.ts`)*
+- ~~Cross-advisor intake review URL is 404 (tenant isolation)~~ *(covered by `advisor-intake-review.spec.ts`)*
 - Pipeline metrics (`activeInFlight`, `totalAssigned`) match expected counts
 - Pipeline filters (by stage, search) update visible rows
 - Send client invitation
-- Review client intake submission
-- Approve/reject intake
+- Approve/reject intake (action buttons in ReviewSidebar)
 - View client assessment results
 - Cyber risk advisor review
 - Identity risk advisor review
@@ -142,12 +153,14 @@ Implemented:
 - ~~Cross-advisor data isolation on direct URL access~~ *(covered by `tenant-isolation.spec.ts`)*
 
 Not Implemented (feature exists, not yet covered):
-- Default Akili branding shown when client has no assigned advisor with `brandingEnabled`
+- ~~Default Akili branding when client's advisor has `brandingEnabled=false`~~ *(covered by `default-branding-fallback.spec.ts`)*
+- Default Akili branding when client has no active advisor assignment (different code path - findFirst returns null)
 - ~~`/api/client/advisor-logo` returns advisor's actual S3 logo bytes~~ *(covered by `advisor-logo-endpoint.spec.ts`)*
 - ~~`/api/client/advisor-logo` blocks non-USER and unauthenticated callers~~ *(covered by `advisor-logo-endpoint.spec.ts`)*
 - Advisor branding edit flow (admin or advisor sets `brandName`/colors/logo, change is reflected in client portal)
 - Advisor branding audit log entries created on update (`AdvisorBrandingAuditLog`)
-- `subscriptionQualifiesForPortalEnablement` gate: advisor without subscription redirected to `/advisor/billing`
+- ~~`subscriptionQualifiesForPortalEnablement` gate: no-sub advisor redirected to `/advisor/billing`~~ *(covered by `advisor-billing-gate.spec.ts`)*
+- Subscription edge states (UNPAID; CANCELLED with cancelAtPeriodEnd=true; expired GRACE_PERIOD)
 
 Subdomain routing - exercisable via three staging-bound subdomains:
 - `independent-wealth.akilirisk.com` -> advisor2, `isActive=true, dnsVerified=true` -> branded portal renders. *(covered by `subdomain-routing.spec.ts`)*

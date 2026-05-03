@@ -41,8 +41,10 @@ Use these only in local/development. Ensure the app and database are running, th
 |------|--------|----------|--------|
 | **Advisor** | `advisor@test.com` | `testpassword123` | Has advisor profile and assigned client. After login, use Advisor Hub / Portfolio. |
 | **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Independent advisor with no client assignments and a 30-day grace-period subscription. Owns active+verified subdomain `independent-wealth.akilirisk.com`. Used by tenant-isolation + active-subdomain tests. |
-| **Advisor (unverified subdomain)** | `advisor3@test.com` | `testpassword123` | Owns subdomain `inactive-tenant.akilirisk.com` (`isActive=true, dnsVerified=false`). Used by the "Subdomain Not Available" test (DNS-pending state). |
+| **Advisor (unverified subdomain, no sub)** | `advisor3@test.com` | `testpassword123` | Owns subdomain `inactive-tenant.akilirisk.com` (`isActive=true, dnsVerified=false`). No Subscription row, so doubles as the billing-gate fixture (lands on `/advisor/billing` from any advisor route). |
 | **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Owns subdomain `disabled-tenant.akilirisk.com` (`isActive=false, dnsVerified=true`). Used by the "Subdomain Not Available" test (admin-deactivated state). |
+| **Advisor (no branding)** | `advisor-unbranded@test.com` | `testpassword123` | `brandingEnabled=false` on profile. Used by the default-branding-fallback test. |
+| **Client (no branding)** | `client-unbranded@test.com` | `testpassword123` | Assigned to `advisor-unbranded`; dashboard renders the default Akili lockup instead of advisor white-label. |
 | **Client** | `client@test.com` | `testpassword123` | Seeded with a submitted intake; use for advisor review flow. |
 | **Client (MFA)** | `client-mfa@test.com` | `testpassword123` | Second client for MFA testing. Sign in, go to Settings, enable MFA, then sign out and sign in again to hit the MFA verify screen. |
 | **Client (fresh intake)** | `client-fresh@test.com` | `testpassword123` | No `IntakeInterview` row - used by Playwright intake happy-path tests. Reset between runs with `node scripts/reset-fresh-client-intake.js` (the test suite calls this in `beforeEach`). |

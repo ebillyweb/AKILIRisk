@@ -1,4 +1,11 @@
-export type Role = "advisor" | "advisor2" | "client" | "admin" | "clientFresh";
+export type Role =
+  | "advisor"
+  | "advisor2"
+  | "advisor3"
+  | "client"
+  | "clientUnbranded"
+  | "admin"
+  | "clientFresh";
 
 export interface TestUser {
   role: Role;
@@ -26,6 +33,26 @@ export const USERS: Record<Role, TestUser> = {
     email: env("ADVISOR2_EMAIL", "advisor2@test.com"),
     password: env("ADVISOR2_PASSWORD", "testpassword123"),
     expectedLandingPath: "/advisor",
+  },
+  /**
+   * Advisor with no Subscription row - the (protected)/advisor/layout.tsx
+   * billing gate redirects them to /advisor/billing on every advisor route.
+   */
+  advisor3: {
+    role: "advisor3",
+    email: env("ADVISOR3_EMAIL", "advisor3@test.com"),
+    password: env("ADVISOR3_PASSWORD", "testpassword123"),
+    expectedLandingPath: "/advisor/billing",
+  },
+  /**
+   * Client assigned to an advisor with brandingEnabled=false. Their dashboard
+   * shows the default Akili branding instead of an advisor's white-label.
+   */
+  clientUnbranded: {
+    role: "clientUnbranded",
+    email: env("CLIENT_UNBRANDED_EMAIL", "client-unbranded@test.com"),
+    password: env("CLIENT_UNBRANDED_PASSWORD", "testpassword123"),
+    expectedLandingPath: "/dashboard",
   },
   client: {
     role: "client",
