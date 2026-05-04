@@ -1,4 +1,5 @@
 import { AdvisorBrandingData } from '@/lib/validation/branding';
+import { escapeHtml } from '@/lib/escape-html';
 
 /**
  * Enhanced advisor branding data for emails
@@ -19,18 +20,6 @@ interface EnhancedEmailTemplateData {
   invitationUrl: string;
   clientName?: string;
   templateType?: 'invitation' | 'reminder' | 'notification';
-}
-
-/**
- * Escapes HTML special characters to prevent XSS
- */
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 /**

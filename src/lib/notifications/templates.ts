@@ -1,18 +1,7 @@
 import "server-only";
 
 import { NotificationCategory } from "./types";
-
-/**
- * Escapes HTML special characters to prevent XSS
- */
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+import { escapeHtml } from "@/lib/escape-html";
 
 /**
  * Validates logo URL (must be HTTPS)

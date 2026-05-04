@@ -1,4 +1,5 @@
 import { addDays } from "date-fns";
+import { escapeHtml } from "@/lib/escape-html";
 
 /** Policy window for completing paid signup after admin creates an advisor account. */
 export const NEW_ADVISOR_PAID_SIGNUP_DEADLINE_DAYS = 30;
@@ -42,15 +43,6 @@ export function formatGracePeriodEndUtcLabel(date: Date): string {
     hour12: false,
   }).format(date);
   return `${datePart} at ${hm} UTC`;
-}
-
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 function publicOriginFromSignInUrl(signInUrl: string): string {

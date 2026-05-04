@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { escapeHtml } from "@/lib/escape-html";
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
@@ -33,18 +34,6 @@ interface SendInvitationData {
   personalMessage: string;
   invitationUrl: string;
   clientName?: string;
-}
-
-/**
- * Escapes HTML special characters to prevent XSS
- */
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }
 
 /**
