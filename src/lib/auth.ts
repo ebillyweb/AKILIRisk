@@ -1,7 +1,20 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import authConfig from "@/lib/auth.config";
+import { applyAdminDemotion } from "@/lib/auth-shared";
+
+/** Short, non-reversible identifier for an email so log lines stay
+ *  observable without exposing PII. Mirrors `emailHash` in
+ *  `@/lib/auth.config`. */
+function emailHash(email: string | null | undefined): string | undefined {
+  if (!email) return undefined;
+  return createHash("sha256")
+    .update(email.toLowerCase())
+    .digest("hex")
+    .slice(0, 8);
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
@@ -49,7 +62,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         console.info("Auth signIn callback created session", {
           userId: user.id,
-          email: user.email,
+          emailHash: emailHash(user.email),
           mfaEnabled: Boolean(dbUser?.mfaEnabled),
         });
       }
@@ -96,12 +109,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.accountDeactivated = Boolean(
           (token as { accountDeactivated?: boolean }).accountDeactivated
         );
-        let role = (token.role as string) ?? "USER";
-        // ADMIN is only valid for the designated admin account
-        if (role === "ADMIN" && session.user.email !== "buddy@ebilly.com") {
-          role = "USER";
-        }
-        session.user.role = role;
+        // ADMIN is only valid for the designated admin account.
+        // Same guard runs in auth-edge.ts via the shared helper.
+        session.user.role = applyAdminDemotion(
+          token.role as string | undefined,
+          session.user.email
+        );
       }
       return session;
     },

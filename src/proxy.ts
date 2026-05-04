@@ -27,10 +27,21 @@ function extractSubdomain(hostname: string): string | null {
   return null;
 }
 
-/** For server layouts (e.g. advisor) that branch on URL without middleware. */
+/** For server layouts (e.g. advisor) that branch on URL without middleware.
+ *
+ *  Also scrubs the `x-advisor-id` / `x-subdomain` / `x-branded-mode` headers
+ *  on the non-subdomain forwarding path. Those headers are written ONLY by
+ *  the subdomain-rewrite branch below (after a successful AdvisorSubdomain
+ *  lookup). If a client sends them directly to a regular URL, the branded
+ *  layout would otherwise read them as if the proxy had asserted them —
+ *  letting any caller render `/branded/...` for any tenant they name.
+ *  Stripping here closes that injection vector. */
 function withAkiliPathname(req: NextRequest): Headers {
   const h = new Headers(req.headers);
   h.set("x-akili-pathname", req.nextUrl.pathname);
+  h.delete("x-advisor-id");
+  h.delete("x-subdomain");
+  h.delete("x-branded-mode");
   return h;
 }
 
