@@ -58,6 +58,14 @@ under `tests/`.
 | `tests/smoke/intake-audio-endpoint.spec.ts` | unauthenticated GET returns 401 | TBD | Implemented |
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | same event.id delivered twice is deduped (idempotency) | TBD | Implemented |
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | bad signature returns 400 and creates no dedupe row | TBD | Implemented |
+| `tests/smoke/stripe-webhook-endpoint.spec.ts` | two parallel deliveries of same event.id → exactly one is processed (atomic claim) | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | admin can view /admin/audit-log; meta-audit row appears on reload | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | advisor / client / unauthenticated → 404 on /admin/audit-log (no existence leak) | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | unauthenticated GET /api/admin/audit-log/export → 404 | TBD | Implemented |
+| `tests/smoke/audit-log-wiring.spec.ts` | admin create advisor → user.create row with redacted password + emailHash + before=null | TBD | Implemented |
+| `tests/smoke/audit-log-wiring.spec.ts` | admin soft-delete advisor → user.soft_delete row with deletedAt + portal access diff | TBD | Implemented |
+| `tests/smoke/audit-log-csv-export.spec.ts` | admin downloads CSV; rows parse; column count matches header | TBD | Implemented |
+| `tests/smoke/audit-log-csv-export.spec.ts` | export action self-audits as data_access.export with filterHash + format=csv | TBD | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -126,7 +134,7 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - ~~Admin intake script list renders with edit + visibility controls~~ *(covered by `admin-intake-script.spec.ts`)*
 - ~~Admin can edit intake question text (DB round-trip)~~ *(covered by `admin-intake-script.spec.ts`)*
 - ~~Admin can toggle question visibility (DB round-trip)~~ *(covered by `admin-intake-script.spec.ts`)*
-- Admin can soft-delete an advisor
+- ~~Admin can soft-delete an advisor (verifies user.soft_delete audit row)~~ *(covered by `audit-log-wiring.spec.ts`)*
 - Admin can list clients (`/admin/clients`)
 - Admin can assign lead to advisor (`/admin/leads`)
 - Admin intake management view (`/admin/intake`)
@@ -135,6 +143,7 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Admin question bank: edit copy
 - Admin settings page renders
 - Non-admin users redirected from `/admin/*` with `?error=unauthorized`
+- ~~Admin audit log (`/admin/audit-log`) — view, filter, paginate, CSV export~~ *(covered by `audit-log-access.spec.ts`, `audit-log-wiring.spec.ts`, `audit-log-csv-export.spec.ts`)*
 
 ### Documents
 - Generate PDF report for completed assessment

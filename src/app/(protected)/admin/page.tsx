@@ -24,6 +24,12 @@ const SECTIONS = [
     description: "Six risk areas: edit copy and show/hide assessment questions.",
   },
   { href: "/admin/settings", label: "Settings", description: "Admin and system settings." },
+  {
+    href: "/admin/audit-log",
+    label: "Audit log",
+    description:
+      "BRD §5.4 compliance trail: user activity, configuration changes, and sensitive data-access events. CSV export available.",
+  },
 ] as const;
 
 export default async function AdminPage() {
