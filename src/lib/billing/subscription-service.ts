@@ -1,11 +1,11 @@
 import "server-only";
 
-import type {
-  BillingCycle,
+import {
   Prisma,
-  Subscription as SubscriptionRow,
-  SubscriptionStatus,
-  SubscriptionTier,
+  type BillingCycle,
+  type Subscription as SubscriptionRow,
+  type SubscriptionStatus,
+  type SubscriptionTier,
 } from "@prisma/client";
 import type Stripe from "stripe";
 
@@ -231,18 +231,36 @@ export async function appendSubscriptionAuditLog(
 }
 
 /**
+ * Outcome of `upsertSubscriptionFromStripe`. `applied: false` means the
+ * write was skipped because a newer event has already been applied to this
+ * subscription (stale-event ordering check). `row` is always populated when
+ * the subscription exists (either before or after this call); only on the
+ * first-ever create-path failure with no existing row would it be null,
+ * which we don't currently expose because that path always creates a row.
+ */
+export interface UpsertSubscriptionResult {
+  row: SubscriptionRow;
+  applied: boolean;
+}
+
+/**
  * Apply a Stripe subscription snapshot to our DB.
  *
  * `eventCreatedAt` (Stripe `event.created` for the webhook delivering this
  * snapshot, in Date form) is recorded into `Subscription.lastStripeEventAt`
- * atomically with the rest of the upsert. The webhook route calls this
- * helper only after running its own ordering check, but writing the
- * timestamp inside the same upsert closes the small window where two
- * concurrent webhook handlers could otherwise race.
+ * atomically with the rest of the upsert.
+ *
+ * Race safety (round-6 fix): when `eventCreatedAt` is set, the update path
+ * uses a conditional `updateMany` keyed on `lastStripeEventAt < eventCreatedAt
+ * OR null`. This collapses the previous read-then-compare-then-write
+ * (`isEventNewerThanCurrent` check followed by an unconditional upsert) into
+ * a single atomic write. Two concurrent newer-and-older webhooks racing for
+ * the same userId can no longer interleave to clobber the newer state.
  *
  * `eventCreatedAt` is optional for non-webhook callers (e.g. checkout
  * flows that retrieve the subscription mid-request). Those callers don't
- * have an inbound event timestamp to record.
+ * have an inbound event timestamp to record and always run as
+ * unconditional updates.
  */
 export async function upsertSubscriptionFromStripe(
   userId: string,
@@ -250,7 +268,7 @@ export async function upsertSubscriptionFromStripe(
   stripeCustomerId: string,
   db: DbLike = prisma,
   eventCreatedAt?: Date
-): Promise<SubscriptionRow> {
+): Promise<UpsertSubscriptionResult> {
   const existing = await db.subscription.findUnique({ where: { userId } });
   const { tier, billingCycle, priceId } = tierFromStripeSubscription(
     sub,
@@ -261,22 +279,60 @@ export async function upsertSubscriptionFromStripe(
   const currentPeriodEnd = currentPeriodEndFromStripeSubscription(sub);
   const cancelAtPeriodEnd = sub.cancel_at_period_end === true;
 
-  const row = await db.subscription.upsert({
-    where: { userId },
-    create: {
-      userId,
-      stripeCustomerId,
-      stripeSubscriptionId: sub.id,
-      stripePriceId: priceId,
-      tier,
-      status,
-      clientLimit,
-      billingCycle,
-      currentPeriodEnd,
-      cancelAtPeriodEnd,
-      lastStripeEventAt: eventCreatedAt ?? null,
-    },
-    update: {
+  // Create path. The unique constraint on userId protects against two
+  // concurrent first-event creates: one wins, the other catches P2002 and
+  // falls through to the update path on the now-existing row.
+  if (!existing) {
+    try {
+      const created = await db.subscription.create({
+        data: {
+          userId,
+          stripeCustomerId,
+          stripeSubscriptionId: sub.id,
+          stripePriceId: priceId,
+          tier,
+          status,
+          clientLimit,
+          billingCycle,
+          currentPeriodEnd,
+          cancelAtPeriodEnd,
+          lastStripeEventAt: eventCreatedAt ?? null,
+        },
+      });
+
+      await appendSubscriptionAuditLog(db, created.id, "created", {
+        newTier: tier,
+        metadata: { source: "stripe_webhook", stripeSubscriptionId: sub.id },
+      });
+
+      return { row: created, applied: true };
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        // Lost the create race; another concurrent webhook just inserted
+        // the row. Re-read and fall through to the update path so the
+        // ordering check still runs against the newly-created row.
+        const reread = await db.subscription.findUnique({ where: { userId } });
+        if (!reread) {
+          // Vanishingly unlikely (would require a DELETE between create and
+          // re-read). Surface as a hard error rather than silently mis-
+          // applying the snapshot.
+          throw err;
+        }
+        return updateExisting(reread);
+      }
+      throw err;
+    }
+  }
+
+  return updateExisting(existing);
+
+  async function updateExisting(
+    current: SubscriptionRow
+  ): Promise<UpsertSubscriptionResult> {
+    const updateData: Prisma.SubscriptionUpdateManyMutationInput = {
       stripeCustomerId,
       stripeSubscriptionId: sub.id,
       stripePriceId: priceId ?? undefined,
@@ -289,31 +345,58 @@ export async function upsertSubscriptionFromStripe(
       // Only advance the marker when the caller passed one. Non-webhook
       // callers (checkout path) leave it untouched.
       ...(eventCreatedAt ? { lastStripeEventAt: eventCreatedAt } : {}),
-    },
-  });
+    };
 
-  if (existing) {
-    const tierChanged = existing.tier !== tier;
-    const statusChanged = existing.status !== status;
+    if (eventCreatedAt) {
+      // Conditional update — only succeeds when this event is strictly newer
+      // than the last applied one (or no prior event has been applied).
+      // count === 0 means a concurrent newer event has already won; we
+      // report applied=false so the caller skips downstream side effects
+      // (audit logs, etc.) without mutating state.
+      const result = await db.subscription.updateMany({
+        where: {
+          userId,
+          OR: [
+            { lastStripeEventAt: null },
+            { lastStripeEventAt: { lt: eventCreatedAt } },
+          ],
+        },
+        data: updateData,
+      });
+      if (result.count === 0) {
+        return { row: current, applied: false };
+      }
+    } else {
+      // Non-webhook caller — unconditional update, no ordering check.
+      await db.subscription.updateMany({
+        where: { userId },
+        data: updateData,
+      });
+    }
+
+    const updated = await db.subscription.findUnique({ where: { userId } });
+    if (!updated) {
+      throw new Error(
+        `Subscription disappeared after update for userId ${userId}`
+      );
+    }
+
+    const tierChanged = current.tier !== tier;
+    const statusChanged = current.status !== status;
     if (tierChanged || statusChanged) {
-      await appendSubscriptionAuditLog(db, row.id, "stripe_sync", {
-        previousTier: existing.tier,
+      await appendSubscriptionAuditLog(db, updated.id, "stripe_sync", {
+        previousTier: current.tier,
         newTier: tier,
         metadata: {
-          previousStatus: existing.status,
+          previousStatus: current.status,
           newStatus: status,
           stripeSubscriptionId: sub.id,
         },
       });
     }
-  } else {
-    await appendSubscriptionAuditLog(db, row.id, "created", {
-      newTier: tier,
-      metadata: { source: "stripe_webhook", stripeSubscriptionId: sub.id },
-    });
-  }
 
-  return row;
+    return { row: updated, applied: true };
+  }
 }
 
 export async function syncSubscriptionByStripeId(
@@ -338,6 +421,9 @@ export async function syncSubscriptionByStripeId(
     (typeof sub.metadata?.userId === "string" ? sub.metadata.userId : null);
   if (!userId) return;
 
+  // Non-webhook caller (no eventCreatedAt) → always applies. Discard the
+  // result; this helper has no return value and no downstream caller cares
+  // about applied vs. stale.
   await upsertSubscriptionFromStripe(userId, sub, customerId, db);
 }
 

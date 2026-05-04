@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { Prisma, type WebhookProcessStatus } from "@prisma/client";
 import type Stripe from "stripe";
-import type { WebhookProcessStatus } from "@prisma/client";
 
 import { getInvoiceSubscriptionId } from "@/lib/billing/stripe-invoice";
 import {
@@ -25,23 +25,63 @@ async function resolveUserIdForSubscription(
   return row?.userId ?? null;
 }
 
-/** Throw if the inbound event predates the most recent webhook we already
- *  applied to this subscription. Stripe doesn't guarantee ordering across
- *  retries; without this check, a stale `customer.subscription.updated`
- *  arriving after a newer one would clobber current state.
+/**
+ * Atomically claim this event for processing.
  *
- *  Returns true when we should proceed; false when the caller should skip
- *  the upsert and mark the event IGNORED. */
-async function isEventNewerThanCurrent(
-  userId: string,
+ * Returns:
+ *   - "claimed" → we own this event and should run the handler. The
+ *     StripeWebhookEvent row is in RECEIVED state.
+ *   - "deduped" → another delivery already terminated (PROCESSED/IGNORED)
+ *     or is currently in-flight (RECEIVED). Caller should return 200 with
+ *     `deduped: true`. The handler must NOT run.
+ *
+ * Round-6 fix: replaces the prior read-then-upsert dedupe gate, which had a
+ * TOCTOU race — two simultaneous redeliveries could both pass the
+ * `prior?.processedAt` check, both reset the row to RECEIVED, and both run
+ * the handler in parallel. The new shape uses INSERT-or-fail semantics:
+ * the unique primary key on `id` (Stripe's event.id) gives us atomic
+ * claiming for free, and the FAILED-row reclaim is a conditional updateMany
+ * that ensures only one in-flight retry can win.
+ */
+async function claimWebhookEvent(
+  eventId: string,
+  eventType: string,
   eventCreatedAt: Date
-): Promise<boolean> {
-  const existing = await prisma.subscription.findUnique({
-    where: { userId },
-    select: { lastStripeEventAt: true },
-  });
-  if (!existing?.lastStripeEventAt) return true;
-  return eventCreatedAt >= existing.lastStripeEventAt;
+): Promise<"claimed" | "deduped"> {
+  try {
+    await prisma.stripeWebhookEvent.create({
+      data: {
+        id: eventId,
+        eventType,
+        eventCreated: eventCreatedAt,
+        status: "RECEIVED",
+      },
+    });
+    return "claimed";
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      // Row already exists. Try to atomically reclaim a FAILED row so a
+      // Stripe retry of a previously-failed delivery can re-run. The
+      // updateMany matches 0 rows when status is RECEIVED (in-flight),
+      // PROCESSED, or IGNORED — all of which mean "don't run again".
+      const reclaim = await prisma.stripeWebhookEvent.updateMany({
+        where: { id: eventId, status: "FAILED" },
+        data: {
+          status: "RECEIVED",
+          receivedAt: new Date(),
+          processedAt: null,
+        },
+      });
+      if (reclaim.count === 0) {
+        return "deduped";
+      }
+      return "claimed";
+    }
+    throw err;
+  }
 }
 
 export async function POST(request: Request) {
@@ -66,37 +106,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // Dedupe gate. `processedAt != null` means a previous attempt reached a
-  // terminal outcome (PROCESSED or IGNORED) — re-running would be a no-op
-  // at best, a double-mutation at worst. FAILED rows leave processedAt
-  // null so Stripe's retry can take another swing.
-  const prior = await prisma.stripeWebhookEvent.findUnique({
-    where: { id: event.id },
-    select: { processedAt: true },
-  });
-  if (prior?.processedAt) {
-    return NextResponse.json({ received: true, deduped: true });
-  }
-
   const eventCreatedAt = new Date(event.created * 1000);
 
-  // Record the attempt before running any handler logic. Upsert because
-  // a previous FAILED attempt may have left a row behind; we reset it to
-  // RECEIVED so the in-flight retry can take it through to a terminal state.
-  await prisma.stripeWebhookEvent.upsert({
-    where: { id: event.id },
-    create: {
-      id: event.id,
-      eventType: event.type,
-      eventCreated: eventCreatedAt,
-      status: "RECEIVED",
-    },
-    update: {
-      status: "RECEIVED",
-      receivedAt: new Date(),
-      processedAt: null,
-    },
-  });
+  // Atomic dedupe + claim. See claimWebhookEvent comment.
+  const claim = await claimWebhookEvent(event.id, event.type, eventCreatedAt);
+  if (claim === "deduped") {
+    return NextResponse.json({ received: true, deduped: true });
+  }
 
   let outcome: WebhookProcessStatus = "PROCESSED";
 
@@ -128,16 +144,22 @@ export async function POST(request: Request) {
           break;
         }
 
-        if (!(await isEventNewerThanCurrent(userId, eventCreatedAt))) {
-          outcome = "IGNORED";
-          break;
-        }
-
         const stripe = getStripe();
         const sub = await stripe.subscriptions.retrieve(subId, {
           expand: ["latest_invoice"],
         });
-        await upsertSubscriptionFromStripe(userId, sub, customerId, prisma, eventCreatedAt);
+        const result = await upsertSubscriptionFromStripe(
+          userId,
+          sub,
+          customerId,
+          prisma,
+          eventCreatedAt
+        );
+        if (!result.applied) {
+          // Stale event — a newer one already advanced the subscription's
+          // lastStripeEventAt. Mark IGNORED and exit; nothing to redo.
+          outcome = "IGNORED";
+        }
         break;
       }
       case "customer.subscription.created":
@@ -162,12 +184,16 @@ export async function POST(request: Request) {
           break;
         }
 
-        if (!(await isEventNewerThanCurrent(userId, eventCreatedAt))) {
+        const result = await upsertSubscriptionFromStripe(
+          userId,
+          sub,
+          customerId,
+          prisma,
+          eventCreatedAt
+        );
+        if (!result.applied) {
           outcome = "IGNORED";
-          break;
         }
-
-        await upsertSubscriptionFromStripe(userId, sub, customerId, prisma, eventCreatedAt);
         break;
       }
       case "invoice.payment_failed": {
@@ -200,19 +226,21 @@ export async function POST(request: Request) {
           break;
         }
 
-        if (!(await isEventNewerThanCurrent(userId, eventCreatedAt))) {
-          outcome = "IGNORED";
-          break;
-        }
-
-        const row = await upsertSubscriptionFromStripe(
+        const result = await upsertSubscriptionFromStripe(
           userId,
           sub,
           customerId,
           prisma,
           eventCreatedAt
         );
-        await appendSubscriptionAuditLog(prisma, row.id, "payment_failed", {
+        if (!result.applied) {
+          outcome = "IGNORED";
+          break;
+        }
+        // Only append the audit log when the subscription update actually
+        // applied. A stale payment_failed event shouldn't add a misleading
+        // audit row to a subscription that has since recovered.
+        await appendSubscriptionAuditLog(prisma, result.row.id, "payment_failed", {
           metadata: {
             invoiceId: invoice.id,
             amountDue: invoice.amount_due,
@@ -250,12 +278,16 @@ export async function POST(request: Request) {
           break;
         }
 
-        if (!(await isEventNewerThanCurrent(userId, eventCreatedAt))) {
+        const result = await upsertSubscriptionFromStripe(
+          userId,
+          sub,
+          customerId,
+          prisma,
+          eventCreatedAt
+        );
+        if (!result.applied) {
           outcome = "IGNORED";
-          break;
         }
-
-        await upsertSubscriptionFromStripe(userId, sub, customerId, prisma, eventCreatedAt);
         break;
       }
       default:
@@ -268,8 +300,9 @@ export async function POST(request: Request) {
   } catch (e) {
     outcome = "FAILED";
     console.error("Stripe webhook handler error:", e);
-    // Mark FAILED in finally; Stripe's retry will see processedAt=null and
-    // re-run. Return 5xx so Stripe knows to retry.
+    // Mark FAILED in finally; Stripe's retry will see a FAILED row and
+    // re-claim it via claimWebhookEvent's reclaim path. Return 5xx so
+    // Stripe knows to retry.
     await prisma.stripeWebhookEvent.update({
       where: { id: event.id },
       data: { status: outcome, processedAt: null },
@@ -281,8 +314,8 @@ export async function POST(request: Request) {
     where: { id: event.id },
     data: {
       status: outcome,
-      // Both PROCESSED and IGNORED are terminal — set processedAt so the
-      // dedupe gate at the top short-circuits future redeliveries.
+      // Both PROCESSED and IGNORED are terminal — set processedAt so a
+      // redelivery dedupes via claimWebhookEvent's RECEIVED-skip path.
       processedAt: new Date(),
     },
   });

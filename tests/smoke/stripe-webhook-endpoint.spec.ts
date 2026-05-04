@@ -148,6 +148,50 @@ test.describe("stripe webhook endpoint", () => {
     expect(secondBody.deduped, "second delivery should be deduped").toBe(true);
   });
 
+  test("two parallel deliveries of same event.id → exactly one is processed (atomic claim)", async ({
+    request,
+  }) => {
+    // Round-6 regression: the previous dedupe gate read processedAt then
+    // upserted RECEIVED. Two simultaneous deliveries could both pass the
+    // gate (no prior row), both upsert, and both run the handler in
+    // parallel — including two `upsertSubscriptionFromStripe` calls
+    // racing each other. The new gate uses INSERT-or-fail on the unique
+    // primary key for atomic claim. This test fires two POSTs for the
+    // same event.id concurrently and asserts exactly one processes.
+    const eventId = `${TEST_EVENT_ID_PREFIX}_parallel`;
+    const fakeEvent = buildFakeEvent({ id: eventId });
+    const rawBody = JSON.stringify(fakeEvent);
+
+    const signature = stripe.webhooks.generateTestHeaderString({
+      payload: rawBody,
+      secret: WEBHOOK_SECRET,
+    });
+
+    // Promise.all dispatches both before either has a chance to write.
+    // Real-world simultaneity isn't guaranteed (network jitter), but two
+    // back-to-back POSTs reliably hit the race window in local testing.
+    const [a, b] = await Promise.all([
+      postEvent(request, rawBody, signature),
+      postEvent(request, rawBody, signature),
+    ]);
+
+    expect(a.status(), `first response: ${await a.text()}`).toBe(200);
+    expect(b.status(), `second response: ${await b.text()}`).toBe(200);
+
+    const aBody = (await a.json()) as { received?: boolean; deduped?: boolean };
+    const bBody = (await b.json()) as { received?: boolean; deduped?: boolean };
+
+    // Exactly one delivery should have claimed the event (deduped falsy);
+    // the other should report deduped: true. We don't assert WHICH wins
+    // because that depends on network/scheduler order — only that they
+    // didn't both process.
+    const dedupedFlags = [Boolean(aBody.deduped), Boolean(bBody.deduped)];
+    const winners = dedupedFlags.filter((f) => f === false).length;
+    const losers = dedupedFlags.filter((f) => f === true).length;
+    expect(winners, "exactly one delivery should win the claim").toBe(1);
+    expect(losers, "exactly one delivery should be deduped").toBe(1);
+  });
+
   test("bad signature → 400 and no StripeWebhookEvent row created", async ({
     request,
   }) => {
