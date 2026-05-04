@@ -2,8 +2,11 @@ export type Role =
   | "advisor"
   | "advisor2"
   | "advisor3"
+  | "advisor4"
+  | "advisorUnbranded"
   | "client"
   | "clientUnbranded"
+  | "clientMfa"
   | "admin"
   | "clientFresh";
 
@@ -45,6 +48,31 @@ export const USERS: Record<Role, TestUser> = {
     expectedLandingPath: "/advisor/billing",
   },
   /**
+   * Advisor whose subdomain is `disabled-tenant.akilirisk.com`
+   * (`isActive=false, dnsVerified=true`). Subdomain-routing tests do NOT
+   * sign in as advisor4 today (they only navigate to the host); the
+   * fixture exists for future tests that need to authenticate as the
+   * deactivated-subdomain owner.
+   */
+  advisor4: {
+    role: "advisor4",
+    email: env("ADVISOR4_EMAIL", "advisor4@test.com"),
+    password: env("ADVISOR4_PASSWORD", "testpassword123"),
+    expectedLandingPath: "/advisor",
+  },
+  /**
+   * Advisor with `brandingEnabled=false` on their AdvisorProfile. Their
+   * assigned client (`clientUnbranded`) sees the default Akili lockup. The
+   * default-branding-fallback test signs in as the client; future tests
+   * that exercise the advisor-side branding-disabled UI can sign in here.
+   */
+  advisorUnbranded: {
+    role: "advisorUnbranded",
+    email: env("ADVISOR_UNBRANDED_EMAIL", "advisor-unbranded@test.com"),
+    password: env("ADVISOR_UNBRANDED_PASSWORD", "testpassword123"),
+    expectedLandingPath: "/advisor",
+  },
+  /**
    * Client assigned to an advisor with brandingEnabled=false. Their dashboard
    * shows the default Akili branding instead of an advisor's white-label.
    */
@@ -58,6 +86,18 @@ export const USERS: Record<Role, TestUser> = {
     role: "client",
     email: env("CLIENT_EMAIL", "client@test.com"),
     password: env("CLIENT_PASSWORD", "testpassword123"),
+    expectedLandingPath: "/dashboard",
+  },
+  /**
+   * Client account seeded for MFA enrollment / challenge tests. MFA is
+   * NOT enabled at seed time — tests that exercise the verify flow enable
+   * it via Settings before signing out and back in. Lands on /dashboard
+   * when MFA is off; lands on /mfa/verify when MFA is on and unverified.
+   */
+  clientMfa: {
+    role: "clientMfa",
+    email: env("CLIENT_MFA_EMAIL", "client-mfa@test.com"),
+    password: env("CLIENT_MFA_PASSWORD", "testpassword123"),
     expectedLandingPath: "/dashboard",
   },
   admin: {

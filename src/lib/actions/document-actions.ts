@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { generateDownloadUrl } from '@/lib/documents/s3';
+import { generateDownloadUrl, headDocumentObject } from '@/lib/documents/s3';
 import {
   getDocumentRequirementForSessionUser,
   keyMatchesDocumentRequirement,
@@ -67,13 +67,18 @@ export async function getClientDocumentRequirements() {
   }
 }
 
+// `fileSize` and `fileMimeType` were previously trusted from the client
+// here. We now re-derive both from S3's HEAD response in the action body
+// (matches the /api/documents/confirm route). The schema keeps them
+// optional for back-compat with callers that still send them; the values
+// are ignored.
 const confirmUploadSchema = z.object({
   requirementId: z.string().min(1).max(64),
   fileMetadata: z.object({
     key: z.string().min(1),
     fileName: z.string().min(1).max(255),
-    fileSize: z.coerce.number().positive(),
-    fileMimeType: z.string().min(1),
+    fileSize: z.coerce.number().positive().optional(),
+    fileMimeType: z.string().min(1).optional(),
   }),
 });
 
@@ -112,6 +117,16 @@ export async function confirmDocumentUpload(data: unknown) {
       return { success: false, error: 'Invalid upload key for this requirement' };
     }
 
+    // Re-derive content-type and size from S3 (authoritative) instead of
+    // trusting the client's confirm payload.
+    const head = await headDocumentObject(fileMetadata.key);
+    if (!head) {
+      return {
+        success: false,
+        error: 'Uploaded object not found in storage',
+      };
+    }
+
     // Update the requirement with file metadata
     const updatedRequirement = await prisma.documentRequirement.update({
       where: { id: requirementId },
@@ -120,8 +135,8 @@ export async function confirmDocumentUpload(data: unknown) {
         fulfilledAt: new Date(),
         fileKey: fileMetadata.key,
         fileName: fileMetadata.fileName,
-        fileSize: fileMetadata.fileSize,
-        fileMimeType: fileMetadata.fileMimeType,
+        fileSize: head.contentLength ?? 0,
+        fileMimeType: head.contentType ?? 'application/octet-stream',
       },
     });
 

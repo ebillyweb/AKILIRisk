@@ -1,4 +1,9 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { DocumentUploadResponse } from './types';
 import { sanitizeDocumentKeyFileName } from './validation';
@@ -64,6 +69,48 @@ export async function generateUploadUrl(
   const signedUrl = await getSignedUrl(client, command, { expiresIn: 3600 }); // 1 hour expiry
 
   return { signedUrl, key };
+}
+
+/**
+ * Read S3 object metadata for a documents key. Used by the confirm route
+ * to re-derive `Content-Type` and `Content-Length` from the actual S3
+ * object instead of trusting client-supplied values in the confirm body —
+ * the presigned PUT was signed by us with a validated MIME, so S3's
+ * record of it is the authoritative one.
+ *
+ * Returns null when the object isn't found (caller treats as confirm
+ * failure: client claims to have uploaded something we can't see).
+ */
+export async function headDocumentObject(
+  key: string
+): Promise<{ contentType: string | null; contentLength: number | null } | null> {
+  const client = createS3Client();
+  if (!client) {
+    throw new Error("S3 client not configured - check AWS environment variables");
+  }
+
+  const bucketName = process.env.S3_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error("S3_BUCKET_NAME environment variable not configured");
+  }
+
+  try {
+    const head = await client.send(
+      new HeadObjectCommand({ Bucket: bucketName, Key: key })
+    );
+    return {
+      contentType: head.ContentType ?? null,
+      contentLength: head.ContentLength ?? null,
+    };
+  } catch (err) {
+    // NotFound on a missing object surfaces as a 404 from S3; that's the
+    // case we care about — confirming a key the client never actually
+    // uploaded to. Other errors propagate.
+    const code = (err as { name?: string; $metadata?: { httpStatusCode?: number } })
+      ?.$metadata?.httpStatusCode;
+    if (code === 404) return null;
+    throw err;
+  }
 }
 
 export async function generateDownloadUrl(key: string): Promise<string> {
