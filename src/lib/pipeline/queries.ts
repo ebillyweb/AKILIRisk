@@ -19,6 +19,24 @@ function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeRespons
   };
 }
 
+/** Same predicate as `whereIntakeResponseHasAnswer` but keyed by a list of
+ *  interview IDs. Used by the batched pipeline query so we issue one
+ *  `groupBy` instead of one `count` per client. */
+function whereIntakeResponsesForInterviewsHaveAnswer(
+  interviewIds: string[]
+): Prisma.IntakeResponseWhereInput {
+  return {
+    interviewId: { in: interviewIds },
+    OR: [
+      { answeredAt: { not: null } },
+      { audioUrl: { not: null } },
+      {
+        AND: [{ transcription: { not: null } }, { NOT: { transcription: { equals: "" } } }],
+      },
+    ],
+  };
+}
+
 /**
  * Fetches complete pipeline data for an advisor's clients
  */
@@ -63,35 +81,108 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     }
   });
 
-  // For each client, also get invitation data and document requirements
-  const clients = await Promise.all(assignments.map(async (assignment) => {
+  // ── Batched lookups ──────────────────────────────────────────────────────
+  // The previous shape ran 3 sequential queries per client inside the
+  // `map(async ...)`. For an advisor with N clients that's 1 + 3N queries
+  // per call. Worse, `/api/advisor/status-stream` polls this every 30s
+  // while the pipeline tab is open, so a 50-client advisor was driving
+  // ~5 queries/sec of baseline DB load just from one tab.
+  //
+  // Now: 4 queries total (assignments + 3 batches), independent of N.
+  // The maps below let the per-client transform run synchronously.
+
+  // De-dupe inputs. `clientEmail` filters nulls because Prisma's `in` would
+  // include rows where prefillEmail equals null (which is not what `findFirst`
+  // did with a string predicate); easier to exclude up front.
+  const clientEmails = Array.from(
+    new Set(
+      assignments
+        .map((a) => a.client.email)
+        .filter((email): email is string => typeof email === 'string' && email.length > 0)
+    )
+  );
+  const clientIds = Array.from(new Set(assignments.map((a) => a.client.id)));
+  const latestIntakeIds = Array.from(
+    new Set(
+      assignments
+        .map((a) => a.client.intakeInterviews[0]?.id)
+        .filter((id): id is string => typeof id === 'string')
+    )
+  );
+
+  // Fire all three independent batch queries in parallel.
+  const [invitations, documentCounts, intakeResponseCounts] = await Promise.all([
+    clientEmails.length > 0
+      ? prisma.inviteCode.findMany({
+          where: {
+            createdBy: advisorProfileId,
+            prefillEmail: { in: clientEmails },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : Promise.resolve([]),
+    clientIds.length > 0
+      ? prisma.documentRequirement.groupBy({
+          by: ['clientId', 'fulfilled'],
+          where: {
+            advisorId: advisorProfileId,
+            clientId: { in: clientIds },
+          },
+          _count: { fulfilled: true },
+        })
+      : Promise.resolve([]),
+    latestIntakeIds.length > 0
+      ? prisma.intakeResponse.groupBy({
+          by: ['interviewId'],
+          where: whereIntakeResponsesForInterviewsHaveAnswer(latestIntakeIds),
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  // Build per-key indexes so the per-client transform is a synchronous lookup.
+
+  // Latest invitation per client email. The findMany is ordered desc, so the
+  // FIRST occurrence per email is the one `findFirst` would have returned.
+  // (Map.set with the same key would overwrite — we explicitly skip later
+  // duplicates to preserve "latest wins".)
+  type InvitationRow = (typeof invitations)[number];
+  const invitationByEmail = new Map<string, InvitationRow>();
+  for (const inv of invitations) {
+    if (inv.prefillEmail && !invitationByEmail.has(inv.prefillEmail)) {
+      invitationByEmail.set(inv.prefillEmail, inv);
+    }
+  }
+
+  // Document requirement counts per client. groupBy returns one row per
+  // (clientId, fulfilled) combination; we collapse to {required, fulfilled}.
+  const documentCountsByClient = new Map<string, { required: number; fulfilled: number }>();
+  for (const row of documentCounts) {
+    const slot = documentCountsByClient.get(row.clientId) ?? { required: 0, fulfilled: 0 };
+    if (row.fulfilled) {
+      slot.fulfilled = row._count.fulfilled;
+    } else {
+      slot.required = row._count.fulfilled;
+    }
+    documentCountsByClient.set(row.clientId, slot);
+  }
+
+  // Intake response counts (only for interviews that have at least one
+  // matching response — interviews with zero matches won't appear in the
+  // groupBy result, and we treat absence as 0 below).
+  const responseCountByInterview = new Map<string, number>();
+  for (const row of intakeResponseCounts) {
+    responseCountByInterview.set(row.interviewId, row._count._all);
+  }
+
+  // ── Per-client transform — synchronous now ──────────────────────────────
+  const clients: PipelineClient[] = assignments.map((assignment) => {
     const client = assignment.client;
 
-    // Get latest invitation for this client from this advisor
-    const invitation = await prisma.inviteCode.findFirst({
-      where: {
-        createdBy: advisorProfileId,
-        prefillEmail: client.email,
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-
-    // Get document requirements for this client-advisor pair
-    const documentCounts = await prisma.documentRequirement.groupBy({
-      by: ['fulfilled'],
-      where: {
-        advisorId: advisorProfileId,
-        clientId: client.id,
-      },
-      _count: {
-        fulfilled: true,
-      }
-    });
-
-    const documentsRequired = documentCounts.find(g => g.fulfilled === false)?._count.fulfilled || 0;
-    const documentsFulfilled = documentCounts.find(g => g.fulfilled === true)?._count.fulfilled || 0;
+    const invitation = invitationByEmail.get(client.email) ?? null;
+    const docCounts = documentCountsByClient.get(client.id) ?? { required: 0, fulfilled: 0 };
+    const documentsRequired = docCounts.required;
+    const documentsFulfilled = docCounts.fulfilled;
 
     // Get the most recent activity date
     const latestIntake = client.intakeInterviews[0];
@@ -160,9 +251,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
       intake: latestIntake
         ? {
             status: latestIntake.status,
-            responseCount: await prisma.intakeResponse.count({
-              where: whereIntakeResponseHasAnswer(latestIntake.id),
-            }),
+            responseCount: responseCountByInterview.get(latestIntake.id) ?? 0,
             submittedAt: latestIntake.submittedAt,
             waivedAt: assignment.intakeWaivedAt,
           }
@@ -186,7 +275,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     };
 
     return pipelineClient;
-  }));
+  });
 
   // Sort by lastActivity descending by default
   return clients.sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
