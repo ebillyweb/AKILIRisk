@@ -90,7 +90,14 @@ export async function checkClientLimitForAdvisorProfile(
 
   const currentCount = await countActiveClientsForAdvisor(advisorProfileId, db);
 
-  if (!isBillingEnabled()) {
+  // Local/staging convenience: when billing isn't wired up
+  // (`ENABLE_BILLING_FEATURES=false`), let advisors add clients without a
+  // subscription row so seeded fixtures work end-to-end. Production never
+  // takes this shortcut — flipping billing off there must not silently
+  // grant unlimited clients regardless of tier. Mirrors
+  // `advisorHubAccessFromRow` in `@/lib/advisor/auth` and
+  // `missingSubscriptionFallback()` in `@/lib/subscription/validation`.
+  if (!isBillingEnabled() && process.env.NODE_ENV !== "production") {
     return {
       canAddClient: true,
       currentCount,
@@ -182,8 +189,21 @@ function tierFromStripeSubscription(
     return { tier: metaTier, billingCycle: metaCycle, priceId };
   }
 
+  // Fallback path: price ID isn't in the env-configured map AND Stripe
+  // metadata didn't carry a usable tier/cycle. This typically means the
+  // subscription was created out-of-band (Stripe Dashboard, legacy import).
+  // Default to STARTER (lowest paid tier) — never GROWTH — so we don't
+  // silently over-grant entitlements. Existing rows keep their tier so we
+  // don't downgrade a paying customer because of a one-off webhook
+  // hiccup. The warning is grep-friendly so we can audit how often this
+  // path fires in production.
+  if (!existingTier) {
+    console.warn(
+      `[subscription-service] Unmapped Stripe price ID, defaulting to STARTER tier: ${priceId ?? "<no price id>"}`
+    );
+  }
   return {
-    tier: existingTier ?? "GROWTH",
+    tier: existingTier ?? "STARTER",
     billingCycle: "MONTHLY",
     priceId,
   };
@@ -210,11 +230,26 @@ export async function appendSubscriptionAuditLog(
   });
 }
 
+/**
+ * Apply a Stripe subscription snapshot to our DB.
+ *
+ * `eventCreatedAt` (Stripe `event.created` for the webhook delivering this
+ * snapshot, in Date form) is recorded into `Subscription.lastStripeEventAt`
+ * atomically with the rest of the upsert. The webhook route calls this
+ * helper only after running its own ordering check, but writing the
+ * timestamp inside the same upsert closes the small window where two
+ * concurrent webhook handlers could otherwise race.
+ *
+ * `eventCreatedAt` is optional for non-webhook callers (e.g. checkout
+ * flows that retrieve the subscription mid-request). Those callers don't
+ * have an inbound event timestamp to record.
+ */
 export async function upsertSubscriptionFromStripe(
   userId: string,
   sub: Stripe.Subscription,
   stripeCustomerId: string,
-  db: DbLike = prisma
+  db: DbLike = prisma,
+  eventCreatedAt?: Date
 ): Promise<SubscriptionRow> {
   const existing = await db.subscription.findUnique({ where: { userId } });
   const { tier, billingCycle, priceId } = tierFromStripeSubscription(
@@ -239,6 +274,7 @@ export async function upsertSubscriptionFromStripe(
       billingCycle,
       currentPeriodEnd,
       cancelAtPeriodEnd,
+      lastStripeEventAt: eventCreatedAt ?? null,
     },
     update: {
       stripeCustomerId,
@@ -250,6 +286,9 @@ export async function upsertSubscriptionFromStripe(
       billingCycle,
       currentPeriodEnd,
       cancelAtPeriodEnd,
+      // Only advance the marker when the caller passed one. Non-webhook
+      // callers (checkout path) leave it untouched.
+      ...(eventCreatedAt ? { lastStripeEventAt: eventCreatedAt } : {}),
     },
   });
 

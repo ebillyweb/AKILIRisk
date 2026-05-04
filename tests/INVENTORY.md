@@ -56,6 +56,8 @@ under `tests/`.
 | `tests/smoke/intake-audio-endpoint.spec.ts` | assigned advisor GET returns audio bytes (200) | TBD | Implemented |
 | `tests/smoke/intake-audio-endpoint.spec.ts` | unassigned advisor GET returns 404 (cross-tenant audio isolation) | TBD | Implemented |
 | `tests/smoke/intake-audio-endpoint.spec.ts` | unauthenticated GET returns 401 | TBD | Implemented |
+| `tests/smoke/stripe-webhook-endpoint.spec.ts` | same event.id delivered twice is deduped (idempotency) | TBD | Implemented |
+| `tests/smoke/stripe-webhook-endpoint.spec.ts` | bad signature returns 400 and creates no dedupe row | TBD | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 

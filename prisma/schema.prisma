@@ -91,12 +91,52 @@ model Subscription {
 
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
+  /** Stripe `event.created` of the most recent webhook applied to this row.
+   *  Used to drop out-of-order webhook deliveries (Stripe doesn't guarantee
+   *  ordering). Distinct from `updatedAt` because admin actions also bump
+   *  `updatedAt`, which would falsely "win" against legitimate webhook events. */
+  lastStripeEventAt    DateTime?
 
   user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   auditLogs SubscriptionAuditLog[]
 
   @@index([stripeCustomerId])
   @@index([stripeSubscriptionId])
+}
+
+/** Per-Stripe-event idempotency + observability log.
+ *
+ *  The webhook handler upserts a row keyed by Stripe's `event.id` BEFORE
+ *  running any business logic. The dedupe gate is `processedAt != null` —
+ *  PROCESSED and IGNORED both set processedAt (both are terminal, no need
+ *  to re-run); FAILED leaves it null so Stripe's retry can take another
+ *  attempt against the same row. RECEIVED rows are in-flight.
+ *
+ *  Recording IGNORED rows for unhandled event types gives us a complete
+ *  audit trail of what Stripe sent us, even if our handler currently has no
+ *  case for it. Volume can grow; consider a TTL/GC follow-up.
+ */
+model StripeWebhookEvent {
+  /** Stripe's event.id, e.g. `evt_1Abc...`. Primary key for natural dedupe. */
+  id            String                @id
+  eventType     String
+  /** Stripe's `event.created` (Unix seconds → Date). Snapshot at receipt
+   *  time. Used by the ordering check inside subscription-mutating cases. */
+  eventCreated  DateTime
+  receivedAt    DateTime              @default(now())
+  /** Set on terminal outcomes (PROCESSED, IGNORED). Null while RECEIVED or
+   *  if the handler threw (FAILED). The dedupe gate is `processedAt != null`. */
+  processedAt   DateTime?
+  status        WebhookProcessStatus  @default(RECEIVED)
+
+  @@index([eventType, receivedAt])
+}
+
+enum WebhookProcessStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
 }
 
 model SubscriptionAuditLog {
