@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import type { UserRole } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getIntakeAudioObjectBytes } from "@/lib/s3/intake-audio-uploads";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { shouldAuditAudioStream } from "@/lib/audit/audio-stream-dedupe";
 
 /** Same allowlist as the upload route. Reject path-traversal / shell
  *  metacharacters before any DB lookup. */
@@ -45,6 +48,9 @@ export async function GET(
       interviewId_questionId: { interviewId, questionId },
     },
     select: {
+      // id selected so the audit row's entityId points at the response
+      // without an extra round-trip.
+      id: true,
       audioS3Key: true,
       audioContentType: true,
       interview: {
@@ -92,6 +98,34 @@ export async function GET(
   } catch (e) {
     console.error("Intake audio fetch error:", e);
     return new NextResponse(null, { status: 500 });
+  }
+
+  // Audit the access — but only on the 200 success path, and subject to the
+  // 5-minute dedupe so HTML <audio> range requests don't produce N rows per
+  // playback. 401 and 404 paths intentionally do NOT audit:
+  //   - 401: actor unknown.
+  //   - 404: route returns 404 to avoid existence leaks; auditing would
+  //     create the same leak inside the audit log.
+  // Audit metadata is intentionally narrow — interviewId, questionId, role —
+  // never the bytes, never the S3 key, never the audio URL.
+  if (
+    shouldAuditAudioStream(session.user.id, interviewId, questionId)
+  ) {
+    void writeAudit({
+      actor: {
+        userId: session.user.id,
+        role: session.user.role as UserRole | undefined,
+        email: session.user.email,
+      },
+      action: AUDIT_ACTIONS.DATA_ACCESS_AUDIO_STREAM,
+      entityType: "IntakeResponse",
+      entityId: response.id,
+      metadata: {
+        interviewId,
+        questionId,
+        accessRole: isOwner ? "owner" : "assigned_advisor",
+      },
+    });
   }
 
   return new NextResponse(Buffer.from(bytes.data), {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 export type AdvisorsAdminScope = "active" | "all";
 
@@ -96,7 +97,7 @@ export async function getAdvisorForAdmin(userId: string) {
 }
 
 export async function getClientsForAdmin() {
-  await requireAdminRole();
+  const { userId, email } = await requireAdminRole();
   const users = await prisma.user.findMany({
     where: { role: "USER" },
     select: {
@@ -123,11 +124,26 @@ export async function getClientsForAdmin() {
     },
     orderBy: { email: "asc" },
   });
+
+  // Fire-and-forget audit. writeAudit catches its own errors so a slow Prisma
+  // write can't break the page render. Metadata records the row count only —
+  // the actual user list (PII-heavy) is NOT logged. Filter params are an
+  // empty object today (the admin clients page filters client-side after
+  // loading the full list); recorded for parity with future filterable
+  // versions of these queries.
+  void writeAudit({
+    actor: { userId, role: "ADMIN", email },
+    action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_CLIENTS_LIST,
+    entityType: "User",
+    entityId: null,
+    metadata: { rowCount: users.length, filterParams: {} },
+  });
+
   return users;
 }
 
 export async function getIntakeForAdmin() {
-  await requireAdminRole();
+  const { userId, email } = await requireAdminRole();
   const interviews = await prisma.intakeInterview.findMany({
     select: {
       id: true,
@@ -149,11 +165,20 @@ export async function getIntakeForAdmin() {
     },
     orderBy: { updatedAt: "desc" },
   });
+
+  void writeAudit({
+    actor: { userId, role: "ADMIN", email },
+    action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_INTAKE_LIST,
+    entityType: "IntakeInterview",
+    entityId: null,
+    metadata: { rowCount: interviews.length, filterParams: {} },
+  });
+
   return interviews;
 }
 
 export async function getAssessmentsForAdmin() {
-  await requireAdminRole();
+  const { userId, email } = await requireAdminRole();
   const assessments = await prisma.assessment.findMany({
     select: {
       id: true,
@@ -170,6 +195,15 @@ export async function getAssessmentsForAdmin() {
     },
     orderBy: { updatedAt: "desc" },
   });
+
+  void writeAudit({
+    actor: { userId, role: "ADMIN", email },
+    action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_ASSESSMENTS_LIST,
+    entityType: "Assessment",
+    entityId: null,
+    metadata: { rowCount: assessments.length, filterParams: {} },
+  });
+
   return assessments;
 }
 
