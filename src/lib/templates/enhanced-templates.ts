@@ -2,6 +2,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import PizZip from 'pizzip';
 
+// Status output for the CLI entry point at the bottom of this file.
+// Silent in production so a stray runtime caller (e.g. ensureEnhancedTemplatesExist)
+// doesn't pollute server logs.
+const cliLog = (msg: string): void => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(msg);
+  }
+};
+
 /**
  * Enhanced template contents that include advisor branding variables
  */
@@ -406,7 +415,7 @@ export async function createEnhancedTemplateFiles() {
   }
 
   for (const [templateId, content] of Object.entries(enhancedTemplateContents)) {
-    console.log(`Creating enhanced template: ${templateId}-enhanced.docx`);
+    cliLog(`Creating enhanced template: ${templateId}-enhanced.docx`);
 
     // Create base document
     const zip = createBaseDocx();
@@ -449,10 +458,10 @@ export async function createEnhancedTemplateFiles() {
     const filePath = path.join(templatesDir, `${templateId}-enhanced.docx`);
     fs.writeFileSync(filePath, buffer);
 
-    console.log(`Created enhanced template: ${filePath}`);
+    cliLog(`Created enhanced template: ${filePath}`);
   }
 
-  console.log('All enhanced template files created successfully!');
+  cliLog('All enhanced template files created successfully!');
 }
 
 /**
@@ -473,7 +482,7 @@ export function enhancedTemplatesExist(): boolean {
  */
 export async function ensureEnhancedTemplatesExist(): Promise<void> {
   if (!enhancedTemplatesExist()) {
-    console.log('Enhanced templates not found, creating them...');
+    cliLog('Enhanced templates not found, creating them...');
     await createEnhancedTemplateFiles();
   }
 }

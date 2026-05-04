@@ -3,6 +3,14 @@ import * as path from 'path';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 
+// Status output for the CLI entry point at the bottom of this file.
+// Silent in production so a stray runtime caller doesn't pollute server logs.
+const cliLog = (msg: string): void => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(msg);
+  }
+};
+
 // Basic docx structure with minimal content
 const createBaseDocx = (): PizZip => {
   const zip = new PizZip();
@@ -250,7 +258,7 @@ async function createTemplateFiles() {
   }
 
   for (const [templateId, content] of Object.entries(templateContents)) {
-    console.log(`Creating template: ${templateId}.docx`);
+    cliLog(`Creating template: ${templateId}.docx`);
 
     // Create base document
     const zip = createBaseDocx();
@@ -274,10 +282,10 @@ async function createTemplateFiles() {
     const filePath = path.join(templatesDir, `${templateId}.docx`);
     fs.writeFileSync(filePath, buffer);
 
-    console.log(`Created: ${filePath}`);
+    cliLog(`Created: ${filePath}`);
   }
 
-  console.log('All template files created successfully!');
+  cliLog('All template files created successfully!');
 }
 
 // Run if executed directly
