@@ -15,6 +15,11 @@ import {
   lookupActorDisplay,
   type AuditLogFilter,
 } from "@/lib/audit/queries";
+import {
+  LEGACY_BRANDING_ACTION_NAMES,
+  LEGACY_SUBSCRIPTION_ACTION_NAMES,
+  type UnifiedAuditSource,
+} from "@/lib/audit/adapters";
 import { formatAuditDiffSummary } from "@/lib/audit/format-summary";
 import { getAuditAdminActorOrNull } from "@/lib/audit/admin-gate";
 
@@ -28,7 +33,9 @@ type SearchParams = {
   entityId?: string;
   from?: string;
   to?: string;
-  cursor?: string;
+  /** Round-8: replaced cursor pagination with offset to simplify the
+   *  cross-source merge in `listAuditLog`. */
+  offset?: string;
 };
 
 function parseDateOrNull(raw: string | undefined): Date | null {
@@ -72,18 +79,18 @@ function exportHref(sp: SearchParams): string {
   return `/api/admin/audit-log/export${qs ? `?${qs}` : ""}`;
 }
 
-function nextPageHref(sp: SearchParams, cursor: string): string {
+function nextPageHref(sp: SearchParams, nextOffset: number): string {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) {
     if (v === undefined) continue;
-    if (k === "cursor") continue;
+    if (k === "offset") continue;
     if (Array.isArray(v)) {
       for (const vv of v) params.append(k, vv);
     } else {
       params.set(k, v);
     }
   }
-  params.set("cursor", cursor);
+  params.set("offset", String(nextOffset));
   return `/admin/audit-log?${params.toString()}`;
 }
 
@@ -99,7 +106,25 @@ function actionShortName(action: string): string {
   return `${fmt(entity)} · ${fmt(verb)}`;
 }
 
-const ALL_ACTIONS = Object.values(AUDIT_ACTIONS).sort();
+/** Round-8: combined vocabulary across all three sources, sorted for the
+ *  filter dropdown. Generic actions + namespaced legacy actions. */
+const ALL_ACTIONS = [
+  ...Object.values(AUDIT_ACTIONS),
+  ...LEGACY_SUBSCRIPTION_ACTION_NAMES,
+  ...LEGACY_BRANDING_ACTION_NAMES,
+].sort();
+
+const SOURCE_BADGE_VARIANT: Record<UnifiedAuditSource, "outline" | "secondary"> = {
+  generic: "outline",
+  subscription: "secondary",
+  branding: "secondary",
+};
+
+const SOURCE_BADGE_LABEL: Record<UnifiedAuditSource, string> = {
+  generic: "new",
+  subscription: "legacy:sub",
+  branding: "legacy:brand",
+};
 
 export default async function AuditLogPage({
   searchParams,
@@ -115,9 +140,10 @@ export default async function AuditLogPage({
 
   const sp = await searchParams;
   const filter = toFilter(sp);
+  const offset = sp.offset ? Math.max(0, parseInt(sp.offset, 10) || 0) : 0;
 
-  const [{ rows, nextCursor }, totalCount] = await Promise.all([
-    listAuditLog(filter, { take: PAGE_SIZE, cursor: sp.cursor ?? null }),
+  const [{ rows, nextOffset }, totalCount] = await Promise.all([
+    listAuditLog(filter, { take: PAGE_SIZE, offset }),
     countAuditLog(filter),
   ]);
 
@@ -316,6 +342,14 @@ export default async function AuditLogPage({
                       </td>
                       <td className="px-3 py-2 font-mono text-xs">
                         <span title={row.action}>{actionShortName(row.action)}</span>
+                        <Badge
+                          variant={SOURCE_BADGE_VARIANT[row.source]}
+                          className="ml-1.5 text-[10px] font-normal"
+                          data-testid="audit-log-source-badge"
+                          data-source={row.source}
+                        >
+                          {SOURCE_BADGE_LABEL[row.source]}
+                        </Badge>
                       </td>
                       <td className="px-3 py-2 font-mono text-xs">
                         {row.entityType}
@@ -370,10 +404,10 @@ export default async function AuditLogPage({
         </Card>
       )}
 
-      {nextCursor ? (
+      {nextOffset !== null ? (
         <div className="flex justify-end">
           <Button asChild variant="outline" size="sm">
-            <Link href={nextPageHref(sp, nextCursor)}>Next page →</Link>
+            <Link href={nextPageHref(sp, nextOffset)}>Next page →</Link>
           </Button>
         </div>
       ) : null}

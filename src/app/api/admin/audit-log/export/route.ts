@@ -7,6 +7,7 @@ import {
   streamAuditLog,
   type AuditLogFilter,
 } from "@/lib/audit/queries";
+import type { UnifiedAuditRow } from "@/lib/audit/adapters";
 
 export const dynamic = "force-dynamic";
 
@@ -66,21 +67,7 @@ const CSV_HEADER = [
   "userAgent",
 ];
 
-function rowToCsv(row: {
-  id: string;
-  createdAt: Date;
-  actorUserId: string | null;
-  actorRole: string | null;
-  actorEmailHash: string | null;
-  action: string;
-  entityType: string;
-  entityId: string | null;
-  beforeData: unknown;
-  afterData: unknown;
-  metadata: unknown;
-  ipAddress: string | null;
-  userAgent: string | null;
-}): string {
+function rowToCsv(row: UnifiedAuditRow): string {
   return [
     row.id,
     row.createdAt.toISOString(),
