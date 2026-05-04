@@ -15,8 +15,10 @@
  * Requires DATABASE_URL (loaded from .env.local then .env, same as the seed scripts).
  */
 
-require('dotenv').config({ path: '.env.local' });
-require('dotenv').config();
+const path = require('path');
+const repoRoot = path.resolve(__dirname, '..');
+require('dotenv').config({ path: path.join(repoRoot, '.env.local') });
+require('dotenv').config({ path: path.join(repoRoot, '.env') });
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');

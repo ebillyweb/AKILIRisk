@@ -12,8 +12,9 @@
  */
 const path = require('path');
 const dotenv = require('dotenv');
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+const repoRoot = path.resolve(__dirname, '..');
+dotenv.config({ path: path.join(repoRoot, '.env.local') });
+dotenv.config({ path: path.join(repoRoot, '.env') });
 
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');

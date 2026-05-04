@@ -133,6 +133,28 @@ export async function getIntakeReviewData(interviewId: string) {
   }
 }
 
+/**
+ * Gate intake-approval mutations on an ACTIVE ClientAdvisorAssignment from
+ * the calling advisor to the intake's owning client. Without this, the
+ * Prisma upsert on `IntakeApproval { interviewId @unique }` would let any
+ * authenticated advisor mutate any other advisor's existing approval row
+ * (the upsert returns the existing row to the wrong advisor, and the
+ * subsequent updateIntakeApproval rewrites status/focusAreas/notes).
+ *
+ * Returns the verified review wrapper on success, or null when the
+ * advisor has no business touching this approval.
+ */
+async function assertAdvisorMayMutateApproval(
+  advisorProfileId: string,
+  interviewId: string
+) {
+  // getClientIntakeForReview already filters on
+  //   user.clientAssignments.some({ advisorId, status: ACTIVE })
+  // so a null return means "this interview belongs to a client you're
+  // not actively assigned to."
+  return getClientIntakeForReview(advisorProfileId, interviewId);
+}
+
 export async function markIntakeInReview(interviewId: string) {
   try {
     const { userId } = await requireAdvisorRole();
@@ -146,7 +168,22 @@ export async function markIntakeInReview(interviewId: string) {
       };
     }
 
-    // Create approval if it doesn't exist
+    // Multi-tenant boundary: only an advisor with an ACTIVE assignment
+    // to this client may touch the approval. Generic "not found" message
+    // so a probing advisor can't distinguish "no such interview" from
+    // "exists but not yours."
+    const reviewData = await assertAdvisorMayMutateApproval(
+      profile.id,
+      interviewId
+    );
+    if (!reviewData) {
+      return {
+        success: false,
+        error: 'Interview not found or not assigned to you',
+      };
+    }
+
+    // Create approval if it doesn't exist (no-op when one is present)
     let approval = await createIntakeApproval(interviewId, profile.id);
 
     // Update to IN_REVIEW status if it's currently PENDING
@@ -183,6 +220,18 @@ export async function approveClientIntake(data: unknown) {
 
     const { interviewId, focusAreas, notes } = validatedFields.data;
 
+    // Multi-tenant boundary check (see assertAdvisorMayMutateApproval).
+    const reviewData = await assertAdvisorMayMutateApproval(
+      profile.id,
+      interviewId
+    );
+    if (!reviewData) {
+      return {
+        success: false,
+        error: 'Interview not found or not assigned to you',
+      };
+    }
+
     // First ensure an approval exists
     let approval = await createIntakeApproval(interviewId, profile.id);
 
@@ -209,7 +258,7 @@ export async function approveClientIntake(data: unknown) {
 export async function rejectClientIntake(approvalId: string, notes?: string) {
   try {
     const { userId } = await requireAdvisorRole();
-    await getAdvisorProfileOrThrow(userId);
+    const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = z.object({
       approvalId: z.string().cuid(),
@@ -220,6 +269,40 @@ export async function rejectClientIntake(approvalId: string, notes?: string) {
       return {
         success: false,
         error: 'Invalid approval ID',
+      };
+    }
+
+    // Look up the approval first so we can both run the multi-tenant
+    // assignment check (same as the other actions) AND verify the
+    // existing approval is owned by the calling advisor — so even an
+    // advisor with a valid assignment can't override another assigned
+    // advisor's decision. Today's data model has one assigned advisor
+    // per client at a time, but we don't want to rely on that.
+    const existing = await prisma.intakeApproval.findUnique({
+      where: { id: approvalId },
+      select: { id: true, advisorId: true, interviewId: true },
+    });
+    if (!existing) {
+      return { success: false, error: 'Approval not found' };
+    }
+
+    const reviewData = await assertAdvisorMayMutateApproval(
+      profile.id,
+      existing.interviewId
+    );
+    if (!reviewData) {
+      return {
+        success: false,
+        error: 'Approval not found or not assigned to you',
+      };
+    }
+
+    if (existing.advisorId !== profile.id) {
+      // Generic "not found" shape so we don't reveal which advisor owns
+      // the row.
+      return {
+        success: false,
+        error: 'Approval not found or not assigned to you',
       };
     }
 

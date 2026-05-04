@@ -1,5 +1,4 @@
 import { execSync } from "node:child_process";
-import { PLAYWRIGHT_REPO_ROOT } from "../helpers/repo-root";
 import { test, expect } from "@playwright/test";
 
 /**
@@ -14,21 +13,19 @@ import { test, expect } from "@playwright/test";
 
 const INVITE_CODE = "123456";
 
-const scriptEnv = { ...process.env };
-
 test.beforeAll(() => {
   execSync("node scripts/cleanup-signup-test-users.js", {
     stdio: "inherit",
-    cwd: PLAYWRIGHT_REPO_ROOT,
-    env: scriptEnv,
+    cwd: process.cwd(),
+    env: process.env,
   });
 });
 
 test.afterAll(() => {
   execSync("node scripts/cleanup-signup-test-users.js", {
     stdio: "inherit",
-    cwd: PLAYWRIGHT_REPO_ROOT,
-    env: scriptEnv,
+    cwd: process.cwd(),
+    env: process.env,
   });
 });
 

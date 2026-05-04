@@ -1,6 +1,5 @@
 import { execSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
-import { PLAYWRIGHT_REPO_ROOT } from "../helpers/repo-root";
 import { SignInPage } from "../page-objects/SignInPage";
 
 /**
@@ -19,7 +18,7 @@ import { SignInPage } from "../page-objects/SignInPage";
 test.beforeEach(() => {
   execSync("node scripts/reset-fresh-client-intake.js", {
     stdio: "inherit",
-    cwd: PLAYWRIGHT_REPO_ROOT,
+    cwd: process.cwd(),
     env: process.env,
   });
 });

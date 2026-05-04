@@ -1,11 +1,30 @@
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { config as loadEnv } from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
 
+/** Playwright compiles this config as CJS — avoid `import.meta`. Walk up from cwd to find the repo root. */
+function repoRoot(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (
+      existsSync(resolve(dir, "package.json")) &&
+      existsSync(resolve(dir, "playwright.config.ts"))
+    ) {
+      return dir;
+    }
+    const next = dirname(dir);
+    if (next === dir) break;
+    dir = next;
+  }
+  return process.cwd();
+}
+
 // Smoke tests shell out to `node scripts/*.js`; those files call dotenv, but
 // `execSync` only inherits this process env — load repo env here too.
-loadEnv({ path: resolve(process.cwd(), ".env.local") });
-loadEnv({ path: resolve(process.cwd(), ".env") });
+const root = repoRoot();
+loadEnv({ path: resolve(root, ".env.local") });
+loadEnv({ path: resolve(root, ".env") });
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "https://preview.akilirisk.com";
 

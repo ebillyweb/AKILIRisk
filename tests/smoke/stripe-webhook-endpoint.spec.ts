@@ -1,7 +1,6 @@
 import { execSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import Stripe from "stripe";
-import { PLAYWRIGHT_REPO_ROOT } from "../helpers/repo-root";
 
 /**
  * Webhook idempotency + signature gating on `/api/webhooks/stripe`.
@@ -113,7 +112,7 @@ test.describe("stripe webhook endpoint", () => {
     try {
       execSync(
         `node scripts/delete-stripe-webhook-events.js ${TEST_EVENT_ID_PREFIX}`,
-        { stdio: "pipe", cwd: PLAYWRIGHT_REPO_ROOT, env: process.env }
+        { stdio: "pipe", cwd: process.cwd(), env: process.env }
       );
     } catch (e) {
       console.warn("[stripe-webhook spec] cleanup helper failed:", e);
