@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -71,9 +72,24 @@ export default {
           passwordHashToCompare
         );
 
+        // Round-7 timing note: every authorize-failure path writes exactly one
+        // audit row before returning null. Combined with the TIMING_FALLBACK_HASH
+        // bcrypt above, this keeps response-shape identical across the
+        // user-not-found, invalid-password, and deactivated branches — no
+        // signal an attacker can use to enumerate registered emails.
+        // The success path defers its audit row to the signIn callback in
+        // src/lib/auth.ts so we don't double-count successful logins.
+
         if (!user || !user.password) {
           console.warn("Credentials authorize failed: user not found", {
             emailHash: hashedEmail,
+          });
+          await writeAudit({
+            actor: { userId: null, email },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: "user_not_found" },
           });
           return null;
         }
@@ -83,6 +99,13 @@ export default {
             userId: user.id,
             emailHash: hashedEmail,
           });
+          await writeAudit({
+            actor: { userId: user.id, role: user.role, email: user.email },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: user.id,
+            metadata: { reason: "invalid_password" },
+          });
           return null;
         }
 
@@ -90,6 +113,13 @@ export default {
           console.warn("Credentials authorize failed: account deactivated", {
             userId: user.id,
             emailHash: hashedEmail,
+          });
+          await writeAudit({
+            actor: { userId: user.id, role: user.role, email: user.email },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: user.id,
+            metadata: { reason: "account_deactivated" },
           });
           return null;
         }

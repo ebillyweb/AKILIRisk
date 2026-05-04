@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import authConfig from "@/lib/auth.config";
 import { applyAdminDemotion } from "@/lib/auth-shared";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 /** Short, non-reversible identifier for an email so log lines stay
  *  observable without exposing PII. Mirrors `emailHash` in
@@ -28,9 +29,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user.id) {
         const active = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { deletedAt: true },
+          select: { deletedAt: true, role: true },
         });
         if (active?.deletedAt) {
+          // Defense-in-depth: authorize already checks deletedAt, but if a
+          // future provider (OAuth) bypasses that check, this still rejects
+          // and audits the rejection.
+          await writeAudit({
+            actor: { userId: user.id, role: active.role, email: user.email },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: user.id,
+            metadata: { reason: "account_deactivated_at_session_create" },
+          });
           return false;
         }
       }
@@ -47,7 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Check if user has MFA enabled
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { mfaEnabled: true },
+          select: { mfaEnabled: true, role: true },
         });
 
         // Create session with mfaVerified=false if MFA is enabled, true otherwise
@@ -64,6 +75,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           userId: user.id,
           emailHash: emailHash(user.email),
           mfaEnabled: Boolean(dbUser?.mfaEnabled),
+        });
+
+        // Audit row for the success path. Counterpart to the AUTH_SIGNIN_FAILURE
+        // rows written by the credentials authorize callback in auth.config.ts.
+        // Note: the raw sessionToken is NEVER logged (the redactor would strip
+        // it via the /token/i key match anyway).
+        await writeAudit({
+          actor: { userId: user.id, role: dbUser?.role, email: user.email },
+          action: AUDIT_ACTIONS.AUTH_SIGNIN_SUCCESS,
+          entityType: "User",
+          entityId: user.id,
+          metadata: { mfaEnabled: Boolean(dbUser?.mfaEnabled) },
         });
       }
       return true;

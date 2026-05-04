@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { verifyMFAToken, enableMFA } from "@/lib/mfa";
 import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -26,6 +27,20 @@ export async function POST(req: NextRequest) {
     });
 
     if (!rateLimitResult.success) {
+      // Audit the rate-limit rejection. The TOTP token isn't even read on
+      // this branch, so there's nothing to leak in metadata.
+      await writeAudit({
+        actor: {
+          userId: session.user.id,
+          role: session.user.role,
+          email: session.user.email,
+        },
+        action: AUDIT_ACTIONS.AUTH_MFA_CHALLENGE_FAILURE,
+        entityType: "User",
+        entityId: session.user.id,
+        metadata: { reason: "rate_limited" },
+        request: req,
+      });
       return NextResponse.json(
         {
           error: "Too many attempts. Please try again later.",
@@ -49,6 +64,23 @@ export async function POST(req: NextRequest) {
       // Enable MFA and return recovery codes
       const recoveryCodes = await enableMFA(session.user.id, token);
 
+      // Audit success. Raw recovery codes are NEVER in the payload — only
+      // their count. The codes themselves are encrypted at rest.
+      await writeAudit({
+        actor: {
+          userId: session.user.id,
+          role: session.user.role,
+          email: session.user.email,
+        },
+        action: AUDIT_ACTIONS.AUTH_MFA_ENROLLED,
+        entityType: "User",
+        entityId: session.user.id,
+        beforeData: { mfaEnabled: false },
+        afterData: { mfaEnabled: true },
+        metadata: { recoveryCodeCount: recoveryCodes.length },
+        request: req,
+      });
+
       return NextResponse.json({
         success: true,
         recoveryCodes,
@@ -58,6 +90,20 @@ export async function POST(req: NextRequest) {
       const isValid = await verifyMFAToken(session.user.id, token);
 
       if (!isValid) {
+        // Audit invalid-TOTP failure. The raw TOTP code is NEVER in the
+        // metadata — only the failure reason. (Brief: "never log raw TOTP codes".)
+        await writeAudit({
+          actor: {
+            userId: session.user.id,
+            role: session.user.role,
+            email: session.user.email,
+          },
+          action: AUDIT_ACTIONS.AUTH_MFA_CHALLENGE_FAILURE,
+          entityType: "User",
+          entityId: session.user.id,
+          metadata: { reason: "invalid_code" },
+          request: req,
+        });
         return NextResponse.json(
           { error: "Invalid TOTP code" },
           { status: 400 }
@@ -93,6 +139,19 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+
+      // Audit MFA-challenge success.
+      await writeAudit({
+        actor: {
+          userId: session.user.id,
+          role: session.user.role,
+          email: session.user.email,
+        },
+        action: AUDIT_ACTIONS.AUTH_MFA_CHALLENGE_SUCCESS,
+        entityType: "User",
+        entityId: session.user.id,
+        request: req,
+      });
 
       return NextResponse.json({ success: true });
     } else {

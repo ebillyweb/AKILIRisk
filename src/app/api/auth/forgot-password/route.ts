@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import crypto from "crypto";
 
 const forgotPasswordSchema = z.object({
@@ -81,6 +82,22 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findFirst({
       where: { email, deletedAt: null },
       select: { id: true, email: true },
+    });
+
+    // Audit BEFORE the response on every branch so the audit-write latency
+    // is constant regardless of whether the email exists. If we deferred the
+    // user-not-found audit to a void helper (like issueResetEmail), the two
+    // branches would have asymmetric latency and the round-6 enumeration
+    // mitigation would partially regress via DB-write timing.
+    await writeAudit({
+      actor: user
+        ? { userId: user.id, email: user.email }
+        : { userId: null, email },
+      action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET_REQUESTED,
+      entityType: "User",
+      entityId: user?.id ?? null,
+      metadata: { userExists: Boolean(user) },
+      request: req,
     });
 
     // Email enumeration mitigation has two pieces:

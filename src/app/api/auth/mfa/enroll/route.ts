@@ -14,7 +14,11 @@ export async function POST(_req: NextRequest) {
       );
     }
 
-    // Enroll user in MFA
+    // Enroll user in MFA. Note: this only generates the QR code + secret;
+    // mfaEnabled doesn't flip until the user completes the TOTP challenge
+    // via /api/auth/mfa/verify with action=enable. The audit row for
+    // AUTH_MFA_ENROLLED is written there, not here, so a user who abandons
+    // setup without completing the challenge isn't recorded as enrolled.
     const { qrCodeUrl, secret } = await enrollMFA(session.user.id);
 
     return NextResponse.json({

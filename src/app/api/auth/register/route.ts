@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { verifyInviteToken, consumeInviteCode } from "@/lib/invite";
 import { triggerRegistrationNotification } from "@/lib/notifications/triggers";
 import { logSafeError } from "@/lib/log-safe-error";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -152,6 +153,24 @@ export async function POST(request: NextRequest) {
     });
 
     const user = result;
+
+    // Self-audit: the new user is the actor. Captures which invite code was
+    // consumed (auditable: "did this signup come through advisor X's invite?").
+    // Password and rawToken are never in the payload — they exist only above
+    // the create scope. Email is hashed by the redactor on persist.
+    await writeAudit({
+      actor: { userId: user.id, role: "USER", email: user.email },
+      action: AUDIT_ACTIONS.AUTH_REGISTER,
+      entityType: "User",
+      entityId: user.id,
+      beforeData: null,
+      afterData: { role: "USER" },
+      metadata: {
+        viaInviteCodeId: inviteCodeId,
+        advisorInitiated: Boolean(inviteCode.createdBy),
+      },
+      request,
+    });
 
     // Trigger registration notification if invite code was used (fire-and-forget)
     if (inviteCode.createdBy && user.id && userName && user.email) {

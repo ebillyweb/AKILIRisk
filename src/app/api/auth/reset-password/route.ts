@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -120,6 +121,18 @@ export async function POST(req: NextRequest) {
         where: { userId: user.id },
       }),
     ]);
+
+    // Audit AFTER the transaction succeeds. password/hash never reach the
+    // payload; the redactor would strip them anyway via the /password/i key
+    // match if a future caller passed them in.
+    await writeAudit({
+      actor: { userId: user.id, email },
+      action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET_COMPLETED,
+      entityType: "User",
+      entityId: user.id,
+      metadata: { sessionsInvalidated: true },
+      request: req,
+    });
 
     return NextResponse.json(
       { message: "Password reset successfully" },
