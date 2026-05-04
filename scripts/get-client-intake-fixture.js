@@ -16,11 +16,21 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
+const { Pool } = require('pg');
 
 const TEST_CLIENT_EMAIL = process.env.CLIENT_EMAIL || 'client@test.com';
 
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL not set. Add it to .env.local or .env, then re-run.');
+  process.exit(1);
+}
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
 (async () => {
-  const prisma = new PrismaClient();
   try {
     const user = await prisma.user.findUnique({
       where: { email: TEST_CLIENT_EMAIL },
@@ -57,6 +67,7 @@ const TEST_CLIENT_EMAIL = process.env.CLIENT_EMAIL || 'client@test.com';
     );
   } finally {
     await prisma.$disconnect();
+    await pool.end();
   }
 })().catch((err) => {
   console.error(err.message || err);

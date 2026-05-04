@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
+import { clientIpFromRequest } from "@/lib/request-ip";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -21,6 +23,27 @@ const resetPasswordSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit by IP. Token entropy makes brute-forcing the token field
+    // infeasible, but a stolen reset link in a 15-minute window is an
+    // attacker-known secret; throttling caps how many bcrypt-cost-12
+    // attempts an attacker can make against a known-token-but-unknown-
+    // password scenario, and dampens generic enumeration on the endpoint.
+    const ip = clientIpFromRequest(req) ?? "unknown";
+    const rateLimitResult = rateLimit({
+      key: `reset-password:${ip}`,
+      limit: 10,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: "Too many reset attempts. Please try again later.",
+          resetAt: new Date(rateLimitResult.resetAt).toISOString(),
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const validation = resetPasswordSchema.safeParse(body);
 

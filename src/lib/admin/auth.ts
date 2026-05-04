@@ -1,13 +1,18 @@
 import "server-only";
 
 import { auth } from "@/lib/auth";
+import {
+  DESIGNATED_ADMIN_EMAIL,
+  isDesignatedAdminEmail,
+} from "@/lib/auth-shared";
 
-/** Email that is allowed to hold the ADMIN role. */
-export const ADMIN_ALLOWED_EMAIL = "buddy@ebilly.com";
+/** Re-export for back-compat with existing imports. The single source of
+ *  truth is `DESIGNATED_ADMIN_EMAIL` in `@/lib/auth-shared`. */
+export const ADMIN_ALLOWED_EMAIL = DESIGNATED_ADMIN_EMAIL;
 
 export function isAdminUser(email: string | null | undefined, role: string | null | undefined): boolean {
   const r = role?.toString().toUpperCase();
-  return r === "ADMIN" && email === ADMIN_ALLOWED_EMAIL;
+  return r === "ADMIN" && isDesignatedAdminEmail(email);
 }
 
 /**

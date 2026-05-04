@@ -8,9 +8,17 @@
  */
 
 /** Email of the only account permitted to hold the ADMIN role today.
- *  Same string lived inline in both auth.ts and auth-edge.ts before this
- *  helper existed; keep it in sync if you ever change it. */
-const DESIGNATED_ADMIN_EMAIL = "buddy@ebilly.com";
+ *  Single source of truth — `auth.ts`, `auth-edge.ts`, and `admin/auth.ts`
+ *  all consume this value. If you change the designated admin, change it
+ *  here only. */
+export const DESIGNATED_ADMIN_EMAIL = "buddy@ebilly.com";
+
+/** True iff the email exactly matches the designated admin account. */
+export function isDesignatedAdminEmail(
+  email: string | null | undefined
+): boolean {
+  return email === DESIGNATED_ADMIN_EMAIL;
+}
 
 /**
  * Demote ADMIN → USER unless the session belongs to the designated admin
@@ -28,7 +36,7 @@ export function applyAdminDemotion(
   email: string | null | undefined
 ): string {
   const role = (rawRole ?? "USER").toString();
-  if (role === "ADMIN" && email !== DESIGNATED_ADMIN_EMAIL) {
+  if (role === "ADMIN" && !isDesignatedAdminEmail(email)) {
     return "USER";
   }
   return role;
