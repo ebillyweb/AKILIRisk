@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { PLAYWRIGHT_REPO_ROOT } from "../helpers/repo-root";
 import { SignInPage } from "../page-objects/SignInPage";
 import { USERS } from "../fixtures/users";
 
@@ -72,7 +73,10 @@ test.describe("intake audio streaming endpoint", () => {
     // Discover the seeded client's interviewId + questionId so we can
     // exercise the upload + streaming round-trip without coupling to a
     // particular question in the bank.
-    const out = execSync("node scripts/get-client-intake-fixture.js")
+    const out = execSync("node scripts/get-client-intake-fixture.js", {
+      cwd: PLAYWRIGHT_REPO_ROOT,
+      env: process.env,
+    })
       .toString()
       .trim();
     const parsed = JSON.parse(out) as {

@@ -25,7 +25,11 @@
     "import:reputational-social": "npx tsx scripts/import-reputational-social-spreadsheet.ts",
     "db:fix-cyber-migration": "bash scripts/fix-cybersecurity-migration-failure.sh",
     "db:fix-enhanced-migration": "bash scripts/fix-failed-enhanced-migration.sh",
-    "db:backfill-advisor-subscriptions": "node scripts/migrate-advisor-subscriptions.js"
+    "db:backfill-advisor-subscriptions": "node scripts/migrate-advisor-subscriptions.js",
+    "env:vercel:link": "npx vercel link",
+    "env:vercel": "npx vercel env pull .env.local",
+    "env:vercel:preview": "npx vercel env pull .env.local --environment preview",
+    "env:vercel:production": "npx vercel env pull .env.local --environment production"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

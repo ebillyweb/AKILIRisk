@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import Stripe from "stripe";
+import { PLAYWRIGHT_REPO_ROOT } from "../helpers/repo-root";
 
 /**
  * Webhook idempotency + signature gating on `/api/webhooks/stripe`.
@@ -30,6 +31,24 @@ import Stripe from "stripe";
 
 const WEBHOOK_PATH = "/api/webhooks/stripe";
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "";
+
+function playwrightBaseHostname(): string {
+  try {
+    return new URL(
+      process.env.PLAYWRIGHT_BASE_URL ?? "https://preview.akilirisk.com"
+    ).hostname;
+  } catch {
+    return "preview.akilirisk.com";
+  }
+}
+
+/** Remote preview/staging often omits STRIPE_WEBHOOK_SECRET; local secret cannot fix 500 from the server. */
+function stripeWebhookRemoteE2EAllowed(): boolean {
+  const h = playwrightBaseHostname();
+  const isLocal = h === "localhost" || h === "127.0.0.1";
+  if (isLocal) return true;
+  return process.env.E2E_STRIPE_WEBHOOK_REMOTE === "1";
+}
 const TEST_RUN_ID = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 const TEST_EVENT_ID_PREFIX = `evt_test_${TEST_RUN_ID}`;
 
@@ -81,11 +100,11 @@ async function postEvent(
 }
 
 test.describe("stripe webhook endpoint", () => {
-  // Skip the whole file if the test runner doesn't have the secret. The
-  // skip surface in test reports is preferable to a silent pass.
   test.skip(
-    !WEBHOOK_SECRET,
-    "STRIPE_WEBHOOK_SECRET must be set in the test environment (matching the deployed app's value) to forge valid signatures"
+    !WEBHOOK_SECRET.trim() || !stripeWebhookRemoteE2EAllowed(),
+    !WEBHOOK_SECRET.trim()
+      ? "STRIPE_WEBHOOK_SECRET must be set in the test environment (matching the deployed app's value) to forge valid signatures"
+      : "Stripe webhook e2e uses localhost by default: set PLAYWRIGHT_BASE_URL=http://localhost:3000 with STRIPE_WEBHOOK_SECRET on the app, or set E2E_STRIPE_WEBHOOK_REMOTE=1 when the remote deployment has the same secret"
   );
 
   test.afterAll(() => {
@@ -94,7 +113,7 @@ test.describe("stripe webhook endpoint", () => {
     try {
       execSync(
         `node scripts/delete-stripe-webhook-events.js ${TEST_EVENT_ID_PREFIX}`,
-        { stdio: "pipe" }
+        { stdio: "pipe", cwd: PLAYWRIGHT_REPO_ROOT, env: process.env }
       );
     } catch (e) {
       console.warn("[stripe-webhook spec] cleanup helper failed:", e);
