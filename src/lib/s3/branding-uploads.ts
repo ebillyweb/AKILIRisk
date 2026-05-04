@@ -7,6 +7,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { prisma } from '@/lib/db';
+import { resolveAwsCredentials } from '@/lib/s3/aws-credentials';
 
 // Must match the bucket’s actual region (see `aws s3api head-bucket --bucket ...` → x-amz-bucket-region).
 // Wrong region → PermanentRedirect, presigned host mismatch, or OPTIONS 500 on the wrong regional endpoint.
@@ -17,13 +18,13 @@ const BRANDING_S3_REGION =
   'us-east-2';
 
 // Initialize S3 client (WHEN_REQUIRED avoids default CRC checksum params on presigned PUTs that break browser uploads)
+// `credentials: undefined` lets the SDK use its default credential provider chain
+// (IAM role on Vercel/ECS/EC2). resolveAwsCredentials() only returns explicit keys
+// when both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set.
 const s3Client = new S3Client({
   region: BRANDING_S3_REGION,
   followRegionRedirects: true,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
+  credentials: resolveAwsCredentials(),
   requestChecksumCalculation: 'WHEN_REQUIRED',
 });
 

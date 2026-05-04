@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
+import { resolveAwsCredentials } from "@/lib/s3/aws-credentials";
 
 /**
  * Intake voice-response storage on S3.
@@ -27,13 +28,14 @@ const INTAKE_AUDIO_S3_REGION =
   process.env.AWS_REGION?.trim() ||
   "us-east-2";
 
+// `credentials: undefined` lets the SDK use its default credential provider chain
+// (IAM role on Vercel/ECS/EC2). resolveAwsCredentials() only returns explicit keys
+// when both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set — matches the
+// branding-uploads helper this module was modeled on.
 const s3Client = new S3Client({
   region: INTAKE_AUDIO_S3_REGION,
   followRegionRedirects: true,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
+  credentials: resolveAwsCredentials(),
   requestChecksumCalculation: "WHEN_REQUIRED",
 });
 
