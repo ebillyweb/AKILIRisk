@@ -120,10 +120,23 @@ export default async function proxy(req: NextRequest) {
   }
 
   // Continue with existing authentication logic (token from above)
-  const protectedRoutes = ["/dashboard", "/assessment", "/settings"];
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  // `/admin`, `/advisor`, `/intake` are MFA-gated alongside the legacy
+  // client surfaces — privileged routes were previously *less* protected
+  // than the dashboard, which is the inverse of what we want.
+  const protectedRoutes = [
+    "/dashboard",
+    "/assessment",
+    "/settings",
+    "/admin",
+    "/advisor",
+    "/intake",
+  ];
+
+  // Segment-aware match: `/admin` matches `/admin` and `/admin/anything`
+  // but NOT `/administration`. Plain startsWith would over-match.
+  const matchesProtectedPrefix = (route: string): boolean =>
+    pathname === route || pathname.startsWith(`${route}/`);
+  const isProtectedRoute = protectedRoutes.some(matchesProtectedPrefix);
 
   const mfaRoutes = ["/mfa/verify", "/mfa/setup"];
   const isMFARoute = mfaRoutes.some((route) => pathname.startsWith(route));
