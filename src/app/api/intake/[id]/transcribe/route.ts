@@ -72,7 +72,7 @@ export async function POST(
         const placeholderTranscription = "[Transcription unavailable - OpenAI API key not configured]";
 
         await saveIntakeResponse(interviewId, questionId, {
-          audioUrl: existingResponse.audioUrl,
+          audioUrl: existingResponse.audioUrl ?? undefined,
           audioDuration: existingResponse.audioDuration ?? undefined,
           transcription: placeholderTranscription,
           transcriptionStatus: 'COMPLETED',
@@ -113,7 +113,7 @@ export async function POST(
           console.error('[Transcribe]', { interviewId, questionId, error: 'Request timed out' });
 
           await saveIntakeResponse(interviewId, questionId, {
-            audioUrl: existingResponse.audioUrl,
+            audioUrl: existingResponse.audioUrl ?? undefined,
             audioDuration: existingResponse.audioDuration ?? undefined,
             transcriptionStatus: 'FAILED',
           });
@@ -131,7 +131,7 @@ export async function POST(
         console.error('[Transcribe]', { interviewId, questionId, error: 'Whisper API error', status: whisperResponse.status, details: errorText });
 
         await saveIntakeResponse(interviewId, questionId, {
-          audioUrl: existingResponse.audioUrl,
+          audioUrl: existingResponse.audioUrl ?? undefined,
           audioDuration: existingResponse.audioDuration ?? undefined,
           transcriptionStatus: 'FAILED',
         });
@@ -147,7 +147,7 @@ export async function POST(
 
       // Update response with transcription
       await saveIntakeResponse(interviewId, questionId, {
-        audioUrl: existingResponse.audioUrl,
+        audioUrl: existingResponse.audioUrl ?? undefined,
         audioDuration: existingResponse.audioDuration ?? undefined,
         transcription,
         transcriptionStatus: 'COMPLETED',
@@ -162,7 +162,7 @@ export async function POST(
       console.error('[Transcribe]', { interviewId, questionId, error: 'File read error', details: fileError });
 
       await saveIntakeResponse(interviewId, questionId, {
-        audioUrl: existingResponse.audioUrl,
+        audioUrl: existingResponse.audioUrl ?? undefined,
         audioDuration: existingResponse.audioDuration ?? undefined,
         transcriptionStatus: 'FAILED',
       });

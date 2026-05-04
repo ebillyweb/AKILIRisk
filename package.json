@@ -2,8 +2,12 @@
   "name": "belvedere-temp",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "postinstall": "prisma generate",
+    "predev": "node scripts/check-node-version.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
