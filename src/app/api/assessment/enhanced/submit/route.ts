@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, RiskLevel } from '@prisma/client';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { EnhancedScoringEngine } from '@/lib/assessment/engines/enhanced-scoring-engine';
 import { RecommendationEngine } from '@/lib/assessment/engines/recommendation-engine';
 import { RuleEngine } from '@/lib/assessment/engines/rule-engine';
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const validatedData = SubmitAssessmentSchema.parse(body);
 
     // Verify assessment ownership
-    const assessment = await db.assessment.findFirst({
+    const assessment = await prisma.assessment.findFirst({
       where: {
         id: validatedData.assessmentId,
         userId: session.user.id,
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Begin transaction for atomic updates
-    const result = await db.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Save/update answers
       const answerUpdates = Object.entries(validatedData.answers).map(([questionId, answer]) => ({
         assessmentId: validatedData.assessmentId,

@@ -6,7 +6,7 @@
 import './load-example-env';
 import { EnhancedScoringEngine } from '@/lib/assessment/engines/enhanced-scoring-engine';
 import { RecommendationEngine } from '@/lib/assessment/engines/recommendation-engine';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { resolveExampleAssessmentUserId } from './resolve-example-user';
 
 // Example assessment answers based on your question structure
@@ -60,7 +60,7 @@ async function runCybersecurityAssessmentExample() {
 
     // 1. Create assessment
     console.log('1. Creating assessment...');
-    const assessment = await db.assessment.create({
+    const assessment = await prisma.assessment.create({
       data: {
         userId,
         version: 1,
@@ -74,7 +74,7 @@ async function runCybersecurityAssessmentExample() {
     // 2. Submit answers
     console.log('\n2. Submitting answers...');
     const answerPromises = Object.entries(EXAMPLE_FAMILY_ANSWERS).map(([questionId, answer]) =>
-      db.assessmentResponse.create({
+      prisma.assessmentResponse.create({
         data: {
           assessmentId: assessment.id,
           questionId,
@@ -113,7 +113,7 @@ async function runCybersecurityAssessmentExample() {
 
     // 4. Save pillar score
     console.log('\n4. Saving pillar score...');
-    const pillarScore = await db.pillarScore.create({
+    const pillarScore = await prisma.pillarScore.create({
       data: {
         assessmentId: assessment.id,
         pillar: 'cybersecurity',
@@ -185,7 +185,7 @@ async function runCybersecurityAssessmentExample() {
 
     // 7. Complete assessment
     console.log('\n6. Completing assessment...');
-    await db.assessment.update({
+    await prisma.assessment.update({
       where: { id: assessment.id },
       data: {
         status: 'COMPLETED',
@@ -257,7 +257,7 @@ function getRiskTier(score: number) {
 
 async function loadCybersecurityQuestions() {
   // This would load from your question bank
-  return await db.assessmentBankQuestion.findMany({
+  return await prisma.assessmentBankQuestion.findMany({
     where: {
       riskAreaId: 'cybersecurity',
       isVisible: true

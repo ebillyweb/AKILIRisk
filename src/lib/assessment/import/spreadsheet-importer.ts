@@ -6,7 +6,7 @@
  */
 
 import * as XLSX from 'xlsx';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { z } from 'zod';
 
 export interface SpreadsheetRow {
@@ -110,7 +110,7 @@ export class SpreadsheetImporter {
       }
 
       // Begin database transaction
-      const result = await db.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         // Import questions
         const questionCount = await this.importQuestions(validatedRows, tx, options);
 

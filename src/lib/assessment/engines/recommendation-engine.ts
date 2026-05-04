@@ -8,7 +8,7 @@
  * - Business rules and thresholds
  */
 
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { RiskLevel } from '../types';
 
 export interface RecommendationContext {
@@ -226,14 +226,14 @@ export class RecommendationEngine {
       status: 'PENDING' as const
     }));
 
-    await db.assessmentRecommendation.createMany({
+    await prisma.assessmentRecommendation.createMany({
       data,
       skipDuplicates: true
     });
   }
 
   private async loadRecommendationRules(): Promise<RecommendationRule[]> {
-    const rules = await db.recommendationRule.findMany({
+    const rules = await prisma.recommendationRule.findMany({
       where: { isActive: true },
       orderBy: { priority: 'desc' }
     });
@@ -248,7 +248,7 @@ export class RecommendationEngine {
   }
 
   private async getServiceRecommendation(serviceId: string): Promise<ServiceRecommendation | null> {
-    const service = await db.serviceRecommendation.findUnique({
+    const service = await prisma.serviceRecommendation.findUnique({
       where: { id: serviceId, isActive: true }
     });
 

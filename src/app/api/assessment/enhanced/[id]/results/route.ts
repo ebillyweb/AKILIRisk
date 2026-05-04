@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 
 interface AssessmentResult {
   assessment: {
@@ -62,7 +62,7 @@ export async function GET(
     const { id: assessmentId } = await context.params;
 
     // Fetch assessment with all related data
-    const assessment = await db.assessment.findFirst({
+    const assessment = await prisma.assessment.findFirst({
       where: {
         id: assessmentId,
         userId: session.user.id,

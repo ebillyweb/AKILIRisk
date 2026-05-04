@@ -11,7 +11,7 @@ import { calculatePillarScore, getRiskLevel as aggregateMaturityRiskLevel } from
 import { prismaRowToWire } from '@/lib/assessment/bank/row-wire';
 import { wireQuestionsToQuestions } from '@/lib/assessment/bank/behaviors';
 import { pillarForBankRiskArea } from '@/lib/assessment/bank/pillar-for-risk-area';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { resolveExampleAssessmentUserId } from './resolve-example-user';
 
 // Example family profiles with different risk characteristics
@@ -207,7 +207,7 @@ async function runCompleteAssessment(
 
   try {
     // Create assessment
-    const assessment = await db.assessment.create({
+    const assessment = await prisma.assessment.create({
       data: {
         userId: uid,
         version: 1,
@@ -242,7 +242,7 @@ async function runCompleteAssessment(
 
       // Save answers to database
       for (const [questionId, answer] of Object.entries(pillarAnswers)) {
-        await db.assessmentResponse.upsert({
+        await prisma.assessmentResponse.upsert({
           where: {
             assessmentId_questionId: {
               assessmentId: assessment.id,
@@ -263,7 +263,7 @@ async function runCompleteAssessment(
       }
 
       // Load questions for this pillar
-      const questions = await db.assessmentBankQuestion.findMany({
+      const questions = await prisma.assessmentBankQuestion.findMany({
         where: { riskAreaId: pillar.id, isVisible: true },
         orderBy: { sortOrderGlobal: 'asc' }
       });
@@ -288,7 +288,7 @@ async function runCompleteAssessment(
       console.log(`   ❌ Missing Controls: ${scoreResult.missingControls.length}`);
 
       // Save pillar score
-      await db.pillarScore.upsert({
+      await prisma.pillarScore.upsert({
         where: {
           assessmentId_pillar: {
             assessmentId: assessment.id,
@@ -340,7 +340,7 @@ async function runCompleteAssessment(
     const overallRiskLevel = aggregateMaturityRiskLevel(overallScore);
 
     // Complete the assessment
-    await db.assessment.update({
+    await prisma.assessment.update({
       where: { id: assessment.id },
       data: {
         status: 'COMPLETED',

@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { EnhancedScoringEngine } from '@/lib/assessment/engines/enhanced-scoring-engine';
 import { RecommendationEngine } from '@/lib/assessment/engines/recommendation-engine';
 import { RuleEngine } from '@/lib/assessment/engines/rule-engine';
@@ -48,11 +48,11 @@ export async function GET(request: NextRequest) {
         riskAreaId: pillarId
       });
 
-      const pillarConfig = await db.pillarConfiguration.findUnique({
+      const pillarConfig = await prisma.pillarConfiguration.findUnique({
         where: { pillarId, isActive: true }
       });
 
-      const subCategories = await db.subCategoryConfiguration.findMany({
+      const subCategories = await prisma.subCategoryConfiguration.findMany({
         where: { pillarId, isActive: true },
         orderBy: { sortOrder: 'asc' }
       });
@@ -65,18 +65,18 @@ export async function GET(request: NextRequest) {
       });
     } else {
       // Get all pillars overview
-      const pillars = await db.pillarConfiguration.findMany({
+      const pillars = await prisma.pillarConfiguration.findMany({
         where: { isActive: true },
         orderBy: { id: 'asc' }
       });
 
       const pillarOverview = await Promise.all(
         pillars.map(async (pillar) => {
-          const questionCount = await db.assessmentBankQuestion.count({
+          const questionCount = await prisma.assessmentBankQuestion.count({
             where: { riskAreaId: pillar.pillarId, isVisible: true }
           });
 
-          const subCategories = await db.subCategoryConfiguration.findMany({
+          const subCategories = await prisma.subCategoryConfiguration.findMany({
             where: { pillarId: pillar.pillarId, isActive: true },
             orderBy: { sortOrder: 'asc' }
           });
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = CreateAssessmentSchema.parse(body);
 
-    const assessment = await db.assessment.create({
+    const assessment = await prisma.assessment.create({
       data: {
         userId: validatedData.userId,
         version: validatedData.version,

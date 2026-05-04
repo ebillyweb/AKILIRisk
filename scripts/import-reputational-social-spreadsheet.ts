@@ -19,7 +19,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as XLSX from "xlsx";
 import { SpreadsheetImporter } from "../src/lib/assessment/import/spreadsheet-importer";
-import { db } from "../src/lib/db";
+import { prisma } from "../src/lib/db";
 
 const RISK_AREA_ID = "lifestyle-behavioral-risk";
 
@@ -52,7 +52,7 @@ async function main(): Promise<void> {
   const sheetName = defaultSheetName(filePath);
   console.log(`Importing Reputational & social risk from:\n  ${filePath}\n  sheet: "${sheetName}"`);
 
-  const agg = await db.assessmentBankQuestion.aggregate({
+  const agg = await prisma.assessmentBankQuestion.aggregate({
     where: { riskAreaId: RISK_AREA_ID },
     _max: { sortOrderGlobal: true },
   });
@@ -83,5 +83,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await db.$disconnect().catch(() => {});
+    await prisma.$disconnect().catch(() => {});
   });

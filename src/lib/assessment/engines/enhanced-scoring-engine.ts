@@ -11,7 +11,7 @@
 import { Prisma } from '@prisma/client';
 import { Question, ScoreResult, Pillar } from '../types';
 import { calculatePillarScore } from '../scoring';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { pillarForBankRiskArea } from '../bank/pillar-for-risk-area';
 
 export interface ScoringContext {
@@ -181,7 +181,7 @@ export class EnhancedScoringEngine {
    * Load scoring rules from database
    */
   private async loadScoringRules(pillarId: string): Promise<AdvancedScoringRule[]> {
-    const rules = await db.scoringRule.findMany({
+    const rules = await prisma.scoringRule.findMany({
       where: {
         isActive: true,
         // Join with questions to filter by pillar
@@ -220,7 +220,7 @@ export class EnhancedScoringEngine {
     }));
 
     if (executions.length > 0) {
-      await db.ruleExecution.createMany({
+      await prisma.ruleExecution.createMany({
         data: executions.map((e) => ({
           ...e,
           conditions: e.conditions as unknown as Prisma.InputJsonValue,

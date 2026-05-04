@@ -164,11 +164,14 @@ Use these credentials for local development testing:
 ### Database Queries
 ```typescript
 // Always import from lib/db
-import { db } from '@/lib/db'
+import { prisma } from '@/lib/db'
 
 // Use Prisma client for all database operations
-const user = await db.user.findUnique({ where: { email } })
+const user = await prisma.user.findUnique({ where: { email } })
 ```
+
+`@/lib/db` exports both `prisma` (canonical) and a `db` alias; the codebase
+uses `prisma` everywhere — prefer it in new code.
 
 ### Server Actions
 ```typescript
