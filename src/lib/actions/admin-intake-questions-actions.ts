@@ -7,6 +7,7 @@ import { PillarCategoryKind } from "@prisma/client";
 
 import { requireAdminRole } from "@/lib/admin/auth";
 import { prisma } from "@/lib/db";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 function revalidateIntakeQuestionContent() {
   revalidatePath("/admin/intake/questions");
@@ -45,16 +46,26 @@ async function findIntakePillarQuestionOrThrow(questionId: string) {
 }
 
 export async function setIntakePillarQuestionVisibility(formData: FormData) {
-  await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
   const questionId = z.string().uuid().parse(formData.get("questionId"));
   const raw = formData.get("setVisible");
   const isVisible = raw === "1" || raw === "true";
 
-  await findIntakePillarQuestionOrThrow(questionId);
+  const existing = await findIntakePillarQuestionOrThrow(questionId);
 
   await prisma.pillarQuestion.update({
     where: { id: questionId },
     data: { isVisible },
+  });
+
+  await writeAudit({
+    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    action: AUDIT_ACTIONS.INTAKE_QUESTION_VISIBILITY_TOGGLE,
+    entityType: "PillarQuestion",
+    entityId: questionId,
+    beforeData: { isVisible: existing.isVisible },
+    afterData: { isVisible },
+    metadata: { categoryKind: "INTAKE" },
   });
 
   revalidateIntakeQuestionContent();
@@ -68,7 +79,7 @@ export async function setIntakePillarQuestionVisibility(formData: FormData) {
 }
 
 export async function updateIntakePillarQuestionContent(formData: FormData) {
-  await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
   const questionId = z.string().uuid().parse(formData.get("questionId"));
 
   try {
@@ -78,7 +89,7 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
     const displayOrder = z.coerce.number().int().min(0).parse(formData.get("displayOrder"));
     const isVisible = formData.has("isVisible");
 
-    await findIntakePillarQuestionOrThrow(questionId);
+    const existing = await findIntakePillarQuestionOrThrow(questionId);
 
     await prisma.pillarQuestion.update({
       where: { id: questionId },
@@ -89,6 +100,28 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
         displayOrder,
         isVisible,
       },
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      action: AUDIT_ACTIONS.INTAKE_QUESTION_UPDATE,
+      entityType: "PillarQuestion",
+      entityId: questionId,
+      beforeData: {
+        questionText: existing.questionText,
+        whyThisMatters: existing.whyThisMatters,
+        recommendedActions: existing.recommendedActions,
+        displayOrder: existing.displayOrder,
+        isVisible: existing.isVisible,
+      },
+      afterData: {
+        questionText,
+        whyThisMatters,
+        recommendedActions,
+        displayOrder,
+        isVisible,
+      },
+      metadata: { categoryKind: "INTAKE" },
     });
 
     revalidateIntakeQuestionContent();

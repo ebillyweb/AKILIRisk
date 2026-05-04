@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 const updateFlagsSchema = z.object({
   advisorGovernanceDashboardEnabled: z.boolean(),
@@ -13,7 +14,7 @@ const updateFlagsSchema = z.object({
 
 export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
   try {
-    await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
     const parsed = updateFlagsSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -21,6 +22,16 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
         error: "Invalid feature flag payload",
       };
     }
+
+    // Capture prior state for the audit beforeData. Defaults match the upsert's
+    // create-path defaults so a first-time write still produces a useful diff.
+    const prior = await prisma.platformSettings.findUnique({
+      where: { id: "default" },
+      select: {
+        advisorGovernanceDashboardEnabled: true,
+        advisorRiskIntelligenceEnabled: true,
+      },
+    });
 
     await prisma.platformSettings.upsert({
       where: { id: "default" },
@@ -30,6 +41,22 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
       },
       update: {
+        advisorGovernanceDashboardEnabled: parsed.data.advisorGovernanceDashboardEnabled,
+        advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
+      },
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      action: AUDIT_ACTIONS.PLATFORM_SETTINGS_UPDATE,
+      entityType: "PlatformSettings",
+      entityId: "default",
+      beforeData: prior ?? {
+        // First-write case: capture the implicit defaults so the diff is honest.
+        advisorGovernanceDashboardEnabled: true,
+        advisorRiskIntelligenceEnabled: true,
+      },
+      afterData: {
         advisorGovernanceDashboardEnabled: parsed.data.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
       },
