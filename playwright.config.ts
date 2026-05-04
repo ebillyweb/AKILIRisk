@@ -23,8 +23,8 @@ function repoRoot(): string {
 // Smoke tests shell out to `node scripts/*.js`; those files call dotenv, but
 // `execSync` only inherits this process env — load repo env here too.
 const root = repoRoot();
-loadEnv({ path: resolve(root, ".env.local") });
-loadEnv({ path: resolve(root, ".env") });
+loadEnv({ path: resolve(root, ".env.local"), quiet: true });
+loadEnv({ path: resolve(root, ".env"), quiet: true });
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "https://preview.akilirisk.com";
 

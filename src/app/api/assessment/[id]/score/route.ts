@@ -99,10 +99,12 @@ export async function GET(
       );
     }
 
+    // 404 (not 403) on ownership mismatch so the response doesn't tell
+    // the caller whether a given assessment id exists.
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 
@@ -174,10 +176,12 @@ export async function POST(
       );
     }
 
+    // 404 (not 403) on ownership mismatch so the response doesn't tell
+    // the caller whether a given assessment id exists.
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 

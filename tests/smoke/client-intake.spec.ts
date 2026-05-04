@@ -54,10 +54,15 @@ test.describe("client intake wizard", () => {
       const saveButton = page.getByRole("button", { name: /save typed response/i });
       await expect(saveButton).toBeEnabled();
       await saveButton.click();
+      // While saving, the control’s accessible name is "Saving…"; wait until the
+      // idle label returns so `typedSaving` is false and Next is not `responseBusy`.
+      await expect(
+        page.getByRole("button", { name: /save typed response/i })
+      ).toBeVisible({ timeout: 30_000 });
 
       if (q < totalQuestions) {
         const nextButton = page.getByRole("button", { name: /^next$/i });
-        await expect(nextButton).toBeEnabled({ timeout: 15_000 });
+        await expect(nextButton).toBeEnabled({ timeout: 30_000 });
         await nextButton.click();
       }
     }

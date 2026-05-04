@@ -49,10 +49,12 @@ export async function GET(
       );
     }
 
+    // Return 404 (not 403) so the response shape doesn't distinguish
+    // "no such assessment" from "exists but not yours."
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 
@@ -117,10 +119,12 @@ export async function POST(
       );
     }
 
+    // Return 404 (not 403) so the response shape doesn't distinguish
+    // "no such assessment" from "exists but not yours."
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 

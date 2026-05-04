@@ -12,6 +12,22 @@ import { ScoreResult, CategoryScore, MissingControl } from "@/lib/assessment/typ
  * GET: Retrieve cached recommendations if available
  */
 
+/** Narrow `pillarScore.missingControls` (Prisma Json) into the cached
+ *  recommendations shape we wrote in POST. Returns null if the field is
+ *  null, the legacy raw-array shape, or otherwise unrecognized. */
+function extractCachedRecommendations(
+  raw: unknown
+): { recommendations: IdentityRecommendation[]; generatedAt: string } | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const obj = raw as { recommendations?: unknown; generatedAt?: unknown };
+  if (!Array.isArray(obj.recommendations)) return null;
+  return {
+    recommendations: obj.recommendations as IdentityRecommendation[],
+    generatedAt:
+      typeof obj.generatedAt === "string" ? obj.generatedAt : new Date(0).toISOString(),
+  };
+}
+
 /**
  * POST /api/identity-risk/recommendations
  * Generate AI recommendations from assessment results
@@ -50,10 +66,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 404 on ownership mismatch — matches the no-such-assessment shape
+    // above so the response doesn't leak existence.
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 
@@ -171,10 +189,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 404 on ownership mismatch — matches the no-such-assessment shape
+    // above so the response doesn't leak existence.
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 
@@ -195,13 +215,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract cached recommendations if available
-    const missingControlsData = pillarScore.missingControls as any;
-
-    if (missingControlsData && Array.isArray(missingControlsData.recommendations)) {
+    // Extract cached recommendations if available. Two shapes can live
+    // in `pillarScore.missingControls`: the wrapped cache object written
+    // by POST below (`{ controls, recommendations, generatedAt }`) or
+    // the legacy raw array of `MissingControl` from earlier scoring
+    // runs. Only the wrapped shape carries cached recommendations.
+    const cached = extractCachedRecommendations(pillarScore.missingControls);
+    if (cached) {
       return NextResponse.json({
-        recommendations: missingControlsData.recommendations,
-        generatedAt: missingControlsData.generatedAt,
+        recommendations: cached.recommendations,
+        generatedAt: cached.generatedAt,
         cached: true,
       });
     }

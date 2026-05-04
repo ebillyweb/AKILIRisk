@@ -93,3 +93,32 @@ export async function resolvePublicAppUrl(): Promise<string> {
 export function getPublicAppUrl(): string {
   return getPublicAppUrlFromEnv();
 }
+
+/**
+ * Strict env-only resolver for emails / outbound notifications where we
+ * compose a URL with no incoming request to lean on. In production we
+ * refuse the localhost fallback — a wrong link in a recovery email or
+ * advisor notification is worse than no link at all. Caller decides what
+ * to do with `null` (typically: log and skip the send).
+ */
+export function getPublicAppUrlStrict(): string | null {
+  const fromEnv =
+    normalizeOrigin(process.env.AUTH_URL) ??
+    normalizeOrigin(process.env.NEXT_PUBLIC_URL) ??
+    normalizeOrigin(process.env.NEXTAUTH_URL);
+  if (fromEnv) return fromEnv;
+
+  const vercel = sanitizeUrlEnv(process.env.VERCEL_URL);
+  if (vercel) {
+    const host = vercel.replace(/^https?:\/\//i, "").split("/")[0]?.trim();
+    if (host) {
+      const origin = normalizeOrigin(host);
+      if (origin) return origin;
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+  return "http://localhost:3000";
+}

@@ -82,10 +82,12 @@ export async function GET(
       );
     }
 
+    // 404 on ownership mismatch (matches the no-such-assessment shape
+    // above) so a caller can't probe for valid assessment ids.
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 

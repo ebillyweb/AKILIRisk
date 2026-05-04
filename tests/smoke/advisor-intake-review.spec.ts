@@ -43,13 +43,19 @@ test.describe("advisor reviews intake", () => {
     await reviewLink.click();
     await page.waitForURL(/\/advisor\/review\/[^/]+$/, { timeout: 30_000 });
 
-    // Match page chrome (h1) even if the a11y tree differs slightly on hosted builds.
-    await expect(
-      page.locator("h1, h2, h3").filter({ hasText: /^View intake$/ }).first()
-    ).toBeVisible({ timeout: 30_000 });
-
-    await expect(page.getByText(USERS.client.email).first()).toBeVisible();
+    // Confirm the server component finished (avoid flaking on heading text alone:
+    // layout adds an sr-only h1, and hosted builds can hydrate slowly).
+    await expect(page.getByText(USERS.client.email).first()).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(page.getByText(/Test Client/).first()).toBeVisible();
+
+    await expect(
+      page
+        .getByRole("heading", { name: /^View intake$/ })
+        .or(page.getByText(/^View intake$/))
+        .first()
+    ).toBeVisible({ timeout: 15_000 });
 
     // Question text from the seeded intake script (first INTAKE pillar question).
     await expect(

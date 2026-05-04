@@ -1,111 +1,58 @@
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { sendAdvisorIntakeNotification } from '@/lib/email';
-import { createNotification } from '@/lib/data/advisor';
-import { triggerMilestoneNotification } from '@/lib/notifications/triggers';
-import { NextRequest, NextResponse } from 'next/server';
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { notifyAdvisorsOfIntake } from "@/lib/intake/notify-advisor";
+import { NextRequest, NextResponse } from "next/server";
 
+/**
+ * Trigger the assigned-advisor notification flow for a completed intake.
+ *
+ * Authorization: only the intake's owning client may call this. The
+ * previous shape required "any authenticated user" and let any signed-in
+ * caller spam advisor notifications by submitting another client's
+ * `interviewId`. We now look up the interview, verify the session
+ * belongs to its owner, and only then run the notification helper.
+ *
+ * In normal flow this is invoked from the client's
+ * `submitIntakeInterviewAction` server action via direct call (no
+ * round-trip through this endpoint). The route is kept for compatibility
+ * with any out-of-band caller, but the auth shape is identical to what
+ * the action would do.
+ */
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Authenticate - require any authenticated user
     const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Get interview ID from URL params
-    const params = await props.params;
-    const interviewId = params.id;
-
+    const { id: interviewId } = await props.params;
     if (!interviewId) {
-      return NextResponse.json({ error: 'Interview ID required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Interview ID required" },
+        { status: 400 }
+      );
     }
 
-    // Look up the IntakeInterview to get userId (the client)
+    // Ownership check. We deliberately use a single 404 for both
+    // "no such interview" and "exists but not yours" so a probing client
+    // can't enumerate other users' interview ids.
     const interview = await prisma.intakeInterview.findUnique({
       where: { id: interviewId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+      select: { userId: true },
     });
-
-    if (!interview) {
-      return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+    if (!interview || interview.userId !== session.user.id) {
+      return NextResponse.json({ error: "Interview not found" }, { status: 404 });
     }
 
-    // Find active advisor assignments for this client
-    const assignments = await prisma.clientAdvisorAssignment.findMany({
-      where: {
-        clientId: interview.userId,
-        status: 'ACTIVE',
-      },
-      include: {
-        advisor: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    let notifiedCount = 0;
-
-    // Process each assigned advisor
-    for (const assignment of assignments) {
-      try {
-        const advisor = assignment.advisor;
-        const advisorUser = advisor.user;
-
-        // Create in-app notification
-        await createNotification(
-          advisor.id,
-          'NEW_INTAKE',
-          `New Intake: ${interview.user.name}`,
-          `${interview.user.name} has completed their intake interview and is ready for review.`,
-          interviewId
-        );
-
-        // Send email notification
-        const reviewUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/advisor/review/${interviewId}`;
-
-        await sendAdvisorIntakeNotification(
-          advisorUser.email,
-          advisorUser.name || 'Advisor',
-          interview.user.name || 'Client',
-          interview.user.email,
-          reviewUrl
-        );
-
-        notifiedCount++;
-      } catch (advisorError) {
-        // Log error for this advisor but continue with others
-        console.error(`Failed to notify advisor ${assignment.advisor.id}:`, advisorError);
-      }
-    }
-
-    // Also trigger milestone notification using the new system (fire-and-forget)
-    void triggerMilestoneNotification(interview.userId, 'Intake Complete');
-
+    const { notifiedCount } = await notifyAdvisorsOfIntake(interviewId);
     return NextResponse.json({ success: true, notifiedCount });
   } catch (error) {
-    console.error('Failed to process advisor notifications:', error);
+    console.error("Failed to process advisor notifications:", error);
     return NextResponse.json(
-      { error: 'Failed to process notifications' },
+      { error: "Failed to process notifications" },
       { status: 500 }
     );
   }

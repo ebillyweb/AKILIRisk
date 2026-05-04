@@ -15,6 +15,7 @@ import { saveResponseSchema, submitInterviewSchema } from '@/lib/schemas/intake'
 import { revalidatePath } from 'next/cache';
 import type { IntakeQuestion } from '@/lib/intake/types';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
+import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
 
 // Helper function to get authenticated user ID
 async function getAuthUserId() {
@@ -150,22 +151,16 @@ export async function submitIntakeInterviewAction(interviewId: string) {
 
     const submittedInterview = await submitIntakeInterview(interviewId);
 
-    // Fire notification - fire-and-forget (never block submission success)
-    try {
-      // Use fetch without await for fire-and-forget behavior
-      fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/intake/${interviewId}/notify-advisor`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }).catch((error) => {
-        // Silently log notification errors
-        console.error('Advisor notification failed:', error);
-      });
-    } catch (error) {
-      // Silently log notification errors - never block submission
-      console.error('Failed to trigger advisor notification:', error);
-    }
+    // Fire-and-forget advisor notification. Previously this round-tripped
+    // through `fetch /api/intake/[id]/notify-advisor`, which (a) couldn't
+    // forward the user's session cookie from a server-action context so
+    // the route always 401'd, and (b) used a `process.env.NEXTAUTH_URL ||
+    // 'http://localhost:3000'` fallback that hit localhost from the
+    // deployed function. Calling the helper directly skips both problems
+    // and inherits its in-process error handling.
+    void notifyAdvisorsOfIntake(interviewId).catch((error) => {
+      console.error('Advisor notification failed:', error);
+    });
 
     revalidatePath(`/intake/${interviewId}`);
     return { success: true, interview: submittedInterview };

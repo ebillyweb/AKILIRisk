@@ -46,11 +46,14 @@ export async function GET(
       );
     }
 
-    // Verify ownership
+    // Verify ownership. Return 404 (not 403) so a probing client can't
+    // tell "no such assessment" from "exists but not yours" — assessment
+    // ids are CUIDs, but defense-in-depth on the ownership boundary is
+    // free here.
     if (assessment.userId !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
+        { error: "Assessment not found" },
+        { status: 404 }
       );
     }
 
