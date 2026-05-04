@@ -8,6 +8,7 @@ import {
 import { prisma } from "@/lib/db";
 import { verifyInviteToken, consumeInviteCode } from "@/lib/invite";
 import { triggerRegistrationNotification } from "@/lib/notifications/triggers";
+import { logSafeError } from "@/lib/log-safe-error";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -56,7 +57,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
+    // Check if user already exists.
+    //
+    // Intentional: this lookup does NOT filter `deletedAt: null`. A
+    // soft-deleted account permanently blocks re-registration under the
+    // same email. We retain that audit trail and prevent identity reuse;
+    // an admin must hard-delete or merge accounts to free the email.
+    // If you're tempted to "fix" this by adding the filter, talk to
+    // someone who knows the policy first.
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -161,7 +169,9 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
-    console.error("Registration error:", error);
+    // Use logSafeError so a Prisma P2002 (unique violation) doesn't dump
+    // the colliding email value into application logs. See src/lib/log-safe-error.ts.
+    logSafeError("auth/register", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

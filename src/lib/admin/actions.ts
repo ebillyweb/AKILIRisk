@@ -17,6 +17,7 @@ import { sendNotification } from "@/lib/notifications/service";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { getAdvisorForAdmin } from "@/lib/admin/queries";
+import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 
 const updateAdvisorSchema = z.object({
   userId: z.string().cuid(),
@@ -101,8 +102,8 @@ export async function updateAdvisorByAdmin(input: UpdateAdvisorInput) {
     revalidatePath("/admin");
     return { success: true };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to update advisor";
-    return { success: false, error: message };
+    logSafeError("admin/updateAdvisor", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to update advisor") };
   }
 }
 
@@ -185,8 +186,8 @@ export async function setAdvisorPortalAccessByAdmin(input: unknown) {
     revalidatePath("/admin");
     return { success: true };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to update portal access";
-    return { success: false, error: message };
+    logSafeError("admin/togglePortalAccess", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to update portal access") };
   }
 }
 
@@ -203,6 +204,12 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
       };
     }
 
+    // Intentional: this lookup does NOT filter `deletedAt: null`. A
+    // soft-deleted account permanently blocks creating a new advisor under
+    // the same email. We retain that audit trail and prevent identity reuse;
+    // an admin must restore (`restoreAdvisorByAdmin`) or hard-delete the
+    // existing row to free the email. Mirrors the same intent on the
+    // public registration path in src/app/api/auth/register/route.ts.
     const existing = await prisma.user.findUnique({
       where: { email: parsed.data.email },
       select: { id: true },
@@ -306,8 +313,12 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
     revalidatePath("/admin");
     return { success: true, data: { userId: user.id } };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to create advisor";
-    return { success: false, error: message };
+    // P2002 on the User.email unique constraint is the most likely Prisma
+    // error here — its message contains the colliding email. logSafeError
+    // strips that for the log; safeErrorMessage substitutes a generic
+    // string for the admin UI.
+    logSafeError("admin/createAdvisor", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to create advisor") };
   }
 }
 
@@ -371,8 +382,8 @@ export async function softDeleteAdvisorByAdmin(input: unknown) {
     revalidatePath("/admin");
     return { success: true };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to deactivate advisor";
-    return { success: false, error: message };
+    logSafeError("admin/softDeleteAdvisor", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to deactivate advisor") };
   }
 }
 
@@ -427,7 +438,7 @@ export async function restoreAdvisorByAdmin(input: unknown) {
     revalidatePath("/admin");
     return { success: true };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to restore advisor";
-    return { success: false, error: message };
+    logSafeError("admin/restoreAdvisor", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to restore advisor") };
   }
 }

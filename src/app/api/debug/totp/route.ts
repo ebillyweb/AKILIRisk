@@ -28,11 +28,31 @@ const totp = new TOTP({
   algorithm: "sha1",
 });
 
+/**
+ * Two independent gates must both pass for this endpoint to respond:
+ *  1. NODE_ENV !== "production" — Vercel sets NODE_ENV=production by
+ *     default in production deploys, so the endpoint 404s like any
+ *     unmapped route there.
+ *  2. ALLOW_DEBUG_TOTP === "1" — opt-in even in dev/staging. This is the
+ *     belt for the suspenders: a single mis-set NODE_ENV (e.g. accidental
+ *     staging deploy without the env var, or a developer running prod
+ *     code locally with NODE_ENV unset) can't re-expose the route by
+ *     itself.
+ *
+ * The endpoint logs raw TOTP secrets, has no auth, and returns
+ * `error.stack` from caught exceptions — fine for local debugging,
+ * never for any environment that could be reached over the public
+ * internet. See `.env.example` for the ALLOW_DEBUG_TOTP doc block.
+ */
+function debugTotpEnabled(): boolean {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.ALLOW_DEBUG_TOTP === "1"
+  );
+}
+
 export async function POST(req: NextRequest) {
-  // Production guard: this endpoint has no auth and logs raw secrets.
-  // Keep it reachable in local/dev only; in production it 404s like any
-  // unmapped route.
-  if (process.env.NODE_ENV === "production") {
+  if (!debugTotpEnabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -126,8 +146,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  // Production guard: see POST handler.
-  if (process.env.NODE_ENV === "production") {
+  if (!debugTotpEnabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

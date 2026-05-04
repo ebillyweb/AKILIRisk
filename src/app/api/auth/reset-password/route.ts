@@ -80,9 +80,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Find user. Filter out soft-deleted accounts so a deactivated user
+    // can't waste a DB write rotating a password they can't sign in with
+    // anyway (signIn blocks them at the auth callback). Same shape as the
+    // forgot-password route's lookup.
+    const user = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
       select: { id: true },
     });
 

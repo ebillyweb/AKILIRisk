@@ -72,9 +72,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Look up user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Look up user by email. Filter out soft-deleted accounts: `signIn`
+    // already blocks them at the auth callback (see src/lib/auth.ts), but
+    // sending a reset email to a deactivated account is wasted work and
+    // confirms the account ever existed (mild PII leak). `findFirst` with
+    // a deletedAt filter behaves identically to `findUnique({ email })`
+    // for active accounts, and returns null for soft-deleted ones.
+    const user = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
       select: { id: true, email: true },
     });
 

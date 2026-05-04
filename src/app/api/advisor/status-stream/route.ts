@@ -62,14 +62,16 @@ data: {"message": "Failed to fetch pipeline update", "timestamp": "${new Date().
       },
     });
 
+    // No CORS headers — same-origin EventSource doesn't preflight, and
+    // cross-origin EventSource without credentials would fail the
+    // requireAdvisorRole() check at the top of this handler anyway.
+    // The previous wildcard `Access-Control-Allow-Origin: '*'` matched
+    // the dead OPTIONS handlers stripped in round 5 (commit 068095b).
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
-        'Access-Control-Allow-Headers': 'Cache-Control',
       },
     });
   } catch (error) {
