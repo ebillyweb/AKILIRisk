@@ -24,6 +24,8 @@ import { toAdvisorHouseholdMemberViews } from '@/lib/profiles/advisor-household-
 import type { IntakeReviewData } from '@/lib/advisor/types';
 import { getAdvisorInvitations } from '@/lib/invitations/service';
 import { InvitationStatus } from '@prisma/client';
+import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
+import type { UserRole } from '@prisma/client';
 
 export async function getAdvisorDashboardData() {
   try {
@@ -157,7 +159,7 @@ async function assertAdvisorMayMutateApproval(
 
 export async function markIntakeInReview(interviewId: string) {
   try {
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = z.object({ interviewId: z.string().min(1) }).safeParse({ interviewId });
@@ -184,13 +186,32 @@ export async function markIntakeInReview(interviewId: string) {
     }
 
     // Create approval if it doesn't exist (no-op when one is present)
-    let approval = await createIntakeApproval(interviewId, profile.id);
+    const priorApproval = await createIntakeApproval(interviewId, profile.id);
+    let approval = priorApproval;
 
     // Update to IN_REVIEW status if it's currently PENDING
+    let statusChanged = false;
     if (approval.status === 'PENDING') {
       approval = await updateIntakeApproval(approval.id, {
         status: 'IN_REVIEW',
         reviewedAt: new Date(),
+      });
+      statusChanged = true;
+    }
+
+    // Audit only when the status actually transitioned. A no-op call (already
+    // IN_REVIEW) shouldn't produce an audit row — same shape as the existing
+    // SubscriptionAuditLog convention of recording state transitions, not
+    // idempotent reads.
+    if (statusChanged) {
+      await writeAudit({
+        actor: { userId, role: role as UserRole, email },
+        action: AUDIT_ACTIONS.INTAKE_REVIEW_STARTED,
+        entityType: 'IntakeApproval',
+        entityId: approval.id,
+        beforeData: { status: priorApproval.status },
+        afterData: { status: approval.status, reviewedAt: approval.reviewedAt?.toISOString() ?? null },
+        metadata: { interviewId, advisorId: profile.id },
       });
     }
 
@@ -207,7 +228,7 @@ export async function markIntakeInReview(interviewId: string) {
 
 export async function approveClientIntake(data: unknown) {
   try {
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = approveClientSchema.safeParse(data);
@@ -233,7 +254,8 @@ export async function approveClientIntake(data: unknown) {
     }
 
     // First ensure an approval exists
-    let approval = await createIntakeApproval(interviewId, profile.id);
+    const priorApproval = await createIntakeApproval(interviewId, profile.id);
+    let approval = priorApproval;
 
     // Update to APPROVED status with focus areas and notes
     approval = await updateIntakeApproval(approval.id, {
@@ -241,6 +263,16 @@ export async function approveClientIntake(data: unknown) {
       focusAreas,
       notes,
       approvedAt: new Date(),
+    });
+
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email },
+      action: AUDIT_ACTIONS.INTAKE_APPROVE,
+      entityType: 'IntakeApproval',
+      entityId: approval.id,
+      beforeData: { status: priorApproval.status, focusAreas: priorApproval.focusAreas, notes: priorApproval.notes },
+      afterData: { status: approval.status, focusAreas: approval.focusAreas, notes: approval.notes, approvedAt: approval.approvedAt?.toISOString() ?? null },
+      metadata: { interviewId, advisorId: profile.id },
     });
 
     revalidatePath('/advisor/review/[id]', 'page');
@@ -257,7 +289,7 @@ export async function approveClientIntake(data: unknown) {
 
 export async function rejectClientIntake(approvalId: string, notes?: string) {
   try {
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = z.object({
@@ -280,7 +312,16 @@ export async function rejectClientIntake(approvalId: string, notes?: string) {
     // per client at a time, but we don't want to rely on that.
     const existing = await prisma.intakeApproval.findUnique({
       where: { id: approvalId },
-      select: { id: true, advisorId: true, interviewId: true },
+      // status + notes selected so the audit row's beforeData reflects actual
+      // prior state, not a placeholder. Tiny extra column read; no extra
+      // round-trip.
+      select: {
+        id: true,
+        advisorId: true,
+        interviewId: true,
+        status: true,
+        notes: true,
+      },
     });
     if (!existing) {
       return { success: false, error: 'Approval not found' };
@@ -309,6 +350,16 @@ export async function rejectClientIntake(approvalId: string, notes?: string) {
     const approval = await updateIntakeApproval(approvalId, {
       status: 'REJECTED',
       notes,
+    });
+
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email },
+      action: AUDIT_ACTIONS.INTAKE_REJECT,
+      entityType: 'IntakeApproval',
+      entityId: approval.id,
+      beforeData: { status: existing.status, notes: existing.notes },
+      afterData: { status: approval.status, notes: approval.notes },
+      metadata: { interviewId: existing.interviewId, advisorId: profile.id },
     });
 
     revalidatePath('/advisor/review/[id]', 'page');

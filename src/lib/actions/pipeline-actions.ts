@@ -3,9 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
+import type { UserRole } from '@prisma/client';
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
 import { getClientPipeline, getPipelineMetrics, getClientDetail } from '@/lib/pipeline/queries';
 import { prisma } from '@/lib/db';
+import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 
 export async function getClientPipelineData() {
   try {
@@ -33,7 +35,7 @@ const documentRequirementSchema = z.object({
 
 export async function addDocumentRequirement(data: unknown) {
   try {
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = documentRequirementSchema.safeParse(data);
@@ -73,6 +75,20 @@ export async function addDocumentRequirement(data: unknown) {
       },
     });
 
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email },
+      action: AUDIT_ACTIONS.DOCUMENT_REQUIREMENT_CREATE,
+      entityType: 'DocumentRequirement',
+      entityId: requirement.id,
+      beforeData: null,
+      afterData: {
+        name: requirement.name,
+        description: requirement.description,
+        fulfilled: requirement.fulfilled,
+      },
+      metadata: { clientId, advisorId: profile.id },
+    });
+
     revalidatePath('/advisor/pipeline');
     return {
       success: true,
@@ -86,7 +102,7 @@ export async function addDocumentRequirement(data: unknown) {
 
 export async function removeDocumentRequirement(requirementId: string) {
   try {
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = z.object({
@@ -118,6 +134,21 @@ export async function removeDocumentRequirement(requirementId: string) {
     // Delete the requirement
     await prisma.documentRequirement.delete({
       where: { id: requirementId },
+    });
+
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email },
+      action: AUDIT_ACTIONS.DOCUMENT_REQUIREMENT_DELETE,
+      entityType: 'DocumentRequirement',
+      entityId: requirement.id,
+      beforeData: {
+        name: requirement.name,
+        description: requirement.description,
+        fulfilled: requirement.fulfilled,
+        clientId: requirement.clientId,
+      },
+      afterData: null,
+      metadata: { advisorId: profile.id },
     });
 
     revalidatePath('/advisor/pipeline');

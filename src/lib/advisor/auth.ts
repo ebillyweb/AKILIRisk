@@ -142,6 +142,10 @@ export async function requireAdvisorRole() {
   return {
     userId: session.user.id,
     role: userRole,
+    // email surfaced for audit-log writes (round-7 P4); existing callers that
+    // destructure `{ userId }` or `{ userId, role }` continue to work because
+    // the extra property is just ignored.
+    email: session.user.email ?? null,
   };
 }
 

@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getAdvisorProfileOrThrow, requireAdvisorRole } from "@/lib/advisor/auth";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 export type IntakeWaiverActionResult =
   | { success: true }
@@ -17,7 +19,7 @@ export async function setClientIntakeWaiver(
   waive: boolean,
 ): Promise<IntakeWaiverActionResult> {
   try {
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const assignment = await prisma.clientAdvisorAssignment.findFirst({
@@ -32,17 +34,34 @@ export async function setClientIntakeWaiver(
       return { success: false, error: "This client is not assigned to you." };
     }
 
+    const newWaivedAt = waive ? new Date() : null;
     await prisma.clientAdvisorAssignment.update({
       where: { id: assignment.id },
       data: waive
         ? {
-            intakeWaivedAt: new Date(),
+            intakeWaivedAt: newWaivedAt,
             intakeWaivedByAdvisorId: profile.id,
           }
         : {
             intakeWaivedAt: null,
             intakeWaivedByAdvisorId: null,
           },
+    });
+
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email },
+      action: AUDIT_ACTIONS.INTAKE_WAIVER_SET,
+      entityType: "ClientAdvisorAssignment",
+      entityId: assignment.id,
+      beforeData: {
+        intakeWaivedAt: assignment.intakeWaivedAt?.toISOString() ?? null,
+        intakeWaivedByAdvisorId: assignment.intakeWaivedByAdvisorId,
+      },
+      afterData: {
+        intakeWaivedAt: newWaivedAt?.toISOString() ?? null,
+        intakeWaivedByAdvisorId: waive ? profile.id : null,
+      },
+      metadata: { clientId, advisorId: profile.id, waived: waive },
     });
 
     revalidatePath("/advisor/pipeline");

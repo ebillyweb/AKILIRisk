@@ -1,5 +1,6 @@
 "use server";
 
+import type { UserRole } from "@prisma/client";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import {
   assertCanAddClientForAdvisorProfile,
@@ -14,6 +15,7 @@ import {
 import { sendAdvisorInvitationEmail } from "@/lib/invitations/email";
 import { createInvitationSchema } from "@/lib/schemas/invitation";
 import { InvitationListFilters, InvitationWithDetails } from "@/lib/invitations/types";
+import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -25,7 +27,7 @@ type ActionResult<T> =
 export async function sendInvitation(formData: FormData): Promise<ActionResult<InvitationWithDetails & { url: string; emailSent: boolean; emailNotSentReason?: string }>> {
   try {
     // Authenticate and get advisor role
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email: actorEmail } = await requireAdvisorRole();
 
     // Get advisor profile with user info
     const profile = await getAdvisorProfileOrThrow(userId);
@@ -69,6 +71,28 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
       clientName: validatedInput.clientName,
     });
 
+    // Audit AFTER both the invite-row write and the email send. The email's
+    // success/failure is recorded in metadata so we have a single audit row
+    // for "this advisor sent invite X" with delivery outcome attached.
+    // prefillEmail will be hashed by the redactor on persist.
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.INVITE_SEND,
+      entityType: "InviteCode",
+      entityId: invitation.id,
+      beforeData: null,
+      afterData: {
+        code: invitation.code,
+        prefillEmail: validatedInput.clientEmail,
+        intakeWaived: validatedInput.intakeWaived,
+      },
+      metadata: {
+        advisorId: profile.id,
+        emailSent: emailResult.sent,
+        emailNotSentReason: emailResult.sent ? undefined : emailResult.reason,
+      },
+    });
+
     return {
       success: true,
       data: {
@@ -98,7 +122,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
 export async function resendInvitationAction(invitationId: string): Promise<ActionResult<InvitationWithDetails & { url: string; emailSent: boolean; emailNotSentReason?: string }>> {
   try {
     // Authenticate and get advisor role
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email: actorEmail } = await requireAdvisorRole();
 
     // Get advisor profile with user info
     const profile = await getAdvisorProfileOrThrow(userId);
@@ -125,6 +149,21 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       clientName: invitation.clientName || undefined,
     });
 
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.INVITE_RESEND,
+      entityType: "InviteCode",
+      entityId: invitation.id,
+      // No before/after diff — resend is logically a delivery retry, not a
+      // state change. Existence of the resend is the auditable event.
+      metadata: {
+        advisorId: profile.id,
+        prefillEmail: invitation.prefillEmail,
+        emailSent: emailResult.sent,
+        emailNotSentReason: emailResult.sent ? undefined : emailResult.reason,
+      },
+    });
+
     return {
       success: true,
       data: {
@@ -147,13 +186,29 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
 export async function expireInvitationAction(invitationId: string): Promise<ActionResult<InvitationWithDetails>> {
   try {
     // Authenticate and get advisor role
-    const { userId } = await requireAdvisorRole();
+    const { userId, role, email: actorEmail } = await requireAdvisorRole();
 
     // Get advisor profile
     const profile = await getAdvisorProfileOrThrow(userId);
 
     // Expire the invitation (this validates ownership)
     const invitation = await expireInvitation(profile.id, invitationId);
+
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.INVITE_EXPIRE,
+      entityType: "InviteCode",
+      entityId: invitation.id,
+      // The status transition itself is captured in metadata (we don't have
+      // the prior status without an extra read; expireInvitation enforces
+      // ownership and returns the post-state, so the metadata.fromStatus is
+      // unknown here — left to the queryable invitation row's history).
+      metadata: {
+        advisorId: profile.id,
+        toStatus: "EXPIRED",
+        prefillEmail: invitation.prefillEmail,
+      },
+    });
 
     return { success: true, data: invitation };
   } catch (error) {

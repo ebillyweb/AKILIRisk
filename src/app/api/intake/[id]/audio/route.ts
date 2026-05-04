@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { UserRole } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { getIntakeInterview, saveIntakeResponse } from '@/lib/data/intake';
 import {
@@ -6,6 +7,7 @@ import {
   deleteIntakeAudioObject,
 } from '@/lib/s3/intake-audio-uploads';
 import { prisma } from '@/lib/db';
+import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 
 /** Voice intake responses cap. 25MB is generous for a single answer at typical
  *  webm/opus bitrates (~32 kbps → ~100 minutes). Anything larger is almost
@@ -185,6 +187,29 @@ export async function POST(
         );
       }
     }
+
+    // Audit AFTER the upload + DB write succeed. Per the design's PII rules:
+    // ONLY {questionId, contentType, sizeBytes} are recorded. NOT the audio
+    // bytes (obvious), NOT the S3 key (changes on re-upload, reveals storage
+    // path), NOT the audio URL (same reasoning).
+    await writeAudit({
+      actor: {
+        userId,
+        role: session.user.role as UserRole | undefined,
+        email: session.user.email,
+      },
+      action: AUDIT_ACTIONS.INTAKE_AUDIO_UPLOAD,
+      entityType: 'IntakeResponse',
+      entityId: response.id,
+      metadata: {
+        interviewId,
+        questionId,
+        contentType: upload.contentType,
+        sizeBytes: upload.size,
+        replacedPriorRecording: Boolean(priorResponse?.audioS3Key),
+      },
+      request,
+    });
 
     return NextResponse.json({
       success: true,

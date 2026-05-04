@@ -16,6 +16,8 @@ import { revalidatePath } from 'next/cache';
 import type { IntakeQuestion } from '@/lib/intake/types';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
 import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
+import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
+import type { UserRole } from '@prisma/client';
 
 // Helper function to get authenticated user ID
 async function getAuthUserId() {
@@ -24,6 +26,19 @@ async function getAuthUserId() {
     throw new Error('Not authenticated');
   }
   return session.user.id;
+}
+
+/** Audit-friendly actor info — same shape as profile-actions.ts. */
+async function getAuthActor() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Not authenticated');
+  }
+  return {
+    userId: session.user.id,
+    role: session.user.role as UserRole | undefined,
+    email: session.user.email ?? null,
+  };
 }
 
 // Start or resume an active intake interview
@@ -117,7 +132,8 @@ export async function updateProgress(interviewId: string, questionIndex: number)
 // Submit completed interview
 export async function submitIntakeInterviewAction(interviewId: string) {
   try {
-    const userId = await getAuthUserId();
+    const actor = await getAuthActor();
+    const userId = actor.userId;
 
     const validatedFields = submitInterviewSchema.safeParse({ interviewId });
     if (!validatedFields.success) {
@@ -150,6 +166,22 @@ export async function submitIntakeInterviewAction(interviewId: string) {
     }
 
     const submittedInterview = await submitIntakeInterview(interviewId);
+
+    await writeAudit({
+      actor,
+      action: AUDIT_ACTIONS.INTAKE_SUBMIT,
+      entityType: 'IntakeInterview',
+      entityId: interviewId,
+      beforeData: { status: interview.status },
+      afterData: {
+        status: submittedInterview.status,
+        submittedAt: submittedInterview.submittedAt?.toISOString() ?? null,
+      },
+      metadata: {
+        responseCount: responses.length,
+        questionCount: expectedIds.length,
+      },
+    });
 
     // Fire-and-forget advisor notification. Previously this round-tripped
     // through `fetch /api/intake/[id]/notify-advisor`, which (a) couldn't
