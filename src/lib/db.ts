@@ -7,7 +7,7 @@ import { Pool } from "pg";
  * (e.g. new User columns). Otherwise `globalThis.prisma` may keep a client
  * generated before `prisma generate`, causing PrismaClientValidationError on new fields.
  */
-const PRISMA_CLIENT_BUILD_ID = 2;
+const PRISMA_CLIENT_BUILD_ID = 3;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -30,7 +30,8 @@ function postgresUrlWithExplicitSslMode(url: string): string {
 function isPrismaClientCurrent(client: PrismaClient): boolean {
   // After `prisma generate`, new models exist on the class; a cached global instance
   // from before generate does not — causes `prisma.platformSettings` undefined until dev restart.
-  return "assessmentBankQuestion" in client;
+  // Bump the probe to the most recently added model so dev discards stale clients.
+  return "auditLog" in client;
 }
 
 function getPrisma(): PrismaClient {

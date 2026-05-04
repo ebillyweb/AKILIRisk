@@ -769,6 +769,55 @@ model AdvisorBrandingAuditLog {
   @@index([action])
 }
 
+/// Generic system-wide audit log added in round 7 for BRD §5.4 ("full audit logs")
+/// + §3.1 ("audit logging of all actions" for admin role). Covers admin actions on
+/// users, configuration changes, auth events, advisor + client workflow actions,
+/// and a curated set of sensitive data-access reads. SubscriptionAuditLog and
+/// AdvisorBrandingAuditLog are intentionally NOT migrated here — see the schema
+/// decision in the round-7 design doc and the comment block in audit-log.ts.
+///
+/// `actorUserId` is NOT a foreign key. Audit history must outlive the user it
+/// references so a regulator-style "who did X" query still resolves after a
+/// hard delete. `actorRole` and `actorEmailHash` are cached at write time so
+/// the row is self-contained.
+model AuditLog {
+  id             String    @id @default(cuid())
+  /// Null only for system actions (e.g. cron jobs, retention sweep itself).
+  actorUserId    String?
+  /// Cached at write time so audit-log queries don't need to join User.
+  actorRole      UserRole?
+  /// 8-char sha256 prefix of lowercase email. Same shape as auth.config.ts emailHash().
+  actorEmailHash String?
+  /// "<entity>.<verb>" e.g. "user.create", "bank_question.update". String not enum so
+  /// adding new actions doesn't require a migration. Application-layer enum is in
+  /// src/lib/audit/audit-log.ts (AUDIT_ACTIONS).
+  action         String
+  /// Entity targeted by the action. e.g. "User", "AssessmentBankQuestion",
+  /// "PlatformSettings", "InviteCode".
+  entityType     String
+  /// Null for bulk actions; otherwise the row's id (or composite key serialized).
+  entityId       String?
+  /// State diff. Both nullable: create has null beforeData; delete has null afterData;
+  /// pure read events have both null. Always pass through redactForAudit() before
+  /// writing — see src/lib/audit/redact.ts.
+  beforeData     Json?
+  afterData      Json?
+  /// Free-form context: stripe event id, target user's email hash, etc. Same redaction
+  /// rules as the data fields.
+  metadata       Json?
+  /// Truncated for privacy: IPv4 last octet zeroed, IPv6 last 64 bits zeroed.
+  /// See src/lib/audit/ip.ts.
+  ipAddress      String?
+  /// Truncated to 256 chars at write time.
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
 // --- Enhanced assessment engine (recommendations, rules, pillar config) ---
 
 model ServiceRecommendation {
