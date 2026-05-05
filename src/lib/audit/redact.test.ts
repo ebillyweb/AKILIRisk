@@ -40,7 +40,7 @@ describe("redactForAudit", () => {
 
   describe("email keys", () => {
     it("hashes plain email", () => {
-      const out = redactForAudit({ email: "Test@Example.COM" }) as {
+      const out = redactForAudit({ email: "Test@Example.COM" }) as unknown as {
         email: { emailHash: string };
       };
       expect(out.email.emailHash).toBe(shortEmailHash("test@example.com"));

@@ -60,9 +60,8 @@ async function uploadOwnerAudio(
   expect(resp.status(), await resp.text()).toBe(200);
   const body = (await resp.json()) as { success: boolean; audioUrl: string };
   expect(body.success).toBe(true);
-  expect(body.audioUrl).toMatch(
-    /^\/api\/intake\/[^/]+\/audio\/[^/]+$/,
-    "upload should return the new authenticated streaming URL"
+  expect(body.audioUrl, "upload should return the new authenticated streaming URL").toMatch(
+    /^\/api\/intake\/[^/]+\/audio\/[^/]+$/
   );
   return body;
 }

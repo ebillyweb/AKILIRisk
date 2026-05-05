@@ -56,7 +56,7 @@ const TEST_EVENT_ID_PREFIX = `evt_test_${TEST_RUN_ID}`;
 // API key needed for that call.
 const stripe = new Stripe(
   process.env.STRIPE_SECRET_KEY?.trim() || "sk_test_smoke_unused",
-  { apiVersion: "2025-09-30.clover" }
+  { apiVersion: "2026-02-25.clover" }
 );
 
 interface FakeStripeEventOptions {
@@ -74,7 +74,7 @@ function buildFakeEvent({ id, type = "ping", createdAt }: FakeStripeEventOptions
   return {
     id,
     object: "event",
-    api_version: "2025-09-30.clover",
+    api_version: "2026-02-25.clover",
     created: createdAt ?? Math.floor(Date.now() / 1000),
     type,
     data: { object: { id, object: "ping" } },

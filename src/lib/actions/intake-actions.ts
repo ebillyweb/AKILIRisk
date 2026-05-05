@@ -166,6 +166,9 @@ export async function submitIntakeInterviewAction(interviewId: string) {
     }
 
     const submittedInterview = await submitIntakeInterview(interviewId);
+    if (!submittedInterview) {
+      return { success: false, error: 'Failed to submit interview' };
+    }
 
     await writeAudit({
       actor,
