@@ -1,5 +1,6 @@
 import { StyleSheet } from '@react-pdf/renderer';
 import { AdvisorBrandingData } from '@/lib/validation/branding';
+import { paletteForRiskLevel } from '@/lib/assessment/risk-color-palette';
 
 /**
  * Default color scheme for PDFs when no advisor branding is provided
@@ -390,21 +391,16 @@ export function createBrandedStyles(branding?: AdvisorBrandingData) {
 }
 
 /**
- * Get risk level colors (these override brand colors for consistency)
+ * Get risk level colors. Round-10: derived from the canonical
+ * RISK_LEVEL_PALETTE (`src/lib/assessment/risk-color-palette.ts`) so the
+ * PDF report and the web heat map use the same hexes.
+ *
+ * Note: pre-round-10, HIGH was '#ef4444' (red-500). The canonical palette
+ * uses orange (#f97316) for HIGH so it's visually distinct from CRITICAL
+ * (red). Affected surface: PDF report cover badge color for HIGH-risk reports.
  */
 export function getRiskColor(level: string): string {
-  switch (level.toUpperCase()) {
-    case 'LOW':
-      return '#10b981';
-    case 'MEDIUM':
-      return '#f59e0b';
-    case 'HIGH':
-      return '#ef4444';
-    case 'CRITICAL':
-      return '#dc2626';
-    default:
-      return '#6b7280';
-  }
+  return paletteForRiskLevel(level).hex;
 }
 
 /**

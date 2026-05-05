@@ -17,7 +17,7 @@ import {
 } from '@/lib/data/advisor';
 import { getAdvisorDashboardClients, getDashboardMetrics } from '@/lib/dashboard/queries';
 import { getFamilyGovernanceTrends } from '@/lib/analytics/queries';
-import { getPortfolioIntelligence, getTopRisksForFamily, getRiskDetailForFamily } from '@/lib/intelligence/queries';
+import { getPortfolioIntelligence, getTopRisksForFamily, getRiskDetailForFamily, getPortfolioPillarScores } from '@/lib/intelligence/queries';
 import { approveClientSchema } from '@/lib/schemas/advisor';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
 import { toAdvisorHouseholdMemberViews } from '@/lib/profiles/advisor-household-view';
@@ -466,6 +466,23 @@ export async function getPortfolioIntelligenceData() {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get portfolio intelligence data';
     return { success: false, error: message };
+  }
+}
+
+/**
+ * Round-10 / B1: per-client × per-pillar grid for the portfolio heat map
+ * on /advisor/intelligence. Wraps `getPortfolioPillarScores` for the
+ * server-component call site.
+ */
+export async function getPortfolioPillarScoresData() {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const data = await getPortfolioPillarScores(profile.id);
+    return { success: true as const, data };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to get portfolio heat-map data';
+    return { success: false as const, error: message };
   }
 }
 

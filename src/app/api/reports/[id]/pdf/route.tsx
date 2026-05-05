@@ -175,6 +175,15 @@ export async function GET(
     // Map Prisma enum to lowercase for consistency
     const riskLevel = pillarScore.riskLevel.toLowerCase();
 
+    // Round-10 / B1 (BRD §4.3): pull every persisted pillar score for this
+    // assessment so the heat-map page in the PDF shows the full per-domain
+    // snapshot, not just the requested pillar. Empty array = legacy single-
+    // pillar behavior (no heat map page rendered).
+    const allPillarScoresForAssessment = await prisma.pillarScore.findMany({
+      where: { assessmentId: id },
+      select: { pillar: true, score: true, riskLevel: true },
+    });
+
     const reportData = {
       score: pillarScore.score,
       riskLevel,
@@ -195,6 +204,11 @@ export async function GET(
       completionPercentage,
       categoryCount: breakdown.length,
       missingControlsCount: missingControls.length,
+      pillarScores: allPillarScoresForAssessment.map((p) => ({
+        pillar: p.pillar,
+        score: p.score,
+        riskLevel: p.riskLevel,
+      })),
     };
 
     // 9. Generate PDF with enhanced branding

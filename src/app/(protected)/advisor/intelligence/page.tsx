@@ -1,12 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getPortfolioIntelligenceData } from "@/lib/actions/advisor-actions";
+import {
+  getPortfolioIntelligenceData,
+  getPortfolioPillarScoresData,
+} from "@/lib/actions/advisor-actions";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { RISK_AREAS } from "@/lib/advisor/types";
 import { RiskSummaryCard } from "@/components/intelligence/RiskSummaryCard";
 import { PortfolioRiskList } from "@/components/intelligence/PortfolioRiskList";
 import { RiskDistributionChart } from "@/components/intelligence/RiskDistributionChart";
+import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import IntelligenceLoading from "./loading";
 
@@ -29,7 +33,12 @@ async function IntelligenceContent({
   categoryFilter?: string;
   categoryLabel?: string;
 }) {
-  const result = await getPortfolioIntelligenceData();
+  // Two queries in parallel: aggregate intelligence + per-pillar grid for
+  // the round-10 / B1 heat map.
+  const [result, heatMapResult] = await Promise.all([
+    getPortfolioIntelligenceData(),
+    getPortfolioPillarScoresData(),
+  ]);
 
   if (!result.success) {
     return (
@@ -42,6 +51,7 @@ async function IntelligenceContent({
   }
 
   const data = result.data!;
+  const heatMapRows = heatMapResult.success ? heatMapResult.data : [];
 
   // Check if any families have completed assessments
   if (data.totalFamilies === 0 || data.familyRiskSummaries.length === 0) {
@@ -65,6 +75,21 @@ async function IntelligenceContent({
         criticalCount={data.criticalCount}
         portfolioRisksCount={data.portfolioRisks.length}
       />
+
+      {/* Round-10 / B1 (BRD §4.3): risk heat map by domain across portfolio.
+          Sorted DESC by overall risk severity (most-at-risk client first). */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Risk by domain — portfolio</CardTitle>
+          <CardDescription>
+            BRD §4.3 heat map across your assigned families. Rows sorted by
+            overall risk severity (most at risk first).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RiskHeatMap mode="portfolio" rows={heatMapRows} />
+        </CardContent>
+      </Card>
 
       {/* Main content - two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

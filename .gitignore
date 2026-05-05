@@ -60,3 +60,6 @@ next-env.d.ts
 # Uploaded files
 public/uploads/
 .env*.local
+
+# Local preview artifacts (round-10 B1 color review)
+preview/

@@ -57,3 +57,26 @@ export interface PortfolioIntelligence {
   portfolioRisks: RiskIndicator[]; // all risks across portfolio, sorted by severity then score
   risksByCategory: Record<string, number>; // count of risks per governance category
 }
+
+/**
+ * Round-10 / B1: per-pillar shape for the portfolio heat map.
+ *
+ * One entry per advisor-assigned client. `pillarScores` holds whatever
+ * pillars have a persisted score on the client's latest COMPLETED
+ * assessment; missing pillars surface as unassessed cells in the heat map.
+ *
+ * Distinct from FamilyRiskSummary (above) which surfaces aggregate
+ * "top risks" — the heat map needs the structured per-pillar grid.
+ */
+export interface PortfolioPillarRow {
+  clientId: string;
+  clientName: string;
+  pillarScores: Array<{
+    pillar: string;
+    score: number;
+    /** Persisted Prisma RiskLevel (UPPERCASE). Null only if a row exists
+     *  with score but missing riskLevel — defensive, shouldn't happen in
+     *  practice. */
+    riskLevel: string | null;
+  }>;
+}

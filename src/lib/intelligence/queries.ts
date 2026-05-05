@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { PILLAR_WEIGHTS } from "@/lib/analytics/queries";
 import { CATEGORY_LABELS } from "@/lib/analytics/formatters";
-import type { RiskSeverity, RiskIndicator, FamilyRiskSummary, PortfolioIntelligence, RiskDetail, RiskRecommendation, AssessmentResponseDetail } from "./types";
+import type { RiskSeverity, RiskIndicator, FamilyRiskSummary, PortfolioIntelligence, RiskDetail, RiskRecommendation, AssessmentResponseDetail, PortfolioPillarRow } from "./types";
 
 /**
  * Static governance recommendations mapped by category slug
@@ -449,4 +449,100 @@ export async function getRiskDetailForFamily(
     assessmentId: assessment.id,
     topRisks: topRisksWithDetails,
   };
+}
+
+/**
+ * Round-10 / B1: per-client × per-pillar grid for the portfolio heat map.
+ *
+ * Returns one row per advisor-assigned active client. Each row carries
+ * whatever pillars have a persisted score on the client's most recent
+ * COMPLETED assessment; missing pillars surface as unassessed cells in
+ * the heat-map renderer.
+ *
+ * Performance: bounded to 4 round-trips regardless of client count, same
+ * shape as the round-7 P2 pipeline batching:
+ *   1. assignments + clients
+ *   2. latest COMPLETED assessment per client (via groupBy)
+ *   3. PillarScore.findMany IN (latest assessment ids)
+ *   4. (no 4th — joined into 3)
+ */
+export async function getPortfolioPillarScores(
+  advisorProfileId: string
+): Promise<PortfolioPillarRow[]> {
+  // 1. Active assignments with client display info.
+  const assignments = await prisma.clientAdvisorAssignment.findMany({
+    where: { advisorId: advisorProfileId, status: "ACTIVE" },
+    include: {
+      client: { select: { id: true, name: true, email: true } },
+    },
+  });
+  if (assignments.length === 0) return [];
+
+  const clientIds = assignments.map((a) => a.clientId);
+
+  // 2. Latest COMPLETED assessment per client. groupBy on userId with a
+  //    max(completedAt) gives the timestamp; a follow-up findMany resolves
+  //    the actual assessment row by (userId, completedAt) tuples. Two
+  //    queries instead of N+1.
+  const latestPerClient = await prisma.assessment.groupBy({
+    by: ["userId"],
+    where: { userId: { in: clientIds }, status: "COMPLETED", completedAt: { not: null } },
+    _max: { completedAt: true },
+  });
+  const latestPairs = latestPerClient
+    .filter((g) => g._max.completedAt !== null)
+    .map((g) => ({ userId: g.userId, completedAt: g._max.completedAt! }));
+
+  if (latestPairs.length === 0) {
+    // Every client has zero scored assessments — return rows with empty
+    // pillarScores so the heat map shows them all unassessed.
+    return assignments.map((a) => ({
+      clientId: a.clientId,
+      clientName: a.client.name ?? a.client.email,
+      pillarScores: [],
+    }));
+  }
+
+  const latestAssessments = await prisma.assessment.findMany({
+    where: {
+      OR: latestPairs.map((p) => ({
+        userId: p.userId,
+        completedAt: p.completedAt,
+        status: "COMPLETED",
+      })),
+    },
+    select: { id: true, userId: true },
+  });
+  const assessmentIdToUserId = new Map(
+    latestAssessments.map((a) => [a.id, a.userId])
+  );
+
+  // 3. Single batched PillarScore fetch.
+  const allScores = await prisma.pillarScore.findMany({
+    where: { assessmentId: { in: latestAssessments.map((a) => a.id) } },
+    select: {
+      assessmentId: true,
+      pillar: true,
+      score: true,
+      riskLevel: true,
+    },
+  });
+
+  const scoresByUserId = new Map<
+    string,
+    Array<{ pillar: string; score: number; riskLevel: string }>
+  >();
+  for (const s of allScores) {
+    const userId = assessmentIdToUserId.get(s.assessmentId);
+    if (!userId) continue;
+    const list = scoresByUserId.get(userId) ?? [];
+    list.push({ pillar: s.pillar, score: s.score, riskLevel: s.riskLevel });
+    scoresByUserId.set(userId, list);
+  }
+
+  return assignments.map((a) => ({
+    clientId: a.clientId,
+    clientName: a.client.name ?? a.client.email,
+    pillarScores: scoresByUserId.get(a.clientId) ?? [],
+  }));
 }

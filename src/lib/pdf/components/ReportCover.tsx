@@ -1,6 +1,7 @@
 import { Page, Text, View, Image } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
+import { paletteForRiskLevel } from '@/lib/assessment/risk-color-palette'
 
 interface AdvisorBranding {
   firmName?: string
@@ -22,20 +23,14 @@ export function ReportCover({
   riskLevel,
   advisorBranding,
 }: ReportCoverProps) {
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case 'LOW':
-        return '#10b981'
-      case 'MEDIUM':
-        return '#f59e0b'
-      case 'HIGH':
-        return '#ef4444'
-      case 'CRITICAL':
-        return '#dc2626'
-      default:
-        return '#6b7280'
-    }
-  }
+  // Round-10 / B1: derive cover badge color from canonical RISK_LEVEL_PALETTE
+  // (`src/lib/assessment/risk-color-palette.ts`) so the cover badge and the
+  // Risk-by-Domain heat-map page (rendered later in the same document) use
+  // matching colors. Pre-round-10 this was an inline switch with red HIGH
+  // (#ef4444). The canonical palette uses orange (#f97316) for HIGH so HIGH
+  // is visually distinct from CRITICAL (red) on the cover.
+  const getRiskColor = (level: string): string =>
+    paletteForRiskLevel(level).hex
 
   return (
     <Page size="A4" style={styles.page}>

@@ -5,6 +5,8 @@ import { CategoryBreakdown } from "./CategoryBreakdown";
 import { RecommendationsSection } from "./RecommendationsSection";
 import { HouseholdComposition } from "./HouseholdComposition";
 import { GovernanceRecommendations } from "./GovernanceRecommendations";
+import { RiskHeatMapPdf } from "./RiskHeatMap";
+import type { PillarScoreInput } from "@/lib/assessment/heat-map-data";
 
 interface CategoryScore {
   name: string;
@@ -30,6 +32,10 @@ interface AssessmentReportData {
   completionPercentage: number;
   categoryCount: number;
   missingControlsCount: number;
+  /** Round-10 / B1 (BRD §4.3): per-pillar input for the heat-map page.
+   *  Optional so existing callers that don't yet pass it still produce a
+   *  valid report (the heat-map page is omitted when missing or empty). */
+  pillarScores?: PillarScoreInput[];
 }
 
 interface HouseholdProfile {
@@ -107,7 +113,19 @@ export function AssessmentReport({
         companyName={companyName}
       />
 
-      {/* Page 3: Household Composition (if household profile exists) */}
+      {/* Round-10 / B1 (BRD §4.3): Risk by Domain heat map. Sits between
+          the Executive Summary (single overall score) and the per-category
+          drill-down so the reader gets a one-page snapshot of the pillar
+          breakdown before diving into specifics. Omitted when pillar
+          scores aren't supplied (legacy callers). */}
+      {data.pillarScores && data.pillarScores.length > 0 ? (
+        <RiskHeatMapPdf
+          pillarScores={data.pillarScores}
+          companyName={companyName}
+        />
+      ) : null}
+
+      {/* Household Composition (if household profile exists) */}
       {householdProfile && householdProfile.members.length > 0 && (
         <HouseholdComposition
           members={householdProfile.members}

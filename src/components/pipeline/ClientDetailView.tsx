@@ -16,6 +16,8 @@ import { WorkflowTimeline } from "./WorkflowTimeline";
 import { DocumentRequirements } from "./DocumentRequirements";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
+import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
+import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
@@ -39,19 +41,17 @@ function getStageBadgeVariant(stage: ClientWorkflowStage) {
   }
 }
 
+/**
+ * Round-10: derived from the canonical RISK_LEVEL_PALETTE
+ * (`src/lib/assessment/risk-color-palette.ts`) so the per-pillar heat map
+ * (rendered just below) and the overall-risk badge use matching color
+ * vocabulary. Pre-round-10 used `green-50/600` for low and `red-50/600`
+ * for high; the canonical palette uses emerald for low and orange for
+ * high (reserves red for critical).
+ */
 function getRiskLevelColor(riskLevel: string) {
-  switch (riskLevel.toLowerCase()) {
-    case 'low':
-      return 'text-green-600 bg-green-50';
-    case 'medium':
-      return 'text-amber-600 bg-amber-50';
-    case 'high':
-      return 'text-red-600 bg-red-50';
-    case 'critical':
-      return 'text-red-800 bg-red-100';
-    default:
-      return 'text-gray-600 bg-gray-50';
-  }
+  const palette = paletteForRiskLevel(riskLevel);
+  return `${palette.text} ${palette.bg}`;
 }
 
 function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
@@ -283,27 +283,18 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     )}
                   </div>
 
-                  {/* Pillar Scores */}
-                  {assessmentDetails.pillarScores.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-3">Risk Pillars</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {assessmentDetails.pillarScores.map((pillar) => (
-                          <div key={pillar.pillar} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                            <div>
-                              <p className="font-medium text-sm">{pillar.pillar}</p>
-                              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${getRiskLevelColor(pillar.riskLevel)}`}>
-                                {pillar.riskLevel}
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold">{pillar.score}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Risk by domain (round-10 / B1 — BRD §4.3 heat map). */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Risk by domain</h4>
+                    <RiskHeatMap
+                      mode="single-client"
+                      pillarScores={assessmentDetails.pillarScores.map((p) => ({
+                        pillar: p.pillar,
+                        score: p.score,
+                        riskLevel: p.riskLevel,
+                      }))}
+                    />
+                  </div>
 
                   {assessmentDetails.completedAt && (
                     <div className="pt-2">
