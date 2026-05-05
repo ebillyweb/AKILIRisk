@@ -110,7 +110,11 @@ const USER_AGENT_MAX_LENGTH = 256;
  */
 export interface AuditActor {
   userId: string | null;
-  role?: UserRole | null;
+  /** Session role string. Accepted as `string` so callers can pass
+   *  `session.user.role` (typed `string | undefined` by NextAuth) without
+   *  a cast at every call site. The value is narrowed to `UserRole` at the
+   *  Prisma boundary inside `writeAudit`. */
+  role?: string | null;
   /** Plaintext email — hashed at write time, never stored. */
   email?: string | null;
 }
@@ -161,7 +165,7 @@ export async function writeAudit(input: WriteAuditInput): Promise<void> {
     await prisma.auditLog.create({
       data: {
         actorUserId: input.actor.userId,
-        actorRole: input.actor.role ?? null,
+        actorRole: (input.actor.role as UserRole | null | undefined) ?? null,
         actorEmailHash: input.actor.email
           ? shortEmailHash(input.actor.email)
           : null,
