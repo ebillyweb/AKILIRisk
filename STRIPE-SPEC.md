@@ -3,11 +3,15 @@
 ## Business Requirements
 
 ### Subscription Tiers
+
+Per BRD §10.1 (round-9 alignment, 2026-05-04). The original rollout used
+10/25/75; the values below are the current contract.
+
 | Tier | Client Limit | Features | Target Market |
 |------|--------------|----------|---------------|
-| **Starter** | 10 clients | Basic reports | Solo advisors |
-| **Growth** | 25 clients | Advanced reports | Small firms |
-| **Professional** | 75 clients | All features, custom branding | Established practices |
+| **Starter** | 25 clients | Basic reports | Solo advisors |
+| **Growth** | 50 clients | Advanced reports | Small firms |
+| **Professional** | 100 clients | All features, custom branding | Established practices |
 
 ### Billing Structure
 - **Monthly billing**: Standard pricing
@@ -94,9 +98,9 @@ export const STRIPE_PRICES = {
 }
 
 export const TIER_LIMITS = {
-  STARTER: 10,
-  GROWTH: 25,
-  PROFESSIONAL: 75,
+  STARTER: 25,
+  GROWTH: 50,
+  PROFESSIONAL: 100,
 } as const
 ```
 
@@ -178,14 +182,47 @@ await db.subscriptionAuditLog.create({
 
 ## Migration Strategy
 
-### Existing Advisor Migration
+### Round-9: BRD §10.1 alignment (2026-05-04)
+
+**Status: applied via `prisma/migrations/20260504200000_tier_limit_bump_brd_alignment`.**
+
+The current migration. Tier limits were 10 / 25 / 75 from the original
+rollout; BRD §10.1 specifies 25 / 50 / 100. Aligned in code by bumping
+`TIER_LIMITS` in `src/lib/billing/constants.ts`; aligned on existing rows
+by the migration named above.
+
+The migration uses a temp-table snapshot so the same view drives both the
+UPDATE and the SubscriptionAuditLog INSERT in a single transaction. Each
+bumped row gets one audit row with `action='tier_limit_bump'` and
+`metadata={previousLimit, newLimit, source: 'brd_alignment_migration_20260504'}`.
+Audit row ids are deterministic (`mig-tier-bump-<subscriptionId>`) so a
+re-run after a partial rollback never double-writes audit rows.
+
+The migration is idempotent: a `WHERE clientLimit != <new>` guard on the
+snapshot means a re-run after full success is a no-op.
+
+No Stripe Dashboard step was needed — Stripe products/prices don't carry
+the limit; it lives only in code + the row.
+
+The audit rows surface in `/admin/audit-log` (round-7 admin UI) under
+action `subscription.tier_limit_bump` via the round-8 unified read view.
+
+### Historical: original tier-rollout plan
+
+The original tier-rollout migration plan from when STRIPE-SPEC.md was
+first written. Captured here for context — the 25/75 numbers below reflect
+the *original* tier limits, which the round-9 migration above has since
+bumped to the BRD-aligned values.
+
 1. **Data migration**: Create Subscription records for existing ADVISOR users
-2. **Default tier**: Auto-enroll in Growth plan (25 clients)
+2. **Default tier**: Auto-enroll in Growth plan (was 25 clients; now 50)
 3. **Grace period**: 30-day free period to choose plan
-4. **Client count handling**: If advisor has >25 clients, auto-assign Professional tier
+4. **Client count handling**: If advisor has >25 clients (under the original
+   limits), auto-assign Professional tier
 
 ```sql
--- Migration script
+-- Original migration script (kept for context — supersede with the round-9
+-- migration above when adapting for current code).
 INSERT INTO Subscription (userId, tier, status, clientLimit, billingCycle, currentPeriodEnd)
 SELECT
   u.id,

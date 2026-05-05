@@ -39,6 +39,8 @@ describe("namespace mapping", () => {
   it("legacy action name lists are populated", () => {
     expect(LEGACY_SUBSCRIPTION_ACTION_NAMES).toContain("subscription.created");
     expect(LEGACY_SUBSCRIPTION_ACTION_NAMES).toContain("subscription.payment_failed");
+    // Round-9: BRD-alignment migration's audit action.
+    expect(LEGACY_SUBSCRIPTION_ACTION_NAMES).toContain("subscription.tier_limit_bump");
     expect(LEGACY_BRANDING_ACTION_NAMES).toContain("branding.update_branding");
     expect(LEGACY_BRANDING_ACTION_NAMES).toContain("branding.upload_logo");
     expect(LEGACY_BRANDING_ACTION_NAMES.length).toBeGreaterThanOrEqual(9);

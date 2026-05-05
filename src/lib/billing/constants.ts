@@ -1,7 +1,17 @@
 import type { SubscriptionTier } from "@prisma/client";
 
+/**
+ * Per-tier client limit. Single source of truth at write time — populates
+ * Subscription.clientLimit on row create/update. Read enforcement uses the
+ * row column (denormalized) so a constant change must be paired with a
+ * migration that bumps existing rows.
+ *
+ * Round-9: aligned with BRD §10.1 (25 / 50 / 100). Was 10 / 25 / 75 from
+ * STRIPE-SPEC.md's original rollout. See migration
+ * `20260504200000_tier_limit_bump_brd_alignment` for the existing-rows update.
+ */
 export const TIER_LIMITS: Record<SubscriptionTier, number> = {
-  STARTER: 10,
-  GROWTH: 25,
-  PROFESSIONAL: 75,
+  STARTER: 25,
+  GROWTH: 50,
+  PROFESSIONAL: 100,
 };

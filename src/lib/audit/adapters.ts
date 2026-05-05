@@ -127,13 +127,17 @@ export const LEGACY_BRANDING_ACTION_NAMES = Object.values(BRANDING_ACTIONS).map(
 );
 
 /** Same for subscription actions. Hand-listed because there's no const —
- *  callers pass the raw string at write time (see grep in round-8 prep:
- *  4 distinct action strings exist in the codebase today). */
+ *  callers pass the raw string at write time. Add new action strings here
+ *  when adding new SubscriptionAuditLog write sites so the unified-view
+ *  filter dropdown picks them up. */
 export const LEGACY_SUBSCRIPTION_ACTION_NAMES = [
   "created",
   "stripe_sync",
   "payment_failed",
   "admin_new_advisor_grace",
+  // Round-9 (BRD §10.1 alignment): one-shot migration bumped existing
+  // Subscription.clientLimit values from 10/25/75 to 25/50/100.
+  "tier_limit_bump",
 ].map(namespaceSubscriptionAction);
 
 // ── Adapter functions ───────────────────────────────────────────────────
