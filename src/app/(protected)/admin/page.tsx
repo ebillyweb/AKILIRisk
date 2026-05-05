@@ -36,6 +36,12 @@ const SECTIONS = [
     description:
       "BRD §5.4 compliance trail: user activity, configuration changes, and sensitive data-access events. CSV export available.",
   },
+  {
+    href: "/admin/exports",
+    label: "Data exports",
+    description:
+      "BRD §5.3 data ownership and portability. Per-tenant or system-wide ZIP bundles (CSV + nested JSON + README).",
+  },
 ] as const;
 
 export default async function AdminPage() {
