@@ -239,7 +239,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
           stage: getStageLabel(stage),
           clientDetailUrl,
           advisorName,
-          firmName: advisor.firmName || 'Belvedere Risk Management',
+          firmName: advisor.firmName || 'Akili Risk',
           logoUrl: advisor.logoUrl || undefined,
         });
 
@@ -258,7 +258,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
           message: `${clientName} has been inactive for ${daysSinceActivity} days at the ${getStageLabel(stage)} stage`,
           referenceId: clientId,
           advisorProfileId: advisorId,
-          emailSubject: `Workflow Stalled: ${clientName} - Belvedere Risk Management`,
+          emailSubject: `Workflow Stalled: ${clientName} - Akili Risk`,
           emailHtml,
         });
 

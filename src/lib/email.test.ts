@@ -8,7 +8,7 @@ import {
  * Round-6 regression: client display names flowed unescaped into the
  * "advisor: new intake ready" email body. A client could pick a display
  * name containing HTML (`<a href="https://evil/phish">…</a>`) and it would
- * render as legitimate clickable content inside a Belvedere-branded email
+ * render as legitimate clickable content inside an Akili Risk-branded email
  * to their advisor.
  *
  * These tests pin the rendered HTML for the user-controlled fields. They

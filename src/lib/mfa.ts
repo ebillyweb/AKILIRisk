@@ -7,10 +7,18 @@ import { prisma } from "@/lib/db";
 import { encrypt, decrypt } from "@/lib/encryption";
 
 // Initialize TOTP with Noble crypto and Scure Base32 plugins
+//
+// Brand rename note: issuer string controls the label shown in users'
+// authenticator apps (e.g. "Akili Risk: alice@example.com"). This change
+// affects NEW enrollments only — existing TOTP secrets in users'
+// authenticator apps continue to display whatever label they were
+// enrolled with (the underlying secret is what verifies, not the label).
+// Users who want the updated label must delete + re-enroll. Pre-rename
+// label was "Belvedere".
 const totp = new TOTP({
   crypto: new NobleCryptoPlugin(),
   base32: new ScureBase32Plugin(),
-  issuer: "Belvedere",
+  issuer: "Akili Risk",
   digits: 6,
   period: 30,
   algorithm: "sha1",
@@ -59,7 +67,7 @@ export async function enrollMFA(userId: string) {
   const otpauthUrl = totp.toURI({
     secret,
     label: user.email,
-    issuer: "Belvedere",
+    issuer: "Akili Risk",
   });
   console.debug("[MFA] Generated otpauth URI");
 

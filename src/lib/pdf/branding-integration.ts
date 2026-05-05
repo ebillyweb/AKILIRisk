@@ -112,9 +112,9 @@ export async function getAdvisorBrandingForPDFByUserId(userId: string): Promise<
  * Create branded PDF metadata
  */
 function pdfDisplayNameFromBranding(branding?: AdvisorBrandingData | null): string {
-  if (!branding) return "Belvedere Risk Management";
+  if (!branding) return "Akili Risk";
   const t = clientPortalBrandingDisplayTitle(branding);
-  return t === "Partner portal" ? "Belvedere Risk Management" : t;
+  return t === "Partner portal" ? "Akili Risk" : t;
 }
 
 export function createBrandedPDFMetadata(branding?: AdvisorBrandingData) {
@@ -160,7 +160,7 @@ export function hasAdvancedBrandingFeatures(branding?: AdvisorBrandingData): boo
  */
 export function getLegacyBrandingFallback(firmName?: string, logoUrl?: string): AdvisorBrandingData {
   return {
-    brandName: firmName || 'Belvedere Risk Management',
+    brandName: firmName || 'Akili Risk',
     logoUrl: logoUrl,
     advisorFirmName: firmName,
     brandingEnabled: true,

@@ -97,7 +97,7 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
             : 'Your Advisor');
 
         // Prepare firm name
-        const advisorFirmName = advisor.firmName || 'Belvedere Risk Management';
+        const advisorFirmName = advisor.firmName || 'Akili Risk';
 
         // Extract document names
         const missingDocuments = clientDocs.map(doc => doc.name);

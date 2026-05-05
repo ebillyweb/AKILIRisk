@@ -1,7 +1,7 @@
 /**
  * ScoreDisplay Component
  *
- * Shows Belvedere-style resilience score (0–100) from maturity (0–3), tier label, and breakdown.
+ * Shows BRD-style resilience score (0–100) from maturity (0–3), tier label, and breakdown.
  */
 
 import { Progress } from "@/components/ui/progress";

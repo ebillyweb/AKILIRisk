@@ -11,7 +11,7 @@ describe("TOTP Configuration", () => {
     totp = new TOTP({
       crypto: new NobleCryptoPlugin(),
       base32: new ScureBase32Plugin(),
-      issuer: "Belvedere",
+      issuer: "Akili Risk",
       digits: 6,
       period: 30,
       algorithm: "sha1",
@@ -67,13 +67,14 @@ describe("TOTP Configuration", () => {
     const uri = totp.toURI({
       secret,
       label: "test@example.com",
-      issuer: "Belvedere",
+      issuer: "Akili Risk",
     });
 
     // URI should contain otpauth prefix
     expect(uri).toMatch(/^otpauth:\/\/totp\//);
     expect(uri).toContain("secret=JBSWY3DPEHPK3PXP");
-    expect(uri).toContain("issuer=Belvedere");
+    // Spaces in the issuer are URL-encoded as %20 in the otpauth URI.
+    expect(uri).toContain("issuer=Akili%20Risk");
     expect(uri).toContain("test%40example.com");
   });
 
@@ -96,7 +97,7 @@ describe("TOTP Configuration", () => {
     // Test that the configuration matches the production setup
     const secret = totp.generateSecret();
     const label = "user@example.com";
-    const issuer = "Belvedere";
+    const issuer = "Akili Risk";
 
     const uri = totp.toURI({
       secret,
@@ -108,7 +109,8 @@ describe("TOTP Configuration", () => {
     // Default values (SHA1, digits=6, period=30) may be omitted from URI
     expect(uri).toContain("otpauth://totp/");
     expect(uri).toContain("secret=");
-    expect(uri).toContain("issuer=Belvedere");
+    // Spaces in the issuer are URL-encoded as %20 in the otpauth URI.
+    expect(uri).toContain("issuer=Akili%20Risk");
     expect(uri).toContain("user%40example.com");
   });
 });

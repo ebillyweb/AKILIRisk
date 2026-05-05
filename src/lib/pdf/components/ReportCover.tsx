@@ -42,7 +42,7 @@ export function ReportCover({
           />
         )}
         <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 40 }}>
-          {advisorBranding?.firmName || "Belvedere Risk Management"}
+          {advisorBranding?.firmName || "Akili Risk"}
         </Text>
 
         <Text style={styles.coverTitle}>
@@ -80,7 +80,7 @@ export function ReportCover({
       <View style={styles.confidential}>
         <Text>
           CONFIDENTIAL: This report contains sensitive family governance information and is intended solely for the assessed family.
-          Distribution outside the family without written consent from {advisorBranding?.firmName || "Belvedere Risk Management"} is prohibited.
+          Distribution outside the family without written consent from {advisorBranding?.firmName || "Akili Risk"} is prohibited.
         </Text>
       </View>
 

@@ -31,12 +31,12 @@ export interface EnhancedTemplateData extends TemplateData {
 export function brandingToTemplateData(branding?: AdvisorBrandingData): Partial<EnhancedTemplateData> {
   if (!branding) {
     return {
-      advisorBrandName: 'Belvedere Risk Management',
-      advisorFirmName: 'Belvedere Risk Management',
+      advisorBrandName: 'Akili Risk',
+      advisorFirmName: 'Akili Risk',
     };
   }
 
-  const brandDisplayName = branding.brandName || branding.advisorFirmName || 'Belvedere Risk Management';
+  const brandDisplayName = branding.brandName || branding.advisorFirmName || 'Akili Risk';
 
   return {
     advisorBrandName: brandDisplayName,
@@ -227,7 +227,7 @@ export function getBrandedDocumentFilename(
 ): string {
   const template = TEMPLATE_REGISTRY.find(t => t.id === templateId);
   const templateName = template?.name || 'Policy Document';
-  const brandName = branding?.brandName || branding?.advisorFirmName || 'Belvedere';
+  const brandName = branding?.brandName || branding?.advisorFirmName || 'Akili Risk';
 
   const familySlug = familyName
     .toLowerCase()

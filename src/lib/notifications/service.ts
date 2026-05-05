@@ -101,7 +101,7 @@ export async function sendNotification(params: SendNotificationParams): Promise<
         } as any);
 
         // Generate subject if not provided
-        const subject = emailSubject || `${title} - Belvedere Risk Management`;
+        const subject = emailSubject || `${title} - Akili Risk`;
 
         const result = await resend.emails.send({
           from: FROM_EMAIL,

@@ -77,7 +77,7 @@ export function AssessmentReport({
   advisorBranding,
   documentMetadata,
 }: AssessmentReportProps) {
-  const companyName = advisorBranding?.firmName || "Belvedere Risk Management";
+  const companyName = advisorBranding?.firmName || "Akili Risk";
 
   return (
     <Document

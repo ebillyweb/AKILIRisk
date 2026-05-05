@@ -80,7 +80,7 @@ function renderFooter(advisorName?: string, firmName?: string): string {
     return `
       <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #ddd;">
         <p style="margin: 8px 0; font-size: 12px; color: #666;">
-          This is an automated notification from Belvedere Risk Management.
+          This is an automated notification from Akili Risk.
         </p>
       </div>
     `;
@@ -103,7 +103,7 @@ function renderFooter(advisorName?: string, firmName?: string): string {
 
     <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #ddd;">
       <p style="margin: 8px 0; font-size: 12px; color: #666;">
-        This is an automated notification from Belvedere Risk Management.
+        This is an automated notification from Akili Risk.
         ${advisorName ? `If you have any questions, please contact ${escapeHtml(advisorName)} directly.` : ''}
       </p>
     </div>

@@ -12,7 +12,7 @@ interface PageFooterProps {
 }
 
 export function PageFooter({ companyName }: PageFooterProps) {
-  const displayCompany = companyName || "Belvedere Risk Management";
+  const displayCompany = companyName || "Akili Risk";
   const baseText = `Confidential | Generated ${generatedDate} | ${displayCompany}`;
 
   return (

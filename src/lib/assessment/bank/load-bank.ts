@@ -18,7 +18,7 @@ import { prismaRowToWire } from "./row-wire";
 export { prismaRowToWire } from "./row-wire";
 
 /**
- * Belvedere DDL pillar tables (`categories` / `sections` / `questions`) are the source of truth
+ * BRD-source pillar DDL tables (`categories` / `sections` / `questions`) are the source of truth
  * when they contain any rows. Set `USE_PILLAR_QUESTION_BANK=0` to force `AssessmentBankQuestion` only.
  */
 async function loadGovernanceQuestionWiresFromPillar(options: {

@@ -26,7 +26,7 @@ export function renderPasswordResetEmailHtml(resetUrl: string): string {
               <h1 style="color: #18181b; margin-top: 0;">Reset Your Password</h1>
 
               <p style="margin: 16px 0;">
-                You requested a password reset for your Belvedere Risk Management account.
+                You requested a password reset for your Akili Risk account.
               </p>
 
               <p style="margin: 16px 0;">
@@ -74,7 +74,7 @@ export async function sendPasswordResetEmail(
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: "Reset your Belvedere password",
+      subject: "Reset your Akili Risk password",
       html: renderPasswordResetEmailHtml(resetUrl),
     });
   } catch (error) {
@@ -144,7 +144,7 @@ export function renderAdvisorIntakeNotificationHtml(
               <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
 
               <p style="margin: 16px 0; font-size: 14px; color: #666;">
-                This is an automated notification from Belvedere Risk Management.
+                This is an automated notification from Akili Risk.
               </p>
             </div>
           </body>

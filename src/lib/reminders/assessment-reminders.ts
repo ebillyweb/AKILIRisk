@@ -154,7 +154,7 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
             : 'Your Advisor');
 
         // Prepare firm name
-        const advisorFirmName = advisor.firmName || 'Belvedere Risk Management';
+        const advisorFirmName = advisor.firmName || 'Akili Risk';
 
         // Determine assessment URL based on what's incomplete
         const hasIncompleteIntake = client.intakeInterviews?.[0]?.status === 'IN_PROGRESS';
@@ -180,7 +180,7 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
           message: `Your governance assessment is ready to complete`,
           referenceId: client.id,
           advisorProfileId: advisor.id,
-          emailSubject: 'Your Assessment is Waiting - Belvedere Risk Management',
+          emailSubject: 'Your Assessment is Waiting - Akili Risk',
           emailHtml,
         });
 

@@ -20,7 +20,7 @@ export function EnhancedPageFooter({
   const styles = createBrandedStyles(branding);
 
   // Determine company name with fallbacks
-  const companyName = branding?.brandName || branding?.advisorFirmName || 'Belvedere Risk Management';
+  const companyName = branding?.brandName || branding?.advisorFirmName || 'Akili Risk';
 
   return (
     <View style={styles.footerContainer}>
@@ -61,7 +61,7 @@ export function MinimalPageFooter({
   totalPages,
 }: Pick<EnhancedPageFooterProps, 'branding' | 'pageNumber' | 'totalPages'>) {
   const styles = createBrandedStyles(branding);
-  const companyName = branding?.brandName || branding?.advisorFirmName || 'Belvedere Risk Management';
+  const companyName = branding?.brandName || branding?.advisorFirmName || 'Akili Risk';
 
   return (
     <View style={styles.footerContainer}>

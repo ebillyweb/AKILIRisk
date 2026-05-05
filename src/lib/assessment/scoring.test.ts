@@ -71,7 +71,7 @@ const minimalQuestions: Question[] = [
 ];
 
 describe("getRiskLevel", () => {
-  /** Belvedere bands on 0–100 resilience (from maturity 0–3 via rounded percent). */
+  /** BRD §4.2 bands on 0–100 resilience (from maturity 0–3 via rounded percent). */
   it("returns low when resilience percent is 80–100", () => {
     expect(getRiskLevel(2.4)).toBe("low");
     expect(getRiskLevel(3)).toBe("low");

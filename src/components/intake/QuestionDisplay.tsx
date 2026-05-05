@@ -14,7 +14,7 @@ import type { IntakeQuestion } from "@/lib/intake/types";
  * Question Display Component
  *
  * Displays intake interview questions with prominent text hierarchy.
- * Follows Belvedere editorial design patterns for clean, focused UX.
+ * Follows the Akili Risk editorial design patterns for clean, focused UX.
  */
 
 interface QuestionDisplayProps {

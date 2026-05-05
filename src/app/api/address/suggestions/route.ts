@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     url.searchParams.set("limit", "8");
     const res = await fetch(url.toString(), {
       headers: {
-        "User-Agent": "BelvedereRiskManagement/1.0 (address-completion)",
+        "User-Agent": "AkiliRisk/1.0 (address-completion)",
       },
     });
     if (!res.ok) return NextResponse.json([]);

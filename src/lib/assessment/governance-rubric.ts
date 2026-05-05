@@ -1,5 +1,5 @@
 /**
- * Belvedere-style family governance rubric: per-question maturity 0–3 rolls up to a
+ * Family governance rubric (per BRD §4.2): per-question maturity 0–3 rolls up to a
  * 0–100 resilience score and tier classification (see client framework A–F weights).
  */
 
@@ -60,7 +60,7 @@ export const DEFAULT_RISK_THRESHOLDS: RiskThresholds = {
 };
 
 /**
- * Risk tier from 0–100 resilience score (Belvedere bands).
+ * Risk tier from 0–100 resilience score (BRD §4.2 bands; configurable via A2).
  *
  * Defensive: if thresholds aren't strictly monotonic (lowMin > mediumMin > highMin),
  * the cascade still produces a defined level — last-cutoff-wins via the if/else

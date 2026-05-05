@@ -1,7 +1,7 @@
 /**
  * Assessment Domain Types
  *
- * Core type definitions for the Belvedere Risk Assessment system.
+ * Core type definitions for the Akili Risk assessment system.
  * Defines questions, scoring, branching logic, and results.
  */
 

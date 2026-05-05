@@ -16,7 +16,7 @@ import { Target, Clock, Users } from "lucide-react";
 interface ActionPlanProps {
   missingControls: MissingControl[];
   pillarName: string;
-  /** Overall tier drives required action row (Belvedere action mapping). */
+  /** Overall tier drives required action row (BRD §4.2 action mapping). */
   riskLevel: RiskLevel;
   scoreRubric?: "governance" | "cyber";
 }

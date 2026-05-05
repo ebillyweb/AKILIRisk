@@ -235,7 +235,7 @@ export async function GET(
     );
 
     // 10. Return PDF with appropriate headers
-    const brandName = advisorBranding?.brandName || advisorBranding?.advisorFirmName || legacyAdvisorBranding?.firmName || 'belvedere';
+    const brandName = advisorBranding?.brandName || advisorBranding?.advisorFirmName || legacyAdvisorBranding?.firmName || 'akili-risk';
     const firmSlug = brandName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

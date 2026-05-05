@@ -24,7 +24,7 @@ export function EnhancedReportCover({
   const styles = createBrandedStyles(branding);
 
   // Determine brand display name with fallbacks
-  const brandDisplayName = branding?.brandName || branding?.advisorFirmName || 'Belvedere Risk Management';
+  const brandDisplayName = branding?.brandName || branding?.advisorFirmName || 'Akili Risk';
 
   return (
     <Page size="A4" style={styles.page}>

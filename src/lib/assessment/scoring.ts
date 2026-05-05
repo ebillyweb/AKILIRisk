@@ -168,7 +168,7 @@ export function calculatePillarScore(
 
 /**
  * Map aggregate maturity (0–3) to risk level. Bands default to the original
- * Belvedere 80/60/40 resilience cutoffs but accept a configured override so
+ * BRD §4.2 80/60/40 resilience cutoffs but accept a configured override so
  * admins can adjust thresholds at /admin/scoring/thresholds (A2 / BRD §4.2).
  */
 export function getRiskLevel(

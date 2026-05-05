@@ -22,7 +22,7 @@ import { ScureBase32Plugin } from "@otplib/plugin-base32-scure";
 const totp = new TOTP({
   crypto: new NobleCryptoPlugin(),
   base32: new ScureBase32Plugin(),
-  issuer: "Belvedere",
+  issuer: "Akili Risk",
   digits: 6,
   period: 30,
   algorithm: "sha1",
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       const qrUri = totp.toURI({
         secret: newSecret,
         label: "debug@example.com",
-        issuer: "Belvedere",
+        issuer: "Akili Risk",
       });
 
       return NextResponse.json({

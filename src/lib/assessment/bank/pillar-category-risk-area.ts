@@ -1,7 +1,7 @@
 import { PillarCategoryKind } from "@prisma/client";
 
 /**
- * Map Belvedere `categories.code` (DDL) to `AssessmentBankQuestion.riskAreaId` / scoring pillar ids.
+ * Map BRD-source pillar DDL `categories.code` to `AssessmentBankQuestion.riskAreaId` / scoring pillar ids.
  * Intake script categories (`PillarCategoryKind.INTAKE`) are not risk areas — use
  * `riskAreaIdForPillarCategory` which returns `null` for them.
  */
