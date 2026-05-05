@@ -33,18 +33,56 @@ export function maturityScoreToPercent(maturity03: number): number {
 }
 
 /**
- * Risk tier from 0–100 resilience score (Belvedere bands).
+ * A2 (BRD §4.2 + §7.1): risk-tier cutoffs in 0–100 resilience-percent space.
+ *
+ * `low/medium/high` are the three configurable cutoffs admins set at
+ * /admin/scoring/thresholds. The fourth band ("critical") is implicit —
+ * any score below `highMin` falls there. We keep four internal bands so
+ * the existing `RiskLevel` enum, `GOVERNANCE_TIER_COPY`, PDF render code,
+ * and recommendation engine continue to work unchanged.
  */
-export function riskLevelFromResiliencePercent(percent: number): RiskLevel {
-  if (percent >= 80) return "low";
-  if (percent >= 60) return "medium";
-  if (percent >= 40) return "high";
+export interface RiskThresholds {
+  /** Low (resilient) ≥ this percent. Default 80. */
+  lowMin: number;
+  /** Medium (moderate) ≥ this percent. Default 60. */
+  mediumMin: number;
+  /** High (elevated) ≥ this percent. Below this is critical. Default 40. */
+  highMin: number;
+}
+
+/** Original hardcoded values — preserved as the default fallback so callers
+ *  that don't have configured thresholds available behave identically to
+ *  pre-A2. */
+export const DEFAULT_RISK_THRESHOLDS: RiskThresholds = {
+  lowMin: 80,
+  mediumMin: 60,
+  highMin: 40,
+};
+
+/**
+ * Risk tier from 0–100 resilience score (Belvedere bands).
+ *
+ * Defensive: if thresholds aren't strictly monotonic (lowMin > mediumMin > highMin),
+ * the cascade still produces a defined level — last-cutoff-wins via the if/else
+ * order. The admin-side server action validates monotonicity before persisting,
+ * so this is only reachable via direct misuse.
+ */
+export function riskLevelFromResiliencePercent(
+  percent: number,
+  thresholds: RiskThresholds = DEFAULT_RISK_THRESHOLDS
+): RiskLevel {
+  if (percent >= thresholds.lowMin) return "low";
+  if (percent >= thresholds.mediumMin) return "medium";
+  if (percent >= thresholds.highMin) return "high";
   return "critical";
 }
 
 /** Tier classification from aggregate maturity (0–3). */
-export function riskLevelFromMaturityScore(maturity03: number): RiskLevel {
-  return riskLevelFromResiliencePercent(maturityScoreToPercent(maturity03));
+export function riskLevelFromMaturityScore(
+  maturity03: number,
+  thresholds: RiskThresholds = DEFAULT_RISK_THRESHOLDS
+): RiskLevel {
+  return riskLevelFromResiliencePercent(maturityScoreToPercent(maturity03), thresholds);
 }
 
 export type GovernanceTierCopy = {
@@ -81,11 +119,17 @@ export function governanceTierCopyForRiskLevel(riskLevel: RiskLevel): Governance
   return GOVERNANCE_TIER_COPY[riskLevel];
 }
 
-/** Progress / heat styling from 0–3 maturity (same bands as percent). */
-export function maturityHeatLevel(maturity03: number): "strong" | "fair" | "weak" | "severe" {
+/** Progress / heat styling from 0–3 maturity. Shares thresholds with
+ *  `riskLevelFromResiliencePercent` so the styling tier and the risk-tier
+ *  label stay consistent ("Low risk" should never render with an orange
+ *  progress bar after an admin moves the cutoffs). */
+export function maturityHeatLevel(
+  maturity03: number,
+  thresholds: RiskThresholds = DEFAULT_RISK_THRESHOLDS
+): "strong" | "fair" | "weak" | "severe" {
   const p = maturityScoreToPercent(maturity03);
-  if (p >= 80) return "strong";
-  if (p >= 60) return "fair";
-  if (p >= 40) return "weak";
+  if (p >= thresholds.lowMin) return "strong";
+  if (p >= thresholds.mediumMin) return "fair";
+  if (p >= thresholds.highMin) return "weak";
   return "severe";
 }

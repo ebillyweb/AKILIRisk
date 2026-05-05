@@ -45,6 +45,10 @@ export const AUDIT_ACTIONS = {
 
   // ── Admin actions on configuration (P2) ───────────────────────────────────
   PLATFORM_SETTINGS_UPDATE: "platform_settings.update",
+  /** A2 (BRD §4.2 + §7.1): admin updates Low/Medium/High score cutoffs at
+   *  /admin/scoring/thresholds. Distinct from PLATFORM_SETTINGS_UPDATE so
+   *  threshold changes are filterable separately in the audit log. */
+  RISK_THRESHOLDS_UPDATE: "risk_thresholds.update",
   GOVERNANCE_LEAD_ASSIGN: "governance_lead.assign",
   INTAKE_QUESTION_UPDATE: "intake_question.update",
   INTAKE_QUESTION_VISIBILITY_TOGGLE: "intake_question.visibility_toggle",

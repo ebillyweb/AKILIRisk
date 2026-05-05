@@ -9,6 +9,7 @@
 import { calculatePillarScore } from '../assessment/scoring';
 import { identityRiskPillar, identityRiskQuestions } from './questions';
 import { ScoreResult } from '../assessment/types';
+import type { RiskThresholds } from '../assessment/governance-rubric';
 
 /**
  * Calculate identity risk score from user answers
@@ -22,12 +23,16 @@ import { ScoreResult } from '../assessment/types';
  */
 export function calculateIdentityRiskScore(
   answers: Record<string, unknown>,
-  visibleQuestionIds?: string[]
+  visibleQuestionIds?: string[],
+  // A2: pass through to the underlying scorer. Defaults to the original
+  // 80/60/40 bands when omitted.
+  thresholds?: RiskThresholds
 ): ScoreResult {
   return calculatePillarScore(
     answers,
     identityRiskPillar,
     identityRiskQuestions,
-    visibleQuestionIds
+    visibleQuestionIds,
+    thresholds
   );
 }

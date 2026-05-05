@@ -25,6 +25,12 @@ const SECTIONS = [
   },
   { href: "/admin/settings", label: "Settings", description: "Admin and system settings." },
   {
+    href: "/admin/scoring/thresholds",
+    label: "Risk thresholds",
+    description:
+      "BRD §4.2 + §7.1: Low / Medium / High score cutoffs. Applies to new scoring runs only.",
+  },
+  {
     href: "/admin/audit-log",
     label: "Audit log",
     description:

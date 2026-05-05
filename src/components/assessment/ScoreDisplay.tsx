@@ -102,9 +102,7 @@ export function ScoreDisplay({
         </div>
 
         <p className="text-xs text-muted-foreground max-w-xl mx-auto">
-          {scoreRubric === "cyber"
-            ? "Tier bands: 80–100 low / resilient · 60–79 moderate · 40–59 elevated · under 40 high/critical."
-            : "Tier bands: 80–100 resilient · 60–79 moderate · 40–59 elevated · under 40 high/critical."}
+          Risk tiers reflect the resilience score relative to configured cutoffs.
         </p>
 
         {answeredPercentage < 100 && (

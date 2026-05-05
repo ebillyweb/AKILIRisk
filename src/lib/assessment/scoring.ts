@@ -19,7 +19,11 @@ import {
   MATURITY_SCALE_MAX,
   REMEDIATION_MATURITY_THRESHOLD,
 } from './maturity-scale';
-import { riskLevelFromMaturityScore } from './governance-rubric';
+import {
+  DEFAULT_RISK_THRESHOLDS,
+  riskLevelFromMaturityScore,
+  type RiskThresholds,
+} from './governance-rubric';
 
 /**
  * Map a raw score from a question's scoreMap onto the 0–3 maturity scale using that
@@ -75,7 +79,11 @@ export function calculatePillarScore(
   answers: Record<string, unknown>,
   pillar: Pillar,
   allQuestions: Question[],
-  visibleQuestionIds?: string[]
+  visibleQuestionIds?: string[],
+  // A2: optional configured cutoffs. When omitted, falls back to
+  // DEFAULT_RISK_THRESHOLDS (the original hardcoded 80/60/40 bands) so
+  // existing callers and tests continue to work unchanged.
+  thresholds: RiskThresholds = DEFAULT_RISK_THRESHOLDS
 ): ScoreResult {
   const categoryScores: CategoryScore[] = [];
   let totalWeightedScore = 0;
@@ -145,7 +153,7 @@ export function calculatePillarScore(
     : 0;
 
   // Determine risk level
-  const riskLevel = getRiskLevel(pillarScore);
+  const riskLevel = getRiskLevel(pillarScore, thresholds);
 
   // Identify missing controls (only from visible questions)
   const missingControls = identifyMissingControls(answers, allQuestions, visibleQuestionIds);
@@ -159,11 +167,15 @@ export function calculatePillarScore(
 }
 
 /**
- * Map aggregate maturity (0–3) to risk level using Belvedere 0–100 resilience bands:
- * 80–100 low, 60–79 moderate, 40–59 elevated, &lt;40 high/critical.
+ * Map aggregate maturity (0–3) to risk level. Bands default to the original
+ * Belvedere 80/60/40 resilience cutoffs but accept a configured override so
+ * admins can adjust thresholds at /admin/scoring/thresholds (A2 / BRD §4.2).
  */
-export function getRiskLevel(score: number): RiskLevel {
-  return riskLevelFromMaturityScore(score);
+export function getRiskLevel(
+  score: number,
+  thresholds: RiskThresholds = DEFAULT_RISK_THRESHOLDS
+): RiskLevel {
+  return riskLevelFromMaturityScore(score, thresholds);
 }
 
 /**
@@ -255,7 +267,9 @@ export function calculateCustomizedPillarScore(
   pillar: Pillar,
   allQuestions: Question[],
   visibleQuestionIds: string[],
-  emphasisMultipliers: Record<string, number>
+  emphasisMultipliers: Record<string, number>,
+  // A2: optional configured cutoffs (same shape as calculatePillarScore).
+  thresholds: RiskThresholds = DEFAULT_RISK_THRESHOLDS
 ): ScoreResult {
   const categoryScores: CategoryScore[] = [];
   let totalWeightedScore = 0;
@@ -324,7 +338,7 @@ export function calculateCustomizedPillarScore(
     : 0;
 
   // Determine risk level
-  const riskLevel = getRiskLevel(pillarScore);
+  const riskLevel = getRiskLevel(pillarScore, thresholds);
 
   // Identify missing controls (only from visible questions)
   const missingControls = identifyMissingControls(answers, allQuestions, visibleQuestionIds);

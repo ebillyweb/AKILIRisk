@@ -160,6 +160,15 @@ model PlatformSettings {
   advisorGovernanceDashboardEnabled Boolean @default(true)
   /** Advisor nav + /advisor/intelligence (portfolio risk views). */
   advisorRiskIntelligenceEnabled    Boolean @default(true)
+  /// A2 (BRD §4.2 + §7.1): risk-tier cutoffs in 0–100 resilience-percent space.
+  /// Configured at /admin/scoring/thresholds. NEW scoring runs use these;
+  /// previously-persisted PillarScore.riskLevel rows are NOT retroactively
+  /// recomputed (would require a re-score). Defaults match the original
+  /// hardcoded values from governance-rubric.ts so behavior is unchanged
+  /// until an admin edits them.
+  riskThresholdLow    Int @default(80)
+  riskThresholdMedium Int @default(60)
+  riskThresholdHigh   Int @default(40)
   updatedAt DateTime @updatedAt
 }
 

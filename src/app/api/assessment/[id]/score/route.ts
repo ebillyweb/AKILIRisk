@@ -8,6 +8,7 @@ import { familyGovernancePillar } from "@/lib/assessment/questions";
 import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
 import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/questions";
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
+import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
 import { Question, Pillar } from "@/lib/assessment/types";
 import {
   getCustomizationConfig,
@@ -258,11 +259,22 @@ export async function POST(
       );
     }
 
+    // A2 (BRD §4.2 + §7.1): fetch the configured Low/Medium/High cutoffs
+    // once per scoring run so all three branches use the same thresholds.
+    // Falls back to the original 80/60/40 bands when PlatformSettings is
+    // missing or DB read fails — see getActiveRiskThresholds().
+    //
+    // Caveat: this writes the resulting riskLevel into PillarScore (a
+    // persisted column). Existing scored assessments retain their previous
+    // risk level until the assessment is re-scored. Threshold changes
+    // apply to NEW scoring runs only.
+    const activeThresholds = await getActiveRiskThresholds();
+
     // Calculate pillar score - customized or standard
     let scoreResult;
     if (pillar === 'identity-risk') {
       // Use identity risk scoring wrapper
-      scoreResult = calculateIdentityRiskScore(answers, visibleIds);
+      scoreResult = calculateIdentityRiskScore(answers, visibleIds, activeThresholds);
     } else if (customizationConfig) {
       // Use customization for governance pillar
       const emphasisMultipliers = getEmphasisMultipliers(customizationConfig);
@@ -271,7 +283,8 @@ export async function POST(
         pillarConfig.pillarData,
         pillarConfig.questions,
         visibleIds,
-        emphasisMultipliers
+        emphasisMultipliers,
+        activeThresholds
       );
     } else {
       // Standard scoring
@@ -279,7 +292,8 @@ export async function POST(
         answers,
         pillarConfig.pillarData,
         pillarConfig.questions,
-        visibleIds
+        visibleIds,
+        activeThresholds
       );
     }
 
