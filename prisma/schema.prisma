@@ -19,7 +19,11 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   emailVerified DateTime?
-  password      String
+  /// Round-11 commit 3 (BRD §5.1.AUTH): nullable so client (role=USER)
+  /// accounts can exist without a password. Advisor + admin accounts
+  /// still set a real bcrypt hash. The credentials provider in
+  /// auth.config.ts has a TIMING_FALLBACK_HASH defensive guard for null.
+  password      String?
   name          String?
   firstName     String?
   lastName      String?

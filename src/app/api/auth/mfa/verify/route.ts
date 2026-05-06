@@ -18,6 +18,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Round-11 commit 3 (BRD §5.1.AUTH): MFA is advisor/admin only.
+    if (session.user.role === "USER") {
+      return NextResponse.json(
+        { error: "MFA is not available for client accounts" },
+        { status: 403 }
+      );
+    }
+
     // Rate limiting: 5 attempts per 5 minutes
     const rateLimitKey = `mfa-verify:${session.user.id}`;
     const rateLimitResult = rateLimit({

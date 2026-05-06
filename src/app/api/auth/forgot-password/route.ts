@@ -81,8 +81,18 @@ export async function POST(req: NextRequest) {
     // for active accounts, and returns null for soft-deleted ones.
     const user = await prisma.user.findFirst({
       where: { email, deletedAt: null },
-      select: { id: true, email: true },
+      select: { id: true, email: true, role: true },
     });
+
+    // Round-11 commit 3 (BRD §5.1.AUTH): clients (role=USER) authenticate
+    // via magic link only — they don't have passwords to reset. Blank the
+    // user reference for clients so the rest of the route falls into the
+    // enumeration-safe "no such email" branch (same generic 200 response,
+    // no reset email sent). The audit row still records the attempt with
+    // metadata.userExists=false so a real audit reader can reconstruct
+    // intent without exposing the role.
+    const eligibleForPasswordReset =
+      user && user.role !== "USER";
 
     // Audit BEFORE the response on every branch so the audit-write latency
     // is constant regardless of whether the email exists. If we deferred the
@@ -96,7 +106,13 @@ export async function POST(req: NextRequest) {
       action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET_REQUESTED,
       entityType: "User",
       entityId: user?.id ?? null,
-      metadata: { userExists: Boolean(user) },
+      metadata: {
+        userExists: Boolean(user),
+        // Round-11 commit 3: capture the client-blocked branch so the
+        // audit log distinguishes "client tried to reset password" from
+        // "no such email" without exposing the role to the client.
+        clientBlocked: user?.role === "USER",
+      },
       request: req,
     });
 
@@ -108,8 +124,8 @@ export async function POST(req: NextRequest) {
     //      have work to do. Previously the known-email branch waited on a
     //      Resend round-trip (~100–500ms) while the unknown branch
     //      returned in ~5ms — a measurable side-channel.
-    if (user) {
-      void issueResetEmail(user.email, baseUrl);
+    if (eligibleForPasswordReset) {
+      void issueResetEmail(user!.email, baseUrl);
     }
 
     // Generic success response (same for existing and non-existing emails)

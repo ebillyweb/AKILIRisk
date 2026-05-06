@@ -124,6 +124,26 @@ export default {
           return null;
         }
 
+        // Round-11 commit 3 (BRD §5.1.AUTH): clients (role=USER) can only
+        // sign in via magic link. Refuse credentials sign-in for clients
+        // even if they happen to have a non-null password (e.g. legacy
+        // pre-round-11 accounts or test fixtures). Advisor + admin
+        // accounts continue to use credentials.
+        if (user.role === "USER") {
+          console.warn("Credentials authorize failed: client role blocked", {
+            userId: user.id,
+            emailHash: hashedEmail,
+          });
+          await writeAudit({
+            actor: { userId: user.id, role: user.role, email: user.email },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: user.id,
+            metadata: { reason: "client_role_blocked" },
+          });
+          return null;
+        }
+
         console.info("Credentials authorize succeeded", {
           userId: user.id,
           emailHash: hashedEmail,
@@ -222,6 +242,20 @@ export default {
             entityType: "User",
             entityId: null,
             metadata: { reason: "user_inactive", inviteCodeId: validation.inviteCodeId },
+          });
+          return null;
+        }
+
+        // Round-11 commit 3 (BRD §5.1.AUTH): magic-link is for clients
+        // only. Refuse advisors + admins so the role split is symmetric
+        // (credentials → ADVISOR/ADMIN, magic-link → USER).
+        if (user.role !== "USER") {
+          await writeAudit({
+            actor: { userId: user.id, role: user.role, email: user.email },
+            action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_FAILURE,
+            entityType: "User",
+            entityId: user.id,
+            metadata: { reason: "non_client_role_blocked", inviteCodeId: validation.inviteCodeId },
           });
           return null;
         }

@@ -128,6 +128,16 @@ function SignInForm() {
         <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
           {isLoading ? "Signing in..." : "Sign In"}
         </Button>
+
+        {/* Round-11 commit 3 (BRD §5.1.AUTH): client sign-in is via
+            magic link, not email + password. Surface the path here for
+            anyone who landed on the credentials form by accident. */}
+        <p className="text-center text-xs text-muted-foreground pt-2">
+          Client account?{" "}
+          <Link href="/signin/magic-link" className="text-primary hover:underline">
+            Sign in with an email link
+          </Link>
+        </p>
       </form>
     </AuthPanel>
   );

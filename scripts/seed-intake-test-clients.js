@@ -55,14 +55,14 @@ async function createTestAdvisor() {
 }
 
 async function createIntakePendingClient(advisorProfile) {
-  const hashedPassword = await bcryptjs.hash('testpassword123', 12);
-
   console.log('Creating client with pending intake...');
 
+  // Round-11 commit 3 (BRD §5.1.AUTH): clients sign in via magic link;
+  // password column is null for USER-role rows.
   const clientUser = await prisma.user.upsert({
     where: { email: 'client+intake@test.com' },
     update: {
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Intake Pending)',
       firstName: 'Intake',
       lastName: 'Pending',
@@ -70,7 +70,7 @@ async function createIntakePendingClient(advisorProfile) {
     },
     create: {
       email: 'client+intake@test.com',
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Intake Pending)',
       firstName: 'Intake',
       lastName: 'Pending',
@@ -166,14 +166,14 @@ async function createIntakePendingClient(advisorProfile) {
 }
 
 async function createAssessmentReadyClient(advisorProfile) {
-  const hashedPassword = await bcryptjs.hash('testpassword123', 12);
-
   console.log('Creating client ready for assessment...');
 
+  // Round-11 commit 3 (BRD §5.1.AUTH): clients sign in via magic link;
+  // password column is null for USER-role rows.
   const clientUser = await prisma.user.upsert({
     where: { email: 'client+assessment@test.com' },
     update: {
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Assessment Ready)',
       firstName: 'Assessment',
       lastName: 'Ready',
@@ -181,7 +181,7 @@ async function createAssessmentReadyClient(advisorProfile) {
     },
     create: {
       email: 'client+assessment@test.com',
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Assessment Ready)',
       firstName: 'Assessment',
       lastName: 'Ready',

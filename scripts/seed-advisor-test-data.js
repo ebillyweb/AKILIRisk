@@ -64,11 +64,15 @@ async function main() {
 
   console.log('✅ Created advisor profile for:', advisorUser.name);
 
-  // Create client user with submitted intake
+  // Create client user with submitted intake.
+  // Round-11 commit 3 (BRD §5.1.AUTH): clients sign in via magic link;
+  // password column is null. Existing Playwright fixtures that try to
+  // sign in with `testpassword123` against this account will fail until
+  // they're migrated to the magic-link flow.
   const clientUser = await prisma.user.upsert({
     where: { email: 'client@test.com' },
     update: {
-      password: hashedPassword,
+      password: null,
       name: 'Test Client',
       firstName: 'Test',
       lastName: 'Client',
@@ -76,7 +80,7 @@ async function main() {
     },
     create: {
       email: 'client@test.com',
-      password: hashedPassword,
+      password: null,
       name: 'Test Client',
       firstName: 'Test',
       lastName: 'Client',
@@ -242,11 +246,14 @@ async function main() {
 
   console.log(`✅ Created ${requirements.length} document requirements for ${clientUser.email}`);
 
-  // Second client user for MFA testing (enable MFA in Settings to test verify flow)
+  // Second client user (round-11: MFA is no longer available for client
+  // accounts; this fixture is preserved for legacy Playwright tests but
+  // its name is misleading post-round-11. Password is null per the
+  // BRD §5.1.AUTH magic-link policy).
   const client2User = await prisma.user.upsert({
     where: { email: 'client-mfa@test.com' },
     update: {
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (MFA)',
       firstName: 'MFA',
       lastName: 'Client',
@@ -254,7 +261,7 @@ async function main() {
     },
     create: {
       email: 'client-mfa@test.com',
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (MFA)',
       firstName: 'MFA',
       lastName: 'Client',
@@ -397,7 +404,7 @@ async function main() {
   const clientFreshUser = await prisma.user.upsert({
     where: { email: 'client-fresh@test.com' },
     update: {
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Fresh)',
       firstName: 'Fresh',
       lastName: 'Client',
@@ -405,7 +412,7 @@ async function main() {
     },
     create: {
       email: 'client-fresh@test.com',
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Fresh)',
       firstName: 'Fresh',
       lastName: 'Client',
@@ -671,7 +678,7 @@ async function main() {
   const clientUnbrandedUser = await prisma.user.upsert({
     where: { email: 'client-unbranded@test.com' },
     update: {
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Unbranded)',
       firstName: 'Unbranded',
       lastName: 'Client',
@@ -679,7 +686,7 @@ async function main() {
     },
     create: {
       email: 'client-unbranded@test.com',
-      password: hashedPassword,
+      password: null,
       name: 'Test Client (Unbranded)',
       firstName: 'Unbranded',
       lastName: 'Client',

@@ -87,10 +87,22 @@ export async function POST(req: NextRequest) {
     // forgot-password route's lookup.
     const user = await prisma.user.findFirst({
       where: { email, deletedAt: null },
-      select: { id: true },
+      select: { id: true, role: true },
     });
 
     if (!user) {
+      return NextResponse.json(
+        { error: "Invalid or expired reset link" },
+        { status: 400 }
+      );
+    }
+
+    // Round-11 commit 3 (BRD §5.1.AUTH): clients (role=USER) authenticate
+    // via magic link; password reset has no purpose for them. If a stale
+    // reset link reaches a client account (legacy invite-flow leftover),
+    // refuse with the same generic 400 used for invalid/expired tokens
+    // — no role disclosure on the wire.
+    if (user.role === "USER") {
       return NextResponse.json(
         { error: "Invalid or expired reset link" },
         { status: 400 }

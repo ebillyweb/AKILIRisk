@@ -1,3 +1,16 @@
+/**
+ * Round-11 commit 3 (BRD §5.1.AUTH): client (role=USER) accounts in this
+ * fixture map still carry a `password` for legacy compatibility with
+ * Playwright smokes that haven't been migrated to the magic-link flow.
+ * Those smokes WILL FAIL post-round-11 because:
+ *   - the credentials provider rejects role=USER (auth.config.ts)
+ *   - the seed scripts now write password=null for client rows
+ *
+ * Migration path for the Playwright suite: replace credentials sign-in
+ * with a magic-link issuance helper that POSTs to /api/auth/magic-link/
+ * request, reads the token from the test mail inbox, and follows the
+ * verify URL. Tracked separately from this commit.
+ */
 export type Role =
   | "advisor"
   | "advisor2"

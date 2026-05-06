@@ -14,6 +14,16 @@ export async function POST(_req: NextRequest) {
       );
     }
 
+    // Round-11 commit 3 (BRD §5.1.AUTH): MFA is for advisor + admin
+    // accounts only. Clients use magic link and have no password to
+    // protect with a second factor.
+    if (session.user.role === "USER") {
+      return NextResponse.json(
+        { error: "MFA is not available for client accounts" },
+        { status: 403 }
+      );
+    }
+
     // Enroll user in MFA. Note: this only generates the QR code + secret;
     // mfaEnabled doesn't flip until the user completes the TOTP challenge
     // via /api/auth/mfa/verify with action=enable. The audit row for

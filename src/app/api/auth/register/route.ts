@@ -29,6 +29,26 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Round-11 commit 3 (BRD §5.1.AUTH): client signup via password
+    // is removed. Clients are created by advisor invitation; the
+    // invitation flow issues a magic link, and the magic-link verify
+    // path creates the User row on first click (commit 4 wires this).
+    // This endpoint refuses with a fixed 410 Gone so any cached client
+    // pointing here gets a clear "ask your advisor" message rather
+    // than a confusing validation error. Advisor + admin accounts are
+    // created via /admin/advisors/new; not affected.
+    return NextResponse.json(
+      {
+        error:
+          "Client signup via password is no longer supported. Ask your advisor to send you a sign-in link.",
+      },
+      { status: 410 }
+    );
+
+    // Pre-round-11 implementation kept below for reference — never
+    // executes after the early return above. Will be removed once
+    // commit 4 lands the magic-link-driven user creation.
+    // eslint-disable-next-line no-unreachable
     const body = await request.json();
 
     const validation = registerSchema.safeParse(body);
