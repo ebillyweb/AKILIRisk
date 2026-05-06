@@ -656,18 +656,16 @@ model AdvisorProfile {
   @@index([brandingEnabled])
 }
 
+/// Round-11 session 2 / commit 2.1 (BRD §5.1 amendment): the contact +
+/// address + DOB fields were dropped per the "minimization by omission"
+/// strategy. Only User.email is stored as client identity. The model is
+/// retained as a near-stub so future per-client metadata has an FK
+/// target without re-introducing a 1:1 table; removable entirely in a
+/// follow-up if no new fields land.
 model ClientProfile {
   id           String    @id @default(cuid())
   userId       String    @unique
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phone        String?
-  addressLine1 String?
-  addressLine2 String?
-  city         String?
-  state        String?
-  postalCode   String?
-  country      String?
-  dateOfBirth  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

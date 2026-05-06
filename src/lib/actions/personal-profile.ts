@@ -71,26 +71,17 @@ export async function getClientPersonalDetails() {
   const session = await auth();
   if (!session?.user?.id) return { success: false, data: null, error: 'Not authenticated' }
   try {
-    const [profile, user] = await Promise.all([
-      prisma.clientProfile.findUnique({
-        where: { userId: session.user.id },
-      }),
-      prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { firstName: true, lastName: true },
-      }),
-    ]);
+    // Round-11 commit 2.1 (BRD §5.1 amendment): only firstName/lastName
+    // remain on the client settings form. Contact + address + DOB
+    // fields were dropped from ClientProfile; we no longer touch that
+    // table here.
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { firstName: true, lastName: true },
+    });
     const data: ClientPersonalDetailsFormData = {
       firstName: user?.firstName ?? '',
       lastName: user?.lastName ?? '',
-      phone: profile?.phone ?? '',
-      addressLine1: profile?.addressLine1 ?? '',
-      addressLine2: profile?.addressLine2 ?? '',
-      city: profile?.city ?? '',
-      state: profile?.state ?? '',
-      postalCode: profile?.postalCode ?? '',
-      country: profile?.country ?? '',
-      dateOfBirth: profile?.dateOfBirth ? profile.dateOfBirth.toISOString().slice(0, 10) : '',
     };
     return { success: true, data, error: null };
   } catch {
@@ -106,55 +97,16 @@ export async function updateClientPersonalDetails(data: unknown) {
     return { success: false, error: 'Invalid data', errors: parsed.error.flatten().fieldErrors };
   }
   try {
-    const {
-      firstName,
-      lastName,
-      phone,
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      postalCode,
-      country,
-      dateOfBirth,
-    } = parsed.data;
-    const dob = dateOfBirth?.trim() ? new Date(dateOfBirth.trim()) : null;
-    if (dob && isNaN(dob.getTime())) {
-      return { success: false, error: 'Invalid date of birth' };
-    }
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: session.user.id },
-        data: {
-          firstName: firstName?.trim() || null,
-          lastName: lastName?.trim() || null,
-        },
-      }),
-      prisma.clientProfile.upsert({
-        where: { userId: session.user.id },
-        create: {
-          userId: session.user.id,
-          phone: phone?.trim() || null,
-          addressLine1: addressLine1?.trim() || null,
-          addressLine2: addressLine2?.trim() || null,
-          city: city?.trim() || null,
-          state: state?.trim() || null,
-          postalCode: postalCode?.trim() || null,
-          country: country?.trim() || null,
-          dateOfBirth: dob,
-        },
-        update: {
-          phone: phone?.trim() || null,
-          addressLine1: addressLine1?.trim() || null,
-          addressLine2: addressLine2?.trim() || null,
-          city: city?.trim() || null,
-          state: state?.trim() || null,
-          postalCode: postalCode?.trim() || null,
-          country: country?.trim() || null,
-          dateOfBirth: dob,
-        },
-      }),
-    ]);
+    const { firstName, lastName } = parsed.data;
+    // Round-11 commit 2.1: only User.firstName/lastName are written
+    // here. ClientProfile no longer has writable client-PII columns.
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        firstName: firstName?.trim() || null,
+        lastName: lastName?.trim() || null,
+      },
+    });
     revalidatePath('/settings');
     return { success: true, error: null };
   } catch (e) {
