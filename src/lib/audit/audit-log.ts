@@ -119,8 +119,17 @@ export const AUDIT_ACTIONS = {
   /** Round-11 commit 2: magic-link successfully consumed; user signed in. */
   AUTH_MAGIC_LINK_SUCCESS: "auth.magic_link_success",
   /** Round-11 commit 2: magic-link validation rejected. metadata.reason:
-   *  "expired" | "used" | "not_found" | "user_inactive". */
+   *  "expired" | "used" | "not_found" | "user_inactive" |
+   *  "non_client_role_blocked". */
   AUTH_MAGIC_LINK_FAILURE: "auth.magic_link_failure",
+  /** Round-11 commit 4 (BRD §5.1.AUTH): advisor reassigns the email on an
+   *  assigned client account. beforeData.email + afterData.email capture
+   *  the change; the audit redactor hashes both via the email-key rule. */
+  CLIENT_EMAIL_REASSIGN: "client.email_reassign",
+  /** Round-11 commit 4: advisor re-issues a magic link for an assigned
+   *  client. metadata.email captures the destination (hashed by the
+   *  redactor); metadata.tokenId references the new MagicLinkToken row. */
+  CLIENT_MAGIC_LINK_REISSUE: "client.magic_link_reissue",
 
   // ── Advisor workflow actions (P4) ─────────────────────────────────────────
   INTAKE_REVIEW_STARTED: "intake.review_started",

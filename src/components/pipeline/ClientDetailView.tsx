@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { WorkflowTimeline } from "./WorkflowTimeline";
 import { DocumentRequirements } from "./DocumentRequirements";
+import { ClientAuthControls } from "./ClientAuthControls";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
@@ -315,6 +316,11 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
 
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
+          {/* Round-11 commit 4 (BRD §5.1.AUTH): client sign-in management
+              — email reassignment + magic-link re-issue. Server actions
+              ownership-gated through ClientAdvisorAssignment. */}
+          <ClientAuthControls clientId={client.id} currentEmail={client.email} />
+
           {/* Document Requirements */}
           <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
 
