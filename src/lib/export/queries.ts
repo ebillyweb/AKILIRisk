@@ -88,14 +88,14 @@ export async function fetchTenantBundle(
     notificationPrefs,
   ] = await Promise.all([
     prisma.advisorProfile.findUnique({ where: { id: advisorProfileId } }),
-    prisma.advisorSubdomain.findUnique({ where: { advisorProfileId } }),
+    prisma.advisorSubdomain.findUnique({ where: { advisorId: advisorProfileId } }),
     prisma.user.findMany({
       where: { id: { in: clientUserIds } },
     }),
     prisma.clientProfile.findMany({ where: { userId: { in: clientUserIds } } }),
     prisma.subscription.findMany({ where: { userId: { in: allUserIds } } }),
     prisma.clientAdvisorAssignment.findMany({ where: { advisorId: advisorProfileId } }),
-    prisma.inviteCode.findMany({ where: { advisorProfileId } }),
+    prisma.inviteCode.findMany({ where: { createdBy: advisorProfileId } }),
     prisma.householdMember.findMany({ where: { userId: { in: clientUserIds } } }),
     prisma.intakeInterview.findMany({ where: { userId: { in: clientUserIds } } }),
     prisma.intakeApproval.findMany({ where: { advisorId: advisorProfileId } }),
@@ -168,7 +168,7 @@ export async function fetchTenantBundle(
     advisorNotifications: notifications as Record<string, unknown>[],
     governanceReviewLeads: governanceLeads as Record<string, unknown>[],
     notificationPreferences: notificationPrefs as Record<string, unknown>[],
-    auditLog: auditLog as Record<string, unknown>[],
+    auditLog: auditLog as unknown as Record<string, unknown>[],
   };
 }
 

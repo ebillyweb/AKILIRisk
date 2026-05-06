@@ -2,10 +2,17 @@ import { Page, Text, View } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
 
+/**
+ * Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only shape.
+ * fullName / age columns dropped from `HouseholdMember` upstream;
+ * the report now renders the auto-assigned label (Member A / Member B
+ * / …) and derives an approximate age from `birthYear` at render time.
+ */
 interface HouseholdMember {
-  fullName: string
+  displayLabel: string
   relationship: string
-  age: number | null
+  birthYear: number | null
+  sex: string | null
   governanceRoles: string[]
   isResident: boolean
 }
@@ -15,7 +22,16 @@ interface HouseholdCompositionProps {
   companyName?: string
 }
 
+const SEX_LABELS: Record<string, string> = {
+  MALE: 'Male',
+  FEMALE: 'Female',
+  OTHER: 'Other',
+  PREFER_NOT_TO_SAY: 'Prefer not to say',
+}
+
 export function HouseholdComposition({ members, companyName }: HouseholdCompositionProps) {
+  const currentYear = new Date().getUTCFullYear()
+
   const formatRelationship = (relationship: string) => {
     return relationship
       .toLowerCase()
@@ -35,8 +51,14 @@ export function HouseholdComposition({ members, companyName }: HouseholdComposit
       .join(', ')
   }
 
-  const formatAge = (age: number | null) => {
-    return age ? age.toString() : 'N/A'
+  const formatAge = (birthYear: number | null) => {
+    if (typeof birthYear !== 'number') return 'N/A'
+    return `~${Math.max(0, currentYear - birthYear)}`
+  }
+
+  const formatSex = (sex: string | null) => {
+    if (!sex) return '—'
+    return SEX_LABELS[sex] ?? sex
   }
 
   const formatStatus = (isResident: boolean) => {
@@ -48,17 +70,19 @@ export function HouseholdComposition({ members, companyName }: HouseholdComposit
       <Text style={styles.header}>Household Composition</Text>
 
       <Text style={styles.paragraph}>
-        This section provides a comprehensive overview of your household members, their relationships,
-        ages, governance roles, and residence status. Understanding your family structure is essential
-        for developing appropriate governance recommendations and succession planning strategies.
+        Demographic structure of the household — labels (Member A, Member B…), relationships,
+        approximate age, sex, governance roles, and residence. Personal names and contact details
+        are not collected (BRD §5.1 amendment); structure alone is sufficient for governance
+        recommendations and succession planning.
       </Text>
 
       <View style={styles.householdTable}>
         {/* Table Header */}
         <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={[styles.tableCol, { flex: 2 }]}>Name</Text>
+          <Text style={[styles.tableCol, { flex: 1.2 }]}>Member</Text>
           <Text style={[styles.tableCol, { flex: 1.5 }]}>Relationship</Text>
           <Text style={[styles.tableCol, { flex: 0.8 }]}>Age</Text>
+          <Text style={[styles.tableCol, { flex: 1.0 }]}>Sex</Text>
           <Text style={[styles.tableCol, { flex: 2 }]}>Governance Roles</Text>
           <Text style={[styles.tableCol, { flex: 1.2 }]}>Status</Text>
         </View>
@@ -66,11 +90,12 @@ export function HouseholdComposition({ members, companyName }: HouseholdComposit
         {/* Table Rows */}
         {members.map((member, index) => (
           <View key={index} style={styles.tableRow}>
-            <Text style={[styles.tableCol, { flex: 2 }]}>{member.fullName}</Text>
+            <Text style={[styles.tableCol, { flex: 1.2 }]}>{member.displayLabel}</Text>
             <Text style={[styles.tableCol, { flex: 1.5 }]}>
               {formatRelationship(member.relationship)}
             </Text>
-            <Text style={[styles.tableCol, { flex: 0.8 }]}>{formatAge(member.age)}</Text>
+            <Text style={[styles.tableCol, { flex: 0.8 }]}>{formatAge(member.birthYear)}</Text>
+            <Text style={[styles.tableCol, { flex: 1.0 }]}>{formatSex(member.sex)}</Text>
             <Text style={[styles.tableCol, { flex: 2 }]}>
               {formatGovernanceRoles(member.governanceRoles)}
             </Text>

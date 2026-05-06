@@ -34,8 +34,9 @@ function richBundle(): TenantBundle {
       { id: "a-2", clientId: "u-2", advisorId: "adv-1" },
     ],
     inviteCodes: [{ id: "ic-1", code: "BELV01", advisorProfileId: "adv-1" }],
+    // Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only fixture.
     householdMembers: [
-      { id: "hm-1", userId: "u-1", fullName: "Alice Spouse", relationship: "SPOUSE" },
+      { id: "hm-1", userId: "u-1", displayLabel: "Member A", birthYear: 1978, sex: "FEMALE", relationship: "SPOUSE", isResident: true },
     ],
     intakeInterviews: [
       { id: "int-1", userId: "u-1", status: "SUBMITTED", updatedAt: "2026-04-01T00:00:00Z" },

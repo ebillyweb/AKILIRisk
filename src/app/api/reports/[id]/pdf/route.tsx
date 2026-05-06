@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { AssessmentReport } from "@/lib/pdf/components/AssessmentReport";
 import { getAdvisorBrandingForPDF, createBrandedPDFMetadata } from "@/lib/pdf/branding-integration";
+import { RELATIONSHIP_LABELS } from "@/lib/schemas/profile";
 
 /**
  * PDF Report Generation API Route
@@ -109,9 +110,10 @@ export async function GET(
     const householdMembers = await prisma.householdMember.findMany({
       where: { userId: session.user.id },
       select: {
-        fullName: true,
+        displayLabel: true,
+        birthYear: true,
+        sex: true,
         relationship: true,
-        age: true,
         governanceRoles: true,
         isResident: true,
       },
@@ -151,12 +153,16 @@ export async function GET(
     const estimatedTotalQuestions = 68; // Based on research findings
     const completionPercentage = Math.min(100, Math.round((totalResponses / estimatedTotalQuestions) * 100));
 
-    // 7. Build household profile object
+    // 7. Build household profile object — demographic-only shape
+    // (Round-11 commit 2.2 / BRD §5.1 amendment). The PDF derives age
+    // from birthYear at render time; we no longer ship a `fullName` or
+    // pre-computed age into the renderer because those columns are gone.
     const householdProfile = householdMembers.length > 0 ? {
-      members: householdMembers.map(m => ({
-        fullName: m.fullName,
-        relationship: m.relationship,
-        age: m.age,
+      members: householdMembers.map((m) => ({
+        displayLabel: m.displayLabel,
+        relationship: RELATIONSHIP_LABELS[m.relationship] ?? m.relationship,
+        birthYear: m.birthYear ?? null,
+        sex: m.sex ?? null,
         governanceRoles: m.governanceRoles as string[],
         isResident: m.isResident,
       })),

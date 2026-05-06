@@ -144,7 +144,7 @@ export async function rescoreAssessment(
   try {
     const actor = await requireAdminRole();
     actorUserId = actor.userId;
-    actorEmail = actor.email;
+    actorEmail = actor.email ?? null;
 
     parsed = rescoreInputSchema.parse(input);
     const { assessmentId } = parsed;
@@ -228,7 +228,7 @@ export async function rescoreAssessment(
         score: scoreResult.score,
         riskLevel: mapRiskLevelToPrisma(scoreResult.riskLevel),
         breakdown: scoreResult.breakdown as unknown as Prisma.InputJsonValue,
-        missingControls: (scoreResult.missingControls ?? null) as Prisma.InputJsonValue | null,
+        missingControls: (scoreResult.missingControls ?? null) as unknown as Prisma.InputJsonValue | null,
       });
     }
 
@@ -293,7 +293,10 @@ export async function rescoreAssessment(
             assessmentId,
             serviceRecommendationId: rec.id,
             triggerReason: { reasons: rec.triggerReason } as unknown as Prisma.InputJsonValue,
-            customization: (rec.customization ?? null) as Prisma.InputJsonValue | null,
+            customization:
+              rec.customization === null || rec.customization === undefined
+                ? PrismaNs.JsonNull
+                : (rec.customization as Prisma.InputJsonValue),
             priority: i + 1,
             status: "PENDING" as const,
           })),

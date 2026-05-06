@@ -87,9 +87,13 @@ export function mapAssessmentToTemplate(
   if (householdProfile && householdProfile.members.length > 0) {
     const members = householdProfile.members;
 
-    // Map household members with formatted relationships and governance roles
+    // Round-11 commit 2.2 (BRD §5.1 amendment): templates render
+    // displayLabel instead of fullName because HouseholdMember no
+    // longer carries a name. Generated Word docs that used to read
+    // "Current Trustees: Jane Smith" now read "Current Trustees:
+    // Member A".
     templateData.householdMembers = members.map(member => ({
-      fullName: member.fullName,
+      displayLabel: member.displayLabel,
       relationship: formatEnumValue(member.relationship),
       governanceRoles: member.governanceRoles.map(formatEnumValue)
     }));
@@ -97,32 +101,32 @@ export function mapAssessmentToTemplate(
     // Extract members by governance roles (comma-joined strings)
     templateData.decisionMakers = members
       .filter(m => m.governanceRoles.some(role => role.toUpperCase() === 'DECISION_MAKER'))
-      .map(m => m.fullName)
+      .map(m => m.displayLabel)
       .join(', ');
 
     templateData.successors = members
       .filter(m => m.governanceRoles.some(role => role.toUpperCase() === 'SUCCESSOR'))
-      .map(m => m.fullName)
+      .map(m => m.displayLabel)
       .join(', ');
 
     templateData.trustees = members
       .filter(m => m.governanceRoles.some(role => role.toUpperCase() === 'TRUSTEE'))
-      .map(m => m.fullName)
+      .map(m => m.displayLabel)
       .join(', ');
 
     templateData.advisors = members
       .filter(m => m.governanceRoles.some(role => role.toUpperCase() === 'ADVISOR'))
-      .map(m => m.fullName)
+      .map(m => m.displayLabel)
       .join(', ');
 
     templateData.beneficiaries = members
       .filter(m => m.governanceRoles.some(role => role.toUpperCase() === 'BENEFICIARY'))
-      .map(m => m.fullName)
+      .map(m => m.displayLabel)
       .join(', ');
 
     templateData.executors = members
       .filter(m => m.governanceRoles.some(role => role.toUpperCase() === 'EXECUTOR'))
-      .map(m => m.fullName)
+      .map(m => m.displayLabel)
       .join(', ');
 
     // Set household head: first decision maker or first member as fallback
@@ -130,8 +134,8 @@ export function mapAssessmentToTemplate(
       m.governanceRoles.some(role => role.toUpperCase() === 'DECISION_MAKER')
     );
     templateData.householdHead = decisionMakers.length > 0
-      ? decisionMakers[0].fullName
-      : members[0].fullName;
+      ? decisionMakers[0].displayLabel
+      : members[0].displayLabel;
   }
 
   return templateData;

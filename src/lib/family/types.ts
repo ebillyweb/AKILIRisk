@@ -1,7 +1,12 @@
 // Family dashboard data types for self-service family portal
 
+// Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only family
+// dashboard view of household members. fullName replaced with
+// displayLabel; sex + birthYear surfaced for completeness.
 export interface FamilyHouseholdMember {
-  fullName: string;
+  displayLabel: string;
+  birthYear: number | null;
+  sex: string | null;
   relationship: string;
   governanceRoles: string[];
 }

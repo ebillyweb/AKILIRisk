@@ -474,20 +474,39 @@ enum TranscriptionStatus {
   FAILED
 }
 
+/// Round-11 commit 2.2 (BRD §5.1 amendment): household-member sex.
+/// Optional — the scoring engine doesn't currently consume sex, so
+/// requiring it would be UX cost without product value.
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+/// Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only household
+/// member. The fullName / age / occupation / phone / email / notes
+/// columns + the share-flag were dropped per the "minimization by
+/// omission" strategy. The advisor sees household composition by
+/// structure (sex × birthYear × relationship × governanceRoles)
+/// without identifying any individual.
 model HouseholdMember {
   id             String             @id @default(cuid())
   userId         String
-  fullName       String
-  age            Int?
-  occupation     String?
-  phone          String?
-  email          String?
+  /// Auto-generated server-side at create time. Format: "Member A",
+  /// "Member B", … (first unused letter A–Z per household), then
+  /// "Member 27", "Member 28", … for the rare household > 26 members.
+  /// Used wherever the old fullName was displayed.
+  displayLabel   String
+  /// Birth year, replaces the old `age` Int column. Nullable for
+  /// "unknown / prefer not to say"; scoring derives the bucketed age
+  /// (under-18, under-26) from `currentYear - birthYear` at read time.
+  birthYear      Int?
+  /// Demographic field (BRD §5.1 amendment). Optional.
+  sex            Sex?
   relationship   FamilyRelationship
   governanceRoles GovernanceRole[]
   isResident     Boolean            @default(true)
-  notes          String?
-  /// When false, advisors see relationship, roles, residency, and age only (name, contact, occupation, notes redacted).
-  shareNameAndContactWithAdvisor Boolean            @default(true)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 

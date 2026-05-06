@@ -18,7 +18,7 @@ export default function ClientSignupRetiredPage() {
   return (
     <AuthPanel
       title="Sign up"
-      subtitle="Akili Risk client accounts are created by your advisor."
+      description="Akili Risk client accounts are created by your advisor."
     >
       <div className="space-y-6">
         <Alert>

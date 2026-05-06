@@ -72,10 +72,11 @@ export async function lookupEntityDisplay(
       case "PillarQuestion": {
         const row = await prisma.pillarQuestion.findUnique({
           where: { id: entityId },
-          select: { text: true },
+          select: { questionText: true },
         });
         if (!row) return fallback;
-        const display = row.text.length > 80 ? row.text.slice(0, 80) + "…" : row.text;
+        const display =
+          row.questionText.length > 80 ? row.questionText.slice(0, 80) + "…" : row.questionText;
         return { displayName: display, editHref: null };
       }
       case "Assessment": {

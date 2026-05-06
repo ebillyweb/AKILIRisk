@@ -3,10 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createRecommendationRule,
-  updateRecommendationRule,
   recommendationRuleInputSchema,
   type RecommendationRuleInput,
+} from "@/lib/admin/recommendation-rule-schemas";
+import {
+  createRecommendationRule,
+  updateRecommendationRule,
 } from "@/lib/actions/admin-recommendation-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +22,7 @@ interface ServiceOption {
 interface RuleFormProps {
   /** Existing rule (edit) or null (create). */
   existing:
-    | (Partial<RecommendationRuleInput> & {
+    | (Omit<Partial<RecommendationRuleInput>, "triggerConditions" | "pillarThresholds" | "questionConditions"> & {
         id: string;
         triggerConditions: unknown;
         pillarThresholds?: unknown;

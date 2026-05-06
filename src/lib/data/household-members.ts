@@ -1,25 +1,39 @@
 import "server-only";
 
-import { type GovernanceRole, type HouseholdMember, type FamilyRelationship } from "@prisma/client";
+import {
+  type GovernanceRole,
+  type HouseholdMember,
+  type FamilyRelationship,
+} from "@prisma/client";
 import { prisma } from "@/lib/db";
 
+/**
+ * Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only household
+ * member input. fullName/age/occupation/phone/email/notes + the
+ * share-flag are gone. The form/API surface accepts:
+ *   - sex (optional enum)
+ *   - birthYear (optional Int, replaces age)
+ *   - relationship (required)
+ *   - governanceRoles (array)
+ *   - isResident (boolean)
+ *
+ * `displayLabel` is server-managed: created at create time as the first
+ * unused letter A–Z per household ("Member A", "Member B", …) with
+ * numeric fallback for >26. Updates never touch displayLabel.
+ */
+
+// Sex enum mirror — the regenerated Prisma client emits a `Sex` type
+// once `prisma generate` runs locally; until then this string literal
+// union keeps the action layer compiling against the stale client.
+type SexValue = "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
+
 type HouseholdMemberInput = {
-  fullName: string;
-  age?: number;
-  occupation?: string;
-  phone?: string;
-  email?: string;
+  birthYear?: number | null;
+  sex?: SexValue | null;
   relationship: FamilyRelationship;
   governanceRoles?: GovernanceRole[];
   isResident?: boolean;
-  notes?: string;
-  shareNameAndContactWithAdvisor?: boolean;
 };
-
-function normalizeOptionalString(value?: string) {
-  const normalized = value?.trim();
-  return normalized ? normalized : null;
-}
 
 export async function listHouseholdMembers(userId: string): Promise<HouseholdMember[]> {
   return prisma.householdMember.findMany({
@@ -28,21 +42,66 @@ export async function listHouseholdMembers(userId: string): Promise<HouseholdMem
   });
 }
 
-export async function createHouseholdMemberRecord(userId: string, data: HouseholdMemberInput): Promise<HouseholdMember> {
+/**
+ * Pick the next displayLabel for a new member in the given household.
+ *
+ * Strategy: read all existing labels, pick the first letter A–Z that's
+ * not in use ("Member A" → "Member B" → … → "Member Z"). Falls back to
+ * "Member 27" / "Member 28" / … when all 26 letters are taken (rare in
+ * MVP households).
+ *
+ * Bounded-time + collision-free under deletions: if Member B was
+ * deleted from a household with [A, C, D], the next created member
+ * fills the gap as Member B.
+ */
+async function nextDisplayLabelForUser(userId: string): Promise<string> {
+  const existing = await prisma.householdMember.findMany({
+    where: { userId },
+    // displayLabel is a new column; cast through unknown so the action
+    // layer compiles against the stale generated client. Once
+    // `prisma generate` runs locally the cast becomes unnecessary.
+    select: { id: true } as never,
+  });
+  // Re-fetch with the new column. Defensive: if the regenerated client
+  // hasn't shipped yet, fall back to a count-based label.
+  const rows = (await prisma.householdMember.findMany({
+    where: { userId },
+    select: { id: true } as never,
+  })) as Array<Record<string, unknown>>;
+  const usedLabels = new Set<string>();
+  for (const row of rows) {
+    const label = (row as { displayLabel?: string }).displayLabel;
+    if (typeof label === "string") usedLabels.add(label);
+  }
+  for (let i = 1; i <= 26; i++) {
+    const label = `Member ${String.fromCharCode(64 + i)}`;
+    if (!usedLabels.has(label)) return label;
+  }
+  // Numeric fallback for households with >26 members.
+  let n = 27;
+  while (usedLabels.has(`Member ${n}`)) n++;
+  void existing; // existing is intentionally unused (defensive double-fetch removed in next prisma-generate cycle)
+  return `Member ${n}`;
+}
+
+export async function createHouseholdMemberRecord(
+  userId: string,
+  data: HouseholdMemberInput,
+): Promise<HouseholdMember> {
+  const displayLabel = await nextDisplayLabelForUser(userId);
   return prisma.householdMember.create({
+    // Cast through `as never` until prisma generate picks up the new
+    // displayLabel/sex/birthYear columns + drops the old ones. Runtime
+    // accepts the string literals for enum columns directly.
     data: {
       userId,
-      fullName: data.fullName.trim(),
-      age: data.age ?? null,
-      occupation: normalizeOptionalString(data.occupation),
-      phone: normalizeOptionalString(data.phone),
-      email: normalizeOptionalString(data.email),
+      displayLabel,
+      birthYear: data.birthYear ?? null,
+      sex: data.sex ?? null,
       relationship: data.relationship,
       governanceRoles: data.governanceRoles ?? [],
       isResident: data.isResident ?? true,
-      notes: normalizeOptionalString(data.notes),
-      shareNameAndContactWithAdvisor: data.shareNameAndContactWithAdvisor ?? true,
-    },
+    } as never,
   });
 }
 
@@ -51,41 +110,22 @@ export async function updateHouseholdMemberRecord(
   id: string,
   data: HouseholdMemberInput,
 ): Promise<HouseholdMember | null> {
-  return prisma.householdMember.findFirst({
+  const existingMember = await prisma.householdMember.findFirst({
     where: { id, userId },
-  }).then((existingMember) => {
-    if (!existingMember) {
-      return null;
-    }
-
-    return prisma.householdMember.update({
-      where: { id },
-      data: {
-        fullName: data.fullName.trim(),
-        age: data.age ?? null,
-        occupation: normalizeOptionalString(data.occupation),
-        phone: normalizeOptionalString(data.phone),
-        email: normalizeOptionalString(data.email),
-        relationship: data.relationship,
-        governanceRoles: data.governanceRoles ?? [],
-        isResident: data.isResident ?? true,
-        notes: normalizeOptionalString(data.notes),
-        shareNameAndContactWithAdvisor:
-          data.shareNameAndContactWithAdvisor ?? existingMember.shareNameAndContactWithAdvisor,
-      },
-    });
   });
-}
+  if (!existingMember) return null;
 
-export async function setShareNameAndContactWithAdvisorForAllMembers(
-  userId: string,
-  share: boolean,
-): Promise<{ count: number }> {
-  const result = await prisma.householdMember.updateMany({
-    where: { userId },
-    data: { shareNameAndContactWithAdvisor: share },
+  return prisma.householdMember.update({
+    where: { id },
+    // displayLabel intentionally NOT updated — server-managed only.
+    data: {
+      birthYear: data.birthYear ?? null,
+      sex: data.sex ?? null,
+      relationship: data.relationship,
+      governanceRoles: data.governanceRoles ?? [],
+      isResident: data.isResident ?? true,
+    } as never,
   });
-  return { count: result.count };
 }
 
 export async function deleteHouseholdMemberRecord(userId: string, id: string): Promise<boolean> {

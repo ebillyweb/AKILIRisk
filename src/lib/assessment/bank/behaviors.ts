@@ -1,5 +1,5 @@
 import type { HouseholdProfile } from "@/lib/assessment/personalization";
-import { getMembersByRole, hasMultipleGenerations, hasSuccessors } from "@/lib/assessment/personalization";
+import { ageFromBirthYear, getMembersByRole, hasMultipleGenerations, hasSuccessors } from "@/lib/assessment/personalization";
 import type { BranchingRule, Question } from "@/lib/assessment/types";
 
 export type BranchingPredicateWire = {
@@ -57,7 +57,11 @@ const PROFILE_CONDITIONS: Record<
   (profile: HouseholdProfile) => boolean
 > = {
   "young-dependent": (profile) =>
-    profile.members.some((m) => m.age !== null && m.age < 26),
+    // Round-11 commit 2.2: age derived from birthYear at read time.
+    profile.members.some((m) => {
+      const age = ageFromBirthYear(m.birthYear);
+      return age !== null && age < 26;
+    }),
   "trustee-in-family": (profile) =>
     profile.members.some((m) => m.governanceRoles.includes("TRUSTEE")),
   "generations-or-successors": (profile) =>
@@ -75,13 +79,16 @@ const TEXT_TEMPLATE_BY_QUESTION_ID: Record<
   string,
   (profile: HouseholdProfile | null) => string
 > = {
+  // Round-11 commit 2.2 (BRD §5.1 amendment): personalization now uses
+  // the auto-assigned `displayLabel` ("Member A", "Member B", …)
+  // because fullName was dropped from HouseholdMember.
   "dma-05": (p) => {
     if (!p) {
       return "How does the primary decision maker communicate major financial decisions to the family?";
     }
     const dm = getMembersByRole(p, "DECISION_MAKER")[0];
     return dm
-      ? `How does ${dm.fullName} communicate major financial decisions to the family?`
+      ? `How does ${dm.displayLabel} communicate major financial decisions to the family?`
       : "How does the primary decision maker communicate major financial decisions to the family?";
   },
   "sp-02": (p) => {
@@ -90,7 +97,7 @@ const TEXT_TEMPLATE_BY_QUESTION_ID: Record<
     }
     const successor = getMembersByRole(p, "SUCCESSOR")[0];
     return successor
-      ? `How prepared is ${successor.fullName} for leadership responsibility?`
+      ? `How prepared is ${successor.displayLabel} for leadership responsibility?`
       : "How prepared is your primary successor for leadership responsibility?";
   },
 };

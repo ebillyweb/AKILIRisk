@@ -38,11 +38,15 @@ interface AssessmentReportData {
   pillarScores?: PillarScoreInput[];
 }
 
+// Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only PDF input.
+// fullName + age dropped upstream; the PDF builder now passes
+// displayLabel + birthYear + sex straight through.
 interface HouseholdProfile {
   members: Array<{
-    fullName: string;
+    displayLabel: string;
     relationship: string;
-    age: number | null;
+    birthYear: number | null;
+    sex: string | null;
     governanceRoles: string[];
     isResident: boolean;
   }>;

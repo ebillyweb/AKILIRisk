@@ -45,7 +45,9 @@ export async function getFamilyDashboardData(userId: string): Promise<FamilyDash
     include: {
       householdMembers: {
         select: {
-          fullName: true,
+          displayLabel: true,
+          birthYear: true,
+          sex: true,
           relationship: true,
           governanceRoles: true,
         },
@@ -82,8 +84,10 @@ export async function getFamilyDashboardData(userId: string): Promise<FamilyDash
   }
 
   // Map household members
-  const householdMembers: FamilyHouseholdMember[] = user.householdMembers.map(member => ({
-    fullName: member.fullName,
+  const householdMembers: FamilyHouseholdMember[] = user.householdMembers.map((member) => ({
+    displayLabel: member.displayLabel,
+    birthYear: member.birthYear,
+    sex: member.sex,
     relationship: member.relationship,
     governanceRoles: member.governanceRoles,
   }));

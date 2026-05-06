@@ -7,11 +7,15 @@
 
 import { Question } from './types';
 
-// Types matching data from getHouseholdMembers() server action
+// Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only household
+// member shape. fullName + age replaced with displayLabel + birthYear;
+// scoring derives bucketed age from `currentYear - birthYear` at read
+// time via ageFromBirthYear() below.
 export interface HouseholdMemberProfile {
   id: string;
-  fullName: string;
-  age: number | null;
+  displayLabel: string;
+  birthYear: number | null;
+  sex: string | null;
   relationship: string; // FamilyRelationship enum value
   governanceRoles: string[]; // GovernanceRole enum values
   isResident: boolean;
@@ -19,6 +23,17 @@ export interface HouseholdMemberProfile {
 
 export interface HouseholdProfile {
   members: HouseholdMemberProfile[];
+}
+
+/**
+ * Derive an integer age from birthYear. Returns null when birthYear is
+ * unknown. Mid-year birthdays produce an off-by-one (someone who turns
+ * 18 next month is still computed as 17), but the previous int-age
+ * column had the same imprecision so it's not a regression.
+ */
+export function ageFromBirthYear(birthYear: number | null | undefined): number | null {
+  if (birthYear == null) return null;
+  return new Date().getUTCFullYear() - birthYear;
 }
 
 /**
@@ -93,13 +108,17 @@ export function hasMultipleGenerations(profile: HouseholdProfile): boolean {
 }
 
 /**
- * Check if household has any minors
+ * Check if household has any minors. Round-11 commit 2.2 derives age
+ * from birthYear at read time.
  *
  * @param profile - Household profile data
- * @returns true if any member has age < 18
+ * @returns true if any member's derived age < 18
  */
 export function hasMinors(profile: HouseholdProfile): boolean {
-  return profile.members.some(member => member.age !== null && member.age < 18);
+  return profile.members.some(member => {
+    const age = ageFromBirthYear(member.birthYear);
+    return age !== null && age < 18;
+  });
 }
 
 /**

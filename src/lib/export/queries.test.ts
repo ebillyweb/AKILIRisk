@@ -26,8 +26,9 @@ const { dataset, matches } = vi.hoisted(() => {
       { id: "adv-B", userId: "uB", firmName: "Beta B", user: { email: "b@example.com" } },
     ],
     advisorSubdomain: [
-      { id: "sub-A", advisorProfileId: "adv-A", subdomain: "acme-a" },
-      { id: "sub-B", advisorProfileId: "adv-B", subdomain: "beta-b" },
+      // Schema field is `advisorId` (queries.ts uses `where: { advisorId }`).
+      { id: "sub-A", advisorId: "adv-A", subdomain: "acme-a" },
+      { id: "sub-B", advisorId: "adv-B", subdomain: "beta-b" },
     ],
     user: [
       { id: "uA", email: "a@example.com", role: "ADVISOR" },
@@ -54,12 +55,17 @@ const { dataset, matches } = vi.hoisted(() => {
       { id: "asg-B2", clientId: "bB2", advisorId: "adv-B" },
     ],
     inviteCode: [
-      { id: "ic-A", code: "AAA123", advisorProfileId: "adv-A" },
-      { id: "ic-B", code: "BBB456", advisorProfileId: "adv-B" },
+      // Schema field is `createdBy` (queries.ts uses `where: { createdBy }`).
+      { id: "ic-A", code: "AAA123", createdBy: "adv-A" },
+      { id: "ic-B", code: "BBB456", createdBy: "adv-B" },
     ],
+    // Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only.
+    // fullName / age / phone / email dropped from the schema; the
+    // tenant-isolation test only cares that the row's userId is
+    // correctly scoped, so the demographic columns are simple stubs.
     householdMember: [
-      { id: "hm-A1", userId: "aA1", fullName: "Alice Spouse" },
-      { id: "hm-B1", userId: "bB1", fullName: "Bob Spouse" },
+      { id: "hm-A1", userId: "aA1", displayLabel: "Member A", birthYear: 1978, sex: "FEMALE", relationship: "SPOUSE", isResident: true },
+      { id: "hm-B1", userId: "bB1", displayLabel: "Member A", birthYear: 1972, sex: "MALE", relationship: "SPOUSE", isResident: true },
     ],
     intakeInterview: [
       { id: "int-A1", userId: "aA1", status: "SUBMITTED" },

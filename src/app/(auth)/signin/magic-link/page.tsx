@@ -51,7 +51,7 @@ export default function MagicLinkRequestPage() {
     return (
       <AuthPanel
         title="Check your email"
-        subtitle="We&apos;ve sent you a sign-in link if your account exists."
+        description="We've sent you a sign-in link if your account exists."
       >
         <div className="space-y-4">
           <Alert>
@@ -80,7 +80,7 @@ export default function MagicLinkRequestPage() {
   return (
     <AuthPanel
       title="Sign in"
-      subtitle="Enter your email and we&apos;ll send you a sign-in link."
+      description="Enter your email and we'll send you a sign-in link."
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (

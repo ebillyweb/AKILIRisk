@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { RELATIONSHIP_LABELS } from "@/lib/schemas/profile";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { generateTemplate, getAvailableTemplates } from "@/lib/templates/generator";
@@ -119,19 +120,28 @@ export async function GET(
     // Load household members
     const householdMembers = await prisma.householdMember.findMany({
       where: { userId: session.user.id },
-      select: { fullName: true, relationship: true, age: true, governanceRoles: true, isResident: true }
+      select: {
+        id: true,
+        displayLabel: true,
+        birthYear: true,
+        sex: true,
+        relationship: true,
+        governanceRoles: true,
+        isResident: true,
+      },
     });
 
-    // Build HouseholdProfile from members
+    // Build HouseholdProfile from members (see `HouseholdMemberProfile` in personalization.ts)
     const householdProfile = householdMembers.length > 0 ? {
-      members: householdMembers.map(m => ({
-        id: '', // Not needed for templates
-        fullName: m.fullName,
-        age: m.age,
-        relationship: m.relationship,
+      members: householdMembers.map((m) => ({
+        id: m.id,
+        displayLabel: m.displayLabel,
+        birthYear: m.birthYear,
+        sex: m.sex,
+        relationship: RELATIONSHIP_LABELS[m.relationship] ?? m.relationship,
         governanceRoles: m.governanceRoles as string[],
-        isResident: m.isResident
-      }))
+        isResident: m.isResident,
+      })),
     } : null;
 
     // Map assessment data to template data

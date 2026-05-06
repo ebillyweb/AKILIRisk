@@ -7,6 +7,7 @@ import {
 } from "@/lib/actions/advisor-actions";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { RISK_AREAS } from "@/lib/advisor/types";
+import { isRiskAreaId } from "@/lib/assessment/bank/risk-areas";
 import { RiskSummaryCard } from "@/components/intelligence/RiskSummaryCard";
 import { PortfolioRiskList } from "@/components/intelligence/PortfolioRiskList";
 import { RiskDistributionChart } from "@/components/intelligence/RiskDistributionChart";
@@ -14,11 +15,9 @@ import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import IntelligenceLoading from "./loading";
 
-const RISK_AREA_IDS = new Set<string>(RISK_AREAS.map((a) => a.id));
-
 function resolveCategoryFilter(raw: string | undefined) {
   if (!raw) return { categoryFilter: undefined as string | undefined, categoryLabel: undefined as string | undefined };
-  if (!RISK_AREA_IDS.has(raw)) {
+  if (!isRiskAreaId(raw)) {
     return { categoryFilter: undefined, categoryLabel: undefined };
   }
   const label = RISK_AREAS.find((a) => a.id === raw)?.name;

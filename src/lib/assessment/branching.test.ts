@@ -46,29 +46,40 @@ const mockQuestions: Question[] = [
   { id: "q3", text: "Q3?", type: "yes-no", required: true, pillar: "test", subCategory: "cat1", weight: 1, scoreMap: {} },
 ];
 
-// Test profile data
+// Test profile data — Round-11 commit 2.2 (BRD §5.1 amendment):
+// fullName + age dropped from HouseholdMemberProfile; tests now use
+// displayLabel + birthYear. yearForAge() converts the original
+// "decision-maker is 45 / child is 16 / parent is 75" intent into
+// birthYears anchored at the current year so the assertions stay
+// stable as the calendar advances.
+const CURRENT_YEAR = new Date().getUTCFullYear();
+const yearForAge = (age: number) => CURRENT_YEAR - age;
+
 const testProfile: HouseholdProfile = {
   members: [
     {
       id: '1',
-      fullName: 'John Smith',
-      age: 45,
+      displayLabel: 'Member A',
+      birthYear: yearForAge(45),
+      sex: null,
       relationship: 'spouse',
       governanceRoles: ['DECISION_MAKER'],
       isResident: true,
     },
     {
       id: '2',
-      fullName: 'Tommy Smith',
-      age: 16,
+      displayLabel: 'Member B',
+      birthYear: yearForAge(16),
+      sex: null,
       relationship: 'child',
       governanceRoles: ['SUCCESSOR'],
       isResident: true,
     },
     {
       id: '3',
-      fullName: 'Robert Smith Sr',
-      age: 75,
+      displayLabel: 'Member C',
+      birthYear: yearForAge(75),
+      sex: null,
       relationship: 'parent',
       governanceRoles: ['TRUSTEE'],
       isResident: false,
@@ -362,8 +373,9 @@ describe("shouldShowQuestion with profile awareness", () => {
       members: [
         {
           id: '1',
-          fullName: 'John Smith',
-          age: 45,
+          displayLabel: 'Member A',
+          birthYear: yearForAge(45),
+          sex: null,
           relationship: 'spouse',
           governanceRoles: ['DECISION_MAKER'],
           isResident: true,
@@ -394,7 +406,7 @@ describe("shouldShowQuestion with profile awareness", () => {
     expect(shouldShowQuestion(questionWithBoth, { prerequisite: 'no' }, testProfile)).toBe(false);
 
     // Fails if profileCondition fails
-    const profileWithoutTrustee: HouseholdProfile = { members: [{ id: '1', fullName: 'Test', age: 30, relationship: 'spouse', governanceRoles: [], isResident: true }] };
+    const profileWithoutTrustee: HouseholdProfile = { members: [{ id: '1', displayLabel: 'Member A', birthYear: yearForAge(30), sex: null, relationship: 'spouse', governanceRoles: [], isResident: true }] };
     expect(shouldShowQuestion(questionWithBoth, { prerequisite: 'yes' }, profileWithoutTrustee)).toBe(false);
   });
 });
@@ -414,7 +426,7 @@ describe("getVisibleQuestions with profile", () => {
 
   it("filters correctly without profile", () => {
     const profileWithoutTrustee: HouseholdProfile = {
-      members: [{ id: '1', fullName: 'Test', age: 30, relationship: 'spouse', governanceRoles: [], isResident: true }]
+      members: [{ id: '1', displayLabel: 'Member A', birthYear: yearForAge(30), sex: null, relationship: 'spouse', governanceRoles: [], isResident: true }]
     };
     const visible = getVisibleQuestions({}, questionsWithProfile, profileWithoutTrustee);
     expect(visible).toHaveLength(2); // Should exclude profile-conditioned question

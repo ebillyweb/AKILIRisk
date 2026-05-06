@@ -7,7 +7,6 @@ import {
   deleteHouseholdMemberRecord,
   updateHouseholdMemberRecord,
   listHouseholdMembers,
-  setShareNameAndContactWithAdvisorForAllMembers,
 } from '@/lib/data/household-members';
 import { householdMemberSchema, updateHouseholdMemberSchema } from '@/lib/schemas/profile';
 import { revalidatePath } from 'next/cache';
@@ -130,24 +129,28 @@ export async function getHouseholdMembers() {
   }
 }
 
-/** Apply the same advisor visibility preference to every household member for the signed-in client. */
+/**
+ * Round-11 commit 2.2 (BRD §5.1 amendment): RETIRED. The
+ * `shareNameAndContactWithAdvisor` flag was dropped along with the
+ * fullName/contact fields it gated. Kept as a no-op stub so existing
+ * call sites (if any cached on the client) still resolve and audit
+ * the historical intent. Safe to delete in a follow-up commit.
+ */
 export async function setAllHouseholdMembersShareNameAndContactWithAdvisor(share: boolean) {
   try {
     const actor = await getAuthActor();
-    await setShareNameAndContactWithAdvisorForAllMembers(actor.userId, share);
-
-    // Bulk toggle — entityId is null because the action covers all of the
-    // user's household members. metadata captures the toggled value.
     await writeAudit({
       actor,
       action: AUDIT_ACTIONS.HOUSEHOLD_MEMBER_SHARE_TOGGLE,
       entityType: 'HouseholdMember',
       entityId: null,
-      afterData: { shareNameAndContactWithAdvisor: share },
-      metadata: { scope: 'all_members_for_user', userId: actor.userId },
+      metadata: {
+        scope: 'all_members_for_user',
+        userId: actor.userId,
+        retiredAction: true,
+        attemptedShare: share,
+      },
     });
-
-    revalidatePath('/profiles');
     return { success: true as const };
   } catch (error) {
     const message =

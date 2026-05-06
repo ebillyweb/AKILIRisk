@@ -110,10 +110,15 @@ export const COLUMNS_BY_TABLE = {
     "id", "code", "advisorProfileId", "email", "tier", "billingCycle",
     "usedByUserId", "usedAt", "expiresAt", "createdAt",
   ],
+  // Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only export.
+  // fullName / age / occupation / phone / email / notes /
+  // shareNameAndContactWithAdvisor were dropped from the schema; the
+  // export now ships displayLabel + birthYear + sex alongside the
+  // structural fields (relationship, governanceRoles, isResident).
   household_members: [
-    "id", "userId", "fullName", "age", "occupation", "phone", "email",
-    "relationship", "governanceRoles", "isResident", "notes",
-    "shareNameAndContactWithAdvisor", "createdAt", "updatedAt",
+    "id", "userId", "displayLabel", "birthYear", "sex",
+    "relationship", "governanceRoles", "isResident",
+    "createdAt", "updatedAt",
   ],
   intake_interviews: [
     "id", "userId", "status", "currentQuestionIndex", "startedAt",

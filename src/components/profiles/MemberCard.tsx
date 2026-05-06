@@ -3,33 +3,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { HouseholdMemberFormData, RELATIONSHIP_LABELS, GOVERNANCE_ROLE_LABELS } from '@/lib/schemas/profile';
-import {
-  BriefcaseBusiness,
-  Mail,
-  Pencil,
-  Phone,
-  ShieldCheck,
-  Trash2,
-  UserRound,
-} from 'lucide-react';
+import type { HouseholdMember } from '@prisma/client';
+import { RELATIONSHIP_LABELS, GOVERNANCE_ROLE_LABELS } from '@/lib/schemas/profile';
+import { Pencil, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 
-// Using Prisma type from the database
-type HouseholdMember = {
-  id: string;
-  fullName: string;
-  age: number | null;
-  occupation: string | null;
-  phone: string | null;
-  email: string | null;
-  relationship: HouseholdMemberFormData['relationship'];
-  governanceRoles: HouseholdMemberFormData['governanceRoles'];
-  isResident: boolean;
-  notes: string | null;
-  shareNameAndContactWithAdvisor: boolean;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+const SEX_LABELS: Partial<Record<NonNullable<HouseholdMember['sex']>, string>> = {
+  MALE: 'Male',
+  FEMALE: 'Female',
+  OTHER: 'Other',
+  PREFER_NOT_TO_SAY: 'Prefer not to say',
 };
 
 interface MemberCardProps {
@@ -39,24 +21,15 @@ interface MemberCardProps {
 }
 
 export function MemberCard({ member, onEdit, onDelete }: MemberCardProps) {
-  const contactItems = [
-    member.phone
-      ? { label: 'Phone', value: member.phone, icon: Phone }
-      : null,
-    member.email
-      ? { label: 'Email', value: member.email, icon: Mail }
-      : null,
-  ].filter(Boolean) as Array<{
-    label: string;
-    value: string;
-    icon: typeof Phone;
-  }>;
-
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete ${member.fullName}?`)) {
+    if (window.confirm(`Delete ${member.displayLabel}?`)) {
       onDelete(member.id);
     }
   };
+
+  const currentYear = new Date().getUTCFullYear();
+  const derivedAge =
+    typeof member.birthYear === 'number' ? Math.max(0, currentYear - member.birthYear) : null;
 
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition-transform duration-200 hover:-translate-y-1">
@@ -64,24 +37,16 @@ export function MemberCard({ member, onEdit, onDelete }: MemberCardProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <p className="editorial-kicker">Household Profile</p>
-              <CardTitle className="text-xl sm:text-2xl">{member.fullName}</CardTitle>
+              <p className="editorial-kicker">Household profile</p>
+              <CardTitle className="text-xl sm:text-2xl">{member.displayLabel}</CardTitle>
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="bg-background/75">
                 {RELATIONSHIP_LABELS[member.relationship]}
               </Badge>
               <Badge variant={member.isResident ? 'secondary' : 'info'} className="bg-background/75">
-                {member.isResident ? 'Lives In Household' : 'Extended Family'}
+                {member.isResident ? 'Lives in household' : 'Extended family'}
               </Badge>
-              {!member.shareNameAndContactWithAdvisor ? (
-                <Badge
-                  variant="outline"
-                  className="max-w-full border-amber-500/40 bg-amber-500/10 text-left text-xs font-medium leading-snug text-amber-950 dark:text-amber-100"
-                >
-                  Name & contact hidden from advisor
-                </Badge>
-              ) : null}
             </div>
           </div>
           <div className="flex gap-2">
@@ -90,7 +55,7 @@ export function MemberCard({ member, onEdit, onDelete }: MemberCardProps) {
               size="icon-sm"
               onClick={() => onEdit(member)}
               className="shrink-0 bg-background/80"
-              aria-label={`Edit ${member.fullName}`}
+              aria-label={`Edit ${member.displayLabel}`}
             >
               <Pencil className="size-3.5" />
             </Button>
@@ -99,62 +64,43 @@ export function MemberCard({ member, onEdit, onDelete }: MemberCardProps) {
               size="icon-sm"
               onClick={handleDelete}
               className="shrink-0 text-destructive hover:text-destructive"
-              aria-label={`Delete ${member.fullName}`}
+              aria-label={`Delete ${member.displayLabel}`}
             >
               <Trash2 className="size-3.5" />
             </Button>
           </div>
         </div>
 
-        {(member.age || member.occupation) && (
+        {(derivedAge !== null || member.sex || member.birthYear) && (
           <div className="flex flex-wrap gap-2">
-            {member.age ? (
+            {typeof member.birthYear === 'number' ? (
               <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-sm text-muted-foreground">
                 <UserRound className="size-3.5" />
-                <span className="font-medium text-foreground">{member.age}</span>
+                <span className="font-medium text-foreground">Born {member.birthYear}</span>
+              </div>
+            ) : null}
+            {derivedAge !== null ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-sm text-muted-foreground">
+                <UserRound className="size-3.5" />
+                <span className="font-medium text-foreground">~{derivedAge}</span>
                 <span>years old</span>
               </div>
             ) : null}
-            {member.occupation ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-sm text-muted-foreground">
-                <BriefcaseBusiness className="size-3.5" />
-                <span className="font-medium text-foreground">{member.occupation}</span>
-              </div>
+            {member.sex ? (
+              <Badge variant="outline" className="bg-background/75">
+                {SEX_LABELS[member.sex] ?? member.sex}
+              </Badge>
             ) : null}
           </div>
         )}
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col gap-4 pt-5">
-        {contactItems.length > 0 ? (
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Contact
-            </p>
-            <div className="grid gap-2 rounded-[1.25rem] border border-border/70 bg-background/70 p-3 text-sm">
-              {contactItems.map(({ label, value, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/65 px-3 py-2.5"
-                >
-                  <Icon className="mt-0.5 size-4 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <p className="text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
-                      {label}
-                    </p>
-                    <p className="break-words font-medium text-foreground">{value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
         {member.governanceRoles.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               <ShieldCheck className="size-3.5" />
-              Governance Roles
+              Governance roles
             </div>
             <div className="flex flex-wrap gap-2">
               {member.governanceRoles.map((role) => (
@@ -169,15 +115,6 @@ export function MemberCard({ member, onEdit, onDelete }: MemberCardProps) {
             No governance roles have been assigned yet.
           </div>
         )}
-
-        {member.notes ? (
-          <div className="mt-auto space-y-2 rounded-[1.25rem] border border-border/70 bg-background/70 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Notes
-            </p>
-            <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">{member.notes}</p>
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );

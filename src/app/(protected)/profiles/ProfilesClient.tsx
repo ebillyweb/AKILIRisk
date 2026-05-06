@@ -1,40 +1,17 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import type { HouseholdMember } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { MemberCard } from '@/components/profiles/MemberCard';
 import { ProfileForm } from '@/components/profiles/ProfileForm';
-import {
-  createHouseholdMember,
-  updateHouseholdMember,
-  deleteHouseholdMember,
-  setAllHouseholdMembersShareNameAndContactWithAdvisor,
-} from '@/lib/actions/profile-actions';
+import { createHouseholdMember, updateHouseholdMember, deleteHouseholdMember } from '@/lib/actions/profile-actions';
 import { HouseholdMemberFormData } from '@/lib/schemas/profile';
 import { ArrowLeft, Plus, ShieldCheck, Users } from 'lucide-react';
-
-// Using Prisma type from the database
-type HouseholdMember = {
-  id: string;
-  fullName: string;
-  age: number | null;
-  occupation: string | null;
-  phone: string | null;
-  email: string | null;
-  relationship: HouseholdMemberFormData['relationship'];
-  governanceRoles: HouseholdMemberFormData['governanceRoles'];
-  isResident: boolean;
-  notes: string | null;
-  shareNameAndContactWithAdvisor: boolean;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
 
 type FormData = HouseholdMemberFormData;
 
@@ -46,17 +23,9 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<HouseholdMember | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isBulkSharePending, startBulkShareTransition] = useTransition();
   const router = useRouter();
   const residentCount = initialMembers.filter((member) => member.isResident).length;
   const advisoryCount = initialMembers.filter((member) => member.governanceRoles.length > 0).length;
-  const allShareNameWithAdvisor = initialMembers.every((m) => m.shareNameAndContactWithAdvisor);
-  const noneShareNameWithAdvisor = initialMembers.every((m) => !m.shareNameAndContactWithAdvisor);
-  const bulkShareChecked: boolean | 'indeterminate' = allShareNameWithAdvisor
-    ? true
-    : noneShareNameWithAdvisor
-      ? false
-      : 'indeterminate';
 
   const handleAddMember = () => {
     setEditingMember(null);
@@ -89,7 +58,12 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
         setEditingMember(null);
         router.refresh();
       } else {
-        const errorMessage = result.error || 'An error occurred';
+        const errorMessage =
+          'error' in result && result.error
+            ? result.error
+            : 'errors' in result && result.errors
+              ? 'Please fix the highlighted fields.'
+              : 'An error occurred';
         toast.error(errorMessage);
       }
     } catch {
@@ -97,24 +71,6 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleBulkShareWithAdvisor = (share: boolean) => {
-    startBulkShareTransition(() => {
-      void (async () => {
-        const result = await setAllHouseholdMembersShareNameAndContactWithAdvisor(share);
-        if (result.success) {
-          toast.success(
-            share
-              ? 'All members now share name and contact with your advisor'
-              : 'Name and contact are hidden from your advisor for all members (roles still visible)',
-          );
-          router.refresh();
-        } else {
-          toast.error(result.error || 'Could not update advisor visibility');
-        }
-      })();
-    });
   };
 
   const handleDelete = async (id: string) => {
@@ -133,16 +89,11 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
   };
 
   const getDefaultValues = (member: HouseholdMember): FormData => ({
-    fullName: member.fullName,
-    age: member.age || undefined,
-    occupation: member.occupation || undefined,
-    phone: member.phone || undefined,
-    email: member.email || undefined,
+    birthYear: member.birthYear ?? undefined,
+    sex: member.sex ?? undefined,
     relationship: member.relationship,
     governanceRoles: member.governanceRoles,
     isResident: member.isResident,
-    notes: member.notes || undefined,
-    shareNameAndContactWithAdvisor: member.shareNameAndContactWithAdvisor,
   });
 
   if (showForm) {
@@ -151,15 +102,15 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
         <div className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-background/80 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className="editorial-kicker">
-              {editingMember ? 'Profile Revision' : 'New Household Profile'}
+              {editingMember ? 'Profile revision' : 'New household profile'}
             </p>
             <div className="space-y-1">
               <h2 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
-                {editingMember ? `Update ${editingMember.fullName}` : 'Add a new member profile'}
+                {editingMember ? `Update ${editingMember.displayLabel}` : 'Add a new member profile'}
               </h2>
               <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                Capture relationship context, contact details, and governance responsibilities so
-                your family operating model stays current.
+                Capture relationship, residency, governance roles, and optional birth year / sex for
+                risk assessments. Names and contact are not collected on this screen.
               </p>
             </div>
           </div>
@@ -173,15 +124,15 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
           <CardHeader className="space-y-4 border-b section-divider pb-6">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">Governance-ready record</Badge>
-              <Badge variant="secondary">Private household data</Badge>
+              <Badge variant="secondary">Demographic structure</Badge>
             </div>
             <div className="space-y-2">
               <CardTitle className="text-2xl sm:text-3xl">
                 {editingMember ? 'Refine the member profile' : 'Build the member profile'}
               </CardTitle>
               <CardDescription className="max-w-2xl text-sm leading-6 sm:text-base">
-                Include the information your team will need later for ownership transitions,
-                family participation, and governance planning.
+                Your advisor sees labels like &quot;Member A&quot; plus structure only — not personal names or
+                contact details.
               </CardDescription>
             </div>
           </CardHeader>
@@ -209,7 +160,7 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
                   <Plus className="size-8" />
                 </div>
                 <div className="space-y-3">
-                  <p className="editorial-kicker">Start The Directory</p>
+                  <p className="editorial-kicker">Start the directory</p>
                   <h3 className="text-3xl font-semibold tracking-[-0.04em] text-balance sm:text-4xl">
                     No household members have been added yet.
                   </h3>
@@ -222,11 +173,11 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">Family relationships</Badge>
                 <Badge variant="secondary">Governance roles</Badge>
-                <Badge variant="info">Contact context</Badge>
+                <Badge variant="info">Residency</Badge>
               </div>
               <Button onClick={handleAddMember} size="lg">
                 <Plus className="size-4" />
-                Add Your First Member
+                Add your first member
               </Button>
             </div>
 
@@ -237,7 +188,7 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
                   <p className="text-sm font-semibold text-foreground">What to capture</p>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  Record relationship, residency, role, and contact details for the people who
+                  Relationship, residency, governance roles, and optional birth year / sex for the people who
                   matter in your family governance model.
                 </p>
               </div>
@@ -270,44 +221,14 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
             <Badge variant="info">{advisoryCount} with governance roles</Badge>
           </div>
           <p className="max-w-2xl text-sm leading-5 text-muted-foreground">
-            Keep profiles current as roles, participants, and contact details change.
+            Keep profiles current as roles and residency change.
           </p>
         </div>
         <Button onClick={handleAddMember} size="lg" className="w-full sm:w-auto shrink-0">
           <Plus className="size-4" />
-          Add Member
+          Add member
         </Button>
       </div>
-
-      <Card className="overflow-hidden border-border/70 bg-background/65">
-        <CardHeader className="pb-2 pt-5 sm:pt-6">
-          <CardTitle className="text-lg">Advisor visibility</CardTitle>
-          <CardDescription className="max-w-3xl text-sm leading-6">
-            Control whether your advisor can see each person&apos;s name, phone, email, occupation, and notes.
-            Relationship, residency, governance roles, and age stay visible for risk assessments when sharing is
-            off.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pb-5 sm:pb-6">
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-            <Checkbox
-              checked={bulkShareChecked}
-              onCheckedChange={(state) => handleBulkShareWithAdvisor(state === true)}
-              disabled={isBulkSharePending}
-              className="mt-1"
-              aria-describedby="bulk-advisor-visibility-hint"
-            />
-            <span className="min-w-0 space-y-1">
-              <span className="block text-sm font-semibold text-foreground">
-                Share name and contact with my advisor for everyone
-              </span>
-              <span id="bulk-advisor-visibility-hint" className="block text-xs leading-5 text-muted-foreground">
-                You can still change this per person when adding or editing a member.
-              </span>
-            </span>
-          </label>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
         {initialMembers.map((member) => (

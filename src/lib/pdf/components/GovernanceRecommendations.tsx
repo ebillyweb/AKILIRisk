@@ -2,8 +2,13 @@ import { Page, Text, View } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
 
+// Round-11 commit 2.2 (BRD §5.1 amendment): displayLabel replaces
+// fullName upstream. Pre-round-11 governance recs called out members
+// by name ("Current Trustee(s): Jane Smith"); the report now references
+// auto-generated labels ("Current Trustee(s): Member A") because
+// HouseholdMember no longer carries names.
 interface HouseholdMember {
-  fullName: string
+  displayLabel: string
   governanceRoles: string[]
   relationship: string
 }
@@ -148,7 +153,7 @@ export function GovernanceRecommendations({
               <View style={styles.roleMemberList}>
                 <Text style={styles.paragraph}>
                   <Text style={{ fontWeight: 'bold' }}>Current {formatRoleName(role)}(s):</Text>{' '}
-                  {roleMembers.map((member) => member.fullName).join(', ')}
+                  {roleMembers.map((member) => member.displayLabel).join(', ')}
                 </Text>
               </View>
 

@@ -3,13 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createServiceRecommendation,
-  updateServiceRecommendation,
   serviceRecommendationInputSchema,
   TIER_VALUES,
   COMPLEXITY_VALUES,
   IMPLEMENTATION_TYPE_VALUES,
   type ServiceRecommendationInput,
+} from "@/lib/admin/recommendation-rule-schemas";
+import {
+  createServiceRecommendation,
+  updateServiceRecommendation,
 } from "@/lib/actions/admin-recommendation-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -29,19 +29,24 @@ export interface TemplateData {
   strengths: string[];
   recommendations: string[];
 
-  // Household member data (empty arrays/strings when no profile)
+  // Household member data (empty arrays/strings when no profile).
+  // Round-11 commit 2.2 (BRD §5.1 amendment): templates surface
+  // auto-assigned `displayLabel` ("Member A", "Member B"…) instead of
+  // personal names, because the HouseholdMember row no longer carries
+  // a name. The role-joined strings (decisionMakers / successors /
+  // trustees / …) are now joined labels rather than joined names.
   householdMembers?: Array<{
-    fullName: string;
+    displayLabel: string;
     relationship: string;
     governanceRoles: string[];
   }>;
-  decisionMakers?: string; // Names of members with DECISION_MAKER role (comma-joined)
-  successors?: string; // Names of members with SUCCESSOR role (comma-joined)
-  trustees?: string; // Names of members with TRUSTEE role (comma-joined)
-  advisors?: string; // Names of members with ADVISOR role (comma-joined)
-  beneficiaries?: string; // Names of members with BENEFICIARY role (comma-joined)
-  executors?: string; // Names of members with EXECUTOR role (comma-joined)
-  householdHead?: string; // Primary decision maker or first member name
+  decisionMakers?: string; // Display labels of members with DECISION_MAKER role (comma-joined)
+  successors?: string; // Display labels of members with SUCCESSOR role (comma-joined)
+  trustees?: string; // Display labels of members with TRUSTEE role (comma-joined)
+  advisors?: string; // Display labels of members with ADVISOR role (comma-joined)
+  beneficiaries?: string; // Display labels of members with BENEFICIARY role (comma-joined)
+  executors?: string; // Display labels of members with EXECUTOR role (comma-joined)
+  householdHead?: string; // Display label of primary decision maker or first member
 }
 
 export const TEMPLATE_REGISTRY: TemplateMetadata[] = [

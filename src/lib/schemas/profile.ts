@@ -4,24 +4,35 @@ import { z } from 'zod';
 export const familyRelationship = ['spouse', 'child', 'parent', 'sibling', 'grandchild', 'grandparent', 'other'] as const;
 export const governanceRole = ['decision_maker', 'advisor', 'successor', 'beneficiary', 'trustee', 'executor', 'other'] as const;
 
-// Zod schema for creating household members
+/**
+ * Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only household
+ * member input. fullName/age/occupation/phone/email/notes + the
+ * share-flag were dropped from the schema. Form/UI captures sex +
+ * birthYear + relationship + roles + residency only; displayLabel is
+ * server-generated, not user-editable.
+ *
+ * birthYear range [1900, currentYear] — guarded server-side too in
+ * data/household-members.ts. UI renders a year input.
+ */
+const CURRENT_YEAR = new Date().getUTCFullYear();
+
 export const householdMemberSchema = z.object({
-  fullName: z.string().min(1, 'Full name is required').max(100, 'Full name must be 100 characters or less'),
-  age: z.number().int().min(0).max(150).optional(),
-  occupation: z.string().max(100, 'Occupation must be 100 characters or less').optional(),
-  phone: z.string().max(20, 'Phone number must be 20 characters or less').optional(),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  birthYear: z
+    .number()
+    .int()
+    .min(1900, 'Birth year must be 1900 or later')
+    .max(CURRENT_YEAR, `Birth year cannot exceed ${CURRENT_YEAR}`)
+    .optional(),
+  sex: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']).optional(),
   relationship: z.enum(['SPOUSE', 'CHILD', 'PARENT', 'SIBLING', 'GRANDCHILD', 'GRANDPARENT', 'OTHER']),
   governanceRoles: z.array(z.enum(['DECISION_MAKER', 'ADVISOR', 'SUCCESSOR', 'BENEFICIARY', 'TRUSTEE', 'EXECUTOR', 'OTHER'])),
   isResident: z.boolean(),
-  notes: z.string().max(500, 'Notes must be 500 characters or less').optional(),
-  shareNameAndContactWithAdvisor: z.boolean(),
 });
 
-// Schema for updating household members (partial except for required fields)
+// Schema for updating household members (partial except for relationship).
+// displayLabel is server-managed; clients never write it.
 export const updateHouseholdMemberSchema = householdMemberSchema.partial().required({
-  fullName: true,
-  relationship: true
+  relationship: true,
 });
 
 // Type inference

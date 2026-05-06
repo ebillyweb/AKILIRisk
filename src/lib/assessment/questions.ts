@@ -6,7 +6,7 @@
  */
 
 import { Question, Pillar } from './types';
-import { hasMultipleGenerations, hasSuccessors, getMembersByRole } from './personalization';
+import { ageFromBirthYear, hasMultipleGenerations, hasSuccessors, getMembersByRole } from './personalization';
 import { cyberRiskQuestions } from '../cyber-risk/questions';
 
 // ============================================================================
@@ -162,8 +162,12 @@ const physicalSecurityQuestions: Question[] = [
     subCategory: 'physical-security',
     weight: 3,
     scoreMap: { yes: 10, no: 0 },
+    // Round-11 commit 2.2: age derived from birthYear at read time.
     profileCondition: (profile) =>
-      profile.members.some((m) => m.age !== null && m.age < 26),
+      profile.members.some((m) => {
+        const age = ageFromBirthYear(m.birthYear);
+        return age !== null && age < 26;
+      }),
   },
   {
     id: 'phys-05',
@@ -370,7 +374,7 @@ const decisionMakingQuestions: Question[] = [
       if (!p) return 'How does the primary decision maker communicate major financial decisions to the family?';
       const dm = getMembersByRole(p, 'DECISION_MAKER')[0];
       return dm
-        ? `How does ${dm.fullName} communicate major financial decisions to the family?`
+        ? `How does ${dm.displayLabel} communicate major financial decisions to the family?`
         : 'How does the primary decision maker communicate major financial decisions to the family?';
     },
   },
@@ -955,7 +959,7 @@ const successionPlanningQuestions: Question[] = [
       if (!p) return 'How prepared is your primary successor for leadership responsibility?';
       const successor = getMembersByRole(p, 'SUCCESSOR')[0];
       return successor
-        ? `How prepared is ${successor.fullName} for leadership responsibility?`
+        ? `How prepared is ${successor.displayLabel} for leadership responsibility?`
         : 'How prepared is your primary successor for leadership responsibility?';
     },
   },

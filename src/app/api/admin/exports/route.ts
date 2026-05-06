@@ -68,9 +68,8 @@ export async function GET(request: NextRequest) {
     metadata: {
       scope,
       format: "zip-csv-and-json",
-      rowCounts: bundleResult.result // best-effort: counts are known up-front for tenant; for system we await later
-        ? "see follow-up log"
-        : undefined,
+      // Row counts are attached when the stream completes (see bundleResult.result .then below).
+      rowCounts: "pending",
       schemaVersion: bundleResult.filename.includes("system-") ? "v1" : "v1",
     },
     request,
