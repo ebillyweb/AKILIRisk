@@ -1,18 +1,16 @@
 import type { IntakeApproval, IntakeInterview, IntakeResponse } from '@prisma/client';
 import type { AdvisorHouseholdMemberView } from '@/lib/profiles/advisor-household-view';
 
-// Dashboard client data for advisor's client list
+// Dashboard client data for advisor's client list.
+// Round-11 commit 2.1 (BRD §5.1 amendment): clientProfile contact +
+// address fields are gone. The advisor card now shows name + email
+// only; per-client phone/location was the primary consumer of the
+// dropped fields.
 export type AdvisorDashboardClient = {
   id: string;
   name: string | null;
   email: string;
   assignedAt: Date;
-  clientProfile?: {
-    phone: string | null;
-    city: string | null;
-    state: string | null;
-    country: string | null;
-  } | null;
   latestInterview: {
     id: string;
     status: string;

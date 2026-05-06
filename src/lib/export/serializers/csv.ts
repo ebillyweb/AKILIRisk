@@ -88,9 +88,12 @@ export const COLUMNS_BY_TABLE = {
     // are credential material, not "client data" under §5.3, and exporting
     // them would let the bundle compromise the account.
   ],
+  // Round-11 commit 2.1 (BRD §5.1 amendment): contact + address + DOB
+  // columns dropped. The CSV is now id + userId + timestamps; kept in
+  // the bundle so SAR exports still document the table's existence and
+  // its row count for each client.
   client_profiles: [
-    "id", "userId", "phone", "addressLine1", "addressLine2", "city", "state",
-    "postalCode", "country", "dateOfBirth", "createdAt", "updatedAt",
+    "id", "userId", "createdAt", "updatedAt",
   ],
   subscriptions: [
     "id", "userId", "stripeCustomerId", "stripePriceId", "stripeSubscriptionId",

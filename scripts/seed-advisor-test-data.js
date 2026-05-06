@@ -90,28 +90,16 @@ async function main() {
 
   console.log('✅ Created client user:', clientUser.email);
 
-  // Client profile (personal details) for first test client
+  // Client profile (stub) — round-11 commit 2.1 dropped contact +
+  // address + DOB columns per the §5.1 amendment. Profile row is
+  // created with only id + userId + timestamps so FK relationships
+  // still resolve.
   await prisma.clientProfile.upsert({
     where: { userId: clientUser.id },
-    update: {
-      phone: '+1 (555) 200-3000',
-      addressLine1: '123 Main Street',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94102',
-      country: 'USA'
-    },
-    create: {
-      userId: clientUser.id,
-      phone: '+1 (555) 200-3000',
-      addressLine1: '123 Main Street',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94102',
-      country: 'USA'
-    }
+    update: {},
+    create: { userId: clientUser.id }
   });
-  console.log('✅ Created client profile for:', clientUser.email);
+  console.log('✅ Created client profile (stub) for:', clientUser.email);
 
   // Create intake interview with SUBMITTED status
   const intakeInterview = await prisma.intakeInterview.upsert({
@@ -271,21 +259,11 @@ async function main() {
 
   console.log('✅ Created second client user (for MFA testing):', client2User.email);
 
+  // Round-11 commit 2.1: ClientProfile reduced to id + userId stub.
   await prisma.clientProfile.upsert({
     where: { userId: client2User.id },
-    update: {
-      phone: '+1 (555) 201-3001',
-      city: 'New York',
-      state: 'NY',
-      country: 'USA'
-    },
-    create: {
-      userId: client2User.id,
-      phone: '+1 (555) 201-3001',
-      city: 'New York',
-      state: 'NY',
-      country: 'USA'
-    }
+    update: {},
+    create: { userId: client2User.id }
   });
 
   const intakeInterview2 = await prisma.intakeInterview.upsert({

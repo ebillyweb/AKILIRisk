@@ -49,8 +49,9 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     include: {
       client: {
         include: {
-          // Get client profile for additional info
-          clientProfile: true,
+          // Round-11 commit 2.1: clientProfile no longer carries
+          // contact/address/DOB columns; the include was unused after
+          // those drops, so remove it entirely.
           // Get latest intake interview
           intakeInterviews: {
             orderBy: {
@@ -337,7 +338,8 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     include: {
       client: {
         include: {
-          clientProfile: true,
+          // Round-11 commit 2.1: clientProfile include removed (no
+          // selectable columns remain after the §5.1 minimization).
           intakeInterviews: {
             orderBy: { updatedAt: 'desc' },
           },

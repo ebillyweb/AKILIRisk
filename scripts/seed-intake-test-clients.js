@@ -78,25 +78,11 @@ async function createIntakePendingClient(advisorProfile) {
     }
   });
 
+  // Round-11 commit 2.1: ClientProfile reduced to a stub.
   await prisma.clientProfile.upsert({
     where: { userId: clientUser.id },
-    update: {
-      phone: '+1 (555) 300-4000',
-      addressLine1: '456 Oak Avenue',
-      city: 'Los Angeles',
-      state: 'CA',
-      postalCode: '90210',
-      country: 'USA'
-    },
-    create: {
-      userId: clientUser.id,
-      phone: '+1 (555) 300-4000',
-      addressLine1: '456 Oak Avenue',
-      city: 'Los Angeles',
-      state: 'CA',
-      postalCode: '90210',
-      country: 'USA'
-    }
+    update: {},
+    create: { userId: clientUser.id }
   });
 
   // Create intake interview with IN_PROGRESS status
@@ -189,25 +175,11 @@ async function createAssessmentReadyClient(advisorProfile) {
     }
   });
 
+  // Round-11 commit 2.1: ClientProfile reduced to a stub.
   await prisma.clientProfile.upsert({
     where: { userId: clientUser.id },
-    update: {
-      phone: '+1 (555) 400-5000',
-      addressLine1: '789 Pine Street',
-      city: 'Seattle',
-      state: 'WA',
-      postalCode: '98101',
-      country: 'USA'
-    },
-    create: {
-      userId: clientUser.id,
-      phone: '+1 (555) 400-5000',
-      addressLine1: '789 Pine Street',
-      city: 'Seattle',
-      state: 'WA',
-      postalCode: '98101',
-      country: 'USA'
-    }
+    update: {},
+    create: { userId: clientUser.id }
   });
 
   // Create intake interview with SUBMITTED status

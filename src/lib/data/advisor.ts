@@ -30,14 +30,9 @@ export async function getAssignedClients(advisorProfileId: string): Promise<Advi
           id: true,
           name: true,
           email: true,
-          clientProfile: {
-            select: {
-              phone: true,
-              city: true,
-              state: true,
-              country: true,
-            },
-          },
+          // Round-11 commit 2.1 (BRD §5.1 amendment): clientProfile
+          // contact + address fields were dropped. The advisor card
+          // shows name + email only.
         },
       },
     },
@@ -85,7 +80,8 @@ export async function getAssignedClients(advisorProfileId: string): Promise<Advi
     name: assignment.client.name,
     email: assignment.client.email,
     assignedAt: assignment.assignedAt,
-    clientProfile: assignment.client.clientProfile ?? undefined,
+    // Round-11 commit 2.1: clientProfile field removed from
+    // AdvisorDashboardClient — see src/lib/advisor/types.ts.
     latestInterview: interviewsByClient.get(assignment.client.id) || null,
   }));
 }

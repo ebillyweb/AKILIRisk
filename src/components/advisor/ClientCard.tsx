@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, FileText, Clock, Phone, MapPin } from "lucide-react";
+import { User, FileText, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { AdvisorDashboardClient } from "@/lib/advisor/types";
@@ -12,14 +12,12 @@ interface ClientCardProps {
   client: AdvisorDashboardClient;
 }
 
-function formatLocation(profile: NonNullable<AdvisorDashboardClient["clientProfile"]>) {
-  const parts = [profile.city, profile.state, profile.country].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : null;
-}
+// Round-11 commit 2.1 (BRD §5.1 amendment): the clientProfile.phone +
+// city/state/country block was removed; ClientProfile no longer carries
+// those columns.
 
 export function ClientCard({ client }: ClientCardProps) {
-  const { id, name, email, assignedAt, latestInterview, clientProfile } = client;
-  const location = clientProfile ? formatLocation(clientProfile) : null;
+  const { id, name, email, assignedAt, latestInterview } = client;
   const router = useRouter();
 
   // Status badge configuration
@@ -92,23 +90,10 @@ export function ClientCard({ client }: ClientCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Personal details when present */}
-        {(clientProfile?.phone || location) && (
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            {clientProfile?.phone && (
-              <span className="inline-flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5" />
-                {clientProfile.phone}
-              </span>
-            )}
-            {location && (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" />
-                {location}
-              </span>
-            )}
-          </div>
-        )}
+        {/* Round-11 commit 2.1: the per-client phone + location row
+            was rendered from ClientProfile.phone + city/state/country,
+            all of which were dropped from the schema. Card now jumps
+            straight to the assignment-info row. */}
 
         {/* Assignment info */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
