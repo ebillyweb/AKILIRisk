@@ -137,6 +137,111 @@ export default {
         };
       },
     }),
+    /**
+     * Round-11 commit 2 (BRD §5.1.AUTH): magic-link auth for client users.
+     *
+     * Wraps the validate + consume helpers from src/lib/auth/magic-link.ts.
+     * Caller drives this provider via NextAuth's signIn("magic-link", { token })
+     * after the verify page has already validated the raw token; the
+     * provider re-validates + atomically consumes (so a crash between
+     * validate and consume can't sign in twice).
+     *
+     * id="magic-link" distinguishes this from the email/password
+     * Credentials provider above. Auth.js v5 routes signIn calls to the
+     * provider with the matching id.
+     *
+     * Role gating (USER-only for magic-link, ADVISOR/ADMIN-only for
+     * credentials) lands in commit 3. This commit leaves the magic-link
+     * provider open to any role so the auth primitive can be exercised
+     * before the lockdown lands.
+     */
+    Credentials({
+      id: "magic-link",
+      name: "Magic Link",
+      credentials: { token: { label: "Token", type: "text" } },
+      async authorize(credentials) {
+        const tokenInput = credentials?.token;
+        if (typeof tokenInput !== "string" || tokenInput.length === 0) {
+          await writeAudit({
+            actor: { userId: null, email: null },
+            action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: "not_found" },
+          });
+          return null;
+        }
+
+        // Lazy-import the helper to avoid pulling server-only modules into
+        // the auth.config.ts edge surface (NextAuth's adapter ships a
+        // light-weight bundle here; keep heavy imports lazy).
+        const { validateMagicLinkToken, consumeMagicLinkToken } = await import(
+          "@/lib/auth/magic-link"
+        );
+
+        const validation = await validateMagicLinkToken(tokenInput);
+        if (!validation.success) {
+          await writeAudit({
+            actor: { userId: null, email: null },
+            action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: validation.reason },
+          });
+          return null;
+        }
+
+        // Atomic consume — flips used=true. Race-safe under double-click
+        // because consumeMagicLinkToken uses updateMany with a where:
+        // { used: false } predicate.
+        const consumption = await consumeMagicLinkToken(tokenInput);
+        if (!consumption.success) {
+          await writeAudit({
+            actor: { userId: null, email: validation.email },
+            action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: consumption.reason },
+          });
+          return null;
+        }
+
+        // Resolve the User. For invitation-flow tokens the User may not
+        // exist yet — commit 4 wires User-creation here. For now we look
+        // up an existing User; if the token is invitation-only and the
+        // User hasn't been created, we audit + reject (commit 4 will
+        // change this branch).
+        const user = await prisma.user.findFirst({
+          where: { email: validation.email, deletedAt: null },
+          select: { id: true, email: true, name: true, image: true, role: true },
+        });
+        if (!user) {
+          await writeAudit({
+            actor: { userId: null, email: validation.email },
+            action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: "user_inactive", inviteCodeId: validation.inviteCodeId },
+          });
+          return null;
+        }
+
+        await writeAudit({
+          actor: { userId: user.id, role: user.role, email: user.email },
+          action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_SUCCESS,
+          entityType: "User",
+          entityId: user.id,
+          metadata: { inviteCodeId: validation.inviteCodeId },
+        });
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        };
+      },
+    }),
   ],
   pages: {
     signIn: "/signin",

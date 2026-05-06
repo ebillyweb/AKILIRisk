@@ -110,6 +110,17 @@ export const AUDIT_ACTIONS = {
   AUTH_MFA_CHALLENGE_SUCCESS: "auth.mfa_challenge_success",
   AUTH_MFA_CHALLENGE_FAILURE: "auth.mfa_challenge_failure",
   AUTH_MFA_RECOVERY_USED: "auth.mfa_recovery_used",
+  /** Round-11 commit 2 (BRD §5.1.AUTH): magic-link token issued
+   *  (POST /api/auth/magic-link/request). metadata.userExists
+   *  distinguishes the enumeration-safe paths so the audit-log reader
+   *  can see the issuance attempt without learning whether the email
+   *  matched a real account. */
+  AUTH_MAGIC_LINK_REQUEST: "auth.magic_link_request",
+  /** Round-11 commit 2: magic-link successfully consumed; user signed in. */
+  AUTH_MAGIC_LINK_SUCCESS: "auth.magic_link_success",
+  /** Round-11 commit 2: magic-link validation rejected. metadata.reason:
+   *  "expired" | "used" | "not_found" | "user_inactive". */
+  AUTH_MAGIC_LINK_FAILURE: "auth.magic_link_failure",
 
   // ── Advisor workflow actions (P4) ─────────────────────────────────────────
   INTAKE_REVIEW_STARTED: "intake.review_started",

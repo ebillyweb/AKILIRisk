@@ -213,6 +213,35 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+/// Round-11 commit 2 (BRD §5.1.AUTH): magic-link authentication tokens for
+/// client users. Sibling to NextAuth's VerificationToken (which holds
+/// password-reset tokens for advisor accounts). Single-use, 15-minute
+/// expiry by default; raw token hashed via SHA-256 before storage.
+model MagicLinkToken {
+  id           String    @id @default(cuid())
+  /// SHA-256 hash of the random 32-byte token sent to the user. The raw
+  /// token only exists in transit (the email body) and during validation.
+  tokenHash    String    @unique
+  /// Email the link is bound to. Validation uses tokenHash for lookup;
+  /// email is stored for audit + display only.
+  email        String
+  /// Optional FK to the originating InviteCode when the link is issued
+  /// as part of advisor invitation. Null for self-service sign-in
+  /// requests by existing users. SetNull on delete so an invite removal
+  /// doesn't cascade-kill in-flight tokens.
+  inviteCodeId String?
+  expires      DateTime
+  used         Boolean   @default(false)
+  /// When the link was clicked (used flips true). Null until clicked.
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  inviteCode   InviteCode? @relation(fields: [inviteCodeId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([expires])
+}
+
 model Assessment {
   id            String           @id @default(cuid())
   userId        String
@@ -565,6 +594,9 @@ model InviteCode {
   resendCount Int       @default(0)
 
   advisor     AdvisorProfile? @relation(fields: [createdBy], references: [id])
+  /// Round-11 commit 2: magic-link tokens issued for this invite (one
+  /// invite may have multiple in-flight tokens if re-issued).
+  magicLinkTokens MagicLinkToken[]
 
   @@index([code])
   @@index([createdBy])

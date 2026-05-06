@@ -57,6 +57,80 @@ export function renderPasswordResetEmailHtml(resetUrl: string): string {
       `;
 }
 
+/**
+ * Round-11 commit 2 (BRD §5.1.AUTH): magic-link sign-in email body.
+ *
+ * Same shape + voice as the password-reset template (subject differs,
+ * body explains "click to sign in" rather than "click to reset").
+ * `magicLinkUrl` is server-built; routed through escapeHtml as a defense
+ * against any future drift that lets user input leak into the URL.
+ */
+export function renderMagicLinkEmailHtml(magicLinkUrl: string): string {
+  const safeUrl = escapeHtml(magicLinkUrl);
+  return `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
+              <h1 style="color: #18181b; margin-top: 0;">Sign in to Akili Risk</h1>
+
+              <p style="margin: 16px 0;">
+                Click the button below to sign in. This link will expire in <strong>15 minutes</strong> and can only be used once.
+              </p>
+
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${safeUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+                  Sign in
+                </a>
+              </div>
+
+              <p style="margin: 16px 0; font-size: 14px; color: #666;">
+                Or copy and paste this URL into your browser:
+              </p>
+              <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
+                <a href="${safeUrl}" style="color: #18181b;">${safeUrl}</a>
+              </p>
+
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
+
+              <p style="margin: 16px 0; font-size: 14px; color: #666;">
+                If you didn't request this sign-in link, you can safely ignore this email. The link will expire on its own and no action will be taken.
+              </p>
+            </div>
+          </body>
+        </html>
+      `;
+}
+
+export async function sendMagicLinkEmail(
+  email: string,
+  magicLinkUrl: string
+): Promise<void> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error("RESEND_API_KEY not configured - magic-link email will not be sent");
+      return;
+    }
+
+    const resend = new Resend(apiKey);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: "Sign in to Akili Risk",
+      html: renderMagicLinkEmailHtml(magicLinkUrl),
+    });
+  } catch (error) {
+    // Same error semantics as sendPasswordResetEmail: log + swallow to
+    // prevent enumeration via response timing or error-shape.
+    console.error("Failed to send magic-link email:", error);
+  }
+}
+
 export async function sendPasswordResetEmail(
   email: string,
   resetUrl: string
