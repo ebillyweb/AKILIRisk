@@ -19,6 +19,7 @@ import { getAdvisorDashboardClients, getDashboardMetrics } from '@/lib/dashboard
 import { getFamilyGovernanceTrends } from '@/lib/analytics/queries';
 import { getPortfolioIntelligence, getTopRisksForFamily, getRiskDetailForFamily, getPortfolioPillarScores } from '@/lib/intelligence/queries';
 import { approveClientSchema } from '@/lib/schemas/advisor';
+import { decryptUserEmail } from '@/lib/auth/user-email';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
 import { toAdvisorHouseholdMemberViews } from '@/lib/profiles/advisor-household-view';
 import type { IntakeReviewData } from '@/lib/advisor/types';
@@ -625,7 +626,8 @@ export async function getCyberRiskDashboardData() {
       return {
         id: assignment.client.id,
         name: assignment.client.name,
-        email: assignment.client.email,
+        // Round-11 commit 2.4b: decrypt at exit.
+        email: decryptUserEmail(assignment.client.emailCiphertext),
         cyberScore,
         riskLevel,
         assessedAt,
@@ -723,7 +725,8 @@ export async function getIdentityRiskDashboardData() {
       return {
         id: assignment.client.id,
         name: assignment.client.name,
-        email: assignment.client.email,
+        // Round-11 commit 2.4b: decrypt at exit.
+        email: decryptUserEmail(assignment.client.emailCiphertext),
         identityScore: latestIdentityScore?.score || null,
         riskLevel: latestIdentityScore?.riskLevel || null,
         assessedAt: latestIdentityScore?.calculatedAt || null,

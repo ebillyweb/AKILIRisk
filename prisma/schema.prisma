@@ -17,21 +17,14 @@ enum UserRole {
 
 model User {
   id            String    @id @default(cuid())
-  /// Round-11 commit 2.4a (BRD §5.1.AUTH / phase B — soft-drop step 1):
-  /// `email` is no longer the authoritative auth-path lookup column —
-  /// the unique constraint moved to `emailCiphertext`, and writes
-  /// stopped populating this column (userEmailWriteData returns
-  /// ciphertext-only). Nullable because new rows in the bake window
-  /// don't have plaintext. Existing rows keep their plaintext value
-  /// for rollback safety; display surfaces decrypt `emailCiphertext`
-  /// instead of reading this column. Commit 2.4b drops the column.
-  email         String?
-  /// Round-11 commit 2.4a (BRD §5.1.AUTH / phase B — soft-drop step 1):
-  /// authoritative auth-path lookup column. Deterministic AES-256-GCM
-  /// ciphertext of the email; UNIQUE + NOT NULL. Use the helpers in
-  /// `src/lib/auth/user-email.ts` (findUserByEmail /
-  /// userEmailWriteData) rather than reading or writing this column
-  /// directly.
+  /// Round-11 commit 2.4b (BRD §5.1.AUTH / phase B — soft-drop step 2):
+  /// authoritative auth-path lookup column — the only stored form of
+  /// the user's email. Deterministic AES-256-GCM ciphertext; UNIQUE +
+  /// NOT NULL. Use the helpers in `src/lib/auth/user-email.ts`
+  /// (findUserByEmail / userEmailWriteData / userEmailForDisplay /
+  /// decryptUserEmail) rather than reading or writing this column
+  /// directly. The plaintext `email` column was dropped in this
+  /// commit's migration.
   emailCiphertext String    @unique
   emailVerified DateTime?
   /// Round-11 commit 3 (BRD §5.1.AUTH): nullable so client (role=USER)

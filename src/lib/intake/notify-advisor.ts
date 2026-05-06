@@ -5,6 +5,7 @@ import { sendAdvisorIntakeNotification } from "@/lib/email";
 import { createNotification } from "@/lib/data/advisor";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /**
  * Notify every advisor with an ACTIVE assignment to the intake's owning
@@ -22,10 +23,11 @@ import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 export async function notifyAdvisorsOfIntake(
   interviewId: string
 ): Promise<{ notifiedCount: number }> {
+  // Round-11 commit 2.4b: ciphertext, decrypt at usage.
   const interview = await prisma.intakeInterview.findUnique({
     where: { id: interviewId },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, emailCiphertext: true } },
     },
   });
   if (!interview) {
@@ -37,11 +39,13 @@ export async function notifyAdvisorsOfIntake(
     include: {
       advisor: {
         include: {
-          user: { select: { id: true, name: true, email: true } },
+          user: { select: { id: true, name: true, emailCiphertext: true } },
         },
       },
     },
   });
+  // Round-11 commit 2.4b: client email used in the outbound email body.
+  const clientEmail = decryptUserEmail(interview.user.emailCiphertext);
 
   // Strict env-only resolver — see comment in getPublicAppUrlStrict. Null
   // here means "we don't have a usable public origin in prod"; we still
@@ -70,10 +74,10 @@ export async function notifyAdvisorsOfIntake(
       if (baseUrl) {
         const reviewUrl = `${baseUrl}/advisor/review/${interviewId}`;
         await sendAdvisorIntakeNotification(
-          advisorUser.email,
+          decryptUserEmail(advisorUser.emailCiphertext),
           advisorUser.name || "Advisor",
           interview.user.name || "Client",
-          interview.user.email,
+          clientEmail,
           reviewUrl
         );
       }

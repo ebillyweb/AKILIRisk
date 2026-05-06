@@ -149,19 +149,18 @@ export async function fetchTenantBundle(
   // catches the case where the same query runs across a transaction
   // boundary that adds an unrelated user.
   //
-  // Round-11 commit 2.4a (BRD §5.3 export contract): the export ships
-  // RAW PII per the data-portability obligation, which includes the
-  // plaintext email. We resolve via userEmailForDisplay so existing
-  // rows transit their plaintext column and post-2.4a rows decrypt
-  // their ciphertext. The CSV serializer's column list keeps `email`
-  // as the header.
+  // Round-11 commit 2.4b (BRD §5.3 export contract): the export ships
+  // RAW PII per the data-portability obligation. The plaintext column
+  // was dropped — we always decrypt at this layer and write `email`
+  // back onto each row so the downstream CSV serializer's column list
+  // (which keeps `email` as the header) sees plaintext.
   const clients = clientUsers
     .filter((u) => clientUserIdSet.has(u.id))
     .map((u) => {
-      const cu = u as unknown as { email: string | null; emailCiphertext: string };
+      const cu = u as unknown as { emailCiphertext: string };
       return {
         ...u,
-        email: userEmailForDisplay({ email: cu.email, emailCiphertext: cu.emailCiphertext }),
+        email: userEmailForDisplay({ emailCiphertext: cu.emailCiphertext }),
       };
     });
 
@@ -194,20 +193,21 @@ export async function fetchTenantBundle(
 export async function listAdvisorProfilesForSystemExport(): Promise<
   Array<{ id: string; userId: string; email: string; firmName: string | null; brandName: string | null }>
 > {
+  // Round-11 commit 2.4b: emailCiphertext + decrypt at exit.
   const profiles = await prisma.advisorProfile.findMany({
     select: {
       id: true,
       userId: true,
       firmName: true,
       brandName: true,
-      user: { select: { email: true } },
+      user: { select: { emailCiphertext: true } },
     },
     orderBy: { createdAt: "asc" },
   });
   return profiles.map((p) => ({
     id: p.id,
     userId: p.userId,
-    email: p.user.email,
+    email: userEmailForDisplay({ emailCiphertext: p.user.emailCiphertext }),
     firmName: p.firmName,
     brandName: p.brandName,
   }));

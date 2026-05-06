@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { PILLAR_WEIGHTS } from "@/lib/analytics/queries";
 import { CATEGORY_LABELS } from "@/lib/analytics/formatters";
 import type { RiskSeverity, RiskIndicator, FamilyRiskSummary, PortfolioIntelligence, RiskDetail, RiskRecommendation, AssessmentResponseDetail, PortfolioPillarRow } from "./types";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /**
  * Static governance recommendations mapped by category slug
@@ -133,7 +134,8 @@ export async function getTopRisksForFamily(
       client: {
         select: {
           id: true,
-          email: true,
+          // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+          emailCiphertext: true,
         }
       }
     }
@@ -172,7 +174,7 @@ export async function getTopRisksForFamily(
   // Step c: Create RiskIndicators for each pillar score
   const riskIndicators: RiskIndicator[] = assessment.scores.map(pillarScore => ({
     familyId: clientId,
-    familyName: assignment.client.email,
+    familyName: decryptUserEmail(assignment.client.emailCiphertext),
     categorySlug: pillarScore.pillar,
     categoryName: CATEGORY_LABELS[pillarScore.pillar] || pillarScore.pillar,
     score: pillarScore.score,
@@ -193,7 +195,7 @@ export async function getTopRisksForFamily(
   // Step g: Return FamilyRiskSummary
   return {
     familyId: clientId,
-    familyName: assignment.client.email,
+    familyName: decryptUserEmail(assignment.client.emailCiphertext),
     overallScore,
     topRisks,
     assessmentCount,
@@ -217,7 +219,8 @@ export async function getPortfolioIntelligence(
       client: {
         select: {
           id: true,
-          email: true,
+          // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+          emailCiphertext: true,
         }
       }
     }
@@ -260,7 +263,7 @@ export async function getPortfolioIntelligence(
     // Create risk indicators for this family (same logic as getTopRisksForFamily)
     const familyRiskIndicators: RiskIndicator[] = assessment.scores.map(pillarScore => ({
       familyId: assignment.clientId,
-      familyName: assignment.client.email,
+      familyName: decryptUserEmail(assignment.client.emailCiphertext),
       categorySlug: pillarScore.pillar,
       categoryName: CATEGORY_LABELS[pillarScore.pillar] || pillarScore.pillar,
       score: pillarScore.score,
@@ -281,7 +284,7 @@ export async function getPortfolioIntelligence(
     // Create family risk summary
     const familyRiskSummary: FamilyRiskSummary = {
       familyId: assignment.clientId,
-      familyName: assignment.client.email,
+      familyName: decryptUserEmail(assignment.client.emailCiphertext),
       overallScore,
       topRisks,
       assessmentCount,
@@ -351,7 +354,8 @@ export async function getRiskDetailForFamily(
       client: {
         select: {
           id: true,
-          email: true,
+          // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+          emailCiphertext: true,
         }
       }
     }
@@ -382,7 +386,7 @@ export async function getRiskDetailForFamily(
   // Step c: Create RiskIndicators for each pillar score
   const riskIndicators: RiskIndicator[] = assessment.scores.map(pillarScore => ({
     familyId: clientId,
-    familyName: assignment.client.email,
+    familyName: decryptUserEmail(assignment.client.emailCiphertext),
     categorySlug: pillarScore.pillar,
     categoryName: CATEGORY_LABELS[pillarScore.pillar] || pillarScore.pillar,
     score: pillarScore.score,
@@ -443,7 +447,7 @@ export async function getRiskDetailForFamily(
   // Step g: Return complete RiskDetail object
   return {
     familyId: clientId,
-    familyName: assignment.client.email,
+    familyName: decryptUserEmail(assignment.client.emailCiphertext),
     overallScore,
     latestAssessmentDate: assessment.completedAt!.toISOString(),
     assessmentId: assessment.id,
@@ -473,7 +477,8 @@ export async function getPortfolioPillarScores(
   const assignments = await prisma.clientAdvisorAssignment.findMany({
     where: { advisorId: advisorProfileId, status: "ACTIVE" },
     include: {
-      client: { select: { id: true, name: true, email: true } },
+      // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+      client: { select: { id: true, name: true, emailCiphertext: true } },
     },
   });
   if (assignments.length === 0) return [];
@@ -498,7 +503,7 @@ export async function getPortfolioPillarScores(
     // pillarScores so the heat map shows them all unassessed.
     return assignments.map((a) => ({
       clientId: a.clientId,
-      clientName: a.client.name ?? a.client.email,
+      clientName: a.client.name ?? decryptUserEmail(a.client.emailCiphertext),
       pillarScores: [],
     }));
   }
@@ -542,7 +547,7 @@ export async function getPortfolioPillarScores(
 
   return assignments.map((a) => ({
     clientId: a.clientId,
-    clientName: a.client.name ?? a.client.email,
+    clientName: a.client.name ?? decryptUserEmail(a.client.emailCiphertext),
     pillarScores: scoresByUserId.get(a.clientId) ?? [],
   }));
 }

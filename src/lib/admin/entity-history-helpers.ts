@@ -14,6 +14,7 @@ import "server-only";
  */
 
 import { prisma } from "@/lib/db";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 export interface EntityDisplayInfo {
   /** Friendly name to render in the page header. */
@@ -80,22 +81,24 @@ export async function lookupEntityDisplay(
         return { displayName: display, editHref: null };
       }
       case "Assessment": {
+        // Round-11 commit 2.4b: ciphertext + decrypt fallback.
         const row = await prisma.assessment.findUnique({
           where: { id: entityId },
-          select: { user: { select: { email: true, name: true } } },
+          select: { user: { select: { emailCiphertext: true, name: true } } },
         });
         if (!row) return fallback;
-        const owner = row.user.name || row.user.email;
+        const owner = row.user.name || decryptUserEmail(row.user.emailCiphertext);
         return { displayName: `Assessment for ${owner}`, editHref: null };
       }
       case "User": {
+        // Round-11 commit 2.4b: ciphertext + decrypt fallback.
         const row = await prisma.user.findUnique({
           where: { id: entityId },
-          select: { name: true, email: true },
+          select: { name: true, emailCiphertext: true },
         });
         if (!row) return fallback;
         return {
-          displayName: row.name || row.email,
+          displayName: row.name || decryptUserEmail(row.emailCiphertext),
           editHref: `/admin/clients/${entityId}`,
         };
       }

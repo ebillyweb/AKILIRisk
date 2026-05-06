@@ -4,6 +4,7 @@ import { requireAdminRole } from "@/lib/admin/auth";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExportControls } from "./ExportControls";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /**
  * /admin/exports — round-10 / E2 (BRD §5.3 data ownership + portability).
@@ -20,24 +21,25 @@ import { ExportControls } from "./ExportControls";
 export default async function AdminExportsPage() {
   await requireAdminRole();
 
+  // Round-11 commit 2.4b: ciphertext, decrypt at exit.
   const advisorProfiles = await prisma.advisorProfile.findMany({
     select: {
       id: true,
       firmName: true,
       brandName: true,
-      user: { select: { email: true } },
+      user: { select: { emailCiphertext: true } },
     },
     orderBy: [{ firmName: "asc" }, { createdAt: "asc" }],
   });
 
-  const advisorOptions = advisorProfiles.map((p) => ({
-    advisorProfileId: p.id,
-    label:
-      p.brandName ||
-      p.firmName ||
-      p.user.email,
-    email: p.user.email,
-  }));
+  const advisorOptions = advisorProfiles.map((p) => {
+    const advisorEmail = decryptUserEmail(p.user.emailCiphertext);
+    return {
+      advisorProfileId: p.id,
+      label: p.brandName || p.firmName || advisorEmail,
+      email: advisorEmail,
+    };
+  });
 
   return (
     <div className="space-y-6">

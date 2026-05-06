@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { shouldSendNotification } from "@/lib/notifications/preferences";
 import { sendNotification } from "@/lib/notifications/service";
 import { renderNotificationEmail } from "@/lib/notifications/templates";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 interface ProcessResult {
   clientsReminded: number;
@@ -64,7 +65,8 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
         client: {
           select: {
             id: true,
-            email: true,
+            // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+            emailCiphertext: true,
             name: true,
             firstName: true,
             lastName: true,
@@ -171,10 +173,13 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
           logoUrl: advisor.logoUrl || undefined,
         });
 
+        // Round-11 commit 2.4b: decrypt once per client.
+        const clientEmail = decryptUserEmail(client.emailCiphertext);
+
         // Send notification
         const result = await sendNotification({
           recipientUserId: client.id,
-          recipientEmail: client.email,
+          recipientEmail: clientEmail,
           category: 'reminder',
           title: 'Assessment Reminder',
           message: `Your governance assessment is ready to complete`,
@@ -186,9 +191,9 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
 
         if (result.emailSent) {
           clientsReminded++;
-          console.log(`Sent assessment reminder to ${client.email}`);
+          console.log(`Sent assessment reminder to ${clientEmail}`);
         } else {
-          console.error(`Failed to send assessment reminder to ${client.email}`);
+          console.error(`Failed to send assessment reminder to ${clientEmail}`);
         }
 
       } catch (clientError) {

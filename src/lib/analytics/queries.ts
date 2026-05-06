@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { FamilyAnalyticsData, AssessmentComparison, GovernanceTrendPoint, CategoryBreakdownPoint } from "./types";
 import { CATEGORY_LABELS } from "./formatters";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 // Pillar weights from the family governance pillar definition
 export const PILLAR_WEIGHTS = {
@@ -73,7 +74,8 @@ export async function getFamilyGovernanceTrends(
       client: {
         select: {
           id: true,
-          email: true,
+          // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+          emailCiphertext: true,
         }
       }
     }
@@ -139,7 +141,8 @@ export async function getFamilyGovernanceTrends(
     assessmentsData.length > 0 ? assessmentsData[assessmentsData.length - 1].categories : [];
 
   // Build client name
-  const clientName = assignment.client.email;
+  // Round-11 commit 2.4b: name fallback now decrypts ciphertext.
+  const clientName = decryptUserEmail(assignment.client.emailCiphertext);
 
   return {
     clientId,

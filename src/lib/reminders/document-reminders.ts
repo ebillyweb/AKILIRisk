@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { sendDocumentReminderEmail } from "./reminder-email";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 interface ProcessResult {
   clientsReminded: number;
@@ -44,7 +45,8 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
         client: {
           select: {
             id: true,
-            email: true,
+            // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+            emailCiphertext: true,
             name: true,
             firstName: true,
             lastName: true,
@@ -105,9 +107,12 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
         // Portal URL (assuming standard documents path)
         const portalUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/documents`;
 
+        // Round-11 commit 2.4b: decrypt once per client.
+        const clientEmail = decryptUserEmail(client.emailCiphertext);
+
         // Send reminder email
         const emailResult = await sendDocumentReminderEmail({
-          clientEmail: client.email,
+          clientEmail,
           clientName,
           missingDocuments,
           advisorName,
@@ -131,9 +136,9 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
           clientsReminded++;
           documentsIncluded += clientDocs.length;
 
-          console.log(`Sent reminder to ${client.email} for ${clientDocs.length} documents`);
+          console.log(`Sent reminder to ${clientEmail} for ${clientDocs.length} documents`);
         } else {
-          console.error(`Failed to send reminder to ${client.email}: ${emailResult.reason}`);
+          console.error(`Failed to send reminder to ${clientEmail}: ${emailResult.reason}`);
         }
       } catch (clientError) {
         console.error(`Error processing reminders for client ${clientId}:`, clientError);

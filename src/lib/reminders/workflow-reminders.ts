@@ -5,6 +5,7 @@ import { computeClientStage, isStalled, getStageLabel } from "@/lib/pipeline/sta
 import { shouldSendNotification } from "@/lib/notifications/preferences";
 import { sendNotification } from "@/lib/notifications/service";
 import { renderNotificationEmail } from "@/lib/notifications/templates";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 interface ProcessResult {
   advisorsNotified: number;
   clientsEscalated: number;
@@ -41,7 +42,8 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
         client: {
           select: {
             id: true,
-            email: true,
+            // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+            emailCiphertext: true,
             name: true,
             firstName: true,
             lastName: true,
@@ -55,7 +57,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
             user: {
               select: {
                 id: true,
-                email: true,
+                emailCiphertext: true,
                 name: true,
                 firstName: true,
                 lastName: true,
@@ -243,16 +245,15 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
           logoUrl: advisor.logoUrl || undefined,
         });
 
-        // Skip if advisor has no email
-        if (!advisor.user.email) {
-          console.warn(`Advisor ${advisorId} has no email address, skipping notification`);
-          continue;
-        }
+        // Round-11 commit 2.4b: decrypt advisor email; emailCiphertext
+        // is non-null after the schema flip, so the previous
+        // "no email address" branch is unreachable.
+        const advisorEmail = decryptUserEmail(advisor.user.emailCiphertext);
 
         // Send notification
         const result = await sendNotification({
           recipientUserId: advisor.user.id,
-          recipientEmail: advisor.user.email,
+          recipientEmail: advisorEmail,
           category: 'stalled',
           title: 'Workflow Stalled',
           message: `${clientName} has been inactive for ${daysSinceActivity} days at the ${getStageLabel(stage)} stage`,
@@ -267,7 +268,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
           if (isEscalation) {
             clientsEscalated++;
           }
-          console.log(`Notified advisor ${advisor.user.email} about stalled workflow for ${clientName} (${daysSinceActivity} days)`);
+          console.log(`Notified advisor ${advisorEmail} about stalled workflow for ${clientName} (${daysSinceActivity} days)`);
         } else {
           console.error(`Failed to send stalled workflow notification for client ${clientId}`);
         }

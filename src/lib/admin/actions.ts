@@ -289,7 +289,10 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
           firstName: parsed.data.firstName ?? undefined,
           lastName: parsed.data.lastName ?? undefined,
         },
-        select: { id: true, email: true },
+        // Round-11 commit 2.4b: only id needed downstream — the
+        // welcome notification uses parsed.data.email (form input
+        // plaintext) directly.
+        select: { id: true },
       });
 
       const p = await tx.advisorProfile.create({
@@ -346,7 +349,8 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
       });
       await sendNotification({
         recipientUserId: user.id,
-        recipientEmail: user.email,
+        // Round-11 commit 2.4b: use form-input plaintext (in scope).
+        recipientEmail: parsed.data.email,
         category: "system",
         title: "Welcome — complete signup within 30 days",
         message: `Grace for hub access ends ${formatUtcCalendarDate(gracePeriodEnd)} (UTC, start of next calendar day). Complete paid subscription within 30 days by ${formatUtcCalendarDate(paidSignupDeadline)}.`,

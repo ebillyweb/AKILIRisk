@@ -50,7 +50,8 @@ export async function createAdvisorInvitation(
           user: {
             select: {
               name: true,
-              email: true,
+              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
+              emailCiphertext: true,
             },
           },
         },
@@ -100,7 +101,8 @@ export async function getAdvisorInvitations(
           user: {
             select: {
               name: true,
-              email: true,
+              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
+              emailCiphertext: true,
             },
           },
         },
@@ -131,7 +133,8 @@ export async function resendInvitation(
           user: {
             select: {
               name: true,
-              email: true,
+              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
+              emailCiphertext: true,
             },
           },
         },
@@ -166,7 +169,8 @@ export async function resendInvitation(
           user: {
             select: {
               name: true,
-              email: true,
+              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
+              emailCiphertext: true,
             },
           },
         },
@@ -202,7 +206,8 @@ export async function expireInvitation(
           user: {
             select: {
               name: true,
-              email: true,
+              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
+              emailCiphertext: true,
             },
           },
         },
@@ -229,7 +234,8 @@ export async function expireInvitation(
           user: {
             select: {
               name: true,
-              email: true,
+              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
+              emailCiphertext: true,
             },
           },
         },

@@ -89,13 +89,13 @@ export async function POST(req: NextRequest) {
     // Lookup user + invite-code in parallel to keep the audit-write
     // latency constant regardless of which (if any) match. Both are
     // bounded reads.
-    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read shim
-    // for the user lookup; invite-code lookup is unaffected because
-    // InviteCode.prefillEmail isn't being encrypted in this round.
+    // Round-11 commit 2.4b: User.email column dropped; pull
+    // emailCiphertext for the audit hash. InviteCode.prefillEmail
+    // is unrelated and stays plaintext (separate scope).
     const [user, inviteCode] = await Promise.all([
       findUserByEmail(email, {
         where: { deletedAt: null },
-        select: { id: true, email: true },
+        select: { id: true, emailCiphertext: true },
       }),
       prisma.inviteCode.findFirst({
         where: {
@@ -113,9 +113,12 @@ export async function POST(req: NextRequest) {
 
     // Audit BEFORE the response on every branch so the audit-write
     // latency is constant regardless of whether the email matches.
+    // Round-11 commit 2.4b: pass emailCiphertext for the user-found
+    // branch (writeAudit decrypts internally for the hash); fall back
+    // to form-input plaintext when no user matches.
     await writeAudit({
       actor: user
-        ? { userId: user.id, email: user.email }
+        ? { userId: user.id, emailCiphertext: user.emailCiphertext }
         : { userId: null, email },
       action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_REQUEST,
       entityType: "User",

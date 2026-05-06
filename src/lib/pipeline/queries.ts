@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { PipelineClient, PipelineMetrics, ClientWorkflowStage, ClientDetail, WorkflowEvent } from "./types";
 import { computeClientStage, computeProgress, isStalled } from "./status";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -98,7 +99,9 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
   const clientEmails = Array.from(
     new Set(
       assignments
-        .map((a) => a.client.email)
+        // Round-11 commit 2.4b: client.email is gone; decrypt
+        // ciphertext for the invite-prefill lookup batch below.
+        .map((a) => decryptUserEmail(a.client.emailCiphertext))
         .filter((email): email is string => typeof email === 'string' && email.length > 0)
     )
   );
@@ -179,8 +182,10 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
   // ── Per-client transform — synchronous now ──────────────────────────────
   const clients: PipelineClient[] = assignments.map((assignment) => {
     const client = assignment.client;
+    // Round-11 commit 2.4b: decrypt once per row.
+    const clientEmail = decryptUserEmail(client.emailCiphertext);
 
-    const invitation = invitationByEmail.get(client.email) ?? null;
+    const invitation = invitationByEmail.get(clientEmail) ?? null;
     const docCounts = documentCountsByClient.get(client.id) ?? { required: 0, fulfilled: 0 };
     const documentsRequired = docCounts.required;
     const documentsFulfilled = docCounts.fulfilled;
@@ -239,7 +244,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     const pipelineClient: PipelineClient = {
       id: client.id,
       name: client.name,
-      email: client.email,
+      email: clientEmail,
       assignedAt: assignment.assignedAt,
       stage,
       progress: computeProgress(stage),
@@ -362,12 +367,14 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
   }
 
   const client = assignment.client;
+  // Round-11 commit 2.4b: client.email is gone; decrypt once.
+  const clientEmail = decryptUserEmail(client.emailCiphertext);
 
   // Fetch invitation data
   const invitation = await prisma.inviteCode.findFirst({
     where: {
       createdBy: advisorProfileId,
-      prefillEmail: client.email,
+      prefillEmail: clientEmail,
     },
     orderBy: { createdAt: 'desc' }
   });
@@ -517,7 +524,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
   const pipelineClient: PipelineClient = {
     id: client.id,
     name: client.name,
-    email: client.email,
+    email: clientEmail,
     assignedAt: assignment.assignedAt,
     stage,
     progress: computeProgress(stage),

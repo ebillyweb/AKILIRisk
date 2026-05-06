@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
 import { ClientPersonalDetailsForm } from "@/components/settings/ClientPersonalDetailsForm";
 import { getAdvisorPersonalDetails, getClientPersonalDetails } from "@/lib/actions/personal-profile";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 export default async function SettingsPage({
   searchParams,
@@ -27,19 +28,20 @@ export default async function SettingsPage({
 
   const role = session.user.role?.toString().toUpperCase();
 
-  // Fetch user data
-  const user = await prisma.user.findUnique({
+  // Round-11 commit 2.4b: ciphertext + decrypt for display.
+  const userRow = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
-      email: true,
+      emailCiphertext: true,
       mfaEnabled: true,
       mfaRecoveryCodes: true,
     },
   });
 
-  if (!user) {
+  if (!userRow) {
     redirect("/signin");
   }
+  const user = { ...userRow, email: decryptUserEmail(userRow.emailCiphertext) };
 
   // Fetch personal details for profile section (advisor or client by role)
   let advisorDetails: Awaited<ReturnType<typeof getAdvisorPersonalDetails>>["data"] = null;

@@ -2,20 +2,31 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import type { AdvisorDashboardClient } from "@/lib/advisor/types";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 export async function getAdvisorProfile(userId: string) {
-  return prisma.advisorProfile.findUnique({
+  // Round-11 commit 2.4b: ciphertext + decrypt at exit so callers
+  // keep reading `profile.user.email` as plaintext.
+  const profile = await prisma.advisorProfile.findUnique({
     where: { userId },
     include: {
       user: {
         select: {
           id: true,
           name: true,
-          email: true,
+          emailCiphertext: true,
         },
       },
     },
   });
+  if (!profile) return null;
+  return {
+    ...profile,
+    user: {
+      ...profile.user,
+      email: decryptUserEmail(profile.user.emailCiphertext),
+    },
+  };
 }
 
 export async function getAssignedClients(advisorProfileId: string): Promise<AdvisorDashboardClient[]> {
@@ -29,7 +40,8 @@ export async function getAssignedClients(advisorProfileId: string): Promise<Advi
         select: {
           id: true,
           name: true,
-          email: true,
+          // Round-11 commit 2.4b: ciphertext, decrypt below.
+          emailCiphertext: true,
           // Round-11 commit 2.1 (BRD §5.1 amendment): clientProfile
           // contact + address fields were dropped. The advisor card
           // shows name + email only.
@@ -78,7 +90,7 @@ export async function getAssignedClients(advisorProfileId: string): Promise<Advi
   return assignments.map(assignment => ({
     id: assignment.client.id,
     name: assignment.client.name,
-    email: assignment.client.email,
+    email: decryptUserEmail(assignment.client.emailCiphertext),
     assignedAt: assignment.assignedAt,
     // Round-11 commit 2.1: clientProfile field removed from
     // AdvisorDashboardClient — see src/lib/advisor/types.ts.
@@ -105,7 +117,8 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
         select: {
           id: true,
           name: true,
-          email: true,
+          // Round-11 commit 2.4b: ciphertext, decrypt at exit.
+          emailCiphertext: true,
         },
       },
       responses: {
@@ -128,7 +141,13 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
   });
 
   return {
-    interview,
+    interview: {
+      ...interview,
+      user: {
+        ...interview.user,
+        email: decryptUserEmail(interview.user.emailCiphertext),
+      },
+    },
     approval,
   };
 }

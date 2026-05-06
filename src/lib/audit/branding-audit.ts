@@ -237,7 +237,9 @@ export async function getAdvisorAuditLog(
                 name: true,
                 firstName: true,
                 lastName: true,
-                email: true,
+                // Round-11 commit 2.4b: ciphertext; consumers that
+                // need plaintext should decrypt at the call site.
+                emailCiphertext: true,
               },
             },
           },

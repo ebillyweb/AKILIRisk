@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 import {
   brandingAuditRowToGeneric,
   denamespaceBrandingAction,
@@ -387,9 +388,13 @@ export async function lookupActorDisplay(
     new Set(actorUserIds.filter((id): id is string => typeof id === "string" && id.length > 0))
   );
   if (ids.length === 0) return new Map();
+  // Round-11 commit 2.4b: ciphertext, decrypt at exit so the actor
+  // resolver still returns plaintext for the audit-log row display.
   const users = await prisma.user.findMany({
     where: { id: { in: ids } },
-    select: { id: true, email: true, name: true },
+    select: { id: true, emailCiphertext: true, name: true },
   });
-  return new Map(users.map((u) => [u.id, { email: u.email, name: u.name }]));
+  return new Map(
+    users.map((u) => [u.id, { email: decryptUserEmail(u.emailCiphertext), name: u.name }])
+  );
 }

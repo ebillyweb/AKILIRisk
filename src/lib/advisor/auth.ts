@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { subscriptionQualifiesForPortalEnablement } from "@/lib/billing/advisor-portal-subscription";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { prisma } from "@/lib/db";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /** Thrown by `requireAdvisorRole` when an admin has disabled advisor hub/API access. */
 export const ADVISOR_PORTAL_DISABLED_MESSAGE =
@@ -150,13 +151,16 @@ export async function requireAdvisorRole() {
 }
 
 export async function getAdvisorProfileOrThrow(userId: string) {
+  // Round-11 commit 2.4b: emailCiphertext + decrypt at exit so callers
+  // (billing, advisor settings page, invitation actions) keep reading
+  // `profile.user.email` as plaintext.
   const profile = await prisma.advisorProfile.findUnique({
     where: { userId },
     include: {
       user: {
         select: {
           name: true,
-          email: true,
+          emailCiphertext: true,
           firstName: true,
           lastName: true,
         },
@@ -168,5 +172,11 @@ export async function getAdvisorProfileOrThrow(userId: string) {
     throw new Error("Advisor profile not found");
   }
 
-  return profile;
+  return {
+    ...profile,
+    user: {
+      ...profile.user,
+      email: decryptUserEmail(profile.user.emailCiphertext),
+    },
+  };
 }

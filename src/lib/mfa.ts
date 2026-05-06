@@ -47,12 +47,10 @@ export async function enrollMFA(userId: string) {
     throw encryptError;
   }
 
-  // Round-11 commit 2.4a: pull both columns + resolve via the
-  // bake-window-tolerant helper. The `email` column is null for users
-  // created post-2.4a; emailCiphertext is always populated.
+  // Round-11 commit 2.4b: column dropped; only emailCiphertext.
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true, emailCiphertext: true },
+    select: { emailCiphertext: true },
   });
 
   if (!user) {

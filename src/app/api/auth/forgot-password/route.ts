@@ -80,12 +80,11 @@ export async function POST(req: NextRequest) {
     // confirms the account ever existed (mild PII leak). `findFirst` with
     // a deletedAt filter behaves identically to `findUnique({ email })`
     // for active accounts, and returns null for soft-deleted ones.
-    // Round-11 commit 2.4a: ciphertext is needed for the audit hash;
-    // email kept for the user-found / send-reset-link branch which
-    // sends mail to the address.
+    // Round-11 commit 2.4b: column dropped; only emailCiphertext is
+    // stored. The reset-link send already uses form-input plaintext.
     const user = await findUserByEmail(email, {
       where: { deletedAt: null },
-      select: { id: true, email: true, emailCiphertext: true, role: true },
+      select: { id: true, emailCiphertext: true, role: true },
     });
 
     // Round-11 commit 3 (BRD §5.1.AUTH): clients (role=USER) authenticate

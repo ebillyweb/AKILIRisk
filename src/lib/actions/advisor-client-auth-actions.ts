@@ -75,13 +75,10 @@ async function gateAssignedClient(clientId: string) {
   });
   if (!assignment) return { success: false as const, error: "This client is not assigned to you." };
 
-  // Round-11 commit 2.4a: emailCiphertext is the auth-path source of
-  // truth; the plaintext column may be null for users created
-  // post-2.4a. We pull both — emailCiphertext for decrypt-then-use,
-  // email for the bake-window display fallback only.
+  // Round-11 commit 2.4b: column dropped; only emailCiphertext.
   const client = await prisma.user.findUnique({
     where: { id: clientId },
-    select: { id: true, email: true, emailCiphertext: true, role: true, deletedAt: true },
+    select: { id: true, emailCiphertext: true, role: true, deletedAt: true },
   });
   if (!client || client.deletedAt) return { success: false as const, error: "Client not found." };
   if (client.role !== "USER") {

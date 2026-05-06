@@ -16,7 +16,8 @@ export interface IntakeQuestion {
   recordingTips: string[];
 }
 
-// Prisma include pattern for IntakeInterview with responses
+// Prisma include pattern for IntakeInterview with responses.
+// Round-11 commit 2.4b: User.email column dropped; use emailCiphertext.
 export type IntakeInterviewWithResponses = Prisma.IntakeInterviewGetPayload<{
   include: {
     responses: true;
@@ -24,7 +25,7 @@ export type IntakeInterviewWithResponses = Prisma.IntakeInterviewGetPayload<{
       select: {
         id: true;
         name: true;
-        email: true;
+        emailCiphertext: true;
       };
     };
   };

@@ -3,12 +3,18 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { decryptUserEmail, withDecryptedEmail } from "@/lib/auth/user-email";
 
 export type AdvisorsAdminScope = "active" | "all";
 
 export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope }) {
   await requireAdminRole();
   const scope = opts?.scope ?? "active";
+  // Round-11 commit 2.4b: select emailCiphertext, decrypt in the
+  // mapper so callers keep reading `.email` as plaintext. orderBy on
+  // emailCiphertext is meaningless (deterministic ciphertext doesn't
+  // preserve string order), so we fall back to createdAt — admin UIs
+  // can re-sort client-side after the email plaintext is hydrated.
   const advisors = await prisma.user.findMany({
     where: {
       role: "ADVISOR",
@@ -16,7 +22,7 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
     },
     select: {
       id: true,
-      email: true,
+      emailCiphertext: true,
       name: true,
       firstName: true,
       lastName: true,
@@ -52,19 +58,20 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
         },
       },
     },
-    orderBy: { email: "asc" },
+    orderBy: { createdAt: "asc" },
   });
-  return advisors;
+  return advisors.map(withDecryptedEmail);
 }
 
 /** Fetch a single advisor by user id for admin edit form. */
 export async function getAdvisorForAdmin(userId: string) {
   await requireAdminRole();
+  // Round-11 commit 2.4b: same ciphertext→plaintext mapper pattern.
   const user = await prisma.user.findFirst({
     where: { id: userId, role: "ADVISOR" },
     select: {
       id: true,
-      email: true,
+      emailCiphertext: true,
       name: true,
       firstName: true,
       lastName: true,
@@ -93,16 +100,19 @@ export async function getAdvisorForAdmin(userId: string) {
       },
     },
   });
-  return user;
+  return user ? withDecryptedEmail(user) : null;
 }
 
 export async function getClientsForAdmin() {
   const { userId, email } = await requireAdminRole();
-  const users = await prisma.user.findMany({
+  // Round-11 commit 2.4b: ciphertext on both the top-level User and
+  // the joined advisor.user; decrypt at exit so the admin page sees
+  // `.email` plaintext on every row.
+  const usersRaw = await prisma.user.findMany({
     where: { role: "USER" },
     select: {
       id: true,
-      email: true,
+      emailCiphertext: true,
       name: true,
       createdAt: true,
       _count: {
@@ -115,15 +125,29 @@ export async function getClientsForAdmin() {
           advisor: {
             select: {
               id: true,
-              user: { select: { email: true, name: true } },
+              user: { select: { emailCiphertext: true, name: true } },
               firmName: true,
             },
           },
         },
       },
     },
-    orderBy: { email: "asc" },
+    orderBy: { createdAt: "asc" },
   });
+  const users = usersRaw.map((u) => ({
+    ...u,
+    email: decryptUserEmail(u.emailCiphertext),
+    clientAssignments: u.clientAssignments.map((a) => ({
+      ...a,
+      advisor: {
+        ...a.advisor,
+        user: {
+          ...a.advisor.user,
+          email: decryptUserEmail(a.advisor.user.emailCiphertext),
+        },
+      },
+    })),
+  }));
 
   // Fire-and-forget audit. writeAudit catches its own errors so a slow Prisma
   // write can't break the page render. Metadata records the row count only —
@@ -144,7 +168,8 @@ export async function getClientsForAdmin() {
 
 export async function getIntakeForAdmin() {
   const { userId, email } = await requireAdminRole();
-  const interviews = await prisma.intakeInterview.findMany({
+  // Round-11 commit 2.4b: nested ciphertext fields on user + advisor.user.
+  const interviewsRaw = await prisma.intakeInterview.findMany({
     select: {
       id: true,
       status: true,
@@ -153,18 +178,34 @@ export async function getIntakeForAdmin() {
       completedAt: true,
       submittedAt: true,
       updatedAt: true,
-      user: { select: { id: true, email: true, name: true } },
+      user: { select: { id: true, emailCiphertext: true, name: true } },
       approval: {
         select: {
           id: true,
           status: true,
-          advisor: { select: { user: { select: { email: true } } } },
+          advisor: { select: { user: { select: { emailCiphertext: true } } } },
         },
       },
       _count: { select: { responses: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
+  const interviews = interviewsRaw.map((i) => ({
+    ...i,
+    user: { ...i.user, email: decryptUserEmail(i.user.emailCiphertext) },
+    approval: i.approval
+      ? {
+          ...i.approval,
+          advisor: {
+            ...i.approval.advisor,
+            user: {
+              ...i.approval.advisor.user,
+              email: decryptUserEmail(i.approval.advisor.user.emailCiphertext),
+            },
+          },
+        }
+      : null,
+  }));
 
   void writeAudit({
     actor: { userId, role: "ADMIN", email },
@@ -179,7 +220,8 @@ export async function getIntakeForAdmin() {
 
 export async function getAssessmentsForAdmin() {
   const { userId, email } = await requireAdminRole();
-  const assessments = await prisma.assessment.findMany({
+  // Round-11 commit 2.4b: ciphertext on user, decrypt at exit.
+  const assessmentsRaw = await prisma.assessment.findMany({
     select: {
       id: true,
       userId: true,
@@ -190,11 +232,15 @@ export async function getAssessmentsForAdmin() {
       startedAt: true,
       completedAt: true,
       updatedAt: true,
-      user: { select: { id: true, email: true, name: true } },
+      user: { select: { id: true, emailCiphertext: true, name: true } },
       _count: { select: { responses: true, scores: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
+  const assessments = assessmentsRaw.map((a) => ({
+    ...a,
+    user: { ...a.user, email: decryptUserEmail(a.user.emailCiphertext) },
+  }));
 
   void writeAudit({
     actor: { userId, role: "ADMIN", email },
@@ -209,29 +255,47 @@ export async function getAssessmentsForAdmin() {
 
 export async function getGovernanceReviewLeadsForAdmin() {
   await requireAdminRole();
-  return prisma.governanceReviewLead.findMany({
+  // Round-11 commit 2.4b: assignedAdvisor.user.email decrypted at exit.
+  const leads = await prisma.governanceReviewLead.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       assignedAdvisor: {
         select: {
           id: true,
           firmName: true,
-          user: { select: { email: true, name: true } },
+          user: { select: { emailCiphertext: true, name: true } },
         },
       },
     },
   });
+  return leads.map((l) => ({
+    ...l,
+    assignedAdvisor: l.assignedAdvisor
+      ? {
+          ...l.assignedAdvisor,
+          user: {
+            ...l.assignedAdvisor.user,
+            email: decryptUserEmail(l.assignedAdvisor.user.emailCiphertext),
+          },
+        }
+      : null,
+  }));
 }
 
 export async function getAdvisorProfilesForLeadAssignment() {
   await requireAdminRole();
-  return prisma.advisorProfile.findMany({
+  // Round-11 commit 2.4b: same nested decrypt.
+  const profiles = await prisma.advisorProfile.findMany({
     where: { user: { deletedAt: null } },
     select: {
       id: true,
       firmName: true,
-      user: { select: { email: true, name: true } },
+      user: { select: { emailCiphertext: true, name: true } },
     },
     orderBy: { id: "asc" },
   });
+  return profiles.map((p) => ({
+    ...p,
+    user: { ...p.user, email: decryptUserEmail(p.user.emailCiphertext) },
+  }));
 }

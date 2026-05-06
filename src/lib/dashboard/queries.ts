@@ -2,8 +2,13 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import type { DashboardClient, DashboardMetrics, RiskDistribution } from "./types";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 export async function getAdvisorDashboardClients(advisorProfileId: string): Promise<DashboardClient[]> {
+  // Round-11 commit 2.4b: include `client` (full row) so we read
+  // emailCiphertext alongside id/name; decrypt at exit. Prisma's
+  // generated type for `include: { client: true }` carries
+  // emailCiphertext automatically.
   const assignments = await prisma.clientAdvisorAssignment.findMany({
     where: {
       advisorId: advisorProfileId,
@@ -41,7 +46,7 @@ export async function getAdvisorDashboardClients(advisorProfileId: string): Prom
     return {
       id: assignment.client.id,
       name: assignment.client.name,
-      email: assignment.client.email,
+      email: decryptUserEmail(assignment.client.emailCiphertext),
       assignedAt: assignment.assignedAt,
       latestScore: latestScore ? {
         score: latestScore.score,

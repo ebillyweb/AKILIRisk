@@ -179,9 +179,23 @@ vi.mock("@/lib/db", () => {
 });
 
 import { fetchTenantBundle, resolveTenantScope } from "./queries";
+import { userEmailCiphertext } from "@/lib/auth/user-email";
+
+// Round-11 commit 2.4b: fetchTenantBundle now decrypts client emails;
+// pin a deterministic test key so the fixture rows can carry valid
+// ciphertext.
+const TEST_KEY = "test-key-do-not-use-in-prod-0123456789ABCDEF";
 
 beforeEach(() => {
+  process.env.ENCRYPTION_KEY = TEST_KEY;
   vi.clearAllMocks();
+  // Backfill the fixture user rows with real ciphertext for the four
+  // client emails that the tenant bundle decrypts.
+  for (const u of dataset.user) {
+    if (typeof u.email === "string" && !("emailCiphertext" in u)) {
+      (u as Record<string, unknown>).emailCiphertext = userEmailCiphertext(u.email);
+    }
+  }
 });
 
 describe("tenant isolation (the gatekeeper test)", () => {

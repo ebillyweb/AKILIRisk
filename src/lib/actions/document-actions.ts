@@ -32,7 +32,9 @@ export async function getClientDocumentRequirements() {
               select: {
                 firstName: true,
                 lastName: true,
-                email: true,
+                // Round-11 commit 2.4b: ciphertext; downstream
+                // consumers decrypt at the call site if needed.
+                emailCiphertext: true,
               },
             },
           },

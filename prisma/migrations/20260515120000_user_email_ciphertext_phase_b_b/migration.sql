@@ -1,0 +1,22 @@
+-- Round-11 commit 2.4b (BRD §5.1.AUTH / phase B — soft-drop step 2).
+--
+-- Drop the plaintext `User.email` column. Phase B step 1 (commit 2.4a)
+-- flipped the auth-path unique constraint to `emailCiphertext`, stopped
+-- populating `email` on writes, and made `email` nullable. After the
+-- 7-day bake window confirmed signin + display surfaces are stable,
+-- this commit completes the migration by removing the column.
+--
+-- Pre-flight checks (run BEFORE deploy):
+--   1. The bake window has elapsed (commit 2.4a deployed >= 7 days ago).
+--   2. No production errors related to email-column reads in that window.
+--   3. The display-site sweep in this commit's diff covers every site
+--      that previously read `user.email` — verified by the absence of
+--      `User.email` in the post-migration Prisma client type.
+--
+-- Rollback after this point requires re-running the phase-A backfill
+-- because the plaintext column is gone — `decrypt(emailCiphertext)`
+-- can recover plaintext if the encryption key is intact, so it's not
+-- a true data-loss event, but it's a script-execution event rather
+-- than a single SQL revert.
+
+ALTER TABLE "User" DROP COLUMN "email";

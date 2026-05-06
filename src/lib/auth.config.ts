@@ -248,10 +248,11 @@ export default {
         // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
         const user = await findUserByEmail(validation.email, {
           where: { deletedAt: null },
-          // Round-11 commit 2.4a: emailCiphertext for the audit hash;
-          // email is still selected for the (rare) display-time use
-          // during the bake window.
-          select: { id: true, email: true, emailCiphertext: true, name: true, image: true, role: true },
+          // Round-11 commit 2.4b: email column is gone; ciphertext is
+          // the only stored form. The JWT email field comes from
+          // validation.email (form-input plaintext) — see provider
+          // return below.
+          select: { id: true, emailCiphertext: true, name: true, image: true, role: true },
         });
         if (!user) {
           await writeAudit({

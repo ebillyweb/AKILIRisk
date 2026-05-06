@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "../db";
 import { sendNotification } from "./service";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /**
  * Triggers advisor notification when a client registers from an invitation
@@ -25,7 +26,8 @@ export async function triggerRegistrationNotification(
             user: {
               select: {
                 id: true,
-                email: true,
+                // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+                emailCiphertext: true,
               },
             },
           },
@@ -50,7 +52,8 @@ export async function triggerRegistrationNotification(
               user: {
                 select: {
                   id: true,
-                  email: true,
+                  // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+                  emailCiphertext: true,
                 },
               },
             },
@@ -63,7 +66,7 @@ export async function triggerRegistrationNotification(
         // Found the advisor who created the invitation
         await sendNotification({
           recipientUserId: invitation.advisor.user.id,
-          recipientEmail: invitation.advisor.user.email!,
+          recipientEmail: decryptUserEmail(invitation.advisor.user.emailCiphertext),
           category: 'registration',
           title: 'New Client Registered',
           message: `${clientName} (${clientEmail}) has registered from your invitation`,
@@ -79,7 +82,7 @@ export async function triggerRegistrationNotification(
     // Send notification to the assigned advisor
     await sendNotification({
       recipientUserId: assignment.advisor.user.id,
-      recipientEmail: assignment.advisor.user.email!,
+      recipientEmail: decryptUserEmail(assignment.advisor.user.emailCiphertext),
       category: 'registration',
       title: 'New Client Registered',
       message: `${clientName} (${clientEmail}) has registered from your invitation`,
@@ -113,7 +116,8 @@ export async function triggerMilestoneNotification(
             user: {
               select: {
                 id: true,
-                email: true,
+                // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+                emailCiphertext: true,
               },
             },
           },
@@ -137,7 +141,7 @@ export async function triggerMilestoneNotification(
     // Send notification to the assigned advisor
     await sendNotification({
       recipientUserId: assignment.advisor.user.id,
-      recipientEmail: assignment.advisor.user.email!,
+      recipientEmail: decryptUserEmail(assignment.advisor.user.emailCiphertext),
       category: 'milestone',
       title: milestone,
       message: `${clientName} has completed ${milestone}`,
@@ -171,7 +175,8 @@ export async function triggerDocumentUploadNotification(
             user: {
               select: {
                 id: true,
-                email: true,
+                // Round-11 commit 2.4b: ciphertext, decrypt at usage.
+                emailCiphertext: true,
               },
             },
           },
@@ -195,7 +200,7 @@ export async function triggerDocumentUploadNotification(
     // Send notification to the assigned advisor
     await sendNotification({
       recipientUserId: assignment.advisor.user.id,
-      recipientEmail: assignment.advisor.user.email!,
+      recipientEmail: decryptUserEmail(assignment.advisor.user.emailCiphertext),
       category: 'milestone',
       title: 'Document Uploaded',
       message: `${clientName} uploaded ${documentName}`,

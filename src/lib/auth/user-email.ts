@@ -1,8 +1,10 @@
 import "server-only";
 
 import type { Prisma, PrismaClient, User } from "@prisma/client";
-import { decryptDeterministic, encryptDeterministic } from "@/lib/encryption";
 import { prisma as defaultPrisma } from "@/lib/db";
+import { decryptUserEmail, userEmailCiphertext } from "@/lib/auth/user-email-crypto";
+
+export { USER_EMAIL_FIELD_KEY, decryptUserEmail, userEmailCiphertext } from "@/lib/auth/user-email-crypto";
 
 /**
  * Round-11 commit 2.4a (BRD §5.1.AUTH / phase B — soft-drop step 1) —
@@ -32,62 +34,71 @@ import { prisma as defaultPrisma } from "@/lib/db";
  * a client's User.email when they happen to be the same plaintext.
  */
 
-/** The deterministic-encryption fieldKey reserved for `User.email`. */
-export const USER_EMAIL_FIELD_KEY = "User.email";
-
 /**
- * Compute the deterministic ciphertext for a given plaintext email.
- * Idempotent: same input → same output. Used by all writers, the
- * lookup helper, and the audit-log actor-hash decoder.
- */
-export function userEmailCiphertext(email: string): string {
-  return encryptDeterministic(email, USER_EMAIL_FIELD_KEY);
-}
-
-/**
- * Decrypt a stored emailCiphertext back to plaintext. Inverse of
- * userEmailCiphertext for the same key + fieldKey.
+ * Resolve the plaintext email for a User row.
  *
- * Used by:
- *   • NextAuth session callback (puts plaintext into the JWT once
- *     per signin — display surfaces consume `session.user.email`).
- *   • Server-component query mappers for admin/advisor list views.
- *   • Outbound notification + Stripe + reminder paths that need a
- *     real email address.
- *   • The data-export bundle for the BRD §5.3 raw-PII export.
- *   • writeAudit's internal actorEmailHash computation when given a
- *     ciphertext.
- *
- * Throws if the ciphertext is malformed or the key doesn't match —
- * the caller should treat that as an integrity error, not a missing
- * value.
- */
-export function decryptUserEmail(ciphertext: string): string {
-  return decryptDeterministic(ciphertext);
-}
-
-/**
- * Resolve the plaintext email for a User row, preferring the
- * still-populated `email` column for existing rows and decrypting
- * the ciphertext for new rows that didn't get a plaintext write.
+ * Round-11 commit 2.4b (BRD §5.1.AUTH / phase B — soft-drop step 2):
+ * the plaintext `email` column was dropped; this helper now always
+ * decrypts. The signature still accepts an optional `email` field
+ * for forward-compat with old call sites — if a call site somehow
+ * passes plaintext, we use it (won't happen in production but
+ * simplifies test fixtures).
  *
  * Display surfaces, outbound notifications, Stripe customer_email,
- * and TOTP issuer labels all transit through this helper so the
- * 2.4a→2.4b bake window is opaque to them — once 2.4b drops the
- * `email` column the helper degrades to "always decrypt" without
- * any call-site change.
- *
- * Why not always decrypt? Pure-decrypt is fine performance-wise
- * (single AES-GCM op ~1µs) but the fallback preserves the option of
- * a phase-A rollback during the bake window — if we revert 2.4a's
- * application code, the existing-rows-with-plaintext branch still
- * works without re-running a backfill.
+ * and TOTP issuer labels all transit through this helper. AES-GCM
+ * decrypt is ~1µs per op, so even a 1000-row admin list view costs
+ * <5ms total decrypt time — acceptable for any list size we ship.
  */
 export function userEmailForDisplay(user: {
-  email: string | null;
+  email?: string | null;
   emailCiphertext: string;
 }): string {
   return user.email ?? decryptUserEmail(user.emailCiphertext);
+}
+
+/**
+ * Query-layer mapper: take a User-like row that has `emailCiphertext`
+ * and return the same shape with a plaintext `email` field added.
+ * The intent is to keep the contract stable for existing consumers
+ * (server components, page renderers) so they can keep reading
+ * `.email` without knowing about encryption.
+ *
+ *   const users = await prisma.user.findMany({
+ *     select: { id: true, name: true, emailCiphertext: true, … },
+ *   });
+ *   return users.map(withDecryptedEmail);
+ *
+ * For nested relations (e.g. `intakeInterview.user.emailCiphertext`),
+ * use the relation-shaped variants in the call-site query module —
+ * this top-level helper covers the flat case only.
+ */
+export function withDecryptedEmail<T extends { emailCiphertext: string }>(
+  user: T
+): T & { email: string } {
+  return { ...user, email: decryptUserEmail(user.emailCiphertext) };
+}
+
+/**
+ * Same as `withDecryptedEmail` but for rows where the email lives
+ * under a `user.` relation: `{ user: { emailCiphertext, … } }` →
+ * `{ user: { emailCiphertext, …, email } }`. Common shape for
+ * intakeInterview / assessment / advisorProfile / etc. queries
+ * that join the User table.
+ */
+export function withDecryptedRelationEmail<
+  T extends { user: { emailCiphertext: string } | null }
+>(row: T): T extends { user: infer U }
+  ? Omit<T, "user"> & { user: (U & { email: string }) | null }
+  : never {
+  if (!row.user) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { ...row, user: null } as any;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return {
+    ...row,
+    user: { ...row.user, email: decryptUserEmail(row.user.emailCiphertext) },
+  } as any;
 }
 
 /**
