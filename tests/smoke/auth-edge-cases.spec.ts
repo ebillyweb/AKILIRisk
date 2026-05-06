@@ -1,10 +1,19 @@
 import { test, expect } from "@playwright/test";
 import { SignInPage } from "../page-objects/SignInPage";
+import { USERS } from "../fixtures/users";
 
 test.describe("auth edge cases", () => {
   test("wrong password shows the credential error and stays on /signin", async ({ page }) => {
+    // Round-11 session-2: this test originally drove the credentials
+    // form with a CLIENT email + wrong password. Post-219c52e the
+    // credentials provider rejects role=USER unconditionally, so the
+    // failure message would still appear but for a different reason
+    // (client_role_blocked, not invalid_password). Reframe to use the
+    // ADVISOR path — the "wrong password" failure shape is a real
+    // invariant on the advisor flow, which is the only one that still
+    // exercises credentials.
     await page.goto("/signin");
-    await page.locator("#email").fill("client@test.com");
+    await page.locator("#email").fill(USERS.advisor.email);
     await page.locator("#password").fill("not-the-real-password");
     await page.getByRole("button", { name: /^sign in$/i }).click();
 

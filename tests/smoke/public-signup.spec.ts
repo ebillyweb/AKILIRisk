@@ -1,102 +1,25 @@
-import { execSync } from "node:child_process";
-import { test, expect } from "@playwright/test";
-
 /**
- * Public signup happy path: visit /start, redeem the unlimited invite code
- * `123456`, complete the signup form with a throwaway email, land on /intake.
+ * RETIRED — round-11 session-2.
  *
- * State management: this test intentionally creates a User row each run.
- * `cleanup-signup-test-users.js` (called in beforeAll AND afterAll) removes
- * any User rows whose email starts with `pw-signup-` so the DB doesn't
- * accumulate cruft.
+ * This file used to cover the public-signup happy path: visit /start,
+ * redeem an invite code, complete the password-based /signup form,
+ * land on /intake. Round-11 commit 219c52e removed both the password
+ * signup form and the credentials sign-in path for clients (clients
+ * authenticate via magic link only — see BRD §5.1.AUTH amendment).
+ *
+ * The flow this spec exercised no longer exists. The replacement —
+ * "advisor invite → magic-link → User created on click" — is deferred
+ * to a follow-up commit; once that user-creation logic lands, a fresh
+ * smoke covering the new flow will replace this file.
+ *
+ * The file is preserved as an empty test.describe (rather than
+ * deleted) only because the staging sandbox couldn't unlink a
+ * host-owned file in this commit. Safe to delete with `rm` next time
+ * someone touches the suite.
  */
 
-const INVITE_CODE = "123456";
+import { test } from "@playwright/test";
 
-test.beforeAll(() => {
-  execSync("node scripts/cleanup-signup-test-users.js", {
-    stdio: "inherit",
-    cwd: process.cwd(),
-    env: process.env,
-  });
-});
-
-test.afterAll(() => {
-  execSync("node scripts/cleanup-signup-test-users.js", {
-    stdio: "inherit",
-    cwd: process.cwd(),
-    env: process.env,
-  });
-});
-
-test.describe("public signup", () => {
-  test("/start invite redemption + /signup creates user that lands on /intake", async ({ page }) => {
-    test.setTimeout(60_000);
-
-    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const email = `pw-signup-${stamp}@test.com`;
-    const password = "Pw-signup-Test1!";
-
-    await page.goto("/start");
-    await page.getByText(/Enter invite code/i).first().waitFor();
-
-    // The OTP boxes ignore programmatic .fill() - they need real keystrokes
-    // routed through the focused first box for the React handler to advance.
-    await page.locator('input[autocomplete="one-time-code"]').first().click();
-    await page.keyboard.type(INVITE_CODE, { delay: 30 });
-
-    await page.getByRole("button", { name: /continue to create account/i }).click();
-    await page.waitForURL(/\/signup\?invite=.*callbackUrl=%2Fintake/);
-
-    await page.locator("#firstName").fill("Pw");
-    await page.locator("#lastName").fill("Signup");
-    await page.locator("#email").fill(email);
-    await page.locator("#password").fill(password);
-    await page.locator("#confirmPassword").fill(password);
-
-    await page.getByRole("button", { name: /^create account$/i }).click();
-
-    await page.waitForURL(/\/intake(\/|$|\?)/, { timeout: 30_000 });
-    expect(new URL(page.url()).pathname).toMatch(/^\/intake/);
-
-    await expect(
-      page.getByRole("button", { name: /begin interview/i })
-    ).toBeVisible();
-  });
-
-  test("signup with an existing email surfaces an error and does not redirect", async ({ page }) => {
-    await page.goto("/start");
-    await page.locator('input[autocomplete="one-time-code"]').first().click();
-    await page.keyboard.type(INVITE_CODE, { delay: 30 });
-    await page.getByRole("button", { name: /continue to create account/i }).click();
-    await page.waitForURL(/\/signup\?invite=/);
-
-    await page.locator("#firstName").fill("Pw");
-    await page.locator("#lastName").fill("Duplicate");
-    await page.locator("#email").fill("advisor@test.com");
-    await page.locator("#password").fill("Pw-test-1234!");
-    await page.locator("#confirmPassword").fill("Pw-test-1234!");
-    await page.getByRole("button", { name: /^create account$/i }).click();
-
-    await expect(page.getByText(/Unable to create account/i)).toBeVisible();
-    expect(new URL(page.url()).pathname).toBe("/signup");
-  });
-
-  test("signup form rejects mismatched passwords", async ({ page }) => {
-    await page.goto("/start");
-    await page.locator('input[autocomplete="one-time-code"]').first().click();
-    await page.keyboard.type(INVITE_CODE, { delay: 30 });
-    await page.getByRole("button", { name: /continue to create account/i }).click();
-    await page.waitForURL(/\/signup\?invite=/);
-
-    await page.locator("#firstName").fill("Pw");
-    await page.locator("#lastName").fill("Mismatch");
-    await page.locator("#email").fill(`pw-signup-${Date.now()}-mm@test.com`);
-    await page.locator("#password").fill("Pw-test-1234!");
-    await page.locator("#confirmPassword").fill("DIFFERENT-PASSWORD!");
-    await page.getByRole("button", { name: /^create account$/i }).click();
-
-    await expect(page.getByText(/Passwords do not match/i)).toBeVisible();
-    expect(new URL(page.url()).pathname).toBe("/signup");
-  });
+test.describe.skip("public signup (retired post-round-11)", () => {
+  // Empty on purpose. Playwright collects zero tests from this block.
 });
