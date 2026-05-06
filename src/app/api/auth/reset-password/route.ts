@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { findUserByEmail } from "@/lib/auth/user-email";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -85,8 +86,9 @@ export async function POST(req: NextRequest) {
     // can't waste a DB write rotating a password they can't sign in with
     // anyway (signIn blocks them at the auth callback). Same shape as the
     // forgot-password route's lookup.
-    const user = await prisma.user.findFirst({
-      where: { email, deletedAt: null },
+    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
+    const user = await findUserByEmail(email, {
+      where: { deletedAt: null },
       select: { id: true, role: true },
     });
 

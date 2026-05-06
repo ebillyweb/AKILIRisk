@@ -9,6 +9,7 @@ import {
   issueMagicLinkToken,
   invalidatePriorMagicLinkTokens,
 } from "@/lib/auth/magic-link";
+import { findUserByEmail } from "@/lib/auth/user-email";
 
 /**
  * Round-11 commit 2 (BRD §5.1.AUTH): magic-link issuance endpoint.
@@ -88,9 +89,12 @@ export async function POST(req: NextRequest) {
     // Lookup user + invite-code in parallel to keep the audit-write
     // latency constant regardless of which (if any) match. Both are
     // bounded reads.
+    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read shim
+    // for the user lookup; invite-code lookup is unaffected because
+    // InviteCode.prefillEmail isn't being encrypted in this round.
     const [user, inviteCode] = await Promise.all([
-      prisma.user.findFirst({
-        where: { email, deletedAt: null },
+      findUserByEmail(email, {
+        where: { deletedAt: null },
         select: { id: true, email: true },
       }),
       prisma.inviteCode.findFirst({

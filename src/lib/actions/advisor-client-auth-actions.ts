@@ -25,6 +25,7 @@ import {
   issueMagicLinkToken,
   invalidatePriorMagicLinkTokens,
 } from "@/lib/auth/magic-link";
+import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
 import { sendMagicLinkEmail } from "@/lib/email";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 
@@ -118,8 +119,10 @@ export async function reassignClientEmail(
       return ok({ clientId: client.id, oldEmail, newEmail });
     }
 
-    const collision = await prisma.user.findUnique({
-      where: { email: newEmail },
+    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read +
+    // dual-write. Collision check looks at both ciphertext and
+    // plaintext columns; the update populates both.
+    const collision = await findUserByEmail(newEmail, {
       select: { id: true },
     });
     if (collision && collision.id !== client.id) {
@@ -128,7 +131,7 @@ export async function reassignClientEmail(
 
     await prisma.user.update({
       where: { id: client.id },
-      data: { email: newEmail },
+      data: userEmailWriteData(newEmail),
     });
 
     // Invalidate any in-flight magic-link tokens addressed to the old

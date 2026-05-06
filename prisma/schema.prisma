@@ -18,6 +18,14 @@ enum UserRole {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  /// Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): deterministic
+  /// AES-256-GCM ciphertext of `email`. Nullable + non-unique during
+  /// phase A; phase B (commit 2.4) will drop the unique constraint on
+  /// `email`, make this column unique, and flip it to NOT NULL. Use
+  /// the helpers in `src/lib/auth/user-email.ts` (findUserByEmail /
+  /// userEmailWriteData) rather than reading or writing this column
+  /// directly.
+  emailCiphertext String?
   emailVerified DateTime?
   /// Round-11 commit 3 (BRD §5.1.AUTH): nullable so client (role=USER)
   /// accounts can exist without a password. Advisor + admin accounts
@@ -53,6 +61,7 @@ model User {
 
   @@index([email])
   @@index([deletedAt])
+  @@index([emailCiphertext], name: "User_emailCiphertext_idx")
 }
 
 enum SubscriptionTier {

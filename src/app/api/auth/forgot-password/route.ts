@@ -5,6 +5,7 @@ import { sendPasswordResetEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { findUserByEmail } from "@/lib/auth/user-email";
 import crypto from "crypto";
 
 const forgotPasswordSchema = z.object({
@@ -79,8 +80,9 @@ export async function POST(req: NextRequest) {
     // confirms the account ever existed (mild PII leak). `findFirst` with
     // a deletedAt filter behaves identically to `findUnique({ email })`
     // for active accounts, and returns null for soft-deleted ones.
-    const user = await prisma.user.findFirst({
-      where: { email, deletedAt: null },
+    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
+    const user = await findUserByEmail(email, {
+      where: { deletedAt: null },
       select: { id: true, email: true, role: true },
     });
 

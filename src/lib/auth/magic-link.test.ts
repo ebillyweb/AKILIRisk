@@ -41,6 +41,10 @@ import {
 } from "./magic-link";
 
 beforeEach(() => {
+  // Round-11 commit 2.3: validateMagicLinkToken now goes through
+  // findUserByEmail, which calls userEmailCiphertext, which needs an
+  // ENCRYPTION_KEY. Pin a deterministic test key.
+  process.env.ENCRYPTION_KEY = "test-key-do-not-use-in-prod-0123456789ABCDEF";
   for (const m of Object.values(prismaSpies)) {
     if (typeof m === "object") {
       for (const fn of Object.values(m as Record<string, ReturnType<typeof vi.fn>>)) {

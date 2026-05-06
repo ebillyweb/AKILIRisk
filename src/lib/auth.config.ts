@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { findUserByEmail } from "@/lib/auth/user-email";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -58,9 +59,8 @@ export default {
         const { email, password } = parsed.data;
         const hashedEmail = emailHash(email);
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+        // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
+        const user = await findUserByEmail(email);
 
         // Always run a real bcrypt.compare so the response time for
         // "no such email" looks identical to "wrong password for that email".
@@ -231,8 +231,9 @@ export default {
         // up an existing User; if the token is invitation-only and the
         // User hasn't been created, we audit + reject (commit 4 will
         // change this branch).
-        const user = await prisma.user.findFirst({
-          where: { email: validation.email, deletedAt: null },
+        // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
+        const user = await findUserByEmail(validation.email, {
+          where: { deletedAt: null },
           select: { id: true, email: true, name: true, image: true, role: true },
         });
         if (!user) {

@@ -21,6 +21,7 @@ import "server-only";
 
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
+import { findUserByEmail } from "@/lib/auth/user-email";
 
 export const DEFAULT_MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 
@@ -134,8 +135,11 @@ export async function validateMagicLinkToken(
   // tokens whose User hasn't been created yet still pass here (caller
   // creates the User on consume).
   if (!row.inviteCodeId) {
-    const user = await prisma.user.findFirst({
-      where: { email: row.email, deletedAt: null },
+    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read shim
+    // tries deterministic ciphertext first, falls back to plaintext
+    // for rows that haven't been backfilled yet.
+    const user = await findUserByEmail(row.email, {
+      where: { deletedAt: null },
       select: { id: true },
     });
     if (!user) return { success: false, reason: "user_inactive" };

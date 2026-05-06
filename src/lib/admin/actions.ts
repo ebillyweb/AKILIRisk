@@ -19,6 +19,7 @@ import { requireAdminRole } from "@/lib/admin/auth";
 import { getAdvisorForAdmin } from "@/lib/admin/queries";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
 
 const updateAdvisorSchema = z.object({
   userId: z.string().cuid(),
@@ -60,13 +61,15 @@ export async function updateAdvisorByAdmin(input: UpdateAdvisorInput) {
       };
     }
 
+    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-write —
+    // userEmailWriteData populates both `email` and `emailCiphertext`.
     await prisma.user.update({
       where: { id: parsed.data.userId },
       data: {
         name: parsed.data.name ?? undefined,
         firstName: parsed.data.firstName ?? undefined,
         lastName: parsed.data.lastName ?? undefined,
-        email: parsed.data.email,
+        ...userEmailWriteData(parsed.data.email),
       },
     });
 
@@ -254,8 +257,10 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
     // an admin must restore (`restoreAdvisorByAdmin`) or hard-delete the
     // existing row to free the email. Mirrors the same intent on the
     // public registration path in src/app/api/auth/register/route.ts.
-    const existing = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
+    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read shim
+    // so soft-deleted rows backfilled with ciphertext-only still
+    // block re-registration.
+    const existing = await findUserByEmail(parsed.data.email, {
       select: { id: true },
     });
     if (existing) {
@@ -274,9 +279,10 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
       parsed.data.email;
 
     const { user, profile } = await prisma.$transaction(async (tx) => {
+      // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-write.
       const u = await tx.user.create({
         data: {
-          email: parsed.data.email,
+          ...userEmailWriteData(parsed.data.email),
           password: hashedPassword,
           role: "ADVISOR",
           name: parsed.data.name ?? undefined,
