@@ -52,10 +52,16 @@ export default async function AdminQuestionBankEditPage({
 
     return (
       <div className="max-w-3xl space-y-6">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center justify-between">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/admin/question-bank/${riskAreaId}`}>Back to {area.name}</Link>
           </Button>
+          <Link
+            href={`/admin/audit-log/entity/AssessmentBankQuestion/${bankRow.id}`}
+            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+          >
+            View history (BRD §7.2)
+          </Link>
         </div>
 
         {err ? (
@@ -116,10 +122,16 @@ export default async function AdminQuestionBankEditPage({
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/admin/question-bank/${riskAreaId}`}>Back to {area.name}</Link>
         </Button>
+        <Link
+          href={`/admin/audit-log/entity/PillarQuestion/${pillarRow.id}`}
+          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          View history (BRD §7.2)
+        </Link>
       </div>
 
       {err ? (

@@ -216,12 +216,19 @@ model VerificationToken {
 model Assessment {
   id            String           @id @default(cuid())
   userId        String
+  /// C2 (BRD §7.2): bumped each time rescoreAssessment runs. Pre-rescore
+  /// the value is 1 (default); first rescore writes 2, etc. Lets the UI
+  /// surface "v3" badges without consulting the audit log.
   version       Int              @default(1)
   status        AssessmentStatus @default(IN_PROGRESS)
   currentPillar String?
   currentQuestionIndex Int?      @default(0)
   startedAt     DateTime         @default(now())
   completedAt   DateTime?
+  /// C2 (BRD §7.2): set by rescoreAssessment / rescoreAssessmentsBulk so
+  /// the per-client view + PDF cover can render "Last re-scored Mar 4, 2026".
+  /// NULL = never re-scored (true of every pre-C2 row).
+  lastRescoredAt DateTime?
   updatedAt     DateTime         @updatedAt
   approvalId    String?          // Links to IntakeApproval for customized assessments
 

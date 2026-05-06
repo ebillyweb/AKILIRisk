@@ -24,13 +24,19 @@ export default async function AdminIntakeQuestionEditPage({
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/admin/intake/questions" className="inline-flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to intake script
           </Link>
         </Button>
+        <Link
+          href={`/admin/audit-log/entity/PillarQuestion/${questionId}`}
+          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          View history (BRD §7.2)
+        </Link>
       </div>
 
       {sp.err ? (

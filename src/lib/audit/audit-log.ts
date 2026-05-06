@@ -84,6 +84,22 @@ export const AUDIT_ACTIONS = {
    *  metadata.orderedIds captures the new sequence. */
   RECOMMENDATION_RULE_REORDER: "recommendation_rule.reorder",
 
+  // ── C2 (BRD §7.2): Scoring rules + assessment rescore ───────────────────
+  /** Reserved for the future ScoringRule admin editor (no current write
+   *  paths exist; every existing ScoringRule write happens in seed
+   *  scripts). Keeping the constants in vocabulary now so when the
+   *  editor lands, the audit wiring is consistent with the recommendations
+   *  editor's pattern. */
+  SCORING_RULE_CREATE: "scoring_rule.create",
+  SCORING_RULE_UPDATE: "scoring_rule.update",
+  SCORING_RULE_DELETE: "scoring_rule.delete",
+  SCORING_RULE_VISIBILITY_TOGGLE: "scoring_rule.visibility_toggle",
+  /** Admin re-runs an assessment under the current rules + thresholds.
+   *  beforeData captures the prior PillarScore + AssessmentRecommendation
+   *  rows; afterData captures the new ones. metadata may include a
+   *  free-form `reason` string the admin entered in the UI. */
+  ASSESSMENT_RESCORE: "assessment.rescore",
+
   // ── Auth events (P3) ──────────────────────────────────────────────────────
   AUTH_SIGNIN_SUCCESS: "auth.signin_success",
   AUTH_SIGNIN_FAILURE: "auth.signin_failure",

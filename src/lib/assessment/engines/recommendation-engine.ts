@@ -53,9 +53,32 @@ export interface RecommendationCondition {
 export class RecommendationEngine {
 
   /**
-   * Generate recommendations for an assessment
+   * Generate recommendations for an assessment + persist them.
+   *
+   * The assessment-submit code path uses this end-to-end. The C2 rescore
+   * action uses `matchAndDedupeRecommendations` directly so it can wrap
+   * the persistence step in its own transaction (atomic with PillarScore
+   * upserts). Both paths share the matching logic.
    */
   async generateRecommendations(context: RecommendationContext): Promise<ServiceRecommendation[]> {
+    const uniqueRecommendations = await this.matchAndDedupeRecommendations(context);
+
+    // Save recommendations to database
+    await this.saveAssessmentRecommendations(context.assessmentId, uniqueRecommendations);
+
+    return uniqueRecommendations.slice(0, 10); // Limit to top 10
+  }
+
+  /**
+   * C2 (BRD §7.2): match-only path. Returns the deduped + sorted
+   * recommendations for `context` WITHOUT writing to AssessmentRecommendation.
+   * Caller is responsible for persistence — used by the rescore action so
+   * the createMany happens inside the rescore transaction.
+   *
+   * Identical matching/dedup logic to generateRecommendations; only the
+   * trailing `saveAssessmentRecommendations` call is omitted.
+   */
+  async matchAndDedupeRecommendations(context: RecommendationContext): Promise<ServiceRecommendation[]> {
     const rules = await this.loadRecommendationRules();
     const recommendations: ServiceRecommendation[] = [];
 
@@ -78,12 +101,7 @@ export class RecommendationEngine {
     recommendations.sort((a, b) => b.priority - a.priority);
 
     // Remove duplicates (same service triggered by multiple rules)
-    const uniqueRecommendations = this.deduplicateRecommendations(recommendations);
-
-    // Save recommendations to database
-    await this.saveAssessmentRecommendations(context.assessmentId, uniqueRecommendations);
-
-    return uniqueRecommendations.slice(0, 10); // Limit to top 10
+    return this.deduplicateRecommendations(recommendations);
   }
 
   /**

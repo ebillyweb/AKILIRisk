@@ -35,10 +35,18 @@ export default async function EditRecommendationRulePage({
 
   return (
     <div className="space-y-6">
-      <Link href="/admin/recommendations?view=rules" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="h-4 w-4" />
-        Back to rules
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/admin/recommendations?view=rules" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Back to rules
+        </Link>
+        <Link
+          href={`/admin/audit-log/entity/RecommendationRule/${id}`}
+          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+        >
+          View history (BRD §7.2)
+        </Link>
+      </div>
       <RecommendationRuleForm existing={existing} serviceOptions={serviceOptions} />
     </div>
   );
