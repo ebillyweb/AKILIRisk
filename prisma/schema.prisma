@@ -829,6 +829,29 @@ model AuditLog {
 
 // --- Enhanced assessment engine (recommendations, rules, pillar config) ---
 
+/// C1 (BRD §4.4): tiered recommendations classification.
+/// BASELINE = automated baseline recs the engine surfaces from rules.
+/// ENHANCED = manual overlay added by admin (Akili Risk staff curation).
+enum RecommendationTier {
+  BASELINE
+  ENHANCED
+}
+
+/// C1 (BRD §4.4): catalog filter dimension. Nullable on existing rows.
+enum RecommendationComplexity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+/// C1 (BRD §4.4): catalog filter dimension. Nullable on existing rows.
+/// HYBRID = some self-serve setup followed by advisory completion.
+enum ImplementationType {
+  DIY
+  ADVISORY
+  HYBRID
+}
+
 model ServiceRecommendation {
   id            String   @id @default(cuid())
   name          String
@@ -840,6 +863,12 @@ model ServiceRecommendation {
   provider      String?
   metadata      Json?
   isActive      Boolean  @default(true)
+  /// C1 (BRD §4.4): see RecommendationTier. Defaults BASELINE for back-compat.
+  tier               RecommendationTier        @default(BASELINE)
+  /// C1 (BRD §4.4): nullable so existing rows render as "—" in admin filters.
+  complexity         RecommendationComplexity?
+  /// C1 (BRD §4.4): nullable so existing rows render as "—" in admin filters.
+  implementationType ImplementationType?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -848,6 +877,7 @@ model ServiceRecommendation {
 
   @@index([category, priority])
   @@index([isActive])
+  @@index([tier])
 }
 
 model ScoringRule {

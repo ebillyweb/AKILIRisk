@@ -61,6 +61,29 @@ export const AUDIT_ACTIONS = {
   PILLAR_QUESTION_DELETE: "pillar_question.delete",
   PILLAR_QUESTION_VISIBILITY_TOGGLE: "pillar_question.visibility_toggle",
 
+  // ── C1 (BRD §4.4): Service-recommendation catalog + matching rules ──────
+  /** Admin creates a ServiceRecommendation row. */
+  RECOMMENDATION_CREATE: "recommendation.create",
+  /** Admin edits a ServiceRecommendation row. */
+  RECOMMENDATION_UPDATE: "recommendation.update",
+  /** Admin hard-deletes a ServiceRecommendation row (only when no FK refs
+   *  exist; otherwise the action errors and suggests visibility-toggle). */
+  RECOMMENDATION_DELETE: "recommendation.delete",
+  /** Admin toggles isActive on a ServiceRecommendation (soft-delete equiv). */
+  RECOMMENDATION_VISIBILITY_TOGGLE: "recommendation.visibility_toggle",
+  /** Admin creates a RecommendationRule row. */
+  RECOMMENDATION_RULE_CREATE: "recommendation_rule.create",
+  /** Admin edits a RecommendationRule row. */
+  RECOMMENDATION_RULE_UPDATE: "recommendation_rule.update",
+  /** Admin deletes a RecommendationRule row (no historical FK refs to
+   *  block hard delete; rules have no AssessmentRecommendation back-pointer). */
+  RECOMMENDATION_RULE_DELETE: "recommendation_rule.delete",
+  /** Admin toggles isActive on a RecommendationRule. */
+  RECOMMENDATION_RULE_VISIBILITY_TOGGLE: "recommendation_rule.visibility_toggle",
+  /** Admin bulk-reorders RecommendationRule.priority. Single audit row;
+   *  metadata.orderedIds captures the new sequence. */
+  RECOMMENDATION_RULE_REORDER: "recommendation_rule.reorder",
+
   // ── Auth events (P3) ──────────────────────────────────────────────────────
   AUTH_SIGNIN_SUCCESS: "auth.signin_success",
   AUTH_SIGNIN_FAILURE: "auth.signin_failure",

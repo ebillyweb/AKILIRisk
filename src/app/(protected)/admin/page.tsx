@@ -42,6 +42,12 @@ const SECTIONS = [
     description:
       "BRD §5.3 data ownership and portability. Per-tenant or system-wide ZIP bundles (CSV + nested JSON + README).",
   },
+  {
+    href: "/admin/recommendations",
+    label: "Recommendations",
+    description:
+      "BRD §4.4 service catalog + rule editor. Tier (Baseline/Enhanced), complexity, DIY vs Advisory; recommendation engine matches.",
+  },
 ] as const;
 
 export default async function AdminPage() {

@@ -628,11 +628,22 @@ async function setupAllPillarRules() {
   await prisma.$transaction(async (tx) => {
     console.log('\n📦 Adding service recommendations...');
 
+    // C1 (BRD §4.4): set the new classification fields explicitly so
+    // post-seed catalog has the BRD's tier/complexity dimensions
+    // populated. tier: BASELINE because every seeded entry IS the
+    // automated baseline catalog (manual ENHANCED overlays come from
+    // the admin editor). complexity: MEDIUM as a sensible default —
+    // admins adjust per-service through the UI.
     for (const service of SERVICE_RECOMMENDATIONS) {
+      const enriched = {
+        ...service,
+        tier: 'BASELINE' as const,
+        complexity: 'MEDIUM' as const,
+      };
       await tx.serviceRecommendation.upsert({
         where: { id: service.id },
-        create: service,
-        update: service
+        create: enriched,
+        update: enriched
       });
     }
 
