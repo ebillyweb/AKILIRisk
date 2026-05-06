@@ -80,10 +80,12 @@ export async function POST(req: NextRequest) {
     // confirms the account ever existed (mild PII leak). `findFirst` with
     // a deletedAt filter behaves identically to `findUnique({ email })`
     // for active accounts, and returns null for soft-deleted ones.
-    // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
+    // Round-11 commit 2.4a: ciphertext is needed for the audit hash;
+    // email kept for the user-found / send-reset-link branch which
+    // sends mail to the address.
     const user = await findUserByEmail(email, {
       where: { deletedAt: null },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, emailCiphertext: true, role: true },
     });
 
     // Round-11 commit 3 (BRD §5.1.AUTH): clients (role=USER) authenticate
@@ -102,8 +104,13 @@ export async function POST(req: NextRequest) {
     // branches would have asymmetric latency and the round-6 enumeration
     // mitigation would partially regress via DB-write timing.
     await writeAudit({
+      // Round-11 commit 2.4a: when the user row is found, pass
+      // emailCiphertext (writeAudit decrypts internally for the hash);
+      // when not found we still hash the form-input plaintext so the
+      // user-not-found and user-found code paths produce the same
+      // actorEmailHash for a given email.
       actor: user
-        ? { userId: user.id, email: user.email }
+        ? { userId: user.id, emailCiphertext: user.emailCiphertext }
         : { userId: null, email },
       action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET_REQUESTED,
       entityType: "User",
@@ -127,7 +134,10 @@ export async function POST(req: NextRequest) {
     //      Resend round-trip (~100–500ms) while the unknown branch
     //      returned in ~5ms — a measurable side-channel.
     if (eligibleForPasswordReset) {
-      void issueResetEmail(user!.email, baseUrl);
+      // Round-11 commit 2.4a: send to the form-input plaintext rather
+      // than user.email — the column may be null for users created
+      // post-2.4a.
+      void issueResetEmail(email, baseUrl);
     }
 
     // Generic success response (same for existing and non-existing emails)

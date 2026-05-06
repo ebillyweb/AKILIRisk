@@ -62,8 +62,10 @@ vi.mock("@/lib/db", () => ({
 
 import {
   USER_EMAIL_FIELD_KEY,
+  decryptUserEmail,
   findUserByEmail,
   userEmailCiphertext,
+  userEmailForDisplay,
   userEmailWriteData,
 } from "./user-email";
 
@@ -99,21 +101,51 @@ describe("userEmailCiphertext", () => {
   });
 });
 
-describe("userEmailWriteData", () => {
-  it("returns both columns ready to splat into a Prisma data: object", () => {
-    const out = userEmailWriteData("carol@example.com");
-    expect(out.email).toBe("carol@example.com");
-    expect(out.emailCiphertext).toBe(userEmailCiphertext("carol@example.com"));
+describe("decryptUserEmail / userEmailForDisplay", () => {
+  it("decryptUserEmail round-trips with userEmailCiphertext", () => {
+    const ct = userEmailCiphertext("kate@example.com");
+    expect(decryptUserEmail(ct)).toBe("kate@example.com");
   });
 
-  it("never returns just one column — both keys are always present", () => {
-    const out = userEmailWriteData("dave@example.com");
-    expect(Object.keys(out).sort()).toEqual(["email", "emailCiphertext"]);
+  it("userEmailForDisplay prefers the plaintext column when populated", () => {
+    const ct = userEmailCiphertext("liam@example.com");
+    const result = userEmailForDisplay({
+      email: "liam@example.com",
+      emailCiphertext: ct,
+    });
+    expect(result).toBe("liam@example.com");
+  });
+
+  it("userEmailForDisplay decrypts when plaintext column is null", () => {
+    const ct = userEmailCiphertext("mia@example.com");
+    const result = userEmailForDisplay({ email: null, emailCiphertext: ct });
+    expect(result).toBe("mia@example.com");
   });
 });
 
+describe("userEmailWriteData", () => {
+  // Round-11 commit 2.4a: writes ciphertext only — the plaintext
+  // `email` column is no longer authoritative; new rows get NULL
+  // there. Existing rows keep their plaintext for the bake window
+  // but writes don't touch the column anymore.
+  it("returns the ciphertext column ready to splat into a Prisma data: object", () => {
+    const out = userEmailWriteData("carol@example.com");
+    expect(out.emailCiphertext).toBe(userEmailCiphertext("carol@example.com"));
+  });
+
+  it("does not write the plaintext email column", () => {
+    const out = userEmailWriteData("dave@example.com") as Record<string, unknown>;
+    expect(out.email).toBeUndefined();
+    expect(Object.keys(out)).toEqual(["emailCiphertext"]);
+  });
+});
+
+// Round-11 commit 2.4a: post-flip, findUserByEmail issues a SINGLE
+// findFirst keyed on emailCiphertext. The plaintext-fallback branch
+// from phase A is gone — the migration enforces NOT NULL on the
+// ciphertext column so every row matches.
 describe("findUserByEmail", () => {
-  it("returns the row when only emailCiphertext is set (post-backfill)", async () => {
+  it("returns the row via the ciphertext lookup", async () => {
     const ct = userEmailCiphertext("eve@example.com");
     fakeRows.push({
       id: "u-1",
@@ -126,47 +158,28 @@ describe("findUserByEmail", () => {
     const got = await findUserByEmail("eve@example.com");
     expect(got).not.toBeNull();
     expect(got!.id).toBe("u-1");
-    // Two queries are issued in sequence — fast-path-then-fallback —
-    // but the first hits, so only one matters semantically. We verify
-    // the ciphertext branch ran first.
-    expect(fakeFindFirst).toHaveBeenCalled();
+    // Single query — no plaintext fallback after 2.4a.
+    expect(fakeFindFirst).toHaveBeenCalledTimes(1);
     const firstCall = fakeFindFirst.mock.calls[0]?.[0] as {
       where: Record<string, unknown>;
     };
     expect(firstCall.where.emailCiphertext).toBe(ct);
+    // No plaintext branch ran.
+    expect(firstCall.where.email).toBeUndefined();
   });
 
-  it("falls back to plaintext when emailCiphertext is null (un-backfilled row)", async () => {
-    fakeRows.push({
-      id: "u-2",
-      email: "frank@example.com",
-      emailCiphertext: null,
-      deletedAt: null,
-      role: "USER",
-    });
-
-    const got = await findUserByEmail("frank@example.com");
-    expect(got).not.toBeNull();
-    expect(got!.id).toBe("u-2");
-    // Two calls: ciphertext miss, plaintext hit.
-    expect(fakeFindFirst).toHaveBeenCalledTimes(2);
-    const secondCall = fakeFindFirst.mock.calls[1]?.[0] as {
-      where: Record<string, unknown>;
-    };
-    expect(secondCall.where.email).toBe("frank@example.com");
-  });
-
-  it("returns null when neither lookup matches", async () => {
+  it("returns null when the ciphertext lookup misses", async () => {
     const got = await findUserByEmail("ghost@example.com");
     expect(got).toBeNull();
-    expect(fakeFindFirst).toHaveBeenCalledTimes(2);
+    // Still single-query — null result doesn't trigger a fallback.
+    expect(fakeFindFirst).toHaveBeenCalledTimes(1);
   });
 
-  it("merges extra `where` filters into both lookups (e.g. deletedAt: null)", async () => {
+  it("merges extra `where` filters into the lookup (e.g. deletedAt: null)", async () => {
     fakeRows.push({
       id: "u-3",
       email: "hank@example.com",
-      emailCiphertext: null,
+      emailCiphertext: userEmailCiphertext("hank@example.com"),
       deletedAt: new Date(), // soft-deleted
       role: "USER",
     });
@@ -175,14 +188,14 @@ describe("findUserByEmail", () => {
       where: { deletedAt: null },
     });
     expect(got).toBeNull();
-    expect(fakeFindFirst).toHaveBeenCalledTimes(2);
-    for (const call of fakeFindFirst.mock.calls) {
-      const args = call[0] as { where: Record<string, unknown> };
-      expect(args.where.deletedAt).toBeNull();
-    }
+    expect(fakeFindFirst).toHaveBeenCalledTimes(1);
+    const args = fakeFindFirst.mock.calls[0]?.[0] as {
+      where: Record<string, unknown>;
+    };
+    expect(args.where.deletedAt).toBeNull();
   });
 
-  it("forwards `select` to both lookups", async () => {
+  it("forwards `select` to the lookup", async () => {
     fakeRows.push({
       id: "u-4",
       email: "iris@example.com",

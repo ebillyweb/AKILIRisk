@@ -5,6 +5,7 @@ import { toDataURL } from "qrcode";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { encrypt, decrypt } from "@/lib/encryption";
+import { userEmailForDisplay } from "@/lib/auth/user-email";
 
 // Initialize TOTP with Noble crypto and Scure Base32 plugins
 //
@@ -46,15 +47,18 @@ export async function enrollMFA(userId: string) {
     throw encryptError;
   }
 
-  // Get user email for QR code label
+  // Round-11 commit 2.4a: pull both columns + resolve via the
+  // bake-window-tolerant helper. The `email` column is null for users
+  // created post-2.4a; emailCiphertext is always populated.
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true },
+    select: { email: true, emailCiphertext: true },
   });
 
   if (!user) {
     throw new Error("User not found");
   }
+  const userEmail = userEmailForDisplay(user);
 
   // Store encrypted secret (but don't enable MFA yet)
   await prisma.user.update({
@@ -66,7 +70,7 @@ export async function enrollMFA(userId: string) {
   // Generate otpauth URI using built-in method
   const otpauthUrl = totp.toURI({
     secret,
-    label: user.email,
+    label: userEmail,
     issuer: "Akili Risk",
   });
   console.debug("[MFA] Generated otpauth URI");

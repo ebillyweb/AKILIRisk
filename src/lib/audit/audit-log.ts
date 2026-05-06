@@ -4,6 +4,7 @@ import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { redactForAudit, shortEmailHash } from "./redact";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 import { truncateIpForAudit } from "./ip";
 
 /**
@@ -170,6 +171,15 @@ const USER_AGENT_MAX_LENGTH = 256;
 /**
  * Actor identification passed to writeAudit. `null`/`undefined` actor info
  * is supported for system actions.
+ *
+ * Round-11 commit 2.4a (BRD §5.1.AUTH / phase B — soft-drop step 1):
+ * actors can identify their email two ways. Most call sites pass
+ * `email` (plaintext from the form input or `session.user.email`,
+ * which NextAuth populates with form-input plaintext after 2.4a).
+ * Sites that have a User row in hand and don't want to depend on the
+ * (soon-to-be-dropped) plaintext column pass `emailCiphertext`
+ * instead — writeAudit decrypts internally to compute the hash. Pass
+ * exactly one; if both are passed, ciphertext wins.
  */
 export interface AuditActor {
   userId: string | null;
@@ -180,6 +190,11 @@ export interface AuditActor {
   role?: string | null;
   /** Plaintext email — hashed at write time, never stored. */
   email?: string | null;
+  /** Deterministic ciphertext — decrypted then hashed at write time.
+   *  Used by call sites that read the User row and don't want to
+   *  depend on the plaintext column (which the bake window leaves in
+   *  place but will drop in commit 2.4b). */
+  emailCiphertext?: string | null;
 }
 
 export interface WriteAuditInput {
@@ -225,12 +240,20 @@ export async function writeAudit(input: WriteAuditInput): Promise<void> {
       ? userAgentRaw.slice(0, USER_AGENT_MAX_LENGTH)
       : null;
 
+    // Round-11 commit 2.4a: actor email may arrive as plaintext OR
+    // deterministic ciphertext. Resolve to plaintext-then-hash inside
+    // the audit machinery so call sites don't need to encrypt /
+    // decrypt themselves. Ciphertext wins if both are passed.
+    const actorPlaintextEmail = input.actor.emailCiphertext
+      ? decryptUserEmail(input.actor.emailCiphertext)
+      : input.actor.email ?? null;
+
     await prisma.auditLog.create({
       data: {
         actorUserId: input.actor.userId,
         actorRole: (input.actor.role as UserRole | null | undefined) ?? null,
-        actorEmailHash: input.actor.email
-          ? shortEmailHash(input.actor.email)
+        actorEmailHash: actorPlaintextEmail
+          ? shortEmailHash(actorPlaintextEmail)
           : null,
         action: input.action,
         entityType: input.entityType,

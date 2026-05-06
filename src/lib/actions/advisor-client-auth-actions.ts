@@ -25,7 +25,8 @@ import {
   issueMagicLinkToken,
   invalidatePriorMagicLinkTokens,
 } from "@/lib/auth/magic-link";
-import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
+import { decryptUserEmail, findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
+import { shortEmailHash } from "@/lib/audit/redact";
 import { sendMagicLinkEmail } from "@/lib/email";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 
@@ -74,9 +75,13 @@ async function gateAssignedClient(clientId: string) {
   });
   if (!assignment) return { success: false as const, error: "This client is not assigned to you." };
 
+  // Round-11 commit 2.4a: emailCiphertext is the auth-path source of
+  // truth; the plaintext column may be null for users created
+  // post-2.4a. We pull both — emailCiphertext for decrypt-then-use,
+  // email for the bake-window display fallback only.
   const client = await prisma.user.findUnique({
     where: { id: clientId },
-    select: { id: true, email: true, role: true, deletedAt: true },
+    select: { id: true, email: true, emailCiphertext: true, role: true, deletedAt: true },
   });
   if (!client || client.deletedAt) return { success: false as const, error: "Client not found." };
   if (client.role !== "USER") {
@@ -113,7 +118,9 @@ export async function reassignClientEmail(
 
     const { actor, client } = gate;
     const newEmail = parsed.newEmail.toLowerCase().trim();
-    const oldEmail = client.email;
+    // Round-11 commit 2.4a: derive plaintext from ciphertext rather
+    // than the (now-optional) plaintext column.
+    const oldEmail = decryptUserEmail(client.emailCiphertext);
 
     if (newEmail === oldEmail.toLowerCase()) {
       return ok({ clientId: client.id, oldEmail, newEmail });
@@ -139,13 +146,19 @@ export async function reassignClientEmail(
     // and silently fail at the auth provider, but cleaner to drop them.
     await invalidatePriorMagicLinkTokens(oldEmail);
 
+    // Round-11 commit 2.4a: store hashes directly under non-`email`
+    // keys (the redactor's auto-hash rule keys off the suffix `email`,
+    // so a key like `emailHash` flows through unmodified). Hashing at
+    // the call site keeps this audit row stable across the 2.4b
+    // column drop — the call site already has plaintext for both
+    // values (oldEmail decrypted above, newEmail is form input).
     await writeAudit({
       actor,
       action: AUDIT_ACTIONS.CLIENT_EMAIL_REASSIGN,
       entityType: "User",
       entityId: client.id,
-      beforeData: { email: oldEmail },
-      afterData: { email: newEmail },
+      beforeData: { emailHash: shortEmailHash(oldEmail) },
+      afterData: { emailHash: shortEmailHash(newEmail) },
       metadata: { clientId: client.id },
     });
 
@@ -177,13 +190,20 @@ export async function reissueClientMagicLink(
     const baseUrl = resolvePublicBaseUrl();
     if (!baseUrl) return fail("Sign-in is temporarily unavailable.");
 
-    await invalidatePriorMagicLinkTokens(client.email);
-    const issued = await issueMagicLinkToken(client.email);
+    // Round-11 commit 2.4a: derive plaintext from ciphertext rather
+    // than the (now-optional) client.email column.
+    const clientEmail = decryptUserEmail(client.emailCiphertext);
+
+    await invalidatePriorMagicLinkTokens(clientEmail);
+    const issued = await issueMagicLinkToken(clientEmail);
     const verifyUrl = `${baseUrl}/auth/magic-link/verify?token=${issued.rawToken}`;
     // Fire-and-forget the email so the action returns fast; the email
     // helper has its own try/catch and never throws.
-    void sendMagicLinkEmail(client.email, verifyUrl);
+    void sendMagicLinkEmail(clientEmail, verifyUrl);
 
+    // metadata.email — auto-redacted to { emailHash: <hash> } by the
+    // redactor's email-suffix rule, so it survives the bake window
+    // unchanged.
     await writeAudit({
       actor,
       action: AUDIT_ACTIONS.CLIENT_MAGIC_LINK_REISSUE,
@@ -191,13 +211,13 @@ export async function reissueClientMagicLink(
       entityId: client.id,
       metadata: {
         clientId: client.id,
-        email: client.email,
+        email: clientEmail,
         tokenId: issued.tokenId,
       },
     });
 
     revalidatePath(`/advisor/pipeline/${client.id}`);
-    return ok({ clientId: client.id, email: client.email });
+    return ok({ clientId: client.id, email: clientEmail });
   } catch (err) {
     logSafeError("reissueClientMagicLink", err);
     return fail(safeErrorMessage(err, "Failed to re-issue magic link"));

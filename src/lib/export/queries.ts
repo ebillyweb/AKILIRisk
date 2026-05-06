@@ -16,6 +16,7 @@ import "server-only";
  */
 
 import { prisma } from "@/lib/db";
+import { userEmailForDisplay } from "@/lib/auth/user-email";
 import type { TenantBundle } from "./types";
 import {
   fetchTenantAuditLog,
@@ -147,7 +148,22 @@ export async function fetchTenantBundle(
   // first. Should be a no-op (the IN-clause query is already scoped) but
   // catches the case where the same query runs across a transaction
   // boundary that adds an unrelated user.
-  const clients = clientUsers.filter((u) => clientUserIdSet.has(u.id));
+  //
+  // Round-11 commit 2.4a (BRD §5.3 export contract): the export ships
+  // RAW PII per the data-portability obligation, which includes the
+  // plaintext email. We resolve via userEmailForDisplay so existing
+  // rows transit their plaintext column and post-2.4a rows decrypt
+  // their ciphertext. The CSV serializer's column list keeps `email`
+  // as the header.
+  const clients = clientUsers
+    .filter((u) => clientUserIdSet.has(u.id))
+    .map((u) => {
+      const cu = u as unknown as { email: string | null; emailCiphertext: string };
+      return {
+        ...u,
+        email: userEmailForDisplay({ email: cu.email, emailCiphertext: cu.emailCiphertext }),
+      };
+    });
 
   return {
     advisor: advisorProfile as Record<string, unknown> | null,

@@ -100,7 +100,10 @@ export default {
             emailHash: hashedEmail,
           });
           await writeAudit({
-            actor: { userId: user.id, role: user.role, email: user.email },
+            // Round-11 commit 2.4a: switch from plaintext email to
+            // ciphertext — writeAudit decrypts internally to compute
+            // the hash. Survives the 2.4b column drop.
+            actor: { userId: user.id, role: user.role, emailCiphertext: user.emailCiphertext },
             action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
             entityType: "User",
             entityId: user.id,
@@ -115,7 +118,10 @@ export default {
             emailHash: hashedEmail,
           });
           await writeAudit({
-            actor: { userId: user.id, role: user.role, email: user.email },
+            // Round-11 commit 2.4a: switch from plaintext email to
+            // ciphertext — writeAudit decrypts internally to compute
+            // the hash. Survives the 2.4b column drop.
+            actor: { userId: user.id, role: user.role, emailCiphertext: user.emailCiphertext },
             action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
             entityType: "User",
             entityId: user.id,
@@ -135,7 +141,10 @@ export default {
             emailHash: hashedEmail,
           });
           await writeAudit({
-            actor: { userId: user.id, role: user.role, email: user.email },
+            // Round-11 commit 2.4a: switch from plaintext email to
+            // ciphertext — writeAudit decrypts internally to compute
+            // the hash. Survives the 2.4b column drop.
+            actor: { userId: user.id, role: user.role, emailCiphertext: user.emailCiphertext },
             action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
             entityType: "User",
             entityId: user.id,
@@ -149,9 +158,14 @@ export default {
           emailHash: hashedEmail,
         });
 
+        // Round-11 commit 2.4a: NextAuth's JWT email field comes
+        // from form-input plaintext rather than User.email — the
+        // plaintext column is no longer authoritative and may be null
+        // for users created post-2.4a. Form input is the most
+        // recent ground-truth plaintext.
         return {
           id: user.id,
-          email: user.email,
+          email,
           name: user.name,
           image: user.image,
         };
@@ -234,7 +248,10 @@ export default {
         // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
         const user = await findUserByEmail(validation.email, {
           where: { deletedAt: null },
-          select: { id: true, email: true, name: true, image: true, role: true },
+          // Round-11 commit 2.4a: emailCiphertext for the audit hash;
+          // email is still selected for the (rare) display-time use
+          // during the bake window.
+          select: { id: true, email: true, emailCiphertext: true, name: true, image: true, role: true },
         });
         if (!user) {
           await writeAudit({
@@ -252,7 +269,10 @@ export default {
         // (credentials → ADVISOR/ADMIN, magic-link → USER).
         if (user.role !== "USER") {
           await writeAudit({
-            actor: { userId: user.id, role: user.role, email: user.email },
+            // Round-11 commit 2.4a: switch from plaintext email to
+            // ciphertext — writeAudit decrypts internally to compute
+            // the hash. Survives the 2.4b column drop.
+            actor: { userId: user.id, role: user.role, emailCiphertext: user.emailCiphertext },
             action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_FAILURE,
             entityType: "User",
             entityId: user.id,
@@ -262,16 +282,21 @@ export default {
         }
 
         await writeAudit({
-          actor: { userId: user.id, role: user.role, email: user.email },
+          // Round-11 commit 2.4a: ciphertext-keyed actor (writeAudit
+          // decrypts internally to compute the hash).
+          actor: { userId: user.id, role: user.role, emailCiphertext: user.emailCiphertext },
           action: AUDIT_ACTIONS.AUTH_MAGIC_LINK_SUCCESS,
           entityType: "User",
           entityId: user.id,
           metadata: { inviteCodeId: validation.inviteCodeId },
         });
 
+        // Round-11 commit 2.4a: JWT email from validation.email
+        // (token-decoded plaintext) rather than User.email — same
+        // rationale as the credentials provider above.
         return {
           id: user.id,
-          email: user.email,
+          email: validation.email,
           name: user.name,
           image: user.image,
         };
