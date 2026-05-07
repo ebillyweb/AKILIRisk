@@ -100,32 +100,35 @@ describe("userEmailCiphertext", () => {
     expect(USER_EMAIL_FIELD_KEY).toBe("User.email");
   });
 
-  // Round-11 bug-hunt fix (commit A): the deterministic ciphertext is
-  // case-sensitive at the helper layer. Normalization lives in the Zod
-  // schemas that wrap every auth entry point — see
-  // src/app/api/auth/{magic-link/request,forgot-password,reset-password}
-  // and src/lib/{auth.config,admin/actions,schemas/invitation}. This
-  // assertion pins the contract: if a future caller forgets to
-  // normalize, the helper produces a different ciphertext and signin
-  // breaks for that user.
-  it("is case-SENSITIVE at the helper layer (callers MUST normalize upstream)", () => {
+  // Round-11 bug-hunt fix (commit 0a6b27e): the helper now normalizes
+  // internally via `normalizeEmailForCiphertext` (.trim().toLowerCase())
+  // before computing the deterministic ciphertext. This pins the
+  // current contract — mixed-case input MUST collapse to the same
+  // ciphertext as the lowercase form, otherwise the auth path's
+  // findFirst(emailCiphertext = …) lookup misses for legitimately
+  // signed-up users who type their email in a different case at
+  // signin. The previous contract (helper case-sensitive, callers
+  // normalize via Zod schemas) was a foot-gun: every new entry point
+  // had to remember to add .transform(toLowerCase) or break login.
+  it("is case-INSENSITIVE at the helper layer (mixed-case input → identical ciphertext)", () => {
     const lower = userEmailCiphertext("alice@example.com");
     const mixed = userEmailCiphertext("Alice@Example.com");
     const upper = userEmailCiphertext("ALICE@EXAMPLE.COM");
-    expect(lower).not.toEqual(mixed);
-    expect(lower).not.toEqual(upper);
-    expect(mixed).not.toEqual(upper);
+    expect(mixed).toEqual(lower);
+    expect(upper).toEqual(lower);
   });
 
-  it("post-Zod-normalization (.trim().toLowerCase()) → identical ciphertext", () => {
-    const normalize = (s: string) => s.trim().toLowerCase();
-    const fromMixed = userEmailCiphertext(normalize("Alice@Example.com"));
-    const fromUpper = userEmailCiphertext(normalize("ALICE@EXAMPLE.COM"));
-    const fromPaddedMixed = userEmailCiphertext(normalize("  Alice@Example.com  "));
+  it("trims whitespace before deterministic encryption", () => {
+    // Distinct from the case-insensitivity assertion above: covers the
+    // .trim() half of the internal normalization. Pads with leading and
+    // trailing whitespace and verifies it collapses to the same
+    // ciphertext as the unpadded baseline. Combined with the previous
+    // test, this pins the full normalizeEmailForCiphertext contract.
     const baseline = userEmailCiphertext("alice@example.com");
-    expect(fromMixed).toEqual(baseline);
-    expect(fromUpper).toEqual(baseline);
-    expect(fromPaddedMixed).toEqual(baseline);
+    expect(userEmailCiphertext("  alice@example.com  ")).toEqual(baseline);
+    expect(userEmailCiphertext("\talice@example.com\n")).toEqual(baseline);
+    // Combined trim + lowercase still hits the same ciphertext.
+    expect(userEmailCiphertext("  Alice@Example.com  ")).toEqual(baseline);
   });
 });
 
