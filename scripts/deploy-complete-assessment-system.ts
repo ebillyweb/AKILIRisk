@@ -329,7 +329,7 @@ async function validateDeployment() {
 
     // Check pillar coverage
     const pillarIds = pillars.map(p => p.pillarId);
-    const expectedPillars = ['governance', 'cybersecurity', 'physical-security', 'financial-asset-protection', 'environmental-geographic-risk', 'lifestyle-behavioral-risk'];
+    const expectedPillars = ['governance', 'cyber-digital', 'physical-security', 'insurance', 'geographic-environmental', 'reputational-social'];
     const missingPillars = expectedPillars.filter(p => !pillarIds.includes(p));
 
     if (missingPillars.length > 0) {

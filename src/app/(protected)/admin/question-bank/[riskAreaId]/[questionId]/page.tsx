@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdminRole } from "@/lib/admin/auth";
 import {
@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
-import { isRiskAreaId } from "@/lib/assessment/bank/risk-areas";
+import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
 import { RISK_AREAS } from "@/lib/advisor/types";
 import { prisma } from "@/lib/db";
 
@@ -34,6 +34,12 @@ export default async function AdminQuestionBankEditPage({
   const { riskAreaId, questionId: questionIdParam } = await params;
   const { err } = await searchParams;
   const questionId = decodeURIComponent(questionIdParam);
+
+  // F2 / BRD §4.1 — old bookmark URL? 302 to the current ID instead of 404.
+  const legacy = legacyRiskAreaRedirect(riskAreaId);
+  if (legacy) {
+    redirect(`/admin/question-bank/${legacy}/${encodeURIComponent(questionId)}`);
+  }
 
   if (!isRiskAreaId(riskAreaId)) {
     notFound();

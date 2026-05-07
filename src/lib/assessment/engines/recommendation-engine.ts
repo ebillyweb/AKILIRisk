@@ -329,7 +329,7 @@ export const EXAMPLE_RECOMMENDATION_RULES = [
     conditions: [
       {
         type: "risk_level" as const,
-        pillarId: "cybersecurity",
+        pillarId: "cyber-digital",
         operator: "in" as const,
         value: ["high", "critical"],
         weight: 3

@@ -267,7 +267,7 @@ export const EXAMPLE_SCORING_RULE: Rule = {
     {
       type: "modify_score",
       parameters: {
-        pillarId: "cybersecurity",
+        pillarId: "cyber-digital",
         modifier: "add",
         value: 0.5
       }

@@ -19,11 +19,11 @@ export function formatScore(score: number): string {
  */
 export const CATEGORY_LABELS: Record<string, string> = {
   governance: 'Governance',
-  cybersecurity: 'Cyber security',
+  "cyber-digital": 'Cyber security',
   'physical-security': 'Physical security',
-  'financial-asset-protection': 'Insurance',
-  'environmental-geographic-risk': 'Geographic',
-  'lifestyle-behavioral-risk': 'Reputational & social risk',
+  'insurance': 'Insurance',
+  'geographic-environmental': 'Geographic',
+  'reputational-social': 'Reputational & social risk',
   /** Historical breakdown rows */
   'health-medical-preparedness': 'Insurance (prior medical section)',
   // Legacy governance subcategory IDs (scores stored before six-pillar taxonomy)
@@ -43,11 +43,11 @@ export const CATEGORY_LABELS: Record<string, string> = {
 export const CHART_COLORS: Record<string, string> = {
   primary: '#3b82f6',
   governance: '#78350f',
-  cybersecurity: '#7c3aed',
+  "cyber-digital": '#7c3aed',
   'physical-security': '#64748b',
-  'financial-asset-protection': '#ca8a04',
-  'environmental-geographic-risk': '#0d9488',
-  'lifestyle-behavioral-risk': '#2563eb',
+  'insurance': '#ca8a04',
+  'geographic-environmental': '#0d9488',
+  'reputational-social': '#2563eb',
   'health-medical-preparedness': '#e11d48',
   'decision-making-authority': '#78350f',
   'access-controls': '#7c3aed',

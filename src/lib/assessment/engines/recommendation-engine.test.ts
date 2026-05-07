@@ -27,8 +27,8 @@ const fakeRules = [
     ruleName: "Cyber uplift for high risk",
     description: null,
     triggerConditions: [
-      { type: "score_threshold", pillarId: "cybersecurity", operator: "less_than", value: 60, weight: 3 },
-      { type: "risk_level", pillarId: "cybersecurity", operator: "in", value: ["high", "critical"], weight: 2 },
+      { type: "score_threshold", pillarId: "cyber-digital", operator: "less_than", value: 60, weight: 3 },
+      { type: "risk_level", pillarId: "cyber-digital", operator: "in", value: ["high", "critical"], weight: 2 },
     ],
     pillarThresholds: null,
     questionConditions: null,
@@ -157,7 +157,7 @@ describe("RecommendationEngine — C1 schema-additions regression", () => {
       assessmentId: "as-test-1",
       userId: "u-1",
       pillarScores: {
-        cybersecurity: { score: 35, riskLevel: "high" },
+        "cyber-digital": { score: 35, riskLevel: "high" },
         governance: { score: 75, riskLevel: "low" },
       },
       answers: {},
@@ -177,7 +177,7 @@ describe("RecommendationEngine — C1 schema-additions regression", () => {
       assessmentId: "as-test-2",
       userId: "u-2",
       pillarScores: {
-        cybersecurity: { score: 35, riskLevel: "high" },
+        "cyber-digital": { score: 35, riskLevel: "high" },
         governance: { score: 75, riskLevel: "low" },
       },
       answers: {},
@@ -195,7 +195,7 @@ describe("RecommendationEngine — C1 schema-additions regression", () => {
       assessmentId: "as-test-3",
       userId: "u-3",
       pillarScores: {
-        cybersecurity: { score: 35, riskLevel: "critical" },
+        "cyber-digital": { score: 35, riskLevel: "critical" },
       },
       answers: {},
       householdProfile: {},
@@ -213,7 +213,7 @@ describe("RecommendationEngine — C1 schema-additions regression", () => {
     await engine.generateRecommendations({
       assessmentId: "as-test-4",
       userId: "u-4",
-      pillarScores: { cybersecurity: { score: 35, riskLevel: "high" } },
+      pillarScores: { "cyber-digital": { score: 35, riskLevel: "high" } },
       answers: {},
       householdProfile: {},
       missingControls: [{ questionId: "behavioral_substance_screen", category: "lifestyle" }],
@@ -243,7 +243,7 @@ describe("RecommendationEngine — C1 schema-additions regression", () => {
     const recs = await engine.generateRecommendations({
       assessmentId: "as-test-5",
       userId: "u-5",
-      pillarScores: { cybersecurity: { score: 35, riskLevel: "high" } },
+      pillarScores: { "cyber-digital": { score: 35, riskLevel: "high" } },
       answers: {},
       householdProfile: {},
       missingControls: [{ questionId: "behavioral_substance_screen", category: "lifestyle" }],

@@ -10,7 +10,7 @@ import { Question } from '@/lib/assessment/types';
 
 /** Prior intake IDs mapped to current `RISK_AREAS` ids */
 const FOCUS_AREA_LEGACY_ALIASES: Record<string, string> = {
-  'health-medical-preparedness': 'financial-asset-protection',
+  'health-medical-preparedness': 'insurance',
 };
 
 function normalizeRiskAreaId(id: string): string {

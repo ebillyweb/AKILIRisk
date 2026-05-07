@@ -238,7 +238,7 @@ export function QuestionCard({
       {question.type === "maturity-scale" ? (
         <p className="mt-3 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
           Maturity scale (0–{MATURITY_SCALE_MAX}):{" "}
-          {(question.subCategory === "cybersecurity"
+          {(question.subCategory === "cyber-digital"
             ? CYBER_MATURITY_LEVEL_LABELS
             : MATURITY_LEVEL_LABELS
           ).map((label, i) => `${i} — ${label}`).join(" · ")}

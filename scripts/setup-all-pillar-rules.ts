@@ -352,7 +352,7 @@ const RECOMMENDATION_RULES = [
       },
       {
         type: 'score_threshold',
-        pillarId: 'financial-asset-protection',
+        pillarId: 'insurance',
         operator: 'less_than',
         value: 2.0,
         weight: 3
@@ -432,7 +432,7 @@ const RECOMMENDATION_RULES = [
       },
       {
         type: 'score_threshold',
-        pillarId: 'environmental-geographic-risk',
+        pillarId: 'geographic-environmental',
         operator: 'less_than',
         value: 1.8,
         weight: 3
@@ -457,7 +457,7 @@ const RECOMMENDATION_RULES = [
       },
       {
         type: 'score_threshold',
-        pillarId: 'lifestyle-behavioral-risk',
+        pillarId: 'reputational-social',
         operator: 'less_than',
         value: 2.0,
         weight: 3

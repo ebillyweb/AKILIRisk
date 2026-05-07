@@ -36,14 +36,14 @@ interface RuleFormProps {
 const CONDITION_PLACEHOLDER = `[
   {
     "type": "score_threshold",
-    "pillarId": "cybersecurity",
+    "pillarId": "cyber-digital",
     "operator": "less_than",
     "value": 1.8,
     "weight": 3
   },
   {
     "type": "risk_level",
-    "pillarId": "cybersecurity",
+    "pillarId": "cyber-digital",
     "operator": "in",
     "value": ["high", "critical"],
     "weight": 2
@@ -51,7 +51,7 @@ const CONDITION_PLACEHOLDER = `[
 ]`;
 
 const THRESHOLDS_PLACEHOLDER = `{
-  "cybersecurity": { "min": 1.8, "max": 2.4 }
+  "cyber-digital": { "min": 1.8, "max": 2.4 }
 }`;
 
 /**

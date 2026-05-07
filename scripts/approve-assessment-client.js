@@ -56,7 +56,7 @@ async function main() {
     where: { interviewId: interview.id },
     update: {
       status: 'APPROVED',
-      focusAreas: ['financial-asset-protection', 'cybersecurity', 'lifestyle-behavioral-risk'],
+      focusAreas: ['insurance', 'cyber-digital', 'reputational-social'],
       notes: 'Intake approved for comprehensive governance assessment. Client demonstrates strong foundational understanding.',
       reviewedAt: new Date(),
       approvedAt: new Date()
@@ -65,7 +65,7 @@ async function main() {
       interviewId: interview.id,
       advisorId: advisor.advisorProfile.id,
       status: 'APPROVED',
-      focusAreas: ['financial-asset-protection', 'cybersecurity', 'lifestyle-behavioral-risk'],
+      focusAreas: ['insurance', 'cyber-digital', 'reputational-social'],
       notes: 'Intake approved for comprehensive governance assessment. Client demonstrates strong foundational understanding.',
       reviewedAt: new Date(),
       approvedAt: new Date()

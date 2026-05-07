@@ -2,11 +2,11 @@ import type { Pillar } from "@/lib/assessment/types";
 
 const DEFAULT_LABELS: Record<string, string> = {
   governance: "Governance",
-  cybersecurity: "Cybersecurity",
+  "cyber-digital": "Cybersecurity",
   "physical-security": "Physical Security",
-  "financial-asset-protection": "Insurance & Asset Protection",
-  "environmental-geographic-risk": "Geographic Risk",
-  "lifestyle-behavioral-risk": "Reputational & Social Risk",
+  insurance: "Insurance & Asset Protection",
+  "geographic-environmental": "Geographic Risk",
+  "reputational-social": "Reputational & Social Risk",
 };
 
 /**

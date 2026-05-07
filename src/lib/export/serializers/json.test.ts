@@ -55,11 +55,11 @@ function richBundle(): TenantBundle {
     assessmentResponses: [
       { id: "ar-1", assessmentId: "as-1", questionId: "q-a", pillar: "governance" },
       { id: "ar-2", assessmentId: "as-1", questionId: "q-b", pillar: "governance" },
-      { id: "ar-3", assessmentId: "as-1", questionId: "q-c", pillar: "cybersecurity" },
+      { id: "ar-3", assessmentId: "as-1", questionId: "q-c", pillar: "cyber-digital" },
     ],
     pillarScores: [
       { id: "ps-1", assessmentId: "as-1", pillar: "governance", score: 8.4 },
-      { id: "ps-2", assessmentId: "as-1", pillar: "cybersecurity", score: 6.1 },
+      { id: "ps-2", assessmentId: "as-1", pillar: "cyber-digital", score: 6.1 },
       { id: "ps-3", assessmentId: "as-2", pillar: "governance", score: 4.2 },
     ],
     documentRequirements: [

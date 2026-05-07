@@ -58,7 +58,15 @@ export type RiskAreaSelection = {
   selected: boolean;
 };
 
-// Risk areas: six pillars for comprehensive assessment (IDs stable for bank / scoring JSON)
+// Risk areas: six pillars for comprehensive assessment.
+// F2 / BRD §4.1 — the six IDs match BRD-domain wording. Migration
+// 20260521120000 renamed the four drifted IDs in the DB; the code-side
+// rename here keeps the source of truth in sync. Unchanged: governance,
+// physical-security. Renamed (old → new):
+//   cybersecurity                  → cyber-digital
+//   financial-asset-protection     → insurance
+//   environmental-geographic-risk  → geographic-environmental
+//   lifestyle-behavioral-risk      → reputational-social
 export const RISK_AREAS = [
   {
     id: 'governance',
@@ -67,7 +75,7 @@ export const RISK_AREAS = [
       'Decision rights, family authority, advisor coordination, documentation, and dispute resolution.',
   },
   {
-    id: 'cybersecurity',
+    id: 'cyber-digital',
     name: 'Cyber security',
     summary: 'Digital footprint, data protection, fraud, and online threats.',
   },
@@ -77,19 +85,19 @@ export const RISK_AREAS = [
     summary: 'Personal safety, property security, travel, and physical access control.',
   },
   {
-    id: 'financial-asset-protection',
+    id: 'insurance',
     name: 'Insurance',
     summary:
       'Property, liability, and health continuity coverage; trusts, titling, succession, and concentration risk.',
   },
   {
-    id: 'environmental-geographic-risk',
+    id: 'geographic-environmental',
     name: 'Geographic',
     summary:
       'Climate and location factors, regional hazards, regulatory context, and geography-driven exposure.',
   },
   {
-    id: 'lifestyle-behavioral-risk',
+    id: 'reputational-social',
     name: 'Reputational & social risk',
     summary:
       'Public footprint, conduct and social media norms, family standards, and reputation-sensitive behavior.',

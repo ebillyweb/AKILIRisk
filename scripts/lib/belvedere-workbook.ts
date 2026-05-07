@@ -24,23 +24,23 @@ export type CategoryKey = keyof typeof CATEGORY_MAPPING;
 
 const PILLAR_LABELS: Record<string, string> = {
   governance: "Governance",
-  cybersecurity: "Cybersecurity",
+  "cyber-digital": "Cybersecurity",
   "physical-security": "Physical Security",
-  "financial-asset-protection": "Insurance & Asset Protection",
-  "environmental-geographic-risk": "Geographic Risk",
-  "lifestyle-behavioral-risk": "Reputational & Social Risk",
+  "insurance": "Insurance & Asset Protection",
+  "geographic-environmental": "Geographic Risk",
+  "reputational-social": "Reputational & Social Risk",
 };
 
 const PILLAR_DESCRIPTIONS: Record<string, string> = {
   governance:
     "Decision rights, family authority, advisor coordination, documentation, and dispute resolution.",
-  cybersecurity: "Digital security, identity, access, and cyber resilience.",
+  "cyber-digital": "Digital security, identity, access, and cyber resilience.",
   "physical-security": "Personal safety, property security, travel, and physical access control.",
-  "financial-asset-protection":
+  "insurance":
     "Property, liability, and health continuity coverage; trusts, titling, succession, and concentration risk.",
-  "environmental-geographic-risk":
+  "geographic-environmental":
     "Climate and location factors, regional hazards, regulatory context, and geography-driven exposure.",
-  "lifestyle-behavioral-risk":
+  "reputational-social":
     "Public footprint, conduct and social media norms, family standards, and reputation-sensitive behavior.",
 };
 
@@ -63,11 +63,11 @@ export function resolveWorkbookPath(): string {
 export function inferPillarIdFromSheetName(sheetName: string): string | null {
   const n = sheetName.toLowerCase();
   if (/\bgovernance\b/.test(n)) return "governance";
-  if (/cyber/.test(n)) return "cybersecurity";
+  if (/cyber/.test(n)) return "cyber-digital";
   if (/physical/.test(n)) return "physical-security";
-  if (/(insurance|financial|asset\s*protect)/.test(n)) return "financial-asset-protection";
-  if (/(geographic|environmental)/.test(n)) return "environmental-geographic-risk";
-  if (/(reputation|lifestyle|social|behavioral)/.test(n)) return "lifestyle-behavioral-risk";
+  if (/(insurance|financial|asset\s*protect)/.test(n)) return "insurance";
+  if (/(geographic|environmental)/.test(n)) return "geographic-environmental";
+  if (/(reputation|lifestyle|social|behavioral)/.test(n)) return "reputational-social";
   return null;
 }
 
@@ -134,7 +134,7 @@ export function determineWeight(questionText: string): number {
 }
 
 export function subcategoryIdForPillar(pillarId: string, categoryBaseId: string): string {
-  if (pillarId === "cybersecurity") return categoryBaseId;
+  if (pillarId === "cyber-digital") return categoryBaseId;
   const safe = pillarId.replace(/-/g, "_");
   return `${safe}_${categoryBaseId}`;
 }
@@ -150,7 +150,7 @@ export function generateQuestionId(
     .replace(/[^a-z0-9\s]/g, "")
     .replace(/\s+/g, "_")
     .substring(0, 40);
-  if (pillarId === "cybersecurity") {
+  if (pillarId === "cyber-digital") {
     return `cyber_${categoryPrefix}_${textSlug}`;
   }
   const p = pillarId.replace(/-/g, "_");
@@ -363,7 +363,7 @@ export function findCyberSheetName(workbook: XLSX.WorkBook): string | null {
   const explicit = process.env.CYBERSECURITY_SHEET_NAME?.trim();
   if (explicit && workbook.SheetNames.includes(explicit)) return explicit;
   for (const name of workbook.SheetNames) {
-    if (inferPillarIdFromSheetName(name) === "cybersecurity") return name;
+    if (inferPillarIdFromSheetName(name) === "cyber-digital") return name;
   }
   return null;
 }

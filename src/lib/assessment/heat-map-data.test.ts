@@ -26,10 +26,10 @@ describe("buildHeatMapCells", () => {
   it("populates pillars present in the input with the right level + score", () => {
     const cells = buildHeatMapCells([
       { pillar: "governance", score: 2.4, riskLevel: "MEDIUM" },
-      { pillar: "cybersecurity", score: 0.8, riskLevel: "CRITICAL" },
+      { pillar: "cyber-digital", score: 0.8, riskLevel: "CRITICAL" },
     ]);
     const gov = cells.find((c) => c.pillarId === "governance")!;
-    const cyb = cells.find((c) => c.pillarId === "cybersecurity")!;
+    const cyb = cells.find((c) => c.pillarId === "cyber-digital")!;
     const phys = cells.find((c) => c.pillarId === "physical-security")!;
     expect(gov.level).toBe("medium");
     expect(gov.score).toBe(2.4);
@@ -93,7 +93,7 @@ describe("rowSeverity", () => {
   it("returns the max severity across cells (critical wins)", () => {
     const cells = buildHeatMapCells([
       { pillar: "governance", score: 2.5, riskLevel: "low" },
-      { pillar: "cybersecurity", score: 0.5, riskLevel: "critical" },
+      { pillar: "cyber-digital", score: 0.5, riskLevel: "critical" },
     ]);
     const sev = rowSeverity(cells);
     expect(sev.max).toBe(4); // critical
@@ -108,7 +108,7 @@ describe("rowSeverity", () => {
   it("avg ignores unassessed cells", () => {
     const cells = buildHeatMapCells([
       { pillar: "governance", score: 2.5, riskLevel: "low" }, // 1
-      { pillar: "cybersecurity", score: 1.5, riskLevel: "high" }, // 3
+      { pillar: "cyber-digital", score: 1.5, riskLevel: "high" }, // 3
       // 4 other pillars unassessed
     ]);
     const sev = rowSeverity(cells);
@@ -118,11 +118,11 @@ describe("rowSeverity", () => {
   it("two HIGHs beat one HIGH + LOWs by avg tiebreak", () => {
     const a = buildHeatMapCells([
       { pillar: "governance", score: 1.5, riskLevel: "high" },
-      { pillar: "cybersecurity", score: 1.5, riskLevel: "high" },
+      { pillar: "cyber-digital", score: 1.5, riskLevel: "high" },
     ]);
     const b = buildHeatMapCells([
       { pillar: "governance", score: 1.5, riskLevel: "high" },
-      { pillar: "cybersecurity", score: 2.5, riskLevel: "low" },
+      { pillar: "cyber-digital", score: 2.5, riskLevel: "low" },
       { pillar: "physical-security", score: 2.5, riskLevel: "low" },
     ]);
     const sevA = rowSeverity(a);

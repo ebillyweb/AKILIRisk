@@ -8,11 +8,11 @@ import { decryptUserEmail } from "@/lib/auth/user-email";
 // Pillar weights from the family governance pillar definition
 export const PILLAR_WEIGHTS = {
   governance: 11,
-  cybersecurity: 20,
+  "cyber-digital": 20,
   'physical-security': 13,
-  'financial-asset-protection': 34,
-  'environmental-geographic-risk': 12,
-  'lifestyle-behavioral-risk': 10,
+  'insurance': 34,
+  'geographic-environmental': 12,
+  'reputational-social': 10,
   /** Historical category rows */
   'health-medical-preparedness': 11,
   // Legacy weights for historical PillarScore rows

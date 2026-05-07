@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { RISK_AREAS } from "@/lib/advisor/types";
 import { isQuestionBankFilterType } from "@/lib/assessment/bank/question-bank-types";
-import { isRiskAreaId } from "@/lib/assessment/bank/risk-areas";
+import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
 import { loadQuestionBankDashboardRows } from "@/lib/assessment/bank/question-bank-dashboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,12 @@ export default async function AdminQuestionBankAreaPage({
   const { type: typeParam } = await searchParams;
   const typeFilter = isQuestionBankFilterType(typeParam) ? typeParam : undefined;
   const typeQuery = typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : "";
+
+  // F2 / BRD §4.1 — old bookmark URL? 302 to the current ID instead of 404.
+  const legacy = legacyRiskAreaRedirect(riskAreaId);
+  if (legacy) {
+    redirect(`/admin/question-bank/${legacy}${typeQuery}`);
+  }
 
   if (!isRiskAreaId(riskAreaId)) {
     notFound();

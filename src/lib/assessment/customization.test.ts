@@ -21,7 +21,7 @@ const mockQuestions: Question[] = [
     type: 'yes-no',
     required: true,
     pillar: 'family-governance',
-    subCategory: 'lifestyle-behavioral-risk',
+    subCategory: 'reputational-social',
     weight: 1,
     scoreMap: { 'yes': 10, 'no': 0 }
   },
@@ -31,7 +31,7 @@ const mockQuestions: Question[] = [
     type: 'yes-no',
     required: true,
     pillar: 'family-governance',
-    subCategory: 'lifestyle-behavioral-risk',
+    subCategory: 'reputational-social',
     weight: 1,
     scoreMap: { 'yes': 10, 'no': 0 }
   },
@@ -41,7 +41,7 @@ const mockQuestions: Question[] = [
     type: 'yes-no',
     required: true,
     pillar: 'family-governance',
-    subCategory: 'cybersecurity',
+    subCategory: 'cyber-digital',
     weight: 1,
     scoreMap: { 'yes': 10, 'no': 0 }
   },
@@ -51,7 +51,7 @@ const mockQuestions: Question[] = [
     type: 'yes-no',
     required: true,
     pillar: 'family-governance',
-    subCategory: 'financial-asset-protection',
+    subCategory: 'insurance',
     weight: 1,
     scoreMap: { 'yes': 10, 'no': 0 }
   }
@@ -69,7 +69,7 @@ describe('getCustomizationConfig', () => {
   });
 
   test('returns customized config with valid focus areas', () => {
-    const focusAreas = ['lifestyle-behavioral-risk', 'cybersecurity', 'financial-asset-protection'];
+    const focusAreas = ['reputational-social', 'cyber-digital', 'insurance'];
     const config = getCustomizationConfig(focusAreas);
 
     expect(config.isCustomized).toBe(true);
@@ -79,12 +79,12 @@ describe('getCustomizationConfig', () => {
   });
 
   test('filters out invalid focus area IDs', () => {
-    const focusAreas = ['lifestyle-behavioral-risk', 'invalid-id', 'cybersecurity', 'another-invalid'];
+    const focusAreas = ['reputational-social', 'invalid-id', 'cyber-digital', 'another-invalid'];
     const config = getCustomizationConfig(focusAreas);
 
     expect(config.isCustomized).toBe(true);
-    expect(config.visibleSubCategories).toEqual(['lifestyle-behavioral-risk', 'cybersecurity']);
-    expect(config.emphasisAreas).toEqual(['lifestyle-behavioral-risk', 'cybersecurity']);
+    expect(config.visibleSubCategories).toEqual(['reputational-social', 'cyber-digital']);
+    expect(config.emphasisAreas).toEqual(['reputational-social', 'cyber-digital']);
   });
 });
 
@@ -97,10 +97,10 @@ describe('getVisibleSubCategories', () => {
   });
 
   test('filters valid focus areas', () => {
-    const focusAreas = ['lifestyle-behavioral-risk', 'invalid-id', 'cybersecurity'];
+    const focusAreas = ['reputational-social', 'invalid-id', 'cyber-digital'];
     const visible = getVisibleSubCategories(focusAreas);
 
-    expect(visible).toEqual(['lifestyle-behavioral-risk', 'cybersecurity']);
+    expect(visible).toEqual(['reputational-social', 'cyber-digital']);
   });
 
   test('returns empty array when no valid focus areas', () => {
@@ -112,14 +112,14 @@ describe('getVisibleSubCategories', () => {
 
   test('maps legacy health-medical focus area to insurance (financial-asset-protection)', () => {
     expect(getVisibleSubCategories(['health-medical-preparedness'])).toEqual([
-      'financial-asset-protection',
+      'insurance',
     ]);
   });
 
   test('dedupes when legacy health and insurance both appear', () => {
     expect(
-      getVisibleSubCategories(['health-medical-preparedness', 'financial-asset-protection'])
-    ).toEqual(['financial-asset-protection']);
+      getVisibleSubCategories(['health-medical-preparedness', 'insurance'])
+    ).toEqual(['insurance']);
   });
 });
 
@@ -127,16 +127,16 @@ describe('getEmphasisMultipliers', () => {
   test('returns 1.5x for emphasis areas, 1.0x for other visible areas', () => {
     const config: CustomizationConfig = {
       isCustomized: true,
-      visibleSubCategories: ['lifestyle-behavioral-risk', 'cybersecurity', 'financial-asset-protection'],
-      emphasisAreas: ['lifestyle-behavioral-risk', 'cybersecurity'],
+      visibleSubCategories: ['reputational-social', 'cyber-digital', 'insurance'],
+      emphasisAreas: ['reputational-social', 'cyber-digital'],
       emphasisMultiplier: 1.5
     };
 
     const multipliers = getEmphasisMultipliers(config);
 
-    expect(multipliers['lifestyle-behavioral-risk']).toBe(1.5);
-    expect(multipliers['cybersecurity']).toBe(1.5);
-    expect(multipliers['financial-asset-protection']).toBe(1.0);
+    expect(multipliers['reputational-social']).toBe(1.5);
+    expect(multipliers['cyber-digital']).toBe(1.5);
+    expect(multipliers['insurance']).toBe(1.0);
   });
 
   test('handles non-customized config', () => {
@@ -158,7 +158,7 @@ describe('getEmphasisMultipliers', () => {
 
 describe('getVisibleQuestionIds', () => {
   test('returns questions matching visible subcategories', () => {
-    const visibleSubCategories = ['lifestyle-behavioral-risk', 'cybersecurity'];
+    const visibleSubCategories = ['reputational-social', 'cyber-digital'];
     const questionIds = getVisibleQuestionIds(visibleSubCategories, mockQuestions);
 
     expect(questionIds).toEqual(['q1', 'q2', 'q3']);
@@ -172,7 +172,7 @@ describe('getVisibleQuestionIds', () => {
   });
 
   test('returns all questions when all subcategories visible', () => {
-    const visibleSubCategories = ['lifestyle-behavioral-risk', 'cybersecurity', 'financial-asset-protection'];
+    const visibleSubCategories = ['reputational-social', 'cyber-digital', 'insurance'];
     const questionIds = getVisibleQuestionIds(visibleSubCategories, mockQuestions);
 
     expect(questionIds).toEqual(['q1', 'q2', 'q3', 'q4']);
@@ -181,7 +181,7 @@ describe('getVisibleQuestionIds', () => {
 
 describe('estimateCompletionMinutes', () => {
   test('estimates time based on visible questions (~20 seconds each)', () => {
-    const visibleSubCategories = ['lifestyle-behavioral-risk']; // 2 questions
+    const visibleSubCategories = ['reputational-social']; // 2 questions
     const minutes = estimateCompletionMinutes(visibleSubCategories, mockQuestions);
 
     // 2 questions * 20 seconds = 40 seconds = 1 minute (rounded up)
@@ -196,19 +196,19 @@ describe('estimateCompletionMinutes', () => {
       type: 'yes-no' as const,
       required: true,
       pillar: 'family-governance',
-      subCategory: 'lifestyle-behavioral-risk',
+      subCategory: 'reputational-social',
       weight: 1,
       scoreMap: { 'yes': 10, 'no': 0 }
     }));
 
-    const visibleSubCategories = ['lifestyle-behavioral-risk'];
+    const visibleSubCategories = ['reputational-social'];
     const minutes = estimateCompletionMinutes(visibleSubCategories, manyQuestions);
 
     expect(minutes).toBe(15); // Should be capped at 15
   });
 
   test('returns reasonable time for typical customization', () => {
-    const visibleSubCategories = ['lifestyle-behavioral-risk', 'cybersecurity']; // 3 questions
+    const visibleSubCategories = ['reputational-social', 'cyber-digital']; // 3 questions
     const minutes = estimateCompletionMinutes(visibleSubCategories, mockQuestions);
 
     // 3 questions * 20 seconds = 60 seconds = 1 minute

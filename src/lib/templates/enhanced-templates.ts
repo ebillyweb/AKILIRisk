@@ -68,7 +68,7 @@ Generated on: {generatedDate}
 Document Type: {documentType}
 `,
 
-  'environmental-geographic-risk': `
+  'geographic-environmental': `
 {advisorBrandName}
 
 {familyName} Geographic risk policy
@@ -172,7 +172,7 @@ Generated on: {generatedDate}
 Document Type: {documentType}
 `,
 
-  'cybersecurity': `
+  'cyber-digital': `
 {advisorBrandName}
 
 {familyName} Cyber security & digital access policy
@@ -225,7 +225,7 @@ Generated on: {generatedDate}
 Document Type: {documentType}
 `,
 
-  'financial-asset-protection': `
+  'insurance': `
 {advisorBrandName}
 
 {familyName} Insurance & asset protection policy
@@ -281,7 +281,7 @@ Generated on: {generatedDate}
 Document Type: {documentType}
 `,
 
-  'lifestyle-behavioral-risk': `
+  'reputational-social': `
 {advisorBrandName}
 
 {familyName} Reputational & social risk policy

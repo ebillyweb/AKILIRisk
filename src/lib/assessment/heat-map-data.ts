@@ -12,7 +12,7 @@ import {
  * Prisma enum value (UPPERCASE) or null when not assessed.
  */
 export interface PillarScoreInput {
-  /** Pillar id from RISK_AREAS (e.g. "governance", "cybersecurity"). */
+  /** Pillar id from RISK_AREAS (e.g. "governance", "cyber-digital"). */
   pillar: string;
   score: number | null;
   riskLevel: string | null;

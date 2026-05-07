@@ -111,7 +111,7 @@ describe("conditionSchema — score_threshold", () => {
   it("accepts a valid score_threshold condition", () => {
     const r = conditionSchema.safeParse({
       type: "score_threshold",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "less_than",
       value: 60,
       weight: 3,
@@ -134,7 +134,7 @@ describe("conditionSchema — score_threshold", () => {
   it("rejects score_threshold with non-numeric value", () => {
     const r = conditionSchema.safeParse({
       type: "score_threshold",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "less_than",
       value: "low",
     });
@@ -143,7 +143,7 @@ describe("conditionSchema — score_threshold", () => {
   it("rejects score_threshold with operator='in' (not in the allowed set)", () => {
     const r = conditionSchema.safeParse({
       type: "score_threshold",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "in",
       value: 60,
     });
@@ -155,7 +155,7 @@ describe("conditionSchema — risk_level", () => {
   it("accepts equals + single risk-level value", () => {
     const r = conditionSchema.safeParse({
       type: "risk_level",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "equals",
       value: "high",
     });
@@ -164,7 +164,7 @@ describe("conditionSchema — risk_level", () => {
   it("rejects risk_level with value: 123", () => {
     const r = conditionSchema.safeParse({
       type: "risk_level",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "equals",
       value: 123,
     });
@@ -173,7 +173,7 @@ describe("conditionSchema — risk_level", () => {
   it("accepts in[] with array of risk levels", () => {
     const r = conditionSchema.safeParse({
       type: "risk_level",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "in",
       value: ["high", "critical"],
     });
@@ -182,7 +182,7 @@ describe("conditionSchema — risk_level", () => {
   it("rejects equals when value is an array (operator/value mismatch)", () => {
     const r = conditionSchema.safeParse({
       type: "risk_level",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "equals",
       value: ["high", "critical"],
     });
@@ -191,7 +191,7 @@ describe("conditionSchema — risk_level", () => {
   it("rejects in with empty array", () => {
     const r = conditionSchema.safeParse({
       type: "risk_level",
-      pillarId: "cybersecurity",
+      pillarId: "cyber-digital",
       operator: "in",
       value: [],
     });
@@ -271,23 +271,23 @@ describe("conditionSchema — profile_condition", () => {
 describe("detectContradictoryConditions", () => {
   it("flags > X AND < Y where Y <= X (impossible) on the same pillar", () => {
     const issues = detectContradictoryConditions([
-      { type: "score_threshold", pillarId: "cybersecurity", operator: "greater_than", value: 80, weight: 1 },
-      { type: "score_threshold", pillarId: "cybersecurity", operator: "less_than", value: 60, weight: 1 },
+      { type: "score_threshold", pillarId: "cyber-digital", operator: "greater_than", value: 80, weight: 1 },
+      { type: "score_threshold", pillarId: "cyber-digital", operator: "less_than", value: 60, weight: 1 },
     ]);
     expect(issues).toHaveLength(1);
     expect(issues[0].conditionIndices.sort()).toEqual([0, 1]);
-    expect(issues[0].message).toMatch(/cybersecurity/);
+    expect(issues[0].message).toMatch(/cyber-digital/);
   });
   it("does NOT flag > X AND < Y where Y > X (possible)", () => {
     const issues = detectContradictoryConditions([
-      { type: "score_threshold", pillarId: "cybersecurity", operator: "greater_than", value: 40, weight: 1 },
-      { type: "score_threshold", pillarId: "cybersecurity", operator: "less_than", value: 60, weight: 1 },
+      { type: "score_threshold", pillarId: "cyber-digital", operator: "greater_than", value: 40, weight: 1 },
+      { type: "score_threshold", pillarId: "cyber-digital", operator: "less_than", value: 60, weight: 1 },
     ]);
     expect(issues).toHaveLength(0);
   });
   it("only checks within the same pillar (no false positive across pillars)", () => {
     const issues = detectContradictoryConditions([
-      { type: "score_threshold", pillarId: "cybersecurity", operator: "greater_than", value: 80, weight: 1 },
+      { type: "score_threshold", pillarId: "cyber-digital", operator: "greater_than", value: 80, weight: 1 },
       { type: "score_threshold", pillarId: "governance", operator: "less_than", value: 60, weight: 1 },
     ]);
     expect(issues).toHaveLength(0);
@@ -300,8 +300,8 @@ describe("recommendationRuleInputSchema cross-condition refine", () => {
       serviceRecommendationId: "ckabcdefghij1234567890klmn",
       ruleName: "bad rule",
       triggerConditions: [
-        { type: "score_threshold", pillarId: "cybersecurity", operator: "greater_than", value: 80, weight: 1 },
-        { type: "score_threshold", pillarId: "cybersecurity", operator: "less_than", value: 60, weight: 1 },
+        { type: "score_threshold", pillarId: "cyber-digital", operator: "greater_than", value: 80, weight: 1 },
+        { type: "score_threshold", pillarId: "cyber-digital", operator: "less_than", value: 60, weight: 1 },
       ],
       priority: 1,
     });
@@ -315,8 +315,8 @@ describe("recommendationRuleInputSchema cross-condition refine", () => {
       serviceRecommendationId: "ckabcdefghij1234567890klmn",
       ruleName: "good rule",
       triggerConditions: [
-        { type: "score_threshold", pillarId: "cybersecurity", operator: "less_than", value: 60, weight: 3 },
-        { type: "risk_level", pillarId: "cybersecurity", operator: "in", value: ["high", "critical"], weight: 2 },
+        { type: "score_threshold", pillarId: "cyber-digital", operator: "less_than", value: 60, weight: 3 },
+        { type: "risk_level", pillarId: "cyber-digital", operator: "in", value: ["high", "critical"], weight: 2 },
         { type: "missing_control", questionId: "cyber_password_manager", operator: "equals", weight: 1 },
       ],
       priority: 90,
@@ -449,7 +449,7 @@ describe("createRecommendationRule", () => {
       serviceRecommendationId: "ckabcdefghij1234567890klmn",
       ruleName: "test rule",
       triggerConditions: [
-        { type: "score_threshold", pillarId: "cybersecurity", operator: "less_than", value: 60, weight: 1 },
+        { type: "score_threshold", pillarId: "cyber-digital", operator: "less_than", value: 60, weight: 1 },
       ],
       priority: 50,
       isActive: true,
@@ -467,7 +467,7 @@ describe("createRecommendationRule", () => {
       serviceRecommendationId: "ckabcdefghij1234567890klmn",
       ruleName: "test rule",
       triggerConditions: [
-        { type: "score_threshold", pillarId: "cybersecurity", operator: "less_than", value: 60, weight: 1 },
+        { type: "score_threshold", pillarId: "cyber-digital", operator: "less_than", value: 60, weight: 1 },
       ],
       priority: 50,
       isActive: true,

@@ -1,10 +1,10 @@
 export type TemplateId =
   | 'governance'
-  | 'cybersecurity'
+  | 'cyber-digital'
   | 'physical-security'
-  | 'financial-asset-protection'
-  | 'environmental-geographic-risk'
-  | 'lifestyle-behavioral-risk';
+  | 'insurance'
+  | 'geographic-environmental'
+  | 'reputational-social';
 
 export interface TemplateMetadata {
   id: TemplateId;
@@ -58,11 +58,11 @@ export const TEMPLATE_REGISTRY: TemplateMetadata[] = [
     applicableSubCategories: ['governance'],
   },
   {
-    id: 'cybersecurity',
+    id: 'cyber-digital',
     name: 'Cyber security & digital access policy',
     description: 'Authentication, device hygiene, and sensitive information access',
-    category: 'cybersecurity',
-    applicableSubCategories: ['cybersecurity'],
+    category: 'cyber-digital',
+    applicableSubCategories: ['cyber-digital'],
   },
   {
     id: 'physical-security',
@@ -72,24 +72,24 @@ export const TEMPLATE_REGISTRY: TemplateMetadata[] = [
     applicableSubCategories: ['physical-security'],
   },
   {
-    id: 'financial-asset-protection',
+    id: 'insurance',
     name: 'Insurance & asset protection policy',
     description: 'Coverage, trusts, titling, succession, medical continuity, and concentration',
-    category: 'financial-asset-protection',
-    applicableSubCategories: ['financial-asset-protection'],
+    category: 'insurance',
+    applicableSubCategories: ['insurance'],
   },
   {
-    id: 'environmental-geographic-risk',
+    id: 'geographic-environmental',
     name: 'Geographic risk policy',
     description: 'Hazards, catastrophe insurance, evacuation, and continuity',
-    category: 'environmental-geographic-risk',
-    applicableSubCategories: ['environmental-geographic-risk'],
+    category: 'geographic-environmental',
+    applicableSubCategories: ['geographic-environmental'],
   },
   {
-    id: 'lifestyle-behavioral-risk',
+    id: 'reputational-social',
     name: 'Reputational & social risk policy',
     description: 'Conduct standards, visibility, social media, and reputation-sensitive behavior',
-    category: 'lifestyle-behavioral-risk',
-    applicableSubCategories: ['lifestyle-behavioral-risk'],
+    category: 'reputational-social',
+    applicableSubCategories: ['reputational-social'],
   },
 ];

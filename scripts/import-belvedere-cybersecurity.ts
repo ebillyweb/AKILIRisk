@@ -72,17 +72,17 @@ async function importCybersecurityFromLegacyCsv(): Promise<number> {
       .on("end", () => finish());
   });
 
-  const questions = parseBelvedereMatrix(matrix, "cybersecurity");
+  const questions = parseBelvedereMatrix(matrix, "cyber-digital");
   if (questions.length === 0) return 0;
 
   await prisma.$transaction(async (tx) => {
     for (const catConfig of Object.values(CATEGORY_MAPPING)) {
-      const subcategoryId = subcategoryIdForPillar("cybersecurity", catConfig.id);
+      const subcategoryId = subcategoryIdForPillar("cyber-digital", catConfig.id);
       await tx.subCategoryConfiguration.upsert({
         where: { subcategoryId },
         create: {
           subcategoryId,
-          pillarId: "cybersecurity",
+          pillarId: "cyber-digital",
           name: catConfig.name,
           description: `Cybersecurity - ${catConfig.name}`,
           baseWeight: 1.0,
@@ -136,7 +136,7 @@ async function importCybersecurityFromLegacyCsv(): Promise<number> {
 async function importCybersecurityFromWorkbookCyberTabOnly(): Promise<number> {
   const filePath = resolveWorkbookPath();
   const { questionCount } = await importBelvedereWorkbookAllSheets(prisma, filePath, {
-    onlyPillarIds: ["cybersecurity"],
+    onlyPillarIds: ["cyber-digital"],
   });
   return questionCount;
 }
@@ -153,7 +153,7 @@ async function importCybersecurityQuestions(): Promise<number> {
     const cyberSheet = findCyberSheetName(wb);
     if (cyberSheet) {
       const matrix = sheetToMatrix(wb.Sheets[cyberSheet]!);
-      if (parseBelvedereMatrix(matrix, "cybersecurity").length > 0) {
+      if (parseBelvedereMatrix(matrix, "cyber-digital").length > 0) {
         const n = await importCybersecurityFromWorkbookCyberTabOnly();
         console.log(`✅ Imported ${n} cybersecurity questions from workbook tab "${cyberSheet}"`);
         return n;

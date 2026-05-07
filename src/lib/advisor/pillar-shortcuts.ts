@@ -4,11 +4,11 @@ import { RISK_AREAS } from "@/lib/advisor/types";
 
 const PILLAR_ICONS: Record<(typeof RISK_AREAS)[number]["id"], LucideIcon> = {
   governance: Scale,
-  cybersecurity: Lock,
+  "cyber-digital": Lock,
   "physical-security": Shield,
-  "financial-asset-protection": Umbrella,
-  "environmental-geographic-risk": Globe,
-  "lifestyle-behavioral-risk": Users,
+  "insurance": Umbrella,
+  "geographic-environmental": Globe,
+  "reputational-social": Users,
 };
 
 /** Six assessment pillars — same IDs as intake focus areas (`RISK_AREAS`). */

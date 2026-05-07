@@ -189,7 +189,7 @@ export default function AssessmentResultsPage() {
       : "six pillars: governance, cyber security, physical security, insurance, geographic, and reputational & social risk";
 
   const isCyberOnlyScore =
-    scoreData.breakdown.length === 1 && scoreData.breakdown[0]?.categoryId === "cybersecurity";
+    scoreData.breakdown.length === 1 && scoreData.breakdown[0]?.categoryId === "cyber-digital";
   const scoreRubric = isCyberOnlyScore ? "cyber" : "governance";
 
   return (

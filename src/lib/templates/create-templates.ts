@@ -69,7 +69,7 @@ GOVERNANCE FRAMEWORK:
 4. Single coordinated advisor team with shared factual baseline
 `,
 
-  'cybersecurity': `
+  'cyber-digital': `
 {familyName} Cyber security & digital access policy
 
 Assessment Date: {assessmentDate}
@@ -140,7 +140,7 @@ PHYSICAL SECURITY FRAMEWORK:
 4. Duress communication and escalation for household members
 `,
 
-  'financial-asset-protection': `
+  'insurance': `
 {familyName} Insurance & asset protection policy
 
 Assessment Date: {assessmentDate}
@@ -179,7 +179,7 @@ INSURANCE & PROTECTION FRAMEWORK:
 7. Contingencies for regional health disruptions affecting dependents
 `,
 
-  'environmental-geographic-risk': `
+  'geographic-environmental': `
 {familyName} Geographic risk policy
 
 Assessment Date: {assessmentDate}
@@ -214,7 +214,7 @@ ENVIRONMENTAL & GEOGRAPHIC FRAMEWORK:
 4. Continuity: records, secondary locations, and advisor contact tree
 `,
 
-  'lifestyle-behavioral-risk': `
+  'reputational-social': `
 {familyName} Reputational & social risk policy
 
 Assessment Date: {assessmentDate}

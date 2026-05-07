@@ -421,7 +421,7 @@ async function importAllPillars() {
       ]
     },
     {
-      id: 'financial-asset-protection',
+      id: 'insurance',
       name: 'Insurance & Asset Protection',
       questions: INSURANCE_QUESTIONS,
       subcategories: [
@@ -433,7 +433,7 @@ async function importAllPillars() {
       ]
     },
     {
-      id: 'environmental-geographic-risk',
+      id: 'geographic-environmental',
       name: 'Geographic Risk',
       questions: GEOGRAPHIC_QUESTIONS,
       subcategories: [
@@ -445,7 +445,7 @@ async function importAllPillars() {
       ]
     },
     {
-      id: 'lifestyle-behavioral-risk',
+      id: 'reputational-social',
       name: 'Reputational & Social Risk',
       questions: SOCIAL_QUESTIONS,
       subcategories: [
@@ -563,9 +563,9 @@ function getDescriptionForPillar(pillarId: string): string {
   const descriptions = {
     'governance': 'Decision rights, family authority, advisor coordination, documentation, and dispute resolution.',
     'physical-security': 'Personal safety, property security, travel, and physical access control.',
-    'financial-asset-protection': 'Property, liability, and health continuity coverage; trusts, titling, succession, and concentration risk.',
-    'environmental-geographic-risk': 'Climate and location factors, regional hazards, regulatory context, and geography-driven exposure.',
-    'lifestyle-behavioral-risk': 'Public footprint, conduct and social media norms, family standards, and reputation-sensitive behavior.'
+    'insurance': 'Property, liability, and health continuity coverage; trusts, titling, succession, and concentration risk.',
+    'geographic-environmental': 'Climate and location factors, regional hazards, regulatory context, and geography-driven exposure.',
+    'reputational-social': 'Public footprint, conduct and social media norms, family standards, and reputation-sensitive behavior.'
   };
   return descriptions[pillarId as keyof typeof descriptions] || 'Risk assessment pillar';
 }

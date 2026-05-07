@@ -542,7 +542,7 @@ function extractCybersecurityFromPillarScore(score: {
     return null;
   }
   const rows = score.breakdown as Array<{ categoryId?: string; score?: number }>;
-  const row = rows.find((r) => r.categoryId === 'cybersecurity');
+  const row = rows.find((r) => r.categoryId === 'cyber-digital');
   if (!row || typeof row.score !== 'number') {
     return null;
   }

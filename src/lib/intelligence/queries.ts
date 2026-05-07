@@ -28,7 +28,7 @@ const RISK_RECOMMENDATIONS: Record<string, RiskRecommendation[]> = {
       priority: 'medium',
     },
   ],
-  'environmental-geographic-risk': [
+  'geographic-environmental': [
     { title: 'Map hazard exposure for each primary property', description: 'Document flood, wind, wildfire, seismic, and heat risk with insurance broker and civil sources', priority: 'high' },
     { title: 'Reconcile property coverage with replacement value', description: 'Align dwelling, flood, wind, and umbrella limits with current construction and ordinance costs', priority: 'high' },
     { title: 'Rehearse evacuation and continuity', description: 'Write down routes, rally points, communications tree, and records to grab under time pressure', priority: 'medium' },
@@ -38,12 +38,12 @@ const RISK_RECOMMENDATIONS: Record<string, RiskRecommendation[]> = {
     { title: 'Institute travel security norms', description: 'Use pre-trip briefings, vetted transport, and check-ins for higher-risk destinations', priority: 'medium' },
     { title: 'Brief dependents away from home', description: 'Give students and travelers clear emergency contacts and duress expectations', priority: 'medium' },
   ],
-  'cybersecurity': [
+  'cyber-digital': [
     { title: 'Tighten identity and account recovery', description: 'Enable MFA, hardware keys where appropriate, and locked-down recovery options on financial and email accounts', priority: 'high' },
     { title: 'Segment home and device access', description: 'Use guest Wi-Fi, patch routers, and inventory IoT; monitor family members most targeted for fraud', priority: 'high' },
     { title: 'Schedule periodic access reviews', description: 'Audit who can see sensitive financial and estate information', priority: 'medium' },
   ],
-  'financial-asset-protection': [
+  'insurance': [
     { title: 'Close insurance and liability gaps', description: 'Review property, excess, D&O, cyber, and professional coverage against real exposures', priority: 'high' },
     { title: 'Stress-test concentration', description: 'Model liquidity and loss scenarios for large real estate, operating business, or single-manager positions', priority: 'high' },
     { title: 'Refresh trusts, titling, and succession documents', description: 'Keep estate plans, marital agreements, and business buy-sell provisions current', priority: 'medium' },
@@ -51,7 +51,7 @@ const RISK_RECOMMENDATIONS: Record<string, RiskRecommendation[]> = {
     { title: 'Align travel with medical evacuation coverage', description: 'Confirm international coverage, telehealth, and transport for serious events', priority: 'medium' },
     { title: 'Plan for regional health disruptions', description: 'Assign caregiving contingencies for elders and dependents when schools or services close', priority: 'medium' },
   ],
-  'lifestyle-behavioral-risk': [
+  'reputational-social': [
     { title: 'Govern public and digital visibility', description: 'Set expectations for social media, press, and sharing wealth-related information', priority: 'high' },
     { title: 'Codify conduct and family standards', description: 'Document behavioral expectations, enforcement, and support for sensitive issues such as substance use', priority: 'high' },
     { title: 'Reduce undue exposure from routines', description: 'Review predictable patterns that increase targeting or reputational risk', priority: 'medium' },
@@ -61,17 +61,17 @@ const RISK_RECOMMENDATIONS: Record<string, RiskRecommendation[]> = {
 /** Map legacy governance subcategory slugs to six-pillar keys for recommendations */
 const LEGACY_RISK_CATEGORY_MAP: Record<string, keyof typeof RISK_RECOMMENDATIONS> = {
   'decision-making-authority': 'governance',
-  'access-controls': 'cybersecurity',
-  'trust-estate-governance': 'financial-asset-protection',
-  'marriage-relationship-risk': 'financial-asset-protection',
-  'succession-planning': 'financial-asset-protection',
-  'behavior-standards': 'lifestyle-behavioral-risk',
-  'business-involvement': 'financial-asset-protection',
+  'access-controls': 'cyber-digital',
+  'trust-estate-governance': 'insurance',
+  'marriage-relationship-risk': 'insurance',
+  'succession-planning': 'insurance',
+  'behavior-standards': 'reputational-social',
+  'business-involvement': 'insurance',
   'documentation-communication': 'governance',
 };
 
 function resolveRiskRecommendationKey(categorySlug: string): string {
-  if (categorySlug === 'health-medical-preparedness') return 'financial-asset-protection';
+  if (categorySlug === 'health-medical-preparedness') return 'insurance';
   if (categorySlug in RISK_RECOMMENDATIONS) return categorySlug;
   return LEGACY_RISK_CATEGORY_MAP[categorySlug] ?? categorySlug;
 }

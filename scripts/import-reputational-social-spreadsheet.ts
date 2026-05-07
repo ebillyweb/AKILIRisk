@@ -21,7 +21,7 @@ import * as XLSX from "xlsx";
 import { SpreadsheetImporter } from "../src/lib/assessment/import/spreadsheet-importer";
 import { prisma } from "../src/lib/db";
 
-const RISK_AREA_ID = "lifestyle-behavioral-risk";
+const RISK_AREA_ID = "reputational-social";
 
 function resolveImportPath(): string {
   const raw = process.env.REPUTATIONAL_SOCIAL_IMPORT_PATH?.trim();

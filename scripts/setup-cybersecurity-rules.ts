@@ -24,14 +24,14 @@ async function setupCybersecurityRules() {
       triggerConditions: [
         {
           type: 'score_threshold',
-          pillarId: 'cybersecurity',
+          pillarId: 'cyber-digital',
           operator: 'greater_than',
           value: 2.4, // 80/100 * 3.0 scale = 2.4
           weight: 4
         }
       ],
       pillarThresholds: {
-        cybersecurity: { min: 2.4, max: 3.0 }
+        "cyber-digital": { min: 2.4, max: 3.0 }
       },
       questionConditions: null,
       priority: 1,
@@ -45,21 +45,21 @@ async function setupCybersecurityRules() {
       triggerConditions: [
         {
           type: 'score_threshold',
-          pillarId: 'cybersecurity',
+          pillarId: 'cyber-digital',
           operator: 'greater_than',
           value: 1.8, // 60/100 * 3.0 = 1.8
           weight: 3
         },
         {
           type: 'score_threshold',
-          pillarId: 'cybersecurity',
+          pillarId: 'cyber-digital',
           operator: 'less_than',
           value: 2.4, // 80/100 * 3.0 = 2.4
           weight: 3
         }
       ],
       pillarThresholds: {
-        cybersecurity: { min: 1.8, max: 2.37 }
+        "cyber-digital": { min: 1.8, max: 2.37 }
       },
       questionConditions: {
         // Trigger if MFA is not universal or password manager not deployed
@@ -77,21 +77,21 @@ async function setupCybersecurityRules() {
       triggerConditions: [
         {
           type: 'score_threshold',
-          pillarId: 'cybersecurity',
+          pillarId: 'cyber-digital',
           operator: 'greater_than',
           value: 1.2, // 40/100 * 3.0 = 1.2
           weight: 4
         },
         {
           type: 'score_threshold',
-          pillarId: 'cybersecurity',
+          pillarId: 'cyber-digital',
           operator: 'less_than',
           value: 1.8, // 60/100 * 3.0 = 1.8
           weight: 4
         }
       ],
       pillarThresholds: {
-        cybersecurity: { min: 1.2, max: 1.77 }
+        "cyber-digital": { min: 1.2, max: 1.77 }
       },
       questionConditions: {
         // Trigger if multiple foundational controls missing
@@ -110,14 +110,14 @@ async function setupCybersecurityRules() {
       triggerConditions: [
         {
           type: 'score_threshold',
-          pillarId: 'cybersecurity',
+          pillarId: 'cyber-digital',
           operator: 'less_than',
           value: 1.2, // <40/100 * 3.0 = 1.2
           weight: 5
         }
       ],
       pillarThresholds: {
-        cybersecurity: { min: 0.0, max: 1.19 }
+        "cyber-digital": { min: 0.0, max: 1.19 }
       },
       questionConditions: {
         // Trigger if critical basics are missing
@@ -162,7 +162,7 @@ async function setupCybersecurityRules() {
         },
         {
           type: 'score_threshold',
-          pillarId: 'cybersecurity',
+          pillarId: 'cyber-digital',
           operator: 'less_than',
           value: 2.0,
           weight: 2
@@ -314,9 +314,9 @@ async function setupCybersecurityRules() {
 
     console.log('Updating pillar configuration for cybersecurity...');
     await tx.pillarConfiguration.upsert({
-      where: { pillarId: 'cybersecurity' },
+      where: { pillarId: 'cyber-digital' },
       create: {
-        pillarId: 'cybersecurity',
+        pillarId: 'cyber-digital',
         name: 'Cyber Security',
         description: 'Digital security, data protection, and online risk management',
         baseWeight: 1.0,

@@ -55,7 +55,7 @@ function getOwnership(category: string): string {
   if (category.includes("business")) {
     return "Board of Directors";
   }
-  if (category === "cybersecurity" || category.includes("cyber")) {
+  if (category === "cyber-digital" || category.includes("cyber")) {
     return "IT / security lead";
   }
   return "Family Office";
