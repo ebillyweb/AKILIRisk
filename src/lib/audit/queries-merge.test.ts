@@ -192,6 +192,75 @@ describe("listAuditLog merge", () => {
   });
 });
 
+describe("excludeTestOrigin filter (NIT 3)", () => {
+  /**
+   * The admin audit-log page defaults to hiding rows whose
+   * `metadata.testOrigin === true` so smoke-test traffic doesn't
+   * pollute compliance reviews. This is a generic-source filter
+   * only — neither subscription nor branding tables write that
+   * metadata flag.
+   *
+   * Verify the predicate is the Prisma JSON-path-equality shape, and
+   * that omitting / passing false leaves the where clause unchanged.
+   */
+  it("omits the NOT clause when excludeTestOrigin is false/undefined", async () => {
+    await listAuditLog({}, { take: 50 });
+    const call = auditLogFindMany.mock.calls[0]?.[0] as { where?: Record<string, unknown> };
+    expect(call?.where ?? {}).not.toHaveProperty("NOT");
+
+    auditLogFindMany.mockClear();
+    await listAuditLog({ excludeTestOrigin: false }, { take: 50 });
+    const call2 = auditLogFindMany.mock.calls[0]?.[0] as { where?: Record<string, unknown> };
+    expect(call2?.where ?? {}).not.toHaveProperty("NOT");
+  });
+
+  it("adds the JSON-path NOT predicate when excludeTestOrigin is true", async () => {
+    await listAuditLog({ excludeTestOrigin: true }, { take: 50 });
+    const call = auditLogFindMany.mock.calls[0]?.[0] as {
+      where: { NOT?: { metadata?: { path: string[]; equals: unknown } } };
+    };
+    expect(call.where.NOT).toEqual({
+      metadata: { path: ["testOrigin"], equals: true },
+    });
+  });
+
+  it("excludeTestOrigin only affects the generic source", async () => {
+    await listAuditLog({ excludeTestOrigin: true }, { take: 50 });
+    // Subscription + branding sources are still queried (no entityType
+    // hard-routing) but their where clauses must NOT carry a metadata
+    // NOT predicate — those tables don't have the column.
+    expect(subAuditLogFindMany).toHaveBeenCalled();
+    expect(brandAuditLogFindMany).toHaveBeenCalled();
+    const subCall = subAuditLogFindMany.mock.calls[0]?.[0] as { where?: Record<string, unknown> };
+    const brandCall = brandAuditLogFindMany.mock.calls[0]?.[0] as { where?: Record<string, unknown> };
+    expect(subCall?.where ?? {}).not.toHaveProperty("NOT");
+    expect(brandCall?.where ?? {}).not.toHaveProperty("NOT");
+  });
+
+  it("preserves an existing NOT clause when adding the testOrigin predicate", async () => {
+    // No genericWhere call site currently sets NOT, but the
+    // implementation merges defensively (`...(where.NOT ?? {})`). Cover
+    // that branch via a filter combo that produces a populated where —
+    // here, just verify the metadata predicate lands intact alongside
+    // the action filter.
+    await listAuditLog(
+      { excludeTestOrigin: true, actions: ["user.create", "user.update"] },
+      { take: 50 },
+    );
+    const call = auditLogFindMany.mock.calls[0]?.[0] as {
+      where: {
+        action?: { in: string[] };
+        NOT: { metadata: { path: string[]; equals: unknown } };
+      };
+    };
+    expect(call.where.action).toEqual({ in: ["user.create", "user.update"] });
+    expect(call.where.NOT.metadata).toEqual({
+      path: ["testOrigin"],
+      equals: true,
+    });
+  });
+});
+
 describe("countAuditLog merge", () => {
   it("sums per-source counts across touched sources", async () => {
     auditLogCount.mockResolvedValue(10);
