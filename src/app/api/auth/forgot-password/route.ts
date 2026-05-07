@@ -8,8 +8,12 @@ import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
 import crypto from "crypto";
 
+// Round-11 bug-hunt fix: normalize email casing — see commit A.
 const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .transform((s) => s.trim().toLowerCase()),
 });
 
 /** Look up the public origin for the password-reset link. In production we

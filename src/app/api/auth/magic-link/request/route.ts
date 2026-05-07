@@ -30,8 +30,15 @@ import { findUserByEmail } from "@/lib/auth/user-email";
  *   - Email matches neither: silent success (enumeration-safe).
  */
 
+// Round-11 bug-hunt fix: normalize email casing so the deterministic
+// ciphertext lookup (case-sensitive) matches whatever case the user
+// originally signed up with. Same transform applies at every other
+// auth entry point — see commit A's diff for the full sweep.
 const requestSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .transform((s) => s.trim().toLowerCase()),
 });
 
 function resolvePublicBaseUrl(): string | null {

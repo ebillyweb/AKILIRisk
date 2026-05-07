@@ -10,7 +10,14 @@ import crypto from "crypto";
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, "Token is required"),
-  email: z.string().email("Invalid email address"),
+  // Round-11 bug-hunt fix: normalize email casing — see commit A.
+  // Both findUserByEmail (deterministic ciphertext, case-sensitive)
+  // and the verificationToken `identifier` lookup at line ~127
+  // require byte-equal input to match the request-time write.
+  email: z
+    .string()
+    .email("Invalid email address")
+    .transform((s) => s.trim().toLowerCase()),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")

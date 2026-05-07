@@ -7,8 +7,14 @@ import { z } from "zod";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
 
+// Round-11 bug-hunt fix: normalize email casing so `findUserByEmail`
+// (deterministic ciphertext, case-sensitive) hits the same row no
+// matter what case the user typed. See commit A.
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  email: z
+    .string()
+    .email()
+    .transform((s) => s.trim().toLowerCase()),
   password: z.string().min(1),
 });
 

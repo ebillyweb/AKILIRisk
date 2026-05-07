@@ -38,8 +38,17 @@ import { issueMagicLinkToken } from "@/lib/auth/magic-link";
  * See .env.example for the ENABLE_TEST_AUTH doc block.
  */
 
+// Round-11 bug-hunt fix: normalize email casing to mirror the
+// production /api/auth/magic-link/request schema. Without this the
+// test endpoint can issue a token for "Alice@Example.com" while the
+// production token issued for "alice@example.com" hits a different
+// ciphertext lookup — Playwright smokes that mix cases would diverge
+// from real-user behavior.
 const requestSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .transform((s) => s.trim().toLowerCase()),
 });
 
 function testAuthEnabled(): boolean {

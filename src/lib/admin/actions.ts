@@ -21,12 +21,20 @@ import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
 
+// Round-11 bug-hunt fix: normalize email casing — both schemas
+// trim+lowercase so userEmailWriteData (deterministic ciphertext,
+// case-sensitive) produces a value that matches whatever case the
+// advisor or admin types in later auth flows. See commit A.
 const updateAdvisorSchema = z.object({
   userId: z.string().cuid(),
   name: z.string().min(1, "Name is required").max(200).optional(),
   firstName: z.string().max(100).optional(),
   lastName: z.string().max(100).optional(),
-  email: z.string().email("Invalid email").max(255),
+  email: z
+    .string()
+    .email("Invalid email")
+    .max(255)
+    .transform((s) => s.trim().toLowerCase()),
   firmName: z.string().max(200).optional(),
   phone: z.string().max(50).optional(),
   jobTitle: z.string().max(200).optional(),
@@ -143,7 +151,11 @@ export async function updateAdvisorByAdmin(input: UpdateAdvisorInput) {
 }
 
 const createAdvisorSchema = z.object({
-  email: z.string().email("Invalid email").max(255),
+  email: z
+    .string()
+    .email("Invalid email")
+    .max(255)
+    .transform((s) => s.trim().toLowerCase()),
   password: z.string().min(8, "Password must be at least 8 characters").max(100),
   name: z.string().min(1, "Name is required").max(200).optional(),
   firstName: z.string().max(100).optional(),

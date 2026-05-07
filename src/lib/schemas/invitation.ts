@@ -1,7 +1,16 @@
 import { z } from "zod";
 
 export const createInvitationSchema = z.object({
-  clientEmail: z.string().email("Valid email required"),
+  // Round-11 bug-hunt fix: normalize email casing — magic-link request
+  // route looks up InviteCode.prefillEmail with a case-sensitive Postgres
+  // `=` predicate, and User.email writes go through deterministic
+  // ciphertext (also case-sensitive). Both must agree on normalization
+  // or an invite created as "Bob@Example.com" won't match a magic-link
+  // request submitted as "bob@example.com".
+  clientEmail: z
+    .string()
+    .email("Valid email required")
+    .transform((s) => s.trim().toLowerCase()),
   clientName: z.string().max(100).optional(),
   personalMessage: z
     .string()

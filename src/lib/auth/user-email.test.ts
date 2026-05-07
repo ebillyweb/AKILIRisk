@@ -99,6 +99,34 @@ describe("userEmailCiphertext", () => {
   it("scopes the deterministic IV to the User.email fieldKey", () => {
     expect(USER_EMAIL_FIELD_KEY).toBe("User.email");
   });
+
+  // Round-11 bug-hunt fix (commit A): the deterministic ciphertext is
+  // case-sensitive at the helper layer. Normalization lives in the Zod
+  // schemas that wrap every auth entry point — see
+  // src/app/api/auth/{magic-link/request,forgot-password,reset-password}
+  // and src/lib/{auth.config,admin/actions,schemas/invitation}. This
+  // assertion pins the contract: if a future caller forgets to
+  // normalize, the helper produces a different ciphertext and signin
+  // breaks for that user.
+  it("is case-SENSITIVE at the helper layer (callers MUST normalize upstream)", () => {
+    const lower = userEmailCiphertext("alice@example.com");
+    const mixed = userEmailCiphertext("Alice@Example.com");
+    const upper = userEmailCiphertext("ALICE@EXAMPLE.COM");
+    expect(lower).not.toEqual(mixed);
+    expect(lower).not.toEqual(upper);
+    expect(mixed).not.toEqual(upper);
+  });
+
+  it("post-Zod-normalization (.trim().toLowerCase()) → identical ciphertext", () => {
+    const normalize = (s: string) => s.trim().toLowerCase();
+    const fromMixed = userEmailCiphertext(normalize("Alice@Example.com"));
+    const fromUpper = userEmailCiphertext(normalize("ALICE@EXAMPLE.COM"));
+    const fromPaddedMixed = userEmailCiphertext(normalize("  Alice@Example.com  "));
+    const baseline = userEmailCiphertext("alice@example.com");
+    expect(fromMixed).toEqual(baseline);
+    expect(fromUpper).toEqual(baseline);
+    expect(fromPaddedMixed).toEqual(baseline);
+  });
 });
 
 describe("decryptUserEmail / userEmailForDisplay", () => {
