@@ -7,7 +7,11 @@ import {
   type Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { decryptTranscription, encryptTranscription } from "@/lib/data/response-content";
+import {
+  decryptTranscription,
+  encryptTranscription,
+  safeDecryptTranscription,
+} from "@/lib/data/response-content";
 
 type IntakeResponseInput = {
   audioUrl?: string;
@@ -50,7 +54,12 @@ export async function getIntakeInterview(userId: string, id: string): Promise<(I
     ...interview,
     responses: interview.responses.map((r) => ({
       ...r,
-      transcription: r.transcription ? decryptTranscription(r.transcription) : null,
+      // Round-11 cleanup: tamper-resilient decrypt — corrupted rows
+      // surface as null transcription instead of crashing the page.
+      transcription: safeDecryptTranscription(r.transcription, {
+        rowId: r.id,
+        column: "IntakeResponse.transcription",
+      }),
     })),
   };
 }
@@ -182,12 +191,16 @@ export async function getIntakeResponsesByInterview(interviewId: string): Promis
   // Round-11 commit 2.5b: decrypt transcription at the query layer
   // so callers (advisor review screens, intake interview page) keep
   // reading row.transcription as plaintext.
+  // Round-11 cleanup: tamper-resilient decrypt.
   const rows = await prisma.intakeResponse.findMany({
     where: { interviewId },
     orderBy: { updatedAt: 'asc' },
   });
   return rows.map((r) => ({
     ...r,
-    transcription: r.transcription ? decryptTranscription(r.transcription) : null,
+    transcription: safeDecryptTranscription(r.transcription, {
+      rowId: r.id,
+      column: "IntakeResponse.transcription",
+    }),
   }));
 }

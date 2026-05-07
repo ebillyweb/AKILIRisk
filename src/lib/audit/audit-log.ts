@@ -162,6 +162,11 @@ export const AUDIT_ACTIONS = {
   // ── System actions (P1) ───────────────────────────────────────────────────
   /** Written by /api/cron/audit-log-retention each successful sweep. */
   SYSTEM_RETENTION_SWEEP: "system.retention_sweep",
+  /** Round-11 cleanup (NIT 4): /api/cron/magic-link-prune sweeps used
+   *  + 7-day-expired MagicLinkToken rows. metadata records the
+   *  deleted row count so admins can monitor the table size over
+   *  time. */
+  SYSTEM_MAGIC_LINK_PRUNE: "system.magic_link_prune",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

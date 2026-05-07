@@ -100,12 +100,20 @@ export type ValidateMagicLinkResult =
 
 /**
  * Look up + validate a magic-link token by raw token. Non-mutating: does
- * NOT flip `used`. Caller calls `consumeMagicLinkToken` after sign-in
- * succeeds (so a failed sign-in doesn't waste the token).
+ * NOT flip `used`.
  *
- * The `user_inactive` reason is checked here (not in consume) so the auth
- * provider can fail fast on the validation pass without an extra DB
- * round-trip in the consume call.
+ * Round-11 cleanup (NIT 1): caller consumes IMMEDIATELY after this
+ * function returns success, BEFORE the user-row + role checks in the
+ * auth provider. The token is single-use regardless of subsequent
+ * sign-in outcome — a non-USER role hit on a client magic-link
+ * burns the token, but the user can request a fresh one. This is
+ * intentional: the consume-before-validate pattern guarantees
+ * single-use even if the role/user checks crash, and the cost
+ * (one wasted token + one re-request flow) is acceptable.
+ *
+ * The `user_inactive` reason is checked here (not in consume) so the
+ * auth provider can fail fast on the validation pass without an
+ * extra DB round-trip in the consume call.
  */
 export async function validateMagicLinkToken(
   rawToken: string

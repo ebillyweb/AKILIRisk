@@ -8,12 +8,14 @@
  * duration of a single test.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   encryptTranscription,
   decryptTranscription,
   encryptAnswer,
   decryptAnswer,
+  safeDecryptAnswer,
+  safeDecryptTranscription,
 } from "./response-content";
 
 const TEST_KEY = "test-key-do-not-use-in-prod-0123456789ABCDEF";

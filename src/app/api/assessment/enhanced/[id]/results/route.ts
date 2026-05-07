@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { decryptAnswer } from '@/lib/data/response-content';
+import { safeDecryptAnswer } from '@/lib/data/response-content';
 
 interface AssessmentResult {
   assessment: {
@@ -89,10 +89,12 @@ export async function GET(
 
     // Transform answers to key-value format. Round-11 commit 2.5b:
     // `answer` is now ciphertext; decrypt at the query layer.
+    // Round-11 cleanup: tamper-resilient decrypt.
     const answers = assessment.responses.reduce((acc, response) => {
-      acc[response.questionId] = response.answer
-        ? decryptAnswer(response.answer as unknown as string)
-        : null;
+      acc[response.questionId] = safeDecryptAnswer(
+        response.answer as unknown as string | null,
+        { rowId: response.questionId, column: "AssessmentResponse.answer" }
+      );
       return acc;
     }, {} as Record<string, unknown>);
 

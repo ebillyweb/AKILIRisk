@@ -36,6 +36,11 @@ type SearchParams = {
   /** Round-8: replaced cursor pagination with offset to simplify the
    *  cross-source merge in `listAuditLog`. */
   offset?: string;
+  /** Round-11 cleanup (NIT 3): "Show test traffic" toggle. Absent →
+   *  hide test rows (default-on hiding); "1" → show. Inverted
+   *  checkbox semantics so the bare URL gives the default-on
+   *  behavior without needing a hidden-input trick. */
+  showTest?: string;
 };
 
 function parseDateOrNull(raw: string | undefined): Date | null {
@@ -61,6 +66,9 @@ function toFilter(sp: SearchParams): AuditLogFilter {
     entityId: sp.entityId?.trim() || null,
     from,
     to,
+    // Round-11 cleanup (NIT 3): default-on (hide). User must check
+    // "Show test traffic" + Apply to opt in.
+    excludeTestOrigin: sp.showTest !== "1",
   };
 }
 
@@ -271,13 +279,28 @@ export default async function AuditLogPage({
                 ))}
               </div>
             </div>
-            <div className="sm:col-span-2 lg:col-span-3 flex justify-end gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/audit-log">Reset</Link>
-              </Button>
-              <Button type="submit" size="sm">
-                Apply filters
-              </Button>
+            <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap items-center justify-between gap-2">
+              {/* Round-11 cleanup (NIT 3): inverted-on-checkbox so the
+                  bare URL gives default-on hiding. User checks "Show
+                  test traffic" + Apply → URL acquires ?showTest=1
+                  and stays opted-in across pagination. */}
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  name="showTest"
+                  value="1"
+                  defaultChecked={sp.showTest === "1"}
+                />
+                <span>Show test traffic (Playwright magic-link issuances; hidden by default)</span>
+              </label>
+              <div className="flex gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/admin/audit-log">Reset</Link>
+                </Button>
+                <Button type="submit" size="sm">
+                  Apply filters
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

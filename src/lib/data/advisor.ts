@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { AdvisorDashboardClient } from "@/lib/advisor/types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
-import { decryptTranscription } from "@/lib/data/response-content";
+import { safeDecryptTranscription } from "@/lib/data/response-content";
 
 export async function getAdvisorProfile(userId: string) {
   // Round-11 commit 2.4b: ciphertext + decrypt at exit so callers
@@ -153,11 +153,14 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
       // advisor review screen (AdvisorIntakeView.tsx ~line 256)
       // displayed the iv:tag:ct hex string instead of the actual
       // transcription text.
+      // Round-11 cleanup: tamper-resilient decrypt — corrupted rows
+      // surface as null instead of crashing the advisor review page.
       responses: interview.responses.map((r) => ({
         ...r,
-        transcription: r.transcription
-          ? decryptTranscription(r.transcription)
-          : null,
+        transcription: safeDecryptTranscription(r.transcription, {
+          rowId: r.id,
+          column: "IntakeResponse.transcription",
+        }),
       })),
     },
     approval,

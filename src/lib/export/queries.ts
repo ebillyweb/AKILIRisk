@@ -17,7 +17,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { userEmailForDisplay } from "@/lib/auth/user-email";
-import { decryptAnswer, decryptTranscription } from "@/lib/data/response-content";
+import { safeDecryptAnswer, safeDecryptTranscription } from "@/lib/data/response-content";
 import type { TenantBundle } from "./types";
 import {
   fetchTenantAuditLog,
@@ -135,14 +135,22 @@ export async function fetchTenantBundle(
   // RAW PII. Both response-content columns are encrypted at rest now;
   // decrypt at the query-layer mapper so the downstream CSV serializer
   // (which references `transcription` and `answer` column names) sees
-  // plaintext values.
+  // plaintext values. Round-11 cleanup: tamper-resilient — corrupted
+  // rows ship as null (CSV cell empty) rather than aborting the
+  // entire export bundle.
   const intakeResponses = intakeResponsesRaw.map((r) => ({
     ...r,
-    transcription: r.transcription ? decryptTranscription(r.transcription) : null,
+    transcription: safeDecryptTranscription(r.transcription, {
+      rowId: r.id,
+      column: "IntakeResponse.transcription",
+    }),
   }));
   const assessmentResponses = assessmentResponsesRaw.map((r) => ({
     ...r,
-    answer: r.answer ? decryptAnswer(r.answer as unknown as string) : null,
+    answer: safeDecryptAnswer(r.answer as unknown as string | null, {
+      rowId: r.id,
+      column: "AssessmentResponse.answer",
+    }),
   }));
 
   // Audit log: heap-merge across the three audit tables, filtered to this

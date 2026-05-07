@@ -84,25 +84,56 @@ async function nextDisplayLabelForUser(userId: string): Promise<string> {
   return `Member ${n}`;
 }
 
+/**
+ * Round-11 cleanup (NIT 2): retry on P2002 unique-violation.
+ *
+ * Two concurrent calls for the same userId can both compute "Member C"
+ * from the read at line 67. With the new
+ * `@@unique([userId, displayLabel])` constraint (migration
+ * 20260520120000), the second writer's create() throws Prisma's
+ * P2002. Catch + recompute + retry, up to MAX_LABEL_RETRIES attempts.
+ * Each retry re-reads the existing labels so the second call picks up
+ * whatever the first writer just persisted.
+ *
+ * MAX_LABEL_RETRIES is bounded by the alphabet (26 letters + numeric
+ * fallback in nextDisplayLabelForUser); 27 retries cover every
+ * realistic concurrent-create burst. After that we propagate.
+ */
+const MAX_LABEL_RETRIES = 27;
+
 export async function createHouseholdMemberRecord(
   userId: string,
   data: HouseholdMemberInput,
 ): Promise<HouseholdMember> {
-  const displayLabel = await nextDisplayLabelForUser(userId);
-  return prisma.householdMember.create({
-    // Cast through `as never` until prisma generate picks up the new
-    // displayLabel/sex/birthYear columns + drops the old ones. Runtime
-    // accepts the string literals for enum columns directly.
-    data: {
-      userId,
-      displayLabel,
-      birthYear: data.birthYear ?? null,
-      sex: data.sex ?? null,
-      relationship: data.relationship,
-      governanceRoles: data.governanceRoles ?? [],
-      isResident: data.isResident ?? true,
-    } as never,
-  });
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < MAX_LABEL_RETRIES; attempt++) {
+    const displayLabel = await nextDisplayLabelForUser(userId);
+    try {
+      return await prisma.householdMember.create({
+        // Cast through `as never` until prisma generate picks up the new
+        // displayLabel/sex/birthYear columns + drops the old ones. Runtime
+        // accepts the string literals for enum columns directly.
+        data: {
+          userId,
+          displayLabel,
+          birthYear: data.birthYear ?? null,
+          sex: data.sex ?? null,
+          relationship: data.relationship,
+          governanceRoles: data.governanceRoles ?? [],
+          isResident: data.isResident ?? true,
+        } as never,
+      });
+    } catch (err) {
+      lastErr = err;
+      // Prisma P2002 = unique constraint failed. Cast loosely because
+      // the locally-generated client may not surface PrismaClientKnownRequestError
+      // until `prisma generate` runs.
+      const code = (err as { code?: string })?.code;
+      if (code !== "P2002") throw err;
+      // Loop and recompute the next label.
+    }
+  }
+  throw lastErr;
 }
 
 export async function updateHouseholdMemberRecord(

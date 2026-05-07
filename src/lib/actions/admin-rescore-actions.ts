@@ -37,7 +37,7 @@ import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
 import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/questions";
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
-import { decryptAnswer } from "@/lib/data/response-content";
+import { safeDecryptAnswer } from "@/lib/data/response-content";
 import type { Question, Pillar } from "@/lib/assessment/types";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
 
@@ -183,11 +183,14 @@ export async function rescoreAssessment(
       where: { assessmentId, skipped: false },
       select: { questionId: true, answer: true, pillar: true },
     });
+    // Round-11 cleanup: tamper-resilient decrypt — a single corrupted
+    // row returns null instead of crashing the whole rescore.
     const allAnswers: Record<string, unknown> = {};
     for (const r of responses) {
-      allAnswers[r.questionId] = r.answer
-        ? decryptAnswer(r.answer as unknown as string)
-        : null;
+      allAnswers[r.questionId] = safeDecryptAnswer(
+        r.answer as unknown as string | null,
+        { rowId: r.questionId, column: "AssessmentResponse.answer" }
+      );
     }
 
     // 3. Threshold + customization context.

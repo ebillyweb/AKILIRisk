@@ -1,6 +1,13 @@
 /**
  * Round-11 commit 2.3 (BRD §5.1.AUTH / phase A) — User.email ciphertext backfill.
  *
+ * **OBSOLETE after Round-11 commit 2.4b** — that migration
+ * (`20260515120000_user_email_ciphertext_phase_b_b`) drops the
+ * `User.email` column. The script now precheck-fails with a clear
+ * error in that state (see `assertObsolescenceGuard` below). Kept
+ * for historical reference and for any DB still in the phase-A
+ * intermediate state.
+ *
  * Reads every User row whose `emailCiphertext` is still null (Phase A DB),
  * computes the deterministic AES-256-GCM ciphertext via `userEmailCiphertext`,
  * and writes it back. Idempotent — safe to re-run after partial failure.
@@ -81,6 +88,38 @@ async function assertUserEmailCiphertextColumn(): Promise<void> {
   }
 }
 
+/**
+ * Round-11 cleanup (NIT 5): this script is a one-shot phase-A→phase-B
+ * transition tool. Commit 2.4b (migration 20260515120000) dropped the
+ * `User.email` column entirely, so the SELECT below is no longer
+ * runnable against a current schema. Fail fast with a clear error
+ * before issuing the doomed query.
+ *
+ * If a developer needs to bring up a fresh staging DB, the schema's
+ * post-2.4b state means new users are created via the application
+ * with `emailCiphertext` populated directly — no backfill needed.
+ */
+async function assertObsolescenceGuard(): Promise<void> {
+  const [{ n }] = await prisma.$queryRaw<[{ n: bigint }]>(
+    Prisma.sql`
+      SELECT COUNT(*)::bigint AS n
+      FROM pg_attribute a
+      JOIN pg_class c ON c.oid = a.attrelid
+      JOIN pg_namespace ns ON ns.oid = c.relnamespace
+      WHERE ns.nspname = 'public'
+        AND c.relname = 'User'
+        AND a.attname = 'email'
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    `
+  );
+  if (Number(n) === 0) {
+    throw new Error(
+      '"User"."email" column does not exist — this script is OBSOLETE after Round-11 commit 2.4b (migration 20260515120000_user_email_ciphertext_phase_b_b dropped the column). New users created post-2.4b have emailCiphertext populated directly via userEmailWriteData; no backfill is required. Do NOT re-run this script.'
+    );
+  }
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   console.log(
@@ -88,6 +127,7 @@ async function main() {
   );
 
   await assertUserEmailCiphertextColumn();
+  await assertObsolescenceGuard();
 
   const [countRow] = await prisma.$queryRaw<[{ c: bigint }]>(
     Prisma.sql`

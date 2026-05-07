@@ -39,6 +39,15 @@ export interface AuditLogFilter {
   entityId?: string | null;
   from?: Date | null;
   to?: Date | null;
+  /**
+   * Round-11 cleanup (NIT 3): exclude rows where
+   * `metadata->>'testOrigin' = 'true'`. Affects the generic
+   * AuditLog source only — neither subscription nor branding tables
+   * write `testOrigin` metadata. Default `false` (show everything),
+   * but the admin UI defaults to `true` so smoke-test traffic is
+   * hidden from compliance reviews unless explicitly toggled.
+   */
+  excludeTestOrigin?: boolean;
 }
 
 export interface AuditLogPagination {
@@ -118,6 +127,16 @@ function genericWhere(filter: AuditLogFilter): Prisma.AuditLogWhereInput {
     where.createdAt = {};
     if (filter.from) where.createdAt.gte = filter.from;
     if (filter.to) where.createdAt.lte = filter.to;
+  }
+  // Round-11 cleanup (NIT 3): exclude rows whose metadata.testOrigin
+  // === true. Uses Prisma's JSON path filter; Postgres evaluates as
+  // `metadata->>'testOrigin' != 'true' OR metadata IS NULL` so audit
+  // rows without the flag continue to show.
+  if (filter.excludeTestOrigin) {
+    where.NOT = {
+      ...(where.NOT ?? {}),
+      metadata: { path: ["testOrigin"], equals: true },
+    };
   }
   return where;
 }

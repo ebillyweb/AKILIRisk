@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { generateIdentityRecommendations, IdentityRecommendation } from "@/lib/identity-risk/recommendations";
 import { ScoreResult, CategoryScore, MissingControl } from "@/lib/assessment/types";
-import { decryptAnswer } from "@/lib/data/response-content";
+import { safeDecryptAnswer } from "@/lib/data/response-content";
 
 /**
  * Identity Risk Recommendations API
@@ -106,11 +106,13 @@ export async function POST(request: NextRequest) {
 
     // Convert responses to answers record. Round-11 commit 2.5b:
     // `answer` is now ciphertext; decrypt at the query layer.
+    // Round-11 cleanup: tamper-resilient decrypt.
     const answers: Record<string, unknown> = {};
     responses.forEach((response) => {
-      answers[response.questionId] = response.answer
-        ? decryptAnswer(response.answer as unknown as string)
-        : null;
+      answers[response.questionId] = safeDecryptAnswer(
+        response.answer as unknown as string | null,
+        { rowId: response.questionId, column: "AssessmentResponse.answer" }
+      );
     });
 
     // Build ScoreResult from PillarScore data

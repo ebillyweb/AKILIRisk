@@ -9,7 +9,7 @@ import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
 import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/questions";
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
-import { decryptAnswer } from "@/lib/data/response-content";
+import { safeDecryptAnswer } from "@/lib/data/response-content";
 import { Question, Pillar } from "@/lib/assessment/types";
 import {
   getCustomizationConfig,
@@ -208,12 +208,15 @@ export async function POST(
 
     // Convert responses to answers Record. Round-11 commit 2.5b:
     // `answer` is now ciphertext; decrypt at the query layer so the
-    // scoring engine sees plaintext.
+    // scoring engine sees plaintext. Round-11 cleanup: tamper-
+    // resilient — a corrupted row returns null + warns instead of
+    // crashing the score request.
     const answers: Record<string, unknown> = {};
     responses.forEach((response) => {
-      answers[response.questionId] = response.answer
-        ? decryptAnswer(response.answer as unknown as string)
-        : null;
+      answers[response.questionId] = safeDecryptAnswer(
+        response.answer as unknown as string | null,
+        { rowId: response.questionId, column: "AssessmentResponse.answer" }
+      );
     });
 
     // Check for customization from linked approval (governance pillar only)

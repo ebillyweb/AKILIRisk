@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { decryptAnswer, encryptAnswer } from "@/lib/data/response-content";
+import { encryptAnswer, safeDecryptAnswer } from "@/lib/data/response-content";
 
 /**
  * Assessment Responses API Routes
@@ -69,9 +69,14 @@ export async function GET(
 
     // Round-11 commit 2.5b: decrypt the answer column at the API
     // layer so the assessment client form sees plaintext JSON values.
+    // Round-11 cleanup: tamper-resilient decrypt — corrupted rows
+    // surface as { answer: null } instead of crashing the request.
     const responses = rows.map((r) => ({
       ...r,
-      answer: r.answer ? decryptAnswer(r.answer as unknown as string) : null,
+      answer: safeDecryptAnswer(r.answer as unknown as string | null, {
+        rowId: r.id,
+        column: "AssessmentResponse.answer",
+      }),
     }));
 
     return NextResponse.json(responses);

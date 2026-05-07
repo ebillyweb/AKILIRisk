@@ -53,3 +53,48 @@ export function encryptAnswer(answer: unknown): string {
 export function decryptAnswer<T = unknown>(ciphertext: string): T {
   return JSON.parse(decrypt(ciphertext)) as T;
 }
+
+/**
+ * Round-11 cleanup: tamper-resilient decrypt wrappers.
+ *
+ * Wrap decrypt calls so a single corrupted ciphertext (manual DB
+ * tampering, partial write, key mismatch) doesn't crash the whole
+ * scoring run / display request. Returns null + emits a structured
+ * console.warn with the row id and column. The warning intentionally
+ * does NOT log the ciphertext or the raw error message — both could
+ * carry partial key material in some failure modes (AES-GCM auth-tag
+ * errors typically don't, but we don't want to depend on that).
+ *
+ * Use these at every read site where a decrypt failure would cascade
+ * into a user-visible 500. Scoring loops + display-layer mappers are
+ * the canonical consumers.
+ */
+export function safeDecryptAnswer<T = unknown>(
+  ciphertext: string | null | undefined,
+  context: { rowId: string; column: string }
+): T | null {
+  if (!ciphertext) return null;
+  try {
+    return decryptAnswer<T>(ciphertext);
+  } catch {
+    console.warn(
+      `[response-content] decrypt failed — rowId=${context.rowId} column=${context.column}`
+    );
+    return null;
+  }
+}
+
+export function safeDecryptTranscription(
+  ciphertext: string | null | undefined,
+  context: { rowId: string; column: string }
+): string | null {
+  if (!ciphertext) return null;
+  try {
+    return decryptTranscription(ciphertext);
+  } catch {
+    console.warn(
+      `[response-content] decrypt failed — rowId=${context.rowId} column=${context.column}`
+    );
+    return null;
+  }
+}
