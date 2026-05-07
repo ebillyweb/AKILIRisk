@@ -29,19 +29,51 @@ import crypto from "crypto";
 // `decrypt` upgrade that auto-detects mode is feasible without
 // changing storage shape.
 
+// ── scrypt key-derivation memoization ──────────────────────────────────
+//
+// scrypt with default cost is ~50ms per call. Pre-perf-fix the encrypt /
+// decrypt / encryptDeterministic / decryptDeterministic helpers each
+// re-derived the key on every invocation, so a 100-row scoring batch
+// burned ~5 seconds of CPU on KDF alone — orders of magnitude more
+// than the AES-GCM work.
+//
+// The derived key is a pure function of the ENCRYPTION_KEY env value
+// (and the fixed salt), so we cache it per-env-value in a Map. Production
+// reads the same ENCRYPTION_KEY for the lifetime of the process →
+// O(1) lookups after the first call. Tests that mutate ENCRYPTION_KEY
+// in `beforeEach` still derive correctly: each distinct key string is
+// cached separately, so a key change forces a fresh scryptSync.
+//
+// Memory cost: 32 bytes per unique key string. Bounded by the number of
+// distinct keys the process ever sees — production: 1, tests: a handful.
+const derivedKeyCache = new Map<string, Buffer>();
+
+/** Internal: derive (and cache) the 32-byte AES key from
+ *  ENCRYPTION_KEY. Pulled out so encrypt / decrypt / encryptDeterministic
+ *  / decryptDeterministic share one cached derivation. The "salt" is
+ *  intentionally fixed — KDF salt collision isn't a concern because
+ *  ENCRYPTION_KEY is the entropy source and scrypt is being used to
+ *  stretch a configured passphrase, not to hash distinct inputs. */
+function deriveAesKey(): Buffer {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new Error("ENCRYPTION_KEY environment variable is not set");
+  }
+  let cached = derivedKeyCache.get(encryptionKey);
+  if (!cached) {
+    cached = crypto.scryptSync(encryptionKey, "salt", 32);
+    derivedKeyCache.set(encryptionKey, cached);
+  }
+  return cached;
+}
+
 /**
  * AES-256-GCM encryption for sensitive data (e.g., MFA secrets)
  * Returns format: iv:authTag:ciphertext (all hex encoded)
  */
 export function encrypt(plaintext: string): string {
-  const encryptionKey = process.env.ENCRYPTION_KEY;
-
-  if (!encryptionKey) {
-    throw new Error("ENCRYPTION_KEY environment variable is not set");
-  }
-
-  // Derive 32-byte key from ENCRYPTION_KEY using scrypt
-  const key = crypto.scryptSync(encryptionKey, "salt", 32);
+  // Memoized scrypt — see deriveAesKey() above.
+  const key = deriveAesKey();
 
   // Generate random IV (16 bytes for AES)
   const iv = crypto.randomBytes(16);
@@ -65,14 +97,8 @@ export function encrypt(plaintext: string): string {
  * Expects format: iv:authTag:ciphertext (all hex encoded)
  */
 export function decrypt(encrypted: string): string {
-  const encryptionKey = process.env.ENCRYPTION_KEY;
-
-  if (!encryptionKey) {
-    throw new Error("ENCRYPTION_KEY environment variable is not set");
-  }
-
-  // Derive same 32-byte key
-  const key = crypto.scryptSync(encryptionKey, "salt", 32);
+  // Memoized scrypt — see deriveAesKey() above.
+  const key = deriveAesKey();
 
   // Split the encrypted string
   const parts = encrypted.split(":");
@@ -96,20 +122,7 @@ export function decrypt(encrypted: string): string {
 }
 
 // ── Round-11 commit 5: deterministic mode + key-version helpers ─────────
-
-/** Internal: derive the same 32-byte AES key the existing encrypt/decrypt
- *  pair uses. Pulled out so the deterministic helpers don't duplicate the
- *  scrypt call. The "salt" argument is intentionally fixed — KDF salt
- *  collision isn't a concern here because the input ENCRYPTION_KEY is
- *  itself the entropy source, and scrypt is being used to stretch a
- *  configured passphrase to a 32-byte key, not to hash distinct inputs. */
-function deriveAesKey(): Buffer {
-  const encryptionKey = process.env.ENCRYPTION_KEY;
-  if (!encryptionKey) {
-    throw new Error("ENCRYPTION_KEY environment variable is not set");
-  }
-  return crypto.scryptSync(encryptionKey, "salt", 32);
-}
+// (deriveAesKey lives above — both modes share the same memoization.)
 
 /**
  * Deterministic AES-256-GCM encryption.

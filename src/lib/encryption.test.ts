@@ -46,6 +46,32 @@ describe("encrypt / decrypt (existing behavior — pinned)", () => {
   });
 });
 
+describe("scrypt key-derivation memoization (perf)", () => {
+  // Round-11 commit 2.5 preface: scrypt at default cost is ~50ms per
+  // call. Pre-fix encrypt + decrypt each re-derived the key, so a
+  // 100-row scoring batch burned ~5s on KDF alone. After the fix the
+  // derivation is amortized across the process lifetime — 2000
+  // round-trips should take well under a second on any modern machine.
+  it("amortizes scrypt across 1000 encrypt + 1000 decrypt calls", () => {
+    const plain = "lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+    const cipher = encrypt(plain); // warm the cache via the first call
+
+    const t0 = process.hrtime.bigint();
+    for (let i = 0; i < 1000; i++) {
+      encrypt(plain);
+    }
+    for (let i = 0; i < 1000; i++) {
+      decrypt(cipher);
+    }
+    const elapsedMs = Number(process.hrtime.bigint() - t0) / 1e6;
+
+    // Generous bound — actual on a quiet machine is ~10-50ms total.
+    // Pre-fix this loop took 90+ seconds (1000 × ~50ms scrypt × 2),
+    // so any non-memoized regression would bust this by 1000x.
+    expect(elapsedMs).toBeLessThan(1000);
+  });
+});
+
 describe("encryptDeterministic / decryptDeterministic", () => {
   it("round-trips a plaintext value", () => {
     const plain = "alice@example.com";
