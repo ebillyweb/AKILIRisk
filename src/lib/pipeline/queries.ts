@@ -597,6 +597,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     });
 
     assessmentDetails = {
+      id: latestAssessment.id,
       status: latestAssessment.status,
       score: score.score,
       riskLevel: score.riskLevel,
@@ -609,6 +610,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     };
   } else if (latestAssessment) {
     assessmentDetails = {
+      id: latestAssessment.id,
       status: latestAssessment.status,
       score: null,
       riskLevel: null,

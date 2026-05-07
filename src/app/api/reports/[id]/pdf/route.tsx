@@ -5,6 +5,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { AssessmentReport } from "@/lib/pdf/components/AssessmentReport";
 import { getAdvisorBrandingForPDF, createBrandedPDFMetadata } from "@/lib/pdf/branding-integration";
 import { RELATIONSHIP_LABELS } from "@/lib/schemas/profile";
+import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 
 /**
  * PDF Report Generation API Route
@@ -49,20 +50,18 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const requestedPillar = searchParams.get("pillar");
 
-    // 2. Ownership check
+    // 2. Authorization. §4.5 commit 2 broadens this from "owner only" to:
+    //    - the client who owns the Assessment,
+    //    - any advisor with an ACTIVE ClientAdvisorAssignment to that client,
+    //    - any admin.
+    //   Anyone else → 403. The auth check is performed BEFORE any heavy
+    //   data load (response-count query, pillar-score query) so a forbidden
+    //   caller burns the smallest possible amount of work.
     const assessment = await prisma.assessment.findUnique({
       where: { id },
       select: {
         userId: true,
         startedAt: true,
-      },
-    });
-
-    // Load response count separately
-    const responseCount = await prisma.assessmentResponse.count({
-      where: {
-        assessmentId: id,
-        skipped: false,
       },
     });
 
@@ -73,12 +72,48 @@ export async function GET(
       );
     }
 
-    if (assessment.userId !== session.user.id) {
+    const sessionUserId = session.user.id;
+    const sessionRole = session.user.role;
+    const isOwner = assessment.userId === sessionUserId;
+    const isAdmin = sessionRole === "ADMIN";
+
+    let isAssignedAdvisor = false;
+    if (!isOwner && !isAdmin && sessionRole === "ADVISOR") {
+      // Resolve the advisor's profile id and check for an ACTIVE assignment
+      // to the assessment's owner. Two queries are required because
+      // ClientAdvisorAssignment.advisorId references AdvisorProfile.id, not
+      // User.id directly. Both are indexed; the round-trip is cheap.
+      const advisorProfile = await prisma.advisorProfile.findUnique({
+        where: { userId: sessionUserId },
+        select: { id: true },
+      });
+      if (advisorProfile) {
+        const assignment = await prisma.clientAdvisorAssignment.findFirst({
+          where: {
+            advisorId: advisorProfile.id,
+            clientId: assessment.userId,
+            status: "ACTIVE",
+          },
+          select: { id: true },
+        });
+        isAssignedAdvisor = assignment != null;
+      }
+    }
+
+    if (!isOwner && !isAdmin && !isAssignedAdvisor) {
       return NextResponse.json(
         { error: "Forbidden" },
         { status: 403 }
       );
     }
+
+    // Load response count after the auth gate.
+    const responseCount = await prisma.assessmentResponse.count({
+      where: {
+        assessmentId: id,
+        skipped: false,
+      },
+    });
 
     // 3. Score check (allow explicit pillar, otherwise use most recently calculated)
     const pillarScore = requestedPillar
@@ -106,9 +141,12 @@ export async function GET(
       );
     }
 
-    // 4. Load household members for household profile
+    // 4. Load household members for household profile.
+    // §4.5 commit 2: keyed on the assessment's owner, not the session caller —
+    // an advisor or admin downloading on behalf of a client must see that
+    // client's household, not their own (advisors don't have households).
     const householdMembers = await prisma.householdMember.findMany({
-      where: { userId: session.user.id },
+      where: { userId: assessment.userId },
       select: {
         displayLabel: true,
         birthYear: true,
@@ -119,10 +157,12 @@ export async function GET(
       },
     });
 
-    // 5. Look up enhanced advisor branding for this client
+    // 5. Look up enhanced advisor branding for this client. Same fix as #4 —
+    // ACTIVE assignment lookup is keyed on the assessment owner (the client),
+    // not on session.user.id.
     const clientAdvisorAssignment = await prisma.clientAdvisorAssignment.findFirst({
       where: {
-        clientId: session.user.id,
+        clientId: assessment.userId,
         status: 'ACTIVE',
       },
       select: {
@@ -287,6 +327,30 @@ export async function GET(
         documentMetadata={pdfMetadata}
       />
     );
+
+    // §4.5 commit 2: audit every successful PDF render. Fire-and-forget —
+    // writeAudit catches its own errors so a slow audit insert can't block
+    // the byte stream. metadata distinguishes the actor's role + records
+    // the client-user-id targeted, mirroring the data_access.* convention
+    // (round-7 P5). The pillar scope is captured so a future per-pillar
+    // download history can be reconstructed without table changes.
+    void writeAudit({
+      actor: {
+        userId: sessionUserId,
+        role: sessionRole ?? null,
+        email: session.user.email ?? null,
+      },
+      action: AUDIT_ACTIONS.REPORT_DOWNLOAD,
+      entityType: "Assessment",
+      entityId: id,
+      metadata: {
+        actorRole: sessionRole ?? "USER",
+        clientUserId: assessment.userId,
+        pillar: pillarScore.pillar,
+        pdfBytes: pdfBuffer.byteLength,
+      },
+      request,
+    });
 
     // 10. Return PDF with appropriate headers
     const brandName = advisorBranding?.brandName || advisorBranding?.advisorFirmName || legacyAdvisorBranding?.firmName || 'akili-risk';

@@ -82,6 +82,11 @@ export type ClientDetail = {
     intakeWaivedAt: Date | null;
   };
   assessmentDetails: {
+    /** §4.5 commit 2: needed by the per-client view to build a
+     *  `/api/reports/[id]/pdf` URL for the advisor's "Download client
+     *  report" button. Populated from `latestAssessment.id` in the
+     *  pipeline query. */
+    id: string;
     status: string;
     score: number | null;
     riskLevel: string | null;

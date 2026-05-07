@@ -1,6 +1,7 @@
 import { getClientsForAdmin } from "@/lib/admin/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 
 export default async function AdminClientsPage() {
   const clients = await getClientsForAdmin();
@@ -29,11 +30,24 @@ export default async function AdminClientsPage() {
                           ` · ${activeAssignments.map((a) => a.advisor.user.email).join(", ")}`}
                       </p>
                     </div>
-                    {activeAssignments.length > 0 ? (
-                      <Badge variant="secondary">{activeAssignments.length} advisor(s)</Badge>
-                    ) : (
-                      <Badge variant="outline">Unassigned</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {/* §4.5 commit 2: admin role is allowlisted for PDF
+                          download; rendered only when the client has a
+                          scored assessment to render. */}
+                      {c.latestScoredAssessmentId && (
+                        <DownloadReportButton
+                          assessmentId={c.latestScoredAssessmentId}
+                          clientLabel={c.name || c.email}
+                          label="Download report"
+                          variant="ghost"
+                        />
+                      )}
+                      {activeAssignments.length > 0 ? (
+                        <Badge variant="secondary">{activeAssignments.length} advisor(s)</Badge>
+                      ) : (
+                        <Badge variant="outline">Unassigned</Badge>
+                      )}
+                    </div>
                   </li>
                 );
               })}

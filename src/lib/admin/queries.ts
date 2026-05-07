@@ -131,23 +131,46 @@ export async function getClientsForAdmin() {
           },
         },
       },
+      // §4.5 commit 2: surface the most recent assessment id (with at
+      // least one PillarScore) so the admin clients page can render a
+      // "Download report" button per row. We pull the most-recent
+      // assessment regardless of scoring state, then filter to those that
+      // have scores in the post-load mapper — keeps the query a single
+      // round-trip rather than per-row PillarScore lookups.
+      assessments: {
+        select: {
+          id: true,
+          completedAt: true,
+          scores: { select: { id: true }, take: 1 },
+        },
+        orderBy: { startedAt: "desc" },
+        take: 1,
+      },
     },
     orderBy: { createdAt: "asc" },
   });
-  const users = usersRaw.map((u) => ({
-    ...u,
-    email: decryptUserEmail(u.emailCiphertext),
-    clientAssignments: u.clientAssignments.map((a) => ({
-      ...a,
-      advisor: {
-        ...a.advisor,
-        user: {
-          ...a.advisor.user,
-          email: decryptUserEmail(a.advisor.user.emailCiphertext),
+  const users = usersRaw.map((u) => {
+    const latestAssessment = u.assessments[0];
+    const latestScoredAssessmentId =
+      latestAssessment && latestAssessment.scores.length > 0
+        ? latestAssessment.id
+        : null;
+    return {
+      ...u,
+      email: decryptUserEmail(u.emailCiphertext),
+      latestScoredAssessmentId,
+      clientAssignments: u.clientAssignments.map((a) => ({
+        ...a,
+        advisor: {
+          ...a.advisor,
+          user: {
+            ...a.advisor.user,
+            email: decryptUserEmail(a.advisor.user.emailCiphertext),
+          },
         },
-      },
-    })),
-  }));
+      })),
+    };
+  });
 
   // Fire-and-forget audit. writeAudit catches its own errors so a slow Prisma
   // write can't break the page render. Metadata records the row count only —

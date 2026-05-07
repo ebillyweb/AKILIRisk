@@ -19,6 +19,7 @@ import { getStageLabel } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
+import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
@@ -344,6 +345,19 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     Client Analytics
                   </Link>
                 </Button>
+              )}
+
+              {/* §4.5 commit 2: server-side auth in the PDF route gates this
+                  to advisors with an ACTIVE ClientAdvisorAssignment to the
+                  client. Rendered here only when the assessment has at
+                  least one calculated PillarScore (proxied by `score`),
+                  since downloading a not-yet-scored assessment 404s. */}
+              {assessmentDetails?.id && assessmentDetails.score !== null && (
+                <DownloadReportButton
+                  assessmentId={assessmentDetails.id}
+                  clientLabel={client.name || client.email}
+                  fullWidth
+                />
               )}
 
               {intakeDetails && intakeFinished && (

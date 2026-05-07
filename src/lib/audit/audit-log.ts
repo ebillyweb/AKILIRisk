@@ -159,6 +159,15 @@ export const AUDIT_ACTIONS = {
   DATA_ACCESS_AUDIT_LOG_VIEW: "data_access.audit_log_view",
   DATA_ACCESS_EXPORT: "data_access.export",
 
+  // ── §4.5 commit 2: Reporting Engine ───────────────────────────────────────
+  /** Written by GET /api/reports/[id]/pdf on every successful render.
+   *  entityId is the Assessment id; metadata.clientUserId is the assessment
+   *  owner; metadata.actorRole distinguishes USER (client self-download)
+   *  from ADVISOR (assigned-advisor download) from ADMIN. metadata.pillar
+   *  records the requested pillar (defaults to the most recently calculated
+   *  PillarScore when no `?pillar=` query param is supplied). */
+  REPORT_DOWNLOAD: "report.download",
+
   // ── System actions (P1) ───────────────────────────────────────────────────
   /** Written by /api/cron/audit-log-retention each successful sweep. */
   SYSTEM_RETENTION_SWEEP: "system.retention_sweep",
