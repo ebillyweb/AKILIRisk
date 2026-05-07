@@ -9,6 +9,7 @@ import {
   SingleChoiceCards,
   YesNoCards,
   MaturityScale,
+  LikertScale,
   NumericInput,
   ShortTextInput,
 } from "./AnswerOptions";
@@ -75,6 +76,14 @@ export function QuestionCard({
             (val) => val !== null && val !== undefined,
             { message: "Please select an answer to continue" }
           ),
+        });
+      case 'likert':
+        return z.object({
+          answer: z
+            .number({ message: "Please select an answer to continue" })
+            .int({ message: "Please select one of the five options" })
+            .min(1, { message: "Please select one of the five options" })
+            .max(5, { message: "Please select one of the five options" }),
         });
       case 'numeric':
         return z.object({
@@ -147,6 +156,14 @@ export function QuestionCard({
         return (
           <MaturityScale
             options={question.options || []}
+            {...base}
+            value={currentAnswer != null ? Number(currentAnswer) : null}
+          />
+        );
+
+      case 'likert':
+        return (
+          <LikertScale
             {...base}
             value={currentAnswer != null ? Number(currentAnswer) : null}
           />

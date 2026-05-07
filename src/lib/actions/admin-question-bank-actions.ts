@@ -17,6 +17,7 @@ const QUESTION_TYPES = [
   "single-choice",
   "yes-no",
   "maturity-scale",
+  "likert",
   "numeric",
   "short-text",
 ] as const satisfies readonly QuestionType[];
@@ -67,7 +68,10 @@ function parseOptionsJson(
   raw: string | null | undefined,
   type: QuestionType
 ): Prisma.InputJsonValue | undefined {
-  if (type === "numeric" || type === "short-text") {
+  // `likert` shares numeric/short-text's "options optional" stance — the
+  // five anchors are baked into the LikertScale renderer; admins can leave
+  // the JSON blank and rely on the default copy.
+  if (type === "numeric" || type === "short-text" || type === "likert") {
     if (raw === null || raw === undefined || String(raw).trim() === "") {
       return undefined;
     }
@@ -116,6 +120,11 @@ function defaultScoreMapForType(type: QuestionType): Prisma.InputJsonValue {
       return { yes: 3, no: 0 };
     case "maturity-scale":
       return { 0: 0, 1: 1, 2: 2, 3: 3 };
+    case "likert":
+      // 5-point Likert default: 1→1 … 5→5. Negatively-keyed items can be
+      // re-authored with the inverted map (5→1, 1→5) without touching
+      // the renderer.
+      return { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
     default:
       return {};
   }

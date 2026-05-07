@@ -167,6 +167,107 @@ export function MaturityScale({ options, value, onChange }: MaturityScaleProps) 
   );
 }
 
+/**
+ * Likert Scale (5-point)
+ *
+ * Horizontal radio group for "Strongly disagree → Strongly agree" attitudinal
+ * questions per BRD §4.1. Distinct from `maturity-scale` (vertical, 0–3,
+ * descriptive labels) and `single-choice` (vertical card list with arbitrary
+ * options). The five pips render with end-anchor labels so the meaning is
+ * unambiguous regardless of locale or sentence framing.
+ *
+ * Stable answer values: 1, 2, 3, 4, 5. Scoring path
+ * (`normalizeAnswerToMaturity` in scoring.ts) divides by the question's
+ * scoreMap max — for the default `{1:1,2:2,3:3,4:4,5:5}` map the response
+ * collapses onto the 0–3 maturity scale (5→3, 1→0, 3→1.5). Negatively-keyed
+ * items can ship `{1:5,2:4,3:3,4:2,5:1}` with no rendering change.
+ */
+interface LikertScaleProps {
+  value: number | null;
+  onChange: (value: number) => void;
+  /** Optional override for the scale anchors. Defaults to disagree/agree. */
+  lowAnchor?: string;
+  midAnchor?: string;
+  highAnchor?: string;
+}
+
+export function LikertScale({
+  value,
+  onChange,
+  lowAnchor = "Strongly disagree",
+  midAnchor = "Neutral",
+  highAnchor = "Strongly agree",
+}: LikertScaleProps) {
+  const points: Array<{ value: number; label: string }> = [
+    { value: 1, label: lowAnchor },
+    { value: 2, label: "Disagree" },
+    { value: 3, label: midAnchor },
+    { value: 4, label: "Agree" },
+    { value: 5, label: highAnchor },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div
+        role="radiogroup"
+        aria-label="Likert scale"
+        className="grid grid-cols-5 gap-2 sm:gap-3"
+      >
+        {points.map((point) => {
+          const isSelected = value === point.value;
+          return (
+            <Card
+              key={point.value}
+              role="radio"
+              aria-checked={isSelected}
+              aria-label={`${point.value} — ${point.label}`}
+              tabIndex={0}
+              onClick={() => onChange(point.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onChange(point.value);
+                }
+              }}
+              className={cn(
+                "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40",
+                isSelected && "border-brand/50 bg-brand/10"
+              )}
+            >
+              <CardContent className="flex flex-col items-center justify-center gap-2 p-3 sm:p-4">
+                <div
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-full border-2",
+                    isSelected
+                      ? "border-primary bg-primary"
+                      : "border-border"
+                  )}
+                >
+                  {isSelected ? (
+                    <Check className="h-4 w-4 text-primary-foreground" />
+                  ) : (
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {point.value}
+                    </span>
+                  )}
+                </div>
+                <span className="text-center text-[11px] font-medium leading-tight text-foreground sm:text-xs">
+                  {point.label}
+                </span>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+      {/* End-anchor strip for at-a-glance orientation on narrow screens. */}
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>{lowAnchor}</span>
+        <span>{highAnchor}</span>
+      </div>
+    </div>
+  );
+}
+
 // Numeric Input
 interface NumericInputProps {
   value: number | null;

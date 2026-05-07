@@ -46,6 +46,40 @@ function wireForScored03(row: PillarQuestionWithHierarchy): GovernanceQuestionWi
   };
 }
 
+/**
+ * 5-point Likert wire (BRD §4.1).
+ *
+ * Distinct from `scale_1_5` in that the answer values are anchored to the
+ * standard "Strongly disagree → Strongly agree" continuum, the renderer is
+ * the horizontal `LikertScale` pip group, and the default scoreMap
+ * collapses 1–5 onto the 0–3 maturity scale via `normalizeAnswerToMaturity`
+ * (5 → 3.0, 1 → 0.0). Existing `scale_1_5` rows are NOT auto-flipped to
+ * Likert — admins re-author intentionally if the legacy semantics drift.
+ *
+ * Negatively-keyed Likert items use the inverted `{1:5,2:4,3:3,4:2,5:1}`
+ * scoreMap; the renderer is unchanged.
+ */
+function wireForLikert5(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
+  return {
+    questionId: row.id,
+    riskAreaId: riskAreaIdForPillarCategory(row.section.category),
+    sortOrderGlobal: 0,
+    text: row.questionText,
+    helpText: row.whyThisMatters,
+    learnMore: row.recommendedActions,
+    riskRelevance: row.whyThisMatters,
+    type: "likert",
+    options: null,
+    required: true,
+    weight: row.section.weightPct ?? 2,
+    scoreMap: { "1": 1, "2": 2, "3": 3, "4": 4, "5": 5 },
+    branchingDependsOn: null,
+    branchingPredicate: null,
+    profileConditionKey: null,
+    omitMaturityScoreWhenYes: false,
+  };
+}
+
 function wireForScale15(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
   const labels = [
     cleanLabel(row.answer0, "1"),
@@ -177,6 +211,8 @@ export function pillarQuestionRowToWire(row: PillarQuestionWithHierarchy): Gover
       return wireForDate(row);
     case "scale_1_5":
       return wireForScale15(row);
+    case "likert_5":
+      return wireForLikert5(row);
     case "scored_0_3":
     default:
       return wireForScored03(row);

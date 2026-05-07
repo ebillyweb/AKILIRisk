@@ -12,6 +12,7 @@ export type QuestionType =
   | 'single-choice'
   | 'yes-no'
   | 'maturity-scale'
+  | 'likert'
   | 'numeric'
   | 'short-text';
 

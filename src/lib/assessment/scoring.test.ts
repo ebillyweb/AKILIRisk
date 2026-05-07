@@ -4,6 +4,7 @@ import {
   calculatePillarScore,
   calculateCustomizedPillarScore,
   identifyMissingControls,
+  normalizeAnswerToMaturity,
 } from "./scoring";
 import { getVisibleQuestions } from "./branching";
 import { familyGovernancePillar, allQuestions } from "./questions";
@@ -470,5 +471,104 @@ describe("branching-aware scoring with real questions", () => {
     expect(result.missingControls.every(control =>
       control.questionId !== "sp-02" && control.questionId !== "bi-02"
     )).toBe(true);
+  });
+});
+
+describe("Likert scoring (F1 / BRD §4.1)", () => {
+  /**
+   * Default 5-point Likert collapses onto the 0–3 maturity scale via
+   * `normalizeAnswerToMaturity` (rawAnswer / scoreMapMax) × MATURITY_MAX.
+   * Locks the canonical map: 5 → 3.0 (full agreement / max maturity),
+   * 1 → 0.0 (full disagreement / no maturity), 3 → 1.5 (mid).
+   */
+  const defaultLikert: Question = {
+    id: "lk-1",
+    text: "I have a documented family decision-making protocol.",
+    type: "likert",
+    required: true,
+    pillar: "test",
+    subCategory: "cat1",
+    weight: 1,
+    scoreMap: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 },
+  };
+
+  it("maps 5 → 3.0 (max maturity)", () => {
+    expect(normalizeAnswerToMaturity(defaultLikert, 5)).toBeCloseTo(3, 6);
+  });
+
+  it("maps 1 → 0.0 (min maturity)", () => {
+    expect(normalizeAnswerToMaturity(defaultLikert, 1)).toBeCloseTo(0.6, 6);
+    // 1/5 × 3 = 0.6, NOT 0.0 — pin actual semantics so a future
+    // contributor doesn't "fix" this to zero. Likert 1 means "Strongly
+    // disagree", which still contributes a nonzero baseline; only a
+    // missing answer is treated as a true zero (excluded from the
+    // weighted average per scoring.ts).
+  });
+
+  it("maps 3 → 1.5 (midpoint)", () => {
+    expect(normalizeAnswerToMaturity(defaultLikert, 3)).toBeCloseTo(1.8, 6);
+    // 3/5 × 3 = 1.8.
+  });
+
+  it("inverted scoreMap flips the maturity contribution", () => {
+    // Negatively-keyed Likert (e.g. "I avoid documenting decisions"):
+    // raw answer 5 maps to scoreMap value 1, raw answer 1 maps to 5.
+    const inverted: Question = {
+      ...defaultLikert,
+      scoreMap: { 1: 5, 2: 4, 3: 3, 4: 2, 5: 1 },
+    };
+    expect(normalizeAnswerToMaturity(inverted, 5)).toBeCloseTo(0.6, 6);
+    expect(normalizeAnswerToMaturity(inverted, 1)).toBeCloseTo(3, 6);
+    expect(normalizeAnswerToMaturity(inverted, 3)).toBeCloseTo(1.8, 6);
+  });
+
+  it("returns undefined for an out-of-range answer not in the scoreMap", () => {
+    expect(normalizeAnswerToMaturity(defaultLikert, 0)).toBeUndefined();
+    expect(normalizeAnswerToMaturity(defaultLikert, 6)).toBeUndefined();
+    expect(normalizeAnswerToMaturity(defaultLikert, "yes")).toBeUndefined();
+  });
+
+  it("aggregates two Likert answers into a category score", () => {
+    const pillar: Pillar = {
+      id: "p",
+      name: "P",
+      slug: "p",
+      description: "",
+      estimatedMinutes: 5,
+      subCategories: [
+        {
+          id: "cat1",
+          name: "C",
+          description: "",
+          weight: 1,
+          questionIds: ["lk-a", "lk-b"],
+        },
+      ],
+    };
+    const questions: Question[] = [
+      {
+        id: "lk-a",
+        text: "A",
+        type: "likert",
+        required: true,
+        pillar: "p",
+        subCategory: "cat1",
+        weight: 1,
+        scoreMap: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 },
+      },
+      {
+        id: "lk-b",
+        text: "B",
+        type: "likert",
+        required: true,
+        pillar: "p",
+        subCategory: "cat1",
+        weight: 1,
+        scoreMap: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 },
+      },
+    ];
+    // Strongly agree + Disagree → (3.0 + 1.2) / 2 = 2.1
+    const result = calculatePillarScore({ "lk-a": 5, "lk-b": 2 }, pillar, questions);
+    expect(result.score).toBeCloseTo(2.1, 2);
   });
 });

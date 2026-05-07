@@ -12,6 +12,7 @@ const fieldSelectClass = cn(
 const QUESTION_TYPES = [
   { value: "yes-no", label: "Yes / No" },
   { value: "maturity-scale", label: "Maturity scale (0–3)" },
+  { value: "likert", label: "Likert scale (1–5)" },
   { value: "single-choice", label: "Single choice" },
   { value: "numeric", label: "Numeric" },
   { value: "short-text", label: "Short text" },
