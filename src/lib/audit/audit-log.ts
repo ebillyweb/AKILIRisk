@@ -158,6 +158,11 @@ export const AUDIT_ACTIONS = {
   DATA_ACCESS_AUDIO_STREAM: "data_access.audio_stream",
   DATA_ACCESS_AUDIT_LOG_VIEW: "data_access.audit_log_view",
   DATA_ACCESS_EXPORT: "data_access.export",
+  /** §9.1 (BRD): admin opens /admin/analytics. metadata captures the
+   *  resolved KPI counts so the audit log gives a coarse "what did
+   *  Belvedere see on date X" trail without a separate snapshot table.
+   *  Aggregate page only — no per-client identifiers in metadata. */
+  DATA_ACCESS_ANALYTICS_VIEW: "data_access.analytics_view",
 
   // ── §4.5 commit 2: Reporting Engine ───────────────────────────────────────
   /** Written by GET /api/reports/[id]/pdf on every successful render.

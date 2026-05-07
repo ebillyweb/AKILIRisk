@@ -31,6 +31,10 @@ const ADVISOR_NAV_ITEMS: { href: string; label: string }[] = [
 
 const ADMIN_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/admin", label: "Admin" },
+  // §9.1 (BRD): Belvedere-side aggregate analytics. Slotted between
+  // /admin (home/index) and /admin/advisors so it sits visually next to
+  // the per-tenant drill-down surfaces it links into.
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/advisors", label: "Advisors" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/leads", label: "Assessment requests" },
