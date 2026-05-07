@@ -55,15 +55,13 @@ export async function POST(request: NextRequest) {
     // Begin transaction for atomic updates
     const result = await prisma.$transaction(async (tx) => {
       // Round-11 commit 2.5b: only the encrypted answer is persisted.
-      // The renamed `answer` column now holds ciphertext; cast through
-      // Prisma.InputJsonValue so the cached generated client (which
-      // still types `answer` as JsonValue) accepts a string write.
+      // The renamed `answer` column now holds ciphertext.
       const answerUpdates = Object.entries(validatedData.answers).map(([questionId, answer]) => ({
         assessmentId: validatedData.assessmentId,
         questionId,
         pillar: validatedData.pillarId || 'unknown',
         subCategory: 'default', // This would need to be determined from question
-        answer: encryptAnswer(answer) as unknown as Prisma.InputJsonValue,
+        answer: encryptAnswer(answer),
         skipped: false,
       }));
 

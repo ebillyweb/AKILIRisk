@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
-import { encryptAnswer } from "@/lib/data/response-content";
+import { decryptAnswer, encryptAnswer } from "@/lib/data/response-content";
 
 /**
  * Assessment Responses API Routes
@@ -159,11 +158,11 @@ export async function POST(
           questionId,
           pillar,
           subCategory,
-          answer: answerCiphertext as unknown as Prisma.InputJsonValue,
+          answer: answerCiphertext,
           skipped: skipped ?? false,
         },
         update: {
-          answer: answerCiphertext as unknown as Prisma.InputJsonValue,
+          answer: answerCiphertext,
           skipped: skipped ?? false,
           updatedAt: new Date(),
         },

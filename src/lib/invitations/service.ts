@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import { decryptUserEmail } from "@/lib/auth/user-email";
 import { createInvitationToken, INVITATION_TTL_SEC } from "@/lib/invite";
 import {
   CreateInvitationInput,
@@ -9,6 +10,27 @@ import {
   InvitationListFilters,
   InvitationStatus
 } from "./types";
+
+function withDecryptedAdvisorEmail<T extends {
+  advisor: {
+    id: string;
+    firmName: string | null;
+    user: { name: string | null; emailCiphertext: string };
+  } | null;
+}>(invitation: T): Omit<T, "advisor"> & { advisor: InvitationWithDetails["advisor"] } {
+  return {
+    ...invitation,
+    advisor: invitation.advisor
+      ? {
+          ...invitation.advisor,
+          user: {
+            name: invitation.advisor.user.name,
+            email: decryptUserEmail(invitation.advisor.user.emailCiphertext),
+          },
+        }
+      : null,
+  };
+}
 
 function generateInviteCode(): string {
   // Generate 6-character alphanumeric uppercase code
@@ -65,7 +87,7 @@ export async function createAdvisorInvitation(
   const url = `${baseUrl}/signup?invite=${token}&callbackUrl=${encodeURIComponent(callback)}`;
 
   return {
-    ...invitation,
+    ...withDecryptedAdvisorEmail(invitation),
     isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
     canResend: invitation.resendCount < 3,
     url,
@@ -112,7 +134,7 @@ export async function getAdvisorInvitations(
   });
 
   return invitations.map((invitation) => ({
-    ...invitation,
+    ...withDecryptedAdvisorEmail(invitation),
     isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
     canResend: invitation.resendCount < 3,
   }));
@@ -184,7 +206,7 @@ export async function resendInvitation(
   const url = `${baseUrl}/signup?invite=${token}&callbackUrl=${encodeURIComponent(callback)}`;
 
   return {
-    ...updatedInvitation,
+    ...withDecryptedAdvisorEmail(updatedInvitation),
     isExpired: false,
     canResend: updatedInvitation.resendCount < 3,
     url,
@@ -244,7 +266,7 @@ export async function expireInvitation(
   });
 
   return {
-    ...updatedInvitation,
+    ...withDecryptedAdvisorEmail(updatedInvitation),
     isExpired: true,
     canResend: false,
   };
