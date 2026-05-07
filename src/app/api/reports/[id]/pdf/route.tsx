@@ -170,7 +170,7 @@ export async function GET(
 
     // 8. Pre-process data into plain objects
     const breakdown = pillarScore.breakdown as unknown as CategoryScore[];
-    const missingControls = pillarScore.missingControls as unknown as MissingControl[];
+    const legacyMissingControls = pillarScore.missingControls as unknown as MissingControl[];
 
     const assessmentDate = assessment.startedAt.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -190,6 +190,60 @@ export async function GET(
       select: { pillar: true, score: true, riskLevel: true },
     });
 
+    // §4.5 commit 1: prefer AssessmentRecommendation rows (joined to the
+    // ServiceRecommendation bank) over `pillarScore.missingControls`. The
+    // bank-driven path surfaces `advisorNotes` per recommendation. Fall back
+    // to the legacy JSONB column when no AssessmentRecommendation rows exist
+    // (older assessments scored before the C1 rules engine landed) so older
+    // PDFs don't suddenly render blank.
+    const assessmentRecommendations = await prisma.assessmentRecommendation.findMany({
+      where: { assessmentId: id },
+      orderBy: { priority: "asc" },
+      select: {
+        priority: true,
+        advisorNotes: true,
+        serviceRecommendation: {
+          select: {
+            name: true,
+            description: true,
+            category: true,
+          },
+        },
+      },
+    });
+
+    /** Map ServiceRecommendation.priority (Int, lower = more urgent) to the
+     *  three-bucket severity the PDF renders. Mirrors the priority bands
+     *  ServiceRecommendation seeds use today (1–3 high, 4–6 medium, 7+ low).
+     *  Stays in sync with `RecommendationsSection`'s color palette. */
+    const severityFromPriority = (priority: number): "high" | "medium" | "low" => {
+      if (priority <= 3) return "high";
+      if (priority <= 6) return "medium";
+      return "low";
+    };
+
+    const missingControls: MissingControl[] = assessmentRecommendations.length > 0
+      ? assessmentRecommendations.map((rec) => ({
+          category: rec.serviceRecommendation.category,
+          subcategory: rec.serviceRecommendation.name,
+          // ServiceRecommendation has a single `description` field that
+          // conflates issue + fix. Render it under the "Recommendation"
+          // heading; surface a concise issue line keyed off category.
+          description: `Gap identified in ${rec.serviceRecommendation.category}.`,
+          recommendation: rec.serviceRecommendation.description,
+          severity: severityFromPriority(rec.priority),
+          advisorNotes: rec.advisorNotes ?? undefined,
+        }))
+      : legacyMissingControls.map((control) => ({
+          category: control.category,
+          subcategory: control.subcategory || control.category, // fallback if subcategory missing
+          description: control.description,
+          recommendation: control.recommendation,
+          severity: control.severity,
+          // Legacy JSONB rows have no `advisorNotes`; leave the field unset
+          // so RecommendationsSection skips the callout entirely.
+        }));
+
     const reportData = {
       score: pillarScore.score,
       riskLevel,
@@ -199,13 +253,7 @@ export async function GET(
         maxScore: cat.maxScore,
         subcategoryCount: breakdown.filter(b => b.name === cat.name).length || 1,
       })),
-      missingControls: missingControls.map(control => ({
-        category: control.category,
-        subcategory: control.subcategory || control.category, // fallback if subcategory missing
-        description: control.description,
-        recommendation: control.recommendation,
-        severity: control.severity,
-      })),
+      missingControls,
       assessmentDate,
       completionPercentage,
       categoryCount: breakdown.length,

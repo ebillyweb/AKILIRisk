@@ -21,6 +21,11 @@ interface MissingControl {
   description: string;
   recommendation: string;
   severity: "high" | "medium" | "low";
+  /** §4.5 commit 1: free-form advisor commentary attached to a specific
+   *  recommendation (`AssessmentRecommendation.advisorNotes`). Optional —
+   *  the legacy `pillarScore.missingControls` fallback path emits rows
+   *  without this field. */
+  advisorNotes?: string;
 }
 
 interface AssessmentReportData {

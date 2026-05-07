@@ -8,6 +8,11 @@ interface MissingControl {
   description: string
   recommendation: string
   severity: 'high' | 'medium' | 'low'
+  /** §4.5 commit 1: when present, rendered as a callout below the
+   *  recommendation. Sourced from `AssessmentRecommendation.advisorNotes`
+   *  (per-assessment, advisor-authored). Optional so the legacy
+   *  `pillarScore.missingControls` fallback path still type-checks. */
+  advisorNotes?: string
 }
 
 interface RecommendationsSectionProps {
@@ -122,6 +127,37 @@ export function RecommendationsSection({ missingControls, companyName }: Recomme
             <Text style={{ fontWeight: 'bold' }}>Recommendation: </Text>
             {control.recommendation}
           </Text>
+
+          {/* §4.5 commit 1: advisor commentary on this specific recommendation,
+              when the advisor has authored anything in
+              `AssessmentRecommendation.advisorNotes`. Indent + left rule so it
+              reads as the advisor's voice rather than baseline rule output. */}
+          {control.advisorNotes && control.advisorNotes.trim().length > 0 ? (
+            <View
+              style={{
+                marginTop: 6,
+                marginLeft: 12,
+                paddingLeft: 8,
+                borderLeftWidth: 2,
+                borderLeftColor: '#94a3b8',
+                borderLeftStyle: 'solid',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 9,
+                  fontWeight: 'bold',
+                  color: '#475569',
+                  marginBottom: 2,
+                }}
+              >
+                Advisor Notes
+              </Text>
+              <Text style={[styles.paragraph, { fontSize: 10, marginBottom: 0 }]}>
+                {control.advisorNotes}
+              </Text>
+            </View>
+          ) : null}
         </View>
       ))}
 
