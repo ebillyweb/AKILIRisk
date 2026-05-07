@@ -23,13 +23,21 @@
 -- (acceptable per round-11 sign-off: "just drop"). The advisor-side
 -- redaction logic that consumed the share-flag collapses to a
 -- pass-through (advisor-household-view.ts).
+--
+-- Idempotent where Postgres may have committed DDL before a later
+-- statement failed (e.g. first deploy created "Sex" then errored on
+-- chr(bigint); `migrate resolve --rolled-back` does not drop DB objects).
 
-CREATE TYPE "Sex" AS ENUM ('MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY');
+DO $sex_enum$ BEGIN
+  CREATE TYPE "Sex" AS ENUM ('MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $sex_enum$;
 
 ALTER TABLE "HouseholdMember"
-  ADD COLUMN "displayLabel" TEXT,
-  ADD COLUMN "sex"          "Sex",
-  ADD COLUMN "birthYear"    INTEGER;
+  ADD COLUMN IF NOT EXISTS "displayLabel" TEXT,
+  ADD COLUMN IF NOT EXISTS "sex"          "Sex",
+  ADD COLUMN IF NOT EXISTS "birthYear"    INTEGER;
 
 -- Backfill displayLabel for existing rows. ROW_NUMBER() per userId
 -- partition gives a stable per-household ordinal; chr(64+n) maps
@@ -43,7 +51,7 @@ WITH ranked AS (
 UPDATE "HouseholdMember" hm
 SET "displayLabel" =
   CASE
-    WHEN ranked.n <= 26 THEN 'Member ' || chr(64 + ranked.n)
+    WHEN ranked.n <= 26 THEN 'Member ' || chr((64 + ranked.n)::int)
     ELSE 'Member ' || ranked.n::text
   END
 FROM ranked
@@ -52,10 +60,10 @@ WHERE hm.id = ranked.id;
 ALTER TABLE "HouseholdMember" ALTER COLUMN "displayLabel" SET NOT NULL;
 
 ALTER TABLE "HouseholdMember"
-  DROP COLUMN "fullName",
-  DROP COLUMN "age",
-  DROP COLUMN "occupation",
-  DROP COLUMN "phone",
-  DROP COLUMN "email",
-  DROP COLUMN "notes",
-  DROP COLUMN "shareNameAndContactWithAdvisor";
+  DROP COLUMN IF EXISTS "fullName",
+  DROP COLUMN IF EXISTS "age",
+  DROP COLUMN IF EXISTS "occupation",
+  DROP COLUMN IF EXISTS "phone",
+  DROP COLUMN IF EXISTS "email",
+  DROP COLUMN IF EXISTS "notes",
+  DROP COLUMN IF EXISTS "shareNameAndContactWithAdvisor";

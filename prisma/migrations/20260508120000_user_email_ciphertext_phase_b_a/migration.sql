@@ -26,12 +26,17 @@
 -- All steps run in one transaction (Postgres default for a single
 -- migration file). A partial-failure leaves the schema in phase-A
 -- shape.
+--
+-- Idempotent retries: Neon / pooler edge cases (or manual `migrate
+-- resolve`) can leave `User_emailCiphertext_key` applied while Prisma
+-- still marks the migration failed. `IF NOT EXISTS` / `IF EXISTS`
+-- avoids duplicate-object errors on re-deploy.
 
 -- (1) Drop the phase-A B-tree.
 DROP INDEX IF EXISTS "User_emailCiphertext_idx";
 
 -- (2) Add the new authoritative UNIQUE.
-CREATE UNIQUE INDEX "User_emailCiphertext_key" ON "User"("emailCiphertext");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_emailCiphertext_key" ON "User"("emailCiphertext");
 
 -- (3) NOT NULL on the new authoritative column.
 ALTER TABLE "User" ALTER COLUMN "emailCiphertext" SET NOT NULL;
@@ -39,7 +44,7 @@ ALTER TABLE "User" ALTER COLUMN "emailCiphertext" SET NOT NULL;
 -- (4) Drop the old plaintext UNIQUE constraint. This frees `email`
 --     to allow duplicates; bake-window code paths must not depend on
 --     email being unique.
-ALTER TABLE "User" DROP CONSTRAINT "User_email_key";
+ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_email_key";
 
 -- (5) Drop the @@index([email]) helper. Auth-path readers no longer
 --     query by email; the only callers reading email after this point

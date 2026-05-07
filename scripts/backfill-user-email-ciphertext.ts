@@ -1,12 +1,19 @@
 /**
  * Round-11 commit 2.3 (BRD §5.1.AUTH / phase A) — User.email ciphertext backfill.
  *
- * Reads every User row whose `emailCiphertext` is still null, computes the
- * deterministic AES-256-GCM ciphertext via the same `encryptDeterministic`
- * helper used at write time, and writes it back. Idempotent — safe to re-run
- * after partial failure.
+ * Reads every User row whose `emailCiphertext` is still null (Phase A DB),
+ * computes the deterministic AES-256-GCM ciphertext via `userEmailCiphertext`,
+ * and writes it back. Idempotent — safe to re-run after partial failure.
  *
- * Run:
+ * Count / batch **SELECT** use `$queryRaw` so this still works after the
+ * Prisma schema marks `emailCiphertext` as non-null: Prisma's query engine
+ * rejects `where: { emailCiphertext: null }` for a required `String` field,
+ * but PostgreSQL can still have NULLs until the backfill + NOT NULL land.
+ *
+ * Run **from the repo root** (so `scripts/lib/prisma-for-scripts` can read
+ * `.env.local` / `.env`). Env is loaded via `./load-repo-env` like other TS
+ * scripts — without it, `DATABASE_URL` is unset and Prisma hits localhost →
+ * `ECONNREFUSED`.
  *
  *     npx tsx scripts/backfill-user-email-ciphertext.ts
  *
@@ -22,10 +29,17 @@
  * Phase B (commit 2.4) is gated on this backfill having completed in
  * production: the SQL-level NOT NULL constraint will fail if any row still
  * has emailCiphertext = null.
+ *
+ * **Prerequisite:** migration `20260507180000_user_email_ciphertext_phase_a`
+ * must be applied so `"User"."emailCiphertext"` exists. If Postgres returns
+ * `column "emailCiphertext" does not exist`, run `npx prisma migrate deploy`
+ * (or `migrate dev`) against this `DATABASE_URL` first.
  */
 
-import { prisma } from "../src/lib/db";
-import { userEmailCiphertext } from "../src/lib/auth/user-email";
+import "./load-repo-env";
+import { Prisma } from "@prisma/client";
+import { prisma, disconnectPrismaScript } from "./lib/prisma-for-scripts";
+import { userEmailCiphertext } from "../src/lib/auth/user-email-crypto";
 
 interface RunOpts {
   batchSize: number;
@@ -45,19 +59,45 @@ function parseArgs(argv: string[]): RunOpts {
   return { batchSize, dryRun };
 }
 
+/** Fails fast with a clear message if the phase-A column was never migrated. */
+async function assertUserEmailCiphertextColumn(): Promise<void> {
+  const [{ n }] = await prisma.$queryRaw<[{ n: bigint }]>(
+    Prisma.sql`
+      SELECT COUNT(*)::bigint AS n
+      FROM pg_attribute a
+      JOIN pg_class c ON c.oid = a.attrelid
+      JOIN pg_namespace ns ON ns.oid = c.relnamespace
+      WHERE ns.nspname = 'public'
+        AND c.relname = 'User'
+        AND a.attname = 'emailCiphertext'
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    `
+  );
+  if (Number(n) === 0) {
+    throw new Error(
+      'Missing "User"."emailCiphertext" — apply Prisma migrations first (at least 20260507180000_user_email_ciphertext_phase_a). Example: npx prisma migrate deploy'
+    );
+  }
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   console.log(
     `[backfill-user-email-ciphertext] starting — batchSize=${opts.batchSize} dry=${opts.dryRun}`
   );
 
-  // Use a typed cast around the column name because the locally-generated
-  // Prisma client may be out-of-date during the rollout window. The actual
-  // SQL in migration `20260507180000_user_email_ciphertext_phase_a` adds the
-  // column.
-  const where = { emailCiphertext: null } as never;
+  await assertUserEmailCiphertextColumn();
 
-  const totalToBackfill = await prisma.user.count({ where });
+  const [countRow] = await prisma.$queryRaw<[{ c: bigint }]>(
+    Prisma.sql`
+      SELECT COUNT(*)::bigint AS c
+      FROM "User"
+      WHERE "emailCiphertext" IS NULL
+        AND "email" IS NOT NULL
+    `
+  );
+  const totalToBackfill = Number(countRow.c);
   console.log(
     `[backfill-user-email-ciphertext] ${totalToBackfill} row(s) need backfill`
   );
@@ -81,13 +121,26 @@ async function main() {
   // O(N) regardless of how many rows have already been backfilled.
   let cursor: string | null = null;
   for (;;) {
-    const rows = await prisma.user.findMany({
-      where,
-      select: { id: true, email: true },
-      orderBy: { id: "asc" },
-      take: opts.batchSize,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    });
+    const rows = await prisma.$queryRaw<Array<{ id: string; email: string | null }>>(
+      cursor
+        ? Prisma.sql`
+            SELECT id, email
+            FROM "User"
+            WHERE "emailCiphertext" IS NULL
+              AND "email" IS NOT NULL
+              AND id > ${cursor}
+            ORDER BY id ASC
+            LIMIT ${opts.batchSize}
+          `
+        : Prisma.sql`
+            SELECT id, email
+            FROM "User"
+            WHERE "emailCiphertext" IS NULL
+              AND "email" IS NOT NULL
+            ORDER BY id ASC
+            LIMIT ${opts.batchSize}
+          `
+    );
     if (rows.length === 0) break;
 
     for (const row of rows) {
@@ -99,7 +152,7 @@ async function main() {
       const ciphertext = userEmailCiphertext(row.email);
       await prisma.user.update({
         where: { id: row.id },
-        data: { emailCiphertext: ciphertext } as never,
+        data: { emailCiphertext: ciphertext },
       });
       updated++;
     }
@@ -119,8 +172,18 @@ async function main() {
 main()
   .catch((err) => {
     console.error("[backfill-user-email-ciphertext] failed:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (
+      typeof msg === "string" &&
+      (msg.includes("emailCiphertext") || msg.includes("42703")) &&
+      msg.includes("does not exist")
+    ) {
+      console.error(
+        "[backfill-user-email-ciphertext] hint: run migrations against this DATABASE_URL (npx prisma migrate deploy), then retry."
+      );
+    }
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await disconnectPrismaScript();
   });

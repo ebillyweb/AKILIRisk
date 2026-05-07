@@ -26,6 +26,7 @@
     "db:fix-cyber-migration": "bash scripts/fix-cybersecurity-migration-failure.sh",
     "db:fix-enhanced-migration": "bash scripts/fix-failed-enhanced-migration.sh",
     "db:backfill-advisor-subscriptions": "node scripts/migrate-advisor-subscriptions.js",
+    "db:backfill-user-email-ciphertext": "npx tsx scripts/backfill-user-email-ciphertext.ts",
     "env:vercel:link": "npx vercel link",
     "env:vercel": "npx vercel env pull .env.local",
     "env:vercel:preview": "npx vercel env pull .env.local --environment preview",
