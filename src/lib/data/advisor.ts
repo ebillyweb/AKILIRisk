@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { AdvisorDashboardClient } from "@/lib/advisor/types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { decryptTranscription } from "@/lib/data/response-content";
 
 export async function getAdvisorProfile(userId: string) {
   // Round-11 commit 2.4b: ciphertext + decrypt at exit so callers
@@ -147,6 +148,17 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
         ...interview.user,
         email: decryptUserEmail(interview.user.emailCiphertext),
       },
+      // Round-11 bug-hunt fix (commit B / RISK 3): decrypt
+      // transcription at the query-layer exit. Without this the
+      // advisor review screen (AdvisorIntakeView.tsx ~line 256)
+      // displayed the iv:tag:ct hex string instead of the actual
+      // transcription text.
+      responses: interview.responses.map((r) => ({
+        ...r,
+        transcription: r.transcription
+          ? decryptTranscription(r.transcription)
+          : null,
+      })),
     },
     approval,
   };

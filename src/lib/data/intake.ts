@@ -32,7 +32,12 @@ export async function createIntakeInterview(userId: string): Promise<IntakeInter
 }
 
 export async function getIntakeInterview(userId: string, id: string): Promise<(IntakeInterview & { responses: IntakeResponse[] }) | null> {
-  return prisma.intakeInterview.findFirst({
+  // Round-11 bug-hunt fix (commit B / RISK 2): decrypt transcription
+  // at the query-layer exit so consumers (intake interview page,
+  // intake-actions wrappers) keep reading row.transcription as
+  // plaintext. Without this, the client-form's typed-answer
+  // textarea was being prefilled with ciphertext post-2.5b.
+  const interview = await prisma.intakeInterview.findFirst({
     where: { id, userId },
     include: {
       responses: {
@@ -40,6 +45,14 @@ export async function getIntakeInterview(userId: string, id: string): Promise<(I
       },
     },
   });
+  if (!interview) return null;
+  return {
+    ...interview,
+    responses: interview.responses.map((r) => ({
+      ...r,
+      transcription: r.transcription ? decryptTranscription(r.transcription) : null,
+    })),
+  };
 }
 
 export async function getActiveIntakeInterview(userId: string): Promise<IntakeInterview | null> {
