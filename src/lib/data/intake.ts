@@ -78,6 +78,23 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
         ? trimmedTranscription
         : null;
 
+  // Round-11 commit 2.5a (BRD §5.1) — bridge-write: keep
+  // `hasTranscription` in sync with the plaintext value at every save
+  // site. Commit 2.5b's read sites switch from
+  // `WHERE transcription != ""` to `WHERE hasTranscription = true`,
+  // so this denormalized boolean has to be authoritative starting NOW
+  // — even before the column flips to ciphertext.
+  const transcriptionForUpdate =
+    data.transcription === undefined
+      ? undefined
+      : trimmedTranscription.length > 0
+        ? trimmedTranscription
+        : null;
+  const hasTranscriptionForUpdate =
+    data.transcription === undefined
+      ? undefined
+      : trimmedTranscription.length > 0;
+
   return prisma.intakeResponse.upsert({
     where: {
       interviewId_questionId: {
@@ -93,6 +110,7 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
       audioContentType: data.audioContentType ?? null,
       audioDuration: data.audioDuration ?? null,
       transcription: transcriptionForCreate,
+      hasTranscription: transcriptionForCreate !== null,
       transcriptionStatus: resolvedCreateStatus,
       answeredAt: isTextOnlyAnswer ? new Date() : null,
     },
@@ -101,12 +119,8 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
       audioS3Key: data.audioS3Key ?? undefined,
       audioContentType: data.audioContentType ?? undefined,
       audioDuration: data.audioDuration ?? undefined,
-      transcription:
-        data.transcription === undefined
-          ? undefined
-          : trimmedTranscription.length > 0
-            ? trimmedTranscription
-            : null,
+      transcription: transcriptionForUpdate,
+      hasTranscription: hasTranscriptionForUpdate,
       transcriptionStatus: isTextOnlyAnswer
         ? 'COMPLETED'
         : (data.transcriptionStatus ?? undefined),

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { encryptAnswer } from "@/lib/data/response-content";
 
 /**
  * Assessment Responses API Routes
@@ -128,6 +129,13 @@ export async function POST(
       );
     }
 
+    // Round-11 commit 2.5a (BRD §5.1) — bridge-write: populate both
+    // `answer` (legacy Json) and `answerCiphertext` (new) on every
+    // upsert. Commit 2.5b drops the plaintext column. Skipped rows
+    // store NULL ciphertext (no answer to encrypt).
+    const answerCiphertext =
+      skipped === true ? null : encryptAnswer(answer);
+
     // Upsert response and update assessment position in a transaction
     const [response] = await prisma.$transaction([
       prisma.assessmentResponse.upsert({
@@ -143,10 +151,12 @@ export async function POST(
           pillar,
           subCategory,
           answer: answer as Prisma.InputJsonValue,
+          answerCiphertext,
           skipped: skipped ?? false,
         },
         update: {
           answer: answer as Prisma.InputJsonValue,
+          answerCiphertext,
           skipped: skipped ?? false,
           updatedAt: new Date(),
         },

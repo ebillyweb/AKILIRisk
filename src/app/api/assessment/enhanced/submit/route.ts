@@ -11,6 +11,7 @@ import { EnhancedScoringEngine } from '@/lib/assessment/engines/enhanced-scoring
 import { RecommendationEngine } from '@/lib/assessment/engines/recommendation-engine';
 import { RuleEngine } from '@/lib/assessment/engines/rule-engine';
 import { loadGovernanceQuestionsMerged } from '@/lib/assessment/bank/load-bank';
+import { encryptAnswer } from '@/lib/data/response-content';
 import { z } from 'zod';
 
 function parseRiskLevel(value: string): RiskLevel {
@@ -53,13 +54,16 @@ export async function POST(request: NextRequest) {
 
     // Begin transaction for atomic updates
     const result = await prisma.$transaction(async (tx) => {
-      // Save/update answers
+      // Round-11 commit 2.5a (BRD §5.1) — bridge-write: populate
+      // both `answer` (legacy Json) and `answerCiphertext` (new) on
+      // every upsert. Commit 2.5b drops the plaintext column.
       const answerUpdates = Object.entries(validatedData.answers).map(([questionId, answer]) => ({
         assessmentId: validatedData.assessmentId,
         questionId,
         pillar: validatedData.pillarId || 'unknown',
         subCategory: 'default', // This would need to be determined from question
         answer: answer as Prisma.InputJsonValue,
+        answerCiphertext: encryptAnswer(answer),
         skipped: false,
       }));
 
@@ -74,6 +78,7 @@ export async function POST(request: NextRequest) {
           create: answerData,
           update: {
             answer: answerData.answer as Prisma.InputJsonValue,
+            answerCiphertext: answerData.answerCiphertext,
             skipped: answerData.skipped,
             updatedAt: new Date(),
           },

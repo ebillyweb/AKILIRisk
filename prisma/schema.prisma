@@ -293,7 +293,16 @@ model AssessmentResponse {
   questionId   String
   pillar       String
   subCategory  String
+  /// Round-11 commit 2.5a: plaintext JSON answer (legacy, bridge-write).
+  /// Commit 2.5b drops this column. New writes set both `answer` and
+  /// `answerCiphertext` via the helper in src/lib/data/response-content.ts.
   answer       Json
+  /// Round-11 commit 2.5a: encrypted form of `answer` —
+  /// JSON.stringify(answer) run through random-IV AES-256-GCM. Nullable
+  /// during the bridge window; commit 2.5b makes this the canonical
+  /// `answer` column (renamed). Skipped rows store NULL — there's no
+  /// answer to encrypt and the `skipped` column is the source of truth.
+  answerCiphertext String?
   skipped      Boolean  @default(false)
   answeredAt   DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -553,7 +562,18 @@ model IntakeResponse {
   audioS3Key          String?
   audioContentType    String?
   audioDuration       Float?
+  /// Round-11 commit 2.5a: still plaintext during the bridge window;
+  /// commit 2.5b's backfill rewrites every value as ciphertext in
+  /// place. The column type stays String? regardless — random-IV
+  /// AES-GCM ciphertext is just a longer string.
   transcription       String?
+  /// Round-11 commit 2.5a: denormalized "non-empty plaintext exists"
+  /// flag. After 2.5b flips `transcription` to ciphertext, the
+  /// existing pipeline filter `WHERE transcription IS NOT NULL AND
+  /// transcription != ''` becomes meaningless (every ciphertext is a
+  /// non-null non-empty string). All write sites (currently just
+  /// saveIntakeResponse) keep this in sync with the plaintext.
+  hasTranscription    Boolean             @default(false)
   transcriptionStatus TranscriptionStatus @default(PENDING)
   answeredAt          DateTime?
   updatedAt           DateTime            @updatedAt
