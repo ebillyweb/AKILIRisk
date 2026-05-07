@@ -17,6 +17,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { userEmailForDisplay } from "@/lib/auth/user-email";
+import { decryptAnswer, decryptTranscription } from "@/lib/data/response-content";
 import type { TenantBundle } from "./types";
 import {
   fetchTenantAuditLog,
@@ -124,11 +125,25 @@ export async function fetchTenantBundle(
   const interviewIds = intakeInterviews.map((i) => i.id);
   const assessmentIds = assessments.map((a) => a.id);
 
-  const [intakeResponses, assessmentResponses, pillarScores] = await Promise.all([
+  const [intakeResponsesRaw, assessmentResponsesRaw, pillarScores] = await Promise.all([
     prisma.intakeResponse.findMany({ where: { interviewId: { in: interviewIds } } }),
     prisma.assessmentResponse.findMany({ where: { assessmentId: { in: assessmentIds } } }),
     prisma.pillarScore.findMany({ where: { assessmentId: { in: assessmentIds } } }),
   ]);
+
+  // Round-11 commit 2.5b (BRD §5.3 export contract): the export ships
+  // RAW PII. Both response-content columns are encrypted at rest now;
+  // decrypt at the query-layer mapper so the downstream CSV serializer
+  // (which references `transcription` and `answer` column names) sees
+  // plaintext values.
+  const intakeResponses = intakeResponsesRaw.map((r) => ({
+    ...r,
+    transcription: r.transcription ? decryptTranscription(r.transcription) : null,
+  }));
+  const assessmentResponses = assessmentResponsesRaw.map((r) => ({
+    ...r,
+    answer: r.answer ? decryptAnswer(r.answer as unknown as string) : null,
+  }));
 
   // Audit log: heap-merge across the three audit tables, filtered to this
   // tenant's actor user ids and entity ids.

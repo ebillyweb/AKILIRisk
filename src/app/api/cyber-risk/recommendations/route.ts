@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { generateCyberRecommendations, CyberRecommendation } from "@/lib/cyber-risk/recommendations";
 import { ScoreResult, CategoryScore, MissingControl } from "@/lib/assessment/types";
+import { decryptAnswer } from "@/lib/data/response-content";
 
 /**
  * Cyber Risk Recommendations API
@@ -103,10 +104,13 @@ export async function POST(request: NextRequest) {
       select: { questionId: true, answer: true },
     });
 
-    // Convert responses to answers record
+    // Convert responses to answers record. Round-11 commit 2.5b:
+    // `answer` is now ciphertext; decrypt at the query layer.
     const answers: Record<string, unknown> = {};
     responses.forEach((response) => {
-      answers[response.questionId] = response.answer;
+      answers[response.questionId] = response.answer
+        ? decryptAnswer(response.answer as unknown as string)
+        : null;
     });
 
     // Build ScoreResult from PillarScore data

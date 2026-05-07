@@ -41,7 +41,8 @@
 import "./load-repo-env";
 import { Prisma } from "@prisma/client";
 import { prisma, disconnectPrismaScript } from "./lib/prisma-for-scripts";
-import { encryptAnswer } from "../src/lib/data/response-content";
+import { encryptAnswer, encryptTranscription } from "../src/lib/data/response-content";
+import { isCiphertext } from "../src/lib/encryption";
 
 interface RunOpts {
   batchSize: number;
@@ -86,32 +87,123 @@ async function assertMigrationApplied(): Promise<void> {
 }
 
 async function backfillIntakeResponses(opts: RunOpts): Promise<void> {
-  const [countRow] = await prisma.$queryRaw<[{ c: bigint }]>(
+  // ── Step 1: keep the denormalized hasTranscription boolean in sync.
+  //
+  // Tricky: after step 2 below rewrites every transcription value to
+  // ciphertext, the literal SQL predicate
+  // `length(trim("transcription")) > 0` becomes useless (every
+  // ciphertext is a non-empty string). So we run this BEFORE the
+  // rewrite — at which point `transcription` is still plaintext and
+  // the boolean derivation is trivially correct. After step 2, this
+  // recompute would no-op (every ciphertext is non-empty, so every
+  // hasTranscription should already be true for non-null rows).
+  const [boolCountRow] = await prisma.$queryRaw<[{ c: bigint }]>(
     Prisma.sql`
       SELECT COUNT(*)::bigint AS c
       FROM "IntakeResponse"
       WHERE "hasTranscription" <> (
         "transcription" IS NOT NULL AND length(trim("transcription")) > 0
       )
+        AND ("transcription" IS NULL OR NOT (
+          "transcription" ~ '^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$'
+        ))
     `
   );
-  const total = Number(countRow.c);
-  console.log(`[backfill-encrypt-response-content] IntakeResponse rows out of sync: ${total}`);
-  if (total === 0 || opts.dryRun) return;
+  const boolTotal = Number(boolCountRow.c);
+  console.log(
+    `[backfill-encrypt-response-content] IntakeResponse hasTranscription out of sync: ${boolTotal}`
+  );
+  if (boolTotal > 0 && !opts.dryRun) {
+    const result = await prisma.$executeRaw(
+      Prisma.sql`
+        UPDATE "IntakeResponse"
+        SET "hasTranscription" = (
+          "transcription" IS NOT NULL AND length(trim("transcription")) > 0
+        )
+        WHERE "hasTranscription" <> (
+          "transcription" IS NOT NULL AND length(trim("transcription")) > 0
+        )
+          AND ("transcription" IS NULL OR NOT (
+            "transcription" ~ '^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$'
+          ))
+      `
+    );
+    console.log(
+      `[backfill-encrypt-response-content] IntakeResponse hasTranscription: updated ${result} row(s)`
+    );
+  }
 
-  // No need to per-row decrypt — the boolean is derived directly via SQL.
-  const result = await prisma.$executeRaw(
+  // ── Step 2: rewrite transcription plaintext → ciphertext in place.
+  //
+  // Idempotent via the format-shape regex: rows whose value already
+  // looks like iv:tag:ct (32 hex : 32 hex : even-hex) are skipped.
+  // Per-row UPDATE keeps memory bounded for unusually long
+  // transcriptions; cursor-paged loop iterates in id order.
+  const [encCountRow] = await prisma.$queryRaw<[{ c: bigint }]>(
     Prisma.sql`
-      UPDATE "IntakeResponse"
-      SET "hasTranscription" = (
-        "transcription" IS NOT NULL AND length(trim("transcription")) > 0
-      )
-      WHERE "hasTranscription" <> (
-        "transcription" IS NOT NULL AND length(trim("transcription")) > 0
-      )
+      SELECT COUNT(*)::bigint AS c
+      FROM "IntakeResponse"
+      WHERE "transcription" IS NOT NULL
+        AND NOT ("transcription" ~ '^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$')
     `
   );
-  console.log(`[backfill-encrypt-response-content] IntakeResponse: updated ${result} row(s)`);
+  const encTotal = Number(encCountRow.c);
+  console.log(
+    `[backfill-encrypt-response-content] IntakeResponse rows needing transcription encryption: ${encTotal}`
+  );
+  if (encTotal === 0 || opts.dryRun) return;
+
+  let cursor: string | null = null;
+  let processed = 0;
+  let updated = 0;
+  for (;;) {
+    const rows = await prisma.$queryRaw<Array<{ id: string; transcription: string | null }>>(
+      cursor
+        ? Prisma.sql`
+            SELECT id, transcription
+            FROM "IntakeResponse"
+            WHERE "transcription" IS NOT NULL
+              AND NOT ("transcription" ~ '^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$')
+              AND id > ${cursor}
+            ORDER BY id ASC
+            LIMIT ${opts.batchSize}
+          `
+        : Prisma.sql`
+            SELECT id, transcription
+            FROM "IntakeResponse"
+            WHERE "transcription" IS NOT NULL
+              AND NOT ("transcription" ~ '^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$')
+            ORDER BY id ASC
+            LIMIT ${opts.batchSize}
+          `
+    );
+    if (rows.length === 0) break;
+
+    for (const row of rows) {
+      processed++;
+      if (row.transcription === null) continue;
+      // Defense in depth: skip any row whose value happens to
+      // already pass isCiphertext (the SQL regex is the primary
+      // guard but isCiphertext is the canonical app-level check).
+      if (isCiphertext(row.transcription)) continue;
+
+      const ciphertext = encryptTranscription(row.transcription);
+      await prisma.$executeRaw(
+        Prisma.sql`
+          UPDATE "IntakeResponse"
+          SET "transcription" = ${ciphertext}
+          WHERE id = ${row.id}
+        `
+      );
+      updated++;
+    }
+
+    cursor = rows[rows.length - 1].id;
+    console.log(
+      `[backfill-encrypt-response-content] IntakeResponse transcription progress: processed=${processed} updated=${updated}`
+    );
+    if (rows.length < opts.batchSize) break;
+  }
 }
 
 async function backfillAssessmentResponses(opts: RunOpts): Promise<void> {

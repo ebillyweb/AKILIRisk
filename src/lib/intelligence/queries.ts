@@ -5,6 +5,7 @@ import { PILLAR_WEIGHTS } from "@/lib/analytics/queries";
 import { CATEGORY_LABELS } from "@/lib/analytics/formatters";
 import type { RiskSeverity, RiskIndicator, FamilyRiskSummary, PortfolioIntelligence, RiskDetail, RiskRecommendation, AssessmentResponseDetail, PortfolioPillarRow } from "./types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { decryptAnswer } from "@/lib/data/response-content";
 
 /**
  * Static governance recommendations mapped by category slug
@@ -420,12 +421,16 @@ export async function getRiskDetailForFamily(
         },
       });
 
-      // Map to AssessmentResponseDetail interface
+      // Map to AssessmentResponseDetail interface. Round-11 commit
+      // 2.5b: decrypt the ciphertext at the query layer so consumers
+      // see the original JSON-shaped answer.
       const responseDetails: AssessmentResponseDetail[] = assessmentResponses.map(response => ({
         questionId: response.questionId,
         pillar: response.pillar,
         subCategory: response.subCategory || '',
-        answer: response.answer,
+        answer: response.answer
+          ? decryptAnswer(response.answer as unknown as string)
+          : null,
         skipped: response.skipped,
         answeredAt: response.answeredAt.toISOString(),
       }));

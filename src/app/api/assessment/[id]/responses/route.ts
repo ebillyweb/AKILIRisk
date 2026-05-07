@@ -59,7 +59,7 @@ export async function GET(
       );
     }
 
-    const responses = await prisma.assessmentResponse.findMany({
+    const rows = await prisma.assessmentResponse.findMany({
       where: {
         assessmentId: id,
       },
@@ -67,6 +67,13 @@ export async function GET(
         answeredAt: "asc",
       },
     });
+
+    // Round-11 commit 2.5b: decrypt the answer column at the API
+    // layer so the assessment client form sees plaintext JSON values.
+    const responses = rows.map((r) => ({
+      ...r,
+      answer: r.answer ? decryptAnswer(r.answer as unknown as string) : null,
+    }));
 
     return NextResponse.json(responses);
   } catch (error) {
@@ -129,10 +136,12 @@ export async function POST(
       );
     }
 
-    // Round-11 commit 2.5a (BRD §5.1) — bridge-write: populate both
-    // `answer` (legacy Json) and `answerCiphertext` (new) on every
-    // upsert. Commit 2.5b drops the plaintext column. Skipped rows
-    // store NULL ciphertext (no answer to encrypt).
+    // Round-11 commit 2.5b: only the encrypted answer is persisted.
+    // The plaintext `answer Json` column was dropped; the renamed
+    // `answer` column now holds ciphertext (typed as `String?` in
+    // the new schema). Cast through Prisma's InputJsonValue so the
+    // cached generated client (which still types `answer` as
+    // JsonValue) accepts a string write.
     const answerCiphertext =
       skipped === true ? null : encryptAnswer(answer);
 
@@ -150,13 +159,11 @@ export async function POST(
           questionId,
           pillar,
           subCategory,
-          answer: answer as Prisma.InputJsonValue,
-          answerCiphertext,
+          answer: answerCiphertext as unknown as Prisma.InputJsonValue,
           skipped: skipped ?? false,
         },
         update: {
-          answer: answer as Prisma.InputJsonValue,
-          answerCiphertext,
+          answer: answerCiphertext as unknown as Prisma.InputJsonValue,
           skipped: skipped ?? false,
           updatedAt: new Date(),
         },

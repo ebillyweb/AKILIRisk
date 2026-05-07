@@ -7,6 +7,7 @@ import {
   type Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { decryptTranscription, encryptTranscription } from "@/lib/data/response-content";
 
 type IntakeResponseInput = {
   audioUrl?: string;
@@ -78,24 +79,24 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
         ? trimmedTranscription
         : null;
 
-  // Round-11 commit 2.5a (BRD §5.1) — bridge-write: keep
-  // `hasTranscription` in sync with the plaintext value at every save
-  // site. Commit 2.5b's read sites switch from
-  // `WHERE transcription != ""` to `WHERE hasTranscription = true`,
-  // so this denormalized boolean has to be authoritative starting NOW
-  // — even before the column flips to ciphertext.
+  // Round-11 commit 2.5b (BRD §5.1): encrypt transcription before
+  // writing. The `transcription` column now stores ciphertext; the
+  // denormalized `hasTranscription` boolean is the only column the
+  // pipeline filters can index on. Plaintext is never persisted.
+  const transcriptionCiphertextForCreate =
+    transcriptionForCreate === null ? null : encryptTranscription(transcriptionForCreate);
   const transcriptionForUpdate =
     data.transcription === undefined
       ? undefined
       : trimmedTranscription.length > 0
-        ? trimmedTranscription
+        ? encryptTranscription(trimmedTranscription)
         : null;
   const hasTranscriptionForUpdate =
     data.transcription === undefined
       ? undefined
       : trimmedTranscription.length > 0;
 
-  return prisma.intakeResponse.upsert({
+  const created = await prisma.intakeResponse.upsert({
     where: {
       interviewId_questionId: {
         interviewId,
@@ -109,8 +110,8 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
       audioS3Key: data.audioS3Key ?? null,
       audioContentType: data.audioContentType ?? null,
       audioDuration: data.audioDuration ?? null,
-      transcription: transcriptionForCreate,
-      hasTranscription: transcriptionForCreate !== null,
+      transcription: transcriptionCiphertextForCreate,
+      hasTranscription: transcriptionCiphertextForCreate !== null,
       transcriptionStatus: resolvedCreateStatus,
       answeredAt: isTextOnlyAnswer ? new Date() : null,
     },
@@ -127,6 +128,14 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
       ...(isTextOnlyAnswer ? { answeredAt: new Date() } : {}),
     },
   });
+
+  // Decrypt before returning so callers continue to see plaintext.
+  return {
+    ...created,
+    transcription: created.transcription
+      ? decryptTranscription(created.transcription)
+      : null,
+  };
 }
 
 export async function updateInterviewProgress(
@@ -157,8 +166,15 @@ export async function submitIntakeInterview(interviewId: string): Promise<Intake
 }
 
 export async function getIntakeResponsesByInterview(interviewId: string): Promise<IntakeResponse[]> {
-  return prisma.intakeResponse.findMany({
+  // Round-11 commit 2.5b: decrypt transcription at the query layer
+  // so callers (advisor review screens, intake interview page) keep
+  // reading row.transcription as plaintext.
+  const rows = await prisma.intakeResponse.findMany({
     where: { interviewId },
     orderBy: { updatedAt: 'asc' },
   });
+  return rows.map((r) => ({
+    ...r,
+    transcription: r.transcription ? decryptTranscription(r.transcription) : null,
+  }));
 }

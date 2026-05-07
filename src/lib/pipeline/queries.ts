@@ -13,9 +13,10 @@ function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeRespons
     OR: [
       { answeredAt: { not: null } },
       { audioUrl: { not: null } },
-      {
-        AND: [{ transcription: { not: null } }, { NOT: { transcription: { equals: "" } } }],
-      },
+      // Round-11 commit 2.5b: transcription is now ciphertext; the
+      // denormalized `hasTranscription` boolean replaces the old
+      // "non-null + non-empty" plaintext predicate.
+      { hasTranscription: true },
     ],
   };
 }
@@ -31,9 +32,10 @@ function whereIntakeResponsesForInterviewsHaveAnswer(
     OR: [
       { answeredAt: { not: null } },
       { audioUrl: { not: null } },
-      {
-        AND: [{ transcription: { not: null } }, { NOT: { transcription: { equals: "" } } }],
-      },
+      // Round-11 commit 2.5b: transcription is now ciphertext; the
+      // denormalized `hasTranscription` boolean replaces the old
+      // "non-null + non-empty" plaintext predicate.
+      { hasTranscription: true },
     ],
   };
 }

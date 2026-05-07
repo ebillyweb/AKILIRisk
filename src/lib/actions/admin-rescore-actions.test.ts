@@ -7,6 +7,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * next/cache.revalidatePath. The action's pillar-config dispatch dynamically
  * loads governance/identity-risk modules; we mock those too to keep the
  * test pure-in-memory.
+ *
+ * Round-11 commit 2.5b: AssessmentResponse.answer is now ciphertext at
+ * rest. Fixture rows below carry encryptAnswer(value) as the column
+ * value so the rescore action's decryptAnswer call succeeds (it would
+ * throw on a literal numeric / object payload).
  */
 
 const { prismaSpies, writeAuditSpy, requireAdminRoleSpy, scoringSpies, engineCtorSpy, recommendationEngineMatchSpy, getActiveThresholdsSpy } = vi.hoisted(() => {
@@ -87,8 +92,13 @@ import {
   rescoreAssessmentsBulk,
 } from "./admin-rescore-actions";
 import { AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { encryptAnswer } from "@/lib/data/response-content";
 
 beforeEach(() => {
+  // Round-11 commit 2.5b: pin a deterministic ENCRYPTION_KEY so the
+  // encryptAnswer / decryptAnswer round-trip in the rescore action's
+  // query layer succeeds against fixture rows.
+  process.env.ENCRYPTION_KEY = "test-key-do-not-use-in-prod-0123456789ABCDEF";
   // Reset all mocks
   for (const m of Object.values(prismaSpies)) {
     if (typeof m === "object") {
@@ -163,7 +173,7 @@ describe("rescoreAssessment", () => {
         recommendations: [],
       });
     prismaSpies.assessmentResponse.findMany.mockResolvedValue([
-      { questionId: "q1", answer: 3, pillar: "family-governance" },
+      { questionId: "q1", answer: encryptAnswer(3), pillar: "family-governance" },
     ]);
     scoringSpies.calculatePillarScore.mockReturnValue({
       score: 80,

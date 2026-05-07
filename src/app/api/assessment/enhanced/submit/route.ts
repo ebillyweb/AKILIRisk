@@ -54,16 +54,16 @@ export async function POST(request: NextRequest) {
 
     // Begin transaction for atomic updates
     const result = await prisma.$transaction(async (tx) => {
-      // Round-11 commit 2.5a (BRD §5.1) — bridge-write: populate
-      // both `answer` (legacy Json) and `answerCiphertext` (new) on
-      // every upsert. Commit 2.5b drops the plaintext column.
+      // Round-11 commit 2.5b: only the encrypted answer is persisted.
+      // The renamed `answer` column now holds ciphertext; cast through
+      // Prisma.InputJsonValue so the cached generated client (which
+      // still types `answer` as JsonValue) accepts a string write.
       const answerUpdates = Object.entries(validatedData.answers).map(([questionId, answer]) => ({
         assessmentId: validatedData.assessmentId,
         questionId,
         pillar: validatedData.pillarId || 'unknown',
         subCategory: 'default', // This would need to be determined from question
-        answer: answer as Prisma.InputJsonValue,
-        answerCiphertext: encryptAnswer(answer),
+        answer: encryptAnswer(answer) as unknown as Prisma.InputJsonValue,
         skipped: false,
       }));
 
@@ -77,8 +77,7 @@ export async function POST(request: NextRequest) {
           },
           create: answerData,
           update: {
-            answer: answerData.answer as Prisma.InputJsonValue,
-            answerCiphertext: answerData.answerCiphertext,
+            answer: answerData.answer,
             skipped: answerData.skipped,
             updatedAt: new Date(),
           },

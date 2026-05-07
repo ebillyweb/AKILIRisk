@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { decryptAnswer } from '@/lib/data/response-content';
 
 interface AssessmentResult {
   assessment: {
@@ -86,9 +87,12 @@ export async function GET(
     // Calculate overall score from pillar scores
     const overallScore = calculateOverallScore(assessment.scores);
 
-    // Transform answers to key-value format
+    // Transform answers to key-value format. Round-11 commit 2.5b:
+    // `answer` is now ciphertext; decrypt at the query layer.
     const answers = assessment.responses.reduce((acc, response) => {
-      acc[response.questionId] = response.answer;
+      acc[response.questionId] = response.answer
+        ? decryptAnswer(response.answer as unknown as string)
+        : null;
       return acc;
     }, {} as Record<string, unknown>);
 

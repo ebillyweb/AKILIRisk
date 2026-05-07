@@ -1,0 +1,32 @@
+-- Round-11 commit 2.5b (BRD §5.1) — finalize response-content encryption.
+--
+-- Drops the plaintext `AssessmentResponse.answer Json` column and
+-- promotes `answerCiphertext` to its place. After this migration the
+-- only stored form of the answer payload is encrypted; reads decrypt
+-- via decryptAnswer<T>(row.answer) at the query layer.
+--
+-- IntakeResponse.transcription stays in place — commit 2.5a's
+-- backfill rewrote every value in-place to ciphertext (after the fix
+-- to the backfill script that ships in the same commit as this
+-- migration). The column type is still String?; it just happens to
+-- store ciphertext now.
+--
+-- Pre-flight (run BEFORE this migration deploys):
+--   1. Migration 20260516120000_add_response_content_ciphertext_columns
+--      has been applied.
+--   2. Backfill script has run to completion in production:
+--        npx tsx scripts/backfill-encrypt-response-content.ts
+--      Sanity SQL — both must return 0:
+--        SELECT COUNT(*) FROM "AssessmentResponse"
+--          WHERE "answerCiphertext" IS NULL AND "skipped" = false;
+--        SELECT COUNT(*) FROM "IntakeResponse"
+--          WHERE "transcription" IS NOT NULL
+--            AND NOT ("transcription" ~ '^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$');
+--
+-- Rollback after this migration: re-add `answer Json` + run a
+-- decrypt-loop script that hydrates plaintext from `answerCiphertext`.
+-- The encryption key still works, so plaintext recovery is a single
+-- batch loop. Per the design doc this is acceptable.
+
+ALTER TABLE "AssessmentResponse" DROP COLUMN "answer";
+ALTER TABLE "AssessmentResponse" RENAME COLUMN "answerCiphertext" TO "answer";

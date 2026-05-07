@@ -37,6 +37,7 @@ import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
 import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/questions";
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
+import { decryptAnswer } from "@/lib/data/response-content";
 import type { Question, Pillar } from "@/lib/assessment/types";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
 
@@ -175,12 +176,19 @@ export async function rescoreAssessment(
 
     // 2. Load every response row once. The per-pillar compute filters by
     //    questionId so only the relevant subset gets used per pillar.
+    //    Round-11 commit 2.5b: `answer` is now ciphertext; decrypt at
+    //    the query layer so the per-pillar scoring engine sees the
+    //    same plaintext shape it always has.
     const responses = await prisma.assessmentResponse.findMany({
       where: { assessmentId, skipped: false },
       select: { questionId: true, answer: true, pillar: true },
     });
     const allAnswers: Record<string, unknown> = {};
-    for (const r of responses) allAnswers[r.questionId] = r.answer;
+    for (const r of responses) {
+      allAnswers[r.questionId] = r.answer
+        ? decryptAnswer(r.answer as unknown as string)
+        : null;
+    }
 
     // 3. Threshold + customization context.
     const activeThresholds = await getActiveRiskThresholds();
