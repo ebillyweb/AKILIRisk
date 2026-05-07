@@ -6,7 +6,19 @@ import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
+import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import crypto from "crypto";
+
+/** Short, non-reversible identifier for an email — used in the
+ *  rate-limit key so the in-memory limiter (and any future Redis
+ *  swap) doesn't transit raw email PII as part of its cache key. */
+function rateLimitEmailKey(email: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(email.trim().toLowerCase())
+    .digest("hex")
+    .slice(0, 16);
+}
 
 // Round-11 bug-hunt fix: normalize email casing — see commit A.
 const forgotPasswordSchema = z.object({
@@ -15,22 +27,6 @@ const forgotPasswordSchema = z.object({
     .email("Invalid email address")
     .transform((s) => s.trim().toLowerCase()),
 });
-
-/** Look up the public origin for the password-reset link. In production we
- *  refuse to fall back to localhost — a wrong link in a recovery email is
- *  worse than the email never being sent. Non-production keeps the
- *  localhost fallback so dev/staging still work without env config. */
-function resolvePublicBaseUrl(): string | null {
-  const configured = process.env.NEXT_PUBLIC_URL?.trim();
-  if (configured) return configured;
-  if (process.env.NODE_ENV === "production") {
-    console.error(
-      "NEXT_PUBLIC_URL is not configured; refusing to send reset email with localhost link"
-    );
-    return null;
-  }
-  return "http://localhost:3000";
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,14 +42,17 @@ export async function POST(req: NextRequest) {
 
     const { email } = validation.data;
 
-    // Rate limit on (ip, email) so a known email can't be locked out by a
-    // single attacker, and a single IP can't spam many emails. Each key
-    // gets 3 attempts/hour. Email-only keying (the previous behavior) let
-    // an attacker DoS password recovery for any victim by hitting the
-    // endpoint with that email a few times.
+    // Rate limit on (ip, hashed-email) so a known email can't be locked
+    // out by a single attacker, and a single IP can't spam many emails.
+    // Each key gets 3 attempts/hour. Email-only keying (the previous
+    // behavior) let an attacker DoS password recovery for any victim by
+    // hitting the endpoint with that email a few times. The email is
+    // hashed before composing the key so raw PII never enters the
+    // limiter's storage — relevant if the in-memory limiter is ever
+    // swapped for Redis.
     const ip = clientIpFromRequest(req) ?? "unknown";
     const rateLimitResult = rateLimit({
-      key: `forgot-password:${ip}:${email}`,
+      key: `forgot-password:${ip}:${rateLimitEmailKey(email)}`,
       limit: 3,
       windowMs: 60 * 60 * 1000,
     });
@@ -67,11 +66,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Refuse to proceed if we can't build a valid recovery URL (production
-    // missing NEXT_PUBLIC_URL). Bail before the user lookup so the failure
-    // shape is identical regardless of email validity.
-    const baseUrl = resolvePublicBaseUrl();
+    // Refuse to proceed if we can't build a valid recovery URL
+    // (production missing AUTH_URL / NEXT_PUBLIC_URL / NEXTAUTH_URL /
+    // VERCEL_URL). Bail before the user lookup so the failure shape is
+    // identical regardless of email validity. Uses the unified strict
+    // env resolver so this route's URL semantics match
+    // notify-advisor.ts and any future caller composing outbound links.
+    const baseUrl = getPublicAppUrlStrict();
     if (!baseUrl) {
+      console.error(
+        "forgot-password: no public app URL configured; refusing to send reset email"
+      );
       return NextResponse.json(
         { error: "Password reset is temporarily unavailable" },
         { status: 503 }

@@ -42,8 +42,16 @@ export function decryptTranscription(ciphertext: string): string {
 /** Encrypt an AssessmentResponse.answer payload. Serializes via
  *  JSON.stringify first so any JSON-compatible value (number, string,
  *  boolean, array, object, null) round-trips. `undefined` is rejected
- *  upstream (Prisma `Json` doesn't accept it either). */
+ *  here with a clear error — `JSON.stringify(undefined)` returns the
+ *  JS value `undefined` (not a string), and the underlying AES cipher
+ *  would otherwise throw a generic "data must be string or Buffer"
+ *  message that surfaces as an opaque 500 to the API caller. The
+ *  schema-level guard at the route boundary should catch this case;
+ *  this is defense-in-depth. */
 export function encryptAnswer(answer: unknown): string {
+  if (typeof answer === "undefined") {
+    throw new Error("encryptAnswer: answer is required (use null for explicit empty)");
+  }
   return encrypt(JSON.stringify(answer));
 }
 

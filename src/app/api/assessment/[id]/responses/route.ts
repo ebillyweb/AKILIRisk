@@ -142,12 +142,24 @@ export async function POST(
 
     // Round-11 commit 2.5b: only the encrypted answer is persisted.
     // The plaintext `answer Json` column was dropped; the renamed
-    // `answer` column now holds ciphertext (typed as `String?` in
-    // the new schema). Cast through Prisma's InputJsonValue so the
-    // cached generated client (which still types `answer` as
-    // JsonValue) accepts a string write.
-    const answerCiphertext =
-      skipped === true ? null : encryptAnswer(answer);
+    // `answer` column now holds ciphertext as `String?` in the new
+    // schema. Once the Prisma client is regenerated post-migration
+    // the type-cast that used to live here is no longer needed.
+    //
+    // Round-11 cleanup: explicit guard for missing `answer` when the
+    // response isn't marked as skipped. `saveResponseSchema.answer` is
+    // `z.unknown()` which accepts `undefined`, and
+    // `JSON.stringify(undefined)` returns the JS value `undefined` —
+    // letting it through would surface as an opaque 500 from the AES
+    // cipher. Reject up front with a clear 400.
+    const isSkipped = skipped === true;
+    if (!isSkipped && typeof answer === "undefined") {
+      return NextResponse.json(
+        { error: "answer is required when skipped is false" },
+        { status: 400 }
+      );
+    }
+    const answerCiphertext = isSkipped ? null : encryptAnswer(answer);
 
     // Upsert response and update assessment position in a transaction
     const [response] = await prisma.$transaction([

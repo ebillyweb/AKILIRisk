@@ -63,12 +63,36 @@ async function claimWebhookEvent(
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      // Row already exists. Try to atomically reclaim a FAILED row so a
-      // Stripe retry of a previously-failed delivery can re-run. The
-      // updateMany matches 0 rows when status is RECEIVED (in-flight),
-      // PROCESSED, or IGNORED — all of which mean "don't run again".
+      // Row already exists. Atomically reclaim it if and only if the
+      // previous attempt has reached a non-terminal state we're allowed
+      // to retake:
+      //
+      //   • status = FAILED — a previous handler threw; Stripe's retry
+      //     can re-run.
+      //   • status = RECEIVED with stale receivedAt — the previous
+      //     handler crashed (OOM kill, function timeout) before it
+      //     could mark the row PROCESSED/IGNORED/FAILED. Without this
+      //     branch the row would sit in RECEIVED forever and every
+      //     redelivery would dedupe, silently dropping the event.
+      //
+      // PROCESSED and IGNORED are terminal — both leave processedAt
+      // set, and we want subsequent redeliveries to dedupe. RECEIVED
+      // rows younger than the threshold are presumed in-flight from a
+      // concurrent retry and dedupe correctly.
+      //
+      // The threshold should comfortably exceed our worst-case handler
+      // latency. Vercel's Hobby/Pro function timeout is 60s/300s; 5
+      // minutes is a safe cushion.
+      const STALE_RECEIVED_MS = 5 * 60 * 1000;
+      const staleCutoff = new Date(Date.now() - STALE_RECEIVED_MS);
       const reclaim = await prisma.stripeWebhookEvent.updateMany({
-        where: { id: eventId, status: "FAILED" },
+        where: {
+          id: eventId,
+          OR: [
+            { status: "FAILED" },
+            { status: "RECEIVED", receivedAt: { lt: staleCutoff } },
+          ],
+        },
         data: {
           status: "RECEIVED",
           receivedAt: new Date(),

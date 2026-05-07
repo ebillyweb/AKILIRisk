@@ -1,8 +1,13 @@
 import "server-only";
 
 import type { Prisma, PrismaClient, User } from "@prisma/client";
+import { encryptDeterministic } from "@/lib/encryption";
 import { prisma as defaultPrisma } from "@/lib/db";
-import { decryptUserEmail, userEmailCiphertext } from "@/lib/auth/user-email-crypto";
+import {
+  decryptUserEmail,
+  USER_EMAIL_FIELD_KEY,
+  userEmailCiphertext,
+} from "@/lib/auth/user-email-crypto";
 
 export { USER_EMAIL_FIELD_KEY, decryptUserEmail, userEmailCiphertext } from "@/lib/auth/user-email-crypto";
 
@@ -160,16 +165,28 @@ interface FindUserByEmailOpts {
 }
 
 /**
- * Look up a User by email — single ciphertext-keyed lookup.
+ * Look up a User by email — ciphertext-keyed lookup.
  *
  * Post-2.4a the dual-read pattern is gone: `emailCiphertext` is the
  * authoritative auth-path column, every row is guaranteed to have a
  * non-null value (NOT NULL constraint), and the deterministic
- * ciphertext for a given plaintext + fieldKey is stable, so a single
+ * ciphertext for a given plaintext + fieldKey is stable, so a
  * findFirst against the new UNIQUE index gets us there.
  *
  * Returns whatever Prisma returns for findFirst — the `select` shape
  * if provided, otherwise the full User row, or null if not found.
+ *
+ * Round-11 bug-hunt fix (RISK 1, email case-normalization): the
+ * canonical lookup key is the lowercased ciphertext. During the
+ * migration window — between the helper's case-normalization
+ * landing and `scripts/normalize-user-email-ciphertext.ts` running
+ * against the DB — some rows still have ciphertext computed against
+ * the original (mixed-case) plaintext. We fall back to the
+ * un-normalized ciphertext when the normalized lookup misses, so
+ * case-mixed legacy rows still authenticate. After the backfill
+ * completes the fallback branch can be removed; the cost is one
+ * extra equality lookup on the unique index per signin attempt
+ * that misses.
  */
 export async function findUserByEmail<S extends Prisma.UserSelect>(
   email: string,
@@ -184,11 +201,36 @@ export async function findUserByEmail(
   opts: FindUserByEmailOpts = {}
 ): Promise<unknown> {
   const client = opts.client ?? defaultPrisma;
-  const ciphertext = userEmailCiphertext(email);
   const baseWhere: Prisma.UserWhereInput = opts.where ?? {};
+  const select = opts.select ? { select: opts.select } : {};
 
-  return client.user.findFirst({
-    where: { ...baseWhere, emailCiphertext: ciphertext } as Prisma.UserWhereInput,
-    ...(opts.select ? { select: opts.select } : {}),
+  // Primary path: normalized (lowercased + trimmed) ciphertext.
+  const normalizedCiphertext = userEmailCiphertext(email);
+  const primary = await client.user.findFirst({
+    where: {
+      ...baseWhere,
+      emailCiphertext: normalizedCiphertext,
+    } as Prisma.UserWhereInput,
+    ...select,
   } as Parameters<PrismaClient["user"]["findFirst"]>[0]);
+  if (primary) return primary;
+
+  // Migration-window fallback: if the input was non-lowercase, look up
+  // the ciphertext for the original-case plaintext too. Pre-fix rows
+  // that stored ciphertext for mixed-case plaintext are still findable.
+  // Skip the second query when the input is already in normalized form
+  // (no distinct ciphertext to try) — saves a roundtrip on every miss.
+  if (email !== email.trim().toLowerCase()) {
+    const rawCiphertext = encryptDeterministic(email, USER_EMAIL_FIELD_KEY);
+    if (rawCiphertext !== normalizedCiphertext) {
+      return client.user.findFirst({
+        where: {
+          ...baseWhere,
+          emailCiphertext: rawCiphertext,
+        } as Prisma.UserWhereInput,
+        ...select,
+      } as Parameters<PrismaClient["user"]["findFirst"]>[0]);
+    }
+  }
+  return null;
 }
