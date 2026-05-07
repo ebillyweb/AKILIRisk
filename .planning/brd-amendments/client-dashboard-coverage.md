@@ -68,7 +68,7 @@ not present in the dashboard's at-a-glance surface.
 
 ## Verdict against BRD §4.3
 
-**🟡 Amber.**
+**🟡 Amber → 🟢 Green** as of the dashboard close-out (see footer).
 
 What's present:
 - ✅ A score is visible on the dashboard for completed assessments.
@@ -126,3 +126,37 @@ question: do we treat the BRD's "Summary dashboard" as the literal
 `/dashboard` route, or as the experience-across-/dashboard-+-/results?
 The amber call is conservative; an experience-across reading lands
 much closer to 🟢.
+
+---
+
+## Resolution
+
+🟢 **Green** as of the dashboard close-out commit (see
+`feat(dashboard): close BRD §4.3 for clients` immediately following
+the round-12 docs commit). Three additions to
+`src/app/(protected)/dashboard/page.tsx`:
+
+1. **`<RiskHeatMap mode="single-client" />`** rendered for the latest
+   scored assessment. Same component the advisor side uses; the
+   per-pillar `PillarScore` rows are loaded in a single
+   `prisma.pillarScore.findMany` call alongside the existing
+   `assessments` query.
+2. **"Overall Risk" hero tile** lifted to first position. Shows the
+   latest aggregate score (`X.X / 10`) + risk-level badge, with
+   palette-matched coloring. Empty-state copy when no scored pillar
+   exists.
+3. **"Top Risks" mini-list** rendering the 2–3 worst pillars sorted
+   by severity DESC + score ASC tiebreaker (logic in
+   `src/lib/dashboard/client-summary.ts`, 11 vitest cases). Each
+   row links to `/assessment/results?pillar=<id>` for per-pillar
+   drill-down.
+
+Empty + locked states preserved:
+- `assessmentUnlocked === false` → the Risk-by-Domain + Top-Risks
+  section is hidden entirely (the existing locked banner above is
+  the only signal in that state).
+- `assessmentUnlocked === true` but no pillar scores yet →
+  empty heat map (the component's own "No scored assessment yet"
+  banner) + Top-Risks section with placeholder copy.
+
+§4.3 now closes cleanly for both advisor and client surfaces.

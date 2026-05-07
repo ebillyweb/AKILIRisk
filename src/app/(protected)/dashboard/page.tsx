@@ -17,6 +17,12 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
+import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
+import {
+  resolveOverallRisk,
+  resolveTopRisks,
+} from "@/lib/dashboard/client-summary";
+import { ChevronRight } from "lucide-react";
 
 export default async function DashboardPage({
   searchParams,
@@ -121,6 +127,25 @@ export default async function DashboardPage({
 
   const totalQuestions = await countVisibleGovernanceQuestions();
 
+  // §4.3 close-out: load every PillarScore for the latest assessment so
+  // the dashboard can render the 6-cell heat map + the top-risks list.
+  // Cheap query — at most 6 rows per assessment, indexed on assessmentId.
+  const latestAssessmentForHeatMap = assessments[0];
+  const allPillarScores = latestAssessmentForHeatMap
+    ? await prisma.pillarScore.findMany({
+        where: { assessmentId: latestAssessmentForHeatMap.id },
+        select: { pillar: true, score: true, riskLevel: true },
+        orderBy: { pillar: "asc" },
+      })
+    : [];
+
+  const overallRisk = resolveOverallRisk({
+    score: latestAssessmentForHeatMap?.scores[0]?.score ?? null,
+    riskLevel: latestAssessmentForHeatMap?.scores[0]?.riskLevel ?? null,
+  });
+  const topRisks = resolveTopRisks(allPillarScores);
+  const showHeatMap = assessmentUnlocked && allPillarScores.length > 0;
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <UnauthorizedNotice error={sp.error} />
@@ -135,7 +160,33 @@ export default async function DashboardPage({
 
           <div className="min-w-0">
             <Card className="bg-background/60">
-              <CardContent className="grid grid-cols-2 gap-x-6 gap-y-8 pt-5 sm:gap-x-8 sm:px-6 sm:pt-6">
+              {/* §4.3 close-out: the hero now leads with Overall Risk
+                  (BRD §4.3 "single-screen summary dashboard"); the
+                  remaining tiles are kept and laid out 1×5 on lg, 2×3
+                  on smaller screens. MFA status duplicates the Account
+                  Settings card below — kept here for at-a-glance
+                  visibility. */}
+              <CardContent className="grid grid-cols-2 gap-x-6 gap-y-8 pt-5 sm:grid-cols-3 sm:gap-x-8 sm:px-6 sm:pt-6 lg:grid-cols-5">
+                <div className="min-w-0 max-w-full" data-testid="hero-overall-risk">
+                  <p className="editorial-kicker block">Overall Risk</p>
+                  {overallRisk ? (
+                    <div className="mt-2 space-y-1">
+                      <p className="break-words text-2xl font-semibold leading-tight tracking-tight tabular-nums sm:text-3xl">
+                        {overallRisk.score.toFixed(1)} / 10
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className={`${overallRisk.palette.bg} ${overallRisk.palette.text} ${overallRisk.palette.border}`}
+                      >
+                        {overallRisk.palette.label}
+                      </Badge>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm leading-snug text-muted-foreground">
+                      Complete your assessment to see your overall risk.
+                    </p>
+                  )}
+                </div>
                 <div className="min-w-0 max-w-full">
                   <p className="editorial-kicker block">Intake</p>
                   <p className="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
@@ -165,6 +216,96 @@ export default async function DashboardPage({
           </div>
         </div>
       </section>
+
+      {/* §4.3 close-out: Risk by Domain heat map + Top Risks. The heat
+          map is the same component the advisor side uses, fed by the
+          per-pillar PillarScore rows for the latest assessment.
+          - assessmentUnlocked=false (intake not yet approved) → hidden
+            so the locked banner above is the only signal.
+          - assessmentUnlocked=true but no scored pillars → empty heat
+            map with "Complete your assessment" placeholder copy.
+          - scored → full heat map + top-risks list when at least one
+            pillar has a non-unassessed level. */}
+      {assessmentUnlocked && (
+        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Risk by domain</CardTitle>
+              <CardDescription>
+                {showHeatMap
+                  ? "Snapshot of your six risk domains. Each cell shows the maturity score and the risk level."
+                  : "Complete your assessment to populate the heat map."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RiskHeatMap
+                mode="single-client"
+                pillarScores={allPillarScores}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Top risks</CardTitle>
+              <CardDescription>
+                {topRisks.length > 0
+                  ? "Highest-priority domains based on your most recent scoring."
+                  : "No risks to surface yet — complete your assessment to see prioritized domains."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {topRisks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Once your assessment is scored, the highest-priority
+                  domains appear here so you can review them in order.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border" data-testid="top-risks">
+                  {topRisks.map((risk) => (
+                    <li
+                      key={risk.pillarId}
+                      className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                      data-pillar-id={risk.pillarId}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{risk.pillarName}</p>
+                          <Badge
+                            variant="outline"
+                            className={`${risk.palette.bg} ${risk.palette.text} ${risk.palette.border} text-xs`}
+                          >
+                            {risk.palette.label}
+                          </Badge>
+                          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                            {risk.score.toFixed(1)} / 10
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm leading-snug text-muted-foreground line-clamp-2">
+                          {risk.summary}
+                        </p>
+                      </div>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0"
+                      >
+                        <Link
+                          href={`/assessment/results?pillar=${encodeURIComponent(risk.pillarId)}`}
+                        >
+                          Review
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card className={!assessmentUnlocked ? "opacity-75" : undefined}>
