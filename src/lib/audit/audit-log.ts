@@ -168,6 +168,30 @@ export const AUDIT_ACTIONS = {
    *  PillarScore when no `?pillar=` query param is supplied). */
   REPORT_DOWNLOAD: "report.download",
 
+  // ── §4.5 commit 3: Reporting Engine — publish lifecycle ──────────────────
+  /** Written inside the publishReport transaction on DRAFT → PUBLISHED.
+   *  entityType "Report"; entityId is the newly-published Report id.
+   *  beforeData captures the DRAFT row (editorial fields + version);
+   *  afterData captures the PUBLISHED row (snapshotData + brandingSnapshot
+   *  excluded from log to keep row size manageable — they're available on
+   *  the Report row itself). metadata records the supersededReportId
+   *  (prior PUBLISHED row whose status flipped to SUPERSEDED in the same
+   *  transaction) when applicable. */
+  REPORT_PUBLISH: "report.publish",
+  /** Admin-only republish: rebuilds the snapshot from current live data,
+   *  inherits editorial from the prior PUBLISHED, supersedes the old.
+   *  Used after a scoring bug fix when the frozen numbers need to be
+   *  refreshed without losing the original record. metadata.reason is
+   *  the admin's free-form justification (max 500 chars). */
+  REPORT_REPUBLISH: "report.republish",
+  /** Written once per assessment by scripts/backfill-reports.ts.
+   *  entityId is the Assessment id; metadata.reportId is the newly
+   *  inserted PUBLISHED Report row's id. */
+  REPORT_BACKFILL: "report.backfill",
+  /** One summary row at the end of a backfill run. System actor.
+   *  metadata.processed / metadata.skipped / metadata.failed counts. */
+  REPORT_BACKFILL_SUMMARY: "report.backfill_summary",
+
   // ── System actions (P1) ───────────────────────────────────────────────────
   /** Written by /api/cron/audit-log-retention each successful sweep. */
   SYSTEM_RETENTION_SWEEP: "system.retention_sweep",

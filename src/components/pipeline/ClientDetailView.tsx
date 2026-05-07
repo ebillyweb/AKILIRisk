@@ -19,7 +19,6 @@ import { getStageLabel } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
-import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
@@ -347,17 +346,16 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                 </Button>
               )}
 
-              {/* §4.5 commit 2: server-side auth in the PDF route gates this
-                  to advisors with an ACTIVE ClientAdvisorAssignment to the
-                  client. Rendered here only when the assessment has at
-                  least one calculated PillarScore (proxied by `score`),
-                  since downloading a not-yet-scored assessment 404s. */}
+              {/* §4.5 commit 3: link to the versioned report view instead
+                  of inline-downloading the latest published. The list page
+                  surfaces every version + the Edit Draft + Publish flow. */}
               {assessmentDetails?.id && assessmentDetails.score !== null && (
-                <DownloadReportButton
-                  assessmentId={assessmentDetails.id}
-                  clientLabel={client.name || client.email}
-                  fullWidth
-                />
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link href={`/advisor/pipeline/${client.id}/report`}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Reports
+                  </Link>
+                </Button>
               )}
 
               {intakeDetails && intakeFinished && (

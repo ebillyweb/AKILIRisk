@@ -1,6 +1,7 @@
 import { Page, Text, View } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
+import { DraftWatermark } from './DraftWatermark'
 
 interface ExecutiveSummaryProps {
   score: number
@@ -8,6 +9,8 @@ interface ExecutiveSummaryProps {
   categoryCount: number
   missingControlsCount: number
   companyName?: string
+  /** §4.5 commit 3: see DraftWatermark. */
+  draft?: boolean
 }
 
 export function ExecutiveSummary({
@@ -16,6 +19,7 @@ export function ExecutiveSummary({
   categoryCount,
   missingControlsCount,
   companyName,
+  draft,
 }: ExecutiveSummaryProps) {
   const getRiskInterpretation = (level: string) => {
     switch (level) {
@@ -94,6 +98,7 @@ export function ExecutiveSummary({
       </View>
 
       <PageFooter companyName={companyName} />
+      {draft ? <DraftWatermark /> : null}
     </Page>
   )
 }

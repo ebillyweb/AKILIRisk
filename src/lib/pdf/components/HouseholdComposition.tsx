@@ -1,6 +1,7 @@
 import { Page, Text, View } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
+import { DraftWatermark } from './DraftWatermark'
 
 /**
  * Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only shape.
@@ -20,6 +21,8 @@ interface HouseholdMember {
 interface HouseholdCompositionProps {
   members: HouseholdMember[]
   companyName?: string
+  /** §4.5 commit 3: see DraftWatermark. */
+  draft?: boolean
 }
 
 const SEX_LABELS: Record<string, string> = {
@@ -29,7 +32,7 @@ const SEX_LABELS: Record<string, string> = {
   PREFER_NOT_TO_SAY: 'Prefer not to say',
 }
 
-export function HouseholdComposition({ members, companyName }: HouseholdCompositionProps) {
+export function HouseholdComposition({ members, companyName, draft }: HouseholdCompositionProps) {
   const currentYear = new Date().getUTCFullYear()
 
   const formatRelationship = (relationship: string) => {
@@ -123,6 +126,7 @@ export function HouseholdComposition({ members, companyName }: HouseholdComposit
       </View>
 
       <PageFooter companyName={companyName} />
+      {draft ? <DraftWatermark /> : null}
     </Page>
   )
 }

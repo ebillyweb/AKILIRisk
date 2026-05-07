@@ -1,6 +1,7 @@
 import { Page, Text, View } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
+import { DraftWatermark } from './DraftWatermark'
 
 interface MissingControl {
   category: string
@@ -18,9 +19,11 @@ interface MissingControl {
 interface RecommendationsSectionProps {
   missingControls: MissingControl[]
   companyName?: string
+  /** §4.5 commit 3: see DraftWatermark. */
+  draft?: boolean
 }
 
-export function RecommendationsSection({ missingControls, companyName }: RecommendationsSectionProps) {
+export function RecommendationsSection({ missingControls, companyName, draft }: RecommendationsSectionProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'high':
@@ -75,6 +78,7 @@ export function RecommendationsSection({ missingControls, companyName }: Recomme
         </View>
 
         <PageFooter companyName={companyName} />
+        {draft ? <DraftWatermark /> : null}
       </Page>
     )
   }
@@ -178,6 +182,7 @@ export function RecommendationsSection({ missingControls, companyName }: Recomme
       </View>
 
       <PageFooter companyName={companyName} />
+      {draft ? <DraftWatermark /> : null}
     </Page>
   )
 }

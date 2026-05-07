@@ -4,6 +4,7 @@ import {
   formatHeatMapScore,
   type PillarScoreInput,
 } from "@/lib/assessment/heat-map-data";
+import { DraftWatermark } from "./DraftWatermark";
 
 /**
  * PDF version of the round-10 / B1 risk heat map. Single-client mode only —
@@ -21,6 +22,8 @@ import {
 interface RiskHeatMapPdfProps {
   pillarScores: ReadonlyArray<PillarScoreInput>;
   companyName: string;
+  /** §4.5 commit 3: see DraftWatermark. */
+  draft?: boolean;
 }
 
 const styles = StyleSheet.create({
@@ -80,7 +83,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export function RiskHeatMapPdf({ pillarScores, companyName }: RiskHeatMapPdfProps) {
+export function RiskHeatMapPdf({ pillarScores, companyName, draft }: RiskHeatMapPdfProps) {
   const cells = buildHeatMapCells(pillarScores);
   const allUnassessed = cells.every((c) => c.level === "unassessed");
 
@@ -122,6 +125,7 @@ export function RiskHeatMapPdf({ pillarScores, companyName }: RiskHeatMapPdfProp
           </View>
         ))}
       </View>
+      {draft ? <DraftWatermark /> : null}
     </Page>
   );
 }

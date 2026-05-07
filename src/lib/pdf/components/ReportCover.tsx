@@ -2,6 +2,7 @@ import { Page, Text, View, Image } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
 import { paletteForRiskLevel } from '@/lib/assessment/risk-color-palette'
+import { DraftWatermark } from './DraftWatermark'
 
 interface AdvisorBranding {
   firmName?: string
@@ -14,6 +15,10 @@ interface ReportCoverProps {
   overallScore: number
   riskLevel: string
   advisorBranding?: AdvisorBranding
+  /** §4.5 commit 3: stamp a diagonal "DRAFT — NOT PUBLISHED" overlay
+   *  when this page is rendered from a DRAFT Report or the legacy
+   *  no-PUBLISHED-yet preview path. */
+  draft?: boolean
 }
 
 export function ReportCover({
@@ -22,6 +27,7 @@ export function ReportCover({
   overallScore,
   riskLevel,
   advisorBranding,
+  draft,
 }: ReportCoverProps) {
   // Round-10 / B1: derive cover badge color from canonical RISK_LEVEL_PALETTE
   // (`src/lib/assessment/risk-color-palette.ts`) so the cover badge and the
@@ -85,6 +91,7 @@ export function ReportCover({
       </View>
 
       <PageFooter companyName={advisorBranding?.firmName} />
+      {draft ? <DraftWatermark /> : null}
     </Page>
   )
 }

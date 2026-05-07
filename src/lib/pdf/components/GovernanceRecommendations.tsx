@@ -1,6 +1,7 @@
 import { Page, Text, View } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
+import { DraftWatermark } from './DraftWatermark'
 
 // Round-11 commit 2.2 (BRD §5.1 amendment): displayLabel replaces
 // fullName upstream. Pre-round-11 governance recs called out members
@@ -23,12 +24,15 @@ interface GovernanceRecommendationsProps {
   members: HouseholdMember[]
   missingControls: MissingControl[]
   companyName?: string
+  /** §4.5 commit 3: see DraftWatermark. */
+  draft?: boolean
 }
 
 export function GovernanceRecommendations({
   members,
   missingControls,
   companyName,
+  draft,
 }: GovernanceRecommendationsProps) {
   const formatRoleName = (role: string) => {
     return role
@@ -185,6 +189,7 @@ export function GovernanceRecommendations({
       </View>
 
       <PageFooter companyName={companyName} />
+      {draft ? <DraftWatermark /> : null}
     </Page>
   )
 }

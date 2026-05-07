@@ -78,6 +78,12 @@ interface AssessmentReportProps {
   advisorBranding?: AdvisorBranding;
   /** Merged onto <Document /> (e.g. from createBrandedPDFMetadata) */
   documentMetadata?: PdfDocumentMetadata;
+  /** §4.5 commit 3 (BRD §4.5): when true, every page renders a diagonal
+   *  "DRAFT — NOT PUBLISHED" watermark. Set on (a) DRAFT Report id
+   *  renders, and (b) the legacy /api/reports/[assessmentId]/pdf path
+   *  when no PUBLISHED Report exists yet (advisor preview before first
+   *  publish, OR client-side path with no published report). */
+  draft?: boolean;
 }
 
 export function AssessmentReport({
@@ -85,6 +91,7 @@ export function AssessmentReport({
   householdProfile,
   advisorBranding,
   documentMetadata,
+  draft,
 }: AssessmentReportProps) {
   const companyName = advisorBranding?.firmName || "Akili Risk";
 
@@ -111,6 +118,7 @@ export function AssessmentReport({
         overallScore={data.score}
         riskLevel={data.riskLevel}
         advisorBranding={advisorBranding}
+        draft={draft}
       />
 
       {/* Page 2: Executive Summary */}
@@ -120,6 +128,7 @@ export function AssessmentReport({
         categoryCount={data.categoryCount}
         missingControlsCount={data.missingControlsCount}
         companyName={companyName}
+        draft={draft}
       />
 
       {/* Round-10 / B1 (BRD §4.3): Risk by Domain heat map. Sits between
@@ -131,6 +140,7 @@ export function AssessmentReport({
         <RiskHeatMapPdf
           pillarScores={data.pillarScores}
           companyName={companyName}
+          draft={draft}
         />
       ) : null}
 
@@ -139,16 +149,18 @@ export function AssessmentReport({
         <HouseholdComposition
           members={householdProfile.members}
           companyName={companyName}
+          draft={draft}
         />
       )}
 
       {/* Page 4: Category Breakdown */}
-      <CategoryBreakdown breakdown={data.breakdown} companyName={companyName} />
+      <CategoryBreakdown breakdown={data.breakdown} companyName={companyName} draft={draft} />
 
       {/* Page 5+: Recommendations */}
       <RecommendationsSection
         missingControls={data.missingControls}
         companyName={companyName}
+        draft={draft}
       />
 
       {/* Page 6+: Governance Recommendations (if household profile has governance roles) */}
@@ -158,6 +170,7 @@ export function AssessmentReport({
             members={householdProfile.members}
             missingControls={data.missingControls}
             companyName={companyName}
+            draft={draft}
           />
         )}
     </Document>

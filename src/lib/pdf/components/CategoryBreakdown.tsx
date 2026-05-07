@@ -1,6 +1,7 @@
 import { Page, Text, View } from '@react-pdf/renderer'
 import { styles } from '../styles'
 import { PageFooter } from './PageFooter'
+import { DraftWatermark } from './DraftWatermark'
 
 interface CategoryScore {
   name: string
@@ -12,9 +13,11 @@ interface CategoryScore {
 interface CategoryBreakdownProps {
   breakdown: CategoryScore[]
   companyName?: string
+  /** §4.5 commit 3: see DraftWatermark. */
+  draft?: boolean
 }
 
-export function CategoryBreakdown({ breakdown, companyName }: CategoryBreakdownProps) {
+export function CategoryBreakdown({ breakdown, companyName, draft }: CategoryBreakdownProps) {
   const columnStyles = {
     row: {
       flexDirection: 'row' as const,
@@ -146,6 +149,7 @@ export function CategoryBreakdown({ breakdown, companyName }: CategoryBreakdownP
       </View>
 
       <PageFooter companyName={companyName} />
+      {draft ? <DraftWatermark /> : null}
     </Page>
   )
 }

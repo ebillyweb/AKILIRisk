@@ -1,6 +1,10 @@
+import Link from "next/link";
+import { Files } from "lucide-react";
+
 import { getClientsForAdmin } from "@/lib/admin/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 
 export default async function AdminClientsPage() {
@@ -31,16 +35,25 @@ export default async function AdminClientsPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* §4.5 commit 2: admin role is allowlisted for PDF
-                          download; rendered only when the client has a
-                          scored assessment to render. */}
+                      {/* §4.5 commit 3: link to the per-version reports
+                          page (republish + audit history live there). The
+                          inline download remains as a quick latest-PUBLISHED
+                          shortcut. */}
                       {c.latestScoredAssessmentId && (
-                        <DownloadReportButton
-                          assessmentId={c.latestScoredAssessmentId}
-                          clientLabel={c.name || c.email}
-                          label="Download report"
-                          variant="ghost"
-                        />
+                        <>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/clients/${c.id}/reports`}>
+                              <Files className="w-4 h-4 mr-2" />
+                              Reports
+                            </Link>
+                          </Button>
+                          <DownloadReportButton
+                            assessmentId={c.latestScoredAssessmentId}
+                            clientLabel={c.name || c.email}
+                            label="Download"
+                            variant="ghost"
+                          />
+                        </>
                       )}
                       {activeAssignments.length > 0 ? (
                         <Badge variant="secondary">{activeAssignments.length} advisor(s)</Badge>

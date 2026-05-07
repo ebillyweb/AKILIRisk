@@ -58,6 +58,10 @@ model User {
   documentRequirements DocumentRequirement[] @relation("ClientDocuments")
   notificationPreference NotificationPreference?
   subscription            Subscription?
+  /// §4.5 commit 3 (BRD §4.5): Reports this user has published. Set-null on
+  /// delete (deleted advisor preserves report attribution-as-null rather
+  /// than orphaning published rows).
+  publishedReports        Report[] @relation("ReportPublisher")
 
   /// Round-11 commit 2.4a: @@index([email]) + the phase-A
   /// User_emailCiphertext_idx are dropped at the SQL level by
@@ -282,6 +286,10 @@ model Assessment {
   scores        PillarScore[]
   recommendations AssessmentRecommendation[]
   ruleExecutions    RuleExecution[]
+  /// §4.5 commit 3 (BRD §4.5): published + draft + superseded report
+  /// versions. Cascade on delete so RTBF wipes every Report row for this
+  /// assessment (frozen reports include client PII in snapshotData).
+  reports        Report[]
 
   @@index([userId])
   @@index([status])
@@ -1031,6 +1039,85 @@ model AssessmentRecommendation {
   @@unique([assessmentId, serviceRecommendationId])
   @@index([assessmentId])
   @@index([status])
+}
+
+/// §4.5 commit 3 (BRD §4.5): Reporting Engine — choice of cover layout
+/// and brand vocabulary for a published report.
+enum ReportTemplate {
+  /// Default Akili / Belvedere lockup; no advisor branding on the cover.
+  BELVEDERE
+  /// Co-branded: advisor firmName + logo on the cover; advisor brand
+  /// colors when subscription tier permits.
+  COBRANDED
+}
+
+/// §4.5 commit 3 (BRD §4.5): state machine for Report rows.
+enum ReportStatus {
+  /// Editable by the assigned advisor. At most one DRAFT per assessment
+  /// (enforced by a Postgres partial unique index — see migration
+  /// 20260522120000_reporting_engine).
+  DRAFT
+  /// Frozen rendering. Never mutated after publish (status flips to
+  /// SUPERSEDED on next publish; see PUBLISHED → SUPERSEDED transition
+  /// inside the publishReport transaction).
+  PUBLISHED
+  /// Prior PUBLISHED row that has been replaced by a newer publish for
+  /// the same assessment. Preserves history; remains downloadable.
+  SUPERSEDED
+}
+
+/// §4.5 commit 3 (BRD §4.5): immutable advisor-published rendering of an
+/// Assessment at a point in time. See `docs/operations/s3-sse-kms.md`-
+/// adjacent docs once a report-engine ops doc lands; for now the
+/// canonical reference is `src/lib/actions/report-actions.ts`
+/// (publishReport / republishReport) and `src/lib/pdf/build-report-
+/// snapshot.ts` (snapshot shape).
+model Report {
+  id                String         @id @default(cuid())
+  assessmentId      String
+  /// Monotonic per assessment. v1 is the first PUBLISHED (or backfilled)
+  /// row; DRAFT rows hold the next-version-to-be value pre-emptively so
+  /// the publish action is a single update with no re-numbering. The
+  /// (assessmentId, version) UNIQUE index catches the rare race where
+  /// two advisors hit Publish at once.
+  version           Int
+  status            ReportStatus   @default(DRAFT)
+  templateChoice    ReportTemplate @default(COBRANDED)
+
+  /// Editorial overlay. Edited freely on DRAFT rows; frozen on publish.
+  executiveSummary  String?
+  /// Map of `{ [serviceRecommendationId]: notesString }`. Frozen on
+  /// publish so future edits to the live `AssessmentRecommendation`
+  /// rows don't retroactively rewrite a published Report's notes.
+  advisorNotes      Json?
+
+  /// Frozen scoring/breakdown/recommendations data, shaped exactly the
+  /// way `AssessmentReport`'s `data` prop expects it (interface in
+  /// `src/lib/pdf/components/AssessmentReport.tsx`). Populated at
+  /// publish time from `buildReportSnapshot(assessmentId)`. Null on
+  /// DRAFT rows — DRAFT preview renders from live data with a
+  /// "DRAFT — NOT PUBLISHED" watermark.
+  snapshotData      Json?
+  /// Frozen advisor-branding data (firmName, logoUrl, brandName,
+  /// tagline, colors, supportEmail, supportPhone). Same selection as
+  /// `getAdvisorBrandingForPDF` returns. Null on DRAFT rows.
+  brandingSnapshot  Json?
+
+  publishedAt       DateTime?
+  /// User id of whoever clicked Publish. ADVISOR for normal flows,
+  /// ADMIN for the republish action. Null on DRAFT rows + on rows whose
+  /// publisher account was later deleted (FK is ON DELETE SET NULL).
+  publishedById     String?
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  assessment        Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  publishedBy       User?          @relation("ReportPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+
+  @@unique([assessmentId, version])
+  @@index([assessmentId, status])
+  @@index([publishedAt])
 }
 
 model PillarConfiguration {
