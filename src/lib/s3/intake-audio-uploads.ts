@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { resolveAwsCredentials } from "@/lib/s3/aws-credentials";
+import { s3EncryptionParams } from "@/lib/s3/encryption-params";
 
 /**
  * Intake voice-response storage on S3.
@@ -101,6 +102,7 @@ export async function uploadIntakeAudioFromBuffer(
           "question-id": questionId,
           "upload-timestamp": Date.now().toString(),
         },
+        ...s3EncryptionParams(),
       })
     );
     return { s3Key, contentType, size: body.byteLength };

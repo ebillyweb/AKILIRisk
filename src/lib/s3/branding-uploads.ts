@@ -8,6 +8,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { prisma } from '@/lib/db';
 import { resolveAwsCredentials } from '@/lib/s3/aws-credentials';
+import { s3EncryptionParams } from '@/lib/s3/encryption-params';
 
 // Must match the bucket’s actual region (see `aws s3api head-bucket --bucket ...` → x-amz-bucket-region).
 // Wrong region → PermanentRedirect, presigned host mismatch, or OPTIONS 500 on the wrong regional endpoint.
@@ -169,7 +170,10 @@ export async function generateLogoUploadUrl(request: UploadUrlRequest): Promise<
   // Generate unique S3 key
   const s3Key = generateS3Key(advisorId, fileName);
 
-  // Create presigned PUT URL
+  // Create presigned PUT URL. SSE-KMS params (when S3_KMS_KEY_ID is set) become
+  // signed headers the browser must echo back; the upload-form layer handles
+  // x-amz-server-side-encryption / x-amz-server-side-encryption-aws-kms-key-id
+  // forwarding, otherwise S3 returns SignatureDoesNotMatch.
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: s3Key,
@@ -180,6 +184,7 @@ export async function generateLogoUploadUrl(request: UploadUrlRequest): Promise<
       'original-filename': fileName,
       'upload-timestamp': Date.now().toString(),
     },
+    ...s3EncryptionParams(),
   });
 
   const expiresIn = 3600; // 1 hour
@@ -273,6 +278,7 @@ export async function uploadLogoFromBuffer(
           'original-filename': fileName,
           'upload-timestamp': Date.now().toString(),
         },
+        ...s3EncryptionParams(),
       })
     );
 
