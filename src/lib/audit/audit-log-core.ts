@@ -212,6 +212,23 @@ export const AUDIT_ACTIONS = {
    *  metadata.processed / metadata.skipped / metadata.failed counts. */
   REPORT_BACKFILL_SUMMARY: "report.backfill_summary",
 
+  // ── Option D session 1: advisor-configured PII policy ────────────────────
+  /** One row per field whose value flipped false → true on a piiPolicy
+   *  save. entityType "AdvisorProfile"; entityId is the advisor profile
+   *  id; metadata.field is the eligible field key (e.g.
+   *  "ClientProfile.phone"). Coexists with the per-save PII_POLICY_UPDATE
+   *  summary row — per-field for forensics, summary for "what was the
+   *  policy on date X?" queries. */
+  PII_POLICY_FIELD_ENABLE: "pii_policy.field_enable",
+  /** One row per field whose value flipped true → false on a piiPolicy
+   *  save. Same shape as PII_POLICY_FIELD_ENABLE. */
+  PII_POLICY_FIELD_DISABLE: "pii_policy.field_disable",
+  /** One summary row per piiPolicy save, capturing the full before/after
+   *  policy JSON in beforeData/afterData. Coexists with the per-field
+   *  ENABLE/DISABLE rows. Idempotent: a save that doesn't change any
+   *  field emits no audit rows at all (action returns early). */
+  PII_POLICY_UPDATE: "pii_policy.update",
+
   // ── System actions (P1) ───────────────────────────────────────────────────
   /** Written by /api/cron/audit-log-retention each successful sweep. */
   SYSTEM_RETENTION_SWEEP: "system.retention_sweep",
