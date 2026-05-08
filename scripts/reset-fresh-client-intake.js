@@ -22,11 +22,16 @@ require('dotenv').config({ path: path.join(repoRoot, '.env'), quiet: true });
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
+const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
 
 const FRESH_EMAIL = process.env.FRESH_CLIENT_EMAIL || 'client-fresh@test.com';
 
 if (!process.env.DATABASE_URL) {
   console.error('DATABASE_URL not set. Add it to .env.local or .env, then re-run.');
+  process.exit(1);
+}
+if (!process.env.ENCRYPTION_KEY) {
+  console.error('ENCRYPTION_KEY not set. Required for User email ciphertext lookups.');
   process.exit(1);
 }
 
@@ -35,7 +40,9 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const user = await prisma.user.findUnique({ where: { email: FRESH_EMAIL } });
+  const user = await prisma.user.findFirst({
+    where: { emailCiphertext: userEmailCiphertext(FRESH_EMAIL) },
+  });
   if (!user) {
     console.error(
       `User ${FRESH_EMAIL} not found. Run \`node scripts/seed-advisor-test-data.js\` first.`

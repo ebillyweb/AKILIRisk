@@ -8,6 +8,12 @@ require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
+const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
+
+if (!process.env.ENCRYPTION_KEY) {
+  console.error('ENCRYPTION_KEY not set. Required for User email ciphertext lookups.');
+  process.exit(1);
+}
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -17,8 +23,10 @@ async function main() {
   console.log('🔓 Approving intake for assessment client...');
 
   // Find the client and their submitted interview
-  const client = await prisma.user.findUnique({
-    where: { email: 'client+assessment@test.com' },
+  const client = await prisma.user.findFirst({
+    where: {
+      emailCiphertext: userEmailCiphertext('client+assessment@test.com'),
+    },
     include: {
       intakeInterviews: {
         where: { status: 'SUBMITTED' },
@@ -41,8 +49,8 @@ async function main() {
   const interview = client.intakeInterviews[0];
 
   // Find the advisor
-  const advisor = await prisma.user.findUnique({
-    where: { email: 'advisor@test.com' },
+  const advisor = await prisma.user.findFirst({
+    where: { emailCiphertext: userEmailCiphertext('advisor@test.com') },
     include: { advisorProfile: true }
   });
 

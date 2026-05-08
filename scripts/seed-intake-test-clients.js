@@ -11,6 +11,14 @@ const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 const bcryptjs = require('bcryptjs');
+const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
+
+if (!process.env.ENCRYPTION_KEY) {
+  console.error(
+    'ENCRYPTION_KEY not set. Required to compute emailCiphertext for User rows — add it to .env.local (same value as Vercel for shared DB).'
+  );
+  process.exit(1);
+}
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -23,12 +31,14 @@ const INTAKE_QUESTION_IDS = [
 
 async function createTestAdvisor() {
   const hashedPassword = await bcryptjs.hash('testpassword123', 12);
+  const advisorEmail = 'advisor@test.com';
+  const advisorCt = userEmailCiphertext(advisorEmail);
 
   const advisorUser = await prisma.user.upsert({
-    where: { email: 'advisor@test.com' },
-    update: {},
+    where: { emailCiphertext: advisorCt },
+    update: { emailCiphertext: advisorCt },
     create: {
-      email: 'advisor@test.com',
+      emailCiphertext: advisorCt,
       password: hashedPassword,
       name: 'Test Advisor',
       firstName: 'Test',
@@ -59,9 +69,12 @@ async function createIntakePendingClient(advisorProfile) {
 
   // Round-11 commit 3 (BRD §5.1.AUTH): clients sign in via magic link;
   // password column is null for USER-role rows.
+  const intakeClientEmail = 'client+intake@test.com';
+  const intakeClientCt = userEmailCiphertext(intakeClientEmail);
   const clientUser = await prisma.user.upsert({
-    where: { email: 'client+intake@test.com' },
+    where: { emailCiphertext: intakeClientCt },
     update: {
+      emailCiphertext: intakeClientCt,
       password: null,
       name: 'Test Client (Intake Pending)',
       firstName: 'Intake',
@@ -69,7 +82,7 @@ async function createIntakePendingClient(advisorProfile) {
       role: 'USER'
     },
     create: {
-      email: 'client+intake@test.com',
+      emailCiphertext: intakeClientCt,
       password: null,
       name: 'Test Client (Intake Pending)',
       firstName: 'Intake',
@@ -145,7 +158,7 @@ async function createIntakePendingClient(advisorProfile) {
     }
   });
 
-  console.log(`✅ Created client with pending intake: ${clientUser.email}`);
+  console.log(`✅ Created client with pending intake: ${intakeClientEmail}`);
   console.log(`   Status: IN_PROGRESS (3/10 questions completed)`);
 
   return { clientUser, intakeInterview };
@@ -156,9 +169,12 @@ async function createAssessmentReadyClient(advisorProfile) {
 
   // Round-11 commit 3 (BRD §5.1.AUTH): clients sign in via magic link;
   // password column is null for USER-role rows.
+  const assessmentClientEmail = 'client+assessment@test.com';
+  const assessmentClientCt = userEmailCiphertext(assessmentClientEmail);
   const clientUser = await prisma.user.upsert({
-    where: { email: 'client+assessment@test.com' },
+    where: { emailCiphertext: assessmentClientCt },
     update: {
+      emailCiphertext: assessmentClientCt,
       password: null,
       name: 'Test Client (Assessment Ready)',
       firstName: 'Assessment',
@@ -166,7 +182,7 @@ async function createAssessmentReadyClient(advisorProfile) {
       role: 'USER'
     },
     create: {
-      email: 'client+assessment@test.com',
+      emailCiphertext: assessmentClientCt,
       password: null,
       name: 'Test Client (Assessment Ready)',
       firstName: 'Assessment',
@@ -279,7 +295,7 @@ async function createAssessmentReadyClient(advisorProfile) {
     });
   }
 
-  console.log(`✅ Created client ready for assessment: ${clientUser.email}`);
+  console.log(`✅ Created client ready for assessment: ${assessmentClientEmail}`);
   console.log(`   Status: SUBMITTED (10/10 questions completed)`);
   console.log(`   Document requirements: ${requirements.length} created`);
 

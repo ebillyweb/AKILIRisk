@@ -11,6 +11,14 @@ const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 const bcryptjs = require('bcryptjs');
+const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
+
+if (!process.env.ENCRYPTION_KEY) {
+  console.error(
+    'ENCRYPTION_KEY not set. Required to compute emailCiphertext for User rows — add it to .env.local (same value as Vercel for shared DB).'
+  );
+  process.exit(1);
+}
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -23,9 +31,12 @@ async function main() {
   const hashedPassword = await bcryptjs.hash('testpassword123', 12);
 
   // Create advisor user
+  const advisorEmail = 'advisor@test.com';
+  const advisorCt = userEmailCiphertext(advisorEmail);
   const advisorUser = await prisma.user.upsert({
-    where: { email: 'advisor@test.com' },
+    where: { emailCiphertext: advisorCt },
     update: {
+      emailCiphertext: advisorCt,
       password: hashedPassword,
       name: 'Test Advisor',
       firstName: 'Test',
@@ -33,7 +44,7 @@ async function main() {
       role: 'ADVISOR'
     },
     create: {
-      email: 'advisor@test.com',
+      emailCiphertext: advisorCt,
       password: hashedPassword,
       name: 'Test Advisor',
       firstName: 'Test',
@@ -42,7 +53,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Created advisor user:', advisorUser.email);
+  console.log('✅ Created advisor user:', advisorEmail);
 
   // Create advisor profile (with personal details)
   const advisorProfile = await prisma.advisorProfile.upsert({
@@ -69,9 +80,12 @@ async function main() {
   // password column is null. Existing Playwright fixtures that try to
   // sign in with `testpassword123` against this account will fail until
   // they're migrated to the magic-link flow.
+  const clientEmail = 'client@test.com';
+  const clientCt = userEmailCiphertext(clientEmail);
   const clientUser = await prisma.user.upsert({
-    where: { email: 'client@test.com' },
+    where: { emailCiphertext: clientCt },
     update: {
+      emailCiphertext: clientCt,
       password: null,
       name: 'Test Client',
       firstName: 'Test',
@@ -79,7 +93,7 @@ async function main() {
       role: 'USER'
     },
     create: {
-      email: 'client@test.com',
+      emailCiphertext: clientCt,
       password: null,
       name: 'Test Client',
       firstName: 'Test',
@@ -88,7 +102,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Created client user:', clientUser.email);
+  console.log('✅ Created client user:', clientEmail);
 
   // Client profile (stub) — round-11 commit 2.1 dropped contact +
   // address + DOB columns per the §5.1 amendment. Profile row is
@@ -99,7 +113,7 @@ async function main() {
     update: {},
     create: { userId: clientUser.id }
   });
-  console.log('✅ Created client profile (stub) for:', clientUser.email);
+  console.log('✅ Created client profile (stub) for:', clientEmail);
 
   // Create intake interview with SUBMITTED status
   const intakeInterview = await prisma.intakeInterview.upsert({
@@ -232,15 +246,18 @@ async function main() {
     });
   }
 
-  console.log(`✅ Created ${requirements.length} document requirements for ${clientUser.email}`);
+  console.log(`✅ Created ${requirements.length} document requirements for ${clientEmail}`);
 
   // Second client user (round-11: MFA is no longer available for client
   // accounts; this fixture is preserved for legacy Playwright tests but
   // its name is misleading post-round-11. Password is null per the
   // BRD §5.1.AUTH magic-link policy).
+  const clientMfaEmail = 'client-mfa@test.com';
+  const clientMfaCt = userEmailCiphertext(clientMfaEmail);
   const client2User = await prisma.user.upsert({
-    where: { email: 'client-mfa@test.com' },
+    where: { emailCiphertext: clientMfaCt },
     update: {
+      emailCiphertext: clientMfaCt,
       password: null,
       name: 'Test Client (MFA)',
       firstName: 'MFA',
@@ -248,7 +265,7 @@ async function main() {
       role: 'USER'
     },
     create: {
-      email: 'client-mfa@test.com',
+      emailCiphertext: clientMfaCt,
       password: null,
       name: 'Test Client (MFA)',
       firstName: 'MFA',
@@ -257,7 +274,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Created second client user (for MFA testing):', client2User.email);
+  console.log('✅ Created second client user (for MFA testing):', clientMfaEmail);
 
   // Round-11 commit 2.1: ClientProfile reduced to id + userId stub.
   await prisma.clientProfile.upsert({
@@ -374,14 +391,17 @@ async function main() {
     });
   }
 
-  console.log(`✅ Created ${requirements2.length} document requirements for ${client2User.email}`);
+  console.log(`✅ Created ${requirements2.length} document requirements for ${clientMfaEmail}`);
 
   // Third client user with NO intake interview row - used by Playwright intake
   // happy-path tests. Tests reset state via scripts/reset-fresh-client-intake.js
   // before each run.
+  const clientFreshEmail = 'client-fresh@test.com';
+  const clientFreshCt = userEmailCiphertext(clientFreshEmail);
   const clientFreshUser = await prisma.user.upsert({
-    where: { email: 'client-fresh@test.com' },
+    where: { emailCiphertext: clientFreshCt },
     update: {
+      emailCiphertext: clientFreshCt,
       password: null,
       name: 'Test Client (Fresh)',
       firstName: 'Fresh',
@@ -389,7 +409,7 @@ async function main() {
       role: 'USER'
     },
     create: {
-      email: 'client-fresh@test.com',
+      emailCiphertext: clientFreshCt,
       password: null,
       name: 'Test Client (Fresh)',
       firstName: 'Fresh',
@@ -418,14 +438,17 @@ async function main() {
     }
   });
 
-  console.log(`✅ Created fresh-intake client (no interview row): ${clientFreshUser.email}`);
+  console.log(`✅ Created fresh-intake client (no interview row): ${clientFreshEmail}`);
 
   // Second independent advisor "tenant" - has their own profile, no clients
   // assigned. Used by the cross-advisor isolation test to confirm advisor B
   // gets 404 when navigating to advisor A's client URL directly.
+  const advisor2Email = 'advisor2@test.com';
+  const advisor2Ct = userEmailCiphertext(advisor2Email);
   const advisor2User = await prisma.user.upsert({
-    where: { email: 'advisor2@test.com' },
+    where: { emailCiphertext: advisor2Ct },
     update: {
+      emailCiphertext: advisor2Ct,
       password: hashedPassword,
       name: 'Test Advisor Two',
       firstName: 'Second',
@@ -433,7 +456,7 @@ async function main() {
       role: 'ADVISOR'
     },
     create: {
-      email: 'advisor2@test.com',
+      emailCiphertext: advisor2Ct,
       password: hashedPassword,
       name: 'Test Advisor Two',
       firstName: 'Second',
@@ -496,7 +519,7 @@ async function main() {
     }
   });
 
-  console.log(`✅ Created second advisor (no client assignments): ${advisor2User.email}`);
+  console.log(`✅ Created second advisor (no client assignments): ${advisor2Email}`);
 
   // Active+verified subdomain for advisor2 -> exercises the proxy.ts branded
   // rewrite path. Bound in Vercel: `independent-wealth.akilirisk.com` -> staging.
@@ -521,9 +544,12 @@ async function main() {
   // Third advisor wired to an active-but-unverified subdomain so the proxy
   // returns the "Subdomain Not Available" 404 page. Bound in Vercel:
   // `inactive-tenant.akilirisk.com` -> staging.
+  const advisor3Email = 'advisor3@test.com';
+  const advisor3Ct = userEmailCiphertext(advisor3Email);
   const advisor3User = await prisma.user.upsert({
-    where: { email: 'advisor3@test.com' },
+    where: { emailCiphertext: advisor3Ct },
     update: {
+      emailCiphertext: advisor3Ct,
       password: hashedPassword,
       name: 'Test Advisor Three',
       firstName: 'Third',
@@ -531,7 +557,7 @@ async function main() {
       role: 'ADVISOR'
     },
     create: {
-      email: 'advisor3@test.com',
+      emailCiphertext: advisor3Ct,
       password: hashedPassword,
       name: 'Test Advisor Three',
       firstName: 'Third',
@@ -569,9 +595,12 @@ async function main() {
   // Fourth advisor wired to a verified-but-deactivated subdomain so the
   // proxy returns "Subdomain Not Available" via the isActive=false branch.
   // Bound in Vercel: `disabled-tenant.akilirisk.com` -> staging.
+  const advisor4Email = 'advisor4@test.com';
+  const advisor4Ct = userEmailCiphertext(advisor4Email);
   const advisor4User = await prisma.user.upsert({
-    where: { email: 'advisor4@test.com' },
+    where: { emailCiphertext: advisor4Ct },
     update: {
+      emailCiphertext: advisor4Ct,
       password: hashedPassword,
       name: 'Test Advisor Four',
       firstName: 'Fourth',
@@ -579,7 +608,7 @@ async function main() {
       role: 'ADVISOR'
     },
     create: {
-      email: 'advisor4@test.com',
+      emailCiphertext: advisor4Ct,
       password: hashedPassword,
       name: 'Test Advisor Four',
       firstName: 'Fourth',
@@ -620,9 +649,12 @@ async function main() {
   // renders AkiliLogoLockup + the platform-name kicker when
   // getAssignedAdvisorBrandingForClient returns null (which happens when the
   // assigned advisor has brandingEnabled=false).
+  const advisorUnbrandedEmail = 'advisor-unbranded@test.com';
+  const advisorUnbrandedCt = userEmailCiphertext(advisorUnbrandedEmail);
   const advisorUnbrandedUser = await prisma.user.upsert({
-    where: { email: 'advisor-unbranded@test.com' },
+    where: { emailCiphertext: advisorUnbrandedCt },
     update: {
+      emailCiphertext: advisorUnbrandedCt,
       password: hashedPassword,
       name: 'Test Advisor Unbranded',
       firstName: 'Unbranded',
@@ -630,7 +662,7 @@ async function main() {
       role: 'ADVISOR'
     },
     create: {
-      email: 'advisor-unbranded@test.com',
+      emailCiphertext: advisorUnbrandedCt,
       password: hashedPassword,
       name: 'Test Advisor Unbranded',
       firstName: 'Unbranded',
@@ -653,9 +685,12 @@ async function main() {
     }
   });
 
+  const clientUnbrandedEmail = 'client-unbranded@test.com';
+  const clientUnbrandedCt = userEmailCiphertext(clientUnbrandedEmail);
   const clientUnbrandedUser = await prisma.user.upsert({
-    where: { email: 'client-unbranded@test.com' },
+    where: { emailCiphertext: clientUnbrandedCt },
     update: {
+      emailCiphertext: clientUnbrandedCt,
       password: null,
       name: 'Test Client (Unbranded)',
       firstName: 'Unbranded',
@@ -663,7 +698,7 @@ async function main() {
       role: 'USER'
     },
     create: {
-      email: 'client-unbranded@test.com',
+      emailCiphertext: clientUnbrandedCt,
       password: null,
       name: 'Test Client (Unbranded)',
       firstName: 'Unbranded',
@@ -687,7 +722,9 @@ async function main() {
     }
   });
 
-  console.log(`✅ Created unbranded fixture: ${clientUnbrandedUser.email} -> ${advisorUnbrandedUser.email} (brandingEnabled=false)`);
+  console.log(
+    `✅ Created unbranded fixture: ${clientUnbrandedEmail} -> ${advisorUnbrandedEmail} (brandingEnabled=false)`
+  );
 
   console.log('\n🎉 Test data seeded successfully!');
   console.log('\n📋 Verification credentials:');

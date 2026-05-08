@@ -31,39 +31,14 @@ if (!process.env.ENCRYPTION_KEY) {
   process.exit(1);
 }
 
+const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-// Round-11 commit 2.4b dropped the plaintext User.email column;
-// `findUnique({ where: { email } })` would fail at the SQL layer.
-// We compute the deterministic ciphertext for the test email and
-// look up by emailCiphertext instead.
-//
-// This script is .js (CommonJS) and can't `require` the TypeScript
-// helper at `src/lib/encryption`, so we inline the deterministic
-// AES-256-GCM the helper produces. The shape (scrypt key, HMAC-IV,
-// iv:authTag:ciphertext output) is identical to
-// `encryptDeterministic(plaintext, "User.email")` — keep them in
-// sync if either changes.
-const crypto = require('crypto');
-function deriveAesKey() {
-  return crypto.scryptSync(process.env.ENCRYPTION_KEY, 'salt', 32);
-}
-function userEmailCiphertext(email) {
-  const plaintext = email.trim().toLowerCase();
-  const key = deriveAesKey();
-  const iv = crypto
-    .createHmac('sha256', 'User.email')
-    .update(plaintext, 'utf8')
-    .digest()
-    .subarray(0, 16);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  let ciphertext = cipher.update(plaintext, 'utf8', 'hex');
-  ciphertext += cipher.final('hex');
-  const authTag = cipher.getAuthTag();
-  return `${iv.toString('hex')}:${authTag.toString('hex')}:${ciphertext}`;
-}
+// Round-11 commit 2.4b dropped the plaintext User.email column — look up by
+// deterministic ciphertext (scripts/lib/user-email-ciphertext-cjs.js).
 
 (async () => {
   try {

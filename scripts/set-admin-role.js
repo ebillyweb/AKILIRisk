@@ -11,6 +11,7 @@ const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { Pool } = require("pg");
 const bcryptjs = require("bcryptjs");
+const { userEmailCiphertext } = require("./lib/user-email-ciphertext-cjs");
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -20,13 +21,22 @@ const ADMIN_EMAIL = "buddy@ebilly.com";
 const DEFAULT_PASSWORD = "Test1111!"; // change if needed for local dev
 
 async function main() {
+  if (!process.env.ENCRYPTION_KEY) {
+    console.error("ENCRYPTION_KEY not set. Required for User.email ciphertext.");
+    process.exit(1);
+  }
   const hashedPassword = await bcryptjs.hash(DEFAULT_PASSWORD, 12);
+  const adminCt = userEmailCiphertext(ADMIN_EMAIL);
 
   const user = await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
-    update: { role: "ADMIN", password: hashedPassword },
+    where: { emailCiphertext: adminCt },
+    update: {
+      emailCiphertext: adminCt,
+      role: "ADMIN",
+      password: hashedPassword,
+    },
     create: {
-      email: ADMIN_EMAIL,
+      emailCiphertext: adminCt,
       password: hashedPassword,
       name: "Admin",
       role: "ADMIN",
@@ -45,8 +55,8 @@ async function main() {
     },
   });
 
-  console.log("✅ Set role to ADMIN for", user.email);
-  console.log("✅ Advisor profile ensured for", user.email, "(can use /advisor).");
+  console.log("✅ Set role to ADMIN for", ADMIN_EMAIL);
+  console.log("✅ Advisor profile ensured for", ADMIN_EMAIL, "(can use /advisor).");
   console.log("   Sign out and sign in again to see the Admin nav and access /admin.");
 }
 
