@@ -24,7 +24,7 @@ import {
   buildReportSnapshot,
   buildBrandingSnapshot,
 } from "../src/lib/pdf/build-report-snapshot";
-import { AUDIT_ACTIONS, writeAudit } from "../src/lib/audit/audit-log";
+import { AUDIT_ACTIONS, writeAudit } from "../src/lib/audit/audit-log-core";
 import {
   processOneAssessment,
   type BackfillDeps,
