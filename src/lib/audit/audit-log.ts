@@ -163,6 +163,14 @@ export const AUDIT_ACTIONS = {
    *  Belvedere see on date X" trail without a separate snapshot table.
    *  Aggregate page only — no per-client identifiers in metadata. */
   DATA_ACCESS_ANALYTICS_VIEW: "data_access.analytics_view",
+  /** Round-12 audit-bucket close-out: client (or owner) loads their own
+   *  scored assessment via GET /api/assessment/[id]/score. metadata.pillar
+   *  records the requested pillar; metadata.assessmentId is duplicated
+   *  here for parity with REPORT_DOWNLOAD's metadata shape (entityId
+   *  carries the same value but logs are easier to filter when the key
+   *  is also in metadata). No dedupe in v1; if volume becomes a problem
+   *  the audio-stream-dedupe.ts pattern is the natural mitigation. */
+  DATA_ACCESS_OWN_ASSESSMENT_RESULTS: "data_access.own_assessment_results",
 
   // ── §4.5 commit 2: Reporting Engine ───────────────────────────────────────
   /** Written by GET /api/reports/[id]/pdf on every successful render.

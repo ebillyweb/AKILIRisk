@@ -17,6 +17,7 @@ import {
   getVisibleQuestionIds,
 } from "@/lib/assessment/customization";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
+import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 
 /**
  * Assessment Score API Routes
@@ -126,6 +127,28 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Round-12 audit-bucket close-out: client (or owner) self-read of
+    // their scored assessment. Fire-and-forget — writeAudit catches its
+    // own errors. metadata.pillar lets the audit log distinguish cross-
+    // pillar tab switches in /assessment/results without inflating the
+    // entityId namespace. No dedupe in v1; if volume becomes an issue
+    // wrap with the audio-stream-dedupe.ts pattern.
+    void writeAudit({
+      actor: {
+        userId: session.user.id,
+        role: session.user.role ?? null,
+        email: session.user.email ?? null,
+      },
+      action: AUDIT_ACTIONS.DATA_ACCESS_OWN_ASSESSMENT_RESULTS,
+      entityType: "Assessment",
+      entityId: id,
+      metadata: {
+        assessmentId: id,
+        pillar,
+      },
+      request,
+    });
 
     return NextResponse.json({
       score: score.score,

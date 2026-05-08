@@ -155,71 +155,100 @@ Each of the three §5.4 buckets has at least 8 distinct audited
 actions; the smallest is "Data access" at 8, which is appropriate for
 a platform whose primary read surface is admin-only.
 
-## Gaps flagged (informational — do NOT add audit rows in this commit)
+## Gaps walk-through
 
-Not all are equal weight. Splitting by likely importance.
+10 gaps were initially flagged. After investigation, **1 was wired**
+(client `/assessment/results` self-reads) and **9 were determined to
+be by-design or have no production call site to instrument**. Each
+gap below carries an explicit verdict (🟢 wired / 🟡 by-design / ⚪
+deferred) with rationale.
 
 ### Likely-significant gaps
 
-1. **Client-side dashboard / results reads.** A client viewing
-   `/dashboard` or `/assessment/results` does not produce a
-   data-access audit row. The advisor-side equivalents
-   (`/admin/clients/[id]`, `/admin/assessment`) DO audit. BRD §5.4
-   "Data access" arguably implies clients reading their own data
-   too — though one could argue a self-read isn't an access event
-   worth auditing. Worth a sign-off.
-2. **Edit-Draft saves on Reports (§4.5 commit 3).** `saveDraftEdits`
-   intentionally does not audit per-save — the publish row's
-   `afterData` aggregates the final state. If product wants per-save
-   visibility (e.g., "advisor edited the executive summary 14 times
-   before publishing v3"), add a `REPORT_DRAFT_SAVE` action. Design
-   intent was to avoid log-spam.
-3. **Advisor branding mutations.** These are audited via a separate
-   `AdvisorBrandingAuditLog` table (round-9), not via `AUDIT_ACTIONS`.
-   Two parallel audit substrates. Consolidating would be a small
-   migration; cross-bucket queries across both substrates today
-   require a UNION.
-4. **Subdomain lifecycle.** Advisor subdomain claim/verify/disable
-   does not produce `AUDIT_ACTIONS` rows. Some signal lives in
-   `AdvisorBrandingAuditLog` if claims are surfaced as branding
-   events; otherwise the `AdvisorSubdomain.dnsVerified` flip is
-   currently silent.
-5. **Stripe webhook events.** `WebhookProcessStatus` lifecycle (the
-   `Subscription` model's webhook claim → process → complete) is
-   captured on the row itself but not in `AUDIT_ACTIONS`. The
-   `processedAt` / `processStatus` columns serve as a per-row audit;
-   no constant exists for cross-row queries like "show me every
-   webhook from January."
+1. **Client-side `/assessment/results` self-reads.** 🟢 **Wired** in
+   the round-12 audit close-out commit. New constant
+   `DATA_ACCESS_OWN_ASSESSMENT_RESULTS` fires on every successful
+   `GET /api/assessment/[id]/score`. metadata captures
+   `{ assessmentId, pillar }`; no dedupe in v1 (the
+   `audio-stream-dedupe.ts` pattern is the natural mitigation if log
+   volume becomes a concern). Client `/dashboard` reads remain
+   unaudited deliberately — every site visit hits the dashboard, so
+   auditing it is poor signal-to-noise; results-page reads are
+   intentional drill-downs and worth recording.
+2. **Edit-Draft saves on Reports (§4.5 commit 3).** 🟡 **By-design.**
+   `saveDraftEdits` is intentionally not audited per-save — the
+   `REPORT_PUBLISH` row's `afterData` aggregates the final editorial
+   state at publish time. Per-keystroke would be log-spam. If product
+   ever wants "advisor edited the executive summary 14 times before
+   publishing v3" visibility, add a `REPORT_DRAFT_SAVE` action; design
+   intent until then is aggregate-at-publish.
+3. **Advisor branding mutations.** 🟡 **By-design (architectural).**
+   Branding edits flow through the `AdvisorBrandingAuditLog` model
+   (round-9), separate from the global `AuditLog` table. This is an
+   intentional choice: branding has per-advisor scope, retention, and
+   read-access semantics that differ from the platform-wide audit
+   substrate. Round-8's unified read adapter merges the two
+   substrates at query time, so cross-substrate filtering "just
+   works" from the admin audit-log UI. Cross-substrate queries from
+   other call sites (e.g. exports) currently require a UNION; that's
+   the only remaining friction and can be flattened by the export
+   helper if needed.
+4. **Subdomain lifecycle.** 🟡 **By-design (no production call site
+   to instrument).** Investigation finding: there is exactly ONE
+   write path for `AdvisorSubdomain.dnsVerified` in the codebase
+   (`subdomain/claim/route.ts`), and it sets the value to `false` at
+   claim time. **No production code path flips `dnsVerified` to
+   `true`** — DNS verification is currently a manual / out-of-band
+   admin DB operation. Pre-emptively adding audit constants without
+   call sites would be cargo-cult. Claim + release ARE audited via
+   `auditSubdomainClaim` (parallel substrate). When a real
+   automated DNS-verification route lands, that's the moment to add
+   `SUBDOMAIN_DNS_VERIFY` / `SUBDOMAIN_DNS_UNVERIFY` constants.
+5. **Stripe webhook events.** 🟡 **By-design.**
+   `WebhookProcessStatus` (the lifecycle of an inbound webhook from
+   `claim` → `process` → `complete`) is implementation detail —
+   useful for ops debugging but not a business-event audit signal.
+   The meaningful business outcomes (subscription created /
+   upgraded / cancelled / billing-cycle transitions) are captured in
+   the dedicated `SubscriptionAuditLog` model, which has its own
+   admin read surface. Adding `AUDIT_ACTIONS` constants for the
+   webhook-process states would duplicate the per-row
+   `processedAt` / `processStatus` columns without adding query
+   reach.
 
 ### Likely-minor / arguable gaps
 
-6. **Per-question intake-response writes.** Each individual response
-   write is not audited. `INTAKE_SUBMIT` is the only intake-side
-   action — the per-question writes inherit auditability via the
-   submit event's snapshot. Acceptable.
-7. **Per-question assessment-response writes.** Same shape as #6.
-   `ASSESSMENT_RESCORE` plus the assessment's `version` field
-   provide before/after; no per-keystroke trail.
-8. **Session expiration / sign-out.** There is no
-   `AUTH_SIGNOUT` constant. NextAuth handles signout client-side
-   without server-state mutation, so there's nothing meaningful to
-   audit anyway.
-9. **Scheduled-task / cron registration.** `SYSTEM_RETENTION_SWEEP`
-   + `SYSTEM_MAGIC_LINK_PRUNE` audit each run; the configuration of
-   when those crons fire (Vercel Cron settings) is outside the
-   platform's audit substrate.
-10. **Profile page edits.** Client and advisor profile self-edits
-    (name, contact, etc.) — most of those columns were dropped in
-    round-11's PII-minimization pass, so the gap is largely
-    cauterized. Anything that remains (e.g., advisor's `firmName`)
-    edits via the branding flow and is captured by
-    `AdvisorBrandingAuditLog`.
+6. **Per-question intake-response writes.** 🟡 **By-design.**
+   `INTAKE_SUBMIT` is the boundary event — its `afterData` captures
+   the full intake snapshot. Per-keystroke is log-spam.
+7. **Per-question assessment-response writes.** 🟡 **By-design.**
+   `ASSESSMENT_RESCORE` + `Assessment.version` give the before/after
+   trail at the meaningful boundary; per-question is log-spam.
+8. **Session expiration / sign-out.** 🟡 **By-design (no server-side
+   mutation to audit).** NextAuth handles sign-out client-side; the
+   server has no state change to record.
+9. **Scheduled-task / cron registration.** 🟡 **By-design (out of
+   substrate).** `SYSTEM_RETENTION_SWEEP` and
+   `SYSTEM_MAGIC_LINK_PRUNE` audit each cron *run*. The
+   *configuration* of when those crons fire lives in
+   `vercel.json` / deployment config — outside the platform audit
+   substrate by definition.
+10. **Profile page edits.** 🟡 **By-design (cauterized by §5.1
+    PII-minimization).** Most editable client-profile columns were
+    dropped in round-11. Remaining advisor-profile fields (e.g.
+    `firmName`) flow through the branding edit path and are captured
+    by `AdvisorBrandingAuditLog`. No standalone "profile edit"
+    surface remains to instrument.
 
 ## Verdict
 
-Coverage of the three BRD §5.4 buckets is **substantively complete**
-for round-12. Each bucket is populated by a healthy mix of
-mutation-event constants. The five "likely-significant gaps" above are
-each a 1-2-line addition (constant + call site) when the relevant
-sign-off arrives — none are blockers. Recommend documenting the
-gaps + revisiting in a future round rather than blanket-adding now.
+Coverage of the three BRD §5.4 buckets is **substantively complete**.
+Round-12 close-out: 1 of 10 flagged gaps was wired; 9 of 10 were
+determined to be by-design or have no production call site to
+instrument. Of the 9, 4 carry an explicit "add an audit constant
+when a real call site lands" note (gap 4 subdomain DNS verify, gap 2
+draft saves if product wants per-save visibility) — i.e. they remain
+intentional non-coverage today but with a clear forward path.
+
+**Tally:** 9 of 10 gaps closed by design; 1 wired in the round-12
+audit close-out commit (`chore(audit): close out audit-bucket gaps`).
