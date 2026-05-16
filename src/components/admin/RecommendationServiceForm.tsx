@@ -15,6 +15,13 @@ import {
 } from "@/lib/actions/admin-recommendation-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ServiceFormProps {
   /** Existing row (edit mode) or null (create mode). */
@@ -131,6 +138,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             options={[...TIER_VALUES]}
             defaultValue={existing?.tier ?? "BASELINE"}
             error={errors.tier}
+            disabled={pending}
           />
           <SelectField
             label="Complexity"
@@ -139,6 +147,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             defaultValue={existing?.complexity ?? ""}
             error={errors.complexity}
             allowEmpty
+            disabled={pending}
           />
           <SelectField
             label="Implementation type"
@@ -147,6 +156,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             defaultValue={existing?.implementationType ?? ""}
             error={errors.implementationType}
             allowEmpty
+            disabled={pending}
           />
           <Field
             label="Priority"
@@ -217,6 +227,8 @@ function Field({ label, name, defaultValue, error, setField, textarea, rows, typ
   );
 }
 
+const EMPTY_SENTINEL = "__empty__";
+
 interface SelectFieldProps {
   label: string;
   name: string;
@@ -224,28 +236,57 @@ interface SelectFieldProps {
   defaultValue?: string;
   error?: string;
   allowEmpty?: boolean;
+  disabled?: boolean;
 }
 
-function SelectField({ label, name, options, defaultValue, error, allowEmpty }: SelectFieldProps) {
+function SelectField({
+  label,
+  name,
+  options,
+  defaultValue,
+  error,
+  allowEmpty,
+  disabled,
+}: SelectFieldProps) {
+  const nonEmpty = options.filter((o) => o !== "");
+  const initial =
+    defaultValue !== undefined && defaultValue !== null
+      ? String(defaultValue)
+      : allowEmpty
+        ? ""
+        : (nonEmpty[0] ?? "");
+
+  const [selected, setSelected] = useState(() =>
+    allowEmpty && initial === "" ? EMPTY_SENTINEL : initial
+  );
+
+  const submitted = selected === EMPTY_SENTINEL ? "" : selected;
+
   return (
     <div>
-      <label htmlFor={name} className="block text-sm font-medium mb-1">
+      <label htmlFor={`select-${name}`} className="mb-1 block text-sm font-medium">
         {label}
       </label>
-      <select
-        id={name}
-        name={name}
-        defaultValue={defaultValue ?? options[0]}
-        className={`w-full rounded-md border px-3 py-2 text-sm bg-background ${error ? "border-destructive" : "border-input"}`}
-      >
-        {options.map((opt) =>
-          opt === "" ? (
-            allowEmpty ? <option key="_empty" value="">— none —</option> : null
-          ) : (
-            <option key={opt} value={opt}>{opt}</option>
-          )
-        )}
-      </select>
+      <input type="hidden" name={name} value={submitted} />
+      <Select value={selected} onValueChange={setSelected} disabled={disabled}>
+        <SelectTrigger
+          id={`select-${name}`}
+          className={error ? "w-full border-destructive" : "w-full"}
+          aria-invalid={error ? true : undefined}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {allowEmpty ? (
+            <SelectItem value={EMPTY_SENTINEL}>— none —</SelectItem>
+          ) : null}
+          {nonEmpty.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </div>
   );

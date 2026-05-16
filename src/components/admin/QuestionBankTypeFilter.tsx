@@ -2,16 +2,19 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   QUESTION_BANK_FILTER_TYPES,
   QUESTION_BANK_TYPE_LABELS,
 } from "@/lib/assessment/bank/question-bank-types";
 
-const selectClass = cn(
-  "border-input h-9 min-w-[12rem] rounded-lg border bg-background px-3 py-1.5 text-sm shadow-xs",
-  "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
-);
+const ALL_TYPES = "__all__";
 
 export function QuestionBankTypeFilter() {
   const router = useRouter();
@@ -21,30 +24,34 @@ export function QuestionBankTypeFilter() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Label htmlFor="question-bank-type" className="text-sm text-muted-foreground whitespace-nowrap">
+      <Label
+        htmlFor="question-bank-type"
+        className="whitespace-nowrap text-sm text-muted-foreground"
+      >
         Question type
       </Label>
-      <select
-        id="question-bank-type"
-        aria-label="Filter by question type"
-        className={selectClass}
-        value={current}
-        onChange={(e) => {
-          const v = e.target.value;
+      <Select
+        value={current === "" ? ALL_TYPES : current}
+        onValueChange={(v) => {
           const next = new URLSearchParams(searchParams.toString());
-          if (v) next.set("type", v);
-          else next.delete("type");
+          if (v === ALL_TYPES) next.delete("type");
+          else next.set("type", v);
           const qs = next.toString();
           router.push(qs ? `${pathname}?${qs}` : pathname);
         }}
       >
-        <option value="">All types</option>
-        {QUESTION_BANK_FILTER_TYPES.map((t) => (
-          <option key={t} value={t}>
-            {QUESTION_BANK_TYPE_LABELS[t]}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id="question-bank-type" className="h-12 min-w-[12rem] w-[min(100%,18rem)]" aria-label="Filter by question type">
+          <SelectValue placeholder="All types" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL_TYPES}>All types</SelectItem>
+          {QUESTION_BANK_FILTER_TYPES.map((t) => (
+            <SelectItem key={t} value={t}>
+              {QUESTION_BANK_TYPE_LABELS[t]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

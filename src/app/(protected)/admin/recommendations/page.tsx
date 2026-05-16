@@ -6,6 +6,7 @@ import {
   listRecommendationRules,
   listDistinctCategories,
 } from "@/lib/admin/recommendation-queries";
+import { RecommendationCatalogFilterForm } from "@/components/admin/RecommendationCatalogFilterForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,30 +118,14 @@ async function ServicesView({
           </Button>
         </CardHeader>
         <CardContent>
-          <form className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4 text-sm">
-            <input name="q" defaultValue={searchParams.q ?? ""} placeholder="Search name/description…" className="rounded-md border border-input px-2 py-1" />
-            <select name="category" defaultValue={searchParams.category ?? ""} className="rounded-md border border-input px-2 py-1 bg-background">
-              <option value="">All domains</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <select name="tier" defaultValue={searchParams.tier ?? ""} className="rounded-md border border-input px-2 py-1 bg-background">
-              <option value="">All tiers</option>
-              <option value="BASELINE">Baseline</option>
-              <option value="ENHANCED">Enhanced</option>
-            </select>
-            <select name="complexity" defaultValue={searchParams.complexity ?? ""} className="rounded-md border border-input px-2 py-1 bg-background">
-              <option value="">Any complexity</option>
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-            </select>
-            <select name="active" defaultValue={searchParams.active ?? "all"} className="rounded-md border border-input px-2 py-1 bg-background">
-              <option value="all">All</option>
-              <option value="active">Active only</option>
-              <option value="inactive">Inactive only</option>
-            </select>
-            <Button type="submit" size="sm" variant="outline">Filter</Button>
-          </form>
+          <RecommendationCatalogFilterForm
+            defaultQ={searchParams.q ?? ""}
+            defaultCategory={searchParams.category ?? ""}
+            defaultTier={searchParams.tier ?? ""}
+            defaultComplexity={searchParams.complexity ?? ""}
+            defaultActive={searchParams.active ?? "all"}
+            categories={categories}
+          />
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

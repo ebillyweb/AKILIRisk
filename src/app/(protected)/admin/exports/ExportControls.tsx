@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const NO_ADVISOR = "__none__";
 
 interface AdvisorOption {
   advisorProfileId: string;
@@ -81,19 +90,25 @@ export function ExportControls({ advisorOptions, systemOnly }: ExportControlsPro
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium">Advisor</label>
-      <select
-        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-        value={advisorProfileId}
-        onChange={(e) => setAdvisorProfileId(e.target.value)}
+      <label className="block text-sm font-medium" htmlFor="export-advisor">
+        Advisor
+      </label>
+      <Select
+        value={advisorProfileId === "" ? NO_ADVISOR : advisorProfileId}
+        onValueChange={(v) => setAdvisorProfileId(v === NO_ADVISOR ? "" : v)}
       >
-        <option value="">— select an advisor —</option>
-        {advisorOptions.map((opt) => (
-          <option key={opt.advisorProfileId} value={opt.advisorProfileId}>
-            {opt.label} ({opt.email})
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id="export-advisor" className="w-full">
+          <SelectValue placeholder="— select an advisor —" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_ADVISOR}>— select an advisor —</SelectItem>
+          {advisorOptions.map((opt) => (
+            <SelectItem key={opt.advisorProfileId} value={opt.advisorProfileId}>
+              {opt.label} ({opt.email})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button asChild variant="default" disabled={!advisorProfileId}>
         <a
           href={downloadHref}

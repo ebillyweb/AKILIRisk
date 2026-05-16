@@ -12,12 +12,21 @@ import {
 } from "@/lib/actions/admin-recommendation-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ServiceOption {
   id: string;
   name: string;
   category: string;
 }
+
+const SERVICE_NONE = "__none__";
 
 interface RuleFormProps {
   /** Existing rule (edit) or null (create). */
@@ -67,6 +76,9 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
   const [pending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [topError, setTopError] = useState<string | null>(null);
+  const [serviceRecommendationId, setServiceRecommendationId] = useState(
+    existing?.serviceRecommendationId ?? ""
+  );
 
   const isEdit = !!existing;
 
@@ -163,23 +175,42 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
           </div>
         )}
         <form action={onSubmit} className="space-y-4">
+          <input
+            type="hidden"
+            name="serviceRecommendationId"
+            value={serviceRecommendationId}
+          />
           <div>
             <label htmlFor="serviceRecommendationId" className="block text-sm font-medium mb-1">
               Service recommendation
             </label>
-            <select
-              id="serviceRecommendationId"
-              name="serviceRecommendationId"
-              defaultValue={existing?.serviceRecommendationId ?? ""}
-              className={`w-full rounded-md border bg-background px-3 py-2 text-sm ${errors.serviceRecommendationId ? "border-destructive" : "border-input"}`}
+            <Select
+              value={
+                serviceRecommendationId === "" ? SERVICE_NONE : serviceRecommendationId
+              }
+              onValueChange={(v) =>
+                setServiceRecommendationId(v === SERVICE_NONE ? "" : v)
+              }
+              disabled={pending}
             >
-              <option value="">— pick a service —</option>
-              {serviceOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  [{s.category}] {s.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                id="serviceRecommendationId"
+                className={
+                  errors.serviceRecommendationId ? "w-full border-destructive" : "w-full"
+                }
+                aria-invalid={errors.serviceRecommendationId ? true : undefined}
+              >
+                <SelectValue placeholder="— pick a service —" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SERVICE_NONE}>— pick a service —</SelectItem>
+                {serviceOptions.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    [{s.category}] {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.serviceRecommendationId && (
               <p className="mt-1 text-xs text-destructive">{errors.serviceRecommendationId}</p>
             )}

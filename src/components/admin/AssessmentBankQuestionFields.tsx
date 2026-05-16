@@ -1,13 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import { PROFILE_CONDITION_KEYS } from "@/lib/assessment/bank/behaviors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 
-const fieldSelectClass = cn(
-  "border-input h-11 w-full min-w-0 rounded-xl border bg-card/80 px-4 py-2 text-base shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-all outline-none md:text-sm",
-  "focus-visible:border-brand/50 focus-visible:ring-brand/20 focus-visible:ring-[3px]",
-);
+const NONE_PROFILE = "__none__";
 
 const QUESTION_TYPES = [
   { value: "yes-no", label: "Yes / No" },
@@ -53,23 +59,31 @@ export function AssessmentBankQuestionFields({
   defaultVisible = true,
   defaultOmitMaturityScoreWhenYes = false,
 }: Props) {
+  const [questionType, setQuestionType] = useState(defaultType);
+  const [profileConditionKey, setProfileConditionKey] = useState(
+    defaultProfileConditionKey || ""
+  );
+
+  const profileSelectValue =
+    profileConditionKey === "" ? NONE_PROFILE : profileConditionKey;
+
   return (
     <>
+      <input type="hidden" name="type" value={questionType} />
       <div className="space-y-2">
         <Label htmlFor="type">Question type</Label>
-        <select
-          id="type"
-          name="type"
-          defaultValue={defaultType}
-          required
-          className={fieldSelectClass}
-        >
-          {QUESTION_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        <Select value={questionType} onValueChange={setQuestionType}>
+          <SelectTrigger id="type" className="w-full" aria-required>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {QUESTION_TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
@@ -225,21 +239,27 @@ export function AssessmentBankQuestionFields({
         />
       </div>
 
+      <input type="hidden" name="profileConditionKey" value={profileConditionKey} />
       <div className="space-y-2">
         <Label htmlFor="profileConditionKey">Household profile condition (optional)</Label>
-        <select
-          id="profileConditionKey"
-          name="profileConditionKey"
-          defaultValue={defaultProfileConditionKey || ""}
-          className={fieldSelectClass}
+        <Select
+          value={profileSelectValue}
+          onValueChange={(v) =>
+            setProfileConditionKey(v === NONE_PROFILE ? "" : v)
+          }
         >
-          <option value="">None</option>
-          {PROFILE_CONDITION_KEYS.map((key) => (
-            <option key={key} value={key}>
-              {key}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="profileConditionKey" className="w-full">
+            <SelectValue placeholder="None" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE_PROFILE}>None</SelectItem>
+            {PROFILE_CONDITION_KEYS.map((key) => (
+              <SelectItem key={key} value={key}>
+                {key}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </>
   );
