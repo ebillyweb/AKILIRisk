@@ -25,7 +25,7 @@ export function AdminClientAccountActions({ clientId, deactivated }: Props) {
           onClick={() =>
             startTransition(async () => {
               const res = await restoreClientByAdmin({ userId: clientId });
-              if (!res.success) toast.error(res.error);
+              if (!res.success) toast.error(res.error ?? "Could not restore client.");
               else toast.success("Client restored.");
             })
           }
@@ -48,7 +48,7 @@ export function AdminClientAccountActions({ clientId, deactivated }: Props) {
             }
             startTransition(async () => {
               const res = await softDeleteClientByAdmin({ userId: clientId });
-              if (!res.success) toast.error(res.error);
+              if (!res.success) toast.error(res.error ?? "Could not deactivate client.");
               else toast.success("Client deactivated.");
             });
           }}
