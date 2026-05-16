@@ -4,6 +4,14 @@ import { prisma } from "@/lib/db";
 import type { GovernanceQuestionWire } from "./behaviors";
 import { loadGovernanceQuestionWires } from "./load-bank";
 
+/** `PillarQuestion.id` is `@db.Uuid`; legacy `AssessmentBankQuestion.questionId` may be a slug. */
+const UUID_STRING_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuidString(value: string): boolean {
+  return UUID_STRING_RE.test(value);
+}
+
 /**
  * Question bank UI rows: same resolution order as assessments (`loadGovernanceQuestionWires`).
  * `hasAssessmentBankRow` is false for pillar-DDL-only questions (admin edit/reorder does not apply).
@@ -43,8 +51,9 @@ export async function loadQuestionBankCountsByRiskArea(): Promise<
     bankRows.map((r) => [r.questionId, r.isVisible])
   );
 
+  const pillarQuestionIds = questionIds.filter(isUuidString);
   const pillarRows = await prisma.pillarQuestion.findMany({
-    where: { id: { in: questionIds } },
+    where: { id: { in: pillarQuestionIds } },
     select: { id: true, isVisible: true },
   });
   const pillarVisibilityById = new Map(pillarRows.map((r) => [r.id, r.isVisible]));
@@ -79,8 +88,9 @@ export async function loadQuestionBankDashboardRows(
   });
   const bankByQuestionId = new Map(bankRows.map((r) => [r.questionId, r]));
 
+  const pillarQuestionIds = questionIds.filter(isUuidString);
   const pillarRows = await prisma.pillarQuestion.findMany({
-    where: { id: { in: questionIds } },
+    where: { id: { in: pillarQuestionIds } },
     select: { id: true, isVisible: true },
   });
   const pillarVisibilityById = new Map(pillarRows.map((r) => [r.id, r.isVisible]));

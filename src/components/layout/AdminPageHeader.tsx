@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import {
-  Shield,
   Users,
   UserCircle,
   Inbox,
