@@ -24,16 +24,6 @@ export interface AdminPageHeaderConfig {
 
 const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
   {
-    path: "/admin",
-    config: {
-      icon: Shield,
-      kicker: "Administration",
-      title: "System Administration",
-      subtitle:
-        "Platform oversight and user management",
-    },
-  },
-  {
     path: "/admin/advisors",
     config: {
       icon: Users,
