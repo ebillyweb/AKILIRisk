@@ -109,6 +109,26 @@ export default async function AdvisorSettingsPage() {
             To change this information, contact your administrator.
           </p>
         </div>
+
+        {/* Option D session 1: PII policy navigation card. Links to the
+            sub-route at /advisor/settings/pii-policy. Mirrors the
+            existing pattern where /advisor/settings/notifications is
+            linked from outside this page (it's reachable but the main
+            settings page doesn't currently surface it inline). */}
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight">PII policy</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure which optional PII fields your future clients are
+                asked for during intake.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm" className="shrink-0">
+              <Link href="/advisor/settings/pii-policy">Manage policy</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

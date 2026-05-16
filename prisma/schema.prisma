@@ -532,6 +532,20 @@ model HouseholdMember {
   birthYear      Int?
   /// Demographic field (BRD §5.1 amendment). Optional.
   sex            Sex?
+  /// Option D session 1: optional household-member full name, re-added
+  /// after round-11's drop. Encrypted at rest with random-IV AES-256-GCM
+  /// via `src/lib/data/client-pii.ts`. Coexists with displayLabel —
+  /// clients who consent to fullName see "Jane Doe" everywhere; clients
+  /// who don't see "Member A" / "Member B" (existing displayLabel
+  /// default). Visibility gated per ClientAdvisorAssignment.fieldVisibility.
+  fullName       String?
+  /// Option D session 1: optional household-member phone, re-added.
+  /// Same encryption + visibility shape as fullName.
+  phone          String?
+  /// Option D session 1: optional free-form notes per household member
+  /// (e.g. role context, health considerations). Same encryption +
+  /// visibility shape as fullName.
+  notes          String?
   relationship   FamilyRelationship
   governanceRoles GovernanceRole[]
   isResident     Boolean            @default(true)
@@ -698,6 +712,30 @@ model AdvisorProfile {
   brandingEnabled     Boolean @default(true)
   customDomainEnabled Boolean @default(false)
 
+  /// Option D session 1 (BRD §5.1 amendment): per-tenant policy
+  /// controlling which optional PII fields the advisor's clients are
+  /// asked to fill in during intake. Default: all 5 fields enabled
+  /// (opt-out shape per round-12 Option D sign-off).
+  ///
+  /// Shape:
+  ///   {
+  ///     "schemaVersion": 1,
+  ///     "fields": {
+  ///       "User.name": boolean,
+  ///       "ClientProfile.phone": boolean,
+  ///       "HouseholdMember.fullName": boolean,
+  ///       "HouseholdMember.phone": boolean,
+  ///       "HouseholdMember.notes": boolean
+  ///     }
+  ///   }
+  ///
+  /// Updated via /advisor/settings/pii-policy; emits PII_POLICY_UPDATE
+  /// (and per-field PII_POLICY_FIELD_ENABLE / _DISABLE rows on toggle).
+  /// New ClientAdvisorAssignment rows snapshot this into
+  /// `fieldVisibility` at create time so a later policy change doesn't
+  /// retroactively hide data already collected from an existing client.
+  piiPolicy        Json     @default("{\"schemaVersion\":1,\"fields\":{\"User.name\":true,\"ClientProfile.phone\":true,\"HouseholdMember.fullName\":true,\"HouseholdMember.phone\":true,\"HouseholdMember.notes\":true}}")
+
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt
   clientAssignments ClientAdvisorAssignment[] @relation("AdvisorAssignments")
@@ -724,6 +762,13 @@ model ClientProfile {
   id           String    @id @default(cuid())
   userId       String    @unique
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Option D session 1 (BRD §5.1 amendment): optional client phone,
+  /// re-added after round-11's drop. Encrypted at rest with random-IV
+  /// AES-256-GCM via `src/lib/data/client-pii.ts`. Populated only when
+  /// the advisor's piiPolicy.fields["ClientProfile.phone"] is true AND
+  /// the client provided one during intake. Read-side visibility is
+  /// gated per ClientAdvisorAssignment.fieldVisibility.
+  phone        String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -739,6 +784,18 @@ model ClientAdvisorAssignment {
   /// When set, client may skip submitted/approved intake for nav and /assessment access.
   intakeWaivedAt             DateTime?
   intakeWaivedByAdvisorId    String?
+  /// Option D session 1: per-assignment snapshot of which PII fields
+  /// THIS advisor can see for THIS client. Two advisors assigned to
+  /// the same client can therefore have different visibility (e.g. a
+  /// reassigned client may consent to a different field set on
+  /// reassignment). Same JSON shape as AdvisorProfile.piiPolicy.
+  ///
+  /// Snapshotted from the advisor's piiPolicy at assignment-create
+  /// time + via SQL backfill in this commit's migration for rows that
+  /// pre-date this commit. Application-layer read sites treat null
+  /// defensively as "fall through to advisor.piiPolicy" for in-flight
+  /// assignments created during the migration window.
+  fieldVisibility            Json?
   intakeWaivedBy             AdvisorProfile? @relation("IntakeWaiverSetBy", fields: [intakeWaivedByAdvisorId], references: [id], onDelete: SetNull)
   client     User             @relation("ClientAssignments", fields: [clientId], references: [id], onDelete: Cascade)
   advisor    AdvisorProfile   @relation("AdvisorAssignments", fields: [advisorId], references: [id], onDelete: Cascade)
