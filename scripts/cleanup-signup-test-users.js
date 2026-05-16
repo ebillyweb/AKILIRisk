@@ -11,14 +11,12 @@
  * to clean up the user it just created; beforeAll calls it to mop up
  * leftovers from previous failed runs).
  *
- * Requires DATABASE_URL (loaded from .env.local then .env, same pattern as
- * the other seed scripts).
+ * Requires DATABASE_URL in `.env.local` (same pattern as the other seed scripts).
  */
 
 const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 require('dotenv').config({ path: path.join(repoRoot, '.env.local'), quiet: true });
-require('dotenv').config({ path: path.join(repoRoot, '.env'), quiet: true });
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
@@ -27,7 +25,7 @@ const EMAIL_PREFIX = 'pw-signup-';
 const EMAIL_DOMAIN = '@test.com';
 
 if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL not set. Add it to .env.local or .env, then re-run.');
+  console.error('DATABASE_URL not set. Add it to .env.local, then re-run.');
   process.exit(1);
 }
 

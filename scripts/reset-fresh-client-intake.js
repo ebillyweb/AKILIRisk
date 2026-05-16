@@ -12,13 +12,12 @@
  * Run from a Playwright fixture:
  *   execSync('node scripts/reset-fresh-client-intake.js')
  *
- * Requires DATABASE_URL (loaded from .env.local then .env, same as the seed scripts).
+ * Requires DATABASE_URL in `.env.local` (same pattern as other seed scripts).
  */
 
 const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 require('dotenv').config({ path: path.join(repoRoot, '.env.local'), quiet: true });
-require('dotenv').config({ path: path.join(repoRoot, '.env'), quiet: true });
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
@@ -27,7 +26,7 @@ const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
 const FRESH_EMAIL = process.env.FRESH_CLIENT_EMAIL || 'client-fresh@test.com';
 
 if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL not set. Add it to .env.local or .env, then re-run.');
+  console.error('DATABASE_URL not set. Add it to .env.local, then re-run.');
   process.exit(1);
 }
 if (!process.env.ENCRYPTION_KEY) {

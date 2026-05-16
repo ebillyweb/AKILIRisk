@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type { UserRole } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
-import { requireAdminRole } from "@/lib/admin/auth";
+import { requireSuperAdminRole } from "@/lib/admin/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 const updateFlagsSchema = z.object({
@@ -14,7 +16,8 @@ const updateFlagsSchema = z.object({
 
 export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
   try {
-    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail, role: actorRole } =
+      await requireSuperAdminRole();
     const parsed = updateFlagsSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -47,7 +50,7 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.PLATFORM_SETTINGS_UPDATE,
       entityType: "PlatformSettings",
       entityId: "default",
@@ -76,7 +79,7 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
 
 export async function getPlatformAdvisorFeatureFlagsForAdmin() {
   try {
-    await requireAdminRole();
+    await requireSuperAdminRole();
     const row = await prisma.platformSettings.findUnique({
       where: { id: "default" },
     });
@@ -129,7 +132,8 @@ export type UpdateRiskThresholdsInput = z.infer<typeof updateRiskThresholdsSchem
 
 export async function updateRiskThresholds(input: unknown) {
   try {
-    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail, role: actorRole } =
+      await requireSuperAdminRole();
     const parsed = updateRiskThresholdsSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -166,7 +170,7 @@ export async function updateRiskThresholds(input: unknown) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.RISK_THRESHOLDS_UPDATE,
       entityType: "PlatformSettings",
       entityId: "default",
@@ -201,7 +205,7 @@ export async function updateRiskThresholds(input: unknown) {
 
 export async function getRiskThresholdsForAdmin() {
   try {
-    await requireAdminRole();
+    await requireSuperAdminRole();
     const row = await prisma.platformSettings.findUnique({
       where: { id: "default" },
       select: {

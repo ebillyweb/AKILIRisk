@@ -8,11 +8,10 @@ import { fileURLToPath } from "url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 config({ path: resolve(repoRoot, ".env.local") });
-config({ path: resolve(repoRoot, ".env") });
 
 if (!process.env.DATABASE_URL?.trim()) {
   throw new Error(
-    "DATABASE_URL is missing. Add it to .env.local or .env (see .env.example). " +
+    "DATABASE_URL is missing. Add it to .env.local (see .env.example). " +
       "Scripts run with `tsx` do not load env the way `next dev` does."
   );
 }

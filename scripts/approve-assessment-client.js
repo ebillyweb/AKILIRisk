@@ -3,8 +3,11 @@
  * Approve intake for client+assessment@test.com to unlock assessment access
  */
 
-require('dotenv').config({ path: '.env.local' });
-require('dotenv').config();
+const path = require("path");
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.local"),
+  quiet: true,
+});
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');

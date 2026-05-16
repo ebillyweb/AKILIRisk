@@ -1,14 +1,16 @@
 /**
  * Prisma client for Node/tsx scripts. Prisma 7 requires a driver adapter.
- * Loads .env.local then .env so DATABASE_URL is set like prisma.config.ts.
+ * Loads `.env.local` from the repo root so DATABASE_URL is set like `next dev`.
  */
 import { config } from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
-config({ path: ".env.local" });
-config();
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+config({ path: resolve(repoRoot, ".env.local") });
 
 function postgresUrlWithExplicitSslMode(url: string): string {
   return url.replace(
@@ -20,7 +22,7 @@ function postgresUrlWithExplicitSslMode(url: string): string {
 const rawUrl = process.env.DATABASE_URL;
 if (!rawUrl?.trim()) {
   throw new Error(
-    "DATABASE_URL is missing. Set it in .env or .env.local (see .env.example)."
+    "DATABASE_URL is missing. Set it in .env.local (see .env.example)."
   );
 }
 

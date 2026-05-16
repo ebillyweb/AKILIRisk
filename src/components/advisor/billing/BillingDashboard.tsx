@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, ExternalLink } from "lucide-react";
+import { CreditCard, Download, ExternalLink } from "lucide-react";
 
 import {
   createCheckoutSession,
@@ -12,9 +11,12 @@ import {
   type BillingInvoiceDTO,
   type SubscriptionDetailsDTO,
 } from "@/lib/actions/billing";
+import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { TIER_LIMITS } from "@/lib/billing/constants";
 import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -52,6 +54,30 @@ function SubscriptionOverview({
 }: {
   data: SubscriptionDetailsDTO;
 }) {
+  /** Synthetic row from `getSubscriptionDetails` when there is no DB `Subscription` and Stripe reconcile found nothing. */
+  if (data.status === "NONE") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <CreditCard className="h-5 w-5" aria-hidden />
+            Current plan
+          </CardTitle>
+          <CardDescription>
+            No subscription is on file yet. Choose a plan below to start checkout; after
+            payment, this card shows your tier and renewal date from Stripe.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          <p>
+            If you already completed checkout, wait a few seconds and refresh—this page
+            polls until Stripe webhooks link your subscription.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const periodEnd = new Date(data.currentPeriodEnd);
   return (
     <Card>
@@ -153,6 +179,7 @@ function PlanSelector({
   changePlanMode,
   committedPlan,
   subscriptionStatus,
+  debugBilling,
 }: {
   billingCycle: BillingCycle;
   onBillingCycleChange: (c: BillingCycle) => void;
@@ -163,6 +190,7 @@ function PlanSelector({
   changePlanMode: "checkout" | "stripe_update";
   committedPlan: CommittedPlan | null;
   subscriptionStatus: string;
+  debugBilling: boolean;
 }) {
   const awaitingCheckoutOnly =
     changePlanMode === "checkout" &&
@@ -172,7 +200,7 @@ function PlanSelector({
 
   const description =
     changePlanMode === "stripe_update"
-      ? "Upgrade, downgrade, or switch between monthly and annual billing. Stripe applies proration. Use Manage payment for cards, invoices, and cancellation."
+      ? "Higher tiers show Upgrade. Your active tier and interval is marked Current plan and is not selectable. Use other cards to change tier or monthly/annual billing (Stripe proration). Download receipts below or in Manage billing."
       : awaitingCheckoutOnly
         ? `You have a plan on file (${TIER_LABEL[committedPlan!.tier]}, ${committedPlan!.billingCycle === "ANNUAL" ? "annual" : "monthly"} billing) but payment is not linked yet. Pick any tier or interval, then complete Checkout—you can downgrade before paying.`
         : "Choose a tier and billing interval. You will complete payment securely on Stripe Checkout.";
@@ -212,10 +240,11 @@ function PlanSelector({
           const committedRank = hasCommitted ? TIER_RANK[committedPlan!.tier] : -1;
           const tierRank = TIER_RANK[tier];
 
+          const isCurrentSelection =
+            changePlanMode === "stripe_update" && isSamePlan;
+
           let buttonLabel = "Subscribe";
-          if (changePlanMode === "stripe_update" && isSamePlan) {
-            buttonLabel = "Current plan";
-          } else if (isSamePlan && awaitingCheckoutOnly) {
+          if (isSamePlan && awaitingCheckoutOnly) {
             buttonLabel = "Add payment in Stripe";
           } else if (isSamePlan && subscriptionStatus === "CANCELLED") {
             buttonLabel = "Resubscribe";
@@ -227,14 +256,7 @@ function PlanSelector({
             buttonLabel = "Downgrade";
           }
 
-          const planButtonVariant:
-            | "billingCurrent"
-            | "billingUpgrade"
-            | "billingDowngrade"
-            | "default" = (() => {
-            if (changePlanMode === "stripe_update" && isSamePlan) {
-              return "billingCurrent";
-            }
+          const planButtonVariant: "billingUpgrade" | "billingDowngrade" | "default" = (() => {
             if (hasCommitted && tierRank > committedRank) {
               return "billingUpgrade";
             }
@@ -244,11 +266,44 @@ function PlanSelector({
             return "default";
           })();
 
-          const disabled =
-            busy || (changePlanMode === "stripe_update" && isSamePlan);
+          const disabled = busy;
 
           const busyLabel =
             changePlanMode === "stripe_update" ? "Updating…" : "Redirecting…";
+
+          if (debugBilling) {
+            const whyNotCurrent: string[] = [];
+            if (changePlanMode !== "stripe_update") {
+              whyNotCurrent.push(
+                `changePlanMode is "${changePlanMode}" (isCurrentSelection only when "stripe_update")`
+              );
+            }
+            if (!hasCommitted) {
+              whyNotCurrent.push("no committedPlan (subscription status is NONE)");
+            } else if (tier !== committedPlan!.tier) {
+              whyNotCurrent.push(`tier mismatch: card=${tier} committed=${committedPlan!.tier}`);
+            } else if (billingCycle !== committedPlan!.billingCycle) {
+              whyNotCurrent.push(
+                `billing interval mismatch: uiCycle=${billingCycle} committedCycle=${committedPlan!.billingCycle} (toggle Monthly/Annual above)`
+              );
+            }
+            console.debug("[advisor-billing] plan-card", {
+              tier,
+              uiBillingCycle: billingCycle,
+              changePlanMode,
+              subscriptionStatus,
+              committedPlan,
+              hasCommitted,
+              isSameTier,
+              isSamePlan,
+              isCurrentSelection,
+              awaitingCheckoutOnly,
+              buttonLabel,
+              planButtonVariant,
+              showsNonSelectableCurrentBlock: isCurrentSelection,
+              whyNotCurrent: isCurrentSelection ? [] : whyNotCurrent,
+            });
+          }
 
           const priceLine =
             billingCycle === "MONTHLY"
@@ -258,11 +313,33 @@ function PlanSelector({
           return (
             <div
               key={tier}
-              className="flex flex-col rounded-lg border bg-card/50 p-4 shadow-sm"
+              className={cn(
+                "flex flex-col rounded-lg border bg-card/50 p-4 shadow-sm",
+                isCurrentSelection &&
+                  "border-primary/35 bg-muted/25 ring-1 ring-primary/25 shadow-none"
+              )}
+              aria-current={isCurrentSelection ? "true" : undefined}
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-semibold">{TIER_LABEL[tier]}</h3>
-                {isSameTier && hasCommitted ? (
+                {isCurrentSelection ? (
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 text-[0.65rem] font-semibold normal-case tracking-normal"
+                  >
+                    Current plan
+                  </Badge>
+                ) : isSameTier &&
+                  hasCommitted &&
+                  changePlanMode === "stripe_update" &&
+                  !isSamePlan ? (
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 text-[0.65rem] font-semibold normal-case tracking-normal"
+                  >
+                    Other interval
+                  </Badge>
+                ) : isSameTier && hasCommitted && awaitingCheckoutOnly ? (
                   <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     Your plan
                   </span>
@@ -278,15 +355,23 @@ function PlanSelector({
               ) : (
                 <p className="mt-2 text-xs text-muted-foreground">Price unavailable</p>
               )}
-              <Button
-                className="mt-4"
-                type="button"
-                variant={planButtonVariant}
-                disabled={disabled}
-                onClick={() => onSelectPlan(tier)}
-              >
-                {busy ? busyLabel : buttonLabel}
-              </Button>
+              {isCurrentSelection ? (
+                <div className="mt-4 rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-3">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Your current plan. Pick another tier or switch monthly/annual above to change.
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  className="mt-4"
+                  type="button"
+                  variant={planButtonVariant}
+                  disabled={disabled}
+                  onClick={() => onSelectPlan(tier)}
+                >
+                  {busy ? busyLabel : buttonLabel}
+                </Button>
+              )}
             </div>
           );
         })}
@@ -302,13 +387,23 @@ function PlanSelector({
   );
 }
 
-function BillingHistory({ invoices }: { invoices: BillingInvoiceDTO[] }) {
+function BillingHistory({
+  invoices,
+  canUseBillingPortal,
+}: {
+  invoices: BillingInvoiceDTO[];
+  canUseBillingPortal: boolean;
+}) {
   if (invoices.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Invoices</CardTitle>
-          <CardDescription>No invoices yet. They will appear after your first payment.</CardDescription>
+          <CardTitle className="text-lg">Invoices & receipts</CardTitle>
+          <CardDescription>
+            {canUseBillingPortal
+              ? "Nothing listed here yet. Use Manage billing & receipts above for the Stripe customer portal—full invoice history and PDF downloads."
+              : "No invoices yet. They will appear after your first payment."}
+          </CardDescription>
         </CardHeader>
       </Card>
     );
@@ -317,8 +412,10 @@ function BillingHistory({ invoices }: { invoices: BillingInvoiceDTO[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Invoices</CardTitle>
-        <CardDescription>Recent billing history from Stripe.</CardDescription>
+        <CardTitle className="text-lg">Invoices & receipts</CardTitle>
+        <CardDescription>
+          Download hosted invoices or PDFs. For older documents, use Manage billing & receipts.
+        </CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -328,7 +425,7 @@ function BillingHistory({ invoices }: { invoices: BillingInvoiceDTO[] }) {
               <th className="pb-2 pr-4 font-medium">Invoice</th>
               <th className="pb-2 pr-4 font-medium">Status</th>
               <th className="pb-2 font-medium">Amount</th>
-              <th className="pb-2 pl-4 font-medium" />
+              <th className="pb-2 pl-4 font-medium">Download</th>
             </tr>
           </thead>
           <tbody>
@@ -350,8 +447,9 @@ function BillingHistory({ invoices }: { invoices: BillingInvoiceDTO[] }) {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-primary hover:underline"
                     >
-                      View
-                      <ExternalLink className="h-3 w-3" aria-hidden />
+                      <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Invoice page
+                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
                     </a>
                   ) : inv.pdfUrl ? (
                     <a
@@ -360,8 +458,9 @@ function BillingHistory({ invoices }: { invoices: BillingInvoiceDTO[] }) {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-primary hover:underline"
                     >
+                      <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
                       PDF
-                      <ExternalLink className="h-3 w-3" aria-hidden />
+                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
                     </a>
                   ) : null}
                 </td>
@@ -380,15 +479,24 @@ export function BillingDashboard({
   checkoutNotice,
   billingEnabled,
   planPrices,
+  debugBilling = isAdvisorBillingDebugEnabled(),
 }: {
   initialSubscription: SubscriptionDetailsDTO | null;
   initialInvoices: BillingInvoiceDTO[];
   checkoutNotice: "success" | "cancel" | null;
   billingEnabled: boolean;
   planPrices: PlanPricesForUi;
+  /** Prefer pass-through from server page; falls back to env gate when omitted (e.g. Storybook). */
+  debugBilling?: boolean;
 }) {
   const router = useRouter();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("MONTHLY");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
+    const sub = initialSubscription;
+    if (sub && sub.status !== "NONE" && sub.status !== "CANCELLED") {
+      return sub.billingCycle;
+    }
+    return "MONTHLY";
+  });
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -432,10 +540,67 @@ export function BillingDashboard({
       ? "stripe_update"
       : "checkout";
 
-  const committedPlan: CommittedPlan | null =
-    data.status === "NONE"
-      ? null
-      : { tier: data.tier, billingCycle: data.billingCycle };
+  const committedPlan: CommittedPlan | null = useMemo(
+    () =>
+      data.status === "NONE" ? null : { tier: data.tier, billingCycle: data.billingCycle },
+    [data.status, data.tier, data.billingCycle]
+  );
+
+  useEffect(() => {
+    if (!debugBilling) return;
+    const raw = initialSubscription;
+    console.debug("[advisor-billing] BillingDashboard render snapshot", {
+      checkoutNotice,
+      rawInitialSubscription: raw
+        ? {
+            tier: raw.tier,
+            status: raw.status,
+            billingCycle: raw.billingCycle,
+            clientLimit: raw.clientLimit,
+            currentPeriodEnd: raw.currentPeriodEnd,
+            cancelAtPeriodEnd: raw.cancelAtPeriodEnd,
+            stripeCustomerId: raw.stripeCustomerId,
+            stripeSubscriptionId: raw.stripeSubscriptionId,
+            currentClientCount: raw.currentClientCount,
+            canAddClient: raw.canAddClient,
+          }
+        : null,
+      resolvedDashboardData: {
+        tier: data.tier,
+        status: data.status,
+        billingCycle: data.billingCycle,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+      },
+      uiBillingCycle: billingCycle,
+      changePlanMode,
+      committedPlan,
+      uiVsCommittedCycle: committedPlan
+        ? { matches: billingCycle === committedPlan.billingCycle, ui: billingCycle, committed: committedPlan.billingCycle }
+        : { matches: null, ui: billingCycle, committed: null },
+      stripeUpdateReason: {
+        hasStripeSubscriptionId: Boolean(data.stripeSubscriptionId?.trim()),
+        statusIsCancelled: data.status === "CANCELLED",
+      },
+    });
+  }, [
+    debugBilling,
+    checkoutNotice,
+    initialSubscription,
+    data.tier,
+    data.status,
+    data.billingCycle,
+    data.stripeCustomerId,
+    data.stripeSubscriptionId,
+    data.clientLimit,
+    data.currentPeriodEnd,
+    data.cancelAtPeriodEnd,
+    data.currentClientCount,
+    data.canAddClient,
+    billingCycle,
+    changePlanMode,
+    committedPlan,
+  ]);
 
   const onSelectPlan = useCallback(
     (tier: SubscriptionTier) => {
@@ -527,13 +692,30 @@ export function BillingDashboard({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-   
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         {data.stripeCustomerId ? (
-          <Button type="button" variant="outline" disabled={pending} onClick={onPortal}>
-            Manage payment &amp; cancellation
-          </Button>
-        ) : null}
+          <>
+            <p className="max-w-prose text-sm text-muted-foreground">
+              Open the Stripe customer portal to update cards, cancel, or download full invoice
+              history. Use the plan grid below to upgrade, downgrade, or switch monthly/annual
+              billing.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onPortal}
+              className="shrink-0"
+            >
+              Manage billing & receipts
+            </Button>
+          </>
+        ) : (
+          <p className="max-w-prose text-sm text-muted-foreground">
+            Complete checkout on a plan below, then return here for receipts and billing portal
+            access.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -551,9 +733,13 @@ export function BillingDashboard({
         changePlanMode={changePlanMode}
         committedPlan={committedPlan}
         subscriptionStatus={data.status}
+        debugBilling={debugBilling}
       />
 
-      <BillingHistory invoices={initialInvoices} />
+      <BillingHistory
+        invoices={initialInvoices}
+        canUseBillingPortal={Boolean(data.stripeCustomerId?.trim())}
+      />
     </div>
   );
 }

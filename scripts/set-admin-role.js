@@ -5,8 +5,11 @@
  * Run: node scripts/set-admin-role.js
  * Then sign out and sign in again so the session gets a fresh JWT with the role.
  */
-require("dotenv").config({ path: ".env.local" });
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.local"),
+  quiet: true,
+});
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { Pool } = require("pg");

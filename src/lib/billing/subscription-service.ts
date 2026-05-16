@@ -399,6 +399,145 @@ export async function upsertSubscriptionFromStripe(
   }
 }
 
+/** Stripe Search query literals use single quotes; escape embedded quotes by doubling. */
+function escapeStripeSearchLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function subscriptionStripeStatusRank(status: Stripe.Subscription.Status): number {
+  switch (status) {
+    case "active":
+      return 5;
+    case "trialing":
+      return 4;
+    case "past_due":
+      return 3;
+    case "unpaid":
+    case "paused":
+    case "incomplete":
+      return 2;
+    case "canceled":
+    case "incomplete_expired":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function pickPrimaryStripeSubscription(
+  subs: Stripe.Subscription[]
+): Stripe.Subscription | null {
+  if (subs.length === 0) return null;
+  return (
+    [...subs].sort((a, b) => {
+      const d =
+        subscriptionStripeStatusRank(b.status) -
+        subscriptionStripeStatusRank(a.status);
+      if (d !== 0) return d;
+      return (b.created ?? 0) - (a.created ?? 0);
+    })[0] ?? null
+  );
+}
+
+/**
+ * When webhooks never wrote `Subscription` (or only wrote `stripeCustomerId`),
+ * `/advisor/billing` would show checkout for every tier. Pull the live Stripe
+ * subscription for this advisor (metadata `userId`, known customer id, then
+ * customer-by-email) and upsert the row so plan cards use `stripe_update`.
+ */
+export async function reconcileAdvisorSubscriptionWithStripe(
+  userId: string,
+  email: string | null,
+  current: SubscriptionRow | null,
+  db: DbLike = prisma
+): Promise<SubscriptionRow | null> {
+  if (!isBillingEnabled()) {
+    return current;
+  }
+
+  if (current?.stripeSubscriptionId?.trim()) {
+    return current;
+  }
+
+  try {
+    const { getStripe } = await import("@/lib/stripe");
+    const stripe = getStripe();
+    const seen = new Set<string>();
+    const candidates: Stripe.Subscription[] = [];
+
+    const pushUnique = (subs: Stripe.Subscription[]) => {
+      for (const s of subs) {
+        if (seen.has(s.id)) continue;
+        seen.add(s.id);
+        candidates.push(s);
+      }
+    };
+
+    const listForCustomer = async (customerId: string) => {
+      const res = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: 30,
+      });
+      pushUnique(res.data);
+    };
+
+    try {
+      const q = escapeStripeSearchLiteral(userId);
+      const searched = await stripe.subscriptions.search({
+        query: `metadata['userId']:'${q}'`,
+        limit: 30,
+      });
+      pushUnique(searched.data);
+    } catch (e) {
+      console.warn(
+        "[subscription-service] Stripe subscription search failed (billing reconcile):",
+        e
+      );
+    }
+
+    const custId = current?.stripeCustomerId?.trim();
+    if (custId) {
+      await listForCustomer(custId);
+    }
+
+    const emailTrim = email?.trim();
+    if (emailTrim) {
+      const customers = await stripe.customers.list({
+        email: emailTrim,
+        limit: 20,
+      });
+      for (const c of customers.data) {
+        if (c.id) await listForCustomer(c.id);
+      }
+    }
+
+    const best = pickPrimaryStripeSubscription(candidates);
+    if (!best) {
+      return current;
+    }
+
+    const customerIdRaw = best.customer;
+    const customerId =
+      typeof customerIdRaw === "string"
+        ? customerIdRaw
+        : customerIdRaw && typeof customerIdRaw === "object" && "id" in customerIdRaw
+          ? (customerIdRaw as { id: string }).id
+          : null;
+    if (!customerId) {
+      return current;
+    }
+
+    await upsertSubscriptionFromStripe(userId, best, customerId, db);
+    return (
+      (await db.subscription.findUnique({ where: { userId } })) ?? current ?? null
+    );
+  } catch (e) {
+    console.warn("[subscription-service] reconcileAdvisorSubscriptionWithStripe failed:", e);
+    return current;
+  }
+}
+
 export async function syncSubscriptionByStripeId(
   stripeSubscriptionId: string,
   db: DbLike = prisma

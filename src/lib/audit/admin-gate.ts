@@ -1,12 +1,12 @@
 import "server-only";
 
 import { auth } from "@/lib/auth";
-import { isAdminUser } from "@/lib/admin/auth";
+import { isAdmin } from "@/lib/admin/auth";
 
 /**
  * Audit-log routes use 404-for-non-admin (existence-leak avoidance, same
  * posture as the audio streaming route). Returns the admin actor info on
- * success; returns null when the caller is not the designated admin —
+ * success; returns null when the caller is not a platform admin —
  * caller decides between `notFound()` (page) and a 404 NextResponse (API).
  *
  * Distinct from `requireAdminRole()` which throws an "Unauthorized" Error.
@@ -19,7 +19,7 @@ export async function getAuditAdminActorOrNull(): Promise<{
 } | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
-  if (!isAdminUser(session.user.email ?? null, session.user.role)) return null;
+  if (!isAdmin(session)) return null;
   return {
     userId: session.user.id,
     email: session.user.email ?? null,

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ReactNode } from "react";
-import { isAdminUser } from "@/lib/admin/auth";
+import { isAdmin } from "@/lib/admin/auth";
 import { AdminPageHeaderFromPath } from "@/components/layout/AdminPageHeader";
 
 export default async function AdminLayout({
@@ -11,10 +11,7 @@ export default async function AdminLayout({
 }) {
   const session = await auth();
 
-  if (
-    !session?.user ||
-    !isAdminUser(session.user.email ?? null, session.user.role)
-  ) {
+  if (!session?.user || !isAdmin(session)) {
     redirect("/dashboard?error=unauthorized");
   }
 

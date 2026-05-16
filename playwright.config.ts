@@ -24,7 +24,6 @@ function repoRoot(): string {
 // `execSync` only inherits this process env — load repo env here too.
 const root = repoRoot();
 loadEnv({ path: resolve(root, ".env.local"), quiet: true });
-loadEnv({ path: resolve(root, ".env"), quiet: true });
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "https://preview.akilirisk.com";
 

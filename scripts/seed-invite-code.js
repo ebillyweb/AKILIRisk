@@ -5,8 +5,11 @@
  * Code is 6 characters, letters and/or numbers (e.g. 123456, ABC123, BELV01).
  * Optional PREFILL_EMAIL: when users enter this code, the signup form email is prefilled (e.g. buddy+belvcustomer@ebilly.com).
  */
-require("dotenv").config({ path: ".env.local" });
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.local"),
+  quiet: true,
+});
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { Pool } = require("pg");

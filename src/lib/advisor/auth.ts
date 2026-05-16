@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { subscriptionQualifiesForPortalEnablement } from "@/lib/billing/advisor-portal-subscription";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { prisma } from "@/lib/db";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /** Thrown by `requireAdvisorRole` when an admin has disabled advisor hub/API access. */
@@ -114,13 +115,13 @@ export async function requireAdvisorSession() {
   }
 
   const userRole = session.user.role?.toString().toUpperCase();
-  if (userRole !== "ADVISOR" && userRole !== "ADMIN") {
+  if (!isAdvisorHubNavRole(userRole)) {
     throw new Error("Unauthorized: Advisor access required");
   }
 
   return {
     userId: session.user.id,
-    role: userRole,
+    role: userRole ?? "USER",
   };
 }
 
@@ -132,7 +133,7 @@ export async function requireAdvisorRole() {
   }
 
   const userRole = session.user.role?.toString().toUpperCase();
-  if (userRole !== "ADVISOR" && userRole !== "ADMIN") {
+  if (!isAdvisorHubNavRole(userRole)) {
     throw new Error("Unauthorized: Advisor access required");
   }
 

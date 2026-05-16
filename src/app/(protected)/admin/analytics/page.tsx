@@ -67,7 +67,7 @@ export default async function AdminAnalyticsPage() {
     controlsResult.status === "fulfilled" ? controlsResult.value : null;
 
   void writeAudit({
-    actor: { userId: session.userId, role: "ADMIN", email: session.email },
+    actor: { userId: session.userId, role: session.role as import("@prisma/client").UserRole, email: session.email },
     action: AUDIT_ACTIONS.DATA_ACCESS_ANALYTICS_VIEW,
     entityType: "system",
     entityId: null,

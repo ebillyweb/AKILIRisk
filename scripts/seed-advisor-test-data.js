@@ -4,9 +4,12 @@
  * Creates: advisor user, advisor profile, client with submitted intake interview, client-advisor assignment
  */
 
-// Load environment variables in the same order as the app
-require('dotenv').config({ path: '.env.local' });
-require('dotenv').config();
+// Load repo-root `.env.local` (Next.js loads this automatically for `next dev`).
+const path = require("path");
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.local"),
+  quiet: true,
+});
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');

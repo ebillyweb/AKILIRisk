@@ -30,7 +30,9 @@
     "env:vercel:link": "npx vercel link",
     "env:vercel": "npx vercel env pull .env.local",
     "env:vercel:preview": "npx vercel env pull .env.local --environment preview",
-    "env:vercel:production": "npx vercel env pull .env.local --environment production"
+    "env:vercel:production": "npx vercel env pull .env.local --environment production",
+    "env:vercel:sync-stripe": "node scripts/sync-vercel-stripe-env.mjs",
+    "env:vercel:sync-stripe-live-production": "node scripts/sync-vercel-stripe-live-production.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

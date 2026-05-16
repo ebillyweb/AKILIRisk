@@ -9,6 +9,7 @@ import { isBillingEnabled } from "@/lib/billing/config";
 import { TIER_LIMITS } from "@/lib/billing/constants";
 import {
   checkClientLimitForAdvisorProfile,
+  reconcileAdvisorSubscriptionWithStripe,
   upsertSubscriptionFromStripe,
   validateCheckoutPrice,
 } from "@/lib/billing/subscription-service";
@@ -260,9 +261,15 @@ export async function getSubscriptionDetails(): Promise<
       where: { userId },
     });
 
+    const reconciled = await reconcileAdvisorSubscriptionWithStripe(
+      userId,
+      profile.user.email ?? null,
+      sub
+    );
+
     const limitCheck = await checkClientLimitForAdvisorProfile(profile.id);
 
-    if (!sub) {
+    if (!reconciled) {
       return {
         success: true,
         data: {
@@ -283,14 +290,14 @@ export async function getSubscriptionDetails(): Promise<
     return {
       success: true,
       data: {
-        tier: sub.tier,
-        status: sub.status,
-        clientLimit: sub.clientLimit,
-        billingCycle: sub.billingCycle,
-        currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
-        cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
-        stripeCustomerId: sub.stripeCustomerId,
-        stripeSubscriptionId: sub.stripeSubscriptionId,
+        tier: reconciled.tier,
+        status: reconciled.status,
+        clientLimit: reconciled.clientLimit,
+        billingCycle: reconciled.billingCycle,
+        currentPeriodEnd: reconciled.currentPeriodEnd.toISOString(),
+        cancelAtPeriodEnd: reconciled.cancelAtPeriodEnd,
+        stripeCustomerId: reconciled.stripeCustomerId,
+        stripeSubscriptionId: reconciled.stripeSubscriptionId,
         currentClientCount: limitCheck.currentCount,
         canAddClient: limitCheck.canAddClient,
       },

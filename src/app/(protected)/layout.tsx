@@ -14,6 +14,10 @@ import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { prisma } from "@/lib/db";
+import {
+  isAdvisorHubNavRole,
+  isPlatformAdminRole,
+} from "@/lib/auth-roles";
 import { cn } from "@/lib/utils";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
@@ -44,8 +48,8 @@ export default async function ProtectedLayout({
   }
 
   const role = session?.user?.role?.toString().toUpperCase();
-  const showAdvisor = role === "ADVISOR" || role === "ADMIN";
-  const showAdmin = role === "ADMIN";
+  const showAdvisor = isAdvisorHubNavRole(role);
+  const showAdmin = isPlatformAdminRole(role);
 
   // For clients: restrict nav to Intake until submitted or advisor waives; Assessment when approved or waived
   let restrictNavToIntake = false;

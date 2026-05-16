@@ -14,7 +14,6 @@ const path = require('path');
 const dotenv = require('dotenv');
 const repoRoot = path.resolve(__dirname, '..');
 dotenv.config({ path: path.join(repoRoot, '.env.local'), quiet: true });
-dotenv.config({ path: path.join(repoRoot, '.env'), quiet: true });
 
 const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
@@ -23,7 +22,7 @@ const { Pool } = require('pg');
 const TEST_CLIENT_EMAIL = process.env.CLIENT_EMAIL || 'client@test.com';
 
 if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL not set. Add it to .env.local or .env, then re-run.');
+  console.error('DATABASE_URL not set. Add it to .env.local, then re-run.');
   process.exit(1);
 }
 if (!process.env.ENCRYPTION_KEY) {

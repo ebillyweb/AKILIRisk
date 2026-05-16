@@ -1,10 +1,10 @@
-import { requireAdminRole } from "@/lib/admin/auth";
+import { requireSuperAdminRole } from "@/lib/admin/auth";
 import { getRiskThresholdsForAdmin } from "@/lib/admin/platform-settings-actions";
 import { AdminRiskThresholdsForm } from "@/components/admin/AdminRiskThresholdsForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminRiskThresholdsPage() {
-  await requireAdminRole();
+  await requireSuperAdminRole();
   const res = await getRiskThresholdsForAdmin();
 
   return (

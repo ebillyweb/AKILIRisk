@@ -1,37 +1,94 @@
 import "server-only";
 
+import type { Session } from "next-auth";
+
 import { auth } from "@/lib/auth";
 import {
-  DESIGNATED_ADMIN_EMAIL,
-  isDesignatedAdminEmail,
-} from "@/lib/auth-shared";
+  isPlatformAdminRole,
+  isSuperAdminRole,
+  normalizeUserRoleString,
+} from "@/lib/auth-roles";
+import { DESIGNATED_ADMIN_EMAIL } from "@/lib/auth-shared";
 
-/** Re-export for back-compat with existing imports. The single source of
- *  truth is `DESIGNATED_ADMIN_EMAIL` in `@/lib/auth-shared`. */
+/** Re-export for back-compat with existing imports. */
 export const ADMIN_ALLOWED_EMAIL = DESIGNATED_ADMIN_EMAIL;
 
-export function isAdminUser(email: string | null | undefined, role: string | null | undefined): boolean {
-  const r = role?.toString().toUpperCase();
-  return r === "ADMIN" && isDesignatedAdminEmail(email);
+export type PlatformAdminContext = {
+  userId: string;
+  email: string | null | undefined;
+  /** Uppercased `UserRole` string from the session (JWT). */
+  role: string;
+};
+
+/**
+ * True if the session user may access the platform admin UI (`/admin`) and
+ * `requireAdminRole` actions — `ADMIN` or `SUPER_ADMIN`.
+ */
+export function isAdmin(session: Session | null): boolean {
+  return isPlatformAdminRole(session?.user?.role);
 }
 
 /**
- * Require the current user to be the designated admin (ADMIN role and buddy@ebilly.com).
- * Use for admin-only routes and actions.
+ * True if the session user is a super admin (platform-wide settings, etc.).
  */
-export async function requireAdminRole() {
+export function isSuperAdmin(session: Session | null): boolean {
+  return isSuperAdminRole(session?.user?.role);
+}
+
+/**
+ * @deprecated Use {@link isAdmin} with the full session object.
+ */
+export function isAdminUser(
+  _email: string | null | undefined,
+  role: string | null | undefined
+): boolean {
+  return isPlatformAdminRole(role);
+}
+
+/**
+ * Require `ADMIN` or `SUPER_ADMIN`. Use for almost all `/admin` pages and
+ * admin server actions. For platform-wide settings, use
+ * {@link requireSuperAdminRole} instead.
+ */
+export async function requireAdminRole(): Promise<PlatformAdminContext> {
   const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error("Not authenticated");
   }
 
-  if (!isAdminUser(session.user.email ?? null, session.user.role)) {
-    throw new Error("Unauthorized: Admin access is restricted to the designated admin account.");
+  if (!isAdmin(session)) {
+    throw new Error(
+      "Unauthorized: Admin access requires ADMIN or SUPER_ADMIN role."
+    );
   }
 
   return {
     userId: session.user.id,
     email: session.user.email,
+    role: normalizeUserRoleString(session.user.role),
+  };
+}
+
+/**
+ * Require `SUPER_ADMIN` only (platform feature flags, global risk thresholds).
+ */
+export async function requireSuperAdminRole(): Promise<PlatformAdminContext> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  if (!isSuperAdmin(session)) {
+    throw new Error(
+      "Unauthorized: This action requires the SUPER_ADMIN role."
+    );
+  }
+
+  return {
+    userId: session.user.id,
+    email: session.user.email,
+    role: normalizeUserRoleString(session.user.role),
   };
 }

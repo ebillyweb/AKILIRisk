@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireAdminRole } from "@/lib/admin/auth";
+import { auth } from "@/lib/auth";
+import { isSuperAdmin, requireAdminRole } from "@/lib/admin/auth";
 import { getPlatformAdvisorFeatureFlagsForAdmin } from "@/lib/admin/platform-settings-actions";
 import { AdminAdvisorFeatureFlagsForm } from "@/components/admin/AdminAdvisorFeatureFlagsForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,12 @@ import { Button } from "@/components/ui/button";
 export default async function AdminSettingsPage() {
   await requireAdminRole();
 
-  const flagsRes = await getPlatformAdvisorFeatureFlagsForAdmin();
+  const session = await auth();
+  const superAdmin = isSuperAdmin(session);
+
+  const flagsRes = superAdmin
+    ? await getPlatformAdvisorFeatureFlagsForAdmin()
+    : null;
 
   return (
     <div className="space-y-6">
@@ -36,8 +42,14 @@ export default async function AdminSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!flagsRes.success ? (
-            <p className="text-sm text-destructive">{flagsRes.error}</p>
+          {!superAdmin ? (
+            <p className="text-sm text-muted-foreground">
+              Only <span className="font-medium text-foreground">super admins</span> can view or change platform-wide
+              advisor feature flags. Ask a super admin to run{" "}
+              <code className="text-xs">node scripts/set-super-admin-role.js</code> for your account if needed.
+            </p>
+          ) : !flagsRes?.success ? (
+            <p className="text-sm text-destructive">{flagsRes?.error ?? "Failed to load flags."}</p>
           ) : (
             <AdminAdvisorFeatureFlagsForm
               initialGovernanceDashboard={flagsRes.data.advisorGovernanceDashboardEnabled}

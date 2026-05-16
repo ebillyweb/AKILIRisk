@@ -3,7 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import authConfig from "@/lib/auth.config";
-import { applyAdminDemotion } from "@/lib/auth-shared";
+import { normalizeUserRoleString } from "@/lib/auth-roles";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 /** Short, non-reversible identifier for an email so log lines stay
@@ -132,11 +132,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.accountDeactivated = Boolean(
           (token as { accountDeactivated?: boolean }).accountDeactivated
         );
-        // ADMIN is only valid for the designated admin account.
-        // Same guard runs in auth-edge.ts via the shared helper.
-        session.user.role = applyAdminDemotion(
-          token.role as string | undefined,
-          session.user.email
+        session.user.role = normalizeUserRoleString(
+          token.role as string | undefined
         );
       }
       return session;

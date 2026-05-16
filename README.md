@@ -110,7 +110,7 @@ Coverage tracker: `tests/INVENTORY.md`.
 The intake spec uses a dedicated seeded user (`client-fresh@test.com`) and resets
 its intake state in `beforeEach` via `scripts/reset-fresh-client-intake.js`. The
 reset reads `DATABASE_URL` from the same env files the seed scripts use, so if
-your local `.env`/`.env.local` points at the staging Neon DB, the reset hits
+your local `.env.local` points at the staging Neon DB, the reset hits
 staging too. Run `node scripts/seed-advisor-test-data.js` once to provision the
 user (it's idempotent).
 

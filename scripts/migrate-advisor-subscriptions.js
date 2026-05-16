@@ -9,8 +9,11 @@
  * Usage: node scripts/migrate-advisor-subscriptions.js
  */
 
-require("dotenv").config({ path: ".env.local" });
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.local"),
+  quiet: true,
+});
 
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");

@@ -200,8 +200,8 @@ The intake spec uses `client-fresh@test.com`, a seeded user with no
 spec runs `node scripts/reset-fresh-client-intake.js` in `beforeEach` to wipe
 their interview rows (cascades drop `IntakeResponse` + `IntakeApproval`).
 
-The reset script loads `DATABASE_URL` from `.env.local` then `.env` - same
-order as the seed scripts. If your local env points at the staging Neon DB,
+The reset script loads `DATABASE_URL` from `.env.local` at the repo root (same
+pattern as the seed scripts). If your local env points at the staging Neon DB,
 the reset hits staging. If you're running tests against `localhost:3000` with
 a local DB, set the local `DATABASE_URL` accordingly.
 
