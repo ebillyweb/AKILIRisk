@@ -1,3 +1,4 @@
+import type { UserRole } from "@prisma/client";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import {
@@ -16,8 +17,7 @@ import { CommonMissingControlsList } from "@/components/admin/analytics/CommonMi
 /**
  * §9.1 (BRD) — Belvedere-side aggregate analytics dashboard.
  *
- * Admin-only (designated admin email + ADMIN role; see
- * `requireAdminRole` in `src/lib/admin/auth.ts`). Pure aggregate view —
+ * Admin-only (`requireAdminRole`: `ADMIN` or `SUPER_ADMIN`). Pure aggregate view —
  * no per-client identifiers surface in any card. The PII-invariant
  * test in `analytics-queries.test.ts` enforces this structurally.
  *
@@ -67,7 +67,7 @@ export default async function AdminAnalyticsPage() {
     controlsResult.status === "fulfilled" ? controlsResult.value : null;
 
   void writeAudit({
-    actor: { userId: session.userId, role: session.role as import("@prisma/client").UserRole, email: session.email },
+    actor: { userId: session.userId, role: session.role as UserRole, email: session.email },
     action: AUDIT_ACTIONS.DATA_ACCESS_ANALYTICS_VIEW,
     entityType: "system",
     entityId: null,

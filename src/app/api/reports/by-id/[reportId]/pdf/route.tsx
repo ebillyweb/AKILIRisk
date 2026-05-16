@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { isPlatformAdminRole } from "@/lib/auth-roles";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { AssessmentReport } from "@/lib/pdf/components/AssessmentReport";
 import { createBrandedPDFMetadata } from "@/lib/pdf/branding-integration";
@@ -69,7 +70,7 @@ export async function GET(
     const sessionRole = session.user.role;
     const ownerUserId = report.assessment.userId;
     const isOwner = ownerUserId === sessionUserId;
-    const isAdmin = sessionRole === "ADMIN";
+    const isAdmin = isPlatformAdminRole(sessionRole ?? undefined);
     let isAssignedAdvisor = false;
     if (!isOwner && !isAdmin && sessionRole === "ADVISOR") {
       const advisor = await prisma.advisorProfile.findUnique({

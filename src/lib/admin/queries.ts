@@ -1,9 +1,13 @@
 import "server-only";
 
+import type { UserRole } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { decryptUserEmail, withDecryptedEmail } from "@/lib/auth/user-email";
+
+export type ClientsAdminScope = "active" | "all";
 
 export type AdvisorsAdminScope = "active" | "all";
 
@@ -103,17 +107,22 @@ export async function getAdvisorForAdmin(userId: string) {
   return user ? withDecryptedEmail(user) : null;
 }
 
-export async function getClientsForAdmin() {
-  const { userId, email } = await requireAdminRole();
+export async function getClientsForAdmin(opts?: { scope?: ClientsAdminScope }) {
+  const { userId, email, role } = await requireAdminRole();
+  const scope = opts?.scope ?? "active";
   // Round-11 commit 2.4b: ciphertext on both the top-level User and
   // the joined advisor.user; decrypt at exit so the admin page sees
   // `.email` plaintext on every row.
   const usersRaw = await prisma.user.findMany({
-    where: { role: "USER" },
+    where: {
+      role: "USER",
+      ...(scope === "active" ? { deletedAt: null } : {}),
+    },
     select: {
       id: true,
       emailCiphertext: true,
       name: true,
+      deletedAt: true,
       createdAt: true,
       _count: {
         select: { intakeInterviews: true, assessments: true },
@@ -179,18 +188,18 @@ export async function getClientsForAdmin() {
   // loading the full list); recorded for parity with future filterable
   // versions of these queries.
   void writeAudit({
-    actor: { userId, role: "ADMIN", email },
+    actor: { userId, role: role as UserRole, email },
     action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_CLIENTS_LIST,
     entityType: "User",
     entityId: null,
-    metadata: { rowCount: users.length, filterParams: {} },
+    metadata: { rowCount: users.length, filterParams: { scope } },
   });
 
   return users;
 }
 
 export async function getIntakeForAdmin() {
-  const { userId, email } = await requireAdminRole();
+  const { userId, email, role } = await requireAdminRole();
   // Round-11 commit 2.4b: nested ciphertext fields on user + advisor.user.
   const interviewsRaw = await prisma.intakeInterview.findMany({
     select: {
@@ -231,7 +240,7 @@ export async function getIntakeForAdmin() {
   }));
 
   void writeAudit({
-    actor: { userId, role: "ADMIN", email },
+    actor: { userId, role: role as UserRole, email },
     action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_INTAKE_LIST,
     entityType: "IntakeInterview",
     entityId: null,
@@ -242,7 +251,7 @@ export async function getIntakeForAdmin() {
 }
 
 export async function getAssessmentsForAdmin() {
-  const { userId, email } = await requireAdminRole();
+  const { userId, email, role } = await requireAdminRole();
   // Round-11 commit 2.4b: ciphertext on user, decrypt at exit.
   const assessmentsRaw = await prisma.assessment.findMany({
     select: {
@@ -266,7 +275,7 @@ export async function getAssessmentsForAdmin() {
   }));
 
   void writeAudit({
-    actor: { userId, role: "ADMIN", email },
+    actor: { userId, role: role as UserRole, email },
     action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_ASSESSMENTS_LIST,
     entityType: "Assessment",
     entityId: null,
@@ -321,4 +330,22 @@ export async function getAdvisorProfilesForLeadAssignment() {
     ...p,
     user: { ...p.user, email: decryptUserEmail(p.user.emailCiphertext) },
   }));
+}
+
+/** Platform staff (`ADMIN` / `SUPER_ADMIN`) for the admin Staff page. */
+export async function getPlatformStaffForAdmin() {
+  await requireAdminRole();
+  const rows = await prisma.user.findMany({
+    where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
+    select: {
+      id: true,
+      emailCiphertext: true,
+      name: true,
+      role: true,
+      deletedAt: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map(withDecryptedEmail);
 }

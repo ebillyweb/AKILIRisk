@@ -11,6 +11,7 @@ import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersona
 import { ClientPersonalDetailsForm } from "@/components/settings/ClientPersonalDetailsForm";
 import { getAdvisorPersonalDetails, getClientPersonalDetails } from "@/lib/actions/personal-profile";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 
 export default async function SettingsPage({
   searchParams,
@@ -46,7 +47,7 @@ export default async function SettingsPage({
   // Fetch personal details for profile section (advisor or client by role)
   let advisorDetails: Awaited<ReturnType<typeof getAdvisorPersonalDetails>>["data"] = null;
   let clientDetails: Awaited<ReturnType<typeof getClientPersonalDetails>>["data"] = null;
-  if (role === "ADVISOR" || role === "ADMIN") {
+  if (isAdvisorHubNavRole(role)) {
     const res = await getAdvisorPersonalDetails();
     if (res.success && res.data) advisorDetails = res.data;
   }

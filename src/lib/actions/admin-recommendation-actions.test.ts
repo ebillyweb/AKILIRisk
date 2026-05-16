@@ -36,7 +36,11 @@ const { prismaSpies, writeAuditSpy, requireAdminRoleSpy } = vi.hoisted(() => ({
   writeAuditSpy: vi.fn().mockResolvedValue(undefined),
   requireAdminRoleSpy: vi
     .fn()
-    .mockResolvedValue({ userId: "admin-user-1", email: "admin@example.com" }),
+    .mockResolvedValue({
+      userId: "admin-user-1",
+      email: "admin@example.com",
+      role: "ADMIN",
+    }),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
@@ -88,7 +92,11 @@ beforeEach(() => {
   prismaSpies.$transaction.mockReset();
   writeAuditSpy.mockClear();
   requireAdminRoleSpy.mockClear();
-  requireAdminRoleSpy.mockResolvedValue({ userId: "admin-user-1", email: "admin@example.com" });
+  requireAdminRoleSpy.mockResolvedValue({
+    userId: "admin-user-1",
+    email: "admin@example.com",
+    role: "ADMIN",
+  });
 });
 
 // ── Enum-mirror invariants ───────────────────────────────────────────────

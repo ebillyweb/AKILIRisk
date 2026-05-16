@@ -1,20 +1,45 @@
 import Link from "next/link";
 import { Files } from "lucide-react";
 
-import { getClientsForAdmin } from "@/lib/admin/queries";
+import { getClientsForAdmin, type ClientsAdminScope } from "@/lib/admin/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
+import { AdminClientAccountActions } from "@/components/admin/AdminClientAccountActions";
+import { cn } from "@/lib/utils";
 
-export default async function AdminClientsPage() {
-  const clients = await getClientsForAdmin();
+export default async function AdminClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const sp = await searchParams;
+  const scope: ClientsAdminScope = sp.filter === "all" ? "all" : "active";
+  const clients = await getClientsForAdmin({ scope });
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-lg font-semibold tracking-tight">
+            Client accounts{" "}
+            <span className="font-normal text-muted-foreground">({clients.length})</span>
+          </h1>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Button variant={scope === "active" ? "default" : "outline"} size="sm" className="h-8" asChild>
+              <Link href="/admin/clients">Active</Link>
+            </Button>
+            <Button variant={scope === "all" ? "default" : "outline"} size="sm" className="h-8" asChild>
+              <Link href="/admin/clients?filter=all">All</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Client accounts ({clients.length})</CardTitle>
+          <CardTitle className="text-base">Clients</CardTitle>
         </CardHeader>
         <CardContent>
           {clients.length === 0 ? (
@@ -23,8 +48,15 @@ export default async function AdminClientsPage() {
             <ul className="divide-y divide-border">
               {clients.map((c) => {
                 const activeAssignments = c.clientAssignments.filter((a) => a.status === "ACTIVE");
+                const isDeactivated = Boolean(c.deletedAt);
                 return (
-                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
+                  <li
+                    key={c.id}
+                    className={cn(
+                      "flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0",
+                      isDeactivated && "opacity-80",
+                    )}
+                  >
                     <div>
                       <p className="font-medium">{c.name ?? c.email}</p>
                       <p className="text-sm text-muted-foreground">{c.email}</p>
@@ -33,6 +65,11 @@ export default async function AdminClientsPage() {
                         {activeAssignments.length > 0 &&
                           ` · ${activeAssignments.map((a) => a.advisor.user.email).join(", ")}`}
                       </p>
+                      {isDeactivated ? (
+                        <Badge variant="secondary" className="mt-2 text-xs">
+                          Deactivated
+                        </Badge>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-2">
                       {/* §4.5 commit 3: link to the per-version reports
@@ -60,6 +97,7 @@ export default async function AdminClientsPage() {
                       ) : (
                         <Badge variant="outline">Unassigned</Badge>
                       )}
+                      <AdminClientAccountActions clientId={c.id} deactivated={isDeactivated} />
                     </div>
                   </li>
                 );

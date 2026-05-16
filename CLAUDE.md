@@ -96,8 +96,9 @@ node scripts/set-admin-role.js
 
 ### Role-based Architecture
 - **USER**: Default client role with assessment access
-- **ADVISOR**: Can manage clients and review assessments
-- **ADMIN**: Full system access via dedicated admin interface
+- **ADVISOR**: Subscriber-facing advisor portal (UI may label “Subscriber”); DB enum `ADVISOR`
+- **ADMIN**: Platform staff admin (`/admin`) except super-admin-only settings
+- **SUPER_ADMIN**: Highest privilege; platform-wide feature flags and risk thresholds (`requireSuperAdminRole` in `src/lib/admin/auth.ts`)
 
 ## Key Modules
 
@@ -129,7 +130,7 @@ Use these credentials for local development testing:
 | **Client** | `client@test.com` | `testpassword123` | Standard client account (SUBMITTED + Approved intake) |
 | **Client (MFA)** | `client-mfa@test.com` | `testpassword123` | For MFA flow testing |
 | **Client (fresh)** | `client-fresh@test.com` | `testpassword123` | No intake row; used by Playwright intake tests. Reset via `node scripts/reset-fresh-client-intake.js` |
-| **Admin** | `buddy@ebilly.com` | `Test1111!` | Admin access (run set-admin-role.js first) |
+| **Super admin** | `buddy@ebilly.com` | `Test1111!` | Full admin + platform settings (`node scripts/set-admin-role.js` sets `SUPER_ADMIN`) |
 
 ### Invite Codes
 - **123456**: Generic signup code

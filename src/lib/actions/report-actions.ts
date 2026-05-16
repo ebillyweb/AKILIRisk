@@ -29,6 +29,7 @@
 import { Prisma, type ReportStatus, type ReportTemplate } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { isPlatformAdminRole } from "@/lib/auth-roles";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import {
   buildReportSnapshot,
@@ -78,7 +79,7 @@ async function authorizeForAssessment(
   });
   if (!assessment) return { ok: false, code: "not_found" };
 
-  if (session.role === "ADMIN") {
+  if (isPlatformAdminRole(session.role)) {
     return { ok: true, bucket: "ADMIN", assessment };
   }
   if (session.role === "ADVISOR") {
@@ -422,7 +423,7 @@ export async function republishReport(
   input: RepublishReportInput
 ): Promise<ReportActionResult<{ publishedReportId: string; version: number }>> {
   const session = await requireSession();
-  if (session.role !== "ADMIN") {
+  if (!isPlatformAdminRole(session.role)) {
     return {
       ok: false,
       code: "forbidden",

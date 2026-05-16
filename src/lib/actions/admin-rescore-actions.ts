@@ -24,7 +24,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, UserRole } from "@prisma/client";
 import { Prisma as PrismaNs, RiskLevel as PrismaRiskLevel } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
@@ -138,6 +138,7 @@ export async function rescoreAssessment(
 ): Promise<ActionResult<RescoreAssessmentResult>> {
   let actorUserId: string | null = null;
   let actorEmail: string | null = null;
+  let actorRole: string | null = null;
   let beforeSnapshot: { pillarScores: unknown[]; recommendations: unknown[] } | null = null;
   let afterSnapshot: { pillarScores: unknown[]; recommendations: unknown[] } | null = null;
   let parsed: RescoreInput | null = null;
@@ -146,6 +147,7 @@ export async function rescoreAssessment(
     const actor = await requireAdminRole();
     actorUserId = actor.userId;
     actorEmail = actor.email ?? null;
+    actorRole = actor.role;
 
     parsed = rescoreInputSchema.parse(input);
     const { assessmentId } = parsed;
@@ -359,7 +361,11 @@ export async function rescoreAssessment(
     // row is the canonical record of "an admin attempted a rescore."
     if (actorUserId && parsed) {
       void writeAudit({
-        actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+        actor: {
+          userId: actorUserId,
+          role: actorRole as UserRole,
+          email: actorEmail,
+        },
         action: AUDIT_ACTIONS.ASSESSMENT_RESCORE,
         entityType: "Assessment",
         entityId: parsed.assessmentId,

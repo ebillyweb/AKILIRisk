@@ -12,6 +12,7 @@ import {
   newAdvisorGracePeriodEndsAt,
   newAdvisorPaidSignupDeadline,
 } from "@/lib/billing/new-advisor-grace";
+import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { sendNotification } from "@/lib/notifications/service";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
@@ -47,7 +48,7 @@ export type UpdateAdvisorInput = z.infer<typeof updateAdvisorSchema>;
 
 export async function updateAdvisorByAdmin(input: UpdateAdvisorInput) {
   try {
-    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
     const parsed = updateAdvisorSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -111,7 +112,7 @@ export async function updateAdvisorByAdmin(input: UpdateAdvisorInput) {
     }
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.USER_UPDATE,
       entityType: "User",
       entityId: parsed.data.userId,
@@ -177,7 +178,7 @@ const setAdvisorPortalAccessSchema = z.object({
 
 export async function setAdvisorPortalAccessByAdmin(input: unknown) {
   try {
-    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
     const parsed = setAdvisorPortalAccessSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -232,7 +233,7 @@ export async function setAdvisorPortalAccessByAdmin(input: unknown) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.USER_PORTAL_ACCESS_TOGGLE,
       entityType: "User",
       entityId: target.id,
@@ -252,7 +253,7 @@ export async function setAdvisorPortalAccessByAdmin(input: unknown) {
 
 export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
   try {
-    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
     const parsed = createAdvisorSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -376,7 +377,7 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
     }
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.USER_CREATE,
       entityType: "User",
       entityId: user.id,
@@ -418,7 +419,7 @@ const adminAdvisorUserIdSchema = z.object({
 
 export async function softDeleteAdvisorByAdmin(input: unknown) {
   try {
-    const { userId: adminUserId, email: adminEmail } = await requireAdminRole();
+    const { userId: adminUserId, email: adminEmail, role: adminRole } = await requireAdminRole();
     const parsed = adminAdvisorUserIdSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -467,7 +468,7 @@ export async function softDeleteAdvisorByAdmin(input: unknown) {
     });
 
     await writeAudit({
-      actor: { userId: adminUserId, role: "ADMIN", email: adminEmail },
+      actor: { userId: adminUserId, role: adminRole as UserRole, email: adminEmail },
       action: AUDIT_ACTIONS.USER_SOFT_DELETE,
       entityType: "User",
       entityId: target.id,
@@ -496,7 +497,7 @@ export async function softDeleteAdvisorByAdmin(input: unknown) {
 
 export async function restoreAdvisorByAdmin(input: unknown) {
   try {
-    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
     const parsed = adminAdvisorUserIdSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -540,7 +541,7 @@ export async function restoreAdvisorByAdmin(input: unknown) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.USER_RESTORE,
       entityType: "User",
       entityId: target.id,
@@ -566,5 +567,135 @@ export async function restoreAdvisorByAdmin(input: unknown) {
   } catch (e) {
     logSafeError("admin/restoreAdvisor", e);
     return { success: false, error: safeErrorMessage(e, "Failed to restore advisor") };
+  }
+}
+
+const adminClientUserIdSchema = z.object({
+  userId: z.string().cuid(),
+});
+
+export async function softDeleteClientByAdmin(input: unknown) {
+  try {
+    const { userId: adminUserId, email: adminEmail, role: adminRole } = await requireAdminRole();
+    const parsed = adminClientUserIdSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    if (parsed.data.userId === adminUserId) {
+      return { success: false, error: "You cannot deactivate your own account." };
+    }
+
+    const target = await prisma.user.findFirst({
+      where: { id: parsed.data.userId, role: "USER" },
+      select: { id: true, deletedAt: true },
+    });
+    if (!target) {
+      return { success: false, error: "Client not found" };
+    }
+    if (target.deletedAt) {
+      return { success: false, error: "Client is already deactivated" };
+    }
+
+    const deletedAt = new Date();
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: target.id },
+        data: { deletedAt },
+      });
+      await tx.clientAdvisorAssignment.updateMany({
+        where: { clientId: target.id, status: "ACTIVE" },
+        data: { status: "INACTIVE" },
+      });
+      await tx.session.deleteMany({ where: { userId: target.id } });
+    });
+
+    await writeAudit({
+      actor: { userId: adminUserId, role: adminRole as UserRole, email: adminEmail },
+      action: AUDIT_ACTIONS.USER_SOFT_DELETE,
+      entityType: "User",
+      entityId: target.id,
+      beforeData: { deletedAt: null },
+      afterData: { deletedAt: deletedAt.toISOString() },
+      metadata: {
+        cascade: {
+          assignmentsDeactivated: true,
+          sessionsDeleted: true,
+        },
+      },
+    });
+
+    revalidatePath("/admin/clients");
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (e) {
+    logSafeError("admin/softDeleteClient", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to deactivate client") };
+  }
+}
+
+export async function restoreClientByAdmin(input: unknown) {
+  try {
+    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+    const parsed = adminClientUserIdSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    const target = await prisma.user.findFirst({
+      where: { id: parsed.data.userId, role: "USER" },
+      select: { id: true, deletedAt: true },
+    });
+    if (!target) {
+      return { success: false, error: "Client not found" };
+    }
+    if (!target.deletedAt) {
+      return { success: false, error: "Client is not deactivated" };
+    }
+
+    const previousDeletedAt = target.deletedAt;
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: target.id },
+        data: { deletedAt: null },
+      });
+      await tx.clientAdvisorAssignment.updateMany({
+        where: { clientId: target.id, status: "INACTIVE" },
+        data: { status: "ACTIVE" },
+      });
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.USER_RESTORE,
+      entityType: "User",
+      entityId: target.id,
+      beforeData: {
+        deletedAt: previousDeletedAt?.toISOString() ?? null,
+      },
+      afterData: { deletedAt: null },
+      metadata: {
+        cascade: {
+          assignmentsReactivated: true,
+        },
+      },
+    });
+
+    revalidatePath("/admin/clients");
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (e) {
+    logSafeError("admin/restoreClient", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to restore client") };
   }
 }

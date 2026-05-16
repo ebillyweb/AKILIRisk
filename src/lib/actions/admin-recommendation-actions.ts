@@ -26,7 +26,7 @@
  */
 
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
@@ -105,7 +105,7 @@ export async function createServiceRecommendation(
     });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_CREATE,
       entityType: "ServiceRecommendation",
       entityId: created.id,
@@ -152,7 +152,7 @@ export async function updateServiceRecommendation(
     });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_UPDATE,
       entityType: "ServiceRecommendation",
       entityId: parsed.id,
@@ -193,7 +193,7 @@ export async function setServiceRecommendationActive(
     });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_VISIBILITY_TOGGLE,
       entityType: "ServiceRecommendation",
       entityId: parsed.id,
@@ -238,7 +238,7 @@ export async function deleteServiceRecommendation(
     await prisma.serviceRecommendation.delete({ where: { id: parsed.id } });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_DELETE,
       entityType: "ServiceRecommendation",
       entityId: parsed.id,
@@ -285,7 +285,7 @@ export async function createRecommendationRule(
     });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_RULE_CREATE,
       entityType: "RecommendationRule",
       entityId: created.id,
@@ -326,7 +326,7 @@ export async function updateRecommendationRule(
     });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_RULE_UPDATE,
       entityType: "RecommendationRule",
       entityId: parsed.id,
@@ -363,7 +363,7 @@ export async function setRecommendationRuleActive(
     });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_RULE_VISIBILITY_TOGGLE,
       entityType: "RecommendationRule",
       entityId: parsed.id,
@@ -392,7 +392,7 @@ export async function deleteRecommendationRule(
     await prisma.recommendationRule.delete({ where: { id: parsed.id } });
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_RULE_DELETE,
       entityType: "RecommendationRule",
       entityId: parsed.id,
@@ -428,7 +428,7 @@ export async function reorderRecommendationRules(
     const result = await prisma.$transaction(ops);
 
     await writeAudit({
-      actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+      actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
       action: AUDIT_ACTIONS.RECOMMENDATION_RULE_REORDER,
       entityType: "RecommendationRule",
       entityId: null,

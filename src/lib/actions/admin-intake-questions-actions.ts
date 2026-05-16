@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { PillarCategoryKind } from "@prisma/client";
+import { PillarCategoryKind, type UserRole } from "@prisma/client";
 
 import { requireAdminRole } from "@/lib/admin/auth";
 import { prisma } from "@/lib/db";
@@ -46,7 +46,7 @@ async function findIntakePillarQuestionOrThrow(questionId: string) {
 }
 
 export async function setIntakePillarQuestionVisibility(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const questionId = z.string().uuid().parse(formData.get("questionId"));
   const raw = formData.get("setVisible");
   const isVisible = raw === "1" || raw === "true";
@@ -59,7 +59,7 @@ export async function setIntakePillarQuestionVisibility(formData: FormData) {
   });
 
   await writeAudit({
-    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
     action: AUDIT_ACTIONS.INTAKE_QUESTION_VISIBILITY_TOGGLE,
     entityType: "PillarQuestion",
     entityId: questionId,
@@ -79,7 +79,7 @@ export async function setIntakePillarQuestionVisibility(formData: FormData) {
 }
 
 export async function updateIntakePillarQuestionContent(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const questionId = z.string().uuid().parse(formData.get("questionId"));
 
   try {
@@ -103,7 +103,7 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.INTAKE_QUESTION_UPDATE,
       entityType: "PillarQuestion",
       entityId: questionId,

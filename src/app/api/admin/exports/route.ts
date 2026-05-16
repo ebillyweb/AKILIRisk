@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { UserRole } from "@prisma/client";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import { getAuditAdminActorOrNull } from "@/lib/audit/admin-gate";
 import { composeSystemZip, composeTenantZip } from "@/lib/export/bundle";
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
   // distinct event), entityType is "DataExport" (distinct from
   // entityType "AuditLog" used by the audit-log CSV export).
   await writeAudit({
-    actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+    actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
     action: AUDIT_ACTIONS.DATA_ACCESS_EXPORT,
     entityType: "DataExport",
     entityId: scope === "tenant" ? advisorProfileId : null,

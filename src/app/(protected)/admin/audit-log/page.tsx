@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -161,7 +162,7 @@ export default async function AuditLogPage({
   // viewed the audit log with WHAT filter — stops a rogue admin from
   // browsing without leaving a trace.
   void writeAudit({
-    actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+    actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
     action: AUDIT_ACTIONS.DATA_ACCESS_AUDIT_LOG_VIEW,
     entityType: "AuditLog",
     entityId: null,

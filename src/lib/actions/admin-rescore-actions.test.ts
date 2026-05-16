@@ -36,6 +36,7 @@ const { prismaSpies, writeAuditSpy, requireAdminRoleSpy, scoringSpies, engineCto
   const requireAdminRoleSpy = vi.fn().mockResolvedValue({
     userId: "admin-user-1",
     email: "admin@example.com",
+    role: "ADMIN",
   });
   const scoringSpies = {
     calculatePillarScore: vi.fn(),
@@ -110,7 +111,11 @@ beforeEach(() => {
   prismaSpies.$transaction.mockReset();
   writeAuditSpy.mockClear();
   requireAdminRoleSpy.mockClear();
-  requireAdminRoleSpy.mockResolvedValue({ userId: "admin-user-1", email: "admin@example.com" });
+  requireAdminRoleSpy.mockResolvedValue({
+    userId: "admin-user-1",
+    email: "admin@example.com",
+    role: "ADMIN",
+  });
   scoringSpies.calculatePillarScore.mockReset();
   scoringSpies.calculateIdentityRiskScore.mockReset();
   scoringSpies.getVisibleQuestions.mockReset();

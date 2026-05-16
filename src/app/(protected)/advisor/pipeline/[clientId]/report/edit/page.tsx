@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
 import { getDraftWithRecommendations } from "@/lib/reports/queries";
 import { getOrCreateDraft } from "@/lib/actions/report-actions";
@@ -25,7 +26,7 @@ export default async function AdvisorEditDraftPage({
 
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
-  if (session.user.role !== "ADVISOR" && session.user.role !== "ADMIN") {
+  if (!isAdvisorHubNavRole(session.user.role)) {
     notFound();
   }
 

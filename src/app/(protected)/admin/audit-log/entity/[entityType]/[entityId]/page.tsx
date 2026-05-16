@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { UserRole } from "@prisma/client";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import {
   AUDIT_ACTIONS,
@@ -50,7 +51,7 @@ export default async function EntityHistoryPage({
 
   // Meta-audit (fire-and-forget, same pattern as the main audit-log page).
   void writeAudit({
-    actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+    actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
     action: AUDIT_ACTIONS.DATA_ACCESS_AUDIT_LOG_VIEW,
     entityType: "AuditLog",
     entityId: null,

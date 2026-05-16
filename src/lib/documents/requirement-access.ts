@@ -3,6 +3,7 @@ import "server-only";
 import type { DocumentRequirement } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 
 /**
  * Resolves access to a document requirement for presigned upload/download flows.
@@ -30,7 +31,7 @@ export async function getDocumentRequirementForSessionUser(
     return requirement;
   }
 
-  if (roleUpper === "ADVISOR" || roleUpper === "ADMIN") {
+  if (isAdvisorHubNavRole(roleUpper)) {
     const profile = await prisma.advisorProfile.findUnique({
       where: { userId },
     });

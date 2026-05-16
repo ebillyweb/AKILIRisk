@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
+import type { UserRole } from "@prisma/client";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import { getAuditAdminActorOrNull } from "@/lib/audit/admin-gate";
 import {
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
   // before the bytes start flowing so a partial download still leaves a
   // record. Per P5: NOT deduped (each export is meaningful).
   await writeAudit({
-    actor: { userId: actor.userId, role: "ADMIN", email: actor.email },
+    actor: { userId: actor.userId, role: actor.role as UserRole, email: actor.email },
     action: AUDIT_ACTIONS.DATA_ACCESS_EXPORT,
     entityType: "AuditLog",
     entityId: null,

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Ensure buddy@ebilly.com exists and has role ADMIN.
- * Admin access is restricted to this account in code (see lib/admin/auth.ts and lib/auth.ts).
+ * Ensure buddy@ebilly.com exists and has role SUPER_ADMIN (highest privilege).
+ * Platform admins use ADMIN or SUPER_ADMIN; super admins alone may edit
+ * platform-wide settings (see `requireSuperAdminRole` in `src/lib/admin/auth.ts`).
+ *
  * Run: node scripts/set-admin-role.js
  * Then sign out and sign in again so the session gets a fresh JWT with the role.
  */
@@ -35,14 +37,14 @@ async function main() {
     where: { emailCiphertext: adminCt },
     update: {
       emailCiphertext: adminCt,
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
       password: hashedPassword,
     },
     create: {
       emailCiphertext: adminCt,
       password: hashedPassword,
       name: "Admin",
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
     },
   });
 
@@ -58,7 +60,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Set role to ADMIN for", ADMIN_EMAIL);
+  console.log("✅ Set role to SUPER_ADMIN for", ADMIN_EMAIL);
   console.log("✅ Advisor profile ensured for", ADMIN_EMAIL, "(can use /advisor).");
   console.log("   Sign out and sign in again to see the Admin nav and access /admin.");
 }

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { redirect } from "next/navigation";
 
@@ -15,7 +16,7 @@ export default async function AssessmentLayout({
   if (!session?.user?.id) return <>{children}</>;
 
   const role = session.user.role?.toString().toUpperCase();
-  if (role === "ADVISOR" || role === "ADMIN") {
+  if (isAdvisorHubNavRole(role)) {
     return <>{children}</>;
   }
 

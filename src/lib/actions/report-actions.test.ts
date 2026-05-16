@@ -570,6 +570,16 @@ describe("republishReport", () => {
     expect(result.code).toBe("forbidden");
   });
 
+  it("allows SUPER_ADMIN callers", async () => {
+    fakes.session.role = "SUPER_ADMIN";
+
+    const result = await republishReport({
+      assessmentId: "asmt-1",
+      reason: "platform correction",
+    });
+    expect(result.ok).toBe(true);
+  });
+
   it("requires a reason", async () => {
     fakes.session.role = "ADMIN";
 

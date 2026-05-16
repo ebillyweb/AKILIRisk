@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma, type UserRole } from "@prisma/client";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { PROFILE_CONDITION_KEYS } from "@/lib/assessment/bank/behaviors";
 import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
@@ -259,7 +259,7 @@ function buildAssessmentBankCreateData(
 }
 
 export async function updateAssessmentBankQuestionVisibility(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const questionId = z.string().min(1).parse(formData.get("questionId"));
   const isVisible = formData.get("isVisible") === "true";
 
@@ -276,7 +276,7 @@ export async function updateAssessmentBankQuestionVisibility(formData: FormData)
   });
 
   await writeAudit({
-    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
     action: AUDIT_ACTIONS.BANK_QUESTION_VISIBILITY_TOGGLE,
     entityType: "AssessmentBankQuestion",
     entityId: row.id,
@@ -289,7 +289,7 @@ export async function updateAssessmentBankQuestionVisibility(formData: FormData)
 }
 
 export async function updatePillarQuestionVisibility(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const questionId = z.string().uuid().parse(formData.get("questionId"));
   const isVisible = formData.get("isVisible") === "true";
   const riskAreaIdRaw = formData.get("riskAreaId");
@@ -313,7 +313,7 @@ export async function updatePillarQuestionVisibility(formData: FormData) {
   });
 
   await writeAudit({
-    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
     action: AUDIT_ACTIONS.PILLAR_QUESTION_VISIBILITY_TOGGLE,
     entityType: "PillarQuestion",
     entityId: row.id,
@@ -326,7 +326,7 @@ export async function updatePillarQuestionVisibility(formData: FormData) {
 }
 
 export async function deletePillarQuestion(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const questionId = z.string().uuid().parse(formData.get("questionId"));
   const riskAreaIdRaw = formData.get("riskAreaId");
   if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
@@ -348,7 +348,7 @@ export async function deletePillarQuestion(formData: FormData) {
   await prisma.pillarQuestion.delete({ where: { id: questionId } });
 
   await writeAudit({
-    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
     action: AUDIT_ACTIONS.PILLAR_QUESTION_DELETE,
     entityType: "PillarQuestion",
     entityId: row.id,
@@ -373,7 +373,7 @@ function optionalFormString(raw: FormDataEntryValue | null): string | null {
 }
 
 export async function updatePillarQuestionContent(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   try {
     const questionId = z.string().uuid().parse(formData.get("questionId"));
     const riskAreaIdRaw = formData.get("riskAreaId");
@@ -435,7 +435,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.PILLAR_QUESTION_UPDATE,
       entityType: "PillarQuestion",
       entityId: existing.id,
@@ -475,7 +475,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
 }
 
 export async function updateAssessmentBankQuestionContent(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   try {
     const questionId = z.string().min(1).parse(formData.get("questionId"));
     const text = z.string().min(1).parse(formData.get("text"));
@@ -559,7 +559,7 @@ export async function updateAssessmentBankQuestionContent(formData: FormData) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.BANK_QUESTION_UPDATE,
       entityType: "AssessmentBankQuestion",
       entityId: row.id,
@@ -605,7 +605,7 @@ export async function updateAssessmentBankQuestionContent(formData: FormData) {
 }
 
 export async function createAssessmentBankQuestion(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const riskAreaIdRaw = formData.get("riskAreaId");
   if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
     redirect("/admin/question-bank");
@@ -630,7 +630,7 @@ export async function createAssessmentBankQuestion(formData: FormData) {
   });
 
   await writeAudit({
-    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
     action: AUDIT_ACTIONS.BANK_QUESTION_CREATE,
     entityType: "AssessmentBankQuestion",
     entityId: created.id,
@@ -652,7 +652,7 @@ export async function createAssessmentBankQuestion(formData: FormData) {
 }
 
 export async function deleteAssessmentBankQuestion(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const questionId = z.string().min(1).parse(formData.get("questionId"));
 
   // .delete returns the deleted row — that gives us the beforeData payload
@@ -662,7 +662,7 @@ export async function deleteAssessmentBankQuestion(formData: FormData) {
   });
 
   await writeAudit({
-    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
     action: AUDIT_ACTIONS.BANK_QUESTION_DELETE,
     entityType: "AssessmentBankQuestion",
     entityId: row.id,
@@ -683,7 +683,7 @@ export async function deleteAssessmentBankQuestion(formData: FormData) {
 }
 
 export async function moveAssessmentBankQuestionOrder(formData: FormData) {
-  const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const questionId = z.string().min(1).parse(formData.get("questionId"));
   const direction = z.enum(["up", "down"]).parse(formData.get("direction"));
 
@@ -722,7 +722,7 @@ export async function moveAssessmentBankQuestionOrder(formData: FormData) {
   // One audit row per reorder action, scoped to the question that the admin
   // explicitly moved. The swapped neighbor is captured in metadata.
   await writeAudit({
-    actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
     action: AUDIT_ACTIONS.BANK_QUESTION_REORDER,
     entityType: "AssessmentBankQuestion",
     entityId: a.id,

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -14,7 +15,7 @@ export default async function AdvisorLayout({
   const userId = session?.user?.id;
 
   const role = session?.user?.role?.toString().toUpperCase();
-  if (!role || (role !== "ADVISOR" && role !== "ADMIN")) {
+  if (!isAdvisorHubNavRole(role)) {
     redirect("/dashboard?error=unauthorized");
   }
 

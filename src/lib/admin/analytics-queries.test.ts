@@ -22,7 +22,7 @@ const { db } = vi.hoisted(() => {
   const state = {
     users: [] as Array<{
       id: string;
-      role: "USER" | "ADVISOR" | "ADMIN";
+      role: "USER" | "ADVISOR" | "ADMIN" | "SUPER_ADMIN";
       deletedAt: Date | null;
       emailCiphertext: string;
     }>,

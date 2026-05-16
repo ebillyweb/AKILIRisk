@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { UserRole } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
 import { getIntakeAudioObjectBytes } from "@/lib/s3/intake-audio-uploads";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -69,7 +70,7 @@ export async function GET(
   let isAssignedAdvisor = false;
   if (!isOwner) {
     const role = session.user.role?.toString().toUpperCase();
-    if (role === "ADVISOR" || role === "ADMIN") {
+    if (isAdvisorHubNavRole(role)) {
       const advisor = await prisma.advisorProfile.findUnique({
         where: { userId: session.user.id },
         select: { id: true },

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { redirect } from "next/navigation";
 import { getFamilyDashboardData } from "@/lib/family/queries";
 import { HouseholdMemberList } from "@/components/family/HouseholdMemberList";
@@ -17,7 +18,7 @@ export default async function FamilyDashboardPage() {
 
   // Check role: if ADVISOR or ADMIN, redirect to /advisor
   const role = session.user.role?.toString().toUpperCase();
-  if (role === "ADVISOR" || role === "ADMIN") {
+  if (isAdvisorHubNavRole(role)) {
     redirect("/advisor");
   }
 

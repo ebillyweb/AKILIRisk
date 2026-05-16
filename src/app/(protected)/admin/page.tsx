@@ -1,11 +1,19 @@
 import Link from "next/link";
-import { requireAdminRole } from "@/lib/admin/auth";
+import { auth } from "@/lib/auth";
+import { isSuperAdmin, requireAdminRole } from "@/lib/admin/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
+
+const SUPER_ADMIN_ONLY_HREFS = new Set<string>(["/admin/scoring/thresholds"]);
 
 const SECTIONS = [
   { href: "/admin/advisors", label: "Advisors", description: "View and manage advisor accounts and profiles." },
   { href: "/admin/clients", label: "Clients", description: "View and manage client accounts and assignments." },
+  {
+    href: "/admin/staff",
+    label: "Platform staff",
+    description: "Admin and super-admin accounts; super admins can promote clients and adjust staff roles.",
+  },
   {
     href: "/admin/leads",
     label: "Assessment requests",
@@ -52,11 +60,16 @@ const SECTIONS = [
 
 export default async function AdminPage() {
   await requireAdminRole();
+  const session = await auth();
+  const superUser = isSuperAdmin(session);
+  const sections = SECTIONS.filter(
+    (s) => superUser || !SUPER_ADMIN_ONLY_HREFS.has(s.href)
+  );
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {SECTIONS.map(({ href, label, description }) => (
+        {sections.map(({ href, label, description }) => (
           <Link key={href} href={href}>
             <Card className="h-full transition-colors hover:bg-muted/50">
               <CardHeader className="pb-2">

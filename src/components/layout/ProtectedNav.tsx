@@ -20,7 +20,7 @@ const CLIENT_NAV_ITEMS: { href: string; label: string }[] = [
 ];
 
 const ADVISOR_NAV_ITEMS: { href: string; label: string }[] = [
-  { href: "/advisor", label: "Overview" },
+  { href: "/advisor", label: "Subscriber hub" },
   { href: "/advisor/invitations", label: "Invitations" },
   { href: "/advisor/dashboard", label: "Dashboard" },
   { href: "/advisor/intelligence", label: "Risk Intelligence" },
@@ -37,6 +37,7 @@ const ADMIN_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/advisors", label: "Advisors" },
   { href: "/admin/clients", label: "Clients" },
+  { href: "/admin/staff", label: "Staff" },
   { href: "/admin/leads", label: "Assessment requests" },
   { href: "/admin/intake", label: "Intake Management" },
   { href: "/admin/intake/questions", label: "Intake script" },

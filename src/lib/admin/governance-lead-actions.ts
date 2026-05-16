@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { createNotification } from "@/lib/data/advisor";
@@ -14,7 +15,7 @@ const assignLeadSchema = z.object({
 
 export async function assignGovernanceReviewLeadAction(raw: unknown) {
   try {
-    const { userId: actorUserId, email: actorEmail } = await requireAdminRole();
+    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
     const parsed = assignLeadSchema.safeParse(raw);
     if (!parsed.success) {
       return { success: false as const, error: "Invalid assignment payload" };
@@ -50,7 +51,7 @@ export async function assignGovernanceReviewLeadAction(raw: unknown) {
     });
 
     await writeAudit({
-      actor: { userId: actorUserId, role: "ADMIN", email: actorEmail },
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.GOVERNANCE_LEAD_ASSIGN,
       entityType: "GovernanceReviewLead",
       entityId: lead.id,

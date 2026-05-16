@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { prisma } from "@/lib/db";
+import { isPlatformAdminRole } from "@/lib/auth-roles";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
@@ -59,7 +60,7 @@ export default async function DashboardPage({
     }
     redirect(`/advisor${errorSuffix}`);
   }
-  if (role === "ADMIN") {
+  if (isPlatformAdminRole(role)) {
     redirect(`/admin${errorSuffix}`);
   }
 

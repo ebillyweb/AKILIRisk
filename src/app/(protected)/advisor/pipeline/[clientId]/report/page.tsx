@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { ArrowLeft, FileDown, Pencil, FileText } from "lucide-react";
 
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
 import { getReportListForClient } from "@/lib/reports/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ export default async function AdvisorReportListPage({
 
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
-  if (session.user.role !== "ADVISOR" && session.user.role !== "ADMIN") {
+  if (!isAdvisorHubNavRole(session.user.role)) {
     notFound();
   }
 

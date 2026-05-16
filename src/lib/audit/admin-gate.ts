@@ -2,6 +2,7 @@ import "server-only";
 
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin/auth";
+import { normalizeUserRoleString } from "@/lib/auth-roles";
 
 /**
  * Audit-log routes use 404-for-non-admin (existence-leak avoidance, same
@@ -16,6 +17,7 @@ import { isAdmin } from "@/lib/admin/auth";
 export async function getAuditAdminActorOrNull(): Promise<{
   userId: string;
   email: string | null;
+  role: string;
 } | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
@@ -23,5 +25,6 @@ export async function getAuditAdminActorOrNull(): Promise<{
   return {
     userId: session.user.id,
     email: session.user.email ?? null,
+    role: normalizeUserRoleString(session.user.role),
   };
 }

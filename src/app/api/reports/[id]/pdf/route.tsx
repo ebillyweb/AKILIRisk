@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { isPlatformAdminRole } from "@/lib/auth-roles";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import { renderReportPdf, renderLivePreviewForAssessment } from "@/lib/pdf/render-report";
 import type { ReportSnapshot } from "@/lib/pdf/build-report-snapshot";
@@ -58,7 +59,7 @@ export async function GET(
     const sessionUserId = session.user.id;
     const sessionRole = session.user.role;
     const isOwner = assessment.userId === sessionUserId;
-    const isAdmin = sessionRole === "ADMIN";
+    const isAdmin = isPlatformAdminRole(sessionRole ?? undefined);
 
     let isAssignedAdvisor = false;
     if (!isOwner && !isAdmin && sessionRole === "ADVISOR") {
