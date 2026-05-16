@@ -123,11 +123,11 @@ export function AdminPageHeader(props: AdminPageHeaderConfig) {
   const { icon: Icon, kicker, title, subtitle } = props;
   return (
     <header role="banner" className="admin-header professional-header space-y-3 sm:space-y-4">
-      <div className="flex items-center gap-3 header-section-spacing">
-        <div className="professional-icon" role="img" aria-label={`${title} section icon`}>
+      <div className="flex min-w-0 flex-wrap items-center gap-3 header-section-spacing">
+        <div className="professional-icon shrink-0" role="img" aria-label={`${title} section icon`}>
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
-        <p className="professional-kicker" id="admin-section-context" role="doc-subtitle">
+        <p className="professional-kicker min-w-0" id="admin-section-context" role="doc-subtitle">
           {kicker}
         </p>
       </div>

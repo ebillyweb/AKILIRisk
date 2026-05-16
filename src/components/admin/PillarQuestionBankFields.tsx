@@ -1,3 +1,6 @@
+"use client";
+
+import { FormHasCheckbox } from "@/components/admin/form-submission-checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,16 +124,12 @@ export function PillarQuestionBankFields({
       </div>
 
       <div className="flex items-center gap-2">
-        <input
+        <FormHasCheckbox
           id="isSubQuestion"
           name="isSubQuestion"
-          type="checkbox"
           defaultChecked={defaultIsSubQuestion}
-          className="size-4 rounded border-input accent-primary"
+          label="Sub-question"
         />
-        <Label htmlFor="isSubQuestion" className="cursor-pointer font-normal">
-          Sub-question
-        </Label>
       </div>
     </>
   );

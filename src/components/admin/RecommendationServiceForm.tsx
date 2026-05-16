@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   serviceRecommendationInputSchema,
@@ -13,8 +13,11 @@ import {
   createServiceRecommendation,
   updateServiceRecommendation,
 } from "@/lib/actions/admin-recommendation-actions";
+import { FormOnCheckbox } from "@/components/admin/form-submission-checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,7 +29,7 @@ import {
 interface ServiceFormProps {
   /** Existing row (edit mode) or null (create mode). */
   existing: (Partial<ServiceRecommendationInput> & { id: string }) | null;
-  /** Active categories suggested in the datalist hint. */
+  /** Active categories suggested as quick-fill chips below the category field. */
   knownCategories: string[];
 }
 
@@ -42,6 +45,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
   const [pending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [topError, setTopError] = useState<string | null>(null);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
 
   const isEdit = !!existing;
 
@@ -119,19 +123,43 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             textarea
             rows={4}
           />
-          <Field
-            label="Category"
-            name="category"
-            defaultValue={existing?.category}
-            error={errors.category}
-            setField={setField}
-            list="known-categories"
-          />
-          <datalist id="known-categories">
-            {knownCategories.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
+          <div>
+            <label htmlFor="category" className="mb-1 block text-sm font-medium">
+              Category
+            </label>
+            <Input
+              ref={categoryInputRef}
+              id="category"
+              name="category"
+              defaultValue={existing?.category ?? ""}
+              onChange={(e) => setField("category", e.target.value)}
+              aria-invalid={errors.category ? true : undefined}
+              className={errors.category ? "border-destructive" : undefined}
+            />
+            {knownCategories.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {knownCategories.map((c) => (
+                  <Button
+                    key={c}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 rounded-full border-border/80 px-2.5 text-xs font-normal text-muted-foreground hover:bg-muted/50"
+                    onClick={() => {
+                      const el = categoryInputRef.current;
+                      if (el) {
+                        el.value = c;
+                        setField("category", c);
+                      }
+                    }}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+            {errors.category ? <p className="mt-1 text-xs text-destructive">{errors.category}</p> : null}
+          </div>
           <SelectField
             label="Tier (BRD §4.4)"
             name="tier"
@@ -169,10 +197,13 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
           <Field label="Estimated cost (e.g. $5,000–$20,000)" name="estimatedCost" defaultValue={existing?.estimatedCost ?? ""} error={errors.estimatedCost} setField={setField} />
           <Field label="Timeframe (e.g. 2–4 months)" name="timeframe" defaultValue={existing?.timeframe ?? ""} error={errors.timeframe} setField={setField} />
           <Field label="Provider" name="provider" defaultValue={existing?.provider ?? ""} error={errors.provider} setField={setField} />
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="isActive" defaultChecked={existing?.isActive !== false} />
-            Active (visible to the recommendation engine)
-          </label>
+          <FormOnCheckbox
+            name="isActive"
+            id="service-is-active"
+            defaultChecked={existing?.isActive !== false}
+            disabled={pending}
+            label="Active (visible to the recommendation engine)"
+          />
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={pending}>
               {pending ? "Saving…" : isEdit ? "Save changes" : "Create"}
@@ -193,33 +224,33 @@ interface FieldProps {
   textarea?: boolean;
   rows?: number;
   type?: string;
-  list?: string;
 }
 
-function Field({ label, name, defaultValue, error, setField, textarea, rows, type, list }: FieldProps) {
+function Field({ label, name, defaultValue, error, setField, textarea, rows, type }: FieldProps) {
   return (
     <div>
-      <label htmlFor={name} className="block text-sm font-medium mb-1">
+      <label htmlFor={name} className="mb-1 block text-sm font-medium">
         {label}
       </label>
       {textarea ? (
-        <textarea
+        <Textarea
           id={name}
           name={name}
           defaultValue={defaultValue ?? ""}
           rows={rows ?? 3}
           onChange={(e) => setField(name, e.target.value)}
-          className={`w-full rounded-md border px-3 py-2 text-sm ${error ? "border-destructive" : "border-input"}`}
+          aria-invalid={error ? true : undefined}
+          className={error ? "border-destructive" : undefined}
         />
       ) : (
-        <input
+        <Input
           id={name}
           name={name}
           defaultValue={defaultValue ?? ""}
           type={type ?? "text"}
-          list={list}
           onChange={(e) => setField(name, e.target.value)}
-          className={`w-full rounded-md border px-3 py-2 text-sm ${error ? "border-destructive" : "border-input"}`}
+          aria-invalid={error ? true : undefined}
+          className={error ? "border-destructive" : undefined}
         />
       )}
       {error && <p className="mt-1 text-xs text-destructive">{error}</p>}

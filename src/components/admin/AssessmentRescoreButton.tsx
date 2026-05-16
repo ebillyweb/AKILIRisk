@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { rescoreAssessment } from "@/lib/actions/admin-rescore-actions";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Props {
   assessmentId: string;
@@ -99,13 +100,13 @@ export function AssessmentRescoreButton({ assessmentId }: Props) {
       <label className="block text-xs font-medium text-amber-900">
         Optional: why are you rescoring this?
       </label>
-      <textarea
+      <Textarea
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         rows={2}
         maxLength={500}
         placeholder="e.g. After the May 4 threshold change…"
-        className="w-full rounded-md border border-amber-300 bg-background px-2 py-1 text-xs"
+        className="rounded-xl border-amber-300 bg-background text-xs"
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex gap-2">

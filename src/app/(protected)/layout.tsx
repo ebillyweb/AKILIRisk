@@ -19,6 +19,7 @@ import {
   isPlatformAdminRole,
 } from "@/lib/auth-roles";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
 const BRANDED_CLIENT_HEADER_KICKER = "Brought to you by AKILI Risk Intelligence";
@@ -160,17 +161,9 @@ export default async function ProtectedLayout({
                           </span>
                         </p>
                       )}
-                      <form
-                        action={async () => {
-                          "use server";
-                          await signOut({ redirectTo: "/" });
-                        }}
-                      >
-                        <Button
-                          type="submit"
-                          variant="outline"
-                          size="sm"
-                          className="min-w-[110px] px-4"
+                      <div className="flex flex-wrap items-center gap-3">
+                        <ThemeToggle
+                          className="shrink-0"
                           style={
                             previewHex
                               ? {
@@ -179,10 +172,31 @@ export default async function ProtectedLayout({
                                 }
                               : undefined
                           }
+                        />
+                        <form
+                          action={async () => {
+                            "use server";
+                            await signOut({ redirectTo: "/" });
+                          }}
                         >
-                          Sign Out
-                        </Button>
-                      </form>
+                          <Button
+                            type="submit"
+                            variant="outline"
+                            size="sm"
+                            className="min-w-[110px] px-4"
+                            style={
+                              previewHex
+                                ? {
+                                    borderColor: `${previewHex.primary}55`,
+                                    color: previewHex.primary,
+                                  }
+                                : undefined
+                            }
+                          >
+                            Sign Out
+                          </Button>
+                        </form>
+                      </div>
                     </div>
                   </div>
                   <div className="min-w-0 xl:max-w-[560px] xl:text-right">

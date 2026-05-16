@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PROFILE_CONDITION_KEYS } from "@/lib/assessment/bank/behaviors";
+import { FormHasCheckbox } from "@/components/admin/form-submission-checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -133,34 +134,22 @@ export function AssessmentBankQuestionFields({
           />
         </div>
         <div className="flex items-end gap-2 pb-2">
-          <div className="flex items-center gap-2">
-            <input
-              id="required"
-              name="required"
-              type="checkbox"
-              defaultChecked={defaultRequired}
-              className="size-4 rounded border-input accent-primary"
-            />
-            <Label htmlFor="required" className="cursor-pointer font-normal">
-              Required
-            </Label>
-          </div>
+          <FormHasCheckbox
+            id="required"
+            name="required"
+            defaultChecked={defaultRequired}
+            label="Required"
+          />
         </div>
       </div>
 
       {showVisibleToggle ? (
-        <div className="flex items-center gap-2">
-          <input
-            id="isVisible"
-            name="isVisible"
-            type="checkbox"
-            defaultChecked={defaultVisible}
-            className="size-4 rounded border-input accent-primary"
-          />
-          <Label htmlFor="isVisible" className="cursor-pointer font-normal">
-            Visible to clients
-          </Label>
-        </div>
+        <FormHasCheckbox
+          id="isVisible"
+          name="isVisible"
+          defaultChecked={defaultVisible}
+          label="Visible to clients"
+        />
       ) : null}
 
       <div className="space-y-2">
@@ -196,24 +185,20 @@ export function AssessmentBankQuestionFields({
         </p>
       </div>
 
-      <div className="flex items-start gap-2 rounded-xl border border-border/80 bg-muted/20 p-3">
-        <input
+      <div className="rounded-xl border border-border/80 bg-muted/20 p-3">
+        <FormHasCheckbox
           id="omitMaturityScoreWhenYes"
           name="omitMaturityScoreWhenYes"
-          type="checkbox"
           defaultChecked={defaultOmitMaturityScoreWhenYes}
-          className="mt-1 size-4 rounded border-input accent-primary"
+          label={
+            <span className="font-medium">Yes/no gate: defer maturity when &quot;Yes&quot;</span>
+          }
         />
-        <div className="space-y-1">
-          <Label htmlFor="omitMaturityScoreWhenYes" className="cursor-pointer font-medium">
-            Yes/no gate: defer maturity when &quot;Yes&quot;
-          </Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            For gates with follow-up questions: do not roll &quot;Yes&quot; into the maturity score—only
-            the follow-ups (levels 1–3) count. &quot;No&quot; still uses the score map (often N/A or zero
-            maturity).
-          </p>
-        </div>
+        <p className="mt-2 pl-7 text-xs text-muted-foreground leading-relaxed">
+          For gates with follow-up questions: do not roll &quot;Yes&quot; into the maturity score—only
+          the follow-ups (levels 1–3) count. &quot;No&quot; still uses the score map (often N/A or zero
+          maturity).
+        </p>
       </div>
 
       <div className="space-y-2">

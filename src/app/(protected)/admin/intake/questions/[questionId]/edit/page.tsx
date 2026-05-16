@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getIntakeQuestionForAdmin } from "@/lib/admin/intake-questions-queries";
 import { updateIntakePillarQuestionContent } from "@/lib/actions/admin-intake-questions-actions";
+import { FormHasCheckbox } from "@/components/admin/form-submission-checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,18 +121,13 @@ export default async function AdminIntakeQuestionEditPage({
               </div>
               <div className="space-y-2">
                 <span className="block text-sm font-medium leading-none">Interview visibility</span>
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="isVisible"
-                    name="isVisible"
-                    defaultChecked={question.isVisible}
-                    className="size-4 rounded border border-input bg-background text-primary shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  <Label htmlFor="isVisible" className="cursor-pointer font-normal">
-                    Include in client intake script
-                  </Label>
-                </div>
+                <FormHasCheckbox
+                  id="isVisible"
+                  name="isVisible"
+                  defaultChecked={question.isVisible}
+                  className="pt-2"
+                  label="Include in client intake script"
+                />
               </div>
             </div>
 

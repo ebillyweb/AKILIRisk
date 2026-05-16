@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { UserRole } from "@prisma/client";
 import { notFound } from "next/navigation";
+import { AuditLogDiffCollapsible } from "@/components/admin/audit-log-diff-collapsible";
+import { AuditLogFilterForm } from "@/components/admin/audit-log-filter-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AUDIT_ACTIONS,
   writeAudit,
@@ -213,97 +213,16 @@ export default async function AuditLogPage({
 
       <Card>
         <CardContent className="pt-6">
-          <form
-            method="get"
-            action="/admin/audit-log"
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            data-testid="audit-log-filter-form"
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="actorUserId">Actor user id</Label>
-              <Input
-                id="actorUserId"
-                name="actorUserId"
-                placeholder="cuid…"
-                defaultValue={filter.actorUserId ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="entityType">Entity type</Label>
-              <Input
-                id="entityType"
-                name="entityType"
-                placeholder="User, AssessmentBankQuestion, …"
-                defaultValue={filter.entityType ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="entityId">Entity id</Label>
-              <Input
-                id="entityId"
-                name="entityId"
-                placeholder="row id"
-                defaultValue={filter.entityId ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="from">From (UTC)</Label>
-              <Input
-                id="from"
-                name="from"
-                type="datetime-local"
-                defaultValue={fromIso}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="to">To (UTC)</Label>
-              <Input
-                id="to"
-                name="to"
-                type="datetime-local"
-                defaultValue={toIso}
-              />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
-              <Label>Actions</Label>
-              <div className="grid max-h-48 grid-cols-1 gap-1.5 overflow-y-auto rounded border p-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
-                {ALL_ACTIONS.map((a) => (
-                  <label key={a} className="flex items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      name="action"
-                      value={a}
-                      defaultChecked={selectedActions.has(a)}
-                    />
-                    <span className="font-mono">{a}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap items-center justify-between gap-2">
-              {/* Round-11 cleanup (NIT 3): inverted-on-checkbox so the
-                  bare URL gives default-on hiding. User checks "Show
-                  test traffic" + Apply → URL acquires ?showTest=1
-                  and stays opted-in across pagination. */}
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                <input
-                  type="checkbox"
-                  name="showTest"
-                  value="1"
-                  defaultChecked={sp.showTest === "1"}
-                />
-                <span>Show test traffic (Playwright magic-link issuances; hidden by default)</span>
-              </label>
-              <div className="flex gap-2">
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/admin/audit-log">Reset</Link>
-                </Button>
-                <Button type="submit" size="sm">
-                  Apply filters
-                </Button>
-              </div>
-            </div>
-          </form>
+          <AuditLogFilterForm
+            allActions={ALL_ACTIONS}
+            initialActorUserId={filter.actorUserId ?? ""}
+            initialEntityType={filter.entityType ?? ""}
+            initialEntityId={filter.entityId ?? ""}
+            initialFrom={fromIso}
+            initialTo={toIso}
+            initialSelectedActions={Array.from(selectedActions)}
+            initialShowTest={sp.showTest === "1"}
+          />
         </CardContent>
       </Card>
 
@@ -382,42 +301,14 @@ export default async function AuditLogPage({
                         ) : null}
                       </td>
                       <td className="px-3 py-2">
-                        <details>
-                          <summary className="cursor-pointer text-xs">{summary}</summary>
-                          <div className="mt-2 grid gap-2 lg:grid-cols-2">
-                            <div>
-                              <div className="text-xs font-semibold text-muted-foreground">before</div>
-                              <pre className="mt-1 max-h-64 overflow-auto rounded bg-muted/40 p-2 text-xs">
-                                {row.beforeData === null
-                                  ? "null"
-                                  : JSON.stringify(row.beforeData, null, 2)}
-                              </pre>
-                            </div>
-                            <div>
-                              <div className="text-xs font-semibold text-muted-foreground">after</div>
-                              <pre className="mt-1 max-h-64 overflow-auto rounded bg-muted/40 p-2 text-xs">
-                                {row.afterData === null
-                                  ? "null"
-                                  : JSON.stringify(row.afterData, null, 2)}
-                              </pre>
-                            </div>
-                            {row.metadata !== null ? (
-                              <div className="lg:col-span-2">
-                                <div className="text-xs font-semibold text-muted-foreground">metadata</div>
-                                <pre className="mt-1 max-h-32 overflow-auto rounded bg-muted/40 p-2 text-xs">
-                                  {JSON.stringify(row.metadata, null, 2)}
-                                </pre>
-                              </div>
-                            ) : null}
-                            {row.ipAddress || row.userAgent ? (
-                              <div className="lg:col-span-2 text-xs text-muted-foreground">
-                                {row.ipAddress ? <span>IP: {row.ipAddress}</span> : null}
-                                {row.ipAddress && row.userAgent ? " · " : null}
-                                {row.userAgent ? <span>UA: {row.userAgent}</span> : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        </details>
+                        <AuditLogDiffCollapsible
+                          summary={summary}
+                          beforeData={row.beforeData}
+                          afterData={row.afterData}
+                          metadata={row.metadata}
+                          ipAddress={row.ipAddress}
+                          userAgent={row.userAgent}
+                        />
                       </td>
                     </tr>
                   );

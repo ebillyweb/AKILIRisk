@@ -10,8 +10,11 @@ import {
   createRecommendationRule,
   updateRecommendationRule,
 } from "@/lib/actions/admin-recommendation-actions";
+import { FormOnCheckbox } from "@/components/admin/form-submission-checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -181,7 +184,7 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
             value={serviceRecommendationId}
           />
           <div>
-            <label htmlFor="serviceRecommendationId" className="block text-sm font-medium mb-1">
+            <label htmlFor="serviceRecommendationId" className="mb-1 block text-sm font-medium">
               Service recommendation
             </label>
             <Select
@@ -217,42 +220,45 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
           </div>
 
           <div>
-            <label htmlFor="ruleName" className="block text-sm font-medium mb-1">Rule name</label>
-            <input
+            <label htmlFor="ruleName" className="mb-1 block text-sm font-medium">Rule name</label>
+            <Input
               id="ruleName"
               name="ruleName"
               defaultValue={existing?.ruleName ?? ""}
-              className={`w-full rounded-md border px-3 py-2 text-sm ${errors.ruleName ? "border-destructive" : "border-input"}`}
+              aria-invalid={errors.ruleName ? true : undefined}
+              className={errors.ruleName ? "border-destructive" : undefined}
             />
             {errors.ruleName && <p className="mt-1 text-xs text-destructive">{errors.ruleName}</p>}
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-1">Description (optional)</label>
-            <textarea
+            <label htmlFor="description" className="mb-1 block text-sm font-medium">Description (optional)</label>
+            <Textarea
               id="description"
               name="description"
               rows={2}
               defaultValue={(existing?.description ?? "") as string}
-              className={`w-full rounded-md border px-3 py-2 text-sm ${errors.description ? "border-destructive" : "border-input"}`}
+              aria-invalid={errors.description ? true : undefined}
+              className={errors.description ? "border-destructive" : undefined}
             />
           </div>
 
           <div>
-            <label htmlFor="triggerConditions" className="block text-sm font-medium mb-1">
+            <label htmlFor="triggerConditions" className="mb-1 block text-sm font-medium">
               Trigger conditions (JSON)
             </label>
-            <p className="text-xs text-muted-foreground mb-2">
+            <p className="mb-2 text-xs text-muted-foreground">
               Array of <code>{"{ type, pillarId | questionId | field, operator, value, weight }"}</code> objects.
               Types: score_threshold, risk_level, answer_match, missing_control, profile_condition.
               Engine matches when &gt;50% of the weighted conditions are satisfied.
             </p>
-            <textarea
+            <Textarea
               id="triggerConditions"
               name="triggerConditions"
               rows={12}
               defaultValue={existing?.triggerConditions ? JSON.stringify(existing.triggerConditions, null, 2) : CONDITION_PLACEHOLDER}
-              className={`w-full rounded-md border px-3 py-2 text-xs font-mono ${errors.triggerConditions ? "border-destructive" : "border-input"}`}
+              aria-invalid={errors.triggerConditions ? true : undefined}
+              className={`font-mono text-xs ${errors.triggerConditions ? "border-destructive" : ""}`}
             />
             {errors.triggerConditions && (
               <pre className="mt-1 whitespace-pre-wrap text-xs text-destructive">{errors.triggerConditions}</pre>
@@ -260,20 +266,21 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
           </div>
 
           <div>
-            <label htmlFor="pillarThresholds" className="block text-sm font-medium mb-1">
+            <label htmlFor="pillarThresholds" className="mb-1 block text-sm font-medium">
               Pillar thresholds (optional, JSON)
             </label>
-            <p className="text-xs text-muted-foreground mb-2">
+            <p className="mb-2 text-xs text-muted-foreground">
               <code>{"{ pillarId: { min, max } }"}</code> — informational metadata; not consumed by the
               current engine.
             </p>
-            <textarea
+            <Textarea
               id="pillarThresholds"
               name="pillarThresholds"
               rows={5}
               defaultValue={existing?.pillarThresholds ? JSON.stringify(existing.pillarThresholds, null, 2) : ""}
               placeholder={THRESHOLDS_PLACEHOLDER}
-              className={`w-full rounded-md border px-3 py-2 text-xs font-mono ${errors.pillarThresholds ? "border-destructive" : "border-input"}`}
+              aria-invalid={errors.pillarThresholds ? true : undefined}
+              className={`font-mono text-xs ${errors.pillarThresholds ? "border-destructive" : ""}`}
             />
             {errors.pillarThresholds && (
               <pre className="mt-1 whitespace-pre-wrap text-xs text-destructive">{errors.pillarThresholds}</pre>
@@ -281,15 +288,16 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
           </div>
 
           <div>
-            <label htmlFor="questionConditions" className="block text-sm font-medium mb-1">
+            <label htmlFor="questionConditions" className="mb-1 block text-sm font-medium">
               Question conditions (optional, JSON)
             </label>
-            <textarea
+            <Textarea
               id="questionConditions"
               name="questionConditions"
               rows={3}
               defaultValue={existing?.questionConditions ? JSON.stringify(existing.questionConditions, null, 2) : ""}
-              className={`w-full rounded-md border px-3 py-2 text-xs font-mono ${errors.questionConditions ? "border-destructive" : "border-input"}`}
+              aria-invalid={errors.questionConditions ? true : undefined}
+              className={`font-mono text-xs ${errors.questionConditions ? "border-destructive" : ""}`}
             />
             {errors.questionConditions && (
               <pre className="mt-1 whitespace-pre-wrap text-xs text-destructive">{errors.questionConditions}</pre>
@@ -297,21 +305,25 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
           </div>
 
           <div>
-            <label htmlFor="priority" className="block text-sm font-medium mb-1">Priority (higher = surfaces first)</label>
-            <input
+            <label htmlFor="priority" className="mb-1 block text-sm font-medium">Priority (higher = surfaces first)</label>
+            <Input
               id="priority"
               name="priority"
               type="number"
               defaultValue={String(existing?.priority ?? 1)}
-              className={`w-full rounded-md border px-3 py-2 text-sm ${errors.priority ? "border-destructive" : "border-input"}`}
+              aria-invalid={errors.priority ? true : undefined}
+              className={errors.priority ? "border-destructive" : undefined}
             />
             {errors.priority && <p className="mt-1 text-xs text-destructive">{errors.priority}</p>}
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="isActive" defaultChecked={existing?.isActive !== false} />
-            Active (engine evaluates this rule)
-          </label>
+          <FormOnCheckbox
+            name="isActive"
+            id="rule-is-active"
+            defaultChecked={existing?.isActive !== false}
+            disabled={pending}
+            label="Active (engine evaluates this rule)"
+          />
 
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={pending}>

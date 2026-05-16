@@ -2,7 +2,8 @@
 @import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Class on `html.dark` — matches Tailwind `darkMode: "class"` (see tailwind.config.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -57,6 +58,7 @@
 }
 
 :root {
+  color-scheme: light;
   --radius: 1rem;
   --background: oklch(0.974 0.008 75.2);
   --foreground: oklch(0.248 0.015 50.2);
@@ -119,6 +121,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.205 0.012 42.1);
   --foreground: oklch(0.948 0.007 82.4);
   --card: oklch(0.252 0.011 42.4 / 90%);
@@ -195,6 +198,13 @@
     text-rendering: optimizeLegibility;
   }
 
+  .dark body {
+    background-image:
+      radial-gradient(circle at top, color-mix(in oklab, var(--brand) 11%, transparent 89%), transparent 40%),
+      radial-gradient(circle at bottom left, color-mix(in oklab, var(--accent) 12%, transparent 88%), transparent 32%),
+      linear-gradient(180deg, color-mix(in oklab, var(--background) 93%, black 7%), var(--background));
+  }
+
   body::before {
     content: "";
     position: fixed;
@@ -205,6 +215,13 @@
       radial-gradient(circle at 20% 20%, color-mix(in oklab, white 55%, transparent 45%) 0%, transparent 34%);
     opacity: 0.7;
     z-index: -1;
+  }
+
+  .dark body::before {
+    background:
+      linear-gradient(120deg, transparent 0%, color-mix(in oklab, var(--brand) 5%, transparent 95%) 50%, transparent 100%),
+      radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--foreground) 6%, transparent 94%) 0%, transparent 36%);
+    opacity: 0.42;
   }
 
   h1,
@@ -247,6 +264,18 @@
     border: 1px solid color-mix(in oklab, var(--border) 82%, white 18%);
     box-shadow: 0 32px 90px -56px rgba(26, 24, 20, 0.45);
     backdrop-filter: blur(18px);
+  }
+
+  .dark .hero-surface {
+    background: linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--card) 92%, var(--foreground) 8%),
+      color-mix(in oklab, var(--surface) 85%, var(--background) 15%)
+    );
+    border: 1px solid color-mix(in oklab, var(--border) 88%, transparent 12%);
+    box-shadow:
+      0 1px 0 color-mix(in oklab, var(--foreground) 8%, transparent 92%),
+      0 28px 70px -48px rgba(0, 0, 0, 0.55);
   }
 
   /* Professional header typography */
@@ -394,29 +423,28 @@
     color: color-mix(in oklab, var(--foreground) 80%, transparent 20%);
   }
 
-  /* Dark theme optimizations */
-  @media (prefers-color-scheme: dark) {
-    .admin-header::before {
-      background: color-mix(in oklab, var(--destructive) 90%, transparent 10%);
-    }
+  /* Dark theme (class on html — not system media alone) */
+  .dark .admin-header::before {
+    background: color-mix(in oklab, var(--destructive) 90%, transparent 10%);
+  }
 
-    .admin-header .professional-icon {
-      background: color-mix(in oklab, var(--destructive) 12%, transparent 88%);
-      border-color: color-mix(in oklab, var(--destructive) 25%, transparent 75%);
-    }
+  .dark .admin-header .professional-icon {
+    background: color-mix(in oklab, var(--destructive) 12%, transparent 88%);
+    border-color: color-mix(in oklab, var(--destructive) 25%, transparent 75%);
+  }
 
-    .client-header {
-      background: linear-gradient(135deg,
-        color-mix(in oklab, var(--background) 100%, var(--primary) 3%),
-        var(--background)
-      );
-      border-color: color-mix(in oklab, var(--border) 80%, transparent 20%);
-    }
+  .dark .client-header {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--background) 100%, var(--primary) 3%),
+      var(--background)
+    );
+    border-color: color-mix(in oklab, var(--border) 80%, transparent 20%);
+  }
 
-    .advisor-header {
-      background: color-mix(in oklab, var(--muted) 40%, transparent 60%);
-      border-color: color-mix(in oklab, var(--border) 60%, transparent 40%);
-    }
+  .dark .advisor-header {
+    background: color-mix(in oklab, var(--muted) 40%, transparent 60%);
+    border-color: color-mix(in oklab, var(--border) 60%, transparent 40%);
   }
 
   /* Focus management for accessibility */
