@@ -23,6 +23,7 @@ import "server-only";
  * returns [] and the gate is a no-op.
  */
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   parsePiiPolicy,
@@ -58,7 +59,7 @@ export async function listAssignmentsAwaitingConsent(
       // this filter typically returns zero rows in production today;
       // the helper exists for the future admin-reassign UI + the
       // race-window edge case.
-      fieldVisibility: { equals: null },
+      fieldVisibility: { equals: Prisma.DbNull },
     },
     orderBy: { assignedAt: "asc" },
     select: {
@@ -87,7 +88,7 @@ export async function hasPendingConsent(clientUserId: string): Promise<boolean> 
     where: {
       clientId: clientUserId,
       status: "ACTIVE",
-      fieldVisibility: { equals: null },
+      fieldVisibility: { equals: Prisma.DbNull },
     },
   });
   return count > 0;

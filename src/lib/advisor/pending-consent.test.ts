@@ -10,6 +10,7 @@
  *   • hasPendingConsent boolean shape (true / false).
  */
 
+import { Prisma } from "@prisma/client";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { dbState } = vi.hoisted(() => ({
@@ -35,7 +36,7 @@ vi.mock("@/lib/db", () => ({
           where: {
             clientId: string;
             status: string;
-            fieldVisibility: { equals: null };
+            fieldVisibility: { equals: typeof Prisma.DbNull };
           };
         }) => {
           return dbState.rows
@@ -43,7 +44,8 @@ vi.mock("@/lib/db", () => ({
               (r) =>
                 r.clientId === where.clientId &&
                 r.status === where.status &&
-                r.fieldVisibility === null
+                r.fieldVisibility === null &&
+                where.fieldVisibility.equals === Prisma.DbNull
             )
             .map((r) => ({
               id: r.id,
@@ -59,14 +61,15 @@ vi.mock("@/lib/db", () => ({
           where: {
             clientId: string;
             status: string;
-            fieldVisibility: { equals: null };
+            fieldVisibility: { equals: typeof Prisma.DbNull };
           };
         }) => {
           return dbState.rows.filter(
             (r) =>
               r.clientId === where.clientId &&
               r.status === where.status &&
-              r.fieldVisibility === null
+              r.fieldVisibility === null &&
+              where.fieldVisibility.equals === Prisma.DbNull
           ).length;
         }
       ),
