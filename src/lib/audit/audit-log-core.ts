@@ -229,6 +229,14 @@ export const AUDIT_ACTIONS = {
    *  field emits no audit rows at all (action returns early). */
   PII_POLICY_UPDATE: "pii_policy.update",
 
+  // ── Option D session 2: client PII visibility consent ─────────────────────
+  /** One row per field when the client sets Yes/No on /consent/pending.
+   *  entityType "ClientAdvisorAssignment"; metadata.field is the eligible
+   *  field key; metadata.granted distinguishes opt-in vs opt-out;
+   *  metadata.surface is "consent_modal". Distinct from session 2.1
+   *  settings/profile fill side-effects. */
+  CLIENT_PII_INTAKE_CONSENT: "client_pii.intake_consent",
+
   // ── System actions (P1) ───────────────────────────────────────────────────
   /** Written by /api/cron/audit-log-retention each successful sweep. */
   SYSTEM_RETENTION_SWEEP: "system.retention_sweep",
