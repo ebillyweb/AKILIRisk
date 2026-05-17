@@ -3,9 +3,11 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   ArrowRight,
+  BarChart3,
   ClipboardList,
   Database,
   FileText,
+  Gauge,
   Settings,
   Shield,
   UserRound,
@@ -33,6 +35,28 @@ type AdminNavGroup = {
 };
 
 const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
+  {
+    id: "dashboards",
+    title: "Dashboards",
+    description:
+      "Two views: how the business is doing, and whether the platform is healthy.",
+    items: [
+      {
+        href: "/admin/analytics",
+        label: "Analytics Dashboard",
+        description:
+          "Onboarding funnel, assessment activity, recommendations, and risk insights across every advisor and client.",
+        icon: BarChart3,
+      },
+      {
+        href: "/admin/operations",
+        label: "Operations Dashboard",
+        description:
+          "Core service health, external dependency status, and recent platform failures.",
+        icon: Gauge,
+      },
+    ],
+  },
   {
     id: "user-management",
     title: "User Management",

@@ -11,6 +11,8 @@ import {
   ListChecks,
   Settings,
   UserCog,
+  Activity,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +24,26 @@ export interface AdminPageHeaderConfig {
 }
 
 const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
+  {
+    path: "/admin/operations",
+    config: {
+      icon: Activity,
+      kicker: "Platform operations",
+      title: "Operations Dashboard",
+      subtitle:
+        "Core service health, external dependency status, and recent failures",
+    },
+  },
+  {
+    path: "/admin/analytics",
+    config: {
+      icon: BarChart3,
+      kicker: "Business intelligence",
+      title: "Analytics Dashboard",
+      subtitle:
+        "Aggregate view of advisor, client, assessment, and recommendation activity",
+    },
+  },
   {
     path: "/admin/advisors",
     config: {
