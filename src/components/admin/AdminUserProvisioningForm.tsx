@@ -62,13 +62,19 @@ export function AdminUserProvisioningForm({
       const response = await createAdminUser(data);
 
       if (response.success) {
+        const invitationSent = response.data?.invitationSent;
+        const invitationError = response.data?.invitationError;
+        let message = "Admin user created successfully!";
+        if (data.sendInvitation && invitationSent) {
+          message += " Invitation email sent.";
+        } else if (data.sendInvitation && invitationError) {
+          message += ` Invitation email failed: ${invitationError} Share the temporary password below securely.`;
+        } else if (!data.sendInvitation) {
+          message += " Please share the temporary password securely.";
+        }
         setResult({
-          type: "success",
-          message: `Admin user created successfully! ${
-            data.sendInvitation
-              ? "Invitation email sent."
-              : "Please share the temporary password securely."
-          }`,
+          type: invitationError ? "error" : "success",
+          message,
           tempPassword: response.data?.tempPassword,
         });
 

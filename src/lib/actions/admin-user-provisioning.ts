@@ -74,7 +74,7 @@ export async function createAdminUser(input: CreateAdminUserInput) {
             role: role as UserRole,
             password: hashedPassword,
             deletedAt: null,
-            emailVerified: null, // Require email verification
+            emailVerified: new Date(), // Auto-verify admin users
             updatedAt: new Date(),
           },
         })
@@ -84,19 +84,23 @@ export async function createAdminUser(input: CreateAdminUserInput) {
             name,
             role: role as UserRole,
             password: hashedPassword,
-            emailVerified: null, // Require email verification
+            emailVerified: new Date(), // Auto-verify admin users
           },
         });
 
     // Send invitation email if requested
+    let invitationSent = false;
+    let invitationError: string | undefined;
     if (sendInvitation) {
-      await sendAdminInvitationEmail({
+      const emailResult = await sendAdminInvitationEmail({
         email: email.toLowerCase(),
         name: user.name!,
         tempPassword,
         role,
         invitedBy: adminContext.email || "Super Admin",
       });
+      invitationSent = emailResult.success;
+      invitationError = emailResult.success ? undefined : emailResult.error;
     }
 
     // Audit log the action
@@ -114,7 +118,7 @@ export async function createAdminUser(input: CreateAdminUserInput) {
         email: email.toLowerCase(),
         name: user.name,
         role: user.role,
-        invitationSent: sendInvitation,
+        invitationSent,
       },
       metadata: {
         adminEmail: email.toLowerCase(),
@@ -132,7 +136,10 @@ export async function createAdminUser(input: CreateAdminUserInput) {
         email: email.toLowerCase(),
         name: user.name,
         role: user.role,
-        tempPassword: sendInvitation ? undefined : tempPassword, // Only return password if not emailed
+        invitationSent,
+        invitationError,
+        // Return password when email was not sent (opt-out or Resend failure).
+        tempPassword: invitationSent ? undefined : tempPassword,
       },
     };
   } catch (error) {
@@ -159,7 +166,14 @@ export async function updateAdminUser(input: UpdateAdminUserInput) {
     };
   }
 
-  const { id, ...updates } = validation.data;
+  const { id, name, role } = validation.data;
+
+  if (name === undefined && role === undefined) {
+    return {
+      success: false,
+      error: "No changes to save",
+    };
+  }
 
   try {
     // Get current user data
@@ -181,22 +195,46 @@ export async function updateAdminUser(input: UpdateAdminUserInput) {
       };
     }
 
-    // Prevent super admin from demoting themselves
-    if (currentUser.id === adminContext.userId && updates.role === "ADMIN") {
+    if (currentUser.role !== "ADMIN" && currentUser.role !== "SUPER_ADMIN") {
       return {
         success: false,
-        error: "You cannot demote your own super admin role",
+        error: "Only administrator accounts can be edited here",
       };
     }
+
+    // Block demoting the last active super admin (any account, not only self).
+    if (
+      role === "ADMIN" &&
+      currentUser.role === "SUPER_ADMIN"
+    ) {
+      const activeSuperAdminCount = await prisma.user.count({
+        where: {
+          role: "SUPER_ADMIN",
+          deletedAt: null,
+          id: { not: id }, // Exclude user being demoted
+        },
+      });
+
+      if (activeSuperAdminCount === 0) {
+        return {
+          success: false,
+          error: "Cannot demote the last super admin. Promote another user to super admin first.",
+        };
+      }
+    }
+
+    const updateData: {
+      name?: string;
+      role?: UserRole;
+      updatedAt: Date;
+    } = { updatedAt: new Date() };
+    if (name !== undefined) updateData.name = name;
+    if (role !== undefined) updateData.role = role as UserRole;
 
     // Update the user
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: {
-        ...updates,
-        role: updates.role as UserRole, // Cast to match Prisma enum
-        updatedAt: new Date(),
-      },
+      data: updateData,
     });
 
     // Audit log the action
@@ -220,7 +258,7 @@ export async function updateAdminUser(input: UpdateAdminUserInput) {
       metadata: {
         adminEmail: userEmailForDisplay(currentUser),
         updatedByEmail: adminContext.email,
-        changes: updates,
+        changes: { name, role },
       },
     });
 
@@ -270,12 +308,23 @@ export async function deactivateAdminUser(userId: string) {
       };
     }
 
-    // Prevent super admin from deactivating themselves
+    // Prevent self-deactivation only if this is the last active super admin
     if (currentUser.id === adminContext.userId) {
-      return {
-        success: false,
-        error: "You cannot deactivate your own account",
-      };
+      // Check if there are other active super admins
+      const activeSuperAdminCount = await prisma.user.count({
+        where: {
+          role: "SUPER_ADMIN",
+          deletedAt: null,
+          id: { not: adminContext.userId }, // Exclude current user
+        },
+      });
+
+      if (activeSuperAdminCount === 0) {
+        return {
+          success: false,
+          error: "Cannot deactivate the last super admin. Promote another user to super admin first.",
+        };
+      }
     }
 
     // Soft delete the user
@@ -324,6 +373,107 @@ export async function deactivateAdminUser(userId: string) {
     return {
       success: false,
       error: "Failed to deactivate admin user. Please try again.",
+    };
+  }
+}
+
+/**
+ * Resend admin invitation email with a new temporary password (super admin only).
+ */
+export async function resendAdminInvitation(userId: string) {
+  const adminContext = await requireSuperAdminRole();
+
+  if (!userId?.trim()) {
+    return { success: false, error: "User ID is required" };
+  }
+
+  try {
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        emailCiphertext: true,
+        name: true,
+        role: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!targetUser || targetUser.deletedAt) {
+      return { success: false, error: "Admin user not found" };
+    }
+
+    if (targetUser.role !== "ADMIN" && targetUser.role !== "SUPER_ADMIN") {
+      return {
+        success: false,
+        error: "Invitation resend is only available for administrator accounts",
+      };
+    }
+
+    const email = userEmailForDisplay(targetUser);
+    const tempPassword = generateSecurePassword();
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        updatedAt: new Date(),
+      },
+    });
+
+    const emailResult = await sendAdminInvitationEmail({
+      email,
+      name: targetUser.name ?? "Administrator",
+      tempPassword,
+      role: targetUser.role as "ADMIN" | "SUPER_ADMIN",
+      invitedBy: adminContext.email || "Super Admin",
+    });
+
+    await writeAudit({
+      actor: {
+        userId: adminContext.userId,
+        email: adminContext.email,
+        role: "SUPER_ADMIN",
+      },
+      action: AUDIT_ACTIONS.ADMIN_USER_INVITATION_RESENT,
+      entityType: "User",
+      entityId: userId,
+      beforeData: null,
+      afterData: {
+        email,
+        name: targetUser.name,
+        role: targetUser.role,
+        invitationSent: emailResult.success,
+      },
+      metadata: {
+        adminEmail: email,
+        resentByEmail: adminContext.email,
+        emailError: emailResult.success ? undefined : emailResult.error,
+      },
+    });
+
+    revalidatePath("/admin/staff");
+
+    if (!emailResult.success) {
+      return {
+        success: false,
+        error:
+          emailResult.error ??
+          "Failed to send invitation email. Share the temporary password securely.",
+        data: { tempPassword },
+      };
+    }
+
+    return {
+      success: true,
+      data: { id: userId, email, invitationSent: true },
+    };
+  } catch (error) {
+    console.error("Failed to resend admin invitation:", error);
+    return {
+      success: false,
+      error: "Failed to resend invitation. Please try again.",
     };
   }
 }

@@ -4,6 +4,22 @@ import { Resend } from "resend";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
+/** Must match a domain verified in Resend (see FROM_EMAIL in .env). */
+const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+
+function formatFromAddress(): string {
+  if (FROM_EMAIL.includes("<")) return FROM_EMAIL;
+  return `AKILI Risk Intelligence <${FROM_EMAIL}>`;
+}
+
+function resendErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "message" in error) {
+    const msg = (error as { message?: unknown }).message;
+    if (typeof msg === "string" && msg.trim()) return msg;
+  }
+  return "Failed to send invitation email";
+}
+
 interface AdminInvitationData {
   email: string;
   name: string;
@@ -28,7 +44,7 @@ export async function sendAdminInvitationEmail(data: AdminInvitationData) {
 
   try {
     const result = await resend.emails.send({
-      from: "AKILI Risk Intelligence <noreply@akilirisk.com>",
+      from: formatFromAddress(),
       to: [email],
       subject: `Welcome to AKILI Risk Intelligence - ${roleLabel} Access`,
       html: generateAdminInvitationHTML({
@@ -52,7 +68,7 @@ export async function sendAdminInvitationEmail(data: AdminInvitationData) {
     return { success: true, data: result };
   } catch (error) {
     console.error("Failed to send admin invitation email:", error);
-    return { success: false, error: "Failed to send invitation email" };
+    return { success: false, error: resendErrorMessage(error) };
   }
 }
 

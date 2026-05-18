@@ -30,7 +30,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deactivateAdminUser } from "@/lib/actions/admin-user-provisioning";
+import {
+  deactivateAdminUser,
+  resendAdminInvitation,
+} from "@/lib/actions/admin-user-provisioning";
+import {
+  AdminUserEditForm,
+  type AdminUserEditTarget,
+} from "@/components/admin/AdminUserEditForm";
 
 interface AdminUser {
   id: string;
@@ -54,9 +61,55 @@ export function AdminUserManagementList({
   onUserUpdated,
 }: AdminUserManagementListProps) {
   const [isDeactivating, setIsDeactivating] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUserEditTarget | null>(
+    null
+  );
+
+  const handleResendInvitation = async (
+    userId: string,
+    userName: string,
+    email: string | null
+  ) => {
+    const label = userName || email || "this user";
+    if (
+      !confirm(
+        `Resend invitation to ${label}? A new temporary password will be emailed and any previous password will stop working.`
+      )
+    ) {
+      return;
+    }
+
+    setIsResending(userId);
+
+    try {
+      const result = await resendAdminInvitation(userId);
+
+      if (result.success) {
+        alert(`Invitation email sent to ${email ?? label}.`);
+        onUserUpdated?.();
+      } else if (result.data?.tempPassword) {
+        alert(
+          `${result.error}\n\nTemporary password (share securely):\n${result.data.tempPassword}`
+        );
+        onUserUpdated?.();
+      } else {
+        alert(`Failed to resend invitation: ${result.error}`);
+      }
+    } catch {
+      alert("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsResending(null);
+    }
+  };
 
   const handleDeactivateUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to deactivate ${userName}? This action cannot be undone.`)) {
+    const isCurrentUser = userId === currentUserId;
+    const message = isCurrentUser
+      ? `Are you sure you want to deactivate your own account (${userName})? You will lose admin access and this action cannot be undone.`
+      : `Are you sure you want to deactivate ${userName}? This action cannot be undone.`;
+
+    if (!confirm(message)) {
       return;
     }
 
@@ -128,6 +181,19 @@ export function AdminUserManagementList({
   }
 
   return (
+    <div className="space-y-6">
+      {editingUser ? (
+        <AdminUserEditForm
+          user={editingUser}
+          isCurrentUser={editingUser.id === currentUserId}
+          onSuccess={() => {
+            onUserUpdated?.();
+            setEditingUser(null);
+          }}
+          onCancel={() => setEditingUser(null)}
+        />
+      ) : null}
+
     <Card>
       <CardHeader>
         <CardTitle>Administrator Accounts</CardTitle>
@@ -150,6 +216,10 @@ export function AdminUserManagementList({
             {adminUsers.map((user) => {
               const isCurrentUser = user.id === currentUserId;
               const isDeactivatingThis = isDeactivating === user.id;
+              const isResendingThis = isResending === user.id;
+              const isEditingThis = editingUser?.id === user.id;
+              const isRowBusy =
+                isDeactivatingThis || isResendingThis || isEditingThis;
 
               return (
                 <TableRow key={user.id}>
@@ -190,45 +260,51 @@ export function AdminUserManagementList({
                         <Button
                           variant="ghost"
                           className="h-8 w-8 p-0"
-                          disabled={isDeactivatingThis}
+                          disabled={isRowBusy}
                         >
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setEditingUser({
+                              id: user.id,
+                              email: user.email,
+                              name: user.name,
+                              role: user.role,
+                            })
+                          }
+                          disabled={isRowBusy}
+                        >
                           <Edit className="mr-2 h-4 w-4" />
-                          Edit User
+                          {isEditingThis ? "Editing..." : "Edit User"}
                         </DropdownMenuItem>
 
-                        {!user.isVerified && (
-                          <DropdownMenuItem disabled>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Resend Invitation
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleResendInvitation(
+                              user.id,
+                              user.name || "",
+                              user.email
+                            )
+                          }
+                          disabled={isRowBusy}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          {isResendingThis ? "Sending..." : "Resend Invitation"}
+                        </DropdownMenuItem>
 
-                        {!isCurrentUser && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDeactivateUser(user.id, user.name || user.email || "this user")}
-                              disabled={isDeactivatingThis}
-                            >
-                              <UserX className="mr-2 h-4 w-4" />
-                              {isDeactivatingThis ? "Deactivating..." : "Deactivate"}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-
-                        {isCurrentUser && (
-                          <DropdownMenuItem disabled className="text-muted-foreground">
-                            <UserX className="mr-2 h-4 w-4" />
-                            Cannot deactivate yourself
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleDeactivateUser(user.id, user.name || user.email || "this user")}
+                          disabled={isRowBusy}
+                        >
+                          <UserX className="mr-2 h-4 w-4" />
+                          {isDeactivatingThis ? "Deactivating..." : "Deactivate"}
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -239,5 +315,6 @@ export function AdminUserManagementList({
         </Table>
       </CardContent>
     </Card>
+    </div>
   );
 }

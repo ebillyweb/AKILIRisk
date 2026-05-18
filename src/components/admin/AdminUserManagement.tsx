@@ -18,11 +18,16 @@ interface AdminUser {
   updatedAt: Date;
 }
 
-export function AdminUserManagement() {
+interface AdminUserManagementProps {
+  currentUserId?: string;
+}
+
+export function AdminUserManagement({
+  currentUserId = "",
+}: AdminUserManagementProps) {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("users");
 
   const loadAdminUsers = async () => {
@@ -46,10 +51,6 @@ export function AdminUserManagement() {
 
   useEffect(() => {
     loadAdminUsers();
-
-    // Get current user ID from session (you may need to adjust this based on your auth setup)
-    // For now, we'll leave it empty and handle it in the component
-    setCurrentUserId("");
   }, []);
 
   const handleUserCreated = () => {

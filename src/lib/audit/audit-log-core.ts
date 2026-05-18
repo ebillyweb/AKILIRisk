@@ -58,6 +58,8 @@ export const AUDIT_ACTIONS = {
   ADMIN_USER_UPDATED: "admin_user.updated",
   /** Super admin deactivates an admin user account. */
   ADMIN_USER_DEACTIVATED: "admin_user.deactivated",
+  /** Super admin resends invitation email with a new temporary password. */
+  ADMIN_USER_INVITATION_RESENT: "admin_user.invitation_resent",
 
   // ── Admin actions on configuration (P2) ───────────────────────────────────
   PLATFORM_SETTINGS_UPDATE: "platform_settings.update",

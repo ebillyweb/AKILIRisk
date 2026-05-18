@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 import { AdminUserManagement } from "@/components/admin/AdminUserManagement";
 import { requireSuperAdminRole } from "@/lib/admin/auth";
+import { auth } from "@/lib/auth";
 
 export default async function AdminUserManagementPage() {
   // Ensure only super admins can access this page
   await requireSuperAdminRole();
+  const session = await auth();
 
   return (
     <div className="space-y-8">
@@ -25,7 +27,7 @@ export default async function AdminUserManagementPage() {
           </div>
         }
       >
-        <AdminUserManagement />
+        <AdminUserManagement currentUserId={session?.user?.id ?? ""} />
       </Suspense>
     </div>
   );
