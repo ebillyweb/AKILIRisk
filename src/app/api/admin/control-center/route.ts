@@ -24,7 +24,7 @@ export async function GET() {
   if (!validation.success) {
     console.error('Control center snapshot validation failed:', {
       error: validation.error,
-      actorId: actor.id,
+      actorId: actor.userId,
       timestamp: new Date().toISOString(),
       snapshotGeneratedAt: snapshot.generatedAt,
     });
