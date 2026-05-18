@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Menu, Shield, X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,57 @@ export function AdminMobileNav({ superUser }: AdminMobileNavProps) {
   const panelId = useId();
 
   const close = useCallback(() => setOpen(false), []);
+
+  // Touch gesture handling for swipe-to-open/close
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setTouchEnd(null); // Reset on new touch
+    setTouchStart(e.targetTouches[0]?.clientX ?? null);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0]?.clientX ?? null);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    // Close sidebar on left swipe when open
+    if (isLeftSwipe && open) {
+      close();
+    }
+
+    // Open sidebar on right swipe when closed and starting from left edge
+    if (isRightSwipe && !open && touchStart < 50) {
+      setOpen(true);
+    }
+  }, [touchStart, touchEnd, open, close]);
+
+  // Debounced toggle to prevent race conditions from rapid clicking
+  const toggleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debouncedToggle = useCallback(() => {
+    if (toggleTimeoutRef.current) {
+      clearTimeout(toggleTimeoutRef.current);
+    }
+    toggleTimeoutRef.current = setTimeout(() => {
+      setOpen(prev => !prev);
+    }, 50);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toggleTimeoutRef.current) {
+        clearTimeout(toggleTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -35,15 +86,20 @@ export function AdminMobileNav({ superUser }: AdminMobileNavProps) {
 
   return (
     <>
-      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-border/60 bg-card/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:hidden">
+      <div
+        className="sticky top-0 z-40 flex items-center gap-3 border-b border-border/60 bg-card/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:hidden"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <Button
           type="button"
           variant="outline"
           size="icon"
-          className="shrink-0"
+          className="shrink-0 h-11 w-11" // Ensure 44px minimum touch target
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((value) => !value)}
+          onClick={debouncedToggle}
         >
           <Menu className="size-4" />
           <span className="sr-only">
@@ -102,7 +158,7 @@ export function AdminMobileNav({ superUser }: AdminMobileNavProps) {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="shrink-0"
+                className="shrink-0 h-11 w-11" // Ensure 44px minimum touch target
                 onClick={close}
               >
                 <X className="size-4" />

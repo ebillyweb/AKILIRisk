@@ -12,17 +12,15 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import { auth } from "@/lib/auth";
-import { isSuperAdmin, requireAdminRole } from "@/lib/admin/auth";
-import { getControlCenterSnapshot } from "@/lib/admin/control-center-snapshot";
+import { requireAdminRole } from "@/lib/admin/auth";
+import { getCachedControlCenterSnapshot } from "@/lib/admin/control-center-snapshot-cached";
 import { ControlCenterLiveDashboard } from "@/components/admin/dashboard/ControlCenterLiveDashboard";
 import { WorkspaceCard } from "@/components/admin/dashboard/WorkspaceCard";
 
 export default async function AdminControlCenterPage() {
-  await requireAdminRole();
-  const session = await auth();
-  const superUser = isSuperAdmin(session);
-  const initialSnapshot = await getControlCenterSnapshot();
+  const adminContext = await requireAdminRole();
+  const superUser = adminContext.role === "SUPER_ADMIN";
+  const initialSnapshot = await getCachedControlCenterSnapshot();
 
   return (
     <div className="space-y-8">

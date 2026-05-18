@@ -1,7 +1,6 @@
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ReactNode } from "react";
-import { isAdmin, isSuperAdmin } from "@/lib/admin/auth";
+import { requireAdminRole } from "@/lib/admin/auth";
 import { AdminControlCenterLayout } from "@/components/admin/layout/AdminControlCenterLayout";
 
 export default async function AdminLayout({
@@ -9,13 +8,15 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await auth();
+  let adminContext;
 
-  if (!session?.user || !isAdmin(session)) {
+  try {
+    adminContext = await requireAdminRole();
+  } catch {
     redirect("/dashboard?error=unauthorized");
   }
 
-  const superUser = isSuperAdmin(session);
+  const superUser = adminContext.role === "SUPER_ADMIN";
 
   return (
     <AdminControlCenterLayout superUser={superUser}>

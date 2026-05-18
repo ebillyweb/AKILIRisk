@@ -18,6 +18,7 @@ export function useControlCenterPolling(initial: ControlCenterSnapshot) {
   const pollMs = resolvePollIntervalMs();
   const [snapshot, setSnapshot] = useState(initial);
   const [status, setStatus] = useState<ControlCenterPollStatus>("idle");
+  const [lastError, setLastError] = useState<string | null>(null);
   const inFlightRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -39,7 +40,11 @@ export function useControlCenterPolling(initial: ControlCenterSnapshot) {
       const data = (await response.json()) as ControlCenterSnapshot;
       setSnapshot(data);
       setStatus("idle");
-    } catch {
+      setLastError(null); // Clear error on success
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Control center refresh failed:', errorMessage);
+      setLastError(errorMessage);
       setStatus("error");
     } finally {
       inFlightRef.current = false;
@@ -63,7 +68,7 @@ export function useControlCenterPolling(initial: ControlCenterSnapshot) {
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [pollMs, refresh]);
+  }, [pollMs]); // Remove refresh from deps since it has no dependencies
 
-  return { snapshot, status, refresh, pollMs };
+  return { snapshot, status, lastError, refresh, pollMs };
 }

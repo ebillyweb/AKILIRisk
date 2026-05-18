@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuditAdminActorOrNull } from "@/lib/audit/admin-gate";
-import { getControlCenterSnapshot } from "@/lib/admin/control-center-snapshot";
+import { getCachedControlCenterSnapshot } from "@/lib/admin/control-center-snapshot-cached";
+import { validateControlCenterSnapshot } from "@/lib/admin/control-center-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,21 @@ export async function GET() {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const snapshot = await getControlCenterSnapshot();
+  const snapshot = await getCachedControlCenterSnapshot();
 
-  return NextResponse.json(snapshot, {
+  // Validate the snapshot before returning
+  const validation = validateControlCenterSnapshot(snapshot);
+  if (!validation.success) {
+    console.error('Control center snapshot validation failed:', validation.error);
+    return NextResponse.json(
+      { error: "Data validation failed" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(validation.data, {
     headers: {
-      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Cache-Control": "private, max-age=10, stale-while-revalidate=30",
     },
   });
 }
