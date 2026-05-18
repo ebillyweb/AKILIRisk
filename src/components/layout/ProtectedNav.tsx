@@ -70,6 +70,11 @@ export function ProtectedNav({
 }: ProtectedNavProps) {
   const pathname = usePathname();
 
+  // Hide admin nav when in admin area - sidebar handles navigation
+  if (showAdmin && pathname.startsWith("/admin")) {
+    return null;
+  }
+
   const advisorNavItems: typeof ADVISOR_NAV_ITEMS | undefined = showAdvisor
     ? advisorFeatureFlags
       ? ADVISOR_NAV_ITEMS.filter((item) => {

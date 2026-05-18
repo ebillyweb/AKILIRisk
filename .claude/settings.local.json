@@ -21,7 +21,10 @@
       "Read(//Users/bwoodtalton/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.0.1/.claude/skills/ui-ux-pro-max/**)",
       "Bash(python3 scripts/search.py \"risk management fintech professional trust\" --design-system -p \"AKILI Risk Intelligence\")",
       "Bash(for file:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(npm run *)",
+      "Bash(npx eslint *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

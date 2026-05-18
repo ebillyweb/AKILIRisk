@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ReactNode } from "react";
-import { isAdmin } from "@/lib/admin/auth";
-import { AdminPageHeaderFromPath } from "@/components/layout/AdminPageHeader";
+import { isAdmin, isSuperAdmin } from "@/lib/admin/auth";
+import { AdminControlCenterLayout } from "@/components/admin/layout/AdminControlCenterLayout";
 
 export default async function AdminLayout({
   children,
@@ -15,10 +15,11 @@ export default async function AdminLayout({
     redirect("/dashboard?error=unauthorized");
   }
 
+  const superUser = isSuperAdmin(session);
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <AdminPageHeaderFromPath />
+    <AdminControlCenterLayout superUser={superUser}>
       {children}
-    </div>
+    </AdminControlCenterLayout>
   );
 }

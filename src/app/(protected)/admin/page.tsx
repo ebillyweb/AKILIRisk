@@ -1,236 +1,364 @@
-import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
 import {
   Activity,
-  ArrowRight,
+  AlertTriangle,
   BarChart3,
+  CheckCircle,
   ClipboardList,
-  Database,
+  Clock,
   FileText,
   Gauge,
+  Puzzle,
+  Server,
   Settings,
   Shield,
-  UserRound,
+  TrendingUp,
+  UserPlus,
   Users,
+  UserRound,
+  Zap,
+  BookOpen,
+  Eye,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { isSuperAdmin, requireAdminRole } from "@/lib/admin/auth";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { MetricCard } from "@/components/admin/dashboard/MetricCard";
+import { NeedsAttentionItem } from "@/components/admin/dashboard/NeedsAttentionItem";
+import { WorkspaceCard } from "@/components/admin/dashboard/WorkspaceCard";
+import { RecentActivityItem } from "@/components/admin/dashboard/RecentActivityItem";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { getControlCenterMetrics } from "@/lib/admin/control-center-metrics";
 
-const SUPER_ADMIN_ONLY_HREFS = new Set<string>(["/admin/scoring/thresholds"]);
-
-type AdminNavCard = {
-  href: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-};
-
-type AdminNavGroup = {
-  id: string;
-  title: string;
-  description: string;
-  items: readonly AdminNavCard[];
-};
-
-const ADMIN_NAV_GROUPS: readonly AdminNavGroup[] = [
+const PLACEHOLDER_ALERTS = [
   {
-    id: "dashboards",
-    title: "Dashboards",
-    description:
-      "Two views: how the business is doing, and whether the platform is healthy.",
-    items: [
-      {
-        href: "/admin/analytics",
-        label: "Analytics Dashboard",
-        description:
-          "Onboarding funnel, assessment activity, recommendations, and risk insights across every advisor and client.",
-        icon: BarChart3,
-      },
-      {
-        href: "/admin/operations",
-        label: "Operations Dashboard",
-        description:
-          "Core service health, external dependency status, and recent platform failures.",
-        icon: Gauge,
-      },
-    ],
+    title: "3 Assessments Stalled",
+    description: "Client submissions waiting over 72 hours for advisor review",
+    severity: "medium" as const,
+    icon: Clock,
+    href: "/admin/assessment?status=stalled",
+    timestamp: "2 hours ago",
   },
   {
-    id: "user-management",
-    title: "User Management",
-    description: "Advisor, client, and internal staff accounts.",
-    items: [
-      {
-        href: "/admin/advisors",
-        label: "Advisors",
-        description: "View and manage advisor accounts and profiles.",
-        icon: Users,
-      },
-      {
-        href: "/admin/clients",
-        label: "Clients",
-        description: "View and manage client accounts and assignments.",
-        icon: UserRound,
-      },
-      {
-        href: "/admin/staff",
-        label: "Platform staff",
-        description:
-          "Admin and super-admin accounts; super admins can promote clients and adjust staff roles.",
-        icon: Users,
-      },
-    ],
+    title: "Integration Warning",
+    description: "Risk data sync showing intermittent failures with external provider",
+    severity: "high" as const,
+    icon: Puzzle,
+    href: "/admin/integrations?status=warning",
+    timestamp: "4 hours ago",
   },
   {
-    id: "intake-assessments",
-    title: "Intake & Assessments",
-    description: "Leads, intake content, assessments, and the question bank.",
-    items: [
-      {
-        href: "/admin/leads",
-        label: "Assessment requests",
-        description: "Public lead form submissions; assign each request to an advisor.",
-        icon: ClipboardList,
-      },
-      {
-        href: "/admin/intake",
-        label: "Intake Management",
-        description: "Review intake interviews and submission status.",
-        icon: ClipboardList,
-      },
-      {
-        href: "/admin/intake/questions",
-        label: "Intake script",
-        description: "Edit spoken questions for the client audio intake (database pillar rows).",
-        icon: FileText,
-      },
-      {
-        href: "/admin/assessment",
-        label: "Assessment Management",
-        description: "Review assessments and completion status.",
-        icon: ClipboardList,
-      },
-      {
-        href: "/admin/question-bank",
-        label: "Question bank",
-        description: "Six risk areas: edit copy and show/hide assessment questions.",
-        icon: FileText,
-      },
-    ],
-  },
-  {
-    id: "platform-operations",
-    title: "Platform Operations",
-    description: "Configuration, risk policy, compliance, data, and recommendations.",
-    items: [
-      {
-        href: "/admin/settings",
-        label: "Settings",
-        description: "Admin and system settings.",
-        icon: Settings,
-      },
-      {
-        href: "/admin/scoring/thresholds",
-        label: "Risk thresholds",
-        description: "Low / Medium / High score cutoffs. Applies to new scoring runs only.",
-        icon: Shield,
-      },
-      {
-        href: "/admin/audit-log",
-        label: "Audit log",
-        description:
-          "Compliance trail: user activity, configuration changes, and sensitive data-access events. CSV export available.",
-        icon: Activity,
-      },
-      {
-        href: "/admin/exports",
-        label: "Data exports",
-        description:
-          "Data ownership and portability. Per-tenant or system-wide ZIP bundles (CSV + nested JSON + README).",
-        icon: Database,
-      },
-      {
-        href: "/admin/recommendations",
-        label: "Recommendations",
-        description:
-          "Service catalog and rule editor. Tier (Baseline/Enhanced), complexity, DIY vs Advisory; recommendation engine matches.",
-        icon: FileText,
-      },
-    ],
+    title: "Onboarding Incomplete",
+    description: "2 advisors missing required compliance documentation",
+    severity: "low" as const,
+    icon: UserPlus,
+    href: "/admin/advisors?status=incomplete",
+    timestamp: "1 day ago",
   },
 ];
 
-function AdminSectionCard({ href, label, description, icon: Icon }: AdminNavCard) {
-  return (
-    <Link href={href} className="group block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-xl">
-      <Card className="h-full rounded-xl border border-border/80 bg-card shadow-sm transition-all duration-200 ease-out group-hover:-translate-y-0.5 group-hover:border-border group-hover:shadow-md">
-        <CardHeader className="space-y-3 pb-2 pt-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors group-hover:border-primary/25 group-hover:bg-primary/5 group-hover:text-primary">
-                <Icon className="size-4 shrink-0" aria-hidden />
-              </span>
-              <div className="min-w-0 space-y-1">
-                <p className="text-base font-semibold leading-snug tracking-tight text-foreground">{label}</p>
-              </div>
-            </div>
-            <ArrowRight
-              className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground"
-              aria-hidden
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="pb-5 pt-0">
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
+const PLACEHOLDER_ACTIVITY = [
+  {
+    type: "assessment" as const,
+    icon: CheckCircle,
+    title: "Assessment Completed",
+    description: "Family risk assessment for Anderson household finalized",
+    timestamp: "5 min ago",
+    user: "advisor@test.com",
+  },
+  {
+    type: "advisor" as const,
+    icon: UserPlus,
+    title: "New Advisor Onboarded",
+    description: "Sarah Chen completed platform setup and compliance verification",
+    timestamp: "23 min ago",
+    user: "admin@akili.com",
+  },
+  {
+    type: "intake" as const,
+    icon: ClipboardList,
+    title: "Intake Submitted",
+    description: "Client completed comprehensive household intake interview",
+    timestamp: "1 hour ago",
+    user: "client@test.com",
+  },
+  {
+    type: "integration" as const,
+    icon: AlertTriangle,
+    title: "Integration Alert Resolved",
+    description: "Risk data provider API connection restored after 15-minute outage",
+    timestamp: "2 hours ago",
+    user: "system",
+  },
+  {
+    type: "report" as const,
+    icon: FileText,
+    title: "Risk Report Generated",
+    description: "Quarterly portfolio risk summary for Enterprise Client Group",
+    timestamp: "3 hours ago",
+    user: "scheduler",
+  },
+];
 
-export default async function AdminPage() {
+export default async function AdminControlCenterPage() {
   await requireAdminRole();
   const session = await auth();
   const superUser = isSuperAdmin(session);
 
-  const visibleGroups = ADMIN_NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => superUser || !SUPER_ADMIN_ONLY_HREFS.has(item.href)),
-  })).filter((group) => group.items.length > 0);
+  const metricsResult = await Promise.allSettled([getControlCenterMetrics()]);
+  const metrics =
+    metricsResult[0].status === "fulfilled" ? metricsResult[0].value : null;
 
   return (
-    <div className="space-y-10">
-      <header className="space-y-4 border-b border-border/60 pb-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">System Administration</h1>
-          <Badge variant="secondary" className="font-medium uppercase tracking-wide text-[10px] text-muted-foreground">
-            Secure area
-          </Badge>
-        </div>
-        <p className="max-w-3xl text-base leading-relaxed text-muted-foreground">
-          Manage users, intake workflows, assessments, configuration, and platform operations.
+    <div className="space-y-8">
+      {/* Header */}
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          AKILI Control Center
+        </h1>
+        <p className="text-lg text-muted-foreground">
+          Platform health, advisor activity, assessments, and operational oversight.
         </p>
       </header>
 
-      <div className="space-y-12">
-        {visibleGroups.map((group) => (
-          <section key={group.id} aria-labelledby={`admin-group-${group.id}`} className="space-y-4">
-            <div className="space-y-1.5">
-              <h2 id={`admin-group-${group.id}`} className="text-lg font-semibold tracking-tight text-foreground">
-                {group.title}
-              </h2>
-              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{group.description}</p>
+      {/* Status Metrics */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Platform Status</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <MetricCard
+            title="Active Advisors"
+            value={metrics?.activeAdvisors.value ?? "—"}
+            icon={Users}
+            trend={metrics?.activeAdvisors.trend}
+            status="healthy"
+          />
+          <MetricCard
+            title="Assessments in Progress"
+            value={metrics?.assessmentsInProgress.value ?? "—"}
+            icon={ClipboardList}
+            trend={metrics?.assessmentsInProgress.trend}
+            status="neutral"
+          />
+          <MetricCard
+            title="Intake Completion"
+            value={metrics?.intakeCompletionRate.value ?? "—"}
+            icon={CheckCircle}
+            trend={metrics?.intakeCompletionRate.trend}
+            status="healthy"
+          />
+          <MetricCard
+            title="Platform Status"
+            value={metrics?.platformStatus.value ?? "—"}
+            icon={Server}
+            status={metrics?.platformStatus.status ?? "neutral"}
+          />
+          <MetricCard
+            title="Failed Integrations"
+            value={metrics?.failedIntegrations.value ?? "—"}
+            icon={Puzzle}
+            status={metrics?.failedIntegrations.status ?? "neutral"}
+            subtitle={
+              metrics && metrics.failedIntegrations.value > 0
+                ? "Requires attention"
+                : undefined
+            }
+          />
+          <MetricCard
+            title="Pending Reviews"
+            value={metrics?.pendingReviews.value ?? "—"}
+            icon={Eye}
+            trend={metrics?.pendingReviews.trend}
+            status="neutral"
+          />
+        </div>
+      </section>
+
+      {/* Needs Attention */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Needs Attention</h2>
+        <div className="space-y-3">
+          {PLACEHOLDER_ALERTS.map((alert, index) => (
+            <NeedsAttentionItem
+              key={index}
+              title={alert.title}
+              description={alert.description}
+              severity={alert.severity}
+              icon={alert.icon}
+              href={alert.href}
+              timestamp={alert.timestamp}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Workspace Shortcuts */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Quick Access</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Assessment Operations */}
+          <div className="space-y-4">
+            <h3 className="text-base font-medium text-muted-foreground">Assessment Operations</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <WorkspaceCard
+                href="/admin/leads"
+                title="New Requests"
+                description="Public lead form submissions awaiting assignment"
+                icon={ClipboardList}
+                badge={{ text: "12", variant: "default" }}
+              />
+              <WorkspaceCard
+                href="/admin/assessment"
+                title="Active Reviews"
+                description="In-progress assessments requiring attention"
+                icon={Eye}
+                badge={{ text: "47", variant: "secondary" }}
+              />
+              <WorkspaceCard
+                href="/admin/intake"
+                title="Intake Queue"
+                description="Interview submissions pending review"
+                icon={ClipboardList}
+                badge={{ text: "8", variant: "default" }}
+              />
+              <WorkspaceCard
+                href="/admin/recommendations"
+                title="Recommendation Rules"
+                description="Service catalog and matching engine"
+                icon={BookOpen}
+              />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {group.items.map((item) => (
-                <AdminSectionCard key={item.href} {...item} />
-              ))}
+          </div>
+
+          {/* People Management */}
+          <div className="space-y-4">
+            <h3 className="text-base font-medium text-muted-foreground">People Management</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <WorkspaceCard
+                href="/admin/advisors"
+                title="Advisors"
+                description="Account management and onboarding status"
+                icon={Users}
+                badge={{ text: "23", variant: "secondary" }}
+              />
+              <WorkspaceCard
+                href="/admin/clients"
+                title="Clients"
+                description="Client accounts and advisor assignments"
+                icon={UserRound}
+                badge={{ text: "156", variant: "secondary" }}
+              />
+              {superUser && (
+                <WorkspaceCard
+                  href="/admin/staff"
+                  title="Staff Access"
+                  description="Admin and super-admin role management"
+                  icon={Shield}
+                  badge={{ text: "Super Admin", variant: "outline" }}
+                />
+              )}
             </div>
-          </section>
-        ))}
-      </div>
+          </div>
+
+          {/* Platform Operations */}
+          <div className="space-y-4">
+            <h3 className="text-base font-medium text-muted-foreground">Platform Operations</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {superUser && (
+                <WorkspaceCard
+                  href="/admin/operations"
+                  title="API Health"
+                  description="Service status and dependency monitoring"
+                  icon={Gauge}
+                  badge={{ text: "Operational", variant: "default" }}
+                />
+              )}
+              <WorkspaceCard
+                href="/admin/audit-log"
+                title="Audit Logs"
+                description="Compliance trail and security events"
+                icon={Activity}
+              />
+              {superUser && (
+                <WorkspaceCard
+                  href="/admin/integrations"
+                  title="Integrations"
+                  description="External service connections and status"
+                  icon={Puzzle}
+                  badge={{ text: "2 Issues", variant: "outline" }}
+                />
+              )}
+              <WorkspaceCard
+                href="/admin/settings"
+                title="Configuration"
+                description="Platform settings and feature flags"
+                icon={Settings}
+              />
+            </div>
+          </div>
+
+          {/* Analytics & Intelligence */}
+          <div className="space-y-4">
+            <h3 className="text-base font-medium text-muted-foreground">Analytics & Intelligence</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <WorkspaceCard
+                href="/admin/analytics"
+                title="Business Analytics"
+                description="Onboarding funnel and platform metrics"
+                icon={BarChart3}
+              />
+              {superUser && (
+                <WorkspaceCard
+                  href="/admin/risk-signals"
+                  title="Risk Signals"
+                  description="Platform-wide risk intelligence monitoring"
+                  icon={AlertTriangle}
+                />
+              )}
+              <WorkspaceCard
+                href="/admin/reports"
+                title="Reports"
+                description="Executive dashboards and data exports"
+                icon={FileText}
+              />
+              <WorkspaceCard
+                href="/admin/analytics"
+                title="Advisor Financial Health"
+                description="Portfolio performance and advisor metrics"
+                icon={TrendingUp}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Recent Activity */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Zap className="size-4" />
+              Platform Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {PLACEHOLDER_ACTIVITY.map((activity, index) => (
+              <div key={index}>
+                <RecentActivityItem
+                  type={activity.type}
+                  icon={activity.icon}
+                  title={activity.title}
+                  description={activity.description}
+                  timestamp={activity.timestamp}
+                  user={activity.user}
+                />
+                {index < PLACEHOLDER_ACTIVITY.length - 1 && (
+                  <Separator className="mt-4" />
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }
