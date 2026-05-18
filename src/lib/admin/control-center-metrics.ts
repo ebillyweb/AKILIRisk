@@ -1,30 +1,20 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import {
-  getOperationsHealthSnapshot,
-  type HealthStatus,
-} from "@/lib/admin/operations-health";
+import { getOperationsHealthSnapshot } from "@/lib/admin/operations-health";
+import type { HealthStatus } from "@/lib/admin/operations-health";
 import type { MetricStatus } from "@/components/admin/dashboard/MetricCard";
+import type {
+  ControlCenterMetrics,
+  MetricTrend,
+} from "@/lib/admin/control-center-types";
+
+export type { ControlCenterMetrics, MetricTrend } from "@/lib/admin/control-center-types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * DAY_MS);
-}
-
-export type MetricTrend = {
-  value: string;
-  direction: "up" | "down" | "flat";
-};
-
-export interface ControlCenterMetrics {
-  activeAdvisors: { value: number; trend: MetricTrend };
-  assessmentsInProgress: { value: number; trend: MetricTrend };
-  intakeCompletionRate: { value: string; trend: MetricTrend };
-  platformStatus: { value: string; status: MetricStatus };
-  failedIntegrations: { value: number; status: MetricStatus };
-  pendingReviews: { value: number; trend: MetricTrend };
 }
 
 function formatCountDelta(current: number, previous: number): MetricTrend {

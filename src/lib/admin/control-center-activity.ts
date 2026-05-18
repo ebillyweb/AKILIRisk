@@ -5,7 +5,15 @@ import { formatDistanceToNow } from "date-fns";
 import { prisma } from "@/lib/db";
 import { formatAuditDiffSummary } from "@/lib/audit/format-summary";
 import { lookupActorDisplay } from "@/lib/audit/queries";
-import type { ActivityType } from "@/components/admin/dashboard/RecentActivityItem";
+import type {
+  ControlCenterActivity,
+  ControlCenterActivityIconKey,
+} from "@/lib/admin/control-center-types";
+
+export type {
+  ControlCenterActivity,
+  ControlCenterActivityIconKey,
+} from "@/lib/admin/control-center-types";
 
 const TAKE = 10;
 
@@ -17,24 +25,6 @@ const EXCLUDED_ACTION_PREFIXES = [
   "auth.magic_link_failure",
   "auth.magic_link_request",
 ] as const;
-
-export type ControlCenterActivityIconKey =
-  | "checkCircle"
-  | "userPlus"
-  | "clipboardList"
-  | "alertTriangle"
-  | "fileText"
-  | "activity";
-
-export interface ControlCenterActivity {
-  id: string;
-  type: ActivityType;
-  iconKey: ControlCenterActivityIconKey;
-  title: string;
-  description: string;
-  timestamp: string;
-  user?: string;
-}
 
 function isExcludedAction(action: string): boolean {
   return EXCLUDED_ACTION_PREFIXES.some((prefix) => action.startsWith(prefix));
@@ -107,7 +97,9 @@ function humanizeAction(action: string): string {
   }
 }
 
-function actionToActivityType(action: string): ActivityType {
+function actionToActivityType(
+  action: string
+): ControlCenterActivity["type"] {
   if (action.startsWith("intake.")) return "intake";
   if (action.startsWith("assessment.")) return "assessment";
   if (action.startsWith("report.")) return "report";

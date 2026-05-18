@@ -2,7 +2,13 @@ import "server-only";
 
 import { formatDistanceToNow } from "date-fns";
 import { prisma } from "@/lib/db";
+import type { ControlCenterAlert } from "@/lib/admin/control-center-types";
 import type { AlertSeverity } from "@/components/admin/dashboard/NeedsAttentionItem";
+
+export type {
+  ControlCenterAlert,
+  ControlCenterAlertIconKey,
+} from "@/lib/admin/control-center-types";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -13,25 +19,6 @@ function hoursAgo(n: number): Date {
 
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * DAY_MS);
-}
-
-export type ControlCenterAlertIconKey =
-  | "clock"
-  | "puzzle"
-  | "userPlus"
-  | "clipboardList"
-  | "alertTriangle";
-
-export interface ControlCenterAlert {
-  id: string;
-  title: string;
-  description: string;
-  severity: AlertSeverity;
-  iconKey: ControlCenterAlertIconKey;
-  href: string;
-  timestamp: string;
-  /** For sort order (newest first within severity). */
-  occurredAt: Date;
 }
 
 const SEVERITY_RANK: Record<AlertSeverity, number> = {
@@ -49,12 +36,16 @@ function formatOccurredAt(date: Date): string {
   return formatDistanceToNow(date, { addSuffix: true });
 }
 
-function sortAlerts(alerts: ControlCenterAlert[]): ControlCenterAlert[] {
-  return [...alerts].sort((a, b) => {
-    const sev = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
-    if (sev !== 0) return sev;
-    return b.occurredAt.getTime() - a.occurredAt.getTime();
-  });
+function sortAlerts(
+  alerts: Array<ControlCenterAlert & { occurredAt: Date }>
+): ControlCenterAlert[] {
+  return [...alerts]
+    .sort((a, b) => {
+      const sev = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+      if (sev !== 0) return sev;
+      return b.occurredAt.getTime() - a.occurredAt.getTime();
+    })
+    .map(({ occurredAt: _occurredAt, ...alert }) => alert);
 }
 
 /**
@@ -195,7 +186,7 @@ export async function getControlCenterAlerts(): Promise<ControlCenterAlert[]> {
     }),
   ]);
 
-  const alerts: ControlCenterAlert[] = [];
+  const alerts: Array<ControlCenterAlert & { occurredAt: Date }> = [];
   const failedIntegrationCount = failedWebhookRows.length;
   const latestFailedWebhook = failedWebhookRows[0];
 
