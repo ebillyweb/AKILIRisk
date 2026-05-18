@@ -32,6 +32,10 @@ import {
   getControlCenterAlerts,
   type ControlCenterAlertIconKey,
 } from "@/lib/admin/control-center-alerts";
+import {
+  getControlCenterActivity,
+  type ControlCenterActivityIconKey,
+} from "@/lib/admin/control-center-activity";
 
 const ALERT_ICONS: Record<
   ControlCenterAlertIconKey,
@@ -44,62 +48,34 @@ const ALERT_ICONS: Record<
   alertTriangle: AlertTriangle,
 };
 
-const PLACEHOLDER_ACTIVITY = [
-  {
-    type: "assessment" as const,
-    icon: CheckCircle,
-    title: "Assessment Completed",
-    description: "Family risk assessment for Anderson household finalized",
-    timestamp: "5 min ago",
-    user: "advisor@test.com",
-  },
-  {
-    type: "advisor" as const,
-    icon: UserPlus,
-    title: "New Advisor Onboarded",
-    description: "Sarah Chen completed platform setup and compliance verification",
-    timestamp: "23 min ago",
-    user: "admin@akili.com",
-  },
-  {
-    type: "intake" as const,
-    icon: ClipboardList,
-    title: "Intake Submitted",
-    description: "Client completed comprehensive household intake interview",
-    timestamp: "1 hour ago",
-    user: "client@test.com",
-  },
-  {
-    type: "integration" as const,
-    icon: AlertTriangle,
-    title: "Integration Alert Resolved",
-    description: "Risk data provider API connection restored after 15-minute outage",
-    timestamp: "2 hours ago",
-    user: "system",
-  },
-  {
-    type: "report" as const,
-    icon: FileText,
-    title: "Risk Report Generated",
-    description: "Quarterly portfolio risk summary for Enterprise Client Group",
-    timestamp: "3 hours ago",
-    user: "scheduler",
-  },
-];
+const ACTIVITY_ICONS: Record<
+  ControlCenterActivityIconKey,
+  typeof CheckCircle
+> = {
+  checkCircle: CheckCircle,
+  userPlus: UserPlus,
+  clipboardList: ClipboardList,
+  alertTriangle: AlertTriangle,
+  fileText: FileText,
+  activity: Activity,
+};
 
 export default async function AdminControlCenterPage() {
   await requireAdminRole();
   const session = await auth();
   const superUser = isSuperAdmin(session);
 
-  const [metricsResult, alertsResult] = await Promise.allSettled([
+  const [metricsResult, alertsResult, activityResult] = await Promise.allSettled([
     getControlCenterMetrics(),
     getControlCenterAlerts(),
+    getControlCenterActivity(),
   ]);
   const metrics =
     metricsResult.status === "fulfilled" ? metricsResult.value : null;
   const alerts =
     alertsResult.status === "fulfilled" ? alertsResult.value : null;
+  const activity =
+    activityResult.status === "fulfilled" ? activityResult.value : null;
 
   return (
     <div className="space-y-8">
@@ -344,21 +320,31 @@ export default async function AdminControlCenterPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {PLACEHOLDER_ACTIVITY.map((activity, index) => (
-              <div key={index}>
-                <RecentActivityItem
-                  type={activity.type}
-                  icon={activity.icon}
-                  title={activity.title}
-                  description={activity.description}
-                  timestamp={activity.timestamp}
-                  user={activity.user}
-                />
-                {index < PLACEHOLDER_ACTIVITY.length - 1 && (
-                  <Separator className="mt-4" />
-                )}
-              </div>
-            ))}
+            {activity === null ? (
+              <p className="text-sm text-muted-foreground">
+                Unable to load recent activity right now.
+              </p>
+            ) : activity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No platform events recorded yet.
+              </p>
+            ) : (
+              activity.map((item, index) => (
+                <div key={item.id}>
+                  <RecentActivityItem
+                    type={item.type}
+                    icon={ACTIVITY_ICONS[item.iconKey]}
+                    title={item.title}
+                    description={item.description}
+                    timestamp={item.timestamp}
+                    user={item.user}
+                  />
+                  {index < activity.length - 1 && (
+                    <Separator className="mt-4" />
+                  )}
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </section>
