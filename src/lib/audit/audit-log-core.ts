@@ -51,6 +51,14 @@ export const AUDIT_ACTIONS = {
   USER_RESTORE: "user.restore",
   USER_PORTAL_ACCESS_TOGGLE: "user.portal_access_toggle",
 
+  // ── Admin user provisioning actions (super admin only) ────────────────────
+  /** Super admin creates a new admin user account. */
+  ADMIN_USER_CREATED: "admin_user.created",
+  /** Super admin updates an existing admin user. */
+  ADMIN_USER_UPDATED: "admin_user.updated",
+  /** Super admin deactivates an admin user account. */
+  ADMIN_USER_DEACTIVATED: "admin_user.deactivated",
+
   // ── Admin actions on configuration (P2) ───────────────────────────────────
   PLATFORM_SETTINGS_UPDATE: "platform_settings.update",
   /** A2 (BRD §4.2 + §7.1): admin updates Low/Medium/High score cutoffs at
@@ -167,7 +175,7 @@ export const AUDIT_ACTIONS = {
   DATA_ACCESS_EXPORT: "data_access.export",
   /** §9.1 (BRD): admin opens /admin/analytics. metadata captures the
    *  resolved KPI counts so the audit log gives a coarse "what did
-   *  Belvedere see on date X" trail without a separate snapshot table.
+   *  AKILI see on date X" trail without a separate snapshot table.
    *  Aggregate page only — no per-client identifiers in metadata. */
   DATA_ACCESS_ANALYTICS_VIEW: "data_access.analytics_view",
   /** Round-12 audit-bucket close-out: client (or owner) loads their own

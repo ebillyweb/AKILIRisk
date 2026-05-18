@@ -12,6 +12,7 @@ import {
   TrendingUp,
   UserRound,
   Users,
+  UserPlus,
   AlertTriangle,
   Puzzle,
   BookOpen,
@@ -63,6 +64,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       { href: "/admin/advisors", label: "Advisors", icon: Users },
       { href: "/admin/clients", label: "Clients", icon: UserRound },
       { href: "/admin/staff", label: "Staff", icon: Users, superAdminOnly: true },
+      { href: "/admin/staff/admin-users", label: "Admin Users", icon: UserPlus, superAdminOnly: true },
     ],
   },
   {
