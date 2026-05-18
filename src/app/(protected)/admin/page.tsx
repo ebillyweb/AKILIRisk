@@ -28,33 +28,21 @@ import { RecentActivityItem } from "@/components/admin/dashboard/RecentActivityI
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getControlCenterMetrics } from "@/lib/admin/control-center-metrics";
+import {
+  getControlCenterAlerts,
+  type ControlCenterAlertIconKey,
+} from "@/lib/admin/control-center-alerts";
 
-const PLACEHOLDER_ALERTS = [
-  {
-    title: "3 Assessments Stalled",
-    description: "Client submissions waiting over 72 hours for advisor review",
-    severity: "medium" as const,
-    icon: Clock,
-    href: "/admin/assessment?status=stalled",
-    timestamp: "2 hours ago",
-  },
-  {
-    title: "Integration Warning",
-    description: "Risk data sync showing intermittent failures with external provider",
-    severity: "high" as const,
-    icon: Puzzle,
-    href: "/admin/integrations?status=warning",
-    timestamp: "4 hours ago",
-  },
-  {
-    title: "Onboarding Incomplete",
-    description: "2 advisors missing required compliance documentation",
-    severity: "low" as const,
-    icon: UserPlus,
-    href: "/admin/advisors?status=incomplete",
-    timestamp: "1 day ago",
-  },
-];
+const ALERT_ICONS: Record<
+  ControlCenterAlertIconKey,
+  typeof Clock
+> = {
+  clock: Clock,
+  puzzle: Puzzle,
+  userPlus: UserPlus,
+  clipboardList: ClipboardList,
+  alertTriangle: AlertTriangle,
+};
 
 const PLACEHOLDER_ACTIVITY = [
   {
@@ -104,9 +92,14 @@ export default async function AdminControlCenterPage() {
   const session = await auth();
   const superUser = isSuperAdmin(session);
 
-  const metricsResult = await Promise.allSettled([getControlCenterMetrics()]);
+  const [metricsResult, alertsResult] = await Promise.allSettled([
+    getControlCenterMetrics(),
+    getControlCenterAlerts(),
+  ]);
   const metrics =
-    metricsResult[0].status === "fulfilled" ? metricsResult[0].value : null;
+    metricsResult.status === "fulfilled" ? metricsResult.value : null;
+  const alerts =
+    alertsResult.status === "fulfilled" ? alertsResult.value : null;
 
   return (
     <div className="space-y-8">
@@ -176,17 +169,27 @@ export default async function AdminControlCenterPage() {
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Needs Attention</h2>
         <div className="space-y-3">
-          {PLACEHOLDER_ALERTS.map((alert, index) => (
-            <NeedsAttentionItem
-              key={index}
-              title={alert.title}
-              description={alert.description}
-              severity={alert.severity}
-              icon={alert.icon}
-              href={alert.href}
-              timestamp={alert.timestamp}
-            />
-          ))}
+          {alerts === null ? (
+            <p className="text-sm text-muted-foreground">
+              Unable to load alerts right now.
+            </p>
+          ) : alerts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No items need attention — platform operations look clear.
+            </p>
+          ) : (
+            alerts.map((alert) => (
+              <NeedsAttentionItem
+                key={alert.id}
+                title={alert.title}
+                description={alert.description}
+                severity={alert.severity}
+                icon={ALERT_ICONS[alert.iconKey]}
+                href={alert.href}
+                timestamp={alert.timestamp}
+              />
+            ))
+          )}
         </div>
       </section>
 
