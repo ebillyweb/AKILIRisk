@@ -5,7 +5,12 @@ import { getControlCenterActivity } from "@/lib/admin/control-center-activity";
 import { getControlCenterAlerts } from "@/lib/admin/control-center-alerts";
 import { getControlCenterMetrics } from "@/lib/admin/control-center-metrics";
 import { monitorPerformance } from "@/lib/monitoring/performance";
-import type { ControlCenterSnapshot } from "@/lib/admin/control-center-types";
+import type {
+  ControlCenterActivity,
+  ControlCenterAlert,
+  ControlCenterMetrics,
+  ControlCenterSnapshot,
+} from "@/lib/admin/control-center-types";
 
 // Cache keys for different data types
 const CACHE_KEYS = {
@@ -26,8 +31,8 @@ const CACHE_TTL = {
 /**
  * Get cached metrics with fallback to fresh data.
  */
-async function getCachedMetrics() {
-  const cached = await cache.get(CACHE_KEYS.METRICS);
+async function getCachedMetrics(): Promise<ControlCenterMetrics> {
+  const cached = await cache.get<ControlCenterMetrics>(CACHE_KEYS.METRICS);
   if (cached) return cached;
 
   const { result: metrics } = await monitorPerformance(
@@ -43,8 +48,8 @@ async function getCachedMetrics() {
 /**
  * Get cached alerts with fallback to fresh data.
  */
-async function getCachedAlerts() {
-  const cached = await cache.get(CACHE_KEYS.ALERTS);
+async function getCachedAlerts(): Promise<ControlCenterAlert[]> {
+  const cached = await cache.get<ControlCenterAlert[]>(CACHE_KEYS.ALERTS);
   if (cached) return cached;
 
   const { result: alerts } = await monitorPerformance(
@@ -60,8 +65,8 @@ async function getCachedAlerts() {
 /**
  * Get cached activity with fallback to fresh data.
  */
-async function getCachedActivity() {
-  const cached = await cache.get(CACHE_KEYS.ACTIVITY);
+async function getCachedActivity(): Promise<ControlCenterActivity[] | null> {
+  const cached = await cache.get<ControlCenterActivity[] | null>(CACHE_KEYS.ACTIVITY);
   if (cached) return cached;
 
   const { result: activity } = await monitorPerformance(
