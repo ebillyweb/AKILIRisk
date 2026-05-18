@@ -77,7 +77,7 @@ export const ControlCenterActivitySchema = z.object({
   title: z.string(),
   description: z.string(),
   timestamp: z.string(),
-  user: z.string(),
+  user: z.string().optional(), // User can be undefined for system actions
 });
 
 // Full control center snapshot schema

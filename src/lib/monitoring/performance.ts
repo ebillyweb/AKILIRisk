@@ -81,6 +81,14 @@ export class PerformanceMonitor {
   }
 }
 
+// Skip monitoring for operations that are too frequent or trivial
+const MONITORING_SKIP_PATTERNS = [
+  /^cache-/,
+  /^validation-/
+];
+
+const MONITORING_SAMPLE_RATE = 0.1; // Monitor 10% of cache operations
+
 /**
  * Higher-order function to monitor async operations.
  */
@@ -89,6 +97,22 @@ export async function monitorPerformance<T>(
   fn: () => Promise<T>,
   metadata: Record<string, unknown> = {}
 ): Promise<{ result: T; metric: PerformanceMetric }> {
+  // Skip monitoring for high-frequency operations
+  const shouldSkip = MONITORING_SKIP_PATTERNS.some(pattern => pattern.test(operation));
+  if (shouldSkip && Math.random() > MONITORING_SAMPLE_RATE) {
+    const result = await fn();
+    // Return minimal metric without actual timing
+    return {
+      result,
+      metric: {
+        operation,
+        durationMs: 0,
+        timestamp: new Date().toISOString(),
+        metadata: { ...metadata, sampled: false }
+      }
+    };
+  }
+
   const monitor = new PerformanceMonitor(operation, metadata);
 
   try {

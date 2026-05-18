@@ -9,7 +9,7 @@ interface RecentActivityItemProps {
   title: string;
   description: string;
   timestamp: string;
-  user?: string;
+  user?: string | null;
   className?: string;
 }
 
@@ -56,6 +56,11 @@ export function RecentActivityItem({
         {user && (
           <p className="text-xs text-muted-foreground/80">
             by {user}
+          </p>
+        )}
+        {!user && (
+          <p className="text-xs text-muted-foreground/80">
+            by system
           </p>
         )}
       </div>

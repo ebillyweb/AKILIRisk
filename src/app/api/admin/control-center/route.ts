@@ -22,7 +22,12 @@ export async function GET() {
   // Validate the snapshot before returning
   const validation = validateControlCenterSnapshot(snapshot);
   if (!validation.success) {
-    console.error('Control center snapshot validation failed:', validation.error);
+    console.error('Control center snapshot validation failed:', {
+      error: validation.error,
+      actorId: actor.id,
+      timestamp: new Date().toISOString(),
+      snapshotGeneratedAt: snapshot.generatedAt,
+    });
     return NextResponse.json(
       { error: "Data validation failed" },
       { status: 500 }

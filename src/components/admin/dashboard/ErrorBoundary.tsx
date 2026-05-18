@@ -19,11 +19,18 @@ interface ErrorBoundaryProps {
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  private resetTimeoutId: number | null = null;
+  private resetTimeoutId: NodeJS.Timeout | null = null;
 
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  componentWillUnmount() {
+    if (this.resetTimeoutId) {
+      clearTimeout(this.resetTimeoutId);
+      this.resetTimeoutId = null;
+    }
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
@@ -59,6 +66,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   resetErrorBoundary = () => {
     if (this.resetTimeoutId) {
       clearTimeout(this.resetTimeoutId);
+      this.resetTimeoutId = null;
     }
 
     this.setState({
@@ -98,7 +106,7 @@ function DefaultErrorFallback({ error, onReset }: DefaultErrorFallbackProps) {
             <div>
               <h3 className="font-semibold text-foreground">Something went wrong</h3>
               <p className="text-sm text-muted-foreground">
-                This component encountered an unexpected error and couldn't render properly.
+                This component encountered an unexpected error and could not render properly.
               </p>
             </div>
 

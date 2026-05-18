@@ -8,17 +8,22 @@ import "server-only";
 interface CacheEntry<T> {
   value: T;
   expiresAt: number;
+  lastAccessed: number;
 }
 
 class MemoryCache {
   private cache = new Map<string, CacheEntry<unknown>>();
-  private cleanupInterval: NodeJS.Timeout;
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private maxSize = 1000; // Maximum number of entries
+  private maxMemoryMB = 100; // Maximum memory usage estimate
 
   constructor() {
-    // Cleanup expired entries every 5 minutes
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000);
+    // Only create interval if one doesn't exist
+    if (!this.cleanupInterval) {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanup();
+      }, 5 * 60 * 1000);
+    }
   }
 
   async get<T>(key: string): Promise<T | null> {
@@ -33,12 +38,39 @@ class MemoryCache {
       return null;
     }
 
+    // Update last accessed time for LRU
+    entry.lastAccessed = Date.now();
+
     return entry.value;
   }
 
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
-    const expiresAt = Date.now() + (ttlSeconds * 1000);
-    this.cache.set(key, { value, expiresAt });
+    const now = Date.now();
+    const expiresAt = now + (ttlSeconds * 1000);
+
+    // Check cache size limits before adding
+    if (this.cache.size >= this.maxSize) {
+      this.evictLRU();
+    }
+
+    this.cache.set(key, { value, expiresAt, lastAccessed: now });
+  }
+
+  private evictLRU(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Date.now();
+
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.lastAccessed < oldestTime) {
+        oldestTime = entry.lastAccessed;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this.cache.delete(oldestKey);
+      console.log(`Cache evicted LRU entry: ${oldestKey}`);
+    }
   }
 
   async delete(key: string): Promise<void> {
@@ -65,7 +97,10 @@ class MemoryCache {
 
   // Cleanup on process exit
   destroy(): void {
-    clearInterval(this.cleanupInterval);
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
     this.cache.clear();
   }
 }

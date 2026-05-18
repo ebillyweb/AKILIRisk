@@ -68,7 +68,7 @@ export function useControlCenterPolling(initial: ControlCenterSnapshot) {
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [pollMs]); // Remove refresh from deps since it has no dependencies
+  }, [pollMs, refresh]); // Include refresh to avoid stale closures
 
   return { snapshot, status, lastError, refresh, pollMs };
 }
