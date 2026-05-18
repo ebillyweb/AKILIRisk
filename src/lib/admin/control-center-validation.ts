@@ -97,7 +97,7 @@ export function validateControlCenterSnapshot(data: unknown):
     return { success: true, data: parsed };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
+      const firstError = error.issues[0];
       return {
         success: false,
         error: `Validation failed at ${firstError.path.join('.')}: ${firstError.message}`
@@ -118,7 +118,7 @@ export function validateControlCenterMetrics(data: unknown):
     return { success: true, data: parsed };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
+      const firstError = error.issues[0];
       return {
         success: false,
         error: `Metrics validation failed at ${firstError.path.join('.')}: ${firstError.message}`
@@ -139,7 +139,7 @@ export function validateControlCenterAlerts(data: unknown):
     return { success: true, data: parsed };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
+      const firstError = error.issues[0];
       return {
         success: false,
         error: `Alerts validation failed at ${firstError.path.join('.')}: ${firstError.message}`
