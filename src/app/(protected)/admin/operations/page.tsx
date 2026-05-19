@@ -142,15 +142,20 @@ export default async function AdminOperationsPage() {
           <div>
             <dt className="font-semibold">Build committed</dt>
             <dd className="font-mono">
-              {snapshot.build.committedAt
-                ? new Date(snapshot.build.committedAt).toUTCString()
-                : "unknown"}
+              {formatBuildCommitted(snapshot.build.committedAt)}
             </dd>
           </div>
         </dl>
       </footer>
     </div>
   );
+}
+
+function formatBuildCommitted(committedAt: string | null): string {
+  if (!committedAt) return "Unavailable (git metadata not embedded at build)";
+  const parsed = new Date(committedAt);
+  if (Number.isNaN(parsed.getTime())) return "Unavailable (invalid commit date)";
+  return parsed.toUTCString();
 }
 
 function PageHeader() {

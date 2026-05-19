@@ -116,14 +116,23 @@ function resolvePlatform(): OperationsHealthSnapshot["platform"] {
   return "node";
 }
 
-function resolveBuild(): OperationsHealthSnapshot["build"] {
-  // VERCEL_GIT_COMMIT_SHA is the full SHA when on Vercel — surface only
-  // the first 7 chars. VERCEL_GIT_COMMIT_REF is the branch / tag ref.
-  const fullSha = process.env.VERCEL_GIT_COMMIT_SHA ?? null;
+/** Resolve build metadata from env (testable; no secrets). */
+export function resolveBuildFromEnv(
+  env: NodeJS.ProcessEnv
+): OperationsHealthSnapshot["build"] {
+  // Vercel exposes SHA/ref at runtime; commit date is injected at build via
+  // next.config `env` (BUILD_GIT_COMMIT_* from git) — there is no
+  // VERCEL_GIT_COMMIT_AUTHOR_DATE system variable.
+  const fullSha =
+    env.VERCEL_GIT_COMMIT_SHA ?? env.BUILD_GIT_COMMIT_SHA ?? null;
   const shortSha = fullSha ? fullSha.slice(0, 7) : null;
-  const ref = process.env.VERCEL_GIT_COMMIT_REF ?? null;
-  const committedAt = process.env.VERCEL_GIT_COMMIT_AUTHOR_DATE ?? null;
+  const ref = env.VERCEL_GIT_COMMIT_REF ?? env.BUILD_GIT_COMMIT_REF ?? null;
+  const committedAt = env.BUILD_GIT_COMMIT_DATE?.trim() || null;
   return { shortSha, ref, committedAt };
+}
+
+function resolveBuild(): OperationsHealthSnapshot["build"] {
+  return resolveBuildFromEnv(process.env);
 }
 
 // ── Database probe ────────────────────────────────────────────────────────
