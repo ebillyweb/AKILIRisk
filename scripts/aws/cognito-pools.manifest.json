@@ -1,0 +1,30 @@
+{
+  "region": "us-east-2",
+  "createdAt": "2026-05-19T03:30:53Z",
+  "issuerTest": "https://cognito-idp.us-east-2.amazonaws.com/us-east-2_JR4Y6KBRE",
+  "issuerProduction": "https://cognito-idp.us-east-2.amazonaws.com/us-east-2_blkijhNxQ",
+  "test": {
+    "userPoolId": "us-east-2_JR4Y6KBRE",
+    "userPoolName": "akili-risk-test",
+    "webClientId": "1795q6i055gh1etaj9pjg102v2",
+    "webClientName": "akili-risk-web"
+  },
+  "production": {
+    "userPoolId": "us-east-2_blkijhNxQ",
+    "userPoolName": "akili-risk-production",
+    "webClientId": "1j4d89gupa5h294kv0dj0on3n9",
+    "webClientName": "akili-risk-web"
+  },
+  "envHints": {
+    "test": {
+      "COGNITO_USER_POOL_ID": "us-east-2_JR4Y6KBRE",
+      "COGNITO_CLIENT_ID": "1795q6i055gh1etaj9pjg102v2",
+      "COGNITO_REGION": "us-east-2"
+    },
+    "production": {
+      "COGNITO_USER_POOL_ID": "us-east-2_blkijhNxQ",
+      "COGNITO_CLIENT_ID": "1j4d89gupa5h294kv0dj0on3n9",
+      "COGNITO_REGION": "us-east-2"
+    }
+  }
+}

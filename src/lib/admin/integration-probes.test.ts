@@ -98,14 +98,54 @@ describe("probeOpenAI", () => {
 });
 
 describe("probeResend", () => {
-  it("returns down on HTTP 403", async () => {
+  it("returns healthy on domains HTTP 200", async () => {
     process.env.RESEND_API_KEY = "re_test";
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ ok: false, status: 403 })
+      vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    );
+    const result = await probeResend();
+    expect(result.status).toBe("healthy");
+    expect(result.message).toContain("domains list");
+  });
+
+  it("returns down on HTTP 403 when key is invalid (not send-only)", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({ name: "invalid_api_key" }),
+      })
     );
     const result = await probeResend();
     expect(result.status).toBe("down");
+  });
+
+  it("falls back to send probe when key is send-only restricted", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          name: "restricted_api_key",
+          message: "This API key is restricted to only send emails",
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        json: async () => ({ message: "Missing `to` field." }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await probeResend();
+    expect(result.status).toBe("healthy");
+    expect(result.message).toContain("send-only");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("https://api.resend.com/emails");
   });
 });
 
@@ -135,6 +175,21 @@ describe("probeS3", () => {
     mockS3Send.mockRejectedValue(new Error("AccessDenied"));
     const result = await probeS3();
     expect(result.status).toBe("down");
+  });
+
+  it("returns down when bucket is not found (404 / NotFound)", async () => {
+    process.env.S3_BUCKET_NAME = "missing-bucket";
+    process.env.AWS_ACCESS_KEY_ID = "AKIA";
+    process.env.AWS_SECRET_ACCESS_KEY = "secret";
+    const notFound = Object.assign(new Error("Unknown"), {
+      name: "NotFound",
+      $metadata: { httpStatusCode: 404 },
+    });
+    mockS3Send.mockRejectedValue(notFound);
+    const result = await probeS3();
+    expect(result.status).toBe("down");
+    expect(result.message).toContain("missing-bucket");
+    expect(result.message).toContain("not found");
   });
 });
 

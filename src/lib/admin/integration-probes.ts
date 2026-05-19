@@ -202,6 +202,91 @@ export async function probeOpenAI(): Promise<IntegrationProbeResult> {
   }
 }
 
+type ResendErrorBody = {
+  name?: string;
+  message?: string;
+};
+
+async function readResendErrorBody(
+  response: Response
+): Promise<ResendErrorBody> {
+  try {
+    return (await response.json()) as ResendErrorBody;
+  } catch {
+    return {};
+  }
+}
+
+function isResendSendOnlyKeyRestriction(
+  response: Response,
+  body: ResendErrorBody
+): boolean {
+  if (response.status !== 401 && response.status !== 403) return false;
+  return (
+    body.name === "restricted_api_key" ||
+    /restricted to only send emails/i.test(body.message ?? "")
+  );
+}
+
+/**
+ * Send-only Resend keys cannot call GET /domains but can POST /emails.
+ * A 422 validation response proves the key is valid for sending.
+ */
+async function probeResendSendPermission(
+  key: string,
+  checkedAt: string
+): Promise<IntegrationProbeResult> {
+  const id = "resend";
+  const response = await withTimeout(
+    fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      signal: AbortSignal.timeout(INTEGRATION_PROBE_TIMEOUT_MS),
+    }),
+    INTEGRATION_PROBE_TIMEOUT_MS,
+    "Resend"
+  );
+
+  if (response.status === 401 || response.status === 403) {
+    return {
+      id,
+      status: "down",
+      message: `Resend API returned ${response.status} (invalid or revoked key).`,
+      checkedAt,
+    };
+  }
+
+  if (response.status === 422) {
+    return {
+      id,
+      status: "healthy",
+      message:
+        "Resend send-only API key verified (transactional email). Domain API requires a full-access key.",
+      checkedAt,
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      id,
+      status: "degraded",
+      message: `Resend API returned HTTP ${response.status} during send probe.`,
+      checkedAt,
+    };
+  }
+
+  return {
+    id,
+    status: "healthy",
+    message: "Resend API accepted credentials (email send).",
+    checkedAt,
+  };
+}
+
 export async function probeResend(): Promise<IntegrationProbeResult> {
   const id = "resend";
   const key = process.env.RESEND_API_KEY?.trim();
@@ -221,6 +306,20 @@ export async function probeResend(): Promise<IntegrationProbeResult> {
       "Resend"
     );
 
+    if (response.ok) {
+      return {
+        id,
+        status: "healthy",
+        message: "Resend API accepted credentials (domains list).",
+        checkedAt,
+      };
+    }
+
+    const body = await readResendErrorBody(response);
+    if (isResendSendOnlyKeyRestriction(response, body)) {
+      return probeResendSendPermission(key, checkedAt);
+    }
+
     if (response.status === 401 || response.status === 403) {
       return {
         id,
@@ -229,6 +328,7 @@ export async function probeResend(): Promise<IntegrationProbeResult> {
         checkedAt,
       };
     }
+
     if (!response.ok) {
       return {
         id,
@@ -237,6 +337,7 @@ export async function probeResend(): Promise<IntegrationProbeResult> {
         checkedAt,
       };
     }
+
     return {
       id,
       status: "healthy",
@@ -321,21 +422,46 @@ export async function probeS3(): Promise<IntegrationProbeResult> {
     };
   } catch (err) {
     const message = sanitizeProbeError(err);
+    const errName =
+      err && typeof err === "object" && "name" in err
+        ? String((err as { name?: string }).name)
+        : "";
+    const httpStatus =
+      err &&
+      typeof err === "object" &&
+      "$metadata" in err &&
+      (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
+
     const accessDenied =
+      httpStatus === 403 ||
+      errName === "Forbidden" ||
       /accessdenied|403|not authorized|invalidaccesskeyid/i.test(message);
-    const notFound = /nosuchbucket|404|not found/i.test(message);
-    if (accessDenied || notFound) {
+    const notFound =
+      httpStatus === 404 ||
+      errName === "NotFound" ||
+      /nosuchbucket|not found/i.test(message);
+
+    if (accessDenied) {
       return {
         id,
         status: "down",
-        message,
+        message: `S3 HeadBucket denied for "${bucket}" in ${region}. Check IAM s3:HeadBucket (and bucket name).`,
+        checkedAt,
+      };
+    }
+    if (notFound) {
+      return {
+        id,
+        status: "down",
+        message: `S3 bucket "${bucket}" was not found in ${region}. Set S3_BRANDING_BUCKET / S3_BUCKET_NAME to an existing bucket.`,
         checkedAt,
       };
     }
     return {
       id,
       status: "degraded",
-      message,
+      message: message === "Unknown" ? `S3 HeadBucket failed for "${bucket}".` : message,
       checkedAt,
     };
   }
