@@ -97,9 +97,8 @@ export default async function AdminOperationsPage() {
             External dependencies
           </h2>
           <p className="text-sm text-muted-foreground">
-            Configured third-party integrations. Statuses shown as
-            &ldquo;Unknown&rdquo; are not actively probed from this dashboard
-            — we rely on the failed-integrations list below for live signal.
+            Third-party integrations probed on each load. Unconfigured rows show
+            as &ldquo;Unknown&rdquo;; Stripe webhook failures also appear below.
           </p>
         </header>
         <DependencyStatusList dependencies={snapshot.dependencies} />

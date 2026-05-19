@@ -130,7 +130,9 @@ export default async function AdminControlCenterPage() {
                   title="Integrations"
                   description="External service connections and status"
                   icon={Puzzle}
-                  badge={{ text: "2 Issues", variant: "outline" }}
+                  badge={integrationsQuickAccessBadge(
+                    initialSnapshot.metrics?.failedIntegrations.value ?? 0
+                  )}
                 />
               )}
               <WorkspaceCard
@@ -179,4 +181,15 @@ export default async function AdminControlCenterPage() {
       </section>
     </div>
   );
+}
+
+function integrationsQuickAccessBadge(failedCount: number): {
+  text: string;
+  variant: "default" | "secondary" | "outline";
+} {
+  if (failedCount <= 0) {
+    return { text: "Healthy", variant: "default" };
+  }
+  const label = failedCount === 1 ? "1 Issue" : `${failedCount} Issues`;
+  return { text: label, variant: "outline" };
 }

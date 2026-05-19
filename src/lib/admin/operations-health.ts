@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  integrationProbesToDependencies,
+  runIntegrationProbes,
+} from "@/lib/admin/integration-probes";
 import { prisma } from "@/lib/db";
 
 /**
@@ -37,6 +41,8 @@ export interface ServiceHealth {
    *  false we surface "unknown" and explain that the integration is
    *  not configured rather than implying it's healthy. */
   configured: boolean;
+  /** ISO timestamp of the last outbound probe for this row (when probed). */
+  probedAt?: string;
 }
 
 export interface FailedIntegrationRow {
@@ -77,8 +83,8 @@ export interface OperationsHealthSnapshot {
     database: ServiceHealth;
     auth: ServiceHealth;
   };
-  /** Configured external dependencies. Each entry's `status` may be
-   *  "unknown" when we choose not to actively probe the dependency. */
+  /** External dependencies (Stripe, OpenAI, Resend, S3, white-label DNS).
+   *  Actively probed on each snapshot via {@link runIntegrationProbes}. */
   dependencies: ServiceHealth[];
   /** StripeWebhookEvent rows with status=FAILED (last 7 days). */
   failedIntegrations: FailedIntegrationRow[];
@@ -185,67 +191,6 @@ function probeAuth(): ServiceHealth {
   };
 }
 
-// ── External dependency reporting ────────────────────────────────────────
-
-/**
- * Build the list of "external dependency" rows from configured env vars.
- *
- * Important: we do NOT make outbound calls to Stripe / OpenAI / Resend
- * here. Active probes would consume the dependency's rate budget on
- * every dashboard load and require shipping the API key to the
- * dependency. Instead we report whether the integration is configured
- * and rely on the failedIntegrations / recentErrors lists below for
- * the actual failure signal.
- */
-function buildDependencies(): ServiceHealth[] {
-  const deps: ServiceHealth[] = [
-    {
-      id: "stripe",
-      label: "Stripe (billing)",
-      description: "Subscription billing + webhook ingestion",
-      configured: Boolean(process.env.STRIPE_SECRET_KEY?.trim()),
-      status: process.env.STRIPE_SECRET_KEY?.trim() ? "unknown" : "unknown",
-      detail: process.env.STRIPE_SECRET_KEY?.trim()
-        ? "Configured. Live status reflected via the failed-integrations panel below."
-        : "Not configured in this environment.",
-    },
-    {
-      id: "openai",
-      label: "OpenAI",
-      description: "Intake transcription + question text-to-speech",
-      configured: Boolean(process.env.OPENAI_API_KEY?.trim()),
-      status: "unknown",
-      detail: process.env.OPENAI_API_KEY?.trim()
-        ? "Configured. We do not poll the OpenAI API from this dashboard."
-        : "Not configured in this environment.",
-    },
-    {
-      id: "resend",
-      label: "Resend (email)",
-      description: "Transactional outbound mail",
-      configured: Boolean(process.env.RESEND_API_KEY?.trim()),
-      status: "unknown",
-      detail: process.env.RESEND_API_KEY?.trim()
-        ? "Configured. Delivery failures show up in failed integrations below."
-        : "Not configured in this environment.",
-    },
-    {
-      id: "s3",
-      label: "Object storage (S3)",
-      description: "Intake audio + document uploads",
-      configured: Boolean(
-        process.env.AWS_S3_BUCKET || process.env.AWS_ACCESS_KEY_ID
-      ),
-      status: "unknown",
-      detail:
-        process.env.AWS_S3_BUCKET || process.env.AWS_ACCESS_KEY_ID
-          ? "Configured. We do not poll AWS from this dashboard."
-          : "Not configured in this environment.",
-    },
-  ];
-  return deps;
-}
-
 // ── Failed integrations & recent errors ──────────────────────────────────
 
 async function loadFailedIntegrations(): Promise<FailedIntegrationRow[]> {
@@ -348,12 +293,14 @@ export async function getOperationsHealthSnapshot(): Promise<OperationsHealthSna
     detail: "This response was produced by the app — the runtime is up.",
   };
 
-  // Run DB-backed listings in parallel; both already swallow their own
-  // errors and fall back to [] so they never block the snapshot.
-  const [failedIntegrations, recentErrors] = await Promise.all([
+  // Run DB-backed listings and outbound integration probes in parallel.
+  // Each helper swallows its own errors so a single probe never blocks the page.
+  const [failedIntegrations, recentErrors, probeResults] = await Promise.all([
     loadFailedIntegrations(),
     loadRecentErrors(),
+    runIntegrationProbes(),
   ]);
+  const dependencies = integrationProbesToDependencies(probeResults);
 
   // Strip the rttMs helper field before returning so the public shape
   // stays narrow.
@@ -365,9 +312,14 @@ export async function getOperationsHealthSnapshot(): Promise<OperationsHealthSna
     environment: resolveEnvironment(),
     platform: resolvePlatform(),
     build: resolveBuild(),
-    overall: rollUpOverall(app.status, databaseHealth.status, auth.status),
+    overall: rollUpOverall(
+      app.status,
+      databaseHealth.status,
+      auth.status,
+      ...dependencies.map((d) => d.status)
+    ),
     core: { app, database: databaseHealth, auth },
-    dependencies: buildDependencies(),
+    dependencies,
     failedIntegrations,
     recentErrors,
     lastSuccessfulHealthCheck:

@@ -1,0 +1,213 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import dns from "node:dns/promises";
+
+const { mockS3Send, mockBalanceRetrieve } = vi.hoisted(() => ({
+  mockS3Send: vi.fn(),
+  mockBalanceRetrieve: vi.fn(),
+}));
+
+vi.mock("@aws-sdk/client-s3", () => ({
+  S3Client: class MockS3Client {
+    send(command: unknown) {
+      return mockS3Send(command);
+    }
+  },
+  HeadBucketCommand: class HeadBucketCommand {
+    constructor(public input: { Bucket: string }) {}
+  },
+}));
+
+vi.mock("stripe", () => {
+  class StripeAuthenticationError extends Error {}
+  class Stripe {
+    balance = { retrieve: mockBalanceRetrieve };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    constructor(_key: string, _options?: unknown) {}
+    static errors = { StripeAuthenticationError };
+  }
+  return { default: Stripe };
+});
+
+import {
+  integrationProbesToDependencies,
+  probeOpenAI,
+  probeResend,
+  probeS3,
+  probeStripe,
+  probeWhiteLabelDns,
+  probeResultToServiceHealth,
+  runIntegrationProbes,
+} from "@/lib/admin/integration-probes";
+
+const envBackup = { ...process.env };
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+  process.env = { ...envBackup };
+  mockS3Send.mockReset();
+  mockBalanceRetrieve.mockReset();
+});
+
+afterEach(() => {
+  process.env = { ...envBackup };
+});
+
+describe("probeStripe", () => {
+  it("returns not_configured when STRIPE_SECRET_KEY is missing", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    const result = await probeStripe();
+    expect(result.status).toBe("not_configured");
+    expect(mockBalanceRetrieve).not.toHaveBeenCalled();
+  });
+
+  it("returns healthy when balance.retrieve succeeds", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    mockBalanceRetrieve.mockResolvedValue({});
+    const result = await probeStripe();
+    expect(result.status).toBe("healthy");
+    expect(mockBalanceRetrieve).toHaveBeenCalled();
+  });
+});
+
+describe("probeOpenAI", () => {
+  it("returns not_configured without OPENAI_API_KEY", async () => {
+    delete process.env.OPENAI_API_KEY;
+    const result = await probeOpenAI();
+    expect(result.status).toBe("not_configured");
+  });
+
+  it("returns healthy on HTTP 200", async () => {
+    process.env.OPENAI_API_KEY = "sk-test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    );
+    const result = await probeOpenAI();
+    expect(result.status).toBe("healthy");
+  });
+
+  it("returns down on HTTP 401", async () => {
+    process.env.OPENAI_API_KEY = "sk-test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 401 })
+    );
+    const result = await probeOpenAI();
+    expect(result.status).toBe("down");
+  });
+});
+
+describe("probeResend", () => {
+  it("returns down on HTTP 403", async () => {
+    process.env.RESEND_API_KEY = "re_test";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 403 })
+    );
+    const result = await probeResend();
+    expect(result.status).toBe("down");
+  });
+});
+
+describe("probeS3", () => {
+  it("returns not_configured when bucket env is missing", async () => {
+    delete process.env.S3_BRANDING_BUCKET;
+    delete process.env.S3_BUCKET_NAME;
+    const result = await probeS3();
+    expect(result.status).toBe("not_configured");
+  });
+
+  it("returns healthy when HeadBucket succeeds", async () => {
+    process.env.S3_BRANDING_BUCKET = "akili-advisor-assets";
+    process.env.AWS_ACCESS_KEY_ID = "AKIA";
+    process.env.AWS_SECRET_ACCESS_KEY = "secret";
+    process.env.AWS_REGION = "us-east-2";
+    mockS3Send.mockResolvedValue({});
+    const result = await probeS3();
+    expect(result.status).toBe("healthy");
+    expect(mockS3Send).toHaveBeenCalled();
+  });
+
+  it("returns down on access denied", async () => {
+    process.env.S3_BUCKET_NAME = "my-bucket";
+    process.env.AWS_ACCESS_KEY_ID = "AKIA";
+    process.env.AWS_SECRET_ACCESS_KEY = "secret";
+    mockS3Send.mockRejectedValue(new Error("AccessDenied"));
+    const result = await probeS3();
+    expect(result.status).toBe("down");
+  });
+});
+
+describe("probeWhiteLabelDns", () => {
+  it("returns not_configured without PRODUCTION_DOMAIN", async () => {
+    delete process.env.PRODUCTION_DOMAIN;
+    const result = await probeWhiteLabelDns();
+    expect(result.status).toBe("not_configured");
+  });
+
+  it("returns healthy when DNS and HTTP succeed", async () => {
+    process.env.PRODUCTION_DOMAIN = "akilirisk.com";
+    vi.spyOn(dns, "lookup").mockResolvedValue([{ address: "1.2.3.4", family: 4 }]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    );
+    const result = await probeWhiteLabelDns();
+    expect(result.status).toBe("healthy");
+    expect(result.message).toContain("Per-advisor CNAME");
+  });
+});
+
+describe("probeResultToServiceHealth", () => {
+  it("maps not_configured to unknown with configured=false", () => {
+    const row = probeResultToServiceHealth({
+      id: "openai",
+      status: "not_configured",
+      message: "missing key",
+      checkedAt: "2026-05-18T12:00:00.000Z",
+    });
+    expect(row.status).toBe("unknown");
+    expect(row.configured).toBe(false);
+    expect(row.probedAt).toBe("2026-05-18T12:00:00.000Z");
+  });
+});
+
+describe("runIntegrationProbes", () => {
+  it("returns five probe rows in stable order", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.S3_BRANDING_BUCKET;
+    delete process.env.S3_BUCKET_NAME;
+    delete process.env.PRODUCTION_DOMAIN;
+
+    const results = await runIntegrationProbes();
+    expect(results).toHaveLength(5);
+    expect(results.map((r) => r.id)).toEqual([
+      "stripe",
+      "openai",
+      "resend",
+      "s3",
+      "white-label-dns",
+    ]);
+    expect(results.every((r) => r.status === "not_configured")).toBe(true);
+  });
+});
+
+describe("integrationProbesToDependencies", () => {
+  it("preserves probe order for operations snapshot", () => {
+    const deps = integrationProbesToDependencies([
+      {
+        id: "s3",
+        status: "healthy",
+        checkedAt: "2026-05-18T12:00:00.000Z",
+      },
+      {
+        id: "stripe",
+        status: "not_configured",
+        checkedAt: "2026-05-18T12:00:00.000Z",
+      },
+    ]);
+    expect(deps.map((d) => d.id)).toEqual(["stripe", "s3"]);
+  });
+});
