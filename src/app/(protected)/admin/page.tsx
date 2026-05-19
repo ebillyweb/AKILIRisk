@@ -42,7 +42,7 @@ export default async function AdminControlCenterPage() {
             <h3 className="text-base font-medium text-muted-foreground">
               Assessment Operations
             </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <WorkspaceCard
                 href="/admin/leads"
                 title="New Requests"
@@ -77,7 +77,7 @@ export default async function AdminControlCenterPage() {
             <h3 className="text-base font-medium text-muted-foreground">
               People Management
             </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <WorkspaceCard
                 href="/admin/advisors"
                 title="Advisors"
@@ -108,7 +108,7 @@ export default async function AdminControlCenterPage() {
             <h3 className="text-base font-medium text-muted-foreground">
               Platform Operations
             </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               {superUser && (
                 <WorkspaceCard
                   href="/admin/operations"
@@ -146,7 +146,7 @@ export default async function AdminControlCenterPage() {
             <h3 className="text-base font-medium text-muted-foreground">
               Analytics & Intelligence
             </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <WorkspaceCard
                 href="/admin/analytics"
                 title="Business Analytics"

@@ -15,7 +15,7 @@ export function AdminControlCenterLayout({
   className,
 }: AdminControlCenterLayoutProps) {
   return (
-    <div className={cn("flex min-h-[calc(100vh-12rem)] bg-background", className)}>
+    <div className={cn("flex min-h-[calc(100vh-8rem)] bg-background", className)}>
       <AdminSidebar superUser={superUser} className="hidden w-64 shrink-0 lg:flex" />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth-roles";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { WorkspaceSlimHeader } from "@/components/layout/WorkspaceSlimHeader";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
 const BRANDED_CLIENT_HEADER_KICKER = "Brought to you by AKILI Risk Intelligence";
@@ -80,6 +81,8 @@ export default async function ProtectedLayout({
   const pathname = (await headers()).get("x-akili-pathname") ?? "";
   const isAdvisorWorkspaceRoute =
     showAdvisor && !clientAdvisorBranding && pathname.startsWith("/advisor");
+  const isAdminWorkspaceRoute = showAdmin && pathname.startsWith("/admin");
+  const isWorkspaceSlimHeaderRoute = isAdvisorWorkspaceRoute || isAdminWorkspaceRoute;
 
   const advisorFeatureFlags = showAdvisor ? await getPlatformFeatureFlags() : null;
 
@@ -117,32 +120,16 @@ export default async function ProtectedLayout({
             <div
               className={cn(
                 "pl-0 pr-4 sm:pl-4 sm:pr-8 lg:pl-6 lg:pr-10",
-                isAdvisorWorkspaceRoute ? "py-2 sm:py-3" : "py-3 sm:py-4"
+                isWorkspaceSlimHeaderRoute ? "py-2 sm:py-3" : "py-3 sm:py-4"
               )}
             >
-              {isAdvisorWorkspaceRoute ? (
-                <div className="flex items-center justify-between gap-4">
-                  <Link
-                    href="/advisor"
-                    className="block shrink-0 text-foreground"
-                    aria-label="Advisor workspace home"
-                  >
-                    <AkiliLogoLockup className="h-auto w-full max-w-[140px] sm:max-w-[160px]" />
-                  </Link>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <ThemeToggle className="shrink-0" />
-                    <form
-                      action={async () => {
-                        "use server";
-                        await signOut({ redirectTo: "/" });
-                      }}
-                    >
-                      <Button type="submit" variant="outline" size="sm" className="min-w-[96px]">
-                        Sign Out
-                      </Button>
-                    </form>
-                  </div>
-                </div>
+              {isWorkspaceSlimHeaderRoute ? (
+                <WorkspaceSlimHeader
+                  homeHref={isAdminWorkspaceRoute ? "/admin" : "/advisor"}
+                  homeAriaLabel={
+                    isAdminWorkspaceRoute ? "Admin workspace home" : "Advisor workspace home"
+                  }
+                />
               ) : (
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end xl:gap-8">
@@ -284,12 +271,12 @@ export default async function ProtectedLayout({
             id="main-content"
             className={cn(
               "px-4 lg:px-10",
-              isAdvisorWorkspaceRoute ? "py-3 sm:px-6 sm:py-4" : "py-5 sm:px-8 sm:py-8 lg:py-10"
+              isWorkspaceSlimHeaderRoute ? "py-3 sm:px-6 sm:py-4" : "py-5 sm:px-8 sm:py-8 lg:py-10"
             )}
             tabIndex={-1}
           >
-            <div className={cn(!isAdvisorWorkspaceRoute && "space-y-6 sm:space-y-8")}>
-              {!isAdvisorWorkspaceRoute && <ClientPageHeaderFromPath />}
+            <div className={cn(!isWorkspaceSlimHeaderRoute && "space-y-6 sm:space-y-8")}>
+              {!isWorkspaceSlimHeaderRoute && <ClientPageHeaderFromPath />}
               {children}
             </div>
           </main>
