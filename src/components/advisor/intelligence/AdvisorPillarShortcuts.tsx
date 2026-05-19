@@ -1,0 +1,46 @@
+import Link from "next/link";
+import { ADVISOR_PILLAR_SHORTCUTS } from "@/lib/advisor/pillar-shortcuts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+export function AdvisorPillarShortcuts() {
+  return (
+    <section
+      aria-labelledby="advisor-pillar-shortcuts-heading"
+      className="rounded-xl border border-border/80 bg-gradient-to-b from-primary/[0.04] to-transparent p-5 shadow-sm sm:p-6"
+    >
+      <Card className="border-0 bg-transparent shadow-none">
+        <CardHeader className="px-0 pt-0">
+          <CardTitle id="advisor-pillar-shortcuts-heading" className="text-base">
+            Assessment pillars
+          </CardTitle>
+          <CardDescription>
+            The six focus areas used across intake and governance scoring. Open the question bank
+            for any pillar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 px-0 pb-0 sm:grid-cols-2 lg:grid-cols-3">
+          {ADVISOR_PILLAR_SHORTCUTS.map(({ id, name, summary, icon: PillarIcon }) => {
+            const href = `/advisor/question-bank/${encodeURIComponent(id)}`;
+            return (
+              <Link key={id} href={href} className="group">
+                <div className="h-full rounded-lg border border-border/70 bg-card p-5 transition-colors hover:border-primary/25 hover:bg-muted/40">
+                  <div className="flex items-start gap-4">
+                    <div className="rounded-md bg-primary/10 p-2 ring-1 ring-primary/10">
+                      <PillarIcon className="h-5 w-5 text-primary" aria-hidden />
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <h4 className="font-semibold leading-snug group-hover:text-primary">
+                        {name}
+                      </h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{summary}</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}

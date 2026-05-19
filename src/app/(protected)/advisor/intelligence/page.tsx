@@ -5,13 +5,13 @@ import {
   getPortfolioIntelligenceData,
   getPortfolioPillarScoresData,
 } from "@/lib/actions/advisor-actions";
-import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { RISK_AREAS } from "@/lib/advisor/types";
 import { isRiskAreaId } from "@/lib/assessment/bank/risk-areas";
 import { RiskSummaryCard } from "@/components/intelligence/RiskSummaryCard";
 import { PortfolioRiskList } from "@/components/intelligence/PortfolioRiskList";
 import { RiskDistributionChart } from "@/components/intelligence/RiskDistributionChart";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
+import { AdvisorPillarShortcuts } from "@/components/advisor/intelligence/AdvisorPillarShortcuts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import IntelligenceLoading from "./loading";
 
@@ -128,24 +128,22 @@ export default async function IntelligencePage({
 }: {
   searchParams: Promise<{ category?: string }>;
 }) {
-  const flags = await getPlatformFeatureFlags();
   const sp = await searchParams;
   const { categoryFilter, categoryLabel } = resolveCategoryFilter(sp.category);
-
-  const backHref = flags.governanceDashboardEnabled ? "/advisor/dashboard" : "/advisor";
-  const backLabel = flags.governanceDashboardEnabled ? "Back to Dashboard" : "Back to Overview";
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
         <Link
-          href={backHref}
+          href="/advisor"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          {backLabel}
+          Advisor workspace
         </Link>
       </div>
+
+      <AdvisorPillarShortcuts />
 
       <Suspense fallback={<IntelligenceLoading />}>
         <IntelligenceContent categoryFilter={categoryFilter} categoryLabel={categoryLabel} />

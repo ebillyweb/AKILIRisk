@@ -32,7 +32,7 @@ export default async function AdvisorQuestionBankAreaPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/advisor">Advisor home</Link>
+          <Link href="/advisor/intelligence">Risk intelligence</Link>
         </Button>
       </div>
 

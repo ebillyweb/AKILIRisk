@@ -1,10 +1,13 @@
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
+import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
+import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ReactNode } from "react";
 import { AdvisorSrOnlyHeading } from "@/components/advisor/AdvisorSrOnlyHeading";
+import { AdvisorControlCenterLayout } from "@/components/advisor/layout/AdvisorControlCenterLayout";
 
 export default async function AdvisorLayout({
   children,
@@ -39,10 +42,22 @@ export default async function AdvisorLayout({
     }
   }
 
+  const [featureFlags, dash] = await Promise.all([
+    getPlatformFeatureFlags(),
+    getAdvisorDashboardData(),
+  ]);
+
+  const unreadNotificationCount = dash.success
+    ? dash.data!.unreadNotificationCount
+    : 0;
+
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <AdvisorControlCenterLayout
+      featureFlags={featureFlags}
+      unreadNotificationCount={unreadNotificationCount}
+    >
       <AdvisorSrOnlyHeading />
       {children}
-    </div>
+    </AdvisorControlCenterLayout>
   );
 }

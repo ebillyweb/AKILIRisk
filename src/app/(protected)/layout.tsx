@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ProtectedNav } from "@/components/layout/ProtectedNav";
@@ -31,7 +32,6 @@ export default async function ProtectedLayout({
 }) {
   const session = await auth();
 
-  // Belt-and-suspenders: redirect if no session (middleware should catch this too)
   if (!session?.user) {
     redirect("/signin");
   }
@@ -52,7 +52,6 @@ export default async function ProtectedLayout({
   const showAdvisor = isAdvisorHubNavRole(role);
   const showAdmin = isPlatformAdminRole(role);
 
-  // For clients: restrict nav to Intake until submitted or advisor waives; Assessment when approved or waived
   let restrictNavToIntake = false;
   let assessmentUnlockedForClient = false;
   let clientAdvisorBranding: Awaited<
@@ -76,8 +75,11 @@ export default async function ProtectedLayout({
     ? getPreviewBrandHex(clientAdvisorBranding)
     : null;
 
-  /** Advisor hub (not client portal): slimmer global title so route content is not stacked under an oversized hero. */
   const compactWorkspaceHeader = showAdvisor && !clientAdvisorBranding;
+
+  const pathname = (await headers()).get("x-akili-pathname") ?? "";
+  const isAdvisorWorkspaceRoute =
+    showAdvisor && !clientAdvisorBranding && pathname.startsWith("/advisor");
 
   const advisorFeatureFlags = showAdvisor ? await getPlatformFeatureFlags() : null;
 
@@ -92,7 +94,6 @@ export default async function ProtectedLayout({
           style={
             previewHex
               ? {
-                  // Overrides `.hero-surface` gradient so the shell matches preview `bg-gray-50`
                   background: "#f9fafb",
                 }
               : undefined
@@ -113,77 +114,84 @@ export default async function ProtectedLayout({
                 : undefined
             }
           >
-            <div className="pl-0 pr-4 py-3 sm:pl-4 sm:pr-8 sm:py-4 lg:pl-6 lg:pr-10">
-              {" "}
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end xl:gap-8">
-                  {" "}
-                  <div className="min-w-0">
-                    {clientAdvisorBranding ? (
-                      <ClientPortalBrandedHeaderMark
-                        brandTitle={brandTitle}
-                        logoSrc={clientPortalLogoImgSrc(clientAdvisorBranding)}
-                        primaryHex={previewHex?.primary}
-                      />
-                    ) : (
-                      <Link
-                        href="/"
-                        className="block text-foreground"
-                        aria-label="AKILI home"
-                      >
-                        <AkiliLogoLockup className="h-auto w-full max-w-[190px] lg:max-w-[220px]" />
-                      </Link>
-                    )}
-
-                    <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                      {previewHex ? (
-                        <p className="text-sm">
-                          <span
-                            style={{
-                              color: previewHex.primary,
-                              opacity: 0.72,
-                            }}
-                          >
-                            Signed in as{" "}
-                          </span>
-                          <span
-                            className="font-semibold break-all"
-                            style={{ color: previewHex.primary }}
-                          >
-                            {session.user.email}
-                          </span>
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Signed in as{" "}
-                          <span className="font-semibold text-foreground break-all">
-                            {session.user.email}
-                          </span>
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-3">
-                        <ThemeToggle
-                          className="shrink-0"
-                          style={
-                            previewHex
-                              ? {
-                                  borderColor: `${previewHex.primary}55`,
-                                  color: previewHex.primary,
-                                }
-                              : undefined
-                          }
+            <div
+              className={cn(
+                "pl-0 pr-4 sm:pl-4 sm:pr-8 lg:pl-6 lg:pr-10",
+                isAdvisorWorkspaceRoute ? "py-2 sm:py-3" : "py-3 sm:py-4"
+              )}
+            >
+              {isAdvisorWorkspaceRoute ? (
+                <div className="flex items-center justify-between gap-4">
+                  <Link
+                    href="/advisor"
+                    className="block shrink-0 text-foreground"
+                    aria-label="Advisor workspace home"
+                  >
+                    <AkiliLogoLockup className="h-auto w-full max-w-[140px] sm:max-w-[160px]" />
+                  </Link>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <ThemeToggle className="shrink-0" />
+                    <form
+                      action={async () => {
+                        "use server";
+                        await signOut({ redirectTo: "/" });
+                      }}
+                    >
+                      <Button type="submit" variant="outline" size="sm" className="min-w-[96px]">
+                        Sign Out
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end xl:gap-8">
+                    <div className="min-w-0">
+                      {clientAdvisorBranding ? (
+                        <ClientPortalBrandedHeaderMark
+                          brandTitle={brandTitle}
+                          logoSrc={clientPortalLogoImgSrc(clientAdvisorBranding)}
+                          primaryHex={previewHex?.primary}
                         />
-                        <form
-                          action={async () => {
-                            "use server";
-                            await signOut({ redirectTo: "/" });
-                          }}
+                      ) : (
+                        <Link
+                          href="/"
+                          className="block text-foreground"
+                          aria-label="AKILI home"
                         >
-                          <Button
-                            type="submit"
-                            variant="outline"
-                            size="sm"
-                            className="min-w-[110px] px-4"
+                          <AkiliLogoLockup className="h-auto w-full max-w-[190px] lg:max-w-[220px]" />
+                        </Link>
+                      )}
+
+                      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                        {previewHex ? (
+                          <p className="text-sm">
+                            <span
+                              style={{
+                                color: previewHex.primary,
+                                opacity: 0.72,
+                              }}
+                            >
+                              Signed in as{" "}
+                            </span>
+                            <span
+                              className="font-semibold break-all"
+                              style={{ color: previewHex.primary }}
+                            >
+                              {session.user.email}
+                            </span>
+                          </p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Signed in as{" "}
+                            <span className="font-semibold text-foreground break-all">
+                              {session.user.email}
+                            </span>
+                          </p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-3">
+                          <ThemeToggle
+                            className="shrink-0"
                             style={
                               previewHex
                                 ? {
@@ -192,68 +200,96 @@ export default async function ProtectedLayout({
                                   }
                                 : undefined
                             }
+                          />
+                          <form
+                            action={async () => {
+                              "use server";
+                              await signOut({ redirectTo: "/" });
+                            }}
                           >
-                            Sign Out
-                          </Button>
-                        </form>
+                            <Button
+                              type="submit"
+                              variant="outline"
+                              size="sm"
+                              className="min-w-[110px] px-4"
+                              style={
+                                previewHex
+                                  ? {
+                                      borderColor: `${previewHex.primary}55`,
+                                      color: previewHex.primary,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              Sign Out
+                            </Button>
+                          </form>
+                        </div>
                       </div>
                     </div>
+                    <div className="min-w-0 xl:max-w-[560px] xl:text-right">
+                      <p
+                        className={cn(
+                          "mb-1",
+                          compactWorkspaceHeader
+                            ? "text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                            : "editorial-kicker",
+                        )}
+                        style={
+                          previewHex ? { color: previewHex.primary } : undefined
+                        }
+                      >
+                        {clientAdvisorBranding
+                          ? BRANDED_CLIENT_HEADER_KICKER
+                          : "AKILI Risk Intelligence"}
+                      </p>
+                      <h1
+                        className={cn(
+                          compactWorkspaceHeader
+                            ? "text-xl font-semibold tracking-tight sm:text-2xl"
+                            : "text-2xl font-semibold leading-[0.94] tracking-[-0.05em] sm:text-3xl lg:text-[3.25rem]",
+                        )}
+                        style={
+                          previewHex ? { color: previewHex.primary } : undefined
+                        }
+                      >
+                        Governance Assessment Workspace
+                      </h1>
+                    </div>
                   </div>
-                  <div className="min-w-0 xl:max-w-[560px] xl:text-right">
-                    <p
-                      className={cn(
-                        "mb-1",
-                        compactWorkspaceHeader
-                          ? "text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                          : "editorial-kicker",
-                      )}
-                      style={
-                        previewHex ? { color: previewHex.primary } : undefined
-                      }
-                    >
-                      {clientAdvisorBranding
-                        ? BRANDED_CLIENT_HEADER_KICKER
-                        : "AKILI Risk Intelligence"}
-                    </p>
-                    <h1
-                      className={cn(
-                        compactWorkspaceHeader
-                          ? "text-xl font-semibold tracking-tight sm:text-2xl"
-                          : "text-2xl font-semibold leading-[0.94] tracking-[-0.05em] sm:text-3xl lg:text-[3.25rem]",
-                      )}
-                      style={
-                        previewHex ? { color: previewHex.primary } : undefined
-                      }
-                    >
-                      Governance Assessment Workspace
-                    </h1>
-                  </div>
-                </div>
 
-                <div
-                  className="border-t border-border/60 pt-4 mt-3"
-                  style={
-                    previewHex
-                      ? { borderTopColor: `${previewHex.primary}30` }
-                      : undefined
-                  }
-                >
-                  <ProtectedNav
-                    showAdvisor={showAdvisor}
-                    showAdmin={showAdmin}
-                    restrictNavToIntake={restrictNavToIntake}
-                    assessmentUnlockedForClient={assessmentUnlockedForClient}
-                    clientBrandHex={previewHex}
-                    advisorFeatureFlags={advisorFeatureFlags}
-                  />
+                  <div
+                    className="mt-3 border-t border-border/60 pt-4"
+                    style={
+                      previewHex
+                        ? { borderTopColor: `${previewHex.primary}30` }
+                        : undefined
+                    }
+                  >
+                    <ProtectedNav
+                      showAdvisor={showAdvisor}
+                      showAdmin={showAdmin}
+                      restrictNavToIntake={restrictNavToIntake}
+                      assessmentUnlockedForClient={assessmentUnlockedForClient}
+                      clientBrandHex={previewHex}
+                      advisorFeatureFlags={advisorFeatureFlags}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </header>
 
-          <main id="main-content" className="px-4 py-5 sm:px-8 sm:py-8 lg:px-10 lg:py-10" tabIndex={-1}>
-            <div className="space-y-6 sm:space-y-8">
-              <ClientPageHeaderFromPath />
+          <main
+            id="main-content"
+            className={cn(
+              "px-4 lg:px-10",
+              isAdvisorWorkspaceRoute ? "py-3 sm:px-6 sm:py-4" : "py-5 sm:px-8 sm:py-8 lg:py-10"
+            )}
+            tabIndex={-1}
+          >
+            <div className={cn(!isAdvisorWorkspaceRoute && "space-y-6 sm:space-y-8")}>
+              {!isAdvisorWorkspaceRoute && <ClientPageHeaderFromPath />}
               {children}
             </div>
           </main>

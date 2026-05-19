@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 /** Single accessibility heading per advisor route (avoids duplicate visible headers under the main nav). */
 function labelForAdvisorPath(pathname: string): string {
-  if (pathname === "/advisor" || pathname === "/advisor/") return "Overview";
+  if (pathname === "/advisor" || pathname === "/advisor/") return "Advisor workspace";
   if (pathname.startsWith("/advisor/pipeline")) return "Client pipeline";
   if (pathname.startsWith("/advisor/analytics")) return "Client analytics";
   if (pathname.startsWith("/advisor/review")) return "Assessment review";
