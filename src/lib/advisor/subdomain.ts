@@ -1,4 +1,8 @@
 import { prisma } from '@/lib/db';
+import {
+  isPlatformSubdomainLabel,
+  isSubdomainAutoActivateEnabled,
+} from '@/lib/advisor/platform-subdomain';
 
 /** Shape passed from the server into SubdomainManager after a claim. */
 export interface AdvisorSubdomainSettings {
@@ -192,6 +196,13 @@ export function validateSubdomainFormat(subdomain: string): { valid: boolean; er
  * Check if subdomain is reserved
  */
 export async function isSubdomainReserved(subdomain: string): Promise<{ reserved: boolean; reason?: string }> {
+  if (isPlatformSubdomainLabel(subdomain)) {
+    return {
+      reserved: true,
+      reason: 'Reserved for platform infrastructure',
+    };
+  }
+
   try {
     const reserved = await prisma.reservedSubdomains.findUnique({
       where: { subdomain }
@@ -262,7 +273,7 @@ export function generateDNSInstructions(subdomain: string): {
     type: 'CNAME',
     record: `${subdomain}.${productionDomain}`,
     value: `app.${productionDomain}`,
-    instructions: `Create a CNAME record pointing ${subdomain}.${productionDomain} to app.${productionDomain}. This will automatically be verified within 15 minutes.`,
+    instructions: `Create a CNAME record pointing ${subdomain}.${productionDomain} to app.${productionDomain}, or ask your platform administrator to activate the subdomain.`,
   };
 }
 
@@ -295,7 +306,7 @@ export async function getAdvisorSubdomainSettings(
   }
 
   let verificationInstructions: AdvisorSubdomainSettings['verificationInstructions'];
-  if (!row.dnsVerified) {
+  if (!row.dnsVerified && !isSubdomainAutoActivateEnabled()) {
     try {
       verificationInstructions = generateDNSInstructions(row.subdomain);
     } catch {

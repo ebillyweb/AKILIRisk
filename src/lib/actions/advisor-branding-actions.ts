@@ -8,6 +8,7 @@ import { brandingUpdateSchema } from '@/lib/validation/branding';
 import { auditBrandingUpdate } from '@/lib/audit/branding-audit';
 import { requireAdvisorBrandingAccess, checkRateLimit } from '@/lib/subscription/validation';
 import { generateLogoUploadUrl, confirmLogoUpload, deleteLogo, uploadLogoFromBuffer } from '@/lib/s3/branding-uploads';
+import { isSubdomainReserved } from '@/lib/advisor/subdomain';
 
 export interface ActionResult {
   success: boolean;
@@ -364,17 +365,13 @@ export async function checkSubdomainAvailabilityAction(subdomain: string): Promi
       };
     }
 
-    // Check if subdomain is reserved
-    const reserved = await prisma.reservedSubdomains.findUnique({
-      where: { subdomain },
-    });
-
-    if (reserved) {
+    const reservedCheck = await isSubdomainReserved(subdomain.toLowerCase());
+    if (reservedCheck.reserved) {
       return {
         success: true,
         data: {
           available: false,
-          reason: `Subdomain '${subdomain}' is reserved: ${reserved.reason}`,
+          reason: `Subdomain '${subdomain}' is reserved: ${reservedCheck.reason}`,
           suggestions: generateSubdomainSuggestions(subdomain),
         },
       };

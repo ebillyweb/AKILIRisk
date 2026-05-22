@@ -2,30 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { getAdvisorBySubdomain } from "@/lib/advisor/subdomain";
-
-/**
- * Extract subdomain from hostname
- */
-function extractSubdomain(hostname: string): string | null {
-  const host = hostname.split(':')[0];
-  const parts = host.split('.');
-
-  if (host.includes('localhost')) {
-    if (parts.length >= 2 && parts[0] !== 'localhost') {
-      return parts[0];
-    }
-    return null;
-  }
-
-  if (parts.length >= 3) {
-    const subdomain = parts[0];
-    if (!['www', 'app', 'api', 'admin'].includes(subdomain)) {
-      return subdomain;
-    }
-  }
-
-  return null;
-}
+import {
+  extractTenantSubdomainLabel,
+  isPlatformHostname,
+} from "@/lib/advisor/platform-subdomain";
 
 /** For server layouts (e.g. advisor) that branch on URL without middleware.
  *
@@ -86,9 +66,9 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  // Handle subdomain routing first
-  if (shouldHandleSubdomain(pathname)) {
-    const subdomain = extractSubdomain(hostname);
+  // Handle advisor tenant subdomain routing (skip platform hosts like preview.*)
+  if (shouldHandleSubdomain(pathname) && !isPlatformHostname(hostname)) {
+    const subdomain = extractTenantSubdomainLabel(hostname);
 
     if (subdomain) {
       try {

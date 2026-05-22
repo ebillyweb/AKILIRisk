@@ -1,6 +1,10 @@
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
 import { getAdvisorSubdomainSettings } from "@/lib/advisor/subdomain";
 import {
+  getProductionDomain,
+  isSubdomainAutoActivateEnabled,
+} from "@/lib/advisor/platform-subdomain";
+import {
   getSubscriptionFeatures,
   STARTER_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
@@ -27,6 +31,8 @@ export default async function AdvisorSettingsPage() {
   const { profile } = result.data!;
 
   const currentSubdomain = await getAdvisorSubdomainSettings(profile.id);
+  const productionDomain = getProductionDomain() ?? "akilirisk.com";
+  const platformSubdomainsAutoActivate = isSubdomainAutoActivateEnabled();
 
   // Subscription flags gate premium tabs; missing Subscription row should not hide the full branding UI
   const features =
@@ -72,6 +78,8 @@ export default async function AdvisorSettingsPage() {
           }}
           features={features}
           currentSubdomain={currentSubdomain}
+          productionDomain={productionDomain}
+          platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
         />
 
         {/* Advisor profile (admin-managed; distinct from client-facing support contacts in branding) */}

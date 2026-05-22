@@ -5,8 +5,12 @@ import { requireSubdomainAccess, checkRateLimit } from '@/lib/subscription/valid
 import {
   validateSubdomainFormat,
   isSubdomainReserved,
-  generateDNSInstructions,
+  clearSubdomainCache,
 } from '@/lib/advisor/subdomain';
+import {
+  getSubdomainActivationData,
+  isSubdomainAutoActivateEnabled,
+} from '@/lib/advisor/platform-subdomain';
 import { auditSubdomainClaim } from '@/lib/audit/branding-audit';
 import { prisma } from '@/lib/db';
 
@@ -19,10 +23,7 @@ const subdomainClaimSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Fail fast on missing config before we mutate any DB rows. Without
-    // PRODUCTION_DOMAIN we cannot return valid DNS instructions, and silently
-    // falling back to a placeholder domain (the previous behavior) handed
-    // advisors records pointing at a domain we don't own.
+    // Fail fast on missing config before we mutate any DB rows.
     if (!process.env.PRODUCTION_DOMAIN?.trim()) {
       console.error(
         'PRODUCTION_DOMAIN environment variable is not configured; refusing to claim subdomain'
@@ -79,6 +80,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const activation = getSubdomainActivationData();
+
     // Use a database transaction to ensure consistency
     const result = await prisma.$transaction(async (tx) => {
       // Double-check availability within transaction
@@ -96,34 +99,41 @@ export async function POST(request: NextRequest) {
       });
 
       if (currentSubdomain) {
-        // Update existing subdomain
+        clearSubdomainCache(currentSubdomain.subdomain);
+
         const updatedSubdomain = await tx.advisorSubdomain.update({
           where: { advisorId },
           data: {
             subdomain: cleanSubdomain,
-            isActive: false, // Deactivate until DNS verification
-            dnsVerified: false,
-            sslProvisioned: false,
-            updatedAt: new Date()
-          }
+            isActive: activation.isActive,
+            dnsVerified: activation.dnsVerified,
+            sslProvisioned: activation.sslProvisioned,
+            verifiedAt: activation.verifiedAt,
+            updatedAt: new Date(),
+          },
         });
 
-        return { action: 'updated', subdomain: updatedSubdomain };
-      } else {
-        // Create new subdomain
-        const newSubdomain = await tx.advisorSubdomain.create({
-          data: {
-            advisorId,
-            subdomain: cleanSubdomain,
-            isActive: false, // Will be activated after DNS verification
-            dnsVerified: false,
-            sslProvisioned: false
-          }
-        });
-
-        return { action: 'created', subdomain: newSubdomain };
+        return { action: 'updated', subdomain: updatedSubdomain, previousSubdomain: currentSubdomain.subdomain };
       }
+
+      const newSubdomain = await tx.advisorSubdomain.create({
+        data: {
+          advisorId,
+          subdomain: cleanSubdomain,
+          isActive: activation.isActive,
+          dnsVerified: activation.dnsVerified,
+          sslProvisioned: activation.sslProvisioned,
+          verifiedAt: activation.verifiedAt,
+        },
+      });
+
+      return { action: 'created', subdomain: newSubdomain, previousSubdomain: null as string | null };
     });
+
+    clearSubdomainCache(cleanSubdomain);
+    if (result.previousSubdomain && result.previousSubdomain !== cleanSubdomain) {
+      clearSubdomainCache(result.previousSubdomain);
+    }
 
     // Audit the action
     await auditSubdomainClaim(advisorId, userId, cleanSubdomain, {
@@ -132,18 +142,18 @@ export async function POST(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'Unknown'
     });
 
-    // Generate DNS verification instructions
-    const verificationInstructions = generateDNSInstructions(cleanSubdomain);
+    const autoActivated = isSubdomainAutoActivateEnabled();
 
     return NextResponse.json({
       success: true,
       data: {
         subdomain: cleanSubdomain,
-        status: 'pending_verification',
-        dnsVerified: false,
-        sslProvisioned: false,
-        verificationInstructions
-      }
+        status: autoActivated ? 'active' : 'pending_verification',
+        dnsVerified: activation.dnsVerified,
+        sslProvisioned: activation.sslProvisioned,
+        isActive: activation.isActive,
+        autoActivated,
+      },
     });
 
   } catch (error) {
@@ -186,10 +196,11 @@ export async function DELETE(request: NextRequest) {
     const { userId } = await requireAdvisorRole();
     const { advisorId } = await requireSubdomainAccess(userId);
 
-    // Release the advisor's subdomain
     const deletedSubdomain = await prisma.advisorSubdomain.delete({
-      where: { advisorId }
+      where: { advisorId },
     });
+
+    clearSubdomainCache(deletedSubdomain.subdomain);
 
     // Audit the release
     await auditSubdomainClaim(advisorId, userId, deletedSubdomain.subdomain, {

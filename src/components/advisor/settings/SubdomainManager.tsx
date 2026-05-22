@@ -14,12 +14,10 @@ import {
   X,
   Clock,
   ExternalLink,
-  RefreshCw,
-  AlertCircle,
   Info,
   Crown,
   Loader2,
-  Copy
+  Copy,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SubscriptionFeatures } from '@/lib/validation/branding';
@@ -28,10 +26,21 @@ import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
 interface SubdomainManagerProps {
   features: SubscriptionFeatures;
   currentSubdomain?: AdvisorSubdomainSettings | null;
+  productionDomain: string;
+  platformSubdomainsAutoActivate?: boolean;
   className?: string;
 }
 
-export function SubdomainManager({ features, currentSubdomain, className = '' }: SubdomainManagerProps) {
+export function SubdomainManager({
+  features,
+  currentSubdomain,
+  productionDomain,
+  platformSubdomainsAutoActivate = true,
+  className = '',
+}: SubdomainManagerProps) {
+  const domainSuffix = `.${productionDomain}`;
+  const portalHost = (slug: string) => `${slug}${domainSuffix}`;
+  const portalUrl = (slug: string) => `https://${portalHost(slug)}`;
   const [subdomain, setSubdomain] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -151,13 +160,28 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
   };
 
   const getStatusBadge = (data: AdvisorSubdomainSettings) => {
-    if (data.dnsVerified && data.sslProvisioned) {
-      return <Badge variant="default" className="bg-green-600"><Check className="h-3 w-3 mr-1" />Active</Badge>;
-    } else if (data.dnsVerified && !data.sslProvisioned) {
-      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />SSL Pending</Badge>;
-    } else {
-      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />DNS Pending</Badge>;
+    if (data.status === 'active' || (data.dnsVerified && data.sslProvisioned)) {
+      return (
+        <Badge variant="default" className="bg-green-600">
+          <Check className="h-3 w-3 mr-1" />
+          Active
+        </Badge>
+      );
     }
+    if (data.dnsVerified && !data.sslProvisioned) {
+      return (
+        <Badge variant="secondary">
+          <Clock className="h-3 w-3 mr-1" />
+          SSL Pending
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="secondary">
+        <Clock className="h-3 w-3 mr-1" />
+        Pending
+      </Badge>
+    );
   };
 
   return (
@@ -194,7 +218,7 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{currentSubdomain.subdomain}.akiliplatform.com</span>
+                  <span className="font-medium">{portalHost(currentSubdomain.subdomain)}</span>
                   {getStatusBadge(currentSubdomain)}
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -206,7 +230,7 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`https://${currentSubdomain.subdomain}.akiliplatform.com`, '_blank')}
+                    onClick={() => window.open(portalUrl(currentSubdomain.subdomain), '_blank')}
                   >
                     <ExternalLink className="h-4 w-4 mr-1" />
                     Visit
@@ -215,7 +239,7 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => copyToClipboard(`${currentSubdomain.subdomain}.akiliplatform.com`)}
+                  onClick={() => copyToClipboard(portalHost(currentSubdomain.subdomain))}
                 >
                   <Copy className="h-4 w-4 mr-1" />
                   Copy
@@ -223,35 +247,26 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
               </div>
             </div>
 
-            {/* DNS Verification Status */}
-            {!currentSubdomain.dnsVerified && currentSubdomain.verificationInstructions && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="space-y-3">
-                    <p className="font-medium">DNS Setup Required</p>
-                    <p>{currentSubdomain.verificationInstructions.instructions}</p>
-                    <div className="bg-muted p-3 rounded font-mono text-sm">
-                      <div className="grid grid-cols-2 gap-2 text-xs uppercase text-muted-foreground mb-2">
-                        <span>Type</span>
-                        <span>Value</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <span>{currentSubdomain.verificationInstructions.type}</span>
-                        <span className="break-all">{currentSubdomain.verificationInstructions.value}</span>
-                      </div>
+            {!platformSubdomainsAutoActivate &&
+              !currentSubdomain.dnsVerified &&
+              currentSubdomain.verificationInstructions && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-3">
+                      <p className="font-medium">Activation pending</p>
+                      <p>{currentSubdomain.verificationInstructions.instructions}</p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.reload()}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-1" />
-                      Check Verification
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+            {platformSubdomainsAutoActivate && currentSubdomain.dnsVerified && (
+              <p className="text-sm text-muted-foreground">
+                Your portal is active on our platform domain. Share{' '}
+                <span className="font-mono">{portalHost(currentSubdomain.subdomain)}</span>{' '}
+                with clients.
+              </p>
             )}
 
             <Separator />
@@ -272,7 +287,7 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
                       maxLength={20}
                     />
                     <div className="px-3 py-2 bg-muted text-sm rounded-r-md border border-l-0 flex items-center">
-                      .akiliplatform.com
+                      {domainSuffix}
                     </div>
                   </div>
                 </div>
@@ -351,7 +366,13 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
               <Info className="h-4 w-4" />
               <AlertDescription>
                 Claim your custom subdomain to provide clients with a fully branded portal experience.
-                Your subdomain will be: <strong>yourname.akiliplatform.com</strong>
+                Your subdomain will be:{' '}
+                <strong>
+                  yourname{domainSuffix}
+                </strong>
+                {platformSubdomainsAutoActivate && (
+                  <> It will be active immediately after you claim it.</>
+                )}
               </AlertDescription>
             </Alert>
 
