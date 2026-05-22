@@ -2,6 +2,8 @@ import "server-only";
 
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/escape-html";
+import type { InvitationEmailTheme } from "@/lib/invitations/invitation-email-theme";
+import { PLATFORM_INVITATION_CTA_COLOR } from "@/lib/invitations/invitation-email-theme";
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
@@ -12,7 +14,6 @@ interface AdvisorInfo {
   advisorEmail: string;
   advisorPhone: string;
   advisorLicenseNumber: string;
-  advisorLogoUrl?: string;
 }
 
 interface InvitationTemplateData {
@@ -22,10 +23,10 @@ interface InvitationTemplateData {
   advisorEmail: string;
   advisorPhone: string;
   advisorLicenseNumber: string;
-  advisorLogoUrl?: string;
   personalMessage: string;
   invitationUrl: string;
   clientName?: string;
+  theme: InvitationEmailTheme;
 }
 
 interface SendInvitationData {
@@ -34,6 +35,7 @@ interface SendInvitationData {
   personalMessage: string;
   invitationUrl: string;
   clientName?: string;
+  theme: InvitationEmailTheme;
 }
 
 /**
@@ -59,11 +61,13 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
     advisorEmail,
     advisorPhone,
     advisorLicenseNumber,
-    advisorLogoUrl,
     personalMessage,
     invitationUrl,
     clientName,
+    theme,
   } = data;
+
+  const accentColor = theme.accentColor || PLATFORM_INVITATION_CTA_COLOR;
 
   // Sanitize user inputs
   const safeAdvisorName = escapeHtml(advisorName);
@@ -75,12 +79,18 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
   const safePersonalMessage = escapeHtml(personalMessage);
   const safeClientName = clientName ? escapeHtml(clientName) : null;
 
-  // Validate and sanitize logo URL
-  const logoHtml = advisorLogoUrl && isValidLogoUrl(advisorLogoUrl)
-    ? `<img src="${escapeHtml(advisorLogoUrl)}" alt="${safeAdvisorFirmName} Logo" style="max-height: 60px; display: block;">`
-    : '';
+  const logoHtml =
+    theme.showAdvisorLogo && theme.logoUrl && isValidLogoUrl(theme.logoUrl)
+      ? `<img src="${escapeHtml(theme.logoUrl)}" alt="${safeAdvisorFirmName} Logo" style="max-height: 60px; display: block;">`
+      : '';
 
   const greeting = safeClientName ? `Dear ${safeClientName},` : 'Dear there,';
+
+  const platformAttribution = theme.showPlatformAttribution
+    ? `<p style="margin: 16px 0 0 0; font-size: 12px; color: #666;">
+            Sent via <strong>AKILI Risk Intelligence</strong> on behalf of ${safeAdvisorName} at ${safeAdvisorFirmName}.
+          </p>`
+    : '';
 
   return `
     <!DOCTYPE html>
@@ -100,7 +110,7 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
           </p>
 
           <!-- Personal Message -->
-          <div style="margin: 24px 0; padding: 16px; background: white; border-radius: 6px; border-left: 4px solid #18181b;">
+          <div style="margin: 24px 0; padding: 16px; background: white; border-radius: 6px; border-left: 4px solid ${accentColor};">
             <p style="margin: 0; font-style: italic;">
               ${safePersonalMessage}
             </p>
@@ -108,7 +118,7 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
 
           <!-- Call to Action -->
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${invitationUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            <a href="${invitationUrl}" style="display: inline-block; background: ${accentColor}; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
               Get Started
             </a>
           </div>
@@ -118,8 +128,10 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
             Or copy and paste this URL into your browser:
           </p>
           <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-            <a href="${invitationUrl}" style="color: #18181b;">${invitationUrl}</a>
+            <a href="${invitationUrl}" style="color: ${accentColor};">${invitationUrl}</a>
           </p>
+
+          ${platformAttribution}
 
           <!-- Divider -->
           <hr style="border: none; border-top: 1px solid #ddd; margin: 32px 0;">
@@ -177,6 +189,7 @@ export async function sendAdvisorInvitationEmail(data: SendInvitationData): Prom
       personalMessage: data.personalMessage,
       invitationUrl: data.invitationUrl,
       clientName: data.clientName,
+      theme: data.theme,
     });
 
     const result = await resend.emails.send({

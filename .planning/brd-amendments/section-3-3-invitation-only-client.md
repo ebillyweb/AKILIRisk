@@ -42,12 +42,13 @@ arc; only the second is in the shipped product:
 
 ### Onboarding sequence
 
-1. **Advisor invites the client.** From `/advisor/invite` the advisor
+1. **Advisor invites the client.** From `/advisor/invitations` the advisor
    creates an `InviteCode` row keyed on the client's email. The
-   invite email contains a single-use link plus a short numeric code
-   (the existing `BELV01` / `123456` invite-code pattern). The
-   advisor's tone, domain, and signature are co-branded per
-   `AdvisorProfile.brandingEnabled`.
+   invite email contains a single-use magic-link (US-1). Email visual
+   co-branding (logo, primary CTA color) follows `AdvisorProfile.brandingEnabled`
+   and subscription entitlements (US-1B — see `docs/user-stories/US-1B-branded-client-invitation.md`).
+   When branding is off, the email uses platform-default styling plus an
+   AKILI attribution line; the advisor signature block is always included.
 2. **Client clicks the link in their email.** The platform validates
    the InviteCode row, provisions a `User` row with `role = USER` and
    no password (`User.password = null` per the §5.1 amendment), and

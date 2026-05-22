@@ -11,6 +11,7 @@ import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
 import { clientPortalBrandingDisplayTitle, clientPortalLogoImgSrc } from "@/lib/client/client-portal-branding";
 import { getAssignedAdvisorBrandingForClient } from "@/lib/client/assigned-advisor-branding";
+import { getTenantBrandingFromRequestHeaders } from "@/lib/client/tenant-portal-branding";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
@@ -60,11 +61,12 @@ export default async function ProtectedLayout({
   > = null;
 
   if (role === "USER" && session.user.id) {
-    const [gate, branding] = await Promise.all([
+    const [gate, assignmentBranding, tenantBranding] = await Promise.all([
       getClientIntakeGateState(session.user.id),
       getAssignedAdvisorBrandingForClient(session.user.id),
+      getTenantBrandingFromRequestHeaders(),
     ]);
-    clientAdvisorBranding = branding;
+    clientAdvisorBranding = assignmentBranding ?? tenantBranding;
     restrictNavToIntake = gate.restrictNavToIntake;
     assessmentUnlockedForClient = gate.assessmentUnlocked;
   }

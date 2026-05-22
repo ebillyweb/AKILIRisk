@@ -5,6 +5,11 @@ import { prisma } from "@/lib/db";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import { createInvitationToken, INVITATION_TTL_SEC } from "@/lib/invite";
 import {
+  buildInvitationSignupUrl,
+  resolveInvitationLinkContext,
+} from "@/lib/invitations/invitation-link";
+import type { SubscriptionFeatures } from "@/lib/validation/branding";
+import {
   CreateInvitationInput,
   InvitationWithDetails,
   InvitationListFilters,
@@ -45,9 +50,22 @@ function generateInviteCode(): string {
   return code;
 }
 
+async function invitationSignupUrl(
+  advisorId: string,
+  inviteCodeId: string,
+  intakeWaived: boolean,
+  features: Pick<SubscriptionFeatures, "customSubdomainEnabled">
+): Promise<string> {
+  const linkContext = await resolveInvitationLinkContext(advisorId, features);
+  const token = createInvitationToken(inviteCodeId);
+  const callback = intakeWaived ? "/assessment" : "/intake";
+  return buildInvitationSignupUrl(linkContext.origin, token, callback);
+}
+
 export async function createAdvisorInvitation(
   advisorId: string,
-  input: CreateInvitationInput
+  input: CreateInvitationInput,
+  options?: { subscriptionFeatures?: Pick<SubscriptionFeatures, "customSubdomainEnabled"> }
 ): Promise<InvitationWithDetails & { url: string }> {
   const code = generateInviteCode();
   const expiresAt = new Date(Date.now() + INVITATION_TTL_SEC * 1000);
@@ -81,10 +99,13 @@ export async function createAdvisorInvitation(
     },
   });
 
-  const token = createInvitationToken(invitation.id);
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const callback = invitation.intakeWaived ? "/assessment" : "/intake";
-  const url = `${baseUrl}/signup?invite=${token}&callbackUrl=${encodeURIComponent(callback)}`;
+  const features = options?.subscriptionFeatures ?? { customSubdomainEnabled: false };
+  const url = await invitationSignupUrl(
+    advisorId,
+    invitation.id,
+    invitation.intakeWaived ?? false,
+    features
+  );
 
   return {
     ...withDecryptedAdvisorEmail(invitation),
@@ -142,7 +163,8 @@ export async function getAdvisorInvitations(
 
 export async function resendInvitation(
   advisorId: string,
-  invitationId: string
+  invitationId: string,
+  options?: { subscriptionFeatures?: Pick<SubscriptionFeatures, "customSubdomainEnabled"> }
 ): Promise<InvitationWithDetails & { url: string }> {
   // Find invitation and verify ownership
   const invitation = await prisma.inviteCode.findUnique({
@@ -200,10 +222,13 @@ export async function resendInvitation(
     },
   });
 
-  const token = createInvitationToken(updatedInvitation.id);
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const callback = updatedInvitation.intakeWaived ? "/assessment" : "/intake";
-  const url = `${baseUrl}/signup?invite=${token}&callbackUrl=${encodeURIComponent(callback)}`;
+  const features = options?.subscriptionFeatures ?? { customSubdomainEnabled: false };
+  const url = await invitationSignupUrl(
+    advisorId,
+    updatedInvitation.id,
+    updatedInvitation.intakeWaived ?? false,
+    features
+  );
 
   return {
     ...withDecryptedAdvisorEmail(updatedInvitation),

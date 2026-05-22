@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { sendInvitation } from '@/lib/actions/invitations';
+import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from '@/lib/schemas/invitation';
 import { Loader2, Copy, AlertCircle } from 'lucide-react';
 
 // Form-specific schema for client-side validation
@@ -38,7 +39,7 @@ export function InviteClientForm() {
     defaultValues: {
       clientEmail: '',
       clientName: '',
-      personalMessage: "I'd like to invite you to complete a family governance assessment. This confidential process will help us identify areas where your family's wealth management governance can be strengthened.",
+      personalMessage: '',
       intakeWaived: false,
     },
   });
@@ -53,7 +54,9 @@ export function InviteClientForm() {
       const formData = new FormData();
       formData.append('clientEmail', data.clientEmail);
       if (data.clientName) formData.append('clientName', data.clientName);
-      if (data.personalMessage) formData.append('personalMessage', data.personalMessage);
+      if (data.personalMessage?.trim()) {
+        formData.append('personalMessage', data.personalMessage.trim());
+      }
   if (data.intakeWaived) formData.append('intakeWaived', 'true');
 
       const result = await sendInvitation(formData);
@@ -172,12 +175,12 @@ export function InviteClientForm() {
             Personal Message
           </label>
           <p className={fieldHintClassName}>
-            Customize your invitation message. You can edit the default template or add your own personal touch.
+            Optional. Leave blank to send the standard invitation message.
           </p>
           <Textarea
             id="personalMessage"
             {...register('personalMessage')}
-            placeholder="Add a personal message..."
+            placeholder={DEFAULT_INVITATION_PERSONAL_MESSAGE}
             rows={4}
             aria-invalid={!!errors.personalMessage}
             disabled={isSubmitting}

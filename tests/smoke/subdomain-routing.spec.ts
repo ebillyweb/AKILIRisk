@@ -64,10 +64,7 @@ test.describe("subdomain routing", () => {
     await expect(page.getByText(/Powered by AkiliRisk Platform/i)).toBeVisible();
 
     const signInLink = page.getByRole("link", { name: /^Sign In$/i });
-    await expect(signInLink.first()).toHaveAttribute(
-      "href",
-      "/branded/auth/signin"
-    );
+    await expect(signInLink.first()).toHaveAttribute("href", "/signin");
   });
 
   for (const { label, url } of NOT_AVAILABLE_CASES) {

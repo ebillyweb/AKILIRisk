@@ -55,7 +55,7 @@ export default async function BrandedClientPortalPage() {
 
           <nav className="hidden md:flex items-center gap-6">
             <Link
-              href="/branded/auth/signin"
+              href="/signin"
               className="text-sm hover:underline"
               style={{ color: primaryColor }}
             >
@@ -69,8 +69,8 @@ export default async function BrandedClientPortalPage() {
               className="text-white hover:opacity-90"
               asChild
             >
-              <Link href="/branded/assessment/start">
-                Start Assessment
+              <Link href="/signup">
+                Get started
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>
@@ -118,11 +118,11 @@ export default async function BrandedClientPortalPage() {
               </Button>
               <div className="text-center">
                 <Link
-                  href="/branded/assessment/start"
+                  href="/signup"
                   className="text-sm hover:underline"
                   style={{ color: primaryColor }}
                 >
-                  Don't have a code? Start new assessment
+                  Have an invitation link? Sign up
                 </Link>
               </div>
             </CardContent>

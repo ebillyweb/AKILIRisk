@@ -33,6 +33,31 @@ function shouldHandleSubdomain(pathname: string): boolean {
   return !skipPaths.some(path => pathname.startsWith(path));
 }
 
+/** Client journey routes served on the main app tree with tenant headers (not /branded rewrites). */
+const TENANT_PASS_THROUGH_PREFIXES = [
+  "/signup",
+  "/signin",
+  "/intake",
+  "/assessment",
+  "/dashboard",
+  "/settings",
+  "/mfa",
+  "/forgot-password",
+  "/reset-password",
+  "/request-review",
+  "/start",
+  "/terms",
+  "/privacy",
+  "/about",
+  "/contact",
+] as const;
+
+function isTenantPassThroughPath(pathname: string): boolean {
+  return TENANT_PASS_THROUGH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
 /**
  * Edge-compatible proxy using getToken (no NextAuth config in Edge).
  * Protects routes and enforces MFA redirect using JWT claims only.
@@ -75,23 +100,20 @@ export default async function proxy(req: NextRequest) {
         const advisorSubdomain = await getAdvisorBySubdomain(subdomain);
 
         if (advisorSubdomain?.isActive && advisorSubdomain?.dnsVerified) {
-          // Create headers for advisor context
           const requestHeaders = withAkiliPathname(req);
           requestHeaders.set('x-advisor-id', advisorSubdomain.advisorId);
           requestHeaders.set('x-subdomain', subdomain);
           requestHeaders.set('x-branded-mode', 'true');
 
-          // Rewrite to branded version
-          const url = req.nextUrl.clone();
-          if (pathname === '/') {
-            url.pathname = '/branded/client-portal';
-          } else if (pathname.startsWith('/auth')) {
-            url.pathname = `/branded${pathname}`;
-          } else if (pathname.startsWith('/assessment')) {
-            url.pathname = `/branded${pathname}`;
-          } else {
-            url.pathname = `/branded${pathname}`;
+          if (isTenantPassThroughPath(pathname)) {
+            return NextResponse.next({
+              request: { headers: requestHeaders },
+            });
           }
+
+          const url = req.nextUrl.clone();
+          url.pathname =
+            pathname === '/' ? '/branded/client-portal' : `/branded${pathname}`;
 
           return NextResponse.rewrite(url, {
             request: { headers: requestHeaders },

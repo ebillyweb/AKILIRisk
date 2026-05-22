@@ -1,5 +1,11 @@
+import "server-only";
+
+import { Resend } from "resend";
 import { AdvisorBrandingData } from '@/lib/validation/branding';
 import { escapeHtml } from '@/lib/escape-html';
+import type { SendEmailResult } from '@/lib/invitations/email';
+
+const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
 /**
  * Enhanced advisor branding data for emails
@@ -353,5 +359,74 @@ export function createEnhancedEmailTemplate(data: EnhancedEmailTemplateData): st
     case 'invitation':
     default:
       return renderEnhancedInvitationTemplate(data);
+  }
+}
+
+export type SendEnhancedInvitationData = {
+  clientEmail: string;
+  branding: AdvisorBrandingData & {
+    advisorName?: string;
+    advisorJobTitle?: string;
+    advisorFirmName?: string;
+    advisorEmail?: string;
+    advisorPhone?: string;
+    advisorLicenseNumber?: string;
+  };
+  personalMessage: string;
+  invitationUrl: string;
+  clientName?: string;
+};
+
+/**
+ * Sends a fully branded invitation email (header tagline, colors, logo).
+ */
+export async function sendEnhancedAdvisorInvitationEmail(
+  data: SendEnhancedInvitationData
+): Promise<SendEmailResult> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.warn(
+        "RESEND_API_KEY not set - invitation email not sent. Add RESEND_API_KEY to .env.local to send emails."
+      );
+      return {
+        sent: false,
+        reason:
+          "RESEND_API_KEY is not configured. Add it to .env.local to send invitation emails.",
+      };
+    }
+
+    const resend = new Resend(apiKey);
+    const advisorName =
+      data.branding.advisorName ||
+      data.branding.brandName ||
+      data.branding.advisorFirmName ||
+      "Your advisor";
+
+    const htmlContent = createEnhancedEmailTemplate({
+      branding: data.branding,
+      personalMessage: data.personalMessage,
+      invitationUrl: data.invitationUrl,
+      clientName: data.clientName,
+      templateType: "invitation",
+    });
+
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.clientEmail,
+      subject: `Invitation from ${advisorName} - Family Governance Assessment`,
+      html: htmlContent,
+    });
+
+    if (result.error) {
+      console.error("Resend API error:", result.error);
+      return { sent: false, reason: result.error.message || "Email delivery failed." };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to send enhanced advisor invitation email:", error);
+    return { sent: false, reason: message };
   }
 }

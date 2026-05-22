@@ -12,14 +12,39 @@ import {
   expireInvitation,
   getAdvisorInvitations,
 } from "@/lib/invitations/service";
-import { sendAdvisorInvitationEmail } from "@/lib/invitations/email";
-import { createInvitationSchema } from "@/lib/schemas/invitation";
+import { resolveInvitationEmailTheme } from "@/lib/invitations/invitation-email-theme";
+import { sendInvitationEmail } from "@/lib/invitations/send-invitation-email";
+import {
+  getSubscriptionFeatures,
+  STARTER_SUBSCRIPTION_FEATURES,
+} from "@/lib/subscription/validation";
+import {
+  createInvitationSchema,
+  DEFAULT_INVITATION_PERSONAL_MESSAGE,
+} from "@/lib/schemas/invitation";
 import { InvitationListFilters, InvitationWithDetails } from "@/lib/invitations/types";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+function invitationEmailThemeForProfile(
+  profile: {
+    brandingEnabled: boolean;
+    logoUrl: string | null;
+    primaryColor: string | null;
+    userId: string;
+  },
+  features: { advancedBrandingEnabled: boolean }
+) {
+  return resolveInvitationEmailTheme({
+    brandingEnabled: profile.brandingEnabled,
+    advancedBrandingEnabled: features.advancedBrandingEnabled,
+    logoUrl: profile.logoUrl,
+    primaryColor: profile.primaryColor,
+  });
+}
 
 /**
  * Server action to send a new invitation
@@ -36,7 +61,12 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
     const rawData = {
       clientEmail: formData.get("clientEmail")?.toString() || "",
       clientName: formData.get("clientName")?.toString() || undefined,
-      personalMessage: formData.get("personalMessage")?.toString() || undefined,
+      personalMessage: (() => {
+        const raw = formData.get("personalMessage")?.toString();
+        if (raw === undefined || raw === null) return undefined;
+        const trimmed = raw.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      })(),
       intakeWaived: (() => {
         const v = formData.get("intakeWaived");
         if (v === null) return false;
@@ -49,10 +79,17 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
 
     await assertCanAddClientForAdvisorProfile(profile.id);
 
-    // Create the invitation
-    const invitation = await createAdvisorInvitation(profile.id, validatedInput);
+    const features =
+      (await getSubscriptionFeatures(profile.userId)) ??
+      STARTER_SUBSCRIPTION_FEATURES;
+    const emailTheme = invitationEmailThemeForProfile(profile, features);
 
-    // Send the email
+    const invitation = await createAdvisorInvitation(profile.id, validatedInput, {
+      subscriptionFeatures: {
+        customSubdomainEnabled: features.customSubdomainEnabled,
+      },
+    });
+
     const advisorInfo = {
       advisorName: profile.user.name || profile.user.firstName + " " + profile.user.lastName || "Advisor",
       advisorJobTitle: profile.jobTitle || "Financial Advisor",
@@ -60,15 +97,29 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
       advisorEmail: profile.user.email,
       advisorPhone: profile.phone || "",
       advisorLicenseNumber: profile.licenseNumber || "",
-      advisorLogoUrl: profile.logoUrl || undefined,
     };
 
-    const emailResult = await sendAdvisorInvitationEmail({
+    const emailResult = await sendInvitationEmail({
       clientEmail: validatedInput.clientEmail,
       advisorInfo,
       personalMessage: validatedInput.personalMessage,
       invitationUrl: invitation.url,
       clientName: validatedInput.clientName,
+      profile: {
+        firmName: profile.firmName,
+        brandName: profile.brandName,
+        tagline: profile.tagline,
+        primaryColor: profile.primaryColor,
+        secondaryColor: profile.secondaryColor,
+        accentColor: profile.accentColor,
+        logoUrl: profile.logoUrl,
+        websiteUrl: profile.websiteUrl,
+        emailFooterText: profile.emailFooterText,
+        supportEmail: profile.supportEmail,
+        supportPhone: profile.supportPhone,
+        brandingEnabled: profile.brandingEnabled,
+      },
+      theme: emailTheme,
     });
 
     // Audit AFTER both the invite-row write and the email send. The email's
@@ -88,6 +139,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
       },
       metadata: {
         advisorId: profile.id,
+        brandingEnabled: emailTheme.brandingEnabled,
         emailSent: emailResult.sent,
         emailNotSentReason: emailResult.sent ? undefined : emailResult.reason,
       },
@@ -128,9 +180,18 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
     const profile = await getAdvisorProfileOrThrow(userId);
 
     // Resend the invitation (this validates ownership and limits)
-    const invitation = await resendInvitation(profile.id, invitationId);
+    const features =
+      (await getSubscriptionFeatures(profile.userId)) ??
+      STARTER_SUBSCRIPTION_FEATURES;
 
-    // Send the new email
+    const invitation = await resendInvitation(profile.id, invitationId, {
+      subscriptionFeatures: {
+        customSubdomainEnabled: features.customSubdomainEnabled,
+      },
+    });
+
+    const emailTheme = invitationEmailThemeForProfile(profile, features);
+
     const advisorInfo = {
       advisorName: profile.user.name || profile.user.firstName + " " + profile.user.lastName || "Advisor",
       advisorJobTitle: profile.jobTitle || "Financial Advisor",
@@ -138,15 +199,30 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       advisorEmail: profile.user.email,
       advisorPhone: profile.phone || "",
       advisorLicenseNumber: profile.licenseNumber || "",
-      advisorLogoUrl: profile.logoUrl || undefined,
     };
 
-    const emailResult = await sendAdvisorInvitationEmail({
+    const emailResult = await sendInvitationEmail({
       clientEmail: invitation.prefillEmail || "",
       advisorInfo,
-      personalMessage: invitation.personalMessage || "I'd like to invite you to complete a family governance assessment.",
+      personalMessage:
+        invitation.personalMessage || DEFAULT_INVITATION_PERSONAL_MESSAGE,
       invitationUrl: invitation.url,
       clientName: invitation.clientName || undefined,
+      profile: {
+        firmName: profile.firmName,
+        brandName: profile.brandName,
+        tagline: profile.tagline,
+        primaryColor: profile.primaryColor,
+        secondaryColor: profile.secondaryColor,
+        accentColor: profile.accentColor,
+        logoUrl: profile.logoUrl,
+        websiteUrl: profile.websiteUrl,
+        emailFooterText: profile.emailFooterText,
+        supportEmail: profile.supportEmail,
+        supportPhone: profile.supportPhone,
+        brandingEnabled: profile.brandingEnabled,
+      },
+      theme: emailTheme,
     });
 
     await writeAudit({
@@ -159,6 +235,7 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       metadata: {
         advisorId: profile.id,
         prefillEmail: invitation.prefillEmail,
+        brandingEnabled: emailTheme.brandingEnabled,
         emailSent: emailResult.sent,
         emailNotSentReason: emailResult.sent ? undefined : emailResult.reason,
       },

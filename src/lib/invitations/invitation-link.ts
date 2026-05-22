@@ -1,0 +1,84 @@
+import "server-only";
+
+import { prisma } from "@/lib/db";
+import {
+  buildAdvisorPortalHostname,
+  getProductionDomain,
+  toTenantHostLabel,
+} from "@/lib/advisor/platform-subdomain";
+import { getPublicAppUrlFromEnv } from "@/lib/public-app-url";
+import type { SubscriptionFeatures } from "@/lib/validation/branding";
+
+export type InvitationLinkContext = {
+  /** Absolute origin, no trailing slash — e.g. https://firm.akilirisk.com */
+  origin: string;
+  /** Whether the link targets an advisor tenant host (white-label subdomain). */
+  usesAdvisorSubdomain: boolean;
+};
+
+function buildAdvisorPortalOrigin(canonicalSlug: string): string {
+  const domain = getProductionDomain();
+  if (!domain) {
+    const port = process.env.PORT?.trim() || "3000";
+    const label = toTenantHostLabel(canonicalSlug);
+    return `http://${label}.localhost:${port}`;
+  }
+  return `https://${buildAdvisorPortalHostname(canonicalSlug)}`;
+}
+
+/**
+ * Resolves the public origin for invitation signup links.
+ * Uses the advisor's verified platform subdomain when white-label is enabled.
+ */
+export async function resolveInvitationLinkContext(
+  advisorProfileId: string,
+  features: Pick<SubscriptionFeatures, "customSubdomainEnabled">
+): Promise<InvitationLinkContext> {
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { id: advisorProfileId },
+    select: {
+      brandingEnabled: true,
+      customDomainEnabled: true,
+      subdomain: {
+        select: {
+          subdomain: true,
+          isActive: true,
+          dnsVerified: true,
+        },
+      },
+    },
+  });
+
+  const defaultOrigin = getPublicAppUrlFromEnv();
+
+  if (
+    !profile?.brandingEnabled ||
+    !profile.customDomainEnabled ||
+    !features.customSubdomainEnabled
+  ) {
+    return { origin: defaultOrigin, usesAdvisorSubdomain: false };
+  }
+
+  const row = profile.subdomain;
+  if (!row?.isActive || !row.dnsVerified || !row.subdomain) {
+    return { origin: defaultOrigin, usesAdvisorSubdomain: false };
+  }
+
+  return {
+    origin: buildAdvisorPortalOrigin(row.subdomain),
+    usesAdvisorSubdomain: true,
+  };
+}
+
+export function buildInvitationSignupUrl(
+  origin: string,
+  inviteToken: string,
+  callbackPath: "/intake" | "/assessment"
+): string {
+  const base = origin.replace(/\/$/, "");
+  const params = new URLSearchParams({
+    invite: inviteToken,
+    callbackUrl: callbackPath,
+  });
+  return `${base}/signup?${params.toString()}`;
+}
