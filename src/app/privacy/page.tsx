@@ -11,8 +11,6 @@ export default function PrivacyPolicyPage() {
     <LegalDocumentPage
       title="Privacy Policy"
       sections={privacyPolicySections}
-      otherPolicyHref="/terms"
-      otherPolicyLabel="Terms of Service"
     />
   );
 }
