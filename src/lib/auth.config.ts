@@ -252,7 +252,7 @@ export default {
         // User hasn't been created, we audit + reject (commit 4 will
         // change this branch).
         // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
-        const user = await findUserByEmail(validation.email, {
+        let user = await findUserByEmail(validation.email, {
           where: { deletedAt: null },
           // Round-11 commit 2.4b: email column is gone; ciphertext is
           // the only stored form. The JWT email field comes from
@@ -260,6 +260,29 @@ export default {
           // return below.
           select: { id: true, emailCiphertext: true, name: true, image: true, role: true },
         });
+
+        if (!user && validation.inviteCodeId) {
+          const { provisionClientFromInviteCode } = await import(
+            "@/lib/invitations/provision-client"
+          );
+          const provisioned = await provisionClientFromInviteCode(
+            validation.inviteCodeId,
+            validation.email,
+          );
+          if (provisioned.ok) {
+            user = await findUserByEmail(validation.email, {
+              where: { deletedAt: null },
+              select: {
+                id: true,
+                emailCiphertext: true,
+                name: true,
+                image: true,
+                role: true,
+              },
+            });
+          }
+        }
+
         if (!user) {
           await writeAudit({
             actor: { userId: null, email: validation.email },
