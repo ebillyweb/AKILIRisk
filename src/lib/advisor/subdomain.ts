@@ -1,5 +1,19 @@
 import { prisma } from '@/lib/db';
 
+/** Shape passed from the server into SubdomainManager after a claim. */
+export interface AdvisorSubdomainSettings {
+  subdomain: string;
+  status: 'active' | 'pending_verification' | 'inactive';
+  dnsVerified: boolean;
+  sslProvisioned: boolean;
+  verificationInstructions?: {
+    type: string;
+    record: string;
+    value: string;
+    instructions: string;
+  };
+}
+
 /**
  * Advisor subdomain data structure
  */
@@ -227,4 +241,73 @@ export function generateSubdomainSuggestions(baseSubdomain: string): string[] {
   });
 
   return suggestions.slice(0, 8); // Return top 8 suggestions
+}
+
+/**
+ * DNS setup instructions for a claimed subdomain.
+ * Requires PRODUCTION_DOMAIN — callers must handle a missing env gracefully.
+ */
+export function generateDNSInstructions(subdomain: string): {
+  type: string;
+  record: string;
+  value: string;
+  instructions: string;
+} {
+  const productionDomain = process.env.PRODUCTION_DOMAIN?.trim();
+  if (!productionDomain) {
+    throw new Error('PRODUCTION_DOMAIN is not configured');
+  }
+
+  return {
+    type: 'CNAME',
+    record: `${subdomain}.${productionDomain}`,
+    value: `app.${productionDomain}`,
+    instructions: `Create a CNAME record pointing ${subdomain}.${productionDomain} to app.${productionDomain}. This will automatically be verified within 15 minutes.`,
+  };
+}
+
+function subdomainSettingsStatus(row: {
+  isActive: boolean;
+  dnsVerified: boolean;
+  sslProvisioned: boolean;
+}): AdvisorSubdomainSettings['status'] {
+  if (row.isActive && row.dnsVerified && row.sslProvisioned) {
+    return 'active';
+  }
+  if (!row.dnsVerified) {
+    return 'pending_verification';
+  }
+  return 'inactive';
+}
+
+/**
+ * Load the advisor's claimed subdomain for settings UI.
+ */
+export async function getAdvisorSubdomainSettings(
+  advisorId: string
+): Promise<AdvisorSubdomainSettings | null> {
+  const row = await prisma.advisorSubdomain.findUnique({
+    where: { advisorId },
+  });
+
+  if (!row) {
+    return null;
+  }
+
+  let verificationInstructions: AdvisorSubdomainSettings['verificationInstructions'];
+  if (!row.dnsVerified) {
+    try {
+      verificationInstructions = generateDNSInstructions(row.subdomain);
+    } catch {
+      verificationInstructions = undefined;
+    }
+  }
+
+  return {
+    subdomain: row.subdomain,
+    status: subdomainSettingsStatus(row),
+    dnsVerified: row.dnsVerified,
+    sslProvisioned: row.sslProvisioned,
+    verificationInstructions,
+  };
 }

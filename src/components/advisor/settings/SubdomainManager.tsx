@@ -23,23 +23,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { SubscriptionFeatures } from '@/lib/validation/branding';
-
-interface SubdomainData {
-  subdomain: string;
-  status: 'active' | 'pending_verification' | 'inactive';
-  dnsVerified: boolean;
-  sslProvisioned: boolean;
-  verificationInstructions?: {
-    type: string;
-    record: string;
-    value: string;
-    instructions: string;
-  };
-}
+import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
 
 interface SubdomainManagerProps {
   features: SubscriptionFeatures;
-  currentSubdomain?: SubdomainData | null;
+  currentSubdomain?: AdvisorSubdomainSettings | null;
   className?: string;
 }
 
@@ -162,7 +150,7 @@ export function SubdomainManager({ features, currentSubdomain, className = '' }:
     toast.success('Copied to clipboard');
   };
 
-  const getStatusBadge = (data: SubdomainData) => {
+  const getStatusBadge = (data: AdvisorSubdomainSettings) => {
     if (data.dnsVerified && data.sslProvisioned) {
       return <Badge variant="default" className="bg-green-600"><Check className="h-3 w-3 mr-1" />Active</Badge>;
     } else if (data.dnsVerified && !data.sslProvisioned) {

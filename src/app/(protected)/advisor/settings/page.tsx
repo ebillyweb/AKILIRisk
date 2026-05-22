@@ -1,4 +1,5 @@
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
+import { getAdvisorSubdomainSettings } from "@/lib/advisor/subdomain";
 import {
   getSubscriptionFeatures,
   STARTER_SUBSCRIPTION_FEATURES,
@@ -7,7 +8,6 @@ import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBran
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft } from "lucide-react";
 
 export default async function AdvisorSettingsPage() {
   const result = await getAdvisorDashboardData();
@@ -25,6 +25,8 @@ export default async function AdvisorSettingsPage() {
   }
 
   const { profile } = result.data!;
+
+  const currentSubdomain = await getAdvisorSubdomainSettings(profile.id);
 
   // Subscription flags gate premium tabs; missing Subscription row should not hide the full branding UI
   const features =
@@ -69,14 +71,16 @@ export default async function AdvisorSettingsPage() {
             logoUploadedAt: profile.logoUploadedAt,
           }}
           features={features}
+          currentSubdomain={currentSubdomain}
         />
 
-        {/* Contact Information (Read-only) */}
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
+        {/* Advisor profile (admin-managed; distinct from client-facing support contacts in branding) */}
+        <div className="rounded-xl border border-border/70 bg-card p-6 shadow-sm">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight">Contact Information</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Your profile</h2>
             <p className="text-sm text-muted-foreground">
-              Shown in client invitation emails. Updated by your administrator.
+              Your name and firm as shown in client invitation emails. Updated by your
+              administrator.
             </p>
           </div>
           <dl className="mt-6 grid gap-4 sm:grid-cols-2">

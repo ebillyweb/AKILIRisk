@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdvisorRole } from '@/lib/advisor/auth';
 import { requireSubdomainAccess, checkRateLimit } from '@/lib/subscription/validation';
-import { validateSubdomainFormat, isSubdomainReserved } from '@/lib/advisor/subdomain';
+import {
+  validateSubdomainFormat,
+  isSubdomainReserved,
+  generateDNSInstructions,
+} from '@/lib/advisor/subdomain';
 import { auditSubdomainClaim } from '@/lib/audit/branding-audit';
 import { prisma } from '@/lib/db';
 
@@ -215,47 +219,5 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-/**
- * Sentinel error class so the POST handler can distinguish missing-env
- * misconfiguration from user-input errors and return 500 instead of 4xx.
- */
-class ServerMisconfigurationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ServerMisconfigurationError';
-  }
-}
-
-/**
- * Generate DNS setup instructions.
- *
- * Throws ServerMisconfigurationError if PRODUCTION_DOMAIN is unset — silently
- * falling back to a placeholder domain would hand advisors DNS records that
- * point at a domain we don't own, which is the original bug that motivated
- * this guard. LOAD_BALANCER_IP is no longer consulted (we issue CNAME records,
- * not A records), so it has been removed entirely.
- */
-function generateDNSInstructions(subdomain: string): {
-  type: string;
-  record: string;
-  value: string;
-  instructions: string;
-} {
-  const productionDomain = process.env.PRODUCTION_DOMAIN?.trim();
-  if (!productionDomain) {
-    console.error(
-      'PRODUCTION_DOMAIN environment variable is not configured; refusing to emit DNS instructions'
-    );
-    throw new ServerMisconfigurationError('Server misconfiguration');
-  }
-
-  return {
-    type: 'CNAME',
-    record: `${subdomain}.${productionDomain}`,
-    value: `app.${productionDomain}`,
-    instructions: `Create a CNAME record pointing ${subdomain}.${productionDomain} to app.${productionDomain}. This will automatically be verified within 15 minutes.`
-  };
 }
 
