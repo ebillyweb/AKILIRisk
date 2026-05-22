@@ -101,7 +101,21 @@ curl -sI https://ebilly-staging.akilirisk.com/ | grep -E 'HTTP|x-matched-path'
 
 ## Logos on tenant hosts
 
-Uploaded logos live in private S3 (`logoS3Key`). The branded landing page must not use raw `logoUrl` S3 links in `<img src>` — browsers cannot fetch them. Use `/api/branded/advisor-logo`, which resolves the advisor from the request `Host` header and streams bytes (see `src/lib/branding/branded-portal-logo.ts`).
+Uploaded logos live in private S3 (`logoS3Key` and/or an S3-shaped `logoUrl`). The branded landing page must not use raw S3 URLs in `<img src>`. It uses `/api/branded/advisor-logo`, which resolves the tenant from the request `Host` header and streams bytes from `S3_BRANDING_BUCKET`.
+
+**Verify after deploy:**
+
+```bash
+curl -sI https://YOUR-SLUG-staging.akilirisk.com/api/branded/advisor-logo | head -5
+```
+
+| Status | Meaning |
+|--------|---------|
+| **200** + `image/*` | OK |
+| **404** | No logo on profile, `brandingEnabled=false`, inactive subdomain, or object missing in `S3_BRANDING_BUCKET` |
+| **500** | AWS misconfiguration on Vercel (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BRANDING_BUCKET`, `S3_BRANDING_REGION`) |
+
+Re-upload the logo on **preview.akilirisk.com** (advisor Settings → Logo) if the DB key points at a deleted object. Preview and tenant hosts must share the same branding S3 env vars.
 
 ## Not implemented
 

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdvisorBySubdomain } from '@/lib/advisor/subdomain';
 import { extractTenantSubdomainLabel } from '@/lib/advisor/platform-subdomain';
+import {
+  isS3ObjectNotFound,
+  resolveBrandingLogoS3Key,
+} from '@/lib/branding/advisor-logo-display';
 import { prisma } from '@/lib/db';
 import { getBrandingLogoObjectBytes } from '@/lib/s3/branding-uploads';
+
+export const runtime = 'nodejs';
 
 /**
  * Public logo bytes for an active tenant subdomain (no session).
@@ -28,20 +34,26 @@ export async function GET(request: NextRequest) {
         id: true,
         brandingEnabled: true,
         logoS3Key: true,
+        logoUrl: true,
         logoContentType: true,
       },
     });
 
-    if (!advisor?.brandingEnabled || !advisor.logoS3Key) {
+    if (!advisor?.brandingEnabled) {
+      return new NextResponse(null, { status: 404 });
+    }
+
+    const logoS3Key = resolveBrandingLogoS3Key(advisor);
+    if (!logoS3Key) {
       return new NextResponse(null, { status: 404 });
     }
 
     const prefix = `advisors/${advisor.id}/`;
-    if (!advisor.logoS3Key.startsWith(prefix)) {
+    if (!logoS3Key.startsWith(prefix)) {
       return new NextResponse(null, { status: 404 });
     }
 
-    const { data, contentType } = await getBrandingLogoObjectBytes(advisor.logoS3Key);
+    const { data, contentType } = await getBrandingLogoObjectBytes(logoS3Key);
 
     return new NextResponse(Buffer.from(data), {
       headers: {
@@ -50,7 +62,12 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Branded advisor logo error:', error);
+    if (isS3ObjectNotFound(error)) {
+      return new NextResponse(null, { status: 404 });
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('Branded advisor logo error:', message);
     return new NextResponse(null, { status: 500 });
   }
 }

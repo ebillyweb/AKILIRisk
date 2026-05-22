@@ -27,4 +27,13 @@ describe('brandedPortalLogoImgSrc', () => {
     const url = 'https://cdn.example.com/logo.png';
     expect(brandedPortalLogoImgSrc({ logoUrl: url })).toBe(url);
   });
+
+  it('uses API route when only logoUrl points at private S3', () => {
+    expect(
+      brandedPortalLogoImgSrc({
+        logoUrl:
+          'https://test-akili-advisor-assets.s3.us-east-2.amazonaws.com/advisors/abc/logos/x.png',
+      })
+    ).toBe(BRANDED_ADVISOR_LOGO_PATH);
+  });
 });
