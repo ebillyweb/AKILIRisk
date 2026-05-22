@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { markInvitationOpened } from "@/lib/invitations/mark-opened";
 
 export async function POST(
   request: NextRequest,
@@ -15,18 +15,7 @@ export async function POST(
       );
     }
 
-    // Rate limit: only update if current status is SENT
-    // Don't downgrade from REGISTERED back to OPENED
-    await prisma.inviteCode.updateMany({
-      where: {
-        id: invitationId,
-        status: "SENT", // Only update if still in SENT status
-      },
-      data: {
-        status: "OPENED",
-        statusUpdatedAt: new Date(),
-      },
-    });
+    await markInvitationOpened(invitationId);
 
     // Return 200 OK regardless (don't expose invitation details)
     return NextResponse.json({ success: true }, { status: 200 });

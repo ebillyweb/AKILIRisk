@@ -84,7 +84,7 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
       ? `<img src="${escapeHtml(theme.logoUrl)}" alt="${safeAdvisorFirmName} Logo" style="max-height: 60px; display: block;">`
       : '';
 
-  const greeting = safeClientName ? `Dear ${safeClientName},` : 'Dear there,';
+  const greeting = safeClientName ? `Dear ${safeClientName},` : "Hello,";
 
   const platformAttribution = theme.showPlatformAttribution
     ? `<p style="margin: 16px 0 0 0; font-size: 12px; color: #666;">

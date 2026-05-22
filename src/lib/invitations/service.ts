@@ -16,6 +16,19 @@ import {
   InvitationStatus
 } from "./types";
 
+export function invitationCanResend(invitation: {
+  status: InvitationStatus;
+  resendCount: number;
+}): boolean {
+  if (invitation.resendCount >= 3) return false;
+  if (invitation.status === InvitationStatus.EXPIRED) return false;
+  if (invitation.status === InvitationStatus.REGISTERED) return false;
+  return (
+    invitation.status === InvitationStatus.SENT ||
+    invitation.status === InvitationStatus.OPENED
+  );
+}
+
 function withDecryptedAdvisorEmail<T extends {
   advisor: {
     id: string;
@@ -110,7 +123,7 @@ export async function createAdvisorInvitation(
   return {
     ...withDecryptedAdvisorEmail(invitation),
     isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
-    canResend: invitation.resendCount < 3,
+    canResend: invitationCanResend(invitation),
     url,
   };
 }
@@ -157,7 +170,7 @@ export async function getAdvisorInvitations(
   return invitations.map((invitation) => ({
     ...withDecryptedAdvisorEmail(invitation),
     isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
-    canResend: invitation.resendCount < 3,
+    canResend: invitationCanResend(invitation),
   }));
 }
 
@@ -192,6 +205,14 @@ export async function resendInvitation(
 
   if (invitation.resendCount >= 3) {
     throw new Error("Maximum resend limit reached");
+  }
+
+  if (invitation.status === InvitationStatus.EXPIRED) {
+    throw new Error("This invitation has expired and cannot be resent.");
+  }
+
+  if (invitation.status === InvitationStatus.REGISTERED) {
+    throw new Error("This client has already registered using this invitation.");
   }
 
   // Update invitation with new expiry and reset status
@@ -233,7 +254,7 @@ export async function resendInvitation(
   return {
     ...withDecryptedAdvisorEmail(updatedInvitation),
     isExpired: false,
-    canResend: updatedInvitation.resendCount < 3,
+    canResend: invitationCanResend(updatedInvitation),
     url,
   };
 }

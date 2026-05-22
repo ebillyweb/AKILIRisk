@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { sendInvitation } from '@/lib/actions/invitations';
 import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from '@/lib/schemas/invitation';
-import { Loader2, Copy, AlertCircle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { ShareableInvitationLinkAlert } from './ShareableInvitationLinkAlert';
 
 // Form-specific schema for client-side validation
 const formSchema = z.object({
@@ -97,39 +98,14 @@ export function InviteClientForm() {
       </div>
 
       {createdLink && !createdLink.emailSent && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/20 p-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div className="space-y-2 min-w-0">
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                Invitation created — email was not sent
-              </p>
-              {createdLink.reason && (
-                <p className="text-xs text-amber-700 dark:text-amber-300">{createdLink.reason}</p>
-              )}
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                Copy this link and share it with your client:
-              </p>
-              <div className="flex gap-2">
-                <Input readOnly value={createdLink.url} className="font-mono text-xs bg-white dark:bg-background" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(createdLink!.url);
-                    toast.success("Link copied to clipboard");
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <Button type="button" variant="secondary" size="sm" onClick={() => { setCreatedLink(null); router.refresh(); }}>
-                Done
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ShareableInvitationLinkAlert
+          url={createdLink.url}
+          reason={createdLink.reason}
+          onDismiss={() => {
+            setCreatedLink(null);
+            router.refresh();
+          }}
+        />
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

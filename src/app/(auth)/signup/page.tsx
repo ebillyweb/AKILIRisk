@@ -1,16 +1,16 @@
 import { redirect } from "next/navigation";
-import { auth, signIn } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
-import { acceptInvitationFromToken } from "@/lib/invitations/accept-invitation";
+import { verifyInviteToken } from "@/lib/invite";
 import {
   ClientSignupInfoPanel,
   InviteAcceptFailure,
 } from "@/components/auth/InviteAcceptFailure";
+import { SignupInviteProcessor } from "@/components/auth/SignupInviteProcessor";
 
 /**
  * Advisor invitation links land here (`/signup?invite=…&callbackUrl=…`).
- * Validates the invite, provisions the client account if needed, issues a
- * one-time magic-link token, and signs the client in immediately.
+ * Records opened (US-5), provisions the client, and signs in via magic link.
  */
 export default async function SignupPage({
   searchParams,
@@ -29,15 +29,18 @@ export default async function SignupPage({
     redirect(safeAfterSignInPath(sp.callbackUrl, "/dashboard"));
   }
 
-  const accepted = await acceptInvitationFromToken(inviteToken, sp.callbackUrl);
-  if (!accepted.ok) {
-    return <InviteAcceptFailure message={accepted.error} />;
+  const inviteCodeId = verifyInviteToken(inviteToken);
+  if (!inviteCodeId) {
+    return (
+      <InviteAcceptFailure message="This invitation link is invalid or has expired." />
+    );
   }
 
-  await signIn("magic-link", {
-    token: accepted.magicLinkToken,
-    redirectTo: accepted.redirectTo,
-  });
-
-  redirect(accepted.redirectTo);
+  return (
+    <SignupInviteProcessor
+      inviteCodeId={inviteCodeId}
+      token={inviteToken}
+      callbackUrl={sp.callbackUrl}
+    />
+  );
 }

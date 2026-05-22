@@ -1,6 +1,5 @@
 import "server-only";
 
-import { InvitationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
 import {
@@ -8,6 +7,7 @@ import {
   issueMagicLinkToken,
 } from "@/lib/auth/magic-link";
 import { verifyInviteToken } from "@/lib/invite";
+import { markInvitationOpened } from "@/lib/invitations/mark-opened";
 import { provisionClientFromInviteCode } from "@/lib/invitations/provision-client";
 
 export type AcceptInvitationResult =
@@ -57,15 +57,7 @@ export async function acceptInvitationFromToken(
     };
   }
 
-  if (invite.status === InvitationStatus.SENT) {
-    await prisma.inviteCode.updateMany({
-      where: { id: inviteCodeId, status: InvitationStatus.SENT },
-      data: {
-        status: InvitationStatus.OPENED,
-        statusUpdatedAt: new Date(),
-      },
-    });
-  }
+  await markInvitationOpened(inviteCodeId);
 
   const provisioned = await provisionClientFromInviteCode(inviteCodeId, email);
   if (!provisioned.ok) {

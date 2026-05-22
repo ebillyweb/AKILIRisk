@@ -48,4 +48,20 @@ describe("renderInvitationTemplate (US-1B)", () => {
     expect(html).toContain("background: #4EA5D9");
     expect(html).not.toContain("Sent via <strong>AKILI Risk Intelligence</strong>");
   });
+
+  it("uses a neutral greeting when client name is omitted", () => {
+    const theme = resolveInvitationEmailTheme({
+      brandingEnabled: false,
+      advancedBrandingEnabled: false,
+      logoUrl: null,
+    });
+
+    const html = renderInvitationTemplate({
+      ...baseAdvisor,
+      theme,
+    });
+
+    expect(html).toContain("Hello,");
+    expect(html).not.toContain("Dear there,");
+  });
 });
