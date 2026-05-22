@@ -38,7 +38,7 @@ import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/q
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
 import { safeDecryptAnswer } from "@/lib/data/response-content";
-import type { Question, Pillar } from "@/lib/assessment/types";
+import type { MissingControl, Question, Pillar } from "@/lib/assessment/types";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
 
 // ── Input shapes ─────────────────────────────────────────────────────────
@@ -254,6 +254,11 @@ export async function rescoreAssessment(
         riskLevel: p.riskLevel.toLowerCase() as import("@/lib/assessment/types").RiskLevel,
       };
     }
+    const aggregatedMissingControls: MissingControl[] = newPillarRows.flatMap((row) => {
+      const raw = row.missingControls;
+      return Array.isArray(raw) ? (raw as MissingControl[]) : [];
+    });
+
     const engine = new RecommendationEngine();
     const newRecs = await engine.matchAndDedupeRecommendations({
       assessmentId,
@@ -263,7 +268,7 @@ export async function rescoreAssessment(
       // The engine's profile_condition handler is a placeholder; passing
       // null is safe.
       householdProfile: null,
-      missingControls: [],
+      missingControls: aggregatedMissingControls,
     });
     void approvalFocusAreas; // currently unused by recompute; reserved for
                              // future customization parity.

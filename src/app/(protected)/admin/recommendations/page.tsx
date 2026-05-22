@@ -53,10 +53,10 @@ export default async function AdminRecommendationsPage({
         <div>
           <h1 className="text-2xl font-bold">Recommendations</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            BRD §4.4: tiered service recommendations + matching rules. Catalog
-            entries are surfaced by the recommendation engine when at least
-            one rule&apos;s weighted conditions exceed 50% on a scored
-            assessment.
+            BRD §4.4: tiered service recommendations + matching rules. Rules
+            include the family-governance UI bank (dma-*, env-*, phys-*, …)
+            and legacy import IDs. Catalog entries surface when weighted
+            conditions exceed 50% on a scored assessment.
           </p>
         </div>
       </div>

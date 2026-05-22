@@ -2,6 +2,10 @@
  * Setup recommendation rules and services for all assessment pillars
  */
 
+import {
+  CYBER_SECURITY_UPLIFT_SERVICE,
+  FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES,
+} from '../src/lib/assessment/engines/family-governance-recommendation-rules';
 import { prisma, disconnectPrismaScript } from './lib/prisma-for-scripts';
 
 const SERVICE_RECOMMENDATIONS = [
@@ -195,10 +199,11 @@ const SERVICE_RECOMMENDATIONS = [
     metadata: {
       services: ['Crisis planning', 'Communication strategies', 'Media relations', 'Recovery protocols']
     }
-  }
+  },
+  CYBER_SECURITY_UPLIFT_SERVICE,
 ];
 
-const RECOMMENDATION_RULES = [
+const LEGACY_RECOMMENDATION_RULES = [
   // Governance Rules
   {
     id: 'governance_charter_needed',
@@ -499,6 +504,12 @@ const RECOMMENDATION_RULES = [
   }
 ];
 
+/** UI worksheet (`dma-*`, `env-*`, …) — see family-governance-recommendation-rules.ts */
+const RECOMMENDATION_RULES = [
+  ...LEGACY_RECOMMENDATION_RULES,
+  ...FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES,
+];
+
 // Advanced scoring rules for enhanced logic
 const SCORING_RULES = [
   // High net worth families get increased governance weight
@@ -659,7 +670,9 @@ async function setupAllPillarRules() {
       });
     }
 
-    console.log(`   ✅ Added ${RECOMMENDATION_RULES.length} recommendation rules`);
+    console.log(
+      `   ✅ Added ${RECOMMENDATION_RULES.length} recommendation rules (${LEGACY_RECOMMENDATION_RULES.length} legacy + ${FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES.length} UI)`
+    );
 
     console.log('\n🎯 Adding scoring rules...');
 

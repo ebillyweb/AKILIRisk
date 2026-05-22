@@ -3,6 +3,7 @@ import { AuthLeftPaneSupplement } from "@/components/auth/AuthLeftPaneSupplement
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldCheck, Sparkles, Waypoints } from "lucide-react";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { SiteFooter } from "@/components/marketing/SiteFooter";
 
 export default function AuthLayout({
   children,
@@ -89,6 +90,8 @@ export default function AuthLayout({
             <div id="main-content" className="flex w-full max-w-xl flex-1 items-center justify-center" tabIndex={-1}>{children}</div>
           </section>
         </div>
+
+        <SiteFooter className="mt-8" />
       </div>
     </div>
   );

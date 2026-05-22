@@ -4,6 +4,7 @@ import { auth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { SiteFooter } from "@/components/marketing/SiteFooter";
 
 export default async function Home() {
   const session = await auth();
@@ -286,6 +287,8 @@ export default async function Home() {
         <p className="mt-10 text-center text-sm text-muted-foreground">
           Built for the advisory process used by AKILI Risk Intelligence.
         </p>
+
+        <SiteFooter className="mt-10" />
       </div>
     </main>
     </>

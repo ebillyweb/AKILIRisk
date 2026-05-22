@@ -18,6 +18,7 @@ import {
 } from "@/lib/assessment/customization";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
+import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
 
 /**
  * Assessment Score API Routes
@@ -331,9 +332,23 @@ export async function POST(
     // Map risk level to Prisma enum
     const prismaRiskLevel = mapRiskLevelToPrisma(scoreResult.riskLevel);
 
-    // Upsert PillarScore and update Assessment status in transaction
-    const [pillarScore] = await prisma.$transaction([
-      prisma.pillarScore.upsert({
+    const recommendationEngine = new RecommendationEngine();
+    const matchedRecommendations = await recommendationEngine.matchAndDedupeRecommendations({
+      assessmentId: id,
+      userId: session.user.id,
+      pillarScores: {
+        [pillar]: {
+          score: scoreResult.score,
+          riskLevel: scoreResult.riskLevel,
+        },
+      },
+      answers,
+      householdProfile: null,
+      missingControls: scoreResult.missingControls,
+    });
+
+    const pillarScore = await prisma.$transaction(async (tx) => {
+      const saved = await tx.pillarScore.upsert({
         where: {
           assessmentId_pillar: {
             assessmentId: id,
@@ -355,17 +370,33 @@ export async function POST(
           missingControls: scoreResult.missingControls as unknown as Prisma.InputJsonValue,
           calculatedAt: new Date(),
         },
-      }),
-      // Only update assessment to COMPLETED if both pillars are complete
-      // For now, keep existing behavior for backwards compatibility
-      prisma.assessment.update({
+      });
+
+      await tx.assessment.update({
         where: { id },
         data: {
           status: "COMPLETED",
           completedAt: new Date(),
         },
-      }),
-    ]);
+      });
+
+      await tx.assessmentRecommendation.deleteMany({ where: { assessmentId: id } });
+
+      if (matchedRecommendations.length > 0) {
+        await tx.assessmentRecommendation.createMany({
+          data: matchedRecommendations.slice(0, 10).map((rec, index) => ({
+            assessmentId: id,
+            serviceRecommendationId: rec.id,
+            triggerReason: { reasons: rec.triggerReason } as unknown as Prisma.InputJsonValue,
+            customization: (rec.customization ?? undefined) as unknown as Prisma.InputJsonValue | undefined,
+            priority: index + 1,
+            status: "PENDING",
+          })),
+        });
+      }
+
+      return saved;
+    });
 
     // Trigger milestone notification for assessment completion (fire-and-forget)
     void triggerMilestoneNotification(assessment.userId, 'Assessment Complete');

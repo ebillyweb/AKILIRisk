@@ -1,0 +1,578 @@
+/**
+ * Production-aligned recommendation catalog for tests.
+ *
+ * Mirrors `scripts/setup-all-pillar-rules.ts` (legacy import rules + UI bank
+ * rules from `family-governance-recommendation-rules.ts`). When seed values
+ * change, update the UI rules module first; fixtures re-export it here.
+ */
+
+import {
+  CYBER_SECURITY_UPLIFT_SERVICE,
+  FAMILY_GOVERNANCE_ALL_NO_EXPECTED_SERVICE_IDS,
+  FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES,
+} from "./family-governance-recommendation-rules";
+import type { RecommendationCondition } from "./recommendation-engine";
+
+export { FAMILY_GOVERNANCE_ALL_NO_EXPECTED_SERVICE_IDS };
+
+export type CatalogService = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  priority: number;
+  estimatedCost?: string;
+  timeframe?: string;
+  provider?: string;
+};
+
+export type CatalogRule = {
+  id: string;
+  serviceRecommendationId: string;
+  ruleName: string;
+  triggerConditions: RecommendationCondition[];
+  priority: number;
+};
+
+/** Worst-case answers from `examples/complete-assessment-example.ts` (highRiskFamily). */
+export const HIGH_RISK_FAMILY_ANSWERS: Record<string, unknown> = {
+  governance_decision_authority: "unclear_undefined",
+  governance_family_charter: "none",
+  governance_next_gen_engagement: "no_preparation",
+  governance_advisor_coordination: "siloed",
+  governance_conflict_resolution: "none",
+  governance_family_meetings: "never",
+
+  cyber_a_password_device_management: "no_ownership",
+  cyber_a_family_online_rules: "none",
+  cyber_c_password_manager: "reused_simple",
+  cyber_c_mfa_enabled: "none",
+
+  physical_home_security: "basic_minimal",
+  physical_travel_security: "none",
+  physical_staff_vetting: "none",
+  physical_emergency_plans: "none",
+  physical_information_protection: "minimal",
+
+  insurance_coverage_review: "never",
+  insurance_umbrella_coverage: "basic",
+  insurance_asset_titling: "individual",
+  insurance_estate_planning: "none_outdated",
+  insurance_business_protection: "minimal",
+
+  geographic_location_assessment: "not_assessed",
+  geographic_climate_preparedness: "unprepared",
+  geographic_political_stability: "not_considered",
+  geographic_regulatory_compliance: "limited",
+  geographic_diversification: "concentrated",
+
+  social_media_policies: "none",
+  social_public_exposure: "unmanaged",
+  social_family_conduct: "none",
+  social_crisis_communication: "none",
+  social_staff_confidentiality: "none",
+};
+
+/** Strong-control answers from `examples/complete-assessment-example.ts` (lowRiskFamily). */
+export const LOW_RISK_FAMILY_ANSWERS: Record<string, unknown> = {
+  governance_decision_authority: "family_council",
+  governance_family_charter: "comprehensive_reviewed",
+  governance_next_gen_engagement: "leadership_pipeline",
+  governance_advisor_coordination: "integrated_team",
+  governance_conflict_resolution: "formal_process",
+  governance_family_meetings: "quarterly",
+
+  physical_home_security: "executive_protection",
+  physical_travel_security: "professional",
+  physical_staff_vetting: "ongoing",
+  physical_emergency_plans: "tested",
+  physical_information_protection: "professional_grade",
+
+  insurance_coverage_review: "annual",
+  insurance_umbrella_coverage: "comprehensive",
+  insurance_asset_titling: "sophisticated",
+  insurance_estate_planning: "dynamic_updated",
+  insurance_business_protection: "sophisticated",
+
+  geographic_location_assessment: "comprehensive_ongoing",
+  geographic_climate_preparedness: "resilient_systems",
+  geographic_political_stability: "dynamic_planning",
+  geographic_regulatory_compliance: "expert_managed",
+  geographic_diversification: "well_diversified",
+
+  social_media_policies: "comprehensive",
+  social_public_exposure: "professional",
+  social_family_conduct: "enforced",
+  social_crisis_communication: "professional",
+  social_staff_confidentiality: "comprehensive",
+};
+
+/** Pillar score keys used by seeded rules (`pillarId` in triggerConditions). */
+export const HIGH_RISK_PILLAR_SCORES: Record<string, { score: number; riskLevel: "critical" | "high" }> = {
+  governance: { score: 0.8, riskLevel: "critical" },
+  "physical-security": { score: 0.5, riskLevel: "critical" },
+  insurance: { score: 0.6, riskLevel: "critical" },
+  "geographic-environmental": { score: 0.7, riskLevel: "critical" },
+  "reputational-social": { score: 0.6, riskLevel: "critical" },
+};
+
+export const GOVERNANCE_REMEDIATION_SERVICE_IDS = [
+  "governance_family_charter",
+  "governance_advisor_coordination",
+  "governance_succession_planning",
+] as const;
+
+export const HIGH_RISK_EXPECTED_SERVICE_IDS = [
+  "governance_family_charter",
+  "governance_advisor_coordination",
+  "governance_succession_planning",
+  "physical_security_assessment",
+  "physical_security_implementation",
+  "physical_emergency_planning",
+  "insurance_comprehensive_review",
+  "insurance_estate_planning",
+  "insurance_asset_protection",
+  "geographic_risk_assessment",
+  "geographic_climate_resilience",
+  "geographic_diversification",
+  "social_reputation_management",
+  "social_media_governance",
+  "social_crisis_response",
+] as const;
+
+export const PRODUCTION_CATALOG_SERVICES: CatalogService[] = [
+  {
+    id: "governance_family_charter",
+    name: "Family Governance Charter Development",
+    description: "Professional facilitation to create comprehensive family governance charter and decision-making framework",
+    category: "governance",
+    priority: 95,
+    estimatedCost: "$15,000 - $40,000",
+    timeframe: "2-4 months",
+    provider: "Family Governance Consultants",
+  },
+  {
+    id: "governance_advisor_coordination",
+    name: "Advisor Coordination and Integration",
+    description: "Establishment of coordinated advisory team with regular communication protocols",
+    category: "governance",
+    priority: 85,
+    estimatedCost: "$8,000 - $20,000",
+    timeframe: "1-2 months",
+  },
+  {
+    id: "governance_succession_planning",
+    name: "Next Generation Development Program",
+    description: "Comprehensive program to prepare next generation for governance responsibilities",
+    category: "governance",
+    priority: 80,
+    estimatedCost: "$25,000 - $75,000",
+    timeframe: "6-12 months",
+  },
+  {
+    id: "physical_security_assessment",
+    name: "Comprehensive Security Assessment",
+    description: "Professional security assessment of all family locations and protocols",
+    category: "security",
+    priority: 90,
+    estimatedCost: "$10,000 - $25,000",
+    timeframe: "2-4 weeks",
+  },
+  {
+    id: "physical_security_implementation",
+    name: "Executive Security Implementation",
+    description: "Implementation of comprehensive physical security measures and protocols",
+    category: "security",
+    priority: 85,
+    estimatedCost: "$50,000 - $200,000",
+    timeframe: "1-3 months",
+  },
+  {
+    id: "physical_emergency_planning",
+    name: "Emergency Response Planning",
+    description: "Development of comprehensive emergency response and evacuation procedures",
+    category: "security",
+    priority: 80,
+    estimatedCost: "$5,000 - $15,000",
+    timeframe: "3-6 weeks",
+  },
+  {
+    id: "insurance_comprehensive_review",
+    name: "Comprehensive Insurance Review",
+    description: "Complete review and optimization of all insurance coverage with gap analysis",
+    category: "insurance",
+    priority: 90,
+    estimatedCost: "$5,000 - $15,000",
+    timeframe: "2-4 weeks",
+  },
+  {
+    id: "insurance_estate_planning",
+    name: "Advanced Estate Planning",
+    description: "Comprehensive estate planning with tax optimization and asset protection strategies",
+    category: "legal",
+    priority: 85,
+    estimatedCost: "$25,000 - $100,000",
+    timeframe: "3-6 months",
+  },
+  {
+    id: "insurance_asset_protection",
+    name: "Asset Protection Strategy",
+    description: "Implementation of sophisticated asset protection and liability mitigation strategies",
+    category: "legal",
+    priority: 80,
+    estimatedCost: "$35,000 - $150,000",
+    timeframe: "4-8 months",
+  },
+  {
+    id: "geographic_risk_assessment",
+    name: "Geographic Risk Assessment",
+    description: "Comprehensive assessment of location-specific risks across all family locations",
+    category: "advisory",
+    priority: 85,
+    estimatedCost: "$8,000 - $20,000",
+    timeframe: "3-6 weeks",
+  },
+  {
+    id: "geographic_climate_resilience",
+    name: "Climate Resilience Planning",
+    description: "Development of climate risk mitigation and adaptation strategies",
+    category: "advisory",
+    priority: 80,
+    estimatedCost: "$15,000 - $40,000",
+    timeframe: "2-4 months",
+  },
+  {
+    id: "geographic_diversification",
+    name: "Geographic Diversification Strategy",
+    description: "Strategic planning for geographic diversification of assets and residences",
+    category: "advisory",
+    priority: 75,
+    estimatedCost: "$20,000 - $50,000",
+    timeframe: "3-6 months",
+  },
+  {
+    id: "social_reputation_management",
+    name: "Family Reputation Management",
+    description: "Comprehensive reputation monitoring and management program",
+    category: "reputation",
+    priority: 85,
+    estimatedCost: "$12,000 - $30,000",
+    timeframe: "Ongoing",
+  },
+  {
+    id: "social_media_governance",
+    name: "Digital Governance and Social Media Policy",
+    description: "Development of family digital governance policies and social media guidelines",
+    category: "reputation",
+    priority: 80,
+    estimatedCost: "$5,000 - $15,000",
+    timeframe: "2-6 weeks",
+  },
+  {
+    id: "social_crisis_response",
+    name: "Crisis Communication Planning",
+    description: "Development of comprehensive crisis communication and reputation recovery strategies",
+    category: "reputation",
+    priority: 75,
+    estimatedCost: "$10,000 - $25,000",
+    timeframe: "4-8 weeks",
+  },
+];
+
+const LEGACY_CATALOG_RULES: CatalogRule[] = [
+  {
+    id: "governance_charter_needed",
+    serviceRecommendationId: "governance_family_charter",
+    ruleName: "Family Charter Development",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "governance_family_charter",
+        operator: "in",
+        value: ["none", "informal"],
+        weight: 4,
+      },
+      {
+        type: "score_threshold",
+        pillarId: "governance",
+        operator: "less_than",
+        value: 2.0,
+        weight: 3,
+      },
+    ],
+    priority: 95,
+  },
+  {
+    id: "governance_advisor_coordination",
+    serviceRecommendationId: "governance_advisor_coordination",
+    ruleName: "Advisor Coordination Improvement",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "governance_advisor_coordination",
+        operator: "in",
+        value: ["siloed", "ad_hoc"],
+        weight: 3,
+      },
+    ],
+    priority: 85,
+  },
+  {
+    id: "governance_succession_planning",
+    serviceRecommendationId: "governance_succession_planning",
+    ruleName: "Next Generation Development",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "governance_next_gen_engagement",
+        operator: "in",
+        value: ["no_preparation", "informal_exposure"],
+        weight: 4,
+      },
+    ],
+    priority: 80,
+  },
+  {
+    id: "physical_security_basic_gaps",
+    serviceRecommendationId: "physical_security_assessment",
+    ruleName: "Security Assessment for Basic Protection",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "physical_home_security",
+        operator: "equals",
+        value: "basic_minimal",
+        weight: 4,
+      },
+      {
+        type: "score_threshold",
+        pillarId: "physical-security",
+        operator: "less_than",
+        value: 1.5,
+        weight: 3,
+      },
+    ],
+    priority: 90,
+  },
+  {
+    id: "physical_security_comprehensive_needed",
+    serviceRecommendationId: "physical_security_implementation",
+    ruleName: "Comprehensive Security Implementation",
+    triggerConditions: [
+      {
+        type: "score_threshold",
+        pillarId: "physical-security",
+        operator: "less_than",
+        value: 2.0,
+        weight: 4,
+      },
+      {
+        type: "answer_match",
+        questionId: "physical_staff_vetting",
+        operator: "in",
+        value: ["none", "basic"],
+        weight: 3,
+      },
+    ],
+    priority: 85,
+  },
+  {
+    id: "physical_emergency_planning_needed",
+    serviceRecommendationId: "physical_emergency_planning",
+    ruleName: "Emergency Planning Development",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "physical_emergency_plans",
+        operator: "in",
+        value: ["none", "basic"],
+        weight: 4,
+      },
+    ],
+    priority: 80,
+  },
+  {
+    id: "insurance_review_overdue",
+    serviceRecommendationId: "insurance_comprehensive_review",
+    ruleName: "Overdue Insurance Review",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "insurance_coverage_review",
+        operator: "in",
+        value: ["never", "crisis_only"],
+        weight: 4,
+      },
+    ],
+    priority: 90,
+  },
+  {
+    id: "insurance_estate_planning_needed",
+    serviceRecommendationId: "insurance_estate_planning",
+    ruleName: "Estate Planning Update",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "insurance_estate_planning",
+        operator: "in",
+        value: ["none_outdated", "basic_current"],
+        weight: 4,
+      },
+      {
+        type: "score_threshold",
+        pillarId: "insurance",
+        operator: "less_than",
+        value: 2.0,
+        weight: 3,
+      },
+    ],
+    priority: 85,
+  },
+  {
+    id: "insurance_asset_protection_needed",
+    serviceRecommendationId: "insurance_asset_protection",
+    ruleName: "Asset Protection Implementation",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "insurance_asset_titling",
+        operator: "in",
+        value: ["individual", "joint_simple"],
+        weight: 4,
+      },
+      {
+        type: "answer_match",
+        questionId: "insurance_umbrella_coverage",
+        operator: "in",
+        value: ["none", "basic"],
+        weight: 3,
+      },
+    ],
+    priority: 80,
+  },
+  {
+    id: "geographic_assessment_needed",
+    serviceRecommendationId: "geographic_risk_assessment",
+    ruleName: "Geographic Risk Assessment",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "geographic_location_assessment",
+        operator: "in",
+        value: ["not_assessed", "basic_awareness"],
+        weight: 4,
+      },
+    ],
+    priority: 85,
+  },
+  {
+    id: "geographic_climate_resilience_needed",
+    serviceRecommendationId: "geographic_climate_resilience",
+    ruleName: "Climate Resilience Planning",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "geographic_climate_preparedness",
+        operator: "in",
+        value: ["unprepared", "basic"],
+        weight: 4,
+      },
+    ],
+    priority: 80,
+  },
+  {
+    id: "geographic_diversification_needed",
+    serviceRecommendationId: "geographic_diversification",
+    ruleName: "Geographic Diversification Strategy",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "geographic_diversification",
+        operator: "equals",
+        value: "concentrated",
+        weight: 4,
+      },
+      {
+        type: "score_threshold",
+        pillarId: "geographic-environmental",
+        operator: "less_than",
+        value: 1.8,
+        weight: 3,
+      },
+    ],
+    priority: 75,
+  },
+  {
+    id: "social_reputation_management_needed",
+    serviceRecommendationId: "social_reputation_management",
+    ruleName: "Reputation Management Program",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "social_public_exposure",
+        operator: "in",
+        value: ["unmanaged", "basic_awareness"],
+        weight: 4,
+      },
+      {
+        type: "score_threshold",
+        pillarId: "reputational-social",
+        operator: "less_than",
+        value: 2.0,
+        weight: 3,
+      },
+    ],
+    priority: 85,
+  },
+  {
+    id: "social_media_governance_needed",
+    serviceRecommendationId: "social_media_governance",
+    ruleName: "Social Media Governance",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "social_media_policies",
+        operator: "in",
+        value: ["none", "informal"],
+        weight: 4,
+      },
+    ],
+    priority: 80,
+  },
+  {
+    id: "social_crisis_planning_needed",
+    serviceRecommendationId: "social_crisis_response",
+    ruleName: "Crisis Communication Planning",
+    triggerConditions: [
+      {
+        type: "answer_match",
+        questionId: "social_crisis_communication",
+        operator: "in",
+        value: ["none", "basic"],
+        weight: 4,
+      },
+    ],
+    priority: 75,
+  },
+];
+
+export const PRODUCTION_CATALOG_RULES: CatalogRule[] = [
+  ...LEGACY_CATALOG_RULES,
+  ...FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES,
+];
+
+const cyberServiceCatalog: CatalogService = {
+  id: CYBER_SECURITY_UPLIFT_SERVICE.id,
+  name: CYBER_SECURITY_UPLIFT_SERVICE.name,
+  description: CYBER_SECURITY_UPLIFT_SERVICE.description,
+  category: CYBER_SECURITY_UPLIFT_SERVICE.category,
+  priority: CYBER_SECURITY_UPLIFT_SERVICE.priority,
+  estimatedCost: CYBER_SECURITY_UPLIFT_SERVICE.estimatedCost,
+  timeframe: CYBER_SECURITY_UPLIFT_SERVICE.timeframe,
+  provider: CYBER_SECURITY_UPLIFT_SERVICE.provider,
+};
+
+export const PRODUCTION_CATALOG_SERVICES_WITH_CYBER: CatalogService[] = [
+  ...PRODUCTION_CATALOG_SERVICES,
+  cyberServiceCatalog,
+];

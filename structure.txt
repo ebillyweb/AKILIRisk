@@ -1,0 +1,636 @@
+.
+├── ASSESSMENT_ENGINE_GUIDE.md
+├── Belvedere_Household_Risk_Profile.xlsx
+├── CLAUDE.md
+├── COMPLETE_DEPLOYMENT_GUIDE.md
+├── CYBERSECURITY_IMPLEMENTATION_GUIDE.md
+├── IMPLEMENTATION_SUMMARY.md
+├── README.md
+├── STRIPE-SPEC.md
+├── Untitled
+├── akili.awsprofile
+├── akili.awsprofile.example
+├── components.json
+├── debug-intake.md
+├── docker-compose.yml
+├── docs
+│   ├── ACCESS-LEVELS-BY-ROLE.md
+│   ├── DEBUGGING_EXECUTION_SUMMARY.md
+│   ├── DEBUG_TOTP_QUICK_START.md
+│   ├── MFA_DEBUGGING_SUMMARY.md
+│   ├── QA-UI-REVIEW-DESKTOP.md
+│   ├── ROLES.md
+│   ├── TECHNICAL_DEBT.md
+│   ├── TOTP_DEBUG_REPORT.md
+│   ├── TOTP_FIX_VERIFICATION.md
+│   └── operations
+│       └── s3-sse-kms.md
+├── eslint.config.mjs
+├── examples
+│   ├── complete-assessment-example.ts
+│   ├── cybersecurity-assessment-example.ts
+│   ├── load-example-env.ts
+│   ├── reputational-social-import-template.csv
+│   ├── resolve-example-user.ts
+│   └── rule-configurations.json
+├── favicon-preview.html
+├── logo
+│   ├── README.md
+│   ├── akili-horizontal-compact-web.jpg
+│   ├── akili-horizontal-compact.jpg
+│   ├── akili-horizontal-compact.png
+│   ├── akili-horizontal-compact.svg
+│   ├── akili-stacked-web.jpg
+│   ├── akili-stacked.jpg
+│   ├── akili-stacked.svg
+│   ├── akili-trademark-only-web.jpg
+│   ├── akili-trademark-only.jpg
+│   ├── akili-trademark-only.svg
+│   ├── convert-to-jpg.js
+│   ├── logo-export-preview.html
+│   ├── package-lock.json
+│   └── package.json
+├── logo-preview.html
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── playwright-report
+│   ├── data
+│   │   ├── 288f3b22ebccdabb6fc7c6439905feee96b3acae.png
+│   │   ├── 3fea8cf8aac1648f54a5d4589978c1ad108fb677.zip
+│   │   ├── 492beeb488911cb51196662bd2a4d9d9dbb7f825.md
+│   │   ├── 49608b659af25e16212f79adde59d09732a7c460.md
+│   │   ├── 76a62c954f8f93753c83e03af767e377d58f8067.md
+│   │   ├── 76aa2470968577ae1ea02a542af3695b96a65ece.webm
+│   │   ├── a543712c1b447a4d35156997734ca4725c303e17.webm
+│   │   ├── a76fe1b0db3c1ac43814a10ac291e007f3baaaf3.zip
+│   │   ├── ad5ed8cb7df361fde0483c40f126a376ae4117c7.webm
+│   │   ├── b13d9fb8850ea788b671adfd436d576ed3ed28af.webm
+│   │   ├── c0522c805ea30cad7c0959e0e9a6463d92eebac1.png
+│   │   ├── d1ad9468425a2629c7c4f49957e51e6fba509678.png
+│   │   ├── e9c965bdeacb1874b9a5161540a07be8c9d1a0f5.zip
+│   │   ├── f76683837a7b59868f8373ae47f1b1ae80aee151.zip
+│   │   └── f79bd429ec4e51acc83d4f7b6ec806d4359130ab.md
+│   ├── index.html
+│   └── trace
+│       ├── assets
+│       ├── codeMirrorModule.DYBRYzYX.css
+│       ├── codicon.DCmgc-ay.ttf
+│       ├── defaultSettingsView.B4dS75f0.css
+│       ├── index.C5466mMT.js
+│       ├── index.CzXZzn5A.css
+│       ├── index.html
+│       ├── manifest.webmanifest
+│       ├── playwright-logo.svg
+│       ├── snapshot.html
+│       ├── sw.bundle.js
+│       ├── uiMode.Btcz36p_.css
+│       ├── uiMode.Vipi55dB.js
+│       ├── uiMode.html
+│       └── xtermModule.DYP7pi_n.css
+├── playwright.config.ts
+├── postcss.config.mjs
+├── prisma
+│   ├── migrations
+│   │   ├── 20260407120000_squashed_baseline
+│   │   ├── 20260408123000_platform_settings_table
+│   │   ├── 20260408140000_assessment_bank_questions
+│   │   ├── 20260409120000_add_omit_maturity_score_when_yes
+│   │   ├── 20260409140000_assessment_bank_risk_relevance
+│   │   ├── 20260409220000_risk_area_taxonomy_governance
+│   │   ├── 20260410000001_cybersecurity_assessment_bank
+│   │   ├── 20260410180000_enhanced_assessment_engine
+│   │   ├── 20260417140000_pillar_sheet_structure
+│   │   ├── 20260417150000_seed_cybersecurity_subcategories
+│   │   ├── 20260418120000_belvedere_pillar_ddl_alignment
+│   │   ├── 20260419120000_questions_is_visible
+│   │   ├── 20260419140000_client_assignment_intake_waiver
+│   │   ├── 20260419140000_pillar_category_kind_intake
+│   │   ├── 20260420120000_intake_why_this_matters_copy
+│   │   ├── 20260420140000_intake_demographic_questions_hidden
+│   │   ├── 20260420180000_household_member_share_name_contact_advisor
+│   │   ├── 20260422_add_invitecode_intake_waived
+│   │   ├── 20260502120000_advisor_portal_access_enabled
+│   │   ├── 20260502180000_user_soft_delete_deleted_at
+│   │   ├── 20260503180000_intake_response_s3_audio
+│   │   ├── 20260503190000_stripe_webhook_dedupe_and_ordering
+│   │   ├── 20260504130000_audit_log
+│   │   ├── 20260504200000_tier_limit_bump_brd_alignment
+│   │   ├── 20260504220000_risk_threshold_settings
+│   │   ├── 20260505150000_recommendation_classification
+│   │   ├── 20260506100000_assessment_last_rescored_at
+│   │   ├── 20260506180000_magic_link_tokens
+│   │   ├── 20260506190000_user_password_nullable
+│   │   ├── 20260507100000_drop_client_profile_pii
+│   │   ├── 20260507120000_household_member_demographic_only
+│   │   ├── 20260507180000_user_email_ciphertext_phase_a
+│   │   ├── 20260508120000_user_email_ciphertext_phase_b_a
+│   │   ├── 20260515120000_user_email_ciphertext_phase_b_b
+│   │   ├── 20260515140000_user_role_super_admin
+│   │   ├── 20260516032425_super_admin_permissions
+│   │   ├── 20260516120000_add_response_content_ciphertext_columns
+│   │   ├── 20260516200000_encrypt_response_content_finalize
+│   │   ├── 20260520120000_household_member_unique_display_label
+│   │   ├── 20260521120000_rename_risk_area_ids_to_brd_naming
+│   │   ├── 20260522120000_reporting_engine
+│   │   ├── 20260523120000_pii_policy
+│   │   └── migration_lock.toml
+│   ├── schema-extensions.prisma
+│   └── schema.prisma
+├── prisma.config.ts
+├── profiles
+│   ├── akili-ebilly.code-profile
+│   └── aws-profile-akili.snippet
+├── public
+│   ├── android-chrome-192x192.png
+│   ├── android-chrome-512x512.png
+│   ├── apple-touch-icon.png
+│   ├── favicon-16x16.png
+│   ├── favicon-32x32.png
+│   ├── favicon-512.png
+│   ├── favicon.png
+│   ├── favicon.svg
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── site.webmanifest
+│   ├── uploads
+│   │   └── intake
+│   ├── vercel.svg
+│   └── window.svg
+├── qa-screens
+│   ├── assessment-desktop.png
+│   ├── dashboard-desktop.png
+│   ├── forgot-desktop.png
+│   ├── forgot-narrow.png
+│   ├── landing-desktop.png
+│   ├── landing-narrow.png
+│   ├── protected-qa
+│   │   ├── assessment-desktop.png
+│   │   ├── assessment-mobile.png
+│   │   ├── dashboard-desktop.png
+│   │   ├── dashboard-mobile.png
+│   │   ├── question-desktop.png
+│   │   ├── question-mobile.png
+│   │   ├── settings-desktop.png
+│   │   └── settings-mobile.png
+│   ├── question-desktop.png
+│   ├── rerun
+│   │   ├── forgot-mobile.png
+│   │   ├── home-mobile.png
+│   │   ├── reset-mobile.png
+│   │   ├── signin-mobile.png
+│   │   └── signup-mobile.png
+│   ├── reset-desktop.png
+│   ├── reset-narrow.png
+│   ├── signin-desktop.png
+│   ├── signin-narrow.png
+│   ├── signup-desktop.png
+│   └── signup-narrow.png
+├── scripts
+│   ├── apply-s3-browser-upload-cors.sh
+│   ├── apply-s3-bucket-encryption.ts
+│   ├── approve-assessment-client.js
+│   ├── aws
+│   │   ├── cognito-pools.manifest.json
+│   │   └── create-cognito-pools.sh
+│   ├── backfill-encrypt-response-content.ts
+│   ├── backfill-reports.ts
+│   ├── backfill-user-email-ciphertext.ts
+│   ├── check-node-version.mjs
+│   ├── cleanup-signup-test-users.js
+│   ├── delete-stripe-webhook-events.js
+│   ├── deploy-complete-assessment-system.ts
+│   ├── fix-cybersecurity-migration-failure.sh
+│   ├── fix-failed-enhanced-migration.sh
+│   ├── get-client-intake-fixture.js
+│   ├── import-all-pillars.ts
+│   ├── import-belvedere-cybersecurity.ts
+│   ├── import-reputational-social-spreadsheet.ts
+│   ├── lib
+│   │   ├── belvedere-workbook.ts
+│   │   ├── prisma-for-scripts.ts
+│   │   └── user-email-ciphertext-cjs.js
+│   ├── load-repo-env.ts
+│   ├── migrate-advisor-subscriptions.js
+│   ├── normalize-user-email-ciphertext.ts
+│   ├── rasterize-favicon-from-svg.mjs
+│   ├── reencrypt-s3-bucket-with-kms.ts
+│   ├── reset-fresh-client-intake.js
+│   ├── s3-browser-upload-cors.json
+│   ├── seed-advisor-test-data.js
+│   ├── seed-assessment-bank.ts
+│   ├── seed-data.sql
+│   ├── seed-intake-test-clients.js
+│   ├── seed-invite-code.js
+│   ├── seed-pillar-ddl-sql.ts
+│   ├── set-admin-role.js
+│   ├── set-advisor-role.js
+│   ├── set-super-admin-role.js
+│   ├── setup-all-pillar-rules.ts
+│   ├── setup-cybersecurity-rules.ts
+│   ├── sql
+│   │   └── belvedere-pillar-ddl-seed.sql
+│   ├── sync-vercel-stripe-env.mjs
+│   ├── sync-vercel-stripe-live-production.mjs
+│   ├── verify-admin-emails.ts
+│   └── wipe-advisor-test-fixtures.js
+├── src
+│   ├── app
+│   │   ├── (auth)
+│   │   ├── (protected)
+│   │   ├── api
+│   │   ├── auth
+│   │   ├── branded
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components
+│   │   ├── admin
+│   │   ├── advisor
+│   │   ├── analytics
+│   │   ├── assessment
+│   │   ├── auth
+│   │   ├── common
+│   │   ├── consent
+│   │   ├── dashboard
+│   │   ├── documents
+│   │   ├── family
+│   │   ├── home
+│   │   ├── intake
+│   │   ├── intelligence
+│   │   ├── layout
+│   │   ├── pipeline
+│   │   ├── profiles
+│   │   ├── providers
+│   │   ├── providers.tsx
+│   │   ├── reports
+│   │   ├── settings
+│   │   ├── theme
+│   │   └── ui
+│   ├── lib
+│   │   ├── actions
+│   │   ├── admin
+│   │   ├── advisor
+│   │   ├── analytics
+│   │   ├── assessment
+│   │   ├── audit
+│   │   ├── auth
+│   │   ├── auth-callback-path.ts
+│   │   ├── auth-edge.ts
+│   │   ├── auth-roles.ts
+│   │   ├── auth-shared.ts
+│   │   ├── auth.config.ts
+│   │   ├── auth.ts
+│   │   ├── billing
+│   │   ├── branding
+│   │   ├── cache
+│   │   ├── client
+│   │   ├── cyber-risk
+│   │   ├── dashboard
+│   │   ├── data
+│   │   ├── db.ts
+│   │   ├── documents
+│   │   ├── email
+│   │   ├── email.test.ts
+│   │   ├── email.ts
+│   │   ├── encryption.test.ts
+│   │   ├── encryption.ts
+│   │   ├── escape-html.ts
+│   │   ├── export
+│   │   ├── family
+│   │   ├── hooks
+│   │   ├── identity-risk
+│   │   ├── intake
+│   │   ├── intelligence
+│   │   ├── invitations
+│   │   ├── invite.ts
+│   │   ├── log-safe-error.ts
+│   │   ├── mfa.test.ts
+│   │   ├── mfa.ts
+│   │   ├── monitoring
+│   │   ├── notifications
+│   │   ├── openai.ts
+│   │   ├── pdf
+│   │   ├── pipeline
+│   │   ├── platform
+│   │   ├── profiles
+│   │   ├── public-app-url.ts
+│   │   ├── rate-limit.ts
+│   │   ├── reminders
+│   │   ├── reports
+│   │   ├── request-ip.ts
+│   │   ├── s3
+│   │   ├── schemas
+│   │   ├── stripe.ts
+│   │   ├── subscription
+│   │   ├── templates
+│   │   ├── theme
+│   │   ├── theming
+│   │   ├── tts
+│   │   ├── utils.ts
+│   │   └── validation
+│   ├── proxy.ts
+│   └── types
+│       └── next-auth.d.ts
+├── staging
+├── structure.txt
+├── tailwind.config.ts
+├── templates
+│   ├── access-controls.docx
+│   ├── behavior-standards.docx
+│   ├── decision-making-authority.docx
+│   ├── documentation-records.docx
+│   ├── family-business-governance.docx
+│   ├── succession-planning.docx
+│   └── trust-estate-governance.docx
+├── test-results
+│   ├── smoke-audit-log-access-adm-257ef-audit-log-redirects-or-404s-chromium
+│   │   ├── error-context.md
+│   │   ├── test-failed-1.png
+│   │   ├── trace.zip
+│   │   └── video.webm
+│   ├── smoke-audit-log-access-adm-55724-in-can-view-admin-audit-log-chromium
+│   │   ├── error-context.md
+│   │   ├── test-failed-1.png
+│   │   ├── trace.zip
+│   │   └── video.webm
+│   ├── smoke-audit-log-csv-export-98f44-e-export-action-self-audits-chromium
+│   │   ├── error-context.md
+│   │   ├── test-failed-1.png
+│   │   ├── trace.zip
+│   │   └── video.webm
+│   └── smoke-audit-log-wiring-aud-45b84-it-row-with-the-right-shape-chromium
+│       ├── error-context.md
+│       ├── test-failed-1.png
+│       ├── trace.zip
+│       └── video.webm
+├── tests
+│   ├── INVENTORY.md
+│   ├── fixtures
+│   │   └── users.ts
+│   ├── page-objects
+│   │   └── SignInPage.ts
+│   ├── playwright-global-setup.ts
+│   └── smoke
+│       ├── admin-advisors.spec.ts
+│       ├── admin-intake-script.spec.ts
+│       ├── advisor-billing-gate.spec.ts
+│       ├── advisor-clients.spec.ts
+│       ├── advisor-intake-review.spec.ts
+│       ├── advisor-logo-endpoint.spec.ts
+│       ├── audit-log-access.spec.ts
+│       ├── audit-log-csv-export.spec.ts
+│       ├── audit-log-wiring.spec.ts
+│       ├── auth-edge-cases.spec.ts
+│       ├── auth.spec.ts
+│       ├── client-dashboard.spec.ts
+│       ├── client-intake.spec.ts
+│       ├── client-portal-branding.spec.ts
+│       ├── default-branding-fallback.spec.ts
+│       ├── intake-audio-endpoint.spec.ts
+│       ├── magic-link-test-helper.spec.ts
+│       ├── public-signup.spec.ts
+│       ├── signin-after-phase-b.spec.ts
+│       ├── stripe-webhook-endpoint.spec.ts
+│       ├── subdomain-routing.spec.ts
+│       └── tenant-isolation.spec.ts
+├── tsconfig.json
+├── tsconfig.tsbuildinfo
+├── vercel.json
+├── vitest.config.ts
+└── vitest.server-only-stub.ts
+
+144 directories, 260 files
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+---
+
+## Testing & Test Credentials
+
+Use these only in local/development. Ensure the app and database are running, then run the seed scripts as needed.
+
+### Seed scripts (run in order if starting fresh)
+
+| Script | Purpose |
+|--------|--------|
+| `node scripts/seed-advisor-test-data.js` | Creates the full test-fixture set: five advisors (`advisor`, `advisor2`, `advisor3`, `advisor4`, `advisor-unbranded`) with profiles, subscriptions, and white-label subdomains where applicable; four clients (`client`, `client-mfa`, `client-fresh`, `client-unbranded`) with profiles, assignments, and (for `client`/`client-mfa`) submitted intake interviews with sample responses. Idempotent. |
+| `node scripts/seed-invite-code.js` | Creates invite codes: **123456** (no prefill) and **BELV01** (prefills `buddy+belvcustomer@ebilly.com` on signup). Run with args: `node scripts/seed-invite-code.js [CODE] [PREFILL_EMAIL]`. |
+| `node scripts/set-advisor-role.js` | Sets `advisor@test.com` role to ADVISOR (run if the advisor menu is missing). |
+| `node scripts/set-admin-role.js` | Creates or updates `buddy@ebilly.com` as ADMIN (designated admin account). |
+
+### Test users & credentials
+
+| Role | Email | Password | Notes |
+|------|--------|----------|--------|
+| **Advisor** | `advisor@test.com` | `testpassword123` | Has advisor profile and assigned client. After login, use Advisor Hub / Portfolio. |
+| **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Independent advisor with no client assignments and a 30-day grace-period subscription. Owns active+verified subdomain `independent-wealth.akilirisk.com`. Used by tenant-isolation + active-subdomain tests. |
+| **Advisor (unverified subdomain, no sub)** | `advisor3@test.com` | `testpassword123` | Owns subdomain `inactive-tenant.akilirisk.com` (`isActive=true, dnsVerified=false`). No Subscription row, so doubles as the billing-gate fixture (lands on `/advisor/billing` from any advisor route). |
+| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Owns subdomain `disabled-tenant.akilirisk.com` (`isActive=false, dnsVerified=true`). Used by the "Subdomain Not Available" test (admin-deactivated state). |
+| **Advisor (no branding)** | `advisor-unbranded@test.com` | `testpassword123` | `brandingEnabled=false` on profile. Used by the default-branding-fallback test. |
+| **Client (no branding)** | `client-unbranded@test.com` | `testpassword123` | Assigned to `advisor-unbranded`; dashboard renders the default Akili lockup instead of advisor white-label. |
+| **Client** | `client@test.com` | `testpassword123` | Seeded with a submitted intake; use for advisor review flow. |
+| **Client (MFA)** | `client-mfa@test.com` | `testpassword123` | Second client for MFA testing. Sign in, go to Settings, enable MFA, then sign out and sign in again to hit the MFA verify screen. |
+| **Client (fresh intake)** | `client-fresh@test.com` | `testpassword123` | No `IntakeInterview` row - used by Playwright intake happy-path tests. Reset between runs with `node scripts/reset-fresh-client-intake.js` (the test suite calls this in `beforeEach`). |
+| **Admin** | `buddy@ebilly.com` | `Test1111!` | Admin access is restricted to this account in code. Run `set-admin-role.js` first. |
+
+### Invitation emails (advisor → client)
+
+Advisor “Send invitation” uses [Resend](https://resend.com) to email the signup link. To actually send emails:
+
+1. Sign up at [resend.com](https://resend.com) and get an API key.
+2. In `.env.local` add:
+   - `RESEND_API_KEY=re_...` (your key)
+   - `FROM_EMAIL=onboarding@resend.dev` (or your verified domain sender)
+
+Without `RESEND_API_KEY`, the invitation is still created and the advisor sees a copyable link to share manually. The UI will show “Invitation created — email was not sent” and the link to copy.
+
+### Invite codes (assessment signup flow)
+
+- **123456** – Generic 6-character code (no email prefill).
+- **BELV01** – Prefills signup email with `buddy+belvcustomer@ebilly.com`.
+
+To create a custom code with optional prefill:
+
+```bash
+node scripts/seed-invite-code.js ABC123 buddy+belvcustomer@ebilly.com
+```
+
+### Testing the main flows
+
+1. **Client assessment flow**  
+   Home → **Start Assessment** → `/start` → enter **BELV01** (or **123456**) → signup (email prefilled if using BELV01) → redirect to intake → complete intake → advisor review → assessment unlocks.
+
+2. **Advisor**  
+   Sign in with `advisor@test.com` / `testpassword123` → you are redirected to Advisor Hub; use Portfolio, Client View, and review links as needed.
+
+3. **Admin**  
+   Run `node scripts/set-admin-role.js`, then sign in with `buddy@ebilly.com` / `Test1111!` → Admin nav (Advisors, Clients, Intake Management, Assessment Management, Settings).
+
+4. **Request a review (no account)**
+   Home → **Request a review here** → `/request-review` → submit the short form → creates a lead and notifies advisors.
+
+5. **MFA verify flow**
+   Sign in as `client-mfa@test.com` / `testpassword123` → **Settings** → **Enable Two-Factor Authentication** (complete setup). Sign out, then sign in again; you should be sent to the MFA verify screen (TOTP or recovery code) before reaching the dashboard.
+
+After changing roles or re-seeding, sign out and sign in again (and hard refresh if needed) so the session and nav reflect the updates.
+
+## End-to-end tests (Playwright)
+
+Smoke tests live in `tests/`. They run against `https://preview.akilirisk.com` by default.
+
+```bash
+npm run test:e2e            # run headless
+npm run test:e2e:headed     # show the browser
+npm run test:e2e:ui         # interactive UI mode
+npm run test:e2e:report     # open the last HTML report
+```
+
+Override the target with `PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`.
+Credentials default to the Test Users table above; override per-role with `ADVISOR_EMAIL`,
+`ADVISOR_PASSWORD`, `CLIENT_EMAIL`, `CLIENT_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+Coverage tracker: `tests/INVENTORY.md`.
+
+The intake spec uses a dedicated seeded user (`client-fresh@test.com`) and resets
+its intake state in `beforeEach` via `scripts/reset-fresh-client-intake.js`. The
+reset reads `DATABASE_URL` from the same env files the seed scripts use, so if
+your local `.env.local` points at the staging Neon DB, the reset hits
+staging too. Run `node scripts/seed-advisor-test-data.js` once to provision the
+user (it's idempotent).
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+{
+  "name": "akilirisk",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "postinstall": "prisma generate",
+    "predev": "node scripts/check-node-version.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e:install": "playwright install",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "seed:assessment-bank": "npx tsx scripts/seed-assessment-bank.ts",
+    "seed:pillar-ddl": "npx tsx scripts/seed-pillar-ddl-sql.ts",
+    "import:reputational-social": "npx tsx scripts/import-reputational-social-spreadsheet.ts",
+    "db:fix-cyber-migration": "bash scripts/fix-cybersecurity-migration-failure.sh",
+    "db:fix-enhanced-migration": "bash scripts/fix-failed-enhanced-migration.sh",
+    "db:backfill-advisor-subscriptions": "node scripts/migrate-advisor-subscriptions.js",
+    "db:backfill-user-email-ciphertext": "npx tsx scripts/backfill-user-email-ciphertext.ts",
+    "env:vercel:link": "npx vercel link",
+    "env:vercel": "npx vercel env pull .env.local",
+    "env:vercel:preview": "npx vercel env pull .env.local --environment preview",
+    "env:vercel:production": "npx vercel env pull .env.local --environment production",
+    "env:vercel:sync-stripe": "node scripts/sync-vercel-stripe-env.mjs",
+    "env:vercel:sync-stripe-live-production": "node scripts/sync-vercel-stripe-live-production.mjs"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
+    "@aws-sdk/client-s3": "^3.1009.0",
+    "@aws-sdk/s3-request-presigner": "^3.1009.0",
+    "@hookform/resolvers": "^5.2.2",
+    "@prisma/adapter-pg": "^7.4.0",
+    "@prisma/client": "^7.7.0",
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-collapsible": "^1.1.12",
+    "@react-pdf/renderer": "^4.3.2",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-table": "^8.21.3",
+    "archiver": "^7.0.1",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "docxtemplater": "^3.68.3",
+    "dotenv": "^17.3.1",
+    "lucide-react": "^0.575.0",
+    "next": "16.1.6",
+    "next-auth": "^5.0.0-beta.30",
+    "openai": "^6.29.0",
+    "otplib": "^13.3.0",
+    "pg": "^8.18.0",
+    "pizzip": "^3.2.0",
+    "qrcode": "^1.5.4",
+    "radix-ui": "^1.4.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-dropzone": "^15.0.0",
+    "react-hook-form": "^7.71.1",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.8.0",
+    "resend": "^6.9.2",
+    "stripe": "^20.4.1",
+    "tailwind-merge": "^3.5.0",
+    "use-debounce": "^10.1.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/archiver": "^6.0.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/pg": "^8.16.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "csv-parser": "^3.2.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "prisma": "^7.7.0",
+    "shadcn": "^3.8.5",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.0.18"
+  }
+}
