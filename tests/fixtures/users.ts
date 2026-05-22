@@ -61,8 +61,9 @@ export const USERS: Record<Role, TestUser> = {
     expectedLandingPath: "/advisor/billing",
   },
   /**
-   * Advisor whose subdomain is `disabled-tenant.akilirisk.com`
-   * (`isActive=false, dnsVerified=true`). Subdomain-routing tests do NOT
+   * Advisor whose subdomain slug is `disabled-tenant`
+   * (`isActive=false, dnsVerified=true`). Staging tenant host:
+   * `disabled-tenant-staging.akilirisk.com`. Subdomain-routing tests do NOT
    * sign in as advisor4 today (they only navigate to the host); the
    * fixture exists for future tests that need to authenticate as the
    * deactivated-subdomain owner.

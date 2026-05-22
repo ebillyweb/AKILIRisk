@@ -27,6 +27,14 @@ loadEnv({ path: resolve(root, ".env.local"), quiet: true });
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "https://preview.akilirisk.com";
 
+// Match Vercel Preview: tenant hosts are {slug}-staging.akilirisk.com (see TENANT_SUBDOMAIN_SUFFIX).
+if (
+  !process.env.TENANT_SUBDOMAIN_SUFFIX &&
+  BASE_URL.includes("preview.akilirisk.com")
+) {
+  process.env.TENANT_SUBDOMAIN_SUFFIX = "-staging";
+}
+
 export default defineConfig({
   testDir: "./tests",
   globalSetup: "./tests/playwright-global-setup.ts",

@@ -30,7 +30,8 @@ Use these only in local/development. Ensure the app and database are running, th
 
 | Script | Purpose |
 |--------|--------|
-| `node scripts/seed-advisor-test-data.js` | Creates the full test-fixture set: five advisors (`advisor`, `advisor2`, `advisor3`, `advisor4`, `advisor-unbranded`) with profiles, subscriptions, and white-label subdomains where applicable; four clients (`client`, `client-mfa`, `client-fresh`, `client-unbranded`) with profiles, assignments, and (for `client`/`client-mfa`) submitted intake interviews with sample responses. Idempotent. |
+| `node scripts/seed-advisor-test-data.js` | Creates the full test-fixture set: five advisors (`advisor`, `advisor2`, `advisor3`, `advisor4`, `advisor-unbranded`) with profiles, subscriptions, and white-label subdomain **slugs** where applicable; four clients (`client`, `client-mfa`, `client-fresh`, `client-unbranded`) with profiles, assignments, and (for `client`/`client-mfa`) submitted intake interviews with sample responses. Idempotent. |
+| `node scripts/seed-platform-reserved-subdomains.js` | Upserts platform-reserved slug labels (`preview`, `www`, `app`, …) into `ReservedSubdomains`. Optional; code also blocks these at claim time. |
 | `node scripts/seed-invite-code.js` | Creates invite codes: **123456** (no prefill) and **BELV01** (prefills `buddy+belvcustomer@ebilly.com` on signup). Run with args: `node scripts/seed-invite-code.js [CODE] [PREFILL_EMAIL]`. |
 | `node scripts/set-advisor-role.js` | Sets `advisor@test.com` role to ADVISOR (run if the advisor menu is missing). |
 | `node scripts/set-admin-role.js` | Creates or updates `buddy@ebilly.com` as ADMIN (designated admin account). |
@@ -40,9 +41,9 @@ Use these only in local/development. Ensure the app and database are running, th
 | Role | Email | Password | Notes |
 |------|--------|----------|--------|
 | **Advisor** | `advisor@test.com` | `testpassword123` | Has advisor profile and assigned client. After login, use Advisor Hub / Portfolio. |
-| **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Independent advisor with no client assignments and a 30-day grace-period subscription. Owns active+verified subdomain `independent-wealth.akilirisk.com`. Used by tenant-isolation + active-subdomain tests. |
-| **Advisor (unverified subdomain, no sub)** | `advisor3@test.com` | `testpassword123` | Owns subdomain `inactive-tenant.akilirisk.com` (`isActive=true, dnsVerified=false`). No Subscription row, so doubles as the billing-gate fixture (lands on `/advisor/billing` from any advisor route). |
-| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Owns subdomain `disabled-tenant.akilirisk.com` (`isActive=false, dnsVerified=true`). Used by the "Subdomain Not Available" test (admin-deactivated state). |
+| **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Slug `independent-wealth` (active+verified). On staging Preview: `https://independent-wealth-staging.akilirisk.com`. Production: `https://independent-wealth.akilirisk.com`. |
+| **Advisor (unverified subdomain, no sub)** | `advisor3@test.com` | `testpassword123` | Slug `inactive-tenant` (`isActive=true`, `dnsVerified=false`). Staging tenant host: `inactive-tenant-staging.akilirisk.com`. Billing-gate fixture (no Subscription). |
+| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Slug `disabled-tenant` (`isActive=false`, `dnsVerified=true`). Staging: `disabled-tenant-staging.akilirisk.com` → "Subdomain Not Available". |
 | **Advisor (no branding)** | `advisor-unbranded@test.com` | `testpassword123` | `brandingEnabled=false` on profile. Used by the default-branding-fallback test. |
 | **Client (no branding)** | `client-unbranded@test.com` | `testpassword123` | Assigned to `advisor-unbranded`; dashboard renders the default Akili lockup instead of advisor white-label. |
 | **Client** | `client@test.com` | `testpassword123` | Seeded with a submitted intake; use for advisor review flow. |
@@ -91,15 +92,22 @@ node scripts/seed-invite-code.js ABC123 buddy+belvcustomer@ebilly.com
 
 After changing roles or re-seeding, sign out and sign in again (and hard refresh if needed) so the session and nav reflect the updates.
 
+## White-label subdomains (advisor portals)
+
+Advisors claim a slug under your apex (`PRODUCTION_DOMAIN`, e.g. `akilirisk.com`). **Staging Preview** uses `TENANT_SUBDOMAIN_SUFFIX=-staging` so tenants are `{slug}-staging.akilirisk.com`; **production** uses `{slug}.akilirisk.com`. The platform app stays on `preview.akilirisk.com` (staging) or `www.akilirisk.com` (production).
+
+Full setup (Vercel domains, env vars, tests): **[docs/white-label-subdomains.md](docs/white-label-subdomains.md)**.
+
 ## End-to-end tests (Playwright)
 
-Smoke tests live in `tests/`. They run against `https://preview.akilirisk.com` by default.
+Smoke tests live in `tests/`. They run against `https://preview.akilirisk.com` by default. Subdomain routing tests use `-staging` tenant hostnames automatically when the base URL is preview (see `playwright.config.ts`).
 
 ```bash
 npm run test:e2e            # run headless
 npm run test:e2e:headed     # show the browser
 npm run test:e2e:ui         # interactive UI mode
 npm run test:e2e:report     # open the last HTML report
+npm run test:e2e -- tests/smoke/subdomain-routing.spec.ts
 ```
 
 Override the target with `PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`.

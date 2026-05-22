@@ -180,15 +180,20 @@ Not Implemented (feature exists, not yet covered):
 - ~~`subscriptionQualifiesForPortalEnablement` gate: no-sub advisor redirected to `/advisor/billing`~~ *(covered by `advisor-billing-gate.spec.ts`)*
 - Subscription edge states (UNPAID; CANCELLED with cancelAtPeriodEnd=true; expired GRACE_PERIOD)
 
-Subdomain routing - exercisable via three staging-bound subdomains:
-- `independent-wealth.akilirisk.com` -> advisor2, `isActive=true, dnsVerified=true` -> branded portal renders. *(covered by `subdomain-routing.spec.ts`)*
-- `inactive-tenant.akilirisk.com` -> advisor3, `isActive=true, dnsVerified=false` -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
-- `disabled-tenant.akilirisk.com` -> advisor4, `isActive=false, dnsVerified=true` -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
+Subdomain routing (see `docs/white-label-subdomains.md`). Seeded **slugs**; Playwright builds hosts with `TENANT_SUBDOMAIN_SUFFIX` (default `-staging` when `PLAYWRIGHT_BASE_URL` is `preview.akilirisk.com`):
+- `independent-wealth` (+ suffix) -> advisor2, active+verified -> branded portal. *(covered by `subdomain-routing.spec.ts`)*
+- `inactive-tenant` (+ suffix) -> advisor3, not verified -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
+- `disabled-tenant` (+ suffix) -> advisor4, inactive -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
 
-Not Implemented (subdomain/custom-domain features still pending):
-- Reserved subdomain rejection (`www`, `app`, `api`, `admin` excluded by `extractSubdomain`). E2E test would require binding one of those names in Vercel which is invasive; consider a unit test against `extractSubdomain` instead.
-- `customDomainEnabled` flag: routing logic for non-`*.akilirisk.com` hosts is not implemented in `proxy.ts` (flag-only, no domain mapping).
-- Subdomain claim/validate/release UX (`generateSubdomainSuggestions`, `isSubdomainReserved`, `validateSubdomainFormat`).
+Implemented (subdomain):
+- Claim / check / release UX and API (`SubdomainManager`, `/api/advisor/subdomain/*`).
+- Platform-owned activation (`SUBDOMAIN_AUTO_ACTIVATE`), staging suffix (`TENANT_SUBDOMAIN_SUFFIX`).
+- Reserved labels in code + optional `scripts/seed-platform-reserved-subdomains.js`.
+- Unit tests: `src/lib/advisor/platform-subdomain.test.ts`.
+
+Not Implemented (subdomain/custom-domain):
+- `customDomainEnabled`: bring-your-own domain routing (non-`*.akilirisk.com`).
+- Per-advisor DNS verification jobs (not needed for platform-owned zone).
 
 Not Implemented (no such feature in the app):
 - "Create tenant" admin flow - the platform has no tenant entity separate from `AdvisorProfile`
@@ -216,12 +221,12 @@ _None outstanding. See "Fixed" below._
 ## Fixed
 
 - **Branded portal `<title>` overridden by root metadata** (5184e47). Root
-  metadata hard-coded "Belvedere Risk Management" so Next.js's Metadata API
+  metadata hard-coded "AKILI Risk Management" so Next.js's Metadata API
   rendered it for every route, overriding the inline `<title>` in
   `branded/layout.tsx`. Replaced with a root `title.default + template` and a
   branded `generateMetadata` returning `title.absolute`. Regression test:
   `subdomain-routing.spec.ts` now asserts the page title matches the
-  advisor's brandName on `independent-wealth.akilirisk.com`.
+  advisor's brandName on the active tenant host (`independent-wealth` + `TENANT_SUBDOMAIN_SUFFIX`).
 - **`/intake` landing copy said "10 focused questions" while the wizard
   rendered 18** (45dd46d). Landing now sources the count from
   `loadIntakeScriptQuestions()` - same loader the wizard uses - so admin
@@ -234,7 +239,7 @@ _None outstanding. See "Fixed" below._
   `brandingEnabled` is on and lets the proxy decide;
   `getAdvisorBrandingBySubdomain` gained a defensive guard so an inactive
   row can't render a portal even via a different code path. New seeded
-  fixture (`advisor4` -> `disabled-tenant.akilirisk.com`,
+  fixture (`advisor4` -> slug `disabled-tenant`,
   `isActive=false, dnsVerified=true`) and parameterized
   `subdomain-routing.spec.ts` cases keep both inactive states covered.
 - **Visibility toggle on `/admin/intake/questions` did not refresh** (487d209).

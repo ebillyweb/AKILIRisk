@@ -77,7 +77,18 @@ node scripts/seed-advisor-test-data.js
 node scripts/seed-invite-code.js
 node scripts/set-advisor-role.js
 node scripts/set-admin-role.js
+# Optional: platform-reserved subdomain labels (preview, www, app, …)
+node scripts/seed-platform-reserved-subdomains.js
 ```
+
+### White-label subdomains
+
+Platform-owned tenant hosts under `PRODUCTION_DOMAIN` (see `docs/white-label-subdomains.md`):
+
+- **Preview / staging:** `TENANT_SUBDOMAIN_SUFFIX=-staging`, `SUBDOMAIN_AUTO_ACTIVATE=true`, platform app at `preview.akilirisk.com`, tenants at `{slug}-staging.akilirisk.com`.
+- **Production:** omit `TENANT_SUBDOMAIN_SUFFIX`; tenants at `{slug}.akilirisk.com`.
+- **Vercel:** `*.akilirisk.com` on one environment at a time (Preview while staging; move to Production at launch). Keep `preview.akilirisk.com` on Preview only.
+- **Code:** `src/lib/advisor/platform-subdomain.ts`, `src/proxy.ts`, `/api/advisor/subdomain/claim`.
 
 ## Architecture & Structure
 
@@ -122,9 +133,9 @@ Use these credentials for local development testing:
 | Role | Email | Password | Notes |
 |------|--------|----------|--------|
 | **Advisor** | `advisor@test.com` | `testpassword123` | Access Advisor Hub/Portfolio |
-| **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Independent tenant; grace-period subscription; no client assignments. Owns active+verified subdomain `independent-wealth.akilirisk.com`. Used by tenant-isolation + active-subdomain tests. |
-| **Advisor (unverified subdomain)** | `advisor3@test.com` | `testpassword123` | Owns subdomain `inactive-tenant.akilirisk.com` (`isActive=true, dnsVerified=false`). Also the no-Subscription billing-gate fixture used by `tests/smoke/advisor-billing-gate.spec.ts` and `tests/fixtures/users.ts`. |
-| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Owns subdomain `disabled-tenant.akilirisk.com` (`isActive=false, dnsVerified=true`). |
+| **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Slug `independent-wealth` (active+verified). Staging URL: `independent-wealth-staging.akilirisk.com`. |
+| **Advisor (unverified subdomain)** | `advisor3@test.com` | `testpassword123` | Slug `inactive-tenant` (not verified). Staging: `inactive-tenant-staging.akilirisk.com`. Billing-gate fixture (`tests/fixtures/users.ts`). |
+| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Slug `disabled-tenant` (inactive). Staging: `disabled-tenant-staging.akilirisk.com`. |
 | **Advisor (no branding)** | `advisor-unbranded@test.com` | `testpassword123` | `brandingEnabled=false` on profile. Used by the default-branding-fallback test. |
 | **Client (no branding)** | `client-unbranded@test.com` | `testpassword123` | Assigned to `advisor-unbranded`; their dashboard renders the default Akili lockup instead of an advisor portal. |
 | **Client** | `client@test.com` | `testpassword123` | Standard client account (SUBMITTED + Approved intake) |

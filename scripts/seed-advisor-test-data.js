@@ -524,8 +524,8 @@ async function main() {
 
   console.log(`✅ Created second advisor (no client assignments): ${advisor2Email}`);
 
-  // Active+verified subdomain for advisor2 -> exercises the proxy.ts branded
-  // rewrite path. Bound in Vercel: `independent-wealth.akilirisk.com` -> staging.
+  // Active+verified subdomain for advisor2 -> exercises proxy branded rewrite.
+  // Staging host (TENANT_SUBDOMAIN_SUFFIX=-staging): independent-wealth-staging.akilirisk.com
   const advisor2Profile = await prisma.advisorProfile.findUnique({
     where: { userId: advisor2User.id },
     select: { id: true }
@@ -544,9 +544,8 @@ async function main() {
   });
   console.log("✅ Created AdvisorSubdomain 'independent-wealth' (active+verified) for advisor2");
 
-  // Third advisor wired to an active-but-unverified subdomain so the proxy
-  // returns the "Subdomain Not Available" 404 page. Bound in Vercel:
-  // `inactive-tenant.akilirisk.com` -> staging.
+  // Third advisor: active but not DNS-verified -> "Subdomain Not Available".
+  // Staging host: inactive-tenant-staging.akilirisk.com (see docs/white-label-subdomains.md).
   const advisor3Email = 'advisor3@test.com';
   const advisor3Ct = userEmailCiphertext(advisor3Email);
   const advisor3User = await prisma.user.upsert({
@@ -595,9 +594,8 @@ async function main() {
   });
   console.log("✅ Created advisor3 + AdvisorSubdomain 'inactive-tenant' (active, NOT verified)");
 
-  // Fourth advisor wired to a verified-but-deactivated subdomain so the
-  // proxy returns "Subdomain Not Available" via the isActive=false branch.
-  // Bound in Vercel: `disabled-tenant.akilirisk.com` -> staging.
+  // Fourth advisor: verified but deactivated -> "Subdomain Not Available".
+  // Staging host: disabled-tenant-staging.akilirisk.com
   const advisor4Email = 'advisor4@test.com';
   const advisor4Ct = userEmailCiphertext(advisor4Email);
   const advisor4User = await prisma.user.upsert({
