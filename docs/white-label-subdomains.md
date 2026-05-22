@@ -99,6 +99,10 @@ curl -sI https://ebilly-staging.akilirisk.com/ | grep -E 'HTTP|x-matched-path'
 # Expect x-matched-path: /branded/client-portal when slug is claimed and active
 ```
 
+## Logos on tenant hosts
+
+Uploaded logos live in private S3 (`logoS3Key`). The branded landing page must not use raw `logoUrl` S3 links in `<img src>` — browsers cannot fetch them. Use `/api/branded/advisor-logo`, which resolves the advisor from the request `Host` header and streams bytes (see `src/lib/branding/branded-portal-logo.ts`).
+
 ## Not implemented
 
 - **Bring-your-own domain** (`customDomainEnabled`): flag only; no routing for non-`*.akilirisk.com` advisor-owned zones.

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Shield, FileText, Users, TrendingUp, ArrowRight, Phone, Mail, Globe } from 'lucide-react';
 import Link from 'next/link';
+import { brandedPortalLogoImgSrc } from '@/lib/branding/branded-portal-logo';
 
 export default async function BrandedClientPortalPage() {
   const headersList = await headers();
@@ -24,6 +25,7 @@ export default async function BrandedClientPortalPage() {
   const brandName = branding.brandName || 'Risk Management Services';
   const primaryColor = branding.primaryColor || '#1a1a2e';
   const secondaryColor = branding.secondaryColor || '#f5f5f5';
+  const logoSrc = brandedPortalLogoImgSrc(branding);
 
   return (
     <div className="min-h-screen">
@@ -34,13 +36,13 @@ export default async function BrandedClientPortalPage() {
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {branding.logoUrl && (
+            {logoSrc ? (
               <img
-                src={branding.logoUrl}
+                src={logoSrc}
                 alt={`${brandName} logo`}
-                className="h-8 w-8 object-contain"
+                className="h-8 w-auto max-w-[160px] object-contain object-left"
               />
-            )}
+            ) : null}
             <div>
               <h1 className="text-xl font-bold" style={{ color: primaryColor }}>
                 {brandName}

@@ -5,6 +5,7 @@ import { getAdvisorBrandingBySubdomain } from '@/lib/advisor/subdomain';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
 import { Toaster } from 'react-hot-toast';
 import '@/app/globals.css';
+import { brandedPortalLogoImgSrc } from '@/lib/branding/branded-portal-logo';
 
 const DEFAULT_BRANDED_TITLE = 'Risk Assessment Portal';
 
@@ -68,12 +69,12 @@ export default async function BrandedLayout({
     );
   }
 
+  const logoSrc = brandedPortalLogoImgSrc(branding);
+
   return (
     <html lang="en">
       <head>
-        {branding.logoUrl && (
-          <link rel="icon" href={branding.logoUrl} />
-        )}
+        {logoSrc && <link rel="icon" href={logoSrc} />}
       </head>
       <body
         className="min-h-screen bg-background font-sans antialiased"
@@ -81,7 +82,7 @@ export default async function BrandedLayout({
           '--advisor-primary': branding.primaryColor || '#1a1a2e',
           '--advisor-secondary': branding.secondaryColor || '#f5f5f5',
           '--advisor-accent': branding.accentColor || '#10b981',
-          '--advisor-logo-url': branding.logoUrl ? `url(${branding.logoUrl})` : 'none',
+          '--advisor-logo-url': logoSrc ? `url(${logoSrc})` : 'none',
           '--advisor-brand-name': `"${branding.brandName || 'Risk Portal'}"`,
         } as React.CSSProperties}
         data-advisor-theme={`advisor-${advisorId}`}
@@ -90,7 +91,8 @@ export default async function BrandedLayout({
         <BrandingProvider
           branding={{
             ...branding,
-            advisorFirmName: branding.brandName // Legacy support
+            logoUrl: logoSrc ?? branding.logoUrl ?? undefined,
+            advisorFirmName: branding.brandName, // Legacy support
           }}
           subdomain={subdomain}
         >
