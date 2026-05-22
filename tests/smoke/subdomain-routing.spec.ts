@@ -18,18 +18,26 @@ import { test, expect } from "@playwright/test";
  *  - advisor3 -> `inactive-tenant` (active, NOT verified)
  *  - advisor4 -> `disabled-tenant` (verified, NOT active)
  *
- * Vercel: each `<sub>.akilirisk.com` is bound to the staging branch.
+ * Vercel: wildcard `*.akilirisk.com` on Preview. When TENANT_SUBDOMAIN_SUFFIX is
+ * set (e.g. `-staging` on preview.akilirisk.com), tenant hosts are
+ * `{slug}-staging.akilirisk.com`, not bare `{slug}.akilirisk.com`.
  */
 
-const ACTIVE_SUBDOMAIN_URL = "https://independent-wealth.akilirisk.com/";
+const TENANT_SUBDOMAIN_SUFFIX = process.env.TENANT_SUBDOMAIN_SUFFIX ?? "";
+
+function tenantPortalUrl(slug: string): string {
+  return `https://${slug}${TENANT_SUBDOMAIN_SUFFIX}.akilirisk.com/`;
+}
+
+const ACTIVE_SUBDOMAIN_URL = tenantPortalUrl("independent-wealth");
 const NOT_AVAILABLE_CASES: { label: string; url: string }[] = [
   {
     label: "active but not dnsVerified",
-    url: "https://inactive-tenant.akilirisk.com/",
+    url: tenantPortalUrl("inactive-tenant"),
   },
   {
     label: "dnsVerified but not active",
-    url: "https://disabled-tenant.akilirisk.com/",
+    url: tenantPortalUrl("disabled-tenant"),
   },
 ];
 

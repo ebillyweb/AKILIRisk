@@ -27,6 +27,8 @@ interface SubdomainManagerProps {
   features: SubscriptionFeatures;
   currentSubdomain?: AdvisorSubdomainSettings | null;
   productionDomain: string;
+  /** e.g. `-staging` on Preview; empty on Production */
+  tenantSubdomainSuffix?: string;
   platformSubdomainsAutoActivate?: boolean;
   className?: string;
 }
@@ -35,12 +37,14 @@ export function SubdomainManager({
   features,
   currentSubdomain,
   productionDomain,
+  tenantSubdomainSuffix = '',
   platformSubdomainsAutoActivate = true,
   className = '',
 }: SubdomainManagerProps) {
   const domainSuffix = `.${productionDomain}`;
-  const portalHost = (slug: string) => `${slug}${domainSuffix}`;
-  const portalUrl = (slug: string) => `https://${portalHost(slug)}`;
+  const portalHost = (canonicalSlug: string) =>
+    `${canonicalSlug}${tenantSubdomainSuffix}${domainSuffix}`;
+  const portalUrl = (canonicalSlug: string) => `https://${portalHost(canonicalSlug)}`;
   const [subdomain, setSubdomain] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -368,7 +372,7 @@ export function SubdomainManager({
                 Claim your custom subdomain to provide clients with a fully branded portal experience.
                 Your subdomain will be:{' '}
                 <strong>
-                  yourname{domainSuffix}
+                  yourname{tenantSubdomainSuffix}{domainSuffix}
                 </strong>
                 {platformSubdomainsAutoActivate && (
                   <> It will be active immediately after you claim it.</>

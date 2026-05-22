@@ -5,6 +5,8 @@ import {
   isPlatformHostname,
   isPlatformSubdomainLabel,
   isSubdomainAutoActivateEnabled,
+  toCanonicalSubdomainSlug,
+  toTenantHostLabel,
 } from './platform-subdomain';
 
 describe('platform-subdomain', () => {
@@ -46,6 +48,17 @@ describe('platform-subdomain', () => {
 
   it('builds portal hostname from PRODUCTION_DOMAIN', () => {
     process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    delete process.env.TENANT_SUBDOMAIN_SUFFIX;
     expect(buildAdvisorPortalHostname('wealthfirm')).toBe('wealthfirm.akilirisk.com');
+  });
+
+  it('appends TENANT_SUBDOMAIN_SUFFIX on preview-style hosts', () => {
+    process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    process.env.TENANT_SUBDOMAIN_SUFFIX = '-staging';
+    expect(toTenantHostLabel('ebilly')).toBe('ebilly-staging');
+    expect(buildAdvisorPortalHostname('ebilly')).toBe('ebilly-staging.akilirisk.com');
+    expect(toCanonicalSubdomainSlug('ebilly-staging')).toBe('ebilly');
+    expect(extractTenantSubdomainLabel('ebilly-staging.akilirisk.com')).toBe('ebilly');
+    expect(extractTenantSubdomainLabel('ebilly.akilirisk.com')).toBeNull();
   });
 });

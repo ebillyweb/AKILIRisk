@@ -27,12 +27,49 @@ export function getProductionDomain(): string | null {
   return domain || null;
 }
 
-export function buildAdvisorPortalHostname(subdomain: string): string {
-  const domain = getProductionDomain();
-  if (!domain) {
-    return `${subdomain}.example.com`;
+/**
+ * Environment-specific host label suffix before the apex (Preview: `-staging` →
+ * `ebilly-staging.akilirisk.com`; Production: `` → `ebilly.akilirisk.com`).
+ * Set TENANT_SUBDOMAIN_SUFFIX on Vercel Preview only.
+ */
+export function getTenantSubdomainSuffix(): string {
+  const raw = process.env.TENANT_SUBDOMAIN_SUFFIX?.trim() ?? '';
+  if (!raw) return '';
+  return raw.startsWith('-') ? raw.toLowerCase() : `-${raw.toLowerCase()}`;
+}
+
+/** DNS/host label for a canonical slug stored in AdvisorSubdomain.subdomain. */
+export function toTenantHostLabel(canonicalSlug: string): string {
+  return `${canonicalSlug.toLowerCase()}${getTenantSubdomainSuffix()}`;
+}
+
+/**
+ * Map incoming host label to DB slug. When a suffix is configured, only labels
+ * ending with that suffix resolve (e.g. preview ignores bare `ebilly.*`).
+ */
+export function toCanonicalSubdomainSlug(hostLabel: string): string | null {
+  const normalized = hostLabel.toLowerCase();
+  const suffix = getTenantSubdomainSuffix();
+
+  if (suffix) {
+    if (!normalized.endsWith(suffix)) return null;
+    const canonical = normalized.slice(0, -suffix.length);
+    if (canonical.length < 3 || canonical.length > 20) return null;
+    if (isPlatformSubdomainLabel(canonical)) return null;
+    return canonical;
   }
-  return `${subdomain}.${domain}`;
+
+  if (isPlatformSubdomainLabel(normalized)) return null;
+  return normalized;
+}
+
+export function buildAdvisorPortalHostname(canonicalSlug: string): string {
+  const domain = getProductionDomain();
+  const label = toTenantHostLabel(canonicalSlug);
+  if (!domain) {
+    return `${label}.example.com`;
+  }
+  return `${label}.${domain}`;
 }
 
 export function buildAdvisorPortalUrl(subdomain: string): string {
@@ -98,15 +135,13 @@ export function extractTenantSubdomainLabel(hostname: string): string | null {
 
   if (host.includes('localhost')) {
     if (parts.length >= 2 && parts[0] !== 'localhost') {
-      const label = parts[0];
-      return isPlatformSubdomainLabel(label) ? null : label;
+      return toCanonicalSubdomainSlug(parts[0]);
     }
     return null;
   }
 
   if (parts.length >= 3) {
-    const label = parts[0];
-    return isPlatformSubdomainLabel(label) ? null : label;
+    return toCanonicalSubdomainSlug(parts[0]);
   }
 
   return null;

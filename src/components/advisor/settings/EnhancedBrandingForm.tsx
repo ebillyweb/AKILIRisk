@@ -76,6 +76,7 @@ interface EnhancedBrandingFormProps {
   features: SubscriptionFeatures;
   currentSubdomain?: AdvisorSubdomainSettings | null;
   productionDomain: string;
+  tenantSubdomainSuffix?: string;
   platformSubdomainsAutoActivate?: boolean;
 }
 
@@ -160,6 +161,7 @@ export function EnhancedBrandingForm({
   features,
   currentSubdomain = null,
   productionDomain,
+  tenantSubdomainSuffix = '',
   platformSubdomainsAutoActivate = true,
 }: EnhancedBrandingFormProps) {
   const xlSidebar = useXlSidebarNav();
@@ -553,6 +555,7 @@ export function EnhancedBrandingForm({
                   features={features}
                   currentSubdomain={currentSubdomain}
                   productionDomain={productionDomain}
+                  tenantSubdomainSuffix={tenantSubdomainSuffix}
                   platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
                 />
               </TabsContent>

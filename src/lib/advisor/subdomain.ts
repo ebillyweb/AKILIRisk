@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/db';
 import {
+  getTenantSubdomainSuffix,
   isPlatformSubdomainLabel,
   isSubdomainAutoActivateEnabled,
+  toTenantHostLabel,
 } from '@/lib/advisor/platform-subdomain';
 
 /** Shape passed from the server into SubdomainManager after a claim. */
@@ -180,12 +182,27 @@ export function validateSubdomainFormat(subdomain: string): { valid: boolean; er
     return { valid: false, error: 'Subdomain must be 3-20 characters long' };
   }
 
-  // Check format
   const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
   if (!subdomainRegex.test(subdomain)) {
     return {
       valid: false,
       error: 'Subdomain can only contain lowercase letters, numbers, and hyphens (not at start/end)'
+    };
+  }
+
+  const envSuffix = getTenantSubdomainSuffix();
+  if (envSuffix && subdomain.endsWith(envSuffix)) {
+    return {
+      valid: false,
+      error: `Do not include "${envSuffix}" in your subdomain — it is added automatically in this environment`,
+    };
+  }
+
+  const hostLabel = toTenantHostLabel(subdomain);
+  if (hostLabel.length > 63) {
+    return {
+      valid: false,
+      error: 'Subdomain is too long for this environment',
     };
   }
 
@@ -269,11 +286,12 @@ export function generateDNSInstructions(subdomain: string): {
     throw new Error('PRODUCTION_DOMAIN is not configured');
   }
 
+  const hostLabel = toTenantHostLabel(subdomain);
   return {
     type: 'CNAME',
-    record: `${subdomain}.${productionDomain}`,
+    record: `${hostLabel}.${productionDomain}`,
     value: `app.${productionDomain}`,
-    instructions: `Create a CNAME record pointing ${subdomain}.${productionDomain} to app.${productionDomain}, or ask your platform administrator to activate the subdomain.`,
+    instructions: `Create a CNAME record pointing ${hostLabel}.${productionDomain} to app.${productionDomain}, or ask your platform administrator to activate the subdomain.`,
   };
 }
 
