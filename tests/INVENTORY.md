@@ -66,6 +66,14 @@ under `tests/`.
 | `tests/smoke/audit-log-wiring.spec.ts` | admin soft-delete advisor → user.soft_delete row with deletedAt + portal access diff | TBD | Implemented |
 | `tests/smoke/audit-log-csv-export.spec.ts` | admin downloads CSV; rows parse; column count matches header | TBD | Implemented |
 | `tests/smoke/audit-log-csv-export.spec.ts` | export action self-audits as data_access.export with filterHash + format=csv | TBD | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-1 send + email normalize; US-9 filters/expire; US-8 resend | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-5 opened API; US-6 invalid invite + register 410; US-7 redeem → intake/assessment | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-4 shareable link when email send fails (send + resend) | Epic 5.1 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 approved client sees six pillar cards on /assessment | US-10–20 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 client opens governance pillar questionnaire | US-10–20 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 hub entry for governance + cyber-digital pillars | US-10–20 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 gate: client without approved intake redirected from /assessment | US-10–20 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 intake-waived invite shows six pillar hub | US-10–20 | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -96,12 +104,13 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Intake "Voice" tab: AudioRecorder upload + transcription *(upload + auth-gated playback covered by `intake-audio-endpoint.spec.ts`; transcription pipeline itself still uncovered)*
 - Intake save-and-resume across sessions (sign out mid-interview, sign back in, resume from last completed question)
 - Submitted intake moves to `IN_REVIEW` state and surfaces on advisor's review queue
-- Advisor approval unlocks assessment (`intakeGate.assessmentUnlocked`)
+- ~~Advisor approval unlocks assessment (`intakeGate.assessmentUnlocked`)~~ *(partial: gate + hub covered by `six-pillar-assessment.spec.ts`; approval action itself still uncovered)*
 - Advisor rejection surfaces "Update needed" hero state on dashboard
-- Advisor waiver path (intake skipped, assessment unlocked)
+- ~~Advisor waiver path (intake skipped, assessment unlocked)~~ *(partial: waived invite hub covered by `six-pillar-assessment.spec.ts`)*
 
 ### Risk Assessments
-- Governance question bank loads on assessment start
+- ~~Six-pillar hub loads for assessment-unlocked client~~ *(covered by `six-pillar-assessment.spec.ts`)*
+- ~~Governance question bank loads on assessment start~~ *(covered by `six-pillar-assessment.spec.ts`)*
 - Family risk module - complete and score
 - Cyber risk module - complete and score
 - Identity risk module - complete and score
@@ -119,7 +128,7 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - ~~Cross-advisor intake review URL is 404 (tenant isolation)~~ *(covered by `advisor-intake-review.spec.ts`)*
 - Pipeline metrics (`activeInFlight`, `totalAssigned`) match expected counts
 - Pipeline filters (by stage, search) update visible rows
-- Send client invitation
+- ~~Send client invitation~~ *(covered by `client-invitation-onboarding.spec.ts`)*
 - Approve/reject intake (action buttons in ReviewSidebar)
 - View client assessment results
 - Cyber risk advisor review

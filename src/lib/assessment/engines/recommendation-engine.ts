@@ -8,6 +8,7 @@
  * - Business rules and thresholds
  */
 
+import { evaluateProfileCondition as evaluateHouseholdProfileCondition } from "@/lib/assessment/profile-condition";
 import { prisma } from '@/lib/db';
 import { RiskLevel } from '../types';
 
@@ -47,7 +48,8 @@ export interface RecommendationCondition {
   questionId?: string;
   operator: 'greater_than' | 'less_than' | 'equals' | 'in' | 'contains';
   value: any;
-  weight?: number; // For weighted conditions
+  field?: string;
+  weight?: number;
 }
 
 export class RecommendationEngine {
@@ -205,8 +207,14 @@ export class RecommendationEngine {
   }
 
   private evaluateProfileCondition(condition: RecommendationCondition, context: RecommendationContext): boolean {
-    // Implement profile condition logic based on your household profile structure
-    return true; // Placeholder
+    const field = condition.field;
+    if (!field) return false;
+    return evaluateHouseholdProfileCondition(
+      context.householdProfile,
+      field,
+      condition.operator as "greater_than" | "less_than" | "equals" | "in",
+      condition.value
+    );
   }
 
   private generateCustomization(rule: RecommendationRule, context: RecommendationContext): Record<string, any> {

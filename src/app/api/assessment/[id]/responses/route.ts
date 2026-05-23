@@ -18,6 +18,7 @@ const saveResponseSchema = z.object({
   answer: z.unknown(),
   skipped: z.boolean().optional(),
   currentQuestionIndex: z.number().optional(),
+  orphanedQuestionIds: z.array(z.string()).optional(),
 });
 
 export async function GET(
@@ -116,7 +117,8 @@ export async function POST(
       );
     }
 
-    const { questionId, pillar, subCategory, answer, skipped, currentQuestionIndex } = validation.data;
+    const { questionId, pillar, subCategory, answer, skipped, currentQuestionIndex, orphanedQuestionIds } =
+      validation.data;
 
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
@@ -162,8 +164,17 @@ export async function POST(
     const answerCiphertext = isSkipped ? null : encryptAnswer(answer);
 
     // Upsert response and update assessment position in a transaction
-    const [response] = await prisma.$transaction([
-      prisma.assessmentResponse.upsert({
+    const [response] = await prisma.$transaction(async (tx) => {
+      if (orphanedQuestionIds && orphanedQuestionIds.length > 0) {
+        await tx.assessmentResponse.deleteMany({
+          where: {
+            assessmentId: id,
+            questionId: { in: orphanedQuestionIds },
+          },
+        });
+      }
+
+      const saved = await tx.assessmentResponse.upsert({
         where: {
           assessmentId_questionId: {
             assessmentId: id,
@@ -183,16 +194,19 @@ export async function POST(
           skipped: skipped ?? false,
           updatedAt: new Date(),
         },
-      }),
-      prisma.assessment.update({
+      });
+
+      await tx.assessment.update({
         where: { id },
         data: {
           currentPillar: pillar,
           currentQuestionIndex: currentQuestionIndex ?? undefined,
           updatedAt: new Date(),
         },
-      }),
-    ]);
+      });
+
+      return [saved];
+    });
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {

@@ -59,7 +59,7 @@ export default function AssessmentCompletePage() {
 
         // Score calculated successfully, wait 2 seconds for effect then redirect
         setTimeout(() => {
-          router.push('/assessment/results');
+          router.push(`/assessment/results?pillar=${encodeURIComponent(pillar)}`);
         }, 2000);
       } catch (err) {
         setIsCalculating(false);

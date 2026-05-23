@@ -1,30 +1,25 @@
-/** Cyber module is merged into the comprehensive assessment (same pillar slug as governance hub). */
-function normalizeScoringPillar(pillar: string): string {
-  if (pillar === "cyber-risk") return "family-governance";
-  return pillar;
-}
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 
 /**
- * Resolve which pillar to score when the client might not know (e.g. stale zustand).
- * Prefer the in-memory store, then the assessment row updated on each save.
+ * Resolve which pillar to score from client store or persisted assessment row.
  */
 export async function resolveScoringPillar(
   assessmentId: string,
   storePillar: string | null | undefined
 ): Promise<string> {
   if (storePillar) {
-    return normalizeScoringPillar(storePillar);
+    return normalizePillarSlug(storePillar);
   }
 
   const res = await fetch(`/api/assessment/${assessmentId}`);
   if (!res.ok) {
-    return "family-governance";
+    return "governance";
   }
 
   const data = (await res.json()) as { currentPillar?: string | null };
   if (typeof data.currentPillar === "string" && data.currentPillar.length > 0) {
-    return normalizeScoringPillar(data.currentPillar);
+    return normalizePillarSlug(data.currentPillar);
   }
 
-  return "family-governance";
+  return "governance";
 }

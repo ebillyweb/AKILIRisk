@@ -145,6 +145,14 @@
 
 ---
 
+## Playwright coverage
+
+- `tests/smoke/client-invitation-onboarding.spec.ts` — Epic 5.1 E2E (US-1, US-4–US-9)
+- `tests/helpers/invitations.ts` — `issueTestInvitation` via `POST /api/test/invitation/issue`
+- `tests/page-objects/AdvisorInvitationsPage.ts` — `/advisor/invitations` UI
+
+Requires `ENABLE_TEST_AUTH=1` on the target deployment for API-backed client redemption tests (same gate as magic-link smokes).
+
 ## Related docs
 
 - [US-1 — Send a Client Invitation](./US-1-send-client-invitation.md)

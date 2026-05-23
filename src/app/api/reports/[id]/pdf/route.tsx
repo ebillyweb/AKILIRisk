@@ -110,10 +110,15 @@ export async function GET(
         draft: false,
       });
     } else {
-      // No PUBLISHED Report: render live with watermark. Per §9 of the
-      // design (sign-off): clients see the watermarked PDF rather than
-      // a "report not yet published" message. Throws if the assessment
-      // hasn't been scored — surface as 404.
+      // No PUBLISHED Report: advisors/admins may preview with watermark;
+      // clients must wait for publish (US-19 / US-20).
+      if (isOwner && !isAdmin && !isAssignedAdvisor) {
+        return NextResponse.json(
+          { error: "Report not yet published by your advisor" },
+          { status: 404 }
+        );
+      }
+
       try {
         renderResult = await renderLivePreviewForAssessment(id);
         renderedDraft = true;

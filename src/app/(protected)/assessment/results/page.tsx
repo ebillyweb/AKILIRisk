@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAssessmentStore } from "@/lib/assessment/store";
 import { resolveScoringPillar } from "@/lib/assessment/scoring-pillar";
 import { ScoreDisplay } from "@/components/assessment/ScoreDisplay";
@@ -21,6 +21,7 @@ import { Loader2, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { pillarDisplayName as getPillarDisplayName, normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
 import type { RiskLevel } from "@/lib/assessment/types";
 
@@ -54,6 +55,8 @@ interface ScoreData {
 
 export default function AssessmentResultsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pillarParam = searchParams.get("pillar");
   const { assessmentId, markPillarComplete, currentPillar, completedPillars } = useAssessmentStore();
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
   /** Pillar we actually loaded/scored (may differ from `currentPillar` if store was stale). */
@@ -82,7 +85,9 @@ export default function AssessmentResultsPage() {
         setIsLoading(true);
         setError(null);
 
-        const targetPillar = await resolveScoringPillar(assessmentId, currentPillar);
+        const targetPillar = normalizePillarSlug(
+          pillarParam ?? (await resolveScoringPillar(assessmentId, currentPillar))
+        );
 
         // Try to fetch existing score for the current pillar
         let response = await fetch(`/api/assessment/${assessmentId}/score?pillar=${targetPillar}`);
@@ -119,18 +124,17 @@ export default function AssessmentResultsPage() {
     }
 
     loadScore();
-  }, [assessmentId, router, markPillarComplete, currentPillar, isReadyForRedirects]);
+  }, [assessmentId, router, markPillarComplete, currentPillar, isReadyForRedirects, pillarParam]);
 
   if (isLoading || !isReadyForRedirects) {
-    const targetPillar = currentPillar || "family-governance";
-    const pillarDisplayName =
-      targetPillar === "identity-risk" ? "identity risk" : "comprehensive risk";
+    const loadingPillar = normalizePillarSlug(pillarParam ?? currentPillar ?? "governance");
+    const loadingLabel = getPillarDisplayName(loadingPillar);
 
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-brand mx-auto" />
-          <p className="text-muted-foreground">Calculating your {pillarDisplayName} assessment results...</p>
+          <p className="text-muted-foreground">Calculating your {loadingLabel} assessment results...</p>
         </div>
       </div>
     );
@@ -179,14 +183,10 @@ export default function AssessmentResultsPage() {
   );
   const answeredPercentage = (answeredCount / totalQuestions) * 100;
 
-  // Determine pillar display info
-  const targetPillar = resultsPillar ?? currentPillar ?? "family-governance";
-  const pillarDisplayName =
-    targetPillar === "identity-risk" ? "Identity Risk" : "Comprehensive Risk";
-  const pillarDescription =
-    targetPillar === "identity-risk"
-      ? "personal information exposure and identity theft vulnerability"
-      : "six pillars: governance, cyber security, physical security, insurance, geographic, and reputational & social risk";
+  const targetPillar = normalizePillarSlug(
+    resultsPillar ?? pillarParam ?? currentPillar ?? "governance"
+  );
+  const pillarLabel = getPillarDisplayName(targetPillar);
 
   const isCyberOnlyScore =
     scoreData.breakdown.length === 1 && scoreData.breakdown[0]?.categoryId === "cyber-digital";
@@ -199,7 +199,7 @@ export default function AssessmentResultsPage() {
           <div className="space-y-3">
             <p className="editorial-kicker">Assessment Complete</p>
             <h1 className="text-4xl font-semibold text-balance sm:text-5xl">
-              {pillarDisplayName} Assessment Results
+              {pillarLabel} Assessment Results
             </h1>
             <p className="text-sm leading-7 text-muted-foreground sm:text-base">
               Completed on {format(new Date(scoreData.completedAt), "MMMM d, yyyy 'at' h:mm a")}
@@ -257,7 +257,7 @@ export default function AssessmentResultsPage() {
           <CardContent className="pt-8">
             <ActionPlan
               missingControls={scoreData.missingControls}
-              pillarName={pillarDisplayName}
+              pillarName={pillarLabel}
               riskLevel={scoreData.riskLevel.toLowerCase() as RiskLevel}
               scoreRubric={scoreRubric}
             />

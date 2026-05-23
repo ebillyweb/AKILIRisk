@@ -279,7 +279,7 @@ export default async function DashboardPage({
                             {risk.palette.label}
                           </Badge>
                           <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                            {risk.score.toFixed(1)} / 10
+                            {risk.score.toFixed(1)} / 3
                           </span>
                         </div>
                         <p className="mt-1 text-sm leading-snug text-muted-foreground line-clamp-2">
@@ -435,7 +435,7 @@ export default async function DashboardPage({
                                       Overall Score
                                     </p>
                                     <p className="text-4xl font-semibold">
-                                      {latestScore.score.toFixed(1)} / 10
+                                      {latestScore.score.toFixed(1)} / 3
                                     </p>
                                   </div>
                                   <Badge

@@ -24,6 +24,7 @@ interface SaveAnswerParams {
   answer: unknown;
   skipped?: boolean;
   currentQuestionIndex?: number;
+  orphanedQuestionIds?: string[];
 }
 
 interface UseAutoSaveReturn {
@@ -88,8 +89,12 @@ export function useAutoSave(assessmentId: string | null): UseAutoSaveReturn {
 
     store.setCurrentPosition(params.pillar, params.currentQuestionIndex ?? 0);
 
-    // Set pending answer for debounced API call
-    setPendingAnswer(params);
+    const orphanedQuestionIds = store.orphanedAnswerIds;
+    setPendingAnswer({
+      ...params,
+      orphanedQuestionIds:
+        orphanedQuestionIds.length > 0 ? orphanedQuestionIds : undefined,
+    });
   };
 
   return {

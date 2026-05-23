@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAssessmentStore } from "@/lib/assessment/store";
 import { useHouseholdProfile } from "@/lib/hooks/useHouseholdProfile";
+import {
+  useAllPillarQuestions,
+  useAssessmentPillarDefinitions,
+  useAssessmentPillarScores,
+} from "@/lib/hooks/useAssessmentPillars";
 import { PillarCard } from "@/components/assessment/PillarCard";
 import { OverallProgress } from "@/components/assessment/ProgressBar";
 import { CustomizationBanner } from "@/components/assessment/CustomizationBanner";
@@ -13,39 +18,29 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 import { getVisibleQuestions } from "@/lib/assessment/branching";
-import { familyGovernancePillar, allQuestions } from "@/lib/assessment/questions";
-import { identityRiskPillar, allIdentityQuestions } from "@/lib/identity-risk/questions";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CustomizationConfig } from "@/lib/assessment/customization";
-import {
-  getVisibleQuestionIds,
-  estimateCompletionMinutes,
-} from "@/lib/assessment/customization";
-import type { GovernanceQuestionWire } from "@/lib/assessment/bank/behaviors";
-import { wireQuestionsToQuestions } from "@/lib/assessment/bank/behaviors";
-import { GOVERNANCE_ASSESSMENT_QUESTIONS_QUERY_KEY } from "@/lib/assessment/bank/query-keys";
+import { ASSESSMENT_PILLAR_IDS, normalizePillarSlug } from "@/lib/assessment/pillar-registry";
+import type { RiskLevel } from "@/lib/assessment/types";
 
 /**
- * Assessment Hub Page
- *
- * Entry point for starting or resuming family governance assessments.
- * Implements server rehydration on mount for save/resume functionality.
- * Enhanced with smart resume to navigate to exact next required question.
+ * Assessment Hub — six-pillar entry point with server-authoritative resume.
  */
-
 export default function AssessmentHubPage() {
   const router = useRouter();
   const store = useAssessmentStore();
-  const setFamilyGovernanceQuestionBank = useAssessmentStore(
-    (s) => s.setFamilyGovernanceQuestionBank,
-  );
+  const pillarDefinitions = useAssessmentPillarDefinitions();
   const [isInitializing, setIsInitializing] = useState(true);
-
-  // Household profile for personalization
   const { profile } = useHouseholdProfile();
+  const { questionsByPillarId, isLoading: questionsLoading } = useAllPillarQuestions();
+  const { data: pillarScores = [] } = useAssessmentPillarScores(store.assessmentId);
 
-  // Fetch assessment data from server for rehydration (with timeout to avoid hanging)
+  const scoredPillarIds = useMemo(
+    () => new Set(pillarScores.map((s) => normalizePillarSlug(s.pillar))),
+    [pillarScores]
+  );
+
   const FETCH_TIMEOUT_MS = 12_000;
   const { data: assessmentData, isError: assessmentFetchError } = useQuery({
     queryKey: ["assessment", store.assessmentId],
@@ -78,77 +73,34 @@ export default function AssessmentHubPage() {
     retry: 1,
   });
 
-  // Fetch customization configuration
-  const { data: customizationConfig, isLoading: customizationLoading } =
-    useQuery<CustomizationConfig>({
-      queryKey: ["assessment-customization"],
-      queryFn: async () => {
-        const response = await fetch("/api/assessment/customization");
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch customization config");
-        }
-
-        return response.json();
-      },
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    });
-
-  const { data: governanceWireResponse } = useQuery<{ questions: GovernanceQuestionWire[] }>({
-    queryKey: GOVERNANCE_ASSESSMENT_QUESTIONS_QUERY_KEY,
+  const { data: customizationConfig } = useQuery<CustomizationConfig>({
+    queryKey: ["assessment-customization"],
     queryFn: async () => {
-      const response = await fetch("/api/assessment/governance-questions");
-      if (!response.ok) {
-        throw new Error("Failed to fetch governance questions");
-      }
+      const response = await fetch("/api/assessment/customization");
+      if (!response.ok) throw new Error("Failed to fetch customization config");
       return response.json();
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const effectiveGovernanceQuestions = useMemo(() => {
-    if (governanceWireResponse?.questions?.length) {
-      return wireQuestionsToQuestions(governanceWireResponse.questions);
-    }
-    return allQuestions;
-  }, [governanceWireResponse]);
-
-  const assessmentPillars = useMemo(
-    () =>
-      [
-        { pillar: familyGovernancePillar, questions: effectiveGovernanceQuestions },
-        { pillar: identityRiskPillar, questions: allIdentityQuestions },
-      ] as const,
-    [effectiveGovernanceQuestions],
-  );
-
-  useEffect(() => {
-    setFamilyGovernanceQuestionBank(effectiveGovernanceQuestions);
-  }, [effectiveGovernanceQuestions, setFamilyGovernanceQuestionBank]);
-
-  // Rehydrate store from server data
   useEffect(() => {
     if (assessmentData && !store.isHydrated) {
       store.loadFromServer(assessmentData);
       store.setHydrated(true);
     }
 
-    // If no assessmentId, mark as hydrated (nothing to load)
     if (!store.assessmentId && !store.isHydrated) {
       store.setHydrated(true);
     }
 
-    // If fetch failed or timed out, stop waiting so the page can render
     if (assessmentFetchError && store.assessmentId && !store.isHydrated) {
       store.setHydrated(true);
     }
 
-    // Defer to avoid synchronous setState in effect (react-hooks/set-state-in-effect)
     const t = setTimeout(() => setIsInitializing(false), 0);
     return () => clearTimeout(t);
   }, [assessmentData, assessmentFetchError, store]);
 
-  // Safety: stop showing loading after max time so the page never hangs
   const LOADING_MAX_MS = 15_000;
   useEffect(() => {
     const id = setTimeout(() => {
@@ -159,90 +111,84 @@ export default function AssessmentHubPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 
-  // Create new assessment mutation
   const createAssessmentMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to create assessment");
-      }
-
+      if (!response.ok) throw new Error("Failed to create assessment");
       return response.json();
-    },
-    onSuccess: (data) => {
-      store.setAssessmentId(data.id);
-      // Will be set by handleStartAssessment based on pillar
-      toast.success("Assessment started");
     },
     onError: () => {
       toast.error("Failed to start assessment");
     },
   });
 
-  const handleStartAssessment = (pillarSlug: string) => {
+  const navigateToPillar = (pillarSlug: string, questionIndex: number) => {
+    store.setCurrentPosition(pillarSlug, questionIndex);
+    router.push(`/assessment/${pillarSlug}/${questionIndex}`);
+  };
+
+  const ensureAssessmentAndGo = (pillarSlug: string, questionIndex: number) => {
+    if (store.assessmentId) {
+      navigateToPillar(pillarSlug, questionIndex);
+      return;
+    }
     createAssessmentMutation.mutate(undefined, {
       onSuccess: (data) => {
-        store.setCurrentPosition(pillarSlug, 0);
-        router.push(`/assessment/${pillarSlug}/0`);
+        store.setAssessmentId(data.id);
+        navigateToPillar(pillarSlug, questionIndex);
       },
     });
   };
 
-  const handleContinueAssessment = (pillarSlug: string) => {
-    // Clean orphaned answers before resuming
-    store.cleanOrphanedAnswers();
+  const resolveResumeIndex = (pillarSlug: string): number => {
+    const serverPillar = assessmentData?.currentPillar
+      ? normalizePillarSlug(assessmentData.currentPillar)
+      : null;
+  const serverIndex =
+      typeof assessmentData?.currentQuestionIndex === "number"
+        ? assessmentData.currentQuestionIndex
+        : null;
 
-    // Find the pillar config
-    const pillarConfig = assessmentPillars.find((p) => p.pillar.slug === pillarSlug);
-    if (!pillarConfig) {
-      toast.error("Pillar configuration not found");
-      return;
+    if (serverPillar === pillarSlug && serverIndex != null && serverIndex >= 0) {
+      return serverIndex;
     }
 
-    // Smart resume: Find next unanswered question using branching logic
-    const pillarQuestions = pillarConfig.questions.filter(
-      (q) => q.pillar === pillarSlug,
-    );
-    const visibleQuestions = getVisibleQuestions(
-      store.answers,
-      pillarQuestions,
-      profile,
-    );
-
-    // Find first unanswered question
-    let nextQuestionIndex = 0;
-    for (let i = 0; i < visibleQuestions.length; i++) {
-      const question = visibleQuestions[i];
-      const answer = store.answers[question.id];
-      if (answer === undefined || answer === null) {
-        nextQuestionIndex = i;
-        break;
-      }
-      // If all questions answered, go to last question (for review)
-      if (i === visibleQuestions.length - 1) {
-        nextQuestionIndex = i;
-      }
+    if (store.currentPillar === pillarSlug && store.currentQuestionIndex != null) {
+      return store.currentQuestionIndex;
     }
 
-    router.push(`/assessment/${pillarSlug}/${nextQuestionIndex}`);
+    return 0;
   };
 
-  // Calculate pillar statistics for each pillar
+  const handleStartAssessment = (pillarSlug: string) => {
+    ensureAssessmentAndGo(pillarSlug, 0);
+  };
+
+  const handleContinueAssessment = (pillarSlug: string) => {
+    store.cleanOrphanedAnswers();
+    ensureAssessmentAndGo(pillarSlug, resolveResumeIndex(pillarSlug));
+  };
+
+  const assessmentPillars = useMemo(
+    () =>
+      pillarDefinitions.map((pillar) => ({
+        pillar,
+        questions: questionsByPillarId.get(pillar.slug) ?? [],
+      })),
+    [pillarDefinitions, questionsByPillarId]
+  );
+
   const pillarStats = assessmentPillars.map(({ pillar, questions }) => {
     const pillarSlug = pillar.slug;
 
-    // Determine pillar status
-    const getPillarStatus = (): 'not-started' | 'in-progress' | 'completed' => {
+    const getPillarStatus = (): "not-started" | "in-progress" | "completed" => {
       if (!store.assessmentId) return "not-started";
-      if (store.completedPillars.includes(pillarSlug)) return "completed";
+      if (scoredPillarIds.has(pillarSlug)) return "completed";
 
-      // Check if any questions from this pillar have been answered
-      const pillarQuestions = questions.filter((q) => q.pillar === pillarSlug);
-      const answeredQuestions = pillarQuestions.filter((q) => {
+      const answeredQuestions = questions.filter((q) => {
         const answer = store.answers[q.id];
         return answer !== undefined && answer !== null;
       });
@@ -250,53 +196,39 @@ export default function AssessmentHubPage() {
       return answeredQuestions.length > 0 ? "in-progress" : "not-started";
     };
 
-    // Calculate question counts using branching logic and customization
-    const pillarQuestions = questions.filter((q) => q.pillar === pillarSlug);
-
-    // Apply customization filtering only for comprehensive (family-governance) pillar
-    const baseQuestions = pillarSlug === "family-governance" &&
-      customizationConfig?.isCustomized &&
-      customizationConfig.visibleSubCategories.length > 0
-        ? pillarQuestions.filter((q) =>
-            customizationConfig.visibleSubCategories.includes(q.subCategory),
-          )
-        : pillarQuestions;
-
-    const visibleQuestions = getVisibleQuestions(
-      store.answers,
-      baseQuestions,
-      profile,
-    );
+    const visibleQuestions = getVisibleQuestions(store.answers, questions, profile);
     const questionsAnswered = visibleQuestions.filter((q) => {
       const answer = store.answers[q.id];
       return answer !== undefined && answer !== null;
     }).length;
-    const totalQuestions = visibleQuestions.length || baseQuestions.length;
+    const totalQuestions = visibleQuestions.length || questions.length;
 
-    // Calculate customized duration if applicable (governance only)
-    const estimatedDuration = pillarSlug === "family-governance" &&
-      customizationConfig?.isCustomized &&
-      customizationConfig.visibleSubCategories.length > 0
-        ? estimateCompletionMinutes(
-            customizationConfig.visibleSubCategories,
-            effectiveGovernanceQuestions,
-          )
-        : pillar.estimatedMinutes;
+    const scoreRow = pillarScores.find(
+      (s) => normalizePillarSlug(s.pillar) === pillarSlug
+    );
 
     return {
       pillar,
       status: getPillarStatus(),
       questionsAnswered,
       totalQuestions,
-      estimatedDuration,
+      estimatedDuration: pillar.estimatedMinutes,
+      score: scoreRow?.score,
+      riskLevel: scoreRow?.riskLevel?.toLowerCase() as RiskLevel | undefined,
     };
   });
 
-  // Calculate focus area count for customization banner (governance only)
-  const focusAreaCount = customizationConfig?.visibleSubCategories.length || 0;
+  const completedPillarSlugs = pillarStats
+    .filter((p) => p.status === "completed")
+    .map((p) => p.pillar.slug);
 
-  // Show loading skeleton until hydrated
-  if (isInitializing || (store.assessmentId && !store.isHydrated)) {
+  const focusAreaCount = customizationConfig?.emphasisAreas.length ?? 0;
+
+  if (
+    isInitializing ||
+    questionsLoading ||
+    (store.assessmentId && !store.isHydrated)
+  ) {
     return (
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="space-y-4">
@@ -309,42 +241,41 @@ export default function AssessmentHubPage() {
     );
   }
 
+  const serverResumePillar = assessmentData?.currentPillar
+    ? normalizePillarSlug(assessmentData.currentPillar)
+    : null;
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
-          <div className="space-y-4 sm:space-y-5">
-            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-              <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
-                Personalized recommendations
-              </div>
-              <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
-                Autosave enabled
-              </div>
-              <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
-                Advisory-style results
-              </div>
-            </div>
+        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+          <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
+            Six risk pillars
+          </div>
+          <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
+            Autosave enabled
+          </div>
+          <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
+            Advisory-style results
           </div>
         </div>
       </section>
 
-      {store.assessmentId && pillarStats.some(p => p.status === "in-progress") && (
+      {store.assessmentId && pillarStats.some((p) => p.status === "in-progress") && (
         <Alert variant="info">
-          <AlertTitle className="text-lg font-semibold">
-            Welcome back
-          </AlertTitle>
+          <AlertTitle className="text-lg font-semibold">Welcome back</AlertTitle>
           <AlertDescription className="space-y-2">
             <p>
-              Continue your assessment from where you left off. Progress is saved automatically.
+              Continue from your last saved position
+              {serverResumePillar
+                ? ` (${pillarDefinitions.find((p) => p.slug === serverResumePillar)?.name ?? serverResumePillar})`
+                : ""}
+              . Progress is saved automatically.
             </p>
             {store.lastSaved && (
               <p className="text-sm flex items-center gap-2">
                 <Clock className="h-3 w-3" />
-                Last saved{" "}
-                {formatDistanceToNow(new Date(store.lastSaved), {
-                  addSuffix: true,
-                })}
+                Last saved {formatDistanceToNow(new Date(store.lastSaved), { addSuffix: true })}
               </p>
             )}
           </AlertDescription>
@@ -355,9 +286,9 @@ export default function AssessmentHubPage() {
         <Card className="bg-background/55">
           <CardContent className="pt-6">
             <OverallProgress
-              completedPillars={store.completedPillars}
-              totalPillars={3}
-              currentPillar={store.currentPillar || undefined}
+              completedPillars={completedPillarSlugs}
+              totalPillars={ASSESSMENT_PILLAR_IDS.length}
+              currentPillar={store.currentPillar || serverResumePillar || undefined}
             />
           </CardContent>
         </Card>
@@ -367,114 +298,80 @@ export default function AssessmentHubPage() {
         <CustomizationBanner
           advisorName={customizationConfig.advisorName}
           focusAreaCount={focusAreaCount}
-          estimatedMinutes={pillarStats.find(p => p.pillar.slug === "family-governance")?.estimatedDuration || 25}
+          estimatedMinutes={ASSESSMENT_PILLAR_IDS.length * 12}
         />
       )}
 
       <section className="space-y-4">
         <div className="space-y-2">
-          <p className="editorial-kicker">Assessment Section</p>
-          <h2 className="text-3xl font-semibold">Structured review</h2>
+          <p className="editorial-kicker">Assessment pillars</p>
+          <h2 className="text-3xl font-semibold">Household risk domains</h2>
         </div>
 
-        <div className="grid gap-4">
-          {pillarStats.map(({ pillar, status, questionsAnswered, totalQuestions }) => (
-            <PillarCard
-              key={pillar.id}
-              pillar={pillar}
-              status={status}
-              questionsAnswered={questionsAnswered}
-              totalQuestions={totalQuestions}
-              onClick={
-                status === "not-started"
-                  ? () => handleStartAssessment(pillar.slug)
-                  : () => handleContinueAssessment(pillar.slug)
-              }
-            />
-          ))}
+        <div className="grid gap-4 md:grid-cols-2" data-testid="assessment-pillar-grid">
+          {pillarStats.map(
+            ({ pillar, status, questionsAnswered, totalQuestions, score, riskLevel }) => (
+              <PillarCard
+                key={pillar.id}
+                pillar={pillar}
+                status={status}
+                questionsAnswered={questionsAnswered}
+                totalQuestions={totalQuestions}
+                score={score}
+                riskLevel={riskLevel}
+                onClick={
+                  status === "not-started"
+                    ? () => handleStartAssessment(pillar.slug)
+                    : () => handleContinueAssessment(pillar.slug)
+                }
+              />
+            )
+          )}
         </div>
       </section>
 
       <section className="hero-surface rounded-[1.75rem] border-t section-divider p-6 sm:p-8">
         <div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-2">
-            <p className="editorial-kicker">Next Step</p>
-            {(() => {
-              const completedCount = pillarStats.filter(p => p.status === "completed").length;
-              const inProgressCount = pillarStats.filter(p => p.status === "in-progress").length;
-              const notStartedCount = pillarStats.filter(p => p.status === "not-started").length;
-
-              if (completedCount === pillarStats.length) {
-                return (
-                  <p className="text-base leading-7 text-muted-foreground">
-                    All assessments complete! Review your results, risk drivers,
-                    and recommended actions for each area.
-                  </p>
-                );
-              } else if (inProgressCount > 0) {
-                return (
-                  <p className="text-base leading-7 text-muted-foreground">
-                    Continue your assessment to receive tailored recommendations
-                    and scored summaries for each risk area.
-                  </p>
-                );
-              } else {
-                return (
-                  <p className="text-base leading-7 text-muted-foreground">
-                    Ready to begin? Start with either assessment pillar. Each takes 15-25 minutes and saves progress automatically.
-                  </p>
-                );
-              }
-            })()}
+            <p className="editorial-kicker">Next step</p>
+            {completedPillarSlugs.length === ASSESSMENT_PILLAR_IDS.length ? (
+              <p className="text-base leading-7 text-muted-foreground">
+                All six pillars are scored. Review your results and download your report once
+                your advisor publishes it.
+              </p>
+            ) : pillarStats.some((p) => p.status === "in-progress") ? (
+              <p className="text-base leading-7 text-muted-foreground">
+                Continue your assessment to receive tailored recommendations for each domain.
+              </p>
+            ) : (
+              <p className="text-base leading-7 text-muted-foreground">
+                Begin with any pillar. Each domain saves progress independently; complete all
+                six to finish the assessment.
+              </p>
+            )}
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            {(() => {
-              const completedCount = pillarStats.filter(p => p.status === "completed").length;
-              const inProgressPillar = pillarStats.find(p => p.status === "in-progress");
+            {completedPillarSlugs.length === ASSESSMENT_PILLAR_IDS.length ? (
+              <>
+                <Button size="lg" onClick={() => router.push("/assessment/results")}>
+                  View results
+                </Button>
+                <Button variant="outline" size="lg" onClick={() => router.push("/dashboard")}>
+                  Dashboard
+                </Button>
+              </>
+            ) : (() => {
+              const resumePillar =
+                (serverResumePillar &&
+                  pillarStats.find((p) => p.pillar.slug === serverResumePillar)) ||
+                pillarStats.find((p) => p.status === "in-progress");
 
-              if (completedCount === pillarStats.length) {
-                return (
-                  <>
-                    <Button
-                      size="lg"
-                      onClick={() => router.push("/assessment/results")}
-                    >
-                      View Results
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => router.push("/dashboard")}
-                    >
-                      Return to Dashboard
-                    </Button>
-                  </>
-                );
-              } else if (inProgressPillar) {
-                return (
-                  <>
-                    <Button
-                      size="lg"
-                      onClick={() => handleContinueAssessment(inProgressPillar.pillar.slug)}
-                    >
-                      Continue {inProgressPillar.pillar.name}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => router.push(`/assessment/${inProgressPillar.pillar.slug}/0`)}
-                    >
-                      Review from Start
-                    </Button>
-                  </>
-                );
-              } else {
-                const governancePillar = pillarStats.find(p => p.pillar.slug === "family-governance");
+              if (resumePillar) {
                 return (
                   <Button
                     size="lg"
-                    onClick={() => governancePillar ? handleStartAssessment(governancePillar.pillar.slug) : undefined}
+                    onClick={() => handleContinueAssessment(resumePillar.pillar.slug)}
                     disabled={createAssessmentMutation.isPending}
                   >
                     {createAssessmentMutation.isPending ? (
@@ -483,11 +380,28 @@ export default function AssessmentHubPage() {
                         Starting...
                       </>
                     ) : (
-                      "Begin Assessment"
+                      `Continue ${resumePillar.pillar.name}`
                     )}
                   </Button>
                 );
               }
+
+              return (
+                <Button
+                  size="lg"
+                  onClick={() => handleStartAssessment("governance")}
+                  disabled={createAssessmentMutation.isPending}
+                >
+                  {createAssessmentMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Starting...
+                    </>
+                  ) : (
+                    "Begin with Governance"
+                  )}
+                </Button>
+              );
             })()}
           </div>
         </div>

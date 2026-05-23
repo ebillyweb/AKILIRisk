@@ -4,17 +4,20 @@ import { prisma } from "@/lib/db";
 import { Prisma, RiskLevel as PrismaRiskLevel } from "@prisma/client";
 import { calculatePillarScore, calculateCustomizedPillarScore } from "@/lib/assessment/scoring";
 import { getVisibleQuestions } from "@/lib/assessment/branching";
-import { familyGovernancePillar } from "@/lib/assessment/questions";
-import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
-import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/questions";
-import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
+import { getPillarAssessmentConfig } from "@/lib/assessment/pillar-config";
+import {
+  normalizePillarSlug,
+  normalizePillarScoreId,
+} from "@/lib/assessment/pillar-registry";
+import {
+  pillarScoresRecordFromRows,
+  syncAssessmentCompletionStatus,
+} from "@/lib/assessment/assessment-completion";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
 import { safeDecryptAnswer } from "@/lib/data/response-content";
-import { Question, Pillar } from "@/lib/assessment/types";
 import {
   getCustomizationConfig,
   getEmphasisMultipliers,
-  getVisibleQuestionIds,
 } from "@/lib/assessment/customization";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
@@ -26,14 +29,6 @@ import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-en
  * POST: Calculate and persist pillar score from assessment responses
  * GET: Retrieve cached score data
  */
-
-/**
- * Map TypeScript RiskLevel string to Prisma enum
- */
-function normalizeScorePillar(pillar: string): string {
-  if (pillar === 'cyber-risk') return 'family-governance';
-  return pillar;
-}
 
 function mapRiskLevelToPrisma(riskLevel: string): PrismaRiskLevel {
   switch (riskLevel) {
@@ -50,22 +45,19 @@ function mapRiskLevelToPrisma(riskLevel: string): PrismaRiskLevel {
   }
 }
 
-/**
- * Helper function to get pillar configuration and questions
- */
-async function getPillarConfig(
-  pillar: string
-): Promise<{ pillarData: Pillar; questions: Question[] } | null> {
-  switch (pillar) {
-    case "family-governance": {
-      const questions = await loadGovernanceQuestionsMerged({ onlyVisible: true });
-      return { pillarData: familyGovernancePillar, questions };
-    }
-    case "identity-risk":
-      return { pillarData: identityRiskPillar, questions: identityRiskQuestions };
-    default:
-      return null;
+/** Resolve a stored PillarScore row (canonical or legacy pillar key). */
+async function findPillarScore(assessmentId: string, pillarSlug: string) {
+  const canonical = normalizePillarSlug(pillarSlug);
+  const candidates = [canonical, pillarSlug, "family-governance"].filter(
+    (v, i, a) => a.indexOf(v) === i
+  );
+  for (const pillar of candidates) {
+    const score = await prisma.pillarScore.findUnique({
+      where: { assessmentId_pillar: { assessmentId, pillar } },
+    });
+    if (score) return score;
   }
+  return null;
 }
 
 /**
@@ -88,7 +80,7 @@ export async function GET(
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const pillar = normalizeScorePillar(searchParams.get('pillar') || 'family-governance');
+    const pillar = normalizePillarSlug(searchParams.get("pillar") || "governance");
 
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
@@ -112,15 +104,7 @@ export async function GET(
       );
     }
 
-    // Load existing score
-    const score = await prisma.pillarScore.findUnique({
-      where: {
-        assessmentId_pillar: {
-          assessmentId: id,
-          pillar: pillar,
-        },
-      },
-    });
+    const score = await findPillarScore(id, pillar);
 
     if (!score) {
       return NextResponse.json(
@@ -187,7 +171,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
-    const pillar = normalizeScorePillar(body.pillar || 'family-governance');
+    const pillar = normalizePillarSlug(body.pillar || "governance");
 
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
@@ -211,8 +195,7 @@ export async function POST(
       );
     }
 
-    // Get pillar configuration
-    const pillarConfig = await getPillarConfig(pillar);
+    const pillarConfig = await getPillarAssessmentConfig(pillar);
     if (!pillarConfig) {
       return NextResponse.json(
         { error: `Unsupported pillar: ${pillar}` },
@@ -243,10 +226,9 @@ export async function POST(
       );
     });
 
-    // Check for customization from linked approval (governance pillar only)
     let customizationConfig = null;
     let customizationMetadata = null;
-    if (pillar === 'family-governance' && assessment.approvalId) {
+    if (assessment.approvalId) {
       const approval = await prisma.intakeApproval.findUnique({
         where: { id: assessment.approvalId },
         select: { focusAreas: true },
@@ -261,18 +243,8 @@ export async function POST(
       }
     }
 
-    // Get visible questions based on customization or standard branching logic
-    let visibleQuestions: Question[];
-    let visibleIds: string[];
-    if (customizationConfig) {
-      // Use customization to filter questions by subcategory (governance only)
-      visibleIds = getVisibleQuestionIds(customizationConfig.visibleSubCategories, pillarConfig.questions);
-      visibleQuestions = pillarConfig.questions.filter(q => visibleIds.includes(q.id));
-    } else {
-      // Standard branching logic
-      visibleQuestions = getVisibleQuestions(answers, pillarConfig.questions);
-      visibleIds = visibleQuestions.map(q => q.id);
-    }
+    const visibleQuestions = getVisibleQuestions(answers, pillarConfig.questions);
+    const visibleIds = visibleQuestions.map((q) => q.id);
 
     // Check minimum completion threshold (50% of visible questions)
     const totalVisibleQuestions = visibleQuestions.length;
@@ -302,62 +274,44 @@ export async function POST(
     // apply to NEW scoring runs only.
     const activeThresholds = await getActiveRiskThresholds();
 
-    // Calculate pillar score - customized or standard
-    let scoreResult;
-    if (pillar === 'identity-risk') {
-      // Use identity risk scoring wrapper
-      scoreResult = calculateIdentityRiskScore(answers, visibleIds, activeThresholds);
-    } else if (customizationConfig) {
-      // Use customization for governance pillar
-      const emphasisMultipliers = getEmphasisMultipliers(customizationConfig);
-      scoreResult = calculateCustomizedPillarScore(
-        answers,
-        pillarConfig.pillarData,
-        pillarConfig.questions,
-        visibleIds,
-        emphasisMultipliers,
-        activeThresholds
-      );
-    } else {
-      // Standard scoring
-      scoreResult = calculatePillarScore(
-        answers,
-        pillarConfig.pillarData,
-        pillarConfig.questions,
-        visibleIds,
-        activeThresholds
-      );
-    }
+    const emphasisMultipliers = customizationConfig
+      ? getEmphasisMultipliers(customizationConfig)
+      : null;
+    const hasEmphasis =
+      emphasisMultipliers != null &&
+      (emphasisMultipliers[pillar] ?? 1) > 1;
+
+    const scoreResult = hasEmphasis
+      ? calculateCustomizedPillarScore(
+          answers,
+          pillarConfig.pillarData,
+          pillarConfig.questions,
+          visibleIds,
+          emphasisMultipliers!,
+          activeThresholds
+        )
+      : calculatePillarScore(
+          answers,
+          pillarConfig.pillarData,
+          pillarConfig.questions,
+          visibleIds,
+          activeThresholds
+        );
 
     // Map risk level to Prisma enum
     const prismaRiskLevel = mapRiskLevelToPrisma(scoreResult.riskLevel);
-
-    const recommendationEngine = new RecommendationEngine();
-    const matchedRecommendations = await recommendationEngine.matchAndDedupeRecommendations({
-      assessmentId: id,
-      userId: session.user.id,
-      pillarScores: {
-        [pillar]: {
-          score: scoreResult.score,
-          riskLevel: scoreResult.riskLevel,
-        },
-      },
-      answers,
-      householdProfile: null,
-      missingControls: scoreResult.missingControls,
-    });
 
     const pillarScore = await prisma.$transaction(async (tx) => {
       const saved = await tx.pillarScore.upsert({
         where: {
           assessmentId_pillar: {
             assessmentId: id,
-            pillar: pillar,
+            pillar,
           },
         },
         create: {
           assessmentId: id,
-          pillar: pillar,
+          pillar,
           score: scoreResult.score,
           riskLevel: prismaRiskLevel,
           breakdown: scoreResult.breakdown as unknown as Prisma.InputJsonValue,
@@ -372,13 +326,29 @@ export async function POST(
         },
       });
 
-      await tx.assessment.update({
-        where: { id },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-        },
+      const allScores = await tx.pillarScore.findMany({
+        where: { assessmentId: id },
+        select: { pillar: true, score: true, riskLevel: true },
       });
+
+      const pillarScoresMap = pillarScoresRecordFromRows(
+        allScores.map((row) => ({
+          pillar: normalizePillarScoreId(row.pillar),
+          score: row.score,
+          riskLevel: row.riskLevel,
+        }))
+      );
+
+      const recommendationEngine = new RecommendationEngine();
+      const matchedRecommendations =
+        await recommendationEngine.matchAndDedupeRecommendations({
+          assessmentId: id,
+          userId: session.user.id,
+          pillarScores: pillarScoresMap,
+          answers,
+          householdProfile: null,
+          missingControls: scoreResult.missingControls,
+        });
 
       await tx.assessmentRecommendation.deleteMany({ where: { assessmentId: id } });
 
@@ -395,18 +365,22 @@ export async function POST(
         });
       }
 
-      return saved;
+      const { allPillarsScored } = await syncAssessmentCompletionStatus(tx, id);
+
+      return { saved, allPillarsScored };
     });
 
-    // Trigger milestone notification for assessment completion (fire-and-forget)
-    void triggerMilestoneNotification(assessment.userId, 'Assessment Complete');
+    if (pillarScore.allPillarsScored) {
+      void triggerMilestoneNotification(assessment.userId, "Assessment Complete");
+    }
 
-    const responseData: any = {
-      score: pillarScore.score,
-      riskLevel: pillarScore.riskLevel,
-      breakdown: pillarScore.breakdown,
-      missingControls: pillarScore.missingControls,
-      completedAt: pillarScore.calculatedAt,
+    const responseData: Record<string, unknown> = {
+      score: pillarScore.saved.score,
+      riskLevel: pillarScore.saved.riskLevel,
+      breakdown: pillarScore.saved.breakdown,
+      missingControls: pillarScore.saved.missingControls,
+      completedAt: pillarScore.saved.calculatedAt,
+      allPillarsScored: pillarScore.allPillarsScored,
     };
 
     // Add customization metadata if applicable

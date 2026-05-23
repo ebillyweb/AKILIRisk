@@ -155,13 +155,28 @@ export const useAssessmentStore = create<AssessmentState>()(
         set({ isLoading: loading }),
 
       cleanOrphanedAnswers: () =>
-        set((state) => ({
-          orphanedAnswerIds: getOrphanedAnswerIds(
+        set((state) => {
+          const orphanedIds = getOrphanedAnswerIds(
             state.answers,
             questionUniverseForOrphans(state),
             state.householdProfile
-          ),
-        })),
+          );
+          if (orphanedIds.length === 0) {
+            return { orphanedAnswerIds: [] };
+          }
+          const newAnswers = { ...state.answers };
+          for (const id of orphanedIds) {
+            delete newAnswers[id];
+          }
+          return {
+            answers: newAnswers,
+            skippedQuestions: state.skippedQuestions.filter(
+              (id) => !orphanedIds.includes(id)
+            ),
+            orphanedAnswerIds: [],
+            lastSaved: new Date().toISOString(),
+          };
+        }),
 
       setHouseholdProfile: (profile: HouseholdProfile | null) =>
         set({ householdProfile: profile }),

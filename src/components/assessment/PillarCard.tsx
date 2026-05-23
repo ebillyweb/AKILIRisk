@@ -60,6 +60,7 @@ export function PillarCard({
 
   return (
     <Card
+      data-testid={`pillar-card-${pillar.slug}`}
       className="cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40"
       onClick={onClick}
     >

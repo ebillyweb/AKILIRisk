@@ -101,6 +101,23 @@ export async function getIntakeReviewData(interviewId: string) {
       };
     }
 
+    // US-11: opening a submitted intake moves approval to IN_REVIEW.
+    let approval = reviewData.approval;
+    if (
+      reviewData.interview.status === 'SUBMITTED' &&
+      (!approval || approval.status === 'PENDING')
+    ) {
+      const priorApproval = await createIntakeApproval(interviewId, profile.id);
+      if (priorApproval.status === 'PENDING') {
+        approval = await updateIntakeApproval(priorApproval.id, {
+          status: 'IN_REVIEW',
+          reviewedAt: new Date(),
+        });
+      } else {
+        approval = priorApproval;
+      }
+    }
+
     const script = await loadIntakeScriptQuestions();
 
     const rawHouseholdMembers = await prisma.householdMember.findMany({
@@ -111,7 +128,7 @@ export async function getIntakeReviewData(interviewId: string) {
 
     const intakeReviewData: IntakeReviewData = {
       interview: reviewData.interview,
-      approval: reviewData.approval,
+      approval,
       questions: script.map((q) => ({
         id: q.id,
         text: q.questionText,
