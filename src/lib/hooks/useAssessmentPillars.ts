@@ -2,8 +2,8 @@
 
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
-  ASSESSMENT_PILLAR_IDS,
   assessmentPillarDefinitions,
+  isAssessmentPillarId,
   normalizePillarSlug,
 } from "@/lib/assessment/pillar-registry";
 import type { Question } from "@/lib/assessment/types";
@@ -22,7 +22,7 @@ export function usePillarQuestions(pillarId: string, enabled = true) {
       if (!res.ok) throw new Error("Failed to load pillar questions");
       return res.json();
     },
-    enabled: enabled && ASSESSMENT_PILLAR_IDS.includes(normalized),
+    enabled: enabled && isAssessmentPillarId(normalized),
     staleTime: 5 * 60 * 1000,
   });
 }
