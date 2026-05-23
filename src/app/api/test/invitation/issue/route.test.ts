@@ -37,13 +37,11 @@ vi.mock("@/lib/audit/audit-log", () => ({
 import { POST } from "./route";
 
 describe("POST /api/test/invitation/issue", () => {
-  const originalNodeEnv = process.env.NODE_ENV;
-  const originalEnable = process.env.ENABLE_TEST_AUTH;
-
   beforeEach(() => {
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
-    process.env.NODE_ENV = "test";
-    process.env.ENABLE_TEST_AUTH = "1";
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("ENABLE_TEST_AUTH", "1");
     serviceSpies.createAdvisorInvitation.mockResolvedValue({
       id: "inv-1",
       url: "https://app.test/signup?invite=tok&callbackUrl=%2Fintake",
@@ -53,19 +51,43 @@ describe("POST /api/test/invitation/issue", () => {
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
-    if (originalEnable === undefined) delete process.env.ENABLE_TEST_AUTH;
-    else process.env.ENABLE_TEST_AUTH = originalEnable;
+    vi.unstubAllEnvs();
   });
 
   it("returns 404 when test auth is disabled", async () => {
-    process.env.ENABLE_TEST_AUTH = "0";
+    vi.stubEnv("ENABLE_TEST_AUTH", "0");
     const req = new NextRequest("http://localhost/api/test/invitation/issue", {
       method: "POST",
       body: JSON.stringify({ clientEmail: "c@test.com" }),
     });
     const res = await POST(req);
     expect(res.status).toBe(404);
+  });
+
+  it("returns 404 on Vercel production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("ENABLE_TEST_AUTH", "1");
+    const req = new NextRequest("http://localhost/api/test/invitation/issue", {
+      method: "POST",
+      body: JSON.stringify({ clientEmail: "c@test.com" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(404);
+  });
+
+  it("creates an invitation on Vercel preview when NODE_ENV is production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("ENABLE_TEST_AUTH", "1");
+    const req = new NextRequest("http://localhost/api/test/invitation/issue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientEmail: "c@test.com" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(serviceSpies.createAdvisorInvitation).toHaveBeenCalledOnce();
   });
 
   it("creates an invitation and returns the signup URL", async () => {

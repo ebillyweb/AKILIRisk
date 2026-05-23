@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { findUserByEmail } from "@/lib/auth/user-email";
+import { isTestAuthEnabled } from "@/lib/auth/test-auth-enabled";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { createAdvisorInvitation } from "@/lib/invitations/service";
 import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from "@/lib/schemas/invitation";
@@ -17,7 +18,7 @@ import {
  *   Body: { advisorEmail?, clientEmail, clientName?, intakeWaived? }
  *   Returns: { invitationId, url, clientEmail, status, intakeWaived }
  *
- * Gates: NODE_ENV !== "production" AND ENABLE_TEST_AUTH === "1"
+ * Gated by isTestAuthEnabled() — see src/lib/auth/test-auth-enabled.ts.
  */
 
 const requestSchema = z.object({
@@ -35,15 +36,8 @@ const requestSchema = z.object({
   intakeWaived: z.boolean().optional().default(false),
 });
 
-function testAuthEnabled(): boolean {
-  return (
-    process.env.NODE_ENV !== "production" &&
-    process.env.ENABLE_TEST_AUTH === "1"
-  );
-}
-
 export async function POST(req: NextRequest) {
-  if (!testAuthEnabled()) {
+  if (!isTestAuthEnabled()) {
     return new NextResponse(null, { status: 404 });
   }
 

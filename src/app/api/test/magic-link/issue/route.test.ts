@@ -3,9 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 /**
  * Round-11 session-2: tests for the test-only magic-link issuance endpoint.
  *
- * Mocks issueMagicLinkToken + writeAudit + the env vars. Asserts both
- * gates (NODE_ENV + ENABLE_TEST_AUTH) plus the audit metadata.testOrigin
- * flag.
+ * Mocks issueMagicLinkToken + writeAudit + the env vars. Asserts gating via
+ * isTestAuthEnabled() plus the audit metadata.testOrigin flag.
  */
 
 const { issueSpy, writeAuditSpy } = vi.hoisted(() => ({
@@ -27,25 +26,17 @@ vi.mock("@/lib/audit/audit-log", async () => {
 import { POST } from "./route";
 import { AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
-const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
-const ORIGINAL_ENABLE = process.env.ENABLE_TEST_AUTH;
-const ORIGINAL_PUBLIC_URL = process.env.NEXT_PUBLIC_URL;
-
 beforeEach(() => {
+  vi.unstubAllEnvs();
   issueSpy.mockReset();
   writeAuditSpy.mockClear();
-  process.env.NODE_ENV = "test";
-  process.env.ENABLE_TEST_AUTH = "1";
-  process.env.NEXT_PUBLIC_URL = "https://preview.akilirisk.com";
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("ENABLE_TEST_AUTH", "1");
+  vi.stubEnv("NEXT_PUBLIC_URL", "https://preview.akilirisk.com");
 });
 
 afterEach(() => {
-  if (ORIGINAL_NODE_ENV === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = ORIGINAL_NODE_ENV;
-  if (ORIGINAL_ENABLE === undefined) delete process.env.ENABLE_TEST_AUTH;
-  else process.env.ENABLE_TEST_AUTH = ORIGINAL_ENABLE;
-  if (ORIGINAL_PUBLIC_URL === undefined) delete process.env.NEXT_PUBLIC_URL;
-  else process.env.NEXT_PUBLIC_URL = ORIGINAL_PUBLIC_URL;
+  vi.unstubAllEnvs();
 });
 
 function makeRequest(body: unknown) {
@@ -57,9 +48,10 @@ function makeRequest(body: unknown) {
 }
 
 describe("/api/test/magic-link/issue — gating", () => {
-  it("returns 404 when NODE_ENV='production' regardless of ENABLE_TEST_AUTH", async () => {
-    process.env.NODE_ENV = "production";
-    process.env.ENABLE_TEST_AUTH = "1";
+  it("returns 404 on Vercel production even when ENABLE_TEST_AUTH=1", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("ENABLE_TEST_AUTH", "1");
 
     const res = await POST(makeRequest({ email: "alice@example.com" }));
     expect(res.status).toBe(404);
@@ -67,9 +59,33 @@ describe("/api/test/magic-link/issue — gating", () => {
     expect(writeAuditSpy).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when ENABLE_TEST_AUTH !== '1' regardless of NODE_ENV", async () => {
-    process.env.NODE_ENV = "test";
-    process.env.ENABLE_TEST_AUTH = "0";
+  it("returns 200 on Vercel preview when NODE_ENV is production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("ENABLE_TEST_AUTH", "1");
+    issueSpy.mockResolvedValue({
+      rawToken: "abc123def456",
+      tokenId: "mlt-test-1",
+      expires: new Date("2030-01-01T00:00:00Z"),
+    });
+
+    const res = await POST(makeRequest({ email: "alice@example.com" }));
+    expect(res.status).toBe(200);
+    expect(issueSpy).toHaveBeenCalledOnce();
+  });
+
+  it("returns 404 for local production builds (next start)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ENABLE_TEST_AUTH", "1");
+
+    const res = await POST(makeRequest({ email: "alice@example.com" }));
+    expect(res.status).toBe(404);
+    expect(issueSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when ENABLE_TEST_AUTH !== '1'", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("ENABLE_TEST_AUTH", "0");
 
     const res = await POST(makeRequest({ email: "alice@example.com" }));
     expect(res.status).toBe(404);
@@ -77,8 +93,8 @@ describe("/api/test/magic-link/issue — gating", () => {
   });
 
   it("returns 404 when ENABLE_TEST_AUTH is unset", async () => {
-    process.env.NODE_ENV = "test";
-    delete process.env.ENABLE_TEST_AUTH;
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("ENABLE_TEST_AUTH", "");
 
     const res = await POST(makeRequest({ email: "alice@example.com" }));
     expect(res.status).toBe(404);
@@ -123,7 +139,7 @@ describe("/api/test/magic-link/issue — happy path", () => {
   });
 
   it("falls back to localhost base URL when NEXT_PUBLIC_URL is unset", async () => {
-    delete process.env.NEXT_PUBLIC_URL;
+    vi.stubEnv("NEXT_PUBLIC_URL", "");
     const res = await POST(makeRequest({ email: "alice@example.com" }));
     const body = await res.json();
     expect(body.verifyUrl).toBe(

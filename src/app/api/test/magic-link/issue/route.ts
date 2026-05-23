@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { issueMagicLinkToken } from "@/lib/auth/magic-link";
+import { isTestAuthEnabled } from "@/lib/auth/test-auth-enabled";
 
 /**
  * Round-11 session-2 (Playwright client-smoke regression fix):
@@ -18,17 +19,9 @@ import { issueMagicLinkToken } from "@/lib/auth/magic-link";
  * SHA-256 hash is stored). This endpoint exposes the raw token to the
  * caller — strictly a test-only affordance.
  *
- * Two independent gates must both pass for the endpoint to respond
- * (mirrors the round-6 ALLOW_DEBUG_TOTP pattern in
- * src/app/api/debug/totp/route.ts):
- *
- *   1. NODE_ENV !== "production" — Vercel sets NODE_ENV=production
- *      on production deploys by default, so the endpoint 404s like any
- *      unmapped route there.
- *   2. ENABLE_TEST_AUTH === "1" — opt-in even in dev/staging. Belt for
- *      the suspenders: a single mis-set NODE_ENV (accidental staging
- *      deploy missing the env var, or a developer running prod code
- *      locally with NODE_ENV unset) can't re-expose the route by itself.
+ * Gated by isTestAuthEnabled() — see src/lib/auth/test-auth-enabled.ts.
+ * Requires ENABLE_TEST_AUTH=1; blocks Vercel Production; allows local dev
+ * and Vercel Preview (Next.js runs NODE_ENV=production on Preview too).
  *
  * Audit row: writes AUTH_MAGIC_LINK_REQUEST with metadata.testOrigin:
  * true so admins reading the audit log can filter smoke-test issuances
@@ -51,13 +44,6 @@ const requestSchema = z.object({
     .transform((s) => s.trim().toLowerCase()),
 });
 
-function testAuthEnabled(): boolean {
-  return (
-    process.env.NODE_ENV !== "production" &&
-    process.env.ENABLE_TEST_AUTH === "1"
-  );
-}
-
 function resolvePublicBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_URL?.trim();
   if (configured) return configured;
@@ -65,7 +51,7 @@ function resolvePublicBaseUrl(): string {
 }
 
 export async function POST(req: NextRequest) {
-  if (!testAuthEnabled()) {
+  if (!isTestAuthEnabled()) {
     // 404 (not 401/403) — same shape as any unmapped route. The endpoint's
     // very existence is a test-only affordance; in production it does not
     // exist as far as any external caller is concerned.

@@ -51,10 +51,9 @@ export class SignInPage {
    * Client sign-in via the test-only magic-link issuance endpoint.
    * Exercises the real issue → verify → signIn flow.
    *
-   * Requires ENABLE_TEST_AUTH=1 + NODE_ENV !== "production" on the
-   * target deployment (preview or local). If the endpoint returns 404
-   * the helper throws a clear error pointing at the env-var setup so
-   * the failure mode is debuggable from CI logs.
+   * Requires ENABLE_TEST_AUTH=1 on the target deployment (preview or local).
+   * If the endpoint returns 404 the helper throws a clear error pointing at
+   * the env-var setup so the failure mode is debuggable from CI logs.
    */
   private async signInViaMagicLink(email: string, expectedLandingPath: string) {
     const issueRes = await this.page.request.post(
@@ -66,7 +65,7 @@ export class SignInPage {
       throw new Error(
         "Test magic-link issuance endpoint returned 404. " +
           "Confirm ENABLE_TEST_AUTH=1 is set on the target deployment " +
-          "(see .env.example) and that NODE_ENV !== 'production'."
+          "(see .env.example). On Vercel Preview, redeploy after setting the var."
       );
     }
     if (!issueRes.ok()) {

@@ -7,7 +7,7 @@ import { USERS } from "../fixtures/users";
  * file fails, every other client-smoke fails for the same reason — so
  * keeping it as its own spec lets us localize debugging when CI breaks.
  *
- * Requires ENABLE_TEST_AUTH=1 + NODE_ENV !== "production" on the target
+ * Requires ENABLE_TEST_AUTH=1 on the target deployment (local or Vercel Preview).
  * deployment (set on preview.akilirisk.com Vercel Preview env; set in
  * .env.local for local runs).
  */
