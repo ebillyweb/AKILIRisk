@@ -16,35 +16,53 @@ export function usePipelineUpdates(initialClients: PipelineClient[]) {
       setConnected(true);
     };
 
-    eventSource.onmessage = (event) => {
+    const applyPipelineUpdate = (event: MessageEvent<string>) => {
       try {
         const data = JSON.parse(event.data);
-        if (event.type === 'pipeline_update' && data.clients) {
-          // Parse dates that came as strings from JSON
-          const updatedClients = data.clients.map((client: any) => ({
-            ...client,
-            assignedAt: new Date(client.assignedAt),
-            lastActivity: new Date(client.lastActivity),
-            invitation: client.invitation ? {
-              ...client.invitation,
-              sentAt: new Date(client.invitation.sentAt),
-            } : null,
-            intake: client.intake ? {
-              ...client.intake,
-              submittedAt: client.intake.submittedAt ? new Date(client.intake.submittedAt) : null,
-            } : null,
-            assessment: client.assessment ? {
-              ...client.assessment,
-              completedAt: client.assessment.completedAt ? new Date(client.assessment.completedAt) : null,
-            } : null,
-          }));
-          setClients(updatedClients);
-          setLastUpdated(new Date(data.timestamp));
-        }
+        if (!data.clients) return;
+        const updatedClients = data.clients.map((client: Record<string, unknown>) => ({
+          ...(client as PipelineClient),
+          assignedAt: new Date(client.assignedAt as string | Date),
+          lastActivity: new Date(client.lastActivity as string | Date),
+          invitation: client.invitation
+            ? {
+                ...(client.invitation as Record<string, unknown>),
+                sentAt: new Date(
+                  (client.invitation as { sentAt: string | Date }).sentAt,
+                ),
+              }
+            : null,
+          intake: client.intake
+            ? {
+                ...(client.intake as Record<string, unknown>),
+                submittedAt: (client.intake as { submittedAt?: string | Date | null })
+                  .submittedAt
+                  ? new Date(
+                      (client.intake as { submittedAt: string | Date }).submittedAt,
+                    )
+                  : null,
+              }
+            : null,
+          assessment: client.assessment
+            ? {
+                ...(client.assessment as Record<string, unknown>),
+                completedAt: (client.assessment as { completedAt?: string | Date | null })
+                  .completedAt
+                  ? new Date(
+                      (client.assessment as { completedAt: string | Date }).completedAt,
+                    )
+                  : null,
+              }
+            : null,
+        })) as PipelineClient[];
+        setClients(updatedClients);
+        setLastUpdated(new Date(data.timestamp));
       } catch (error) {
         console.error('Error parsing SSE data:', error);
       }
     };
+
+    eventSource.addEventListener('pipeline_update', applyPipelineUpdate);
 
     eventSource.addEventListener('connected', () => {
       setConnected(true);

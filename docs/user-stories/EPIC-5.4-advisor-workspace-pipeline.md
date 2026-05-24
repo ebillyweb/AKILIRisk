@@ -236,11 +236,12 @@ Requires `Authorization: Bearer $CRON_SECRET`.
 | Spec | Covers |
 |------|--------|
 | `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | Pipeline search, stalled URL filter, intelligence tenant isolation, notification settings |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | S3 document upload, cron auth + execution, SSE connected + pipeline_update |
 | `tests/smoke/advisor-clients.spec.ts` | Pipeline load + client detail |
 | `tests/smoke/advisor-intake-review.spec.ts` | Pipeline → intake review |
 | `tests/smoke/tenant-isolation.spec.ts` | Cross-advisor pipeline detail |
 
-**Not automated:** full S3 document upload E2E (needs object storage in CI); cron job execution; SSE refresh assertion.
+**CI env (see `.env.example`):** S3 document upload needs `AWS_*` + `S3_BUCKET_NAME` on runner and app; cron smokes need `CRON_SECRET` (optional `E2E_CRON_REMOTE=1` against preview); SSE `pipeline_update` uses 2s poll when `ENABLE_TEST_AUTH=1` on the target.
 
 ---
 

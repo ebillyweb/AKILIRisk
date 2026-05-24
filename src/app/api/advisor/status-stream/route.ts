@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const encoder = new TextEncoder();
+    const pollMs =
+      process.env.ENABLE_TEST_AUTH === '1' ? 2_000 : 30_000;
 
     // UnderlyingSource.cancel receives (reason), not the controller — interval must live in this closure.
     let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -52,7 +54,7 @@ data: {"message": "Failed to fetch pipeline update", "timestamp": "${new Date().
               }
             }
           }
-        }, 30000);
+        }, pollMs);
       },
       cancel() {
         if (intervalId !== undefined) {
