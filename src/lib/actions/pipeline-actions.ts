@@ -31,6 +31,7 @@ const documentRequirementSchema = z.object({
   clientId: z.string().cuid(),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
+  required: z.boolean().optional().default(true),
 });
 
 export async function addDocumentRequirement(data: unknown) {
@@ -46,7 +47,7 @@ export async function addDocumentRequirement(data: unknown) {
       };
     }
 
-    const { clientId, name, description } = validatedFields.data;
+    const { clientId, name, description, required } = validatedFields.data;
 
     // Verify advisor owns the client assignment
     const assignment = await prisma.clientAdvisorAssignment.findFirst({
@@ -71,6 +72,7 @@ export async function addDocumentRequirement(data: unknown) {
         clientId,
         name,
         description,
+        required: required ?? true,
         fulfilled: false,
       },
     });

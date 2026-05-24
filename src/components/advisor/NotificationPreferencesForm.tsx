@@ -19,6 +19,8 @@ const preferencesSchema = z.object({
   emailStalled: z.boolean(),
   emailRegistrations: z.boolean(),
   reminderFrequencyDays: z.number().min(1).max(30),
+  quietStart: z.string().optional(),
+  quietEnd: z.string().optional(),
 });
 
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
@@ -54,6 +56,8 @@ export function NotificationPreferencesForm({
       emailStalled: preferences.emailStalled,
       emailRegistrations: preferences.emailRegistrations,
       reminderFrequencyDays: preferences.reminderFrequencyDays,
+      quietStart: preferences.quietStart ?? '',
+      quietEnd: preferences.quietEnd ?? '',
     },
   });
 
@@ -69,6 +73,8 @@ export function NotificationPreferencesForm({
       formData.append('emailStalled', data.emailStalled.toString());
       formData.append('emailRegistrations', data.emailRegistrations.toString());
       formData.append('reminderFrequencyDays', data.reminderFrequencyDays.toString());
+      formData.append('quietStart', data.quietStart?.trim() ?? '');
+      formData.append('quietEnd', data.quietEnd?.trim() ?? '');
 
       const result = await updatePreferencesAction(formData);
 
@@ -193,6 +199,40 @@ export function NotificationPreferencesForm({
             <p className="text-xs text-muted-foreground ml-6">
               Get notified when client workflows stall
             </p>
+          </div>
+        </div>
+
+        {/* Quiet hours (UTC) */}
+        <div className="space-y-2">
+          <Label className="font-medium">Quiet hours (UTC)</Label>
+          <p className="text-xs text-muted-foreground">
+            Email notifications are suppressed during this window. Leave blank to disable.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="quietStart" className="text-xs text-muted-foreground">
+                Start
+              </Label>
+              <Input
+                id="quietStart"
+                type="time"
+                {...register('quietStart')}
+                disabled={isSubmitting}
+                className="w-32"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="quietEnd" className="text-xs text-muted-foreground">
+                End
+              </Label>
+              <Input
+                id="quietEnd"
+                type="time"
+                {...register('quietEnd')}
+                disabled={isSubmitting}
+                className="w-32"
+              />
+            </div>
           </div>
         </div>
 

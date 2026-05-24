@@ -10,6 +10,7 @@ import {
   getDocumentRequirementForSessionUser,
   keyMatchesDocumentRequirement,
 } from '@/lib/documents/requirement-access';
+import { triggerDocumentUploadNotification } from '@/lib/notifications/triggers';
 
 export async function getClientDocumentRequirements() {
   try {
@@ -145,6 +146,15 @@ export async function confirmDocumentUpload(data: unknown) {
     revalidatePath('/documents');
     revalidatePath('/advisor/pipeline');
     revalidatePath(`/advisor/pipeline/${requirement.clientId}`);
+
+    const roleUpper = (session.user.role ?? 'USER').toString().toUpperCase();
+    if (roleUpper === 'USER') {
+      void triggerDocumentUploadNotification(
+        session.user.id,
+        updatedRequirement.name,
+      );
+    }
+
     return {
       success: true,
       data: updatedRequirement,

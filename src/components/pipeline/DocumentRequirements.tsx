@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { addDocumentRequirement, removeDocumentRequirement } from "@/lib/actions/pipeline-actions";
 import type { ClientDetail } from "@/lib/pipeline/types";
 import { DocumentUpload } from "@/components/documents/DocumentUpload";
@@ -28,6 +29,7 @@ interface DocumentRequirementsProps {
 const documentSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name too long"),
   description: z.string().max(500, "Description too long").optional(),
+  required: z.boolean(),
 });
 
 type DocumentFormData = z.infer<typeof documentSchema>;
@@ -43,14 +45,24 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
     register,
     handleSubmit,
     reset,
-    formState: { errors, isValid }
+    watch,
+    setValue,
+    formState: { errors, isValid },
   } = useForm<DocumentFormData>({
     resolver: zodResolver(documentSchema),
     mode: "onChange",
+    defaultValues: {
+      name: "",
+      description: "",
+      required: true,
+    },
   });
 
-  const fulfilled = requirements.filter(req => req.fulfilled).length;
-  const total = requirements.length;
+  const isRequired = watch("required");
+
+  const mandatoryRequirements = requirements.filter((req) => req.required);
+  const fulfilled = mandatoryRequirements.filter((req) => req.fulfilled).length;
+  const total = mandatoryRequirements.length;
   const progressPercentage = total > 0 ? Math.round((fulfilled / total) * 100) : 0;
 
   const onSubmit = async (data: DocumentFormData) => {
@@ -60,12 +72,13 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
         clientId,
         name: data.name,
         description: data.description || undefined,
+        required: data.required,
       });
 
       if (result.success) {
         setSuccessMessage("Document requirement added successfully");
         setErrorMessage("");
-        reset();
+        reset({ name: "", description: "", required: true });
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(""), 3000);
       } else {
@@ -111,7 +124,7 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
             Document Requirements
           </CardTitle>
           <Badge variant="outline">
-            {fulfilled}/{total} collected
+            {fulfilled}/{total} required collected
           </Badge>
         </div>
 
@@ -160,6 +173,9 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
                       <Badge variant={requirement.fulfilled ? "default" : "secondary"}>
                         {requirement.fulfilled ? "Fulfilled" : "Pending"}
                       </Badge>
+                      {!requirement.required && (
+                        <Badge variant="outline">Optional</Badge>
+                      )}
                     </div>
 
                     {requirement.description && (
@@ -251,6 +267,19 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
                 {errors.description && (
                   <p className="text-sm text-destructive mt-1">{errors.description.message}</p>
                 )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="required"
+                  checked={isRequired}
+                  onCheckedChange={(checked) =>
+                    setValue("required", checked === true, { shouldValidate: true })
+                  }
+                />
+                <Label htmlFor="required" className="font-normal cursor-pointer">
+                  Required for client completion
+                </Label>
               </div>
             </div>
 

@@ -6,6 +6,7 @@ import {
   keyMatchesDocumentRequirement,
 } from "@/lib/documents/requirement-access";
 import { headDocumentObject } from "@/lib/documents/s3";
+import { triggerDocumentUploadNotification } from "@/lib/notifications/triggers";
 import { z } from "zod";
 
 // `fileMimeType` and `fileSize` were previously taken from the body and
@@ -88,6 +89,14 @@ export async function POST(request: NextRequest) {
         fileMimeType: head.contentType ?? "application/octet-stream",
       },
     });
+
+    const roleUpper = (session.user.role ?? "USER").toString().toUpperCase();
+    if (roleUpper === "USER") {
+      void triggerDocumentUploadNotification(
+        session.user.id,
+        updatedRequirement.name,
+      );
+    }
 
     return NextResponse.json(updatedRequirement);
   } catch (error) {

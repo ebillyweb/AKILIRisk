@@ -77,8 +77,15 @@ export function PipelineTable({ clients }: PipelineTableProps) {
             href={`/advisor/pipeline/${client.id}`}
             className="block space-y-1 cursor-pointer hover:bg-muted/50 rounded p-2 -m-2 transition-colors"
           >
-            <div className="font-medium text-primary hover:underline">
-              {displayName}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-primary hover:underline">
+                {displayName}
+              </span>
+              {client.stalled && (
+                <Badge variant="warning" className="text-xs">
+                  Stalled
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">{client.email}</p>
           </Link>
@@ -140,11 +147,11 @@ export function PipelineTable({ clients }: PipelineTableProps) {
       cell: (info) => {
         const docs = info.getValue();
         if (docs.required === 0) {
-          return <span className="text-muted-foreground">-</span>;
+          return <span className="text-muted-foreground">—</span>;
         }
         return (
           <span className="text-sm">
-            {docs.fulfilled}/{docs.required}
+            {docs.fulfilled}/{docs.required} req.
           </span>
         );
       },

@@ -12,6 +12,8 @@ export type PipelineClient = {
   stage: ClientWorkflowStage;
   progress: number;        // 0-100 percentage
   lastActivity: Date;      // Most recent status change
+  /** No activity for more than 7 days and not Complete (US-28) */
+  stalled: boolean;
   // Invitation data (if exists)
   invitation: {
     status: InvitationStatus;
@@ -50,6 +52,8 @@ export type PipelineMetrics = {
 // Filter options for pipeline table
 export type PipelineFilters = {
   stage?: ClientWorkflowStage;
+  /** When true, only clients flagged as stalled */
+  stalled?: boolean;
   search?: string;
   sortBy?: 'name' | 'stage' | 'progress' | 'lastActivity';
   sortDir?: 'asc' | 'desc';

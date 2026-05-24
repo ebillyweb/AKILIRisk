@@ -75,9 +75,12 @@ export function usePipelineFilters(clients: PipelineClient[]) {
   const filteredClients = useMemo(() => {
     let filtered = clients.slice();
 
-    // Filter by stage
     if (filters.stage) {
-      filtered = filtered.filter(client => client.stage === filters.stage);
+      filtered = filtered.filter((client) => client.stage === filters.stage);
+    }
+
+    if (filters.stalled) {
+      filtered = filtered.filter((client) => client.stalled);
     }
 
     // Filter by search (name or email)

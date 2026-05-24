@@ -6,6 +6,12 @@ import { requireAdvisorRole } from '@/lib/advisor/auth';
 import { getUserPreferences, updatePreferences } from '@/lib/notifications/preferences';
 
 // Zod schema for notification preferences
+const timeStringSchema = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/, 'Time must be HH:MM (24-hour)')
+  .optional()
+  .nullable();
+
 const notificationPreferencesSchema = z.object({
   emailEnabled: z.boolean(),
   emailMilestones: z.boolean(),
@@ -13,6 +19,8 @@ const notificationPreferencesSchema = z.object({
   emailStalled: z.boolean(),
   emailRegistrations: z.boolean(),
   reminderFrequencyDays: z.number().min(1).max(30),
+  quietStart: timeStringSchema,
+  quietEnd: timeStringSchema,
 });
 
 export async function getNotificationPreferencesAction() {
@@ -36,6 +44,9 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
     const { userId } = await requireAdvisorRole();
 
     // Parse form data
+    const quietStartRaw = formData.get('quietStart')?.toString().trim() ?? '';
+    const quietEndRaw = formData.get('quietEnd')?.toString().trim() ?? '';
+
     const rawData = {
       emailEnabled: formData.get('emailEnabled') === 'true',
       emailMilestones: formData.get('emailMilestones') === 'true',
@@ -43,6 +54,8 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
       emailStalled: formData.get('emailStalled') === 'true',
       emailRegistrations: formData.get('emailRegistrations') === 'true',
       reminderFrequencyDays: parseInt(formData.get('reminderFrequencyDays')?.toString() || '7'),
+      quietStart: quietStartRaw.length > 0 ? quietStartRaw : null,
+      quietEnd: quietEndRaw.length > 0 ? quietEndRaw : null,
     };
 
     const validatedData = notificationPreferencesSchema.safeParse(rawData);

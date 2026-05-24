@@ -1,7 +1,8 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import { computeClientStage, isStalled, getStageLabel } from "@/lib/pipeline/status";
+import { aggregateMandatoryDocumentCounts } from "@/lib/pipeline/documents";
+import { computeClientStage, getStageLabel, isWorkflowEscalation } from "@/lib/pipeline/status";
 import { shouldSendNotification } from "@/lib/notifications/preferences";
 import { sendNotification } from "@/lib/notifications/service";
 import { renderNotificationEmail } from "@/lib/notifications/templates";
@@ -15,10 +16,8 @@ interface ProcessResult {
  * Processes workflow reminders for stalled client workflows.
  *
  * Logic:
- * - Uses isStalled() function from status.ts (>7 days inactive)
- * - Finds all ClientAdvisorAssignment records and computes stage
- * - Filters to clients where isStalled(lastActivity, stage) is true AND stage is not COMPLETE
- * - For clients stalled >30 days, escalates with 'stalled' category
+ * - Finds ACTIVE assignments and computes workflow stage
+ * - Notifies advisors only when inactive >30 days (US-36 escalation; UI stall is 7 days)
  * - Checks shouldSendNotification for advisor before sending
  * - Prevents duplicate notifications within 7 days using AdvisorNotification records
  * - Sends notifications to ADVISORS (not clients)
@@ -31,7 +30,6 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
 
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     // Find all client advisor assignments with complete data for stage computation
     const assignments = await prisma.clientAdvisorAssignment.findMany({
@@ -101,8 +99,10 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
               take: 1,
             },
             documentRequirements: {
+              where: { advisorId: assignment.advisorId },
               select: {
-                id: true,
+                clientId: true,
+                required: true,
                 fulfilled: true,
               },
             },
@@ -111,15 +111,13 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
 
         if (!clientData) continue;
 
-        // Get invitation data if exists (separate query since it's not directly linked)
+        const clientEmail = decryptUserEmail(assignment.client.emailCiphertext);
         const invitation = await prisma.inviteCode.findFirst({
           where: {
-            status: 'REGISTERED',
             createdBy: assignment.advisorId,
+            prefillEmail: clientEmail,
           },
-          orderBy: {
-            statusUpdatedAt: 'desc',
-          },
+          orderBy: { createdAt: 'desc' },
           select: {
             status: true,
             statusUpdatedAt: true,
@@ -158,10 +156,10 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
             completedAt: latestAssessment.completedAt,
             updatedAt: latestAssessment.updatedAt,
           } : undefined,
-          documents: {
-            required: clientData.documentRequirements.length,
-            fulfilled: clientData.documentRequirements.filter(d => d.fulfilled).length,
-          },
+          documents:
+            aggregateMandatoryDocumentCounts(clientData.documentRequirements).get(
+              clientId,
+            ) ?? { required: 0, fulfilled: 0 },
         };
 
         // Compute current stage
@@ -184,15 +182,11 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
           lastActivity = assignment.assignedAt;
         }
 
-        // Check if workflow is stalled
-        const stalledWorkflow = isStalled(lastActivity, stage);
-        if (!stalledWorkflow) {
+        if (!isWorkflowEscalation(lastActivity, stage)) {
           continue;
         }
 
-        // Determine if this is an escalation case (>30 days)
-        const isEscalation = lastActivity < thirtyDaysAgo;
-        const category = isEscalation ? 'stalled' : 'stalled';
+        const category = 'stalled' as const;
 
         // Check if advisor should receive notifications
         const shouldSend = await shouldSendNotification(advisor.user.id, category, 'email');
@@ -232,7 +226,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
         const daysSinceActivity = Math.floor((Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
 
         // Client detail URL
-        const clientDetailUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/advisor/clients/${clientId}`;
+        const clientDetailUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/advisor/pipeline/${clientId}`;
 
         // Generate email HTML using the stalled workflow template
         const emailHtml = renderNotificationEmail('stalled', {
@@ -255,19 +249,17 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
           recipientUserId: advisor.user.id,
           recipientEmail: advisorEmail,
           category: 'stalled',
-          title: 'Workflow Stalled',
+          title: 'Workflow Escalation',
           message: `${clientName} has been inactive for ${daysSinceActivity} days at the ${getStageLabel(stage)} stage`,
           referenceId: clientId,
           advisorProfileId: advisorId,
-          emailSubject: `Workflow Stalled: ${clientName} - Akili Risk`,
+          emailSubject: `Workflow Escalation: ${clientName} - Akili Risk`,
           emailHtml,
         });
 
         if (result.emailSent || result.inAppCreated) {
           advisorsNotified++;
-          if (isEscalation) {
-            clientsEscalated++;
-          }
+          clientsEscalated++;
           console.log(`Notified advisor ${advisorEmail} about stalled workflow for ${clientName} (${daysSinceActivity} days)`);
         } else {
           console.error(`Failed to send stalled workflow notification for client ${clientId}`);

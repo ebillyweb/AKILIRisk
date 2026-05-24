@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { PipelineClient, PipelineMetrics, ClientWorkflowStage, ClientDetail, WorkflowEvent } from "./types";
+import { aggregateMandatoryDocumentCounts } from "./documents";
 import { computeClientStage, computeProgress, isStalled } from "./status";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 
@@ -62,13 +63,10 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
             },
             take: 1,
           },
-          // Get latest completed assessment
+          // Latest assessment by activity (includes IN_PROGRESS)
           assessments: {
-            where: {
-              status: 'COMPLETED'
-            },
             orderBy: {
-              completedAt: 'desc'
+              updatedAt: 'desc',
             },
             take: 1,
             include: {
@@ -128,13 +126,16 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
         })
       : Promise.resolve([]),
     clientIds.length > 0
-      ? prisma.documentRequirement.groupBy({
-          by: ['clientId', 'fulfilled'],
+      ? prisma.documentRequirement.findMany({
           where: {
             advisorId: advisorProfileId,
             clientId: { in: clientIds },
           },
-          _count: { fulfilled: true },
+          select: {
+            clientId: true,
+            required: true,
+            fulfilled: true,
+          },
         })
       : Promise.resolve([]),
     latestIntakeIds.length > 0
@@ -160,18 +161,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     }
   }
 
-  // Document requirement counts per client. groupBy returns one row per
-  // (clientId, fulfilled) combination; we collapse to {required, fulfilled}.
-  const documentCountsByClient = new Map<string, { required: number; fulfilled: number }>();
-  for (const row of documentCounts) {
-    const slot = documentCountsByClient.get(row.clientId) ?? { required: 0, fulfilled: 0 };
-    if (row.fulfilled) {
-      slot.fulfilled = row._count.fulfilled;
-    } else {
-      slot.required = row._count.fulfilled;
-    }
-    documentCountsByClient.set(row.clientId, slot);
-  }
+  const documentCountsByClient = aggregateMandatoryDocumentCounts(documentCounts);
 
   // Intake response counts (only for interviews that have at least one
   // matching response — interviews with zero matches won't appear in the
@@ -188,9 +178,10 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     const clientEmail = decryptUserEmail(client.emailCiphertext);
 
     const invitation = invitationByEmail.get(clientEmail) ?? null;
-    const docCounts = documentCountsByClient.get(client.id) ?? { required: 0, fulfilled: 0 };
-    const documentsRequired = docCounts.required;
-    const documentsFulfilled = docCounts.fulfilled;
+    const docCounts = documentCountsByClient.get(client.id) ?? {
+      required: 0,
+      fulfilled: 0,
+    };
 
     // Get the most recent activity date
     const latestIntake = client.intakeInterviews[0];
@@ -238,10 +229,12 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
         updatedAt: latestAssessment.updatedAt,
       } : undefined,
       documents: {
-        required: documentsRequired,
-        fulfilled: documentsFulfilled,
-      }
+        required: docCounts.required,
+        fulfilled: docCounts.fulfilled,
+      },
     });
+
+    const stalled = isStalled(lastActivity, stage);
 
     const pipelineClient: PipelineClient = {
       id: client.id,
@@ -251,6 +244,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
       stage,
       progress: computeProgress(stage),
       lastActivity,
+      stalled,
       invitation: invitation ? {
         status: invitation.status,
         sentAt: invitation.createdAt,
@@ -277,9 +271,9 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
         score: latestAssessment.scores[0]?.score || null,
       } : null,
       documents: {
-        required: documentsRequired,
-        fulfilled: documentsFulfilled,
-      }
+        required: docCounts.required,
+        fulfilled: docCounts.fulfilled,
+      },
     };
 
     return pipelineClient;
@@ -313,9 +307,10 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
     COMPLETE: byStage.COMPLETE || 0,
   };
 
-  // Count documents needed
-  const documentsNeeded = clients.filter(client =>
-    client.documents.required > client.documents.fulfilled
+  const documentsNeeded = clients.filter(
+    (client) =>
+      client.documents.required > 0 &&
+      client.documents.fulfilled < client.documents.required,
   ).length;
 
   // Count stalled clients
@@ -468,15 +463,13 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
   // Sort timeline chronologically
   events.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // Build document counts for stage computation
-  const docCounts = documentRequirements.reduce(
-    (acc, req) => {
-      if (req.fulfilled) acc.fulfilled++;
-      else acc.required++;
-      return acc;
-    },
-    { required: 0, fulfilled: 0 }
-  );
+  const docCounts = aggregateMandatoryDocumentCounts(
+    documentRequirements.map((req) => ({
+      clientId,
+      required: req.required,
+      fulfilled: req.fulfilled,
+    })),
+  ).get(clientId) ?? { required: 0, fulfilled: 0 };
 
   const intakeWaived = assignment.intakeWaivedAt != null;
   const intakeForStageDetail =
@@ -523,6 +516,8 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     ? new Date(Math.max(...activityDates.map(d => d.getTime())))
     : assignment.assignedAt;
 
+  const stalled = isStalled(lastActivity, stage);
+
   const pipelineClient: PipelineClient = {
     id: client.id,
     name: client.name,
@@ -531,6 +526,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     stage,
     progress: computeProgress(stage),
     lastActivity,
+    stalled,
     invitation: invitation ? {
       status: invitation.status,
       sentAt: invitation.createdAt,

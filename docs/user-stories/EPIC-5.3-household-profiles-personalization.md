@@ -219,7 +219,7 @@
 ### Related
 
 - BRD §3.5 FR-HH-04 ([amendment](../../.planning/brd-amendments/section-3-5-household-profiles.md))
-- [Epic 5.4 — US-25](./EPIC-5.4-advisor-workspace-pipeline.md) (client detail surfaces)
+- [Epic 5.4 — US-28](./EPIC-5.4-advisor-workspace-pipeline.md) (client pipeline / detail surfaces)
 - [Epic 5.8 — US-43](./EPIC-5.8-policy-templates-deliverables.md) (template placeholders)
 
 ---

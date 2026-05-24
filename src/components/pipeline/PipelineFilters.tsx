@@ -6,6 +6,7 @@ import { useDebouncedCallback } from "use-debounce";
 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -63,6 +64,10 @@ export function PipelineFilters({
     onFilterChange({ ...filters, stage });
   };
 
+  const toggleStalled = () => {
+    onFilterChange({ ...filters, stalled: filters.stalled ? undefined : true });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -77,8 +82,18 @@ export function PipelineFilters({
           />
         </div>
 
-        {/* Stage Filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={filters.stalled ? "default" : "outline"}
+            size="sm"
+            onClick={toggleStalled}
+          >
+            Stalled
+            <Badge variant="secondary" className="ml-2">
+              {metrics.stalled}
+            </Badge>
+          </Button>
           <Select
             value={filters.stage || 'all'}
             onValueChange={handleStageChange}
@@ -121,6 +136,11 @@ export function PipelineFilters({
         {filters.search && (
           <span className="ml-2">
             • Search: <span className="font-medium">"{filters.search}"</span>
+          </span>
+        )}
+        {filters.stalled && (
+          <span className="ml-2">
+            • <span className="font-medium">Stalled only</span>
           </span>
         )}
       </div>

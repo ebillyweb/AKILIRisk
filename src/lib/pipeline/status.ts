@@ -18,6 +18,7 @@ interface ClientRawData {
     completedAt?: Date | null;
     updatedAt: Date;
   };
+  /** Mandatory (`required: true`) document counts for stage gating */
   documents?: {
     required: number;
     fulfilled: number;
@@ -35,11 +36,13 @@ export function computeClientStage(data: ClientRawData): ClientWorkflowStage {
   // Check assessment status first (highest priority)
   if (assessment) {
     if (assessment.status === 'COMPLETED') {
-      // If assessment is complete, check if documents are needed
       if (documents && documents.required > 0) {
-        return documents.fulfilled < documents.required ? 'DOCUMENTS_REQUIRED' : 'COMPLETE';
+        return documents.fulfilled < documents.required
+          ? 'DOCUMENTS_REQUIRED'
+          : 'COMPLETE';
       }
-      return 'ASSESSMENT_COMPLETE';
+      // Assessment finished and no mandatory documents (or none outstanding)
+      return 'COMPLETE';
     }
     if (assessment.status === 'IN_PROGRESS') {
       return 'ASSESSMENT_IN_PROGRESS';
@@ -132,11 +135,24 @@ export function getStageOrder(stage: ClientWorkflowStage): number {
 }
 
 /**
- * Determines if a client is stalled (no activity in 7+ days)
+ * Determines if a client is stalled (no activity for more than 7 days).
+ * Uses whole calendar days since last activity.
  */
 export function isStalled(lastActivity: Date, stage: ClientWorkflowStage): boolean {
   if (stage === 'COMPLETE') return false;
 
-  const daysSinceActivity = Math.floor((Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
+  const daysSinceActivity = Math.floor(
+    (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24),
+  );
   return daysSinceActivity > 7;
+}
+
+/** True when inactive long enough for advisor escalation emails (US-36). */
+export function isWorkflowEscalation(lastActivity: Date, stage: ClientWorkflowStage): boolean {
+  if (stage === 'COMPLETE') return false;
+
+  const daysSinceActivity = Math.floor(
+    (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  return daysSinceActivity > 30;
 }
