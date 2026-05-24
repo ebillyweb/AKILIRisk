@@ -32,7 +32,7 @@ import { TrendCard } from "@/components/admin/analytics/TrendCard";
 import { RecentActivityPanel } from "@/components/admin/analytics/RecentActivityPanel";
 
 /**
- * §9.1 (BRD) — Belvedere-side aggregate analytics dashboard.
+ * §9.1 (BRD) — AKILI-side aggregate analytics dashboard.
  *
  * Admin-only (`requireAdminRole`: `ADMIN` or `SUPER_ADMIN`). Pure aggregate view —
  * no per-client identifiers surface in any card. The PII-invariant
@@ -52,7 +52,7 @@ import { RecentActivityPanel } from "@/components/admin/analytics/RecentActivity
  *
  * Audit: one `DATA_ACCESS_ANALYTICS_VIEW` row per render, capturing
  * the resolved KPI counts as metadata. Coarse but useful trail of
- * "what did Belvedere see on date X" without a snapshot table.
+ * "what did AKILI see on date X" without a snapshot table.
  */
 export default async function AdminAnalyticsPage() {
   const session = await requireAdminRole();
@@ -138,7 +138,7 @@ export default async function AdminAnalyticsPage() {
         <CardLoadFailed label="Platform KPIs failed to load." />
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-6">
         {dist ? (
           <RiskDistributionBar distribution={dist} />
         ) : (

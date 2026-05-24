@@ -1,4 +1,4 @@
--- Belvedere Household Risk Profile — data seed for pillar DDL tables
+-- AKILI Household Risk Profile — data seed for pillar DDL tables
 -- ============================================================
 -- Prerequisites: apply Prisma migrations first (creates public.categories, sections, questions).
 -- Do not duplicate CREATE TABLE / indexes here — schema is owned by migrations.
@@ -121,7 +121,7 @@ ON CONFLICT (category_id, code) DO NOTHING;
 INSERT INTO questions (section_id, question_number, question_text, answer_type, answer_0, answer_1, answer_2, answer_3, why_this_matters, recommended_actions, is_sub_question, cross_reference, display_order, is_visible) VALUES
 
 -- General Discovery
-('00000000-0000-0000-0001-000000000001', '1', 'How did your financial advisor describe what we do at Belvedere?', 'fillable', NULL, NULL, NULL, NULL, 'Opportunity to describe our services deeper', NULL, FALSE, NULL, 1, TRUE),
+('00000000-0000-0000-0001-000000000001', '1', 'How did your financial advisor describe what we do at AKILI?', 'fillable', NULL, NULL, NULL, NULL, 'Opportunity to describe our services deeper', NULL, FALSE, NULL, 1, TRUE),
 ('00000000-0000-0000-0001-000000000001', '2', 'Have you talked to your professional advisors about your personal and "family risk"?', 'yes_no', NULL, NULL, NULL, NULL, 'Level set sophistication of audience; Value Proposition', NULL, FALSE, 'See 1_A.5', 2, TRUE),
 ('00000000-0000-0000-0001-000000000001', '3', 'How involved are you personally in managing your family''s or business''s risk protection—do you rely mostly on advisors, or do you like to be hands-on?', 'fillable', NULL, NULL, NULL, NULL, 'Level set sophistication of audience', NULL, FALSE, NULL, 3, TRUE),
 ('00000000-0000-0000-0001-000000000001', '4', 'Do you know where your key risk reside?', 'yes_no', NULL, NULL, NULL, NULL, 'Level set sophistication of audience', NULL, FALSE, NULL, 4, TRUE),
@@ -184,7 +184,7 @@ INSERT INTO questions (section_id, question_number, question_text, answer_type, 
 ('00000000-0000-0000-0002-000000000003', 'C1', 'Are there family policies for how wealth, assets, or business interests are distributed or discussed with next-generation members?', 'scored_0_3', 'None', 'Informal', 'Documented', 'Reviewed + enforced', 'Unmanaged expectations create entitlement, conflict, and governance failure.', 'Develop an age-appropriate wealth education and communication strategy.', FALSE, NULL, 1),
 ('00000000-0000-0000-0002-000000000003', 'C2', 'Do family members understand the sources and structures of family wealth?', 'scored_0_3', 'None', 'Basic', 'Educated', 'Continuously updated', 'Informed heirs make better decisions and support governance continuity.', 'Implement structured financial literacy curriculum for all family members.', FALSE, NULL, 2),
 ('00000000-0000-0000-0002-000000000003', 'C3', 'Are family philanthropy and charitable giving governed formally?', 'scored_0_3', 'None', 'Ad hoc', 'Structured', 'Strategic + reviewed', 'Undirected giving reduces impact, creates tax risk, and misaligns values.', 'Formalize a giving policy aligned with family values and tax strategy with documented mission statements and giving charters.', FALSE, NULL, 3),
-('00000000-0000-0000-0002-000000000003', 'C4', 'What structured allowances and accountability reviews are younger family members subject to?', 'scored_0_3', 'None', 'Informal', 'Designated', 'Trained + pre-approved', 'Unstructured access undermines financial discipline and development.', 'Deploy Belvedere proprietary financial education and allowance management tools.', FALSE, NULL, 4),
+('00000000-0000-0000-0002-000000000003', 'C4', 'What structured allowances and accountability reviews are younger family members subject to?', 'scored_0_3', 'None', 'Informal', 'Designated', 'Trained + pre-approved', 'Unstructured access undermines financial discipline and development.', 'Deploy AKILI proprietary financial education and allowance management tools.', FALSE, NULL, 4),
 ('00000000-0000-0000-0002-000000000003', 'C5', 'What is your family''s agreed upon policy on gifts and loans between family members?', 'scored_0_3', 'None', 'Inconsistent', 'Standard', 'Periodic re-checks', 'Ambiguity leads to inequity, resentment, and legal issues.', 'Document and review intra-family transfers with tax and legal counsel.', FALSE, NULL, 5),
 
 -- Section D

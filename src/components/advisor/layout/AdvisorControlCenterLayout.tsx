@@ -1,4 +1,8 @@
 import { ReactNode } from "react";
+import {
+  WorkspaceMainPadding,
+  WorkspaceSiteFooterRow,
+} from "@/components/layout/WorkspaceMainContent";
 import { cn } from "@/lib/utils";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { AdvisorSidebar } from "./AdvisorSidebar";
@@ -20,28 +24,30 @@ export function AdvisorControlCenterLayout({
   return (
     <div
       className={cn(
-        "flex min-h-[calc(100vh-8rem)] bg-background -mx-4 sm:-mx-6 lg:-mx-8",
+        "flex min-h-[calc(100vh-8rem)] flex-col bg-background -mx-4 sm:-mx-6 lg:-mx-8",
         className
       )}
     >
-      <AdvisorSidebar
-        featureFlags={featureFlags}
-        unreadNotificationCount={unreadNotificationCount}
-        className="hidden w-64 shrink-0 lg:flex"
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <AdvisorMobileNav
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <AdvisorSidebar
           featureFlags={featureFlags}
           unreadNotificationCount={unreadNotificationCount}
+          className="hidden w-64 shrink-0 lg:flex"
         />
 
-        <main className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto">
-            <div className="p-4 sm:p-6 lg:p-8">{children}</div>
-          </div>
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <AdvisorMobileNav
+            featureFlags={featureFlags}
+            unreadNotificationCount={unreadNotificationCount}
+          />
+
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <WorkspaceMainPadding>{children}</WorkspaceMainPadding>
+          </main>
+        </div>
       </div>
+
+      <WorkspaceSiteFooterRow />
     </div>
   );
 }

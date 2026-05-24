@@ -45,8 +45,8 @@ test.describe("Epic 5.5 platform administration", () => {
       const originalText = await textarea.inputValue();
       expect(originalText.length).toBeGreaterThan(0);
 
-      const marker = ` [pw-${Date.now()}]`;
-      const probeText = `${originalText}${marker}`;
+      const suffix = ` Playwright probe ${Date.now()}`;
+      const probeText = `${originalText}${suffix}`;
 
       await textarea.fill(probeText);
       await page.getByRole("button", { name: /save changes/i }).click();

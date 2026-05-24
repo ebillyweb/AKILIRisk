@@ -1,4 +1,8 @@
 import { ReactNode } from "react";
+import {
+  WorkspaceMainPadding,
+  WorkspaceSiteFooterRow,
+} from "@/components/layout/WorkspaceMainContent";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminMobileNav } from "./AdminMobileNav";
 import { cn } from "@/lib/utils";
@@ -15,18 +19,25 @@ export function AdminControlCenterLayout({
   className,
 }: AdminControlCenterLayoutProps) {
   return (
-    <div className={cn("flex min-h-[calc(100vh-8rem)] bg-background", className)}>
-      <AdminSidebar superUser={superUser} className="hidden w-64 shrink-0 lg:flex" />
+    <div
+      className={cn(
+        "flex min-h-[calc(100vh-8rem)] flex-col bg-background",
+        className
+      )}
+    >
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <AdminSidebar superUser={superUser} className="hidden w-64 shrink-0 lg:flex" />
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <AdminMobileNav superUser={superUser} />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <AdminMobileNav superUser={superUser} />
 
-        <main className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto">
-            <div className="p-4 sm:p-6 lg:p-8">{children}</div>
-          </div>
-        </main>
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <WorkspaceMainPadding>{children}</WorkspaceMainPadding>
+          </main>
+        </div>
       </div>
+
+      <WorkspaceSiteFooterRow />
     </div>
   );
 }

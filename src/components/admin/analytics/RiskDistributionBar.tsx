@@ -2,14 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { RiskDistribution } from "@/lib/admin/analytics-queries";
 
 /**
- * §9.1 (BRD) — risk-level distribution. Stacked horizontal bar showing
- * how many latest-per-pillar PillarScore rows are LOW / MEDIUM / HIGH /
- * CRITICAL across every client on the platform.
- *
- * Implementation note: pure CSS (flexbox + percentages) — avoids
- * adding a chart-library dependency for a single bar. Each segment's
- * width is a flex-grow proportional to its count; segments below 1%
- * collapse to a fixed minimum width so they remain visible.
+ * §9.1 (BRD) — risk-level distribution. Stacked horizontal bar + legend.
  */
 export function RiskDistributionBar({ distribution }: { distribution: RiskDistribution }) {
   const total = distribution.totalScored;
@@ -18,11 +11,11 @@ export function RiskDistributionBar({ distribution }: { distribution: RiskDistri
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Risk-level distribution</CardTitle>
+        <CardTitle className="text-lg font-semibold">Risk-level distribution</CardTitle>
         <CardDescription>
           {empty
-            ? "No scored pillars yet — distribution will populate once the first assessment is scored."
-            : `Across ${total} latest-per-pillar score${total === 1 ? "" : "s"} platform-wide.`}
+            ? "No scored pillars yet — distribution appears after the first assessment is scored."
+            : `Based on ${total} scored pillar${total === 1 ? "" : "s"} across the platform.`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -31,32 +24,45 @@ export function RiskDistributionBar({ distribution }: { distribution: RiskDistri
             No scored assessments yet.
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex h-8 w-full overflow-hidden rounded-md border">
+          <div className="space-y-5">
+            <div
+              className="flex h-10 w-full overflow-hidden rounded-lg border"
+              role="img"
+              aria-label="Risk level distribution bar chart"
+            >
               {distribution.buckets
                 .filter((b) => b.count > 0)
                 .map((b) => (
                   <div
                     key={b.level}
-                    title={`${b.level}: ${b.count} (${b.percent.toFixed(1)}%)`}
-                    className={`${b.palette.bg} flex items-center justify-center text-xs font-mono`}
-                    style={{ flexGrow: b.count, flexShrink: 0, minWidth: "32px" }}
+                    title={`${b.palette.label}: ${b.count} (${b.percent.toFixed(1)}%)`}
+                    className={`${b.palette.bg} flex min-w-[2.5rem] items-center justify-center text-sm font-semibold tabular-nums`}
+                    style={{ flexGrow: b.count }}
                     data-level={b.level}
                   >
                     <span className={b.palette.text}>{b.count}</span>
                   </div>
                 ))}
             </div>
-            <ul className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+
+            <ul className="grid gap-2 sm:grid-cols-2">
               {distribution.buckets.map((b) => (
-                <li key={b.level} className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className={`inline-block h-3 w-3 rounded-sm border ${b.palette.bg} ${b.palette.border}`}
-                  />
-                  <span className="font-medium">{b.palette.label}</span>
-                  <span className="ml-auto font-mono tabular-nums text-muted-foreground">
-                    {b.count} · {b.percent.toFixed(0)}%
+                <li
+                  key={b.level}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      aria-hidden
+                      className={`inline-block h-3 w-3 shrink-0 rounded-sm border ${b.palette.bg} ${b.palette.border}`}
+                    />
+                    <span className="text-sm font-medium">{b.palette.label}</span>
+                  </div>
+                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                    {b.count}
+                    <span className="ml-1 text-muted-foreground/80">
+                      ({b.percent.toFixed(0)}%)
+                    </span>
                   </span>
                 </li>
               ))}

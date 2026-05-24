@@ -6,6 +6,7 @@ import { RISK_AREAS } from "@/lib/advisor/types";
 import { isQuestionBankFilterType } from "@/lib/assessment/bank/question-bank-types";
 import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
 import { loadQuestionBankDashboardRows } from "@/lib/assessment/bank/question-bank-dashboard";
+import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -84,15 +85,14 @@ export default async function AdminQuestionBankAreaPage({
             </p>
           ) : null}
           <p className="text-sm text-muted-foreground pt-1 max-w-2xl">
-            Live bank: Belvedere pillar DDL (<code className="text-xs">questions</code>). Create,
-            edit, hide, reorder, and delete apply directly to new assessments.
+            Create, edit, hide, reorder, or delete questions. Hidden questions are excluded from
+            new assessments.
           </p>
         </CardHeader>
         <CardContent className="space-y-0 divide-y divide-border p-0">
           {questions.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
-              No questions in the bank for this area. Run{" "}
-              <code className="text-xs">npm run seed:pillar-ddl</code> first.
+              No questions in this area yet.
             </p>
           ) : filteredQuestions.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
@@ -105,20 +105,23 @@ export default async function AdminQuestionBankAreaPage({
                 key={q.questionId}
                 className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between"
               >
-                <div className="min-w-0 space-y-1 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <code className="text-xs text-muted-foreground">{q.questionId}</code>
-                    <Badge variant={q.isVisible ? "success" : "secondary"}>
-                      {q.isVisible ? "Visible" : "Hidden"}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {q.type} · weight {q.weight}
-                      {q.required ? " · required" : " · optional"}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium leading-snug">{q.text}</p>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="text-sm font-medium leading-relaxed text-foreground">
+                    {formatQuestionTextForDisplay(q.text)}
+                  </p>
+                  {q.helpText ? (
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {formatQuestionTextForDisplay(q.helpText)}
+                    </p>
+                  ) : null}
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                  <Badge
+                    variant={q.isVisible ? "success" : "secondary"}
+                    className="shrink-0"
+                  >
+                    {q.isVisible ? "Visible" : "Hidden"}
+                  </Badge>
                   <div className="flex gap-1">
                     <form action={movePillarQuestionOrder}>
                       <input type="hidden" name="questionId" value={q.questionId} />

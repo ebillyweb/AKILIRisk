@@ -1,5 +1,5 @@
 /**
- * Setup cybersecurity recommendation rules based on Belvedere risk tiers
+ * Setup cybersecurity recommendation rules based on AKILI risk tiers
  *
  * Maps your risk classification (80-100, 60-79, 40-59, <40) to specific actions
  */

@@ -54,8 +54,8 @@ export default async function AdminQuestionBankNewPage({
         <Alert>
           <AlertTitle>Seed the question bank first</AlertTitle>
           <AlertDescription>
-            Run <code className="text-xs">npm run seed:pillar-ddl</code> after migrations to load
-            Belvedere categories, sections, and questions.
+            The question bank has not been loaded for this environment yet. Contact your platform
+            team to run the initial data setup.
           </AlertDescription>
         </Alert>
       ) : null}

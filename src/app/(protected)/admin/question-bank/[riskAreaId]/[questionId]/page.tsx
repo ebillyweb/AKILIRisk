@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
 import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
 import { RISK_AREAS } from "@/lib/advisor/types";
+import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
 import { prisma } from "@/lib/db";
 
 export default async function AdminQuestionBankEditPage({
@@ -56,7 +57,7 @@ export default async function AdminQuestionBankEditPage({
           href={`/admin/audit-log/entity/PillarQuestion/${pillarRow.id}`}
           className="text-sm text-muted-foreground hover:text-foreground hover:underline"
         >
-          View history (BRD §7.2)
+          View history
         </Link>
       </div>
 
@@ -78,7 +79,7 @@ export default async function AdminQuestionBankEditPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-mono text-base">{pillarRow.id}</CardTitle>
+          <CardTitle className="text-base">Edit question</CardTitle>
           <p className="text-sm text-muted-foreground">{area.name}</p>
         </CardHeader>
         <CardContent>
@@ -87,7 +88,7 @@ export default async function AdminQuestionBankEditPage({
             <input type="hidden" name="riskAreaId" value={riskAreaId} />
             <PillarQuestionBankFields
               answerType={pillarRow.answerType}
-              defaultText={pillarRow.questionText}
+              defaultText={formatQuestionTextForDisplay(pillarRow.questionText)}
               defaultHelpText={pillarRow.whyThisMatters ?? ""}
               defaultLearnMore={pillarRow.recommendedActions ?? ""}
               defaultRiskRelevance=""

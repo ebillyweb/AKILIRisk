@@ -2,20 +2,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { PillarAveragesResult } from "@/lib/admin/analytics-queries";
 
 /**
- * §9.1 (BRD) — per-pillar averages. 6-cell strip echoing the canonical
- * heat-map palette for visual continuity, but values are aggregate
- * averages across every advisor's clients (not per-client).
+ * §9.1 (BRD) — per-pillar averages across the platform.
  */
 export function PillarAveragesStrip({ data }: { data: PillarAveragesResult }) {
   const empty = data.totalScored === 0;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Per-pillar averages</CardTitle>
+        <CardTitle className="text-lg font-semibold">Per-pillar averages</CardTitle>
         <CardDescription>
           {empty
-            ? "Per-pillar averages populate once any assessment is scored."
-            : "Mean score and dominant risk level per domain, across the platform."}
+            ? "Averages appear once any assessment is scored."
+            : "Mean score and typical risk level for each domain."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -24,26 +23,34 @@ export function PillarAveragesStrip({ data }: { data: PillarAveragesResult }) {
             No scored assessments yet.
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {data.pillars.map((p) => (
-              <div
+              <li
                 key={p.pillarId}
                 data-pillar-id={p.pillarId}
                 data-dominant-level={p.dominantLevel}
-                className={`flex flex-col gap-1 rounded-md border p-3 text-xs ${p.palette.bg} ${p.palette.text} ${p.palette.border}`}
+                className={`min-w-0 rounded-lg border p-4 ${p.palette.bg} ${p.palette.text} ${p.palette.border}`}
               >
-                <div className="font-medium leading-tight">{p.pillarName}</div>
-                <div className="font-mono text-[11px] opacity-90 tabular-nums">
-                  {p.avgScore == null ? "—" : `${p.avgScore.toFixed(1)} avg`}
-                </div>
-                <div className="text-[11px] opacity-80">
+                <p
+                  className="text-sm font-semibold leading-snug"
+                  title={p.pillarName}
+                >
+                  {p.pillarName}
+                </p>
+                <p className="mt-3 text-2xl font-semibold tabular-nums leading-none">
+                  {p.avgScore == null ? "—" : p.avgScore.toFixed(1)}
+                  <span className="ml-1.5 text-xs font-normal opacity-80">
+                    avg score
+                  </span>
+                </p>
+                <p className="mt-2 text-xs leading-relaxed opacity-90">
                   {p.dominantLevel === "unassessed"
-                    ? "Not assessed"
-                    : `${p.palette.label} dominant · n=${p.count}`}
-                </div>
-              </div>
+                    ? "Not assessed yet"
+                    : `Typically ${p.palette.label.toLowerCase()}`}
+                </p>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </CardContent>
     </Card>
