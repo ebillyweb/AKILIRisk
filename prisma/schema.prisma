@@ -549,6 +549,9 @@ model HouseholdMember {
   relationship   FamilyRelationship
   governanceRoles GovernanceRole[]
   isResident     Boolean            @default(true)
+  /// US-48 (BRD §3.5 FR-HH-03): when false, member is omitted from advisor
+  /// surfaces but still drives client assessment personalization.
+  shareWithAdvisor Boolean          @default(true)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -711,6 +714,9 @@ model AdvisorProfile {
   // Feature Control
   brandingEnabled     Boolean @default(true)
   customDomainEnabled Boolean @default(false)
+  /// US-49 (BRD §3.5 FR-HH-04): tenant-wide; when false, clients under
+  /// this advisor cannot use /profiles and assessment skips profile logic.
+  householdProfilesEnabled Boolean @default(true)
 
   /// Option D session 1 (BRD §5.1 amendment): per-tenant policy
   /// controlling which optional PII fields the advisor's clients are

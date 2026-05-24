@@ -1,14 +1,26 @@
 import { auth } from '@/lib/auth';
 import { listHouseholdMembers } from '@/lib/data/household-members';
+import { getClientHouseholdProfilesEnabled } from '@/lib/household/profiles-policy';
 import { Badge } from '@/components/ui/badge';
 import { redirect } from 'next/navigation';
 import { ProfilesClient } from './ProfilesClient';
+import { ProfilesDisabledNotice } from '@/components/profiles/ProfilesDisabledNotice';
 
 export default async function ProfilesPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
     redirect('/signin');
+  }
+
+  const householdProfilesEnabled = await getClientHouseholdProfilesEnabled(session.user.id);
+
+  if (!householdProfilesEnabled) {
+    return (
+      <div className="space-y-6 sm:space-y-8">
+        <ProfilesDisabledNotice />
+      </div>
+    );
   }
 
   const members = await listHouseholdMembers(session.user.id);

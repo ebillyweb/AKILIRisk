@@ -8,6 +8,8 @@ import {
   updateHouseholdMemberRecord,
   listHouseholdMembers,
 } from '@/lib/data/household-members';
+import { getHouseholdProfileForClientAssessment } from '@/lib/household/member-profile';
+import { getClientHouseholdProfilesEnabled } from '@/lib/household/profiles-policy';
 import { householdMemberSchema, updateHouseholdMemberSchema } from '@/lib/schemas/profile';
 import { revalidatePath } from 'next/cache';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
@@ -38,10 +40,18 @@ async function getAuthActor() {
   };
 }
 
+async function assertHouseholdProfilesEnabledForClient(userId: string) {
+  const enabled = await getClientHouseholdProfilesEnabled(userId);
+  if (!enabled) {
+    throw new Error('Household profiles are disabled for your account');
+  }
+}
+
 // Create a new household member
 export async function createHouseholdMember(data: unknown) {
   try {
     const actor = await getAuthActor();
+    await assertHouseholdProfilesEnabledForClient(actor.userId);
 
     const validatedFields = householdMemberSchema.safeParse(data);
     if (!validatedFields.success) {
@@ -77,6 +87,7 @@ export async function createHouseholdMember(data: unknown) {
 export async function updateHouseholdMember(id: string, data: unknown) {
   try {
     const actor = await getAuthActor();
+    await assertHouseholdProfilesEnabledForClient(actor.userId);
 
     const validatedFields = updateHouseholdMemberSchema.safeParse(data);
     if (!validatedFields.success) {
@@ -129,33 +140,16 @@ export async function getHouseholdMembers() {
   }
 }
 
-/**
- * Round-11 commit 2.2 (BRD §5.1 amendment): RETIRED. The
- * `shareNameAndContactWithAdvisor` flag was dropped along with the
- * fullName/contact fields it gated. Kept as a no-op stub so existing
- * call sites (if any cached on the client) still resolve and audit
- * the historical intent. Safe to delete in a follow-up commit.
- */
-export async function setAllHouseholdMembersShareNameAndContactWithAdvisor(share: boolean) {
+/** Assessment + client UI: all members when US-49 enabled; else null. */
+export async function getClientAssessmentHouseholdProfile() {
   try {
-    const actor = await getAuthActor();
-    await writeAudit({
-      actor,
-      action: AUDIT_ACTIONS.HOUSEHOLD_MEMBER_SHARE_TOGGLE,
-      entityType: 'HouseholdMember',
-      entityId: null,
-      metadata: {
-        scope: 'all_members_for_user',
-        userId: actor.userId,
-        retiredAction: true,
-        attemptedShare: share,
-      },
-    });
-    return { success: true as const };
+    const userId = await getAuthUserId();
+    const profile = await getHouseholdProfileForClientAssessment(userId);
+    return { success: true as const, profile };
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'Failed to update advisor visibility for household';
-    return { success: false as const, error: message };
+      error instanceof Error ? error.message : 'Failed to load household profile';
+    return { success: false as const, error: message, profile: null };
   }
 }
 
@@ -163,6 +157,7 @@ export async function setAllHouseholdMembersShareNameAndContactWithAdvisor(share
 export async function deleteHouseholdMember(id: string) {
   try {
     const actor = await getAuthActor();
+    await assertHouseholdProfilesEnabledForClient(actor.userId);
 
     // Capture row before delete so beforeData has the (scrubbed) shape.
     const prior = await prisma.householdMember.findFirst({

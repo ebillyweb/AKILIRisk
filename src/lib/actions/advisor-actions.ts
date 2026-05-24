@@ -120,10 +120,12 @@ export async function getIntakeReviewData(interviewId: string) {
 
     const script = await loadIntakeScriptQuestions();
 
-    const rawHouseholdMembers = await prisma.householdMember.findMany({
-      where: { userId: reviewData.interview.userId },
-      orderBy: { createdAt: 'asc' },
-    });
+    const rawHouseholdMembers = profile.householdProfilesEnabled
+      ? await prisma.householdMember.findMany({
+          where: { userId: reviewData.interview.userId },
+          orderBy: { createdAt: 'asc' },
+        })
+      : [];
     const householdMembers = toAdvisorHouseholdMemberViews(rawHouseholdMembers);
 
     const intakeReviewData: IntakeReviewData = {

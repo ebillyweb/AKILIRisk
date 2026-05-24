@@ -47,6 +47,11 @@ export function MemberCard({ member, onEdit, onDelete }: MemberCardProps) {
               <Badge variant={member.isResident ? 'secondary' : 'info'} className="bg-background/75">
                 {member.isResident ? 'Lives in household' : 'Extended family'}
               </Badge>
+              {member.shareWithAdvisor === false ? (
+                <Badge variant="outline" className="bg-background/75">
+                  Hidden from advisor
+                </Badge>
+              ) : null}
             </div>
           </div>
           <div className="flex gap-2">

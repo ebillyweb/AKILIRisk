@@ -33,6 +33,7 @@ type HouseholdMemberInput = {
   relationship: FamilyRelationship;
   governanceRoles?: GovernanceRole[];
   isResident?: boolean;
+  shareWithAdvisor?: boolean;
 };
 
 export async function listHouseholdMembers(userId: string): Promise<HouseholdMember[]> {
@@ -121,6 +122,7 @@ export async function createHouseholdMemberRecord(
           relationship: data.relationship,
           governanceRoles: data.governanceRoles ?? [],
           isResident: data.isResident ?? true,
+          shareWithAdvisor: data.shareWithAdvisor ?? true,
         } as never,
       });
     } catch (err) {
@@ -155,6 +157,9 @@ export async function updateHouseholdMemberRecord(
       relationship: data.relationship,
       governanceRoles: data.governanceRoles ?? [],
       isResident: data.isResident ?? true,
+      ...(data.shareWithAdvisor !== undefined
+        ? { shareWithAdvisor: data.shareWithAdvisor }
+        : {}),
     } as never,
   });
 }

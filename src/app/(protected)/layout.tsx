@@ -13,6 +13,7 @@ import { clientPortalBrandingDisplayTitle, clientPortalLogoImgSrc } from "@/lib/
 import { getAssignedAdvisorBrandingForClient } from "@/lib/client/assigned-advisor-branding";
 import { getTenantBrandingFromRequestHeaders } from "@/lib/client/tenant-portal-branding";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
+import { getClientHouseholdProfilesEnabled } from "@/lib/household/profiles-policy";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { prisma } from "@/lib/db";
@@ -56,19 +57,23 @@ export default async function ProtectedLayout({
 
   let restrictNavToIntake = false;
   let assessmentUnlockedForClient = false;
+  let hideProfilesNav = false;
   let clientAdvisorBranding: Awaited<
     ReturnType<typeof getAssignedAdvisorBrandingForClient>
   > = null;
 
   if (role === "USER" && session.user.id) {
-    const [gate, assignmentBranding, tenantBranding] = await Promise.all([
+    const [gate, assignmentBranding, tenantBranding, householdProfilesEnabled] =
+      await Promise.all([
       getClientIntakeGateState(session.user.id),
       getAssignedAdvisorBrandingForClient(session.user.id),
       getTenantBrandingFromRequestHeaders(),
+      getClientHouseholdProfilesEnabled(session.user.id),
     ]);
     clientAdvisorBranding = assignmentBranding ?? tenantBranding;
     restrictNavToIntake = gate.restrictNavToIntake;
     assessmentUnlockedForClient = gate.assessmentUnlocked;
+    hideProfilesNav = !householdProfilesEnabled;
   }
 
   const brandTitle = clientAdvisorBranding
@@ -260,6 +265,7 @@ export default async function ProtectedLayout({
                       showAdmin={showAdmin}
                       restrictNavToIntake={restrictNavToIntake}
                       assessmentUnlockedForClient={assessmentUnlockedForClient}
+                      hideProfilesNav={hideProfilesNav}
                       clientBrandHex={previewHex}
                       advisorFeatureFlags={advisorFeatureFlags}
                     />

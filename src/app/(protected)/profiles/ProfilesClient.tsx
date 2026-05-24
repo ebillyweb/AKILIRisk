@@ -94,6 +94,7 @@ export function ProfilesClient({ initialMembers }: ProfilesClientProps) {
     relationship: member.relationship,
     governanceRoles: member.governanceRoles,
     isResident: member.isResident,
+    shareWithAdvisor: member.shareWithAdvisor,
   });
 
   if (showForm) {

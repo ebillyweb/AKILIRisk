@@ -53,6 +53,7 @@ export function ProfileForm({ defaultValues, onSubmit, onCancel, isSubmitting }:
       relationship: defaultValues?.relationship || 'SPOUSE',
       governanceRoles: defaultValues?.governanceRoles || [],
       isResident: defaultValues?.isResident ?? true,
+      shareWithAdvisor: defaultValues?.shareWithAdvisor ?? true,
     },
   });
 
@@ -180,6 +181,26 @@ export function ProfileForm({ defaultValues, onSubmit, onCancel, isSubmitting }:
               <span className="block text-sm font-semibold text-foreground">Lives in household</span>
               <span className="block text-xs leading-5 text-muted-foreground">
                 Checked for immediate household residents; uncheck for extended family.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div className="space-y-2">
+          <label className={fieldLabelClassName}>Advisor visibility</label>
+          <label className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
+            <input
+              type="checkbox"
+              {...register('shareWithAdvisor')}
+              className="mt-1 size-4 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            />
+            <span className="space-y-1">
+              <span className="block text-sm font-semibold text-foreground">
+                Share with my advisor
+              </span>
+              <span className="block text-xs leading-5 text-muted-foreground">
+                When unchecked, this member is hidden from your advisor&apos;s portal and
+                reports. Your assessment can still use this profile locally.
               </span>
             </span>
           </label>

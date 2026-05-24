@@ -165,6 +165,8 @@ export const AUDIT_ACTIONS = {
   HOUSEHOLD_MEMBER_UPDATE: "household_member.update",
   HOUSEHOLD_MEMBER_DELETE: "household_member.delete",
   HOUSEHOLD_MEMBER_SHARE_TOGGLE: "household_member.share_toggle",
+  /** US-49: advisor toggles tenant-wide household profiles feature. */
+  HOUSEHOLD_PROFILES_POLICY_UPDATE: "household_profiles.policy_update",
   INTAKE_SUBMIT: "intake.submit",
   INTAKE_AUDIO_UPLOAD: "intake.audio_upload",
 

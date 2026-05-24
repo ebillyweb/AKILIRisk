@@ -16,6 +16,7 @@
 import { prisma } from "@/lib/db";
 import { RELATIONSHIP_LABELS } from "@/lib/schemas/profile";
 import { getAdvisorBrandingForPDF } from "@/lib/pdf/branding-integration";
+import { getHouseholdProfileForAdvisorView } from "@/lib/household/member-profile";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 // Re-exported types intentionally narrow — the snapshot is the storage
 // boundary, not a public API. Consumers use `ReportSnapshot` directly.
@@ -147,26 +148,15 @@ export async function buildReportSnapshot(
     Math.round((responseCount / estimatedTotalQuestions) * 100)
   );
 
-  const householdMembers = await prisma.householdMember.findMany({
-    where: { userId: assessment.userId },
-    select: {
-      displayLabel: true,
-      birthYear: true,
-      sex: true,
-      relationship: true,
-      governanceRoles: true,
-      isResident: true,
-    },
-  });
-
-  const householdProfile = householdMembers.length > 0
+  const householdProfileRaw = await getHouseholdProfileForAdvisorView(assessment.userId);
+  const householdProfile = householdProfileRaw
     ? {
-        members: householdMembers.map((m) => ({
+        members: householdProfileRaw.members.map((m) => ({
           displayLabel: m.displayLabel,
           relationship: RELATIONSHIP_LABELS[m.relationship] ?? m.relationship,
           birthYear: m.birthYear ?? null,
           sex: m.sex ?? null,
-          governanceRoles: m.governanceRoles as string[],
+          governanceRoles: m.governanceRoles,
           isResident: m.isResident,
         })),
       }

@@ -10,6 +10,7 @@ import {
   STARTER_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
+import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +144,19 @@ export default async function AdvisorSettingsPage() {
               <Link href="/advisor/settings/pii-policy">Manage policy</Link>
             </Button>
           </div>
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight">Household profiles</h2>
+            <p className="text-sm text-muted-foreground">
+              Control whether clients can manage household members and receive
+              personalized assessment copy.
+            </p>
+          </div>
+          <HouseholdProfilesPolicyForm
+            initialEnabled={profile.householdProfilesEnabled ?? true}
+          />
         </div>
       </div>
     </div>

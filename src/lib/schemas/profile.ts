@@ -27,6 +27,7 @@ export const householdMemberSchema = z.object({
   relationship: z.enum(['SPOUSE', 'CHILD', 'PARENT', 'SIBLING', 'GRANDCHILD', 'GRANDPARENT', 'OTHER']),
   governanceRoles: z.array(z.enum(['DECISION_MAKER', 'ADVISOR', 'SUCCESSOR', 'BENEFICIARY', 'TRUSTEE', 'EXECUTOR', 'OTHER'])),
   isResident: z.boolean(),
+  shareWithAdvisor: z.boolean().default(true),
 });
 
 // Schema for updating household members (partial except for relationship).

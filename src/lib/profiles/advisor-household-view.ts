@@ -3,15 +3,8 @@ import 'server-only';
 import type { FamilyRelationship, GovernanceRole, HouseholdMember } from '@prisma/client';
 
 /**
- * Round-11 commit 2.2 (BRD §5.1 amendment): demographic-only advisor
- * view. Pre-round-11 this view redacted fullName/contact when the
- * client's `shareNameAndContactWithAdvisor` flag was off; round-11
- * dropped both the PII fields and the flag itself, so the view is
- * now a near-passthrough.
- *
- * The function + type are preserved so call sites don't need
- * coordinated rewrites; future schema changes that re-introduce
- * advisor-visible PII can extend this view.
+ * Advisor-visible household member view. US-48: members with
+ * `shareWithAdvisor = false` are excluded before mapping.
  */
 export type AdvisorHouseholdMemberView = {
   id: string;
@@ -26,14 +19,12 @@ export type AdvisorHouseholdMemberView = {
   updatedAt: Date;
 };
 
-/**
- * Maps a stored household member to what an advisor is allowed to see.
- * Now a near-identity transform — every column on the row is
- * non-identifying demographic / relationship data and safe to surface.
- */
+function memberSharesWithAdvisor(member: HouseholdMember): boolean {
+  const share = (member as HouseholdMember & { shareWithAdvisor?: boolean }).shareWithAdvisor;
+  return share !== false;
+}
+
 export function toAdvisorHouseholdMemberView(member: HouseholdMember): AdvisorHouseholdMemberView {
-  // Cast through unknown so the action layer compiles before
-  // `prisma generate` picks up the new column shape locally.
   const m = member as unknown as Record<string, unknown>;
   return {
     id: m.id as string,
@@ -49,6 +40,8 @@ export function toAdvisorHouseholdMemberView(member: HouseholdMember): AdvisorHo
   };
 }
 
-export function toAdvisorHouseholdMemberViews(members: HouseholdMember[]): AdvisorHouseholdMemberView[] {
-  return members.map(toAdvisorHouseholdMemberView);
+export function toAdvisorHouseholdMemberViews(
+  members: HouseholdMember[],
+): AdvisorHouseholdMemberView[] {
+  return members.filter(memberSharesWithAdvisor).map(toAdvisorHouseholdMemberView);
 }

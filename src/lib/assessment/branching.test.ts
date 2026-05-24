@@ -152,7 +152,7 @@ describe("detectBranchingChanges", () => {
     const previousAnswers = { "teg-01": "no" };
     const currentAnswers = { "teg-01": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions);
+    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
 
     const expectedNewlyVisible = getDependentQuestionIds("teg-01");
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);
@@ -164,7 +164,7 @@ describe("detectBranchingChanges", () => {
     const previousAnswers = { "teg-01": "yes" };
     const currentAnswers = { "teg-01": "no" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions);
+    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
 
     const expectedNewlyHidden = getDependentQuestionIds("teg-01");
     expect(changes.newlyHidden).toEqual(expectedNewlyHidden);
@@ -176,7 +176,7 @@ describe("detectBranchingChanges", () => {
     const previousAnswers = { "sp-01": "no" };
     const currentAnswers = { "sp-01": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions);
+    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
 
     const expectedNewlyVisible = getDependentQuestionIds("sp-01");
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);
@@ -187,7 +187,7 @@ describe("detectBranchingChanges", () => {
     const previousAnswers = { "bi-01": "no" };
     const currentAnswers = { "bi-01": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions);
+    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
 
     const expectedNewlyVisible = getDependentQuestionIds("bi-01");
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);
@@ -198,7 +198,7 @@ describe("detectBranchingChanges", () => {
     const previousAnswers = { "teg-01": "yes", "sp-01": "no", "bi-01": "no" };
     const currentAnswers = { "teg-01": "no", "sp-01": "yes", "bi-01": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions);
+    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
 
     const expectedNewlyVisible = [
       ...getDependentQuestionIds("sp-01"),
@@ -213,7 +213,7 @@ describe("detectBranchingChanges", () => {
   it("returns empty arrays when no branching changes occur", () => {
     const answers = { "teg-01": "yes", "sp-01": "no", "bi-01": "yes" };
 
-    const changes = detectBranchingChanges(answers, answers, allQuestions);
+    const changes = detectBranchingChanges(answers, answers, allQuestions, testProfile);
 
     expect(changes.newlyVisible).toEqual([]);
     expect(changes.newlyHidden).toEqual([]);
@@ -360,6 +360,10 @@ describe("shouldShowQuestion with profile awareness", () => {
     expect(shouldShowQuestion(question, {})).toBe(false);
   });
 
+  it("hides question when profileCondition is set but profile is null", () => {
+    expect(shouldShowQuestion(questionWithProfileCondition, {}, null)).toBe(false);
+  });
+
   it("with profile=null behaves identically to before", () => {
     const question = questionWithBranch;
     const answers = { "has-trust": "yes" };
@@ -433,13 +437,16 @@ describe("getVisibleQuestions with profile", () => {
     expect(visible.map(q => q.id)).not.toContain(questionWithProfileCondition.id);
   });
 
-  it("without profile returns same results as before", () => {
+  it("without profile hides profile-conditioned questions", () => {
     const visibleWithoutProfile = getVisibleQuestions({}, questionsWithProfile);
     const visibleWithUndefined = getVisibleQuestions({}, questionsWithProfile, undefined);
     const visibleWithNull = getVisibleQuestions({}, questionsWithProfile, null);
 
     expect(visibleWithoutProfile).toEqual(visibleWithUndefined);
     expect(visibleWithoutProfile).toEqual(visibleWithNull);
-    expect(visibleWithoutProfile).toHaveLength(3); // All visible when no profile filtering
+    expect(visibleWithoutProfile).toHaveLength(2);
+    expect(visibleWithoutProfile.map((q) => q.id)).not.toContain(
+      questionWithProfileCondition.id,
+    );
   });
 });

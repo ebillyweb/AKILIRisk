@@ -36,8 +36,11 @@ export function shouldShowQuestion(
     }
   }
 
-  // NEW: Profile-based condition (only when profile exists)
-  if (question.profileCondition && profile) {
+  // Profile-based condition: hidden when no profile or condition fails.
+  if (question.profileCondition) {
+    if (!profile) {
+      return false;
+    }
     return question.profileCondition(profile);
   }
 

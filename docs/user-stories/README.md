@@ -8,7 +8,7 @@ This directory maps **BRD functional requirements** to **user stories**, **imple
 |------|-------------|---------|-----|
 | **5.1** | FR-1, FR-11 — client invitation & onboarding | US-1 – US-9 | [EPIC-5.1](./EPIC-5.1-client-invitation-onboarding.md) |
 | **5.2** | FR-2 – FR-6 — household assessment lifecycle | US-10 – US-20 | [EPIC-5.2](./EPIC-5.2-household-assessment-lifecycle.md) |
-| **5.3** | Household profiles & assessment personalization | US-21 – US-23 | [EPIC-5.3](./EPIC-5.3-household-profiles-personalization.md) |
+| **5.3** | Household profiles, personalization & privacy | US-21 – US-23, US-48 – US-49 | [EPIC-5.3](./EPIC-5.3-household-profiles-personalization.md) |
 | **5.4** | Advisor workspace, pipeline & documents | US-24 – US-28 | [EPIC-5.4](./EPIC-5.4-advisor-workspace-pipeline.md) |
 | **5.5** | Platform administration & configuration | US-29 – US-34 | [EPIC-5.5](./EPIC-5.5-platform-administration.md) |
 | **5.6** | Account security, consent & compliance | US-35 – US-38 | [EPIC-5.6](./EPIC-5.6-account-security-compliance.md) |

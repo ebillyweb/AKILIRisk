@@ -6,6 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { listHouseholdMembers } from "@/lib/data/household-members";
+import { getClientHouseholdProfilesEnabled } from "@/lib/household/profiles-policy";
 
 /**
  * Interview Completion Page
@@ -21,10 +22,12 @@ export default async function CompletePage() {
   }
 
   const members = await listHouseholdMembers(session.user.id);
+  const householdProfilesEnabled = await getClientHouseholdProfilesEnabled(session.user.id);
   const hasHouseholdMembers = members.length > 0;
   const hasAnyGovernanceRole = members.some((m) => m.governanceRoles.length > 0);
-  const needsHouseholdProfiles = !hasHouseholdMembers;
-  const needsGovernanceRoles = hasHouseholdMembers && !hasAnyGovernanceRole;
+  const needsHouseholdProfiles = householdProfilesEnabled && !hasHouseholdMembers;
+  const needsGovernanceRoles =
+    householdProfilesEnabled && hasHouseholdMembers && !hasAnyGovernanceRole;
 
   return (
     <div className="max-w-2xl mx-auto py-8 sm:py-12">
