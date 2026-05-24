@@ -56,7 +56,7 @@ test.describe("admin intake script management", () => {
     const probeText = `${originalText}${marker}`;
 
     await textarea.fill(probeText);
-    await page.getByRole("button", { name: /^save$/i }).click();
+    await page.getByRole("button", { name: /save changes/i }).click();
     await page.waitForURL(/\/admin\/intake\/questions(\?saved=1)?$/);
     await expect(
       page.getByText(/Intake script changes are live/i)
@@ -66,7 +66,7 @@ test.describe("admin intake script management", () => {
     await expect(textarea).toHaveValue(probeText);
 
     await textarea.fill(originalText);
-    await page.getByRole("button", { name: /^save$/i }).click();
+    await page.getByRole("button", { name: /save changes/i }).click();
     await page.waitForURL(/\/admin\/intake\/questions(\?saved=1)?$/);
   });
 
@@ -74,18 +74,11 @@ test.describe("admin intake script management", () => {
     await new SignInPage(page).signInAs("admin");
     await page.goto("/admin/intake/questions");
 
-    const initialHide = await page
-      .getByRole("button", { name: /hide from interview/i })
-      .count();
-    const initialShow = await page
-      .getByRole("button", { name: /show in interview/i })
-      .count();
+    const initialHide = await page.getByRole("button", { name: /^hide$/i }).count();
+    const initialShow = await page.getByRole("button", { name: /^show$/i }).count();
     expect(initialHide).toBeGreaterThan(0);
 
-    await page
-      .getByRole("button", { name: /hide from interview/i })
-      .first()
-      .click();
+    await page.getByRole("button", { name: /^hide$/i }).first().click();
     await page.waitForLoadState("networkidle");
 
     // We do a fresh navigation here to isolate the DB round-trip from the
@@ -94,34 +87,27 @@ test.describe("admin intake script management", () => {
     // redirecting to ?saved=1 to bust the prefetched RSC cache).
     await page.goto("/admin/intake/questions");
 
-    expect(
-      await page.getByRole("button", { name: /hide from interview/i }).count()
-    ).toBe(initialHide - 1);
-    expect(
-      await page.getByRole("button", { name: /show in interview/i }).count()
-    ).toBe(initialShow + 1);
+    expect(await page.getByRole("button", { name: /^hide$/i }).count()).toBe(
+      initialHide - 1
+    );
+    expect(await page.getByRole("button", { name: /^show$/i }).count()).toBe(
+      initialShow + 1
+    );
 
-    await page
-      .getByRole("button", { name: /show in interview/i })
-      .first()
-      .click();
+    await page.getByRole("button", { name: /^show$/i }).first().click();
     await page.waitForLoadState("networkidle");
     await page.goto("/admin/intake/questions");
 
-    expect(
-      await page.getByRole("button", { name: /hide from interview/i }).count()
-    ).toBe(initialHide);
-    expect(
-      await page.getByRole("button", { name: /show in interview/i }).count()
-    ).toBe(initialShow);
+    expect(await page.getByRole("button", { name: /^hide$/i }).count()).toBe(initialHide);
+    expect(await page.getByRole("button", { name: /^show$/i }).count()).toBe(initialShow);
   });
 
   test("visibility toggle updates the rendered counts without a hard reload", async ({ page }) => {
     await new SignInPage(page).signInAs("admin");
     await page.goto("/admin/intake/questions");
 
-    const hideButtons = page.getByRole("button", { name: /hide from interview/i });
-    const showButtons = page.getByRole("button", { name: /show in interview/i });
+    const hideButtons = page.getByRole("button", { name: /^hide$/i });
+    const showButtons = page.getByRole("button", { name: /^show$/i });
     const initialHide = await hideButtons.count();
 
     await hideButtons.first().click();

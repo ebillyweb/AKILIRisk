@@ -48,10 +48,15 @@ function mapRiskLevelToPrisma(riskLevel: string): PrismaRiskLevel {
 /** Resolve a stored PillarScore row (canonical or legacy pillar key). */
 async function findPillarScore(assessmentId: string, pillarSlug: string) {
   const canonical = normalizePillarSlug(pillarSlug);
-  const candidates = [canonical, pillarSlug, "family-governance"].filter(
-    (v, i, a) => a.indexOf(v) === i
-  );
-  for (const pillar of candidates) {
+  const candidates = [canonical];
+  if (pillarSlug !== canonical) {
+    candidates.push(pillarSlug);
+  }
+  if (canonical === "governance") {
+    candidates.push("family-governance");
+  }
+  const unique = candidates.filter((v, i, a) => a.indexOf(v) === i);
+  for (const pillar of unique) {
     const score = await prisma.pillarScore.findUnique({
       where: { assessmentId_pillar: { assessmentId, pillar } },
     });

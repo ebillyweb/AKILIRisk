@@ -48,7 +48,10 @@ vi.mock("@/lib/db", () => ({
           where: { assessmentId_pillar: { assessmentId: string; pillar: string } };
         }) => {
           const k = where.assessmentId_pillar;
-          if (k.assessmentId === "asmt-1" && k.pillar === "family-governance") {
+          if (
+            k.assessmentId === "asmt-1" &&
+            (k.pillar === "governance" || k.pillar === "family-governance")
+          ) {
             return {
               score: 7.5,
               riskLevel: "MEDIUM",
@@ -99,7 +102,7 @@ describe("GET /api/assessment/[id]/score audit wiring", () => {
     expect(call.entityId).toBe("asmt-1");
     expect(call.metadata).toEqual({
       assessmentId: "asmt-1",
-      pillar: "family-governance",
+      pillar: "governance",
     });
     expect(call.actor.userId).toBe("user-owner");
   });
@@ -137,7 +140,7 @@ describe("GET /api/assessment/[id]/score audit wiring", () => {
 
     const res = await GET(
       makeRequest(
-        "http://localhost/api/assessment/asmt-1/score?pillar=identity-risk"
+        "http://localhost/api/assessment/asmt-1/score?pillar=cyber-digital"
       ),
       { params: params("asmt-1") }
     );

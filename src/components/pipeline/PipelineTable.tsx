@@ -5,7 +5,6 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   createColumnHelper,
-  type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
 import { useState, type ReactNode } from "react";
@@ -65,7 +64,7 @@ export function PipelineTable({ clients }: PipelineTableProps) {
     return { documents: true };
   });
 
-  const columns: ColumnDef<PipelineClient, unknown>[] = [
+  const columns = [
     columnHelper.accessor("name", {
       header: "Client",
       cell: (info) => {

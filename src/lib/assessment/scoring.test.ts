@@ -8,7 +8,34 @@ import {
 } from "./scoring";
 import { getVisibleQuestions } from "./branching";
 import { familyGovernancePillar, allQuestions } from "./questions";
+import type { HouseholdProfile } from "./personalization";
 import type { Pillar, Question } from "./types";
+
+const CURRENT_YEAR = new Date().getUTCFullYear();
+const yearForAge = (age: number) => CURRENT_YEAR - age;
+
+const profileWithSuccessor: HouseholdProfile = {
+  members: [
+    {
+      id: "1",
+      displayLabel: "Parent",
+      birthYear: yearForAge(50),
+      sex: null,
+      relationship: "self",
+      governanceRoles: ["DECISION_MAKER"],
+      isResident: true,
+    },
+    {
+      id: "2",
+      displayLabel: "Heir",
+      birthYear: yearForAge(20),
+      sex: null,
+      relationship: "child",
+      governanceRoles: ["SUCCESSOR"],
+      isResident: true,
+    },
+  ],
+};
 
 const minimalPillar: Pillar = {
   id: "test-pillar",
@@ -430,7 +457,11 @@ describe("branching-aware scoring with real questions", () => {
       "bi-03": "independent", // Good compensation
     };
 
-    const visibleQuestions = getVisibleQuestions(answers, allQuestions);
+    const visibleQuestions = getVisibleQuestions(
+      answers,
+      allQuestions,
+      profileWithSuccessor
+    );
     const visibleIds = visibleQuestions.map(q => q.id);
 
     // All sections should be visible
