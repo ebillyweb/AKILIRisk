@@ -129,14 +129,11 @@ function genericWhere(filter: AuditLogFilter): Prisma.AuditLogWhereInput {
     if (filter.to) where.createdAt.lte = filter.to;
   }
   // Round-11 cleanup (NIT 3): exclude rows whose metadata.testOrigin
-  // === true. Uses Prisma's JSON path filter; Postgres evaluates as
-  // `metadata->>'testOrigin' != 'true' OR metadata IS NULL` so audit
-  // rows without the flag continue to show.
+  // === true. Prisma's JSON path filter with NOT/equals does not treat
+  // missing keys as non-matches; `not: { testOrigin: true }` keeps rows
+  // where the flag is absent or false.
   if (filter.excludeTestOrigin) {
-    where.NOT = {
-      ...(where.NOT ?? {}),
-      metadata: { path: ["testOrigin"], equals: true },
-    };
+    where.metadata = { not: { testOrigin: true } };
   }
   return where;
 }

@@ -32,7 +32,7 @@ import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { calculatePillarScore } from "@/lib/assessment/scoring";
 import { getVisibleQuestions } from "@/lib/assessment/branching";
-import { familyGovernancePillar } from "@/lib/assessment/questions";
+import { familyGovernancePillar } from "@/lib/assessment/family-governance-pillar";
 import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
 import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/questions";
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";

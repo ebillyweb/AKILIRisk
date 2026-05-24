@@ -214,14 +214,12 @@ describe("excludeTestOrigin filter (NIT 3)", () => {
     expect(call2?.where ?? {}).not.toHaveProperty("NOT");
   });
 
-  it("adds the JSON-path NOT predicate when excludeTestOrigin is true", async () => {
+  it("adds the metadata not predicate when excludeTestOrigin is true", async () => {
     await listAuditLog({ excludeTestOrigin: true }, { take: 50 });
     const call = auditLogFindMany.mock.calls[0]?.[0] as {
-      where: { NOT?: { metadata?: { path: string[]; equals: unknown } } };
+      where: { metadata?: { not?: { testOrigin?: boolean } } };
     };
-    expect(call.where.NOT).toEqual({
-      metadata: { path: ["testOrigin"], equals: true },
-    });
+    expect(call.where.metadata).toEqual({ not: { testOrigin: true } });
   });
 
   it("excludeTestOrigin only affects the generic source", async () => {
@@ -237,12 +235,9 @@ describe("excludeTestOrigin filter (NIT 3)", () => {
     expect(brandCall?.where ?? {}).not.toHaveProperty("NOT");
   });
 
-  it("preserves an existing NOT clause when adding the testOrigin predicate", async () => {
-    // No genericWhere call site currently sets NOT, but the
-    // implementation merges defensively (`...(where.NOT ?? {})`). Cover
-    // that branch via a filter combo that produces a populated where —
-    // here, just verify the metadata predicate lands intact alongside
-    // the action filter.
+  it("preserves action filter alongside the testOrigin predicate", async () => {
+    // No genericWhere call site currently sets metadata, but verify the
+    // testOrigin predicate lands intact alongside the action filter.
     await listAuditLog(
       { excludeTestOrigin: true, actions: ["user.create", "user.update"] },
       { take: 50 },
@@ -250,14 +245,11 @@ describe("excludeTestOrigin filter (NIT 3)", () => {
     const call = auditLogFindMany.mock.calls[0]?.[0] as {
       where: {
         action?: { in: string[] };
-        NOT: { metadata: { path: string[]; equals: unknown } };
+        metadata?: { not?: { testOrigin?: boolean } };
       };
     };
     expect(call.where.action).toEqual({ in: ["user.create", "user.update"] });
-    expect(call.where.NOT.metadata).toEqual({
-      path: ["testOrigin"],
-      equals: true,
-    });
+    expect(call.where.metadata).toEqual({ not: { testOrigin: true } });
   });
 });
 

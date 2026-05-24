@@ -176,6 +176,8 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 ## Playwright coverage
 
+**Test fixtures:** `platform-admin@test.com` / `testpassword123` — `platformAdmin` in `tests/fixtures/users.ts` (role `ADMIN`, not `SUPER_ADMIN`); seeded by `scripts/seed-advisor-test-data.js`. Super-admin gates use `buddy@ebilly.com` (`admin` fixture). See CLAUDE.md.
+
 | Spec | Stories |
 |------|---------|
 | `epic-5.5-platform-admin.spec.ts` | US-37 (CRUD + audit + index header + legacy redirects), US-39–US-44, US-45 (partial), US-46 (list), Control Center IA, ADMIN vs SUPER_ADMIN gates |

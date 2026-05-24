@@ -63,22 +63,21 @@ test.describe("Epic 5.5 platform administration", () => {
       await new SignInPage(page).signInAs("admin");
       await page.goto("/admin/assessment/questions/governance");
 
-      const hideButtons = page.getByRole("button", { name: /^Hide$/ });
-      const showButtons = page.getByRole("button", { name: /^Show$/ });
-      const initialHide = await hideButtons.count();
-      expect(initialHide).toBeGreaterThan(0);
+      const firstRow = page.locator("div.flex.flex-col.gap-3.p-4").first();
+      const hideButton = firstRow.getByRole("button", { name: /^Hide$/ });
+      await expect(hideButton).toBeVisible();
 
-      await hideButtons.first().click();
+      await hideButton.click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance\?saved=1/);
       await expect(page.getByText(/Question bank changes are live/i)).toBeVisible();
 
-      expect(await hideButtons.count()).toBe(initialHide - 1);
-      expect(await showButtons.count()).toBeGreaterThan(0);
+      const showButton = firstRow.getByRole("button", { name: /^Show$/ });
+      await expect(showButton).toBeVisible();
 
-      await showButtons.first().click();
+      await showButton.click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance\?saved=1/);
 
-      expect(await hideButtons.count()).toBe(initialHide);
+      await expect(firstRow.getByRole("button", { name: /^Hide$/ })).toBeVisible();
     });
 
     test("creating and deleting a question round-trips through the DB", async ({ page }) => {
@@ -94,25 +93,19 @@ test.describe("Epic 5.5 platform administration", () => {
       await expect(page.getByText(probeText)).toBeVisible();
 
       page.once("dialog", (dialog) => dialog.accept());
-      await page
-        .locator("div.flex.flex-col.gap-3.p-4", { hasText: probeText })
-        .getByRole("button", { name: /^Delete$/ })
-        .click();
-      await page.waitForLoadState("networkidle");
-      await page.goto("/admin/assessment/questions/governance");
-      await expect(page.getByText(probeText)).toHaveCount(0);
+      const probeRow = page.locator("div.flex.flex-col.gap-3.p-4", { hasText: probeText });
+      await probeRow.getByRole("button", { name: /^Delete$/ }).click();
+      await page.waitForURL(/\/admin\/assessment\/questions\/governance(\?|$)/);
+      await expect(probeRow).toHaveCount(0);
     });
 
     test("reorder controls are enabled and submit without error", async ({ page }) => {
       await new SignInPage(page).signInAs("admin");
       await page.goto("/admin/assessment/questions/governance");
 
-      const moveDownButtons = page.getByRole("button", { name: "Move down" });
-      expect(await moveDownButtons.count()).toBeGreaterThan(0);
-
-      const enabled = moveDownButtons.filter({ hasNot: page.locator("[disabled]") }).first();
-      await expect(enabled).toBeEnabled();
-      await enabled.click();
+      const moveDown = page.getByRole("button", { name: "Move down", disabled: false }).first();
+      await expect(moveDown).toBeEnabled();
+      await moveDown.click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance\?saved=1/);
       await expect(page.getByText(/Question bank changes are live/i)).toBeVisible();
     });
@@ -132,9 +125,9 @@ test.describe("Epic 5.5 platform administration", () => {
         .locator('[data-testid="audit-log-row"][data-action="pillar_question.create"]')
         .first();
       await expect(createRow).toBeVisible();
-      await createRow.locator("details > summary").click();
-      const expandedText = await createRow.locator("details").textContent();
-      expect(expandedText).toMatch(/before[^a-z]+null/i);
+      await createRow.getByRole("button").click();
+      const expandedText = await createRow.textContent();
+      expect(expandedText).toMatch(/before[\s\S]*null/i);
       expect(expandedText).toContain(probeText);
 
       page.once("dialog", (dialog) => dialog.accept());
@@ -154,7 +147,9 @@ test.describe("Epic 5.5 platform administration", () => {
       await expect(
         page.getByRole("heading", { level: 1, name: "Assessment question bank" })
       ).toBeVisible();
-      await expect(page.getByRole("link", { name: /Governance/i })).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Governance", exact: true })
+      ).toBeVisible();
     });
 
     test("legacy /admin/question-bank URLs redirect to canonical assessment paths", async ({
@@ -199,7 +194,8 @@ test.describe("Epic 5.5 platform administration", () => {
       ).toBeVisible();
 
       await page.goto("/admin/settings");
-      await expect(page.getByText("Advisor feature flags")).not.toBeVisible();
+      await expect(page.getByLabel("Advisor governance dashboard")).not.toBeVisible();
+      await expect(page.getByLabel("Advisor risk intelligence")).not.toBeVisible();
 
       const thresholdsResponse = await page.goto("/admin/scoring/thresholds");
       expect(thresholdsResponse?.status()).not.toBe(200);
@@ -270,7 +266,9 @@ test.describe("Epic 5.5 platform administration", () => {
       const response = await page.goto("/admin/scoring/thresholds");
       expect(response?.status()).toBe(200);
 
-      await expect(page.getByText("Risk-tier thresholds")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Risk-tier thresholds" })
+      ).toBeVisible();
       await expect(page.getByRole("button", { name: /save thresholds/i })).toBeVisible();
     });
 

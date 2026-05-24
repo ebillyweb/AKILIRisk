@@ -60,16 +60,21 @@ export async function reorderPillarQuestionInRiskArea(input: {
   const neighbor = sorted[neighborIdx]!;
 
   if (current.sectionId === neighbor.sectionId) {
-    await prisma.$transaction([
-      prisma.pillarQuestion.update({
+    await prisma.$transaction(async (tx) => {
+      const tempOrder = -1;
+      await tx.pillarQuestion.update({
         where: { id: current.id },
-        data: { displayOrder: neighbor.displayOrder },
-      }),
-      prisma.pillarQuestion.update({
+        data: { displayOrder: tempOrder },
+      });
+      await tx.pillarQuestion.update({
         where: { id: neighbor.id },
         data: { displayOrder: current.displayOrder },
-      }),
-    ]);
+      });
+      await tx.pillarQuestion.update({
+        where: { id: current.id },
+        data: { displayOrder: neighbor.displayOrder },
+      });
+    });
     return { ok: true, movedId: current.id, swappedWithId: neighbor.id };
   }
 

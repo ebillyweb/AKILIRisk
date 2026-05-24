@@ -68,7 +68,7 @@ vi.mock("@/lib/assessment/scoring", () => ({
 vi.mock("@/lib/assessment/branching", () => ({
   getVisibleQuestions: (...args: unknown[]) => scoringSpies.getVisibleQuestions(...args),
 }));
-vi.mock("@/lib/assessment/questions", () => ({
+vi.mock("@/lib/assessment/family-governance-pillar", () => ({
   familyGovernancePillar: { id: "family-governance" },
 }));
 vi.mock("@/lib/assessment/bank/load-bank", () => ({

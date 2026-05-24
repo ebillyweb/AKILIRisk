@@ -9,7 +9,6 @@ import {
   detectBranchingChanges,
   getOrphanedAnswerIds,
 } from "./branching";
-import { allQuestions } from "./questions";
 import type { Question } from "./types";
 import type { HouseholdProfile } from "./personalization";
 
@@ -99,11 +98,130 @@ const questionWithProfileCondition: Question = {
   profileCondition: (p) => p.members.some(m => m.governanceRoles.includes('TRUSTEE')),
 };
 
-// Helper function to get dependent question IDs for each gate
+const branchingGateFixture: Question[] = [
+  {
+    id: "dma-01",
+    text: "Governance structure maturity",
+    type: "maturity-scale",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { 0: 0, 1: 1, 2: 2, 3: 3 },
+  },
+  {
+    id: "gate-trust",
+    text: "Do you have trusts?",
+    type: "yes-no",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { yes: 10, no: 0 },
+  },
+  {
+    id: "teg-02",
+    text: "Trust detail 1",
+    type: "yes-no",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { yes: 10, no: 0 },
+    branchingRule: { dependsOn: "gate-trust", showIf: (a) => a === "yes" },
+  },
+  {
+    id: "teg-03",
+    text: "Trust detail 2",
+    type: "yes-no",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { yes: 10, no: 0 },
+    branchingRule: { dependsOn: "gate-trust", showIf: (a) => a === "yes" },
+  },
+  {
+    id: "teg-04",
+    text: "Trust detail 3",
+    type: "maturity-scale",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { 0: 0, 1: 1, 2: 2, 3: 3 },
+    branchingRule: { dependsOn: "gate-trust", showIf: (a) => a === "yes" },
+  },
+  {
+    id: "sp-01",
+    text: "Do you have successors?",
+    type: "yes-no",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { yes: 10, no: 0 },
+  },
+  {
+    id: "sp-02",
+    text: "Successor preparation",
+    type: "maturity-scale",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { 0: 0, 1: 1, 2: 2, 3: 3 },
+    branchingRule: { dependsOn: "sp-01", showIf: (a) => a === "yes" },
+  },
+  {
+    id: "sp-03",
+    text: "Successor training",
+    type: "single-choice",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { none: 0, training: 5 },
+    branchingRule: { dependsOn: "sp-01", showIf: (a) => a === "yes" },
+  },
+  {
+    id: "bi-01",
+    text: "Family business involvement?",
+    type: "yes-no",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { yes: 10, no: 0 },
+  },
+  {
+    id: "bi-02",
+    text: "Business policies",
+    type: "single-choice",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { open: 0, documented: 10 },
+    branchingRule: { dependsOn: "bi-01", showIf: (a) => a === "yes" },
+  },
+  {
+    id: "bi-03",
+    text: "Compensation practices",
+    type: "single-choice",
+    required: true,
+    pillar: "governance",
+    subCategory: "governance",
+    weight: 1,
+    scoreMap: { market: 0, independent: 10 },
+    branchingRule: { dependsOn: "bi-01", showIf: (a) => a === "yes" },
+  },
+];
+
 function getDependentQuestionIds(gateId: string): string[] {
-  return allQuestions
-    .filter(q => q.branchingRule?.dependsOn === gateId)
-    .map(q => q.id)
+  return branchingGateFixture
+    .filter((q) => q.branchingRule?.dependsOn === gateId)
+    .map((q) => q.id)
     .sort();
 }
 
@@ -149,34 +267,49 @@ describe("getNextQuestion", () => {
 
 describe("detectBranchingChanges", () => {
   it("detects newly visible questions when trust gate changes from no to yes", () => {
-    const previousAnswers = { "teg-01": "no" };
-    const currentAnswers = { "teg-01": "yes" };
+    const previousAnswers = { "gate-trust": "no" };
+    const currentAnswers = { "gate-trust": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
+    const changes = detectBranchingChanges(
+      previousAnswers,
+      currentAnswers,
+      branchingGateFixture,
+      testProfile
+    );
 
-    const expectedNewlyVisible = getDependentQuestionIds("teg-01");
+    const expectedNewlyVisible = getDependentQuestionIds("gate-trust");
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);
     expect(changes.newlyHidden).toEqual([]);
-    expect(changes.unchanged).toContain("teg-01"); // Gate question itself is unchanged in visibility
+    expect(changes.unchanged).toContain("gate-trust");
   });
 
   it("detects newly hidden questions when trust gate changes from yes to no", () => {
-    const previousAnswers = { "teg-01": "yes" };
-    const currentAnswers = { "teg-01": "no" };
+    const previousAnswers = { "gate-trust": "yes" };
+    const currentAnswers = { "gate-trust": "no" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
+    const changes = detectBranchingChanges(
+      previousAnswers,
+      currentAnswers,
+      branchingGateFixture,
+      testProfile
+    );
 
-    const expectedNewlyHidden = getDependentQuestionIds("teg-01");
+    const expectedNewlyHidden = getDependentQuestionIds("gate-trust");
     expect(changes.newlyHidden).toEqual(expectedNewlyHidden);
     expect(changes.newlyVisible).toEqual([]);
-    expect(changes.unchanged).toContain("teg-01");
+    expect(changes.unchanged).toContain("gate-trust");
   });
 
   it("detects changes for succession planning gate", () => {
     const previousAnswers = { "sp-01": "no" };
     const currentAnswers = { "sp-01": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
+    const changes = detectBranchingChanges(
+      previousAnswers,
+      currentAnswers,
+      branchingGateFixture,
+      testProfile
+    );
 
     const expectedNewlyVisible = getDependentQuestionIds("sp-01");
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);
@@ -187,7 +320,12 @@ describe("detectBranchingChanges", () => {
     const previousAnswers = { "bi-01": "no" };
     const currentAnswers = { "bi-01": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
+    const changes = detectBranchingChanges(
+      previousAnswers,
+      currentAnswers,
+      branchingGateFixture,
+      testProfile
+    );
 
     const expectedNewlyVisible = getDependentQuestionIds("bi-01");
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);
@@ -195,25 +333,30 @@ describe("detectBranchingChanges", () => {
   });
 
   it("handles multiple gate changes simultaneously", () => {
-    const previousAnswers = { "teg-01": "yes", "sp-01": "no", "bi-01": "no" };
-    const currentAnswers = { "teg-01": "no", "sp-01": "yes", "bi-01": "yes" };
+    const previousAnswers = { "gate-trust": "yes", "sp-01": "no", "bi-01": "no" };
+    const currentAnswers = { "gate-trust": "no", "sp-01": "yes", "bi-01": "yes" };
 
-    const changes = detectBranchingChanges(previousAnswers, currentAnswers, allQuestions, testProfile);
+    const changes = detectBranchingChanges(
+      previousAnswers,
+      currentAnswers,
+      branchingGateFixture,
+      testProfile
+    );
 
     const expectedNewlyVisible = [
       ...getDependentQuestionIds("sp-01"),
       ...getDependentQuestionIds("bi-01"),
     ].sort();
-    const expectedNewlyHidden = getDependentQuestionIds("teg-01");
+    const expectedNewlyHidden = getDependentQuestionIds("gate-trust");
 
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);
     expect(changes.newlyHidden).toEqual(expectedNewlyHidden);
   });
 
   it("returns empty arrays when no branching changes occur", () => {
-    const answers = { "teg-01": "yes", "sp-01": "no", "bi-01": "yes" };
+    const answers = { "gate-trust": "yes", "sp-01": "no", "bi-01": "yes" };
 
-    const changes = detectBranchingChanges(answers, answers, allQuestions, testProfile);
+    const changes = detectBranchingChanges(answers, answers, branchingGateFixture, testProfile);
 
     expect(changes.newlyVisible).toEqual([]);
     expect(changes.newlyHidden).toEqual([]);
@@ -225,18 +368,18 @@ describe("getOrphanedAnswerIds", () => {
   it("identifies trust answers as orphaned when trust gate is no", () => {
     // User answered trust questions but then changed gate to "no"
     const answers = {
-      "teg-01": "no", // Gate says no trusts
-      "teg-02": "centralized", // But user previously answered trust questions
-      "teg-03": "professional",
+      "gate-trust": "no",
+      "teg-02": "yes",
+      "teg-03": "yes",
       "teg-04": 2,
     };
 
-    const orphanedIds = getOrphanedAnswerIds(answers, allQuestions);
+    const orphanedIds = getOrphanedAnswerIds(answers, branchingGateFixture);
 
     expect(orphanedIds).toContain("teg-02");
     expect(orphanedIds).toContain("teg-03");
     expect(orphanedIds).toContain("teg-04");
-    expect(orphanedIds).not.toContain("teg-01"); // Gate question itself is visible
+    expect(orphanedIds).not.toContain("gate-trust");
   });
 
   it("identifies succession planning answers as orphaned when gate is no", () => {
@@ -246,7 +389,7 @@ describe("getOrphanedAnswerIds", () => {
       "sp-03": "training",
     };
 
-    const orphanedIds = getOrphanedAnswerIds(answers, allQuestions);
+    const orphanedIds = getOrphanedAnswerIds(answers, branchingGateFixture);
 
     expect(orphanedIds).toContain("sp-02");
     expect(orphanedIds).toContain("sp-03");
@@ -260,7 +403,7 @@ describe("getOrphanedAnswerIds", () => {
       "bi-03": "market",
     };
 
-    const orphanedIds = getOrphanedAnswerIds(answers, allQuestions);
+    const orphanedIds = getOrphanedAnswerIds(answers, branchingGateFixture);
 
     expect(orphanedIds).toContain("bi-02");
     expect(orphanedIds).toContain("bi-03");
@@ -269,37 +412,37 @@ describe("getOrphanedAnswerIds", () => {
 
   it("returns empty array when no answers are orphaned", () => {
     const answers = {
-      "teg-01": "yes", // Gate allows trust questions
-      "teg-02": "centralized", // Trust questions are visible
-      "sp-01": "no", // No succession planning
-      "bi-01": "no", // No business involvement
+      "gate-trust": "yes",
+      "teg-02": "yes",
+      "sp-01": "no",
+      "bi-01": "no",
     };
 
-    const orphanedIds = getOrphanedAnswerIds(answers, allQuestions);
+    const orphanedIds = getOrphanedAnswerIds(answers, branchingGateFixture);
 
     expect(orphanedIds).toEqual([]);
   });
 
   it("handles answers to questions with no branching rules (never orphaned)", () => {
     const answers = {
-      "dma-01": 3, // Decision-making question with no branching rule
-      "teg-01": "no", // Trust gate
+      "dma-01": 3,
+      "gate-trust": "no",
     };
 
-    const orphanedIds = getOrphanedAnswerIds(answers, allQuestions);
+    const orphanedIds = getOrphanedAnswerIds(answers, branchingGateFixture);
 
-    expect(orphanedIds).not.toContain("dma-01"); // Non-branched questions are never orphaned
-    expect(orphanedIds).not.toContain("teg-01"); // Gate questions are never orphaned
+    expect(orphanedIds).not.toContain("dma-01");
+    expect(orphanedIds).not.toContain("gate-trust");
   });
 
   it("ignores unanswered questions", () => {
     const answers = {
-      "teg-01": "no", // Gate says no trusts
-      "teg-02": null, // Unanswered question shouldn't be considered orphaned
+      "gate-trust": "no",
+      "teg-02": null,
       "teg-03": undefined,
     };
 
-    const orphanedIds = getOrphanedAnswerIds(answers, allQuestions);
+    const orphanedIds = getOrphanedAnswerIds(answers, branchingGateFixture);
 
     expect(orphanedIds).toEqual([]);
   });
@@ -309,19 +452,16 @@ describe("calculateCompletionPercentage with mixed visible/hidden answers", () =
   it("calculates percentage based only on visible questions", () => {
     // User has trusts (shows trust questions) but no business or heirs
     const answers = {
-      "dma-01": 3, // Always visible - answered
-      "dma-02": "criteria-clear", // Always visible - answered
-      "teg-01": "yes", // Gate question - answered (shows trust section)
-      "teg-02": "centralized", // Trust question - answered (visible)
-      "sp-01": "no", // Gate question - answered (hides succession section)
-      "bi-01": "no", // Gate question - answered (hides business section)
+      "dma-01": 3,
+      "gate-trust": "yes",
+      "teg-02": "yes",
+      "sp-01": "no",
+      "bi-01": "no",
     };
 
-    const percentage = calculateCompletionPercentage(answers, allQuestions);
+    const percentage = calculateCompletionPercentage(answers, branchingGateFixture);
 
-    // Should only count visible questions in the denominator
-    // Trust section is visible, succession and business sections are hidden
-    const visibleQuestions = getVisibleQuestions(answers, allQuestions);
+    const visibleQuestions = getVisibleQuestions(answers, branchingGateFixture);
     const answeredVisible = visibleQuestions.filter(q => {
       const answer = answers[q.id as keyof typeof answers];
       return answer !== undefined && answer !== null;
@@ -334,13 +474,13 @@ describe("calculateCompletionPercentage with mixed visible/hidden answers", () =
 
   it("handles case where all sections are hidden", () => {
     const answers = {
-      "dma-01": 3, // Always visible
-      "teg-01": "no", // Hides trust section
-      "sp-01": "no", // Hides succession section
-      "bi-01": "no", // Hides business section
+      "dma-01": 3,
+      "gate-trust": "no",
+      "sp-01": "no",
+      "bi-01": "no",
     };
 
-    const percentage = calculateCompletionPercentage(answers, allQuestions);
+    const percentage = calculateCompletionPercentage(answers, branchingGateFixture);
     expect(percentage).toBeGreaterThan(0); // Should work with just the always-visible questions
   });
 });

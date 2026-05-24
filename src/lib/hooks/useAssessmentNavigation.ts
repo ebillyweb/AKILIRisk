@@ -2,7 +2,6 @@ import { useRouter } from 'next/navigation';
 import { useRef, useEffect, useMemo } from 'react';
 import { useAssessmentStore } from '@/lib/assessment/store';
 import { getVisibleQuestions, detectBranchingChanges } from '@/lib/assessment/branching';
-import { allQuestions } from '@/lib/assessment/questions';
 import { Question } from '@/lib/assessment/types';
 
 /**
@@ -50,13 +49,7 @@ export function useAssessmentNavigation(
   const { answers, setCurrentPosition, householdProfile, familyGovernanceQuestionBank } =
     useAssessmentStore();
 
-  const governanceFallback =
-    familyGovernanceQuestionBank?.length ? familyGovernanceQuestionBank : allQuestions;
-
-  // Use provided questions, or DB-backed governance bank, or static banks
-  const questionSet =
-    options?.questions ||
-    (pillarSlug === 'family-governance' ? governanceFallback : allQuestions);
+  const questionSet = options?.questions ?? familyGovernanceQuestionBank ?? [];
   const pillarQuestions = questionSet.filter((q) => q.pillar === pillarSlug);
 
   // Apply subcategory filtering first (for customization)

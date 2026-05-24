@@ -183,13 +183,15 @@ export async function deletePillarQuestion(formData: FormData) {
 
 export async function updatePillarQuestionContent(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+  let questionId: string;
+  let riskAreaId: string;
   try {
-    const questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
+    questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
     const riskAreaIdRaw = formData.get("riskAreaId");
     if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
       throw new Error("Invalid risk area.");
     }
-    const riskAreaId = riskAreaIdRaw;
+    riskAreaId = riskAreaIdRaw;
 
     const text = z.string().min(1).parse(formData.get("text"));
     const helpText = optionalFormString(formData.get("helpText"));
@@ -274,12 +276,12 @@ export async function updatePillarQuestionContent(formData: FormData) {
       },
       metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
     });
-
-    revalidateQuestionBankPaths(riskAreaId);
-    redirect(`${adminAssessmentQuestionsEditPath(riskAreaId, questionId)}?saved=1`);
   } catch (e: unknown) {
     redirectUpdateError(formData, formatActionError(e));
   }
+
+  revalidateQuestionBankPaths(riskAreaId);
+  redirect(`${adminAssessmentQuestionsEditPath(riskAreaId, questionId)}?saved=1`);
 }
 
 export async function createPillarQuestion(formData: FormData) {

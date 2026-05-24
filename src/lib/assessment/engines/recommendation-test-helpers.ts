@@ -4,55 +4,44 @@
 
 import type { Question } from "../types";
 import { getVisibleQuestions } from "../branching";
+import { buildLowestMaturityAnswers } from "../lowest-maturity-answers";
 import { calculatePillarScore } from "../scoring";
-import { familyGovernancePillar, allQuestions } from "../questions";
+import { normalizePillarSlug, pillarDefinitionFor } from "../pillar-registry";
+import {
+  belvedereAllAssessmentQuestions,
+  belvedereFamilyGovernancePillar,
+  belvedereQuestionsForPillar,
+} from "../test-fixtures/belvedere-pillar-questions";
 import type { CatalogRule, CatalogService } from "./recommendation-catalog-fixtures";
 
-/** Pick the lowest-maturity option for each visible question (yes-no → "no"). */
-export function buildLowestMaturityAnswers(
-  questions: Question[],
-  visibleIds: string[]
-): Record<string, unknown> {
-  const visible = new Set(visibleIds);
-  const answers: Record<string, unknown> = {};
+export { buildLowestMaturityAnswers };
 
-  for (const question of questions) {
-    if (!visible.has(question.id)) continue;
+export function questionsForPillar(pillarId: string): Question[] {
+  return belvedereQuestionsForPillar(normalizePillarSlug(pillarId));
+}
 
-    if (question.type === "yes-no") {
-      answers[question.id] = "no";
-      continue;
-    }
+/** Lowest-maturity answers for one pillar’s UI question bank (respects branching). */
+export function buildAllNoVisiblePillarAnswers(pillarId: string): {
+  answers: Record<string, unknown>;
+  visibleIds: string[];
+  questions: Question[];
+} {
+  const questions = questionsForPillar(pillarId);
+  const seed = buildLowestMaturityAnswers(questions, questions.map((q) => q.id));
+  const visibleIds = getVisibleQuestions(seed, questions).map((q) => q.id);
+  const answers = buildLowestMaturityAnswers(questions, visibleIds);
+  return { answers, visibleIds, questions };
+}
 
-    if (question.type === "maturity-scale" && question.options?.length) {
-      let worst = question.options[0];
-      let worstScore = Number(question.scoreMap[String(worst.value)] ?? Infinity);
-      for (const opt of question.options) {
-        const raw = Number(question.scoreMap[String(opt.value)] ?? Infinity);
-        if (raw < worstScore) {
-          worst = opt;
-          worstScore = raw;
-        }
-      }
-      answers[question.id] = worst.value;
-      continue;
-    }
-
-    if (question.options?.length) {
-      let worst = question.options[0];
-      let worstScore = Number(question.scoreMap[String(worst.value)] ?? Infinity);
-      for (const opt of question.options) {
-        const raw = Number(question.scoreMap[String(opt.value)] ?? Infinity);
-        if (raw < worstScore) {
-          worst = opt;
-          worstScore = raw;
-        }
-      }
-      answers[question.id] = worst.value;
-    }
-  }
-
-  return answers;
+export function scorePillar(
+  pillarId: string,
+  answers: Record<string, unknown>,
+  visibleIds: string[],
+  questions?: Question[]
+) {
+  const qs = questions ?? questionsForPillar(pillarId);
+  const pillar = pillarDefinitionFor(pillarId);
+  return calculatePillarScore(answers, pillar, qs, visibleIds);
 }
 
 /** Visible family-governance answers with every yes-no gate answered "no". */
@@ -60,9 +49,14 @@ export function buildAllNoVisibleFamilyAnswers(): {
   answers: Record<string, unknown>;
   visibleIds: string[];
 } {
-  const answers = buildLowestMaturityAnswers(allQuestions, allQuestions.map((q) => q.id));
-  const visibleIds = getVisibleQuestions(answers, allQuestions).map((q) => q.id);
-  const visibleAnswers = buildLowestMaturityAnswers(allQuestions, visibleIds);
+  const answers = buildLowestMaturityAnswers(
+    belvedereAllAssessmentQuestions,
+    belvedereAllAssessmentQuestions.map((q) => q.id)
+  );
+  const visibleIds = getVisibleQuestions(answers, belvedereAllAssessmentQuestions).map(
+    (q) => q.id
+  );
+  const visibleAnswers = buildLowestMaturityAnswers(belvedereAllAssessmentQuestions, visibleIds);
   return { answers: visibleAnswers, visibleIds };
 }
 
@@ -70,7 +64,12 @@ export function scoreFamilyGovernancePillar(
   answers: Record<string, unknown>,
   visibleIds: string[]
 ) {
-  return calculatePillarScore(answers, familyGovernancePillar, allQuestions, visibleIds);
+  return calculatePillarScore(
+    answers,
+    belvedereFamilyGovernancePillar,
+    belvedereAllAssessmentQuestions,
+    visibleIds
+  );
 }
 
 export function toPrismaCatalogMocks(

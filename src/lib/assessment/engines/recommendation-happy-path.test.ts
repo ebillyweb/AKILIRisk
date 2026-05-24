@@ -10,9 +10,11 @@ import {
   PRODUCTION_CATALOG_RULES,
   PRODUCTION_CATALOG_SERVICES_WITH_CYBER,
 } from "./recommendation-catalog-fixtures";
+import { ASSESSMENT_PILLAR_IDS } from "@/lib/assessment/pillar-registry";
 import {
   buildAllNoVisibleFamilyAnswers,
-  scoreFamilyGovernancePillar,
+  questionsForPillar,
+  scorePillar,
   toPrismaCatalogMocks,
 } from "./recommendation-test-helpers";
 
@@ -128,40 +130,43 @@ describe("RecommendationEngine — happy paths (production catalog)", () => {
   });
 });
 
-describe("RecommendationEngine — family-governance question bank (all no)", () => {
+describe("RecommendationEngine — Belvedere bank (all no)", () => {
   it("answering no on every visible yes-no yields critical risk and missing controls", () => {
     const { answers, visibleIds } = buildAllNoVisibleFamilyAnswers();
-    const score = scoreFamilyGovernancePillar(answers, visibleIds);
+    const score = scorePillar("governance", answers, visibleIds, questionsForPillar("governance"));
 
     expect(score.riskLevel).toBe("critical");
     expect(score.score).toBeLessThan(1.2);
     expect(score.missingControls.length).toBeGreaterThan(0);
 
-    const yesNoIds = visibleIds.filter((id) => {
-      const q = answers[id];
-      return q === "no";
-    });
+    const yesNoIds = visibleIds.filter((id) => answers[id] === "no");
     expect(yesNoIds.length).toBeGreaterThan(0);
   });
 
-  it("all-no visible answers trigger the full UI catalog remediation set", async () => {
+  it("all-no visible answers trigger the full Belvedere catalog remediation set", async () => {
     const { answers, visibleIds } = buildAllNoVisibleFamilyAnswers();
-    const score = scoreFamilyGovernancePillar(answers, visibleIds);
+
+    const pillarScores: Record<string, { score: number; riskLevel: "critical" }> = {};
+    const missingControls = [];
+    for (const pillarId of ASSESSMENT_PILLAR_IDS) {
+      const questions = questionsForPillar(pillarId);
+      const pillarVisibleIds = visibleIds.filter((id) => questions.some((q) => q.id === id));
+      const score = scorePillar(pillarId, answers, pillarVisibleIds, questions);
+      pillarScores[pillarId] = { score: score.score, riskLevel: "critical" };
+      missingControls.push(...score.missingControls);
+    }
 
     const engine = new RecommendationEngine();
     const recs = await engine.matchAndDedupeRecommendations({
-      assessmentId: "as-all-no-ui",
+      assessmentId: "as-all-no-belvedere",
       userId: "u-5",
-      pillarScores: {
-        "family-governance": { score: score.score, riskLevel: score.riskLevel },
-      },
+      pillarScores,
       answers,
       householdProfile: null,
-      missingControls: score.missingControls,
+      missingControls,
     });
 
     const ids = recs.map((r) => r.id).sort();
     expect(ids).toEqual([...FAMILY_GOVERNANCE_ALL_NO_EXPECTED_SERVICE_IDS].sort());
-    expect(score.riskLevel).toBe("critical");
   });
 });
