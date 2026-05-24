@@ -83,7 +83,7 @@ function row(
       category: {
         id: `cat-${riskAreaId}`,
         code,
-        kind: PillarCategoryKind.SCORING,
+        kind: PillarCategoryKind.ASSESSMENT,
         displayOrder: 1,
         title: riskAreaId,
       },

@@ -48,7 +48,7 @@ function makeRow(
       category: {
         id: "cat-1",
         code: "1_governance",
-        kind: PillarCategoryKind.SCORING,
+        kind: PillarCategoryKind.ASSESSMENT,
         displayOrder: 1,
         title: "Governance",
       },
