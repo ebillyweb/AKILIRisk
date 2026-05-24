@@ -4,6 +4,9 @@ Tracks which manual test cases from the **Akili Risk Test Plan** (BRD-derived,
 ~95 cases, stored in the user's Google Drive) are covered by Playwright tests
 under `tests/`.
 
+**Epic & story mapping:** [docs/user-stories/README.md](../docs/user-stories/README.md)  
+Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests below should align with [Epic 5.9](../docs/user-stories/EPIC-5.9-extended-risk-modules.md) reconciliation.
+
 > **Note:** The BRD test plan document is not committed to this repo. TC IDs
 > below should be filled in from the Google Drive doc as tests are implemented.
 > Until then, tests are listed by feature area.
@@ -108,18 +111,24 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Advisor rejection surfaces "Update needed" hero state on dashboard
 - ~~Advisor waiver path (intake skipped, assessment unlocked)~~ *(partial: waived invite hub covered by `six-pillar-assessment.spec.ts`)*
 
-### Risk Assessments
+### Risk Assessments (Epic 5.2 — six pillars)
 - ~~Six-pillar hub loads for assessment-unlocked client~~ *(covered by `six-pillar-assessment.spec.ts`)*
 - ~~Governance question bank loads on assessment start~~ *(covered by `six-pillar-assessment.spec.ts`)*
-- Family risk module - complete and score
-- Cyber risk module - complete and score
-- Identity risk module - complete and score
-- Intelligence module - complete and score
-- Reputational & social module
-- Physical risk module
-- Resume in-progress assessment from dashboard
+- Score all six pillars → assessment `COMPLETED` (US-15 reconciliation)
+- Client resilience / heat map after multi-pillar score (US-16)
+- Full flow: score → advisor draft report → publish → client PDF download (US-19–20)
+- Resume in-progress assessment from dashboard (US-14)
 - Score persists and renders on dashboard
 - Hidden questions (`questions.is_visible=false`) excluded
+- Orphan cleanup when branching hides answered question (US-14)
+
+### Legacy / extended modules (Epic 5.9 — reconcile before expanding coverage)
+- Family risk module - complete and score *(legacy monolith; client redirects to governance)*
+- Cyber risk module - complete and score *(use `cyber-digital` pillar instead)*
+- Identity risk module - complete and score *(legacy; redirects to governance)*
+- Intelligence module - complete and score *(advisor portfolio analytics, not client questionnaire)*
+- Reputational & social module *(pillar: `reputational-social`)*
+- Physical risk module *(pillar: `physical-security`)*
 
 ### Advisor Workflows
 - ~~Advisor portfolio lists assigned clients~~ *(covered by `advisor-clients.spec.ts`)*

@@ -1,5 +1,6 @@
 # Epic 5.1 — Client Invitation & Onboarding
 
+**Index:** [User stories README](./README.md)  
 **BRD:** §5.1 (FR-1, FR-11; business rules §3.4, §3.6)  
 **Advisor UI:** `/advisor/invitations`  
 **Core modules:** `src/lib/invitations/*`, `src/lib/actions/invitations.ts`, `src/lib/billing/subscription-service.ts`, `src/lib/auth/magic-link.ts`, `src/app/(auth)/signup/page.tsx`
@@ -155,5 +156,7 @@ Requires `ENABLE_TEST_AUTH=1` on the target deployment for API-backed client red
 
 ## Related docs
 
+- [User stories README](./README.md) — full epic index (5.1 – 5.9)
 - [US-1 — Send a Client Invitation](./US-1-send-client-invitation.md)
 - [US-1B — Branded client invitation](./US-1B-branded-client-invitation.md)
+- [Epic 5.2 — Household assessment lifecycle](./EPIC-5.2-household-assessment-lifecycle.md) — next epic after onboarding
