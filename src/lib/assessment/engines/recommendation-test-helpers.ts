@@ -4,6 +4,7 @@
 
 import type { Question } from "../types";
 import { getVisibleQuestions } from "../branching";
+import { buildHighestMaturityAnswers } from "../highest-maturity-answers";
 import { buildLowestMaturityAnswers } from "../lowest-maturity-answers";
 import { calculatePillarScore } from "../scoring";
 import { normalizePillarSlug, pillarDefinitionFor } from "../pillar-registry";
@@ -14,23 +15,37 @@ import {
 } from "../test-fixtures/belvedere-pillar-questions";
 import type { CatalogRule, CatalogService } from "./recommendation-catalog-fixtures";
 
-export { buildLowestMaturityAnswers };
+export { buildLowestMaturityAnswers, buildHighestMaturityAnswers };
 
 export function questionsForPillar(pillarId: string): Question[] {
   return belvedereQuestionsForPillar(normalizePillarSlug(pillarId));
 }
 
-/** Lowest-maturity answers for one pillar’s UI question bank (respects branching). */
-export function buildAllNoVisiblePillarAnswers(pillarId: string): {
+function buildExtremeMaturityPillarAnswers(
+  pillarId: string,
+  band: "lowest" | "highest"
+): {
   answers: Record<string, unknown>;
   visibleIds: string[];
   questions: Question[];
 } {
   const questions = questionsForPillar(pillarId);
-  const seed = buildLowestMaturityAnswers(questions, questions.map((q) => q.id));
+  const build =
+    band === "lowest" ? buildLowestMaturityAnswers : buildHighestMaturityAnswers;
+  const seed = build(questions, questions.map((q) => q.id));
   const visibleIds = getVisibleQuestions(seed, questions).map((q) => q.id);
-  const answers = buildLowestMaturityAnswers(questions, visibleIds);
+  const answers = build(questions, visibleIds);
   return { answers, visibleIds, questions };
+}
+
+/** Lowest-maturity answers for one pillar’s question bank (respects branching). */
+export function buildAllNoVisiblePillarAnswers(pillarId: string) {
+  return buildExtremeMaturityPillarAnswers(pillarId, "lowest");
+}
+
+/** Highest-maturity answers for one pillar’s question bank (respects branching). */
+export function buildAllYesVisiblePillarAnswers(pillarId: string) {
+  return buildExtremeMaturityPillarAnswers(pillarId, "highest");
 }
 
 export function scorePillar(
