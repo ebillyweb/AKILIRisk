@@ -94,6 +94,12 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-21 client adds household member | Epic 5.3 | Implemented |
 | `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-48 hidden member omitted from advisor intake review | Epic 5.3 | Implemented |
 | `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-49 advisor disables profiles → client nav hidden + notice | Epic 5.3 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-37 question bank list + edit + visibility round-trip | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-39 recommendations catalog page | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-41 risk thresholds form (super admin) | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-42 advisor feature flags on settings | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-43 analytics dashboard | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-44 operations health nav + page | Epic 5.5 | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -177,9 +183,9 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Admin can assign lead to advisor (`/admin/leads`)
 - Admin intake management view (`/admin/intake`)
 - Admin assessment management view (`/admin/assessment`)
-- Admin question bank: hide/show question
-- Admin question bank: edit copy
-- Admin settings page renders
+- ~~Admin question bank: hide/show question~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
+- ~~Admin question bank: edit copy~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
+- ~~Admin settings page renders~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
 - Non-admin users redirected from `/admin/*` with `?error=unauthorized`
 - ~~Admin audit log (`/admin/audit-log`) — view, filter, paginate, CSV export~~ *(covered by `audit-log-access.spec.ts`, `audit-log-wiring.spec.ts`, `audit-log-csv-export.spec.ts`)*
 

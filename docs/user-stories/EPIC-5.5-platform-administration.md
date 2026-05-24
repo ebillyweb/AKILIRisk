@@ -1,104 +1,176 @@
 # Epic 5.5 — Platform Administration & Configuration
 
-**Status:** **Code-only** → stories US-29–US-34 proposed  
+**Status:** **Done** (BRD US-37 – US-46)  
 **Admin UI:** `/admin/*`  
-**Why separate:** Epic 5.2 assumes rules, thresholds, and question bank exist; admin UX is not specified in US-10–US-20.
+**FR:** FR-10; business rules §3.1, §3.2
+
+Repo history used internal IDs **US-29 – US-34** for the same capabilities; the BRD numbering below is authoritative for sign-off.
 
 ## Coverage summary
 
-| Story | Title | Status | Notes |
-|-------|--------|--------|--------|
-| US-29 | Manage assessment question bank | **Code-only** | CRUD, visibility, pillar DDL |
-| US-30 | Manage intake script | **Code-only** | Admin intake questions |
-| US-31 | Configure recommendation rules & services | **Code-only** | Rules + services CRUD |
-| US-32 | Configure risk thresholds | **Code-only** | `/admin/scoring/thresholds` |
-| US-33 | Rescore assessments | **Code-only** | Admin rescore actions |
-| US-34 | Audit, export & operations | **Code-only** | Audit log, CSV export, health |
+| BRD story | Title | Status | Playwright |
+|-----------|--------|--------|------------|
+| US-37 | Assessment question bank | **Done** | `epic-5.5-platform-admin.spec.ts` |
+| US-38 | Intake interview script | **Done** | `admin-intake-script.spec.ts` |
+| US-39 | Recommendation catalog | **Done** | `epic-5.5-platform-admin.spec.ts` (list) |
+| US-40 | Recommendation rules | **Done** | Unit: `admin-recommendation-actions.test.ts` |
+| US-41 | Risk-tier thresholds | **Done** | `epic-5.5-platform-admin.spec.ts` |
+| US-42 | Platform feature flags | **Done** | `epic-5.5-platform-admin.spec.ts` |
+| US-43 | Platform analytics | **Done** | `epic-5.5-platform-admin.spec.ts` |
+| US-44 | Operations & integration health | **Done** | `epic-5.5-platform-admin.spec.ts` |
+| US-45 | Advisor & client accounts | **Done** | `admin-advisors.spec.ts`, `audit-log-wiring.spec.ts` |
+| US-46 | Platform staff accounts | **Done** | Unit: `admin-user-provisioning.test.ts` |
+
+### Extra capabilities (not in BRD US-37–46 excerpt)
+
+| Capability | Route / code |
+|------------|--------------|
+| Rescore assessments | `/admin/assessment`, `admin-rescore-actions.ts` |
+| Audit log UI + CSV | `/admin/audit-log` |
+| GDPR / tenant exports | `/admin/exports` (super-admin) |
+| Control center | `/admin` |
 
 ---
 
-## US-29 — Manage Assessment Question Bank (Admin)
+## US-37 — Administer the Assessment Question Bank
 
-| Capability | Implementation |
-|------------|----------------|
-| List pillars / risk areas | `/admin/question-bank` |
-| Edit questions, visibility | `/admin/question-bank/[riskAreaId]/[questionId]` |
-| Pillar DDL seed path | `npm run seed:pillar-ddl`, Belvedere workbook import |
+**Single source:** Belvedere pillar DDL (`questions` table). Legacy `AssessmentBankQuestion` removed (migration `20260523140000`).
 
-**Code:** `src/app/(protected)/admin/question-bank/**`, `src/lib/assessment/bank/**`
+| Acceptance criterion | Met | Implementation |
+|---------------------|-----|----------------|
+| Create / edit / delete → new assessments | ✅ | `createPillarQuestion`, `updatePillarQuestionContent`, `deletePillarQuestion` |
+| Hide → excluded from scoring | ✅ | `updatePillarQuestionVisibility`; `load-bank.ts` `onlyVisible: true` |
+| Reorder | ✅ | `movePillarQuestionOrder`, `pillar-question-reorder.ts` |
+| Audit log | ✅ | `PILLAR_QUESTION_*` actions |
 
-**Reconciliation:** Client assessment reads bank via `pillar-config.ts` (Epic 5.2). Admin edits are the source of truth for US-13 hidden questions.
+**Routes:** `/admin/question-bank`, `/admin/question-bank/[riskAreaId]`, `/admin/question-bank/[riskAreaId]/new`, `/admin/question-bank/[riskAreaId]/[questionId]`
 
----
+**Seed:** `npm run seed:pillar-ddl`
 
-## US-30 — Manage Intake Script (Admin)
-
-| Capability | Implementation |
-|------------|----------------|
-| Edit intake questions | `/admin/intake/questions` |
-| Hide/show intake items | Intake question admin |
-
-**Code:** `src/app/(protected)/admin/intake/**`
+**Code:** `src/lib/actions/admin-question-bank-actions.ts`, `src/lib/assessment/bank/**`
 
 ---
 
-## US-31 — Manage Recommendation Rules & Services (Admin)
+## US-38 — Administer the Intake Interview Script
 
-| Capability | Implementation |
-|------------|----------------|
-| Services CRUD | `/admin/recommendations/services/*` |
-| Rules CRUD | `/admin/recommendations/rules/*` |
+| Acceptance criterion | Met | Implementation |
+|---------------------|-----|----------------|
+| Edit content → new intakes | ✅ | `updateIntakePillarQuestionContent` |
+| Hide → not presented | ✅ | `setIntakePillarQuestionVisibility` |
+| Audit log | ✅ | `INTAKE_QUESTION_*` |
 
-**Code:** `src/app/(protected)/admin/recommendations/**`
+**Routes:** `/admin/intake/questions`, `/admin/intake/questions/[questionId]/edit`
 
-**Reconciliation:** US-18 consumes these records at score time; no client-facing admin in Epic 5.2.
-
----
-
-## US-32 — Configure Risk Thresholds (Admin)
-
-| Capability | Implementation |
-|------------|----------------|
-| Edit Low/Medium/High/Critical cutoffs | `/admin/scoring/thresholds` |
-
-**Reconciliation with US-16:** Stored tiers on existing scores unchanged until rescore (US-33).
+**Code:** `src/lib/actions/admin-intake-questions-actions.ts`
 
 ---
 
-## US-33 — Rescore Assessments (Admin)
+## US-39 — Manage the Recommendation Catalog
 
-| Capability | Implementation |
-|------------|----------------|
-| Bulk or single rescore after rule/threshold fixes | `admin-rescore-actions.ts` |
-| Optional republish report with new numbers | Report republish flow |
+| Acceptance criterion | Met | Implementation |
+|---------------------|-----|----------------|
+| CRUD name / description / category / priority / active | ✅ | `admin-recommendation-actions.ts` |
+| Deactivate → not surfaced | ✅ | `setServiceRecommendationActive` |
+| Block delete when referenced | ✅ | FK check → `FK_REFS_BLOCK_DELETE` |
 
-**Code:** `src/lib/actions/admin-rescore-actions.ts`
+**Routes:** `/admin/recommendations`, `/admin/recommendations/services/*`
 
 ---
 
-## US-34 — Audit, Export & Operations (Admin)
+## US-40 — Manage Recommendation Rules
 
-| Capability | Implementation |
-|------------|----------------|
-| Audit log search + entity drill-down | `/admin/audit-log` |
-| GDPR / data exports | `/admin/exports` |
-| Operations health (Stripe, webhooks, etc.) | `/admin/operations` |
-| Integrations | `/admin/integrations` |
-| Staff, advisors, clients, leads | `/admin/staff`, `/admin/advisors`, `/admin/clients`, `/admin/leads` |
-| Platform settings / feature flags | `/admin/settings` |
+| Acceptance criterion | Met | Notes |
+|---------------------|-----|-------|
+| Trigger conditions, pillar thresholds, question conditions | ✅ | Rule form + schemas |
+| Priority / active / deactivate | ✅ | |
+| Contradiction detection | ⚠️ Partial | Impossible `score_threshold` pairs on same pillar only |
 
-**Code:** `src/lib/audit/**`, `src/lib/admin/**`, `src/lib/export/**`
+**Routes:** `/admin/recommendations/rules/*`
+
+---
+
+## US-41 — Configure Risk-Tier Thresholds (Super-Admin)
+
+| Acceptance criterion | Met | Notes |
+|---------------------|-----|-------|
+| Non–super-admin blocked | ✅ | `requireSuperAdminRole()` |
+| 0–100, strictly decreasing | ✅ | Zod + form |
+| New scores only; stored tiers unchanged | ⚠️ | Admin **rescore** recomputes tiers with current thresholds (by design) |
+
+**Route:** `/admin/scoring/thresholds`
+
+---
+
+## US-42 — Manage Platform Feature Flags (Super-Admin)
+
+| Acceptance criterion | Met |
+|---------------------|-----|
+| Toggle governance dashboard & risk intelligence | ✅ |
+| Non–super-admin blocked | ✅ |
+| Missing settings → defaults enabled | ✅ |
+
+**Route:** `/admin/settings`
+
+---
+
+## US-43 — Monitor Platform Analytics (Admin)
+
+| Acceptance criterion | Met |
+|---------------------|-----|
+| Aggregate platform metrics | ✅ |
+| Audit without per-client identifiers | ✅ `DATA_ACCESS_ANALYTICS_VIEW` |
+
+**Route:** `/admin/analytics`
+
+---
+
+## US-44 — Monitor Operations & Integration Health (Admin)
+
+| Acceptance criterion | Met |
+|---------------------|-----|
+| Payments / AI / email / storage status | ✅ |
+| Bounded probes, no secrets | ✅ |
+| Recent failures surfaced | ✅ |
+
+**Route:** `/admin/operations` — visible to all admins in sidebar (BRD § Admin, not super-admin-only).
+
+---
+
+## US-45 — Manage Advisor & Client Accounts (Admin)
+
+| Acceptance criterion | Met |
+|---------------------|-----|
+| Soft-delete with timestamp | ✅ |
+| Restore | ✅ |
+| Advisor portal toggle | ✅ |
+| Audit log | ✅ |
+
+**Routes:** `/admin/advisors`, `/admin/clients`
+
+---
+
+## US-46 — Manage Platform Staff Accounts (Super-Admin)
+
+| Acceptance criterion | Met |
+|---------------------|-----|
+| Promote client → admin staff | ✅ |
+| Change / remove role | ✅ |
+| Non–super-admin blocked | ✅ |
+
+**Routes:** `/admin/staff`, `/admin/staff/admin-users`
 
 ---
 
 ## Playwright coverage
 
-| Area | Status |
-|------|--------|
-| Admin advisors list | `admin-advisors.spec.ts` |
-| Question bank / rescore / audit | **Not implemented** |
+| Spec | Stories |
+|------|---------|
+| `epic-5.5-platform-admin.spec.ts` | US-37, US-39 (list), US-41, US-42, US-43, US-44 |
+| `admin-intake-script.spec.ts` | US-38 |
+| `admin-advisors.spec.ts` | US-45 (partial) |
+| `audit-log-*.spec.ts` | US-45 audit + platform audit infrastructure |
 
 ## Related
 
-- [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — US-16, US-18
+- [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — scoring consumes question bank + rules
 - [ACCESS-LEVELS-BY-ROLE.md](../ACCESS-LEVELS-BY-ROLE.md)

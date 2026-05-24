@@ -38,12 +38,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     items: [
       { href: "/admin", label: "Control Center", icon: Home },
       { href: "/admin/analytics", label: "Executive Dashboard", icon: BarChart3 },
-      {
-        href: "/admin/operations",
-        label: "Operations Health",
-        icon: Gauge,
-        superAdminOnly: true,
-      },
+      { href: "/admin/operations", label: "Operations Health", icon: Gauge },
     ],
   },
   {
