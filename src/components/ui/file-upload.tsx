@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Upload, X, Check, AlertCircle, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, X, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { resolveAdvisorLogoSrcForPreview } from '@/lib/branding/advisor-logo-display';
 
 interface FileUploadProps {
   accept?: string;
@@ -169,6 +170,8 @@ export function FileUpload({
     setUploadState({ status: 'idle' });
   }, []);
 
+  const previewSrc = currentFile ? resolveAdvisorLogoSrcForPreview(currentFile) : '';
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Upload Area */}
@@ -235,15 +238,17 @@ export function FileUpload({
             </div>
           )}
 
-          {/* Current File Display */}
-          {currentFile && uploadState.status === 'idle' && (
-            <div className="mt-4 p-3 bg-background rounded-lg border flex items-center gap-3">
-              <ImageIcon className="h-5 w-5 text-muted-foreground" />
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium">Current Logo</p>
-                <p className="text-xs text-muted-foreground">
-                  {currentFile.split('/').pop() || 'logo'}
-                </p>
+          {/* Current logo preview */}
+          {previewSrc && uploadState.status === 'idle' && (
+            <div className="mt-4 w-full p-4 bg-background rounded-lg border">
+              <p className="text-sm font-medium mb-3">Current Logo</p>
+              <div className="flex items-center justify-center rounded-md bg-muted/30 p-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewSrc}
+                  alt="Current logo"
+                  className="max-h-24 max-w-full object-contain"
+                />
               </div>
             </div>
           )}

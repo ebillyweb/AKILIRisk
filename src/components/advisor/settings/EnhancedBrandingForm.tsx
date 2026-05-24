@@ -499,7 +499,7 @@ export function EnhancedBrandingForm({
                     accept="image/*"
                     maxSize={2 * 1024 * 1024}
                     onUpload={handleLogoUpload}
-                    currentFile={profile.logoUrl}
+                    currentFile={watchedValues.logoUrl || profile.logoUrl || null}
                   />
                 </SettingsSection>
               </TabsContent>
