@@ -1,7 +1,7 @@
 "use client";
 
 import { usePipelineUpdates, usePipelineFilters } from "@/lib/pipeline/hooks";
-import { PipelineFilters } from "@/components/pipeline/PipelineFilters";
+import { PipelineFilters as PipelineFiltersBar } from "@/components/pipeline/PipelineFilters";
 import { PipelineTable } from "@/components/pipeline/PipelineTable";
 import type { PipelineClient, PipelineFilters, PipelineMetrics } from "@/lib/pipeline/types";
 
@@ -45,7 +45,7 @@ export function PipelineView({
       </div>
 
       {/* Filters */}
-      <PipelineFilters
+      <PipelineFiltersBar
         filters={filters}
         onFilterChange={updateFilters}
         metrics={initialMetrics} // Use initial metrics for filter counts
