@@ -74,7 +74,7 @@ export function HouseholdProfilesPolicyForm({
             Let clients document household members and personalize assessments
             from composition and governance roles.
           </p>
-        </motion.div>
+        </div>
       </div>
 
       <Button type="button" onClick={handleSave} disabled={saving}>
