@@ -14,6 +14,12 @@ export type PipelineClient = {
   lastActivity: Date;      // Most recent status change
   /** No activity for more than 7 days and not Complete (US-28) */
   stalled: boolean;
+  /** Submitted intake pending advisor approval (Epic 5.2 / US-29) */
+  awaitingIntakeReview: boolean;
+  /** When awaitingIntakeReview, link target for /advisor/review/[id] */
+  intakeReviewInterviewId: string | null;
+  /** Mandatory document requirements still open */
+  documentsNeeded: boolean;
   // Invitation data (if exists)
   invitation: {
     status: InvitationStatus;
@@ -45,8 +51,9 @@ export type PipelineClient = {
 export type PipelineMetrics = {
   total: number;
   byStage: Record<ClientWorkflowStage, number>;
-  documentsNeeded: number;  // clients with unfulfilled document requirements
+  documentsNeeded: number;  // clients with unfulfilled mandatory document requirements
   stalled: number;          // clients with no activity in 7+ days
+  intakesAwaitingReview: number; // submitted intake not yet approved/rejected
 };
 
 // Filter options for pipeline table
@@ -54,6 +61,10 @@ export type PipelineFilters = {
   stage?: ClientWorkflowStage;
   /** When true, only clients flagged as stalled */
   stalled?: boolean;
+  /** When true, only clients with intake pending advisor approval */
+  awaitingIntakeReview?: boolean;
+  /** When true, only clients with unfulfilled mandatory documents */
+  documentsNeeded?: boolean;
   search?: string;
   sortBy?: 'name' | 'stage' | 'progress' | 'lastActivity';
   sortDir?: 'asc' | 'desc';

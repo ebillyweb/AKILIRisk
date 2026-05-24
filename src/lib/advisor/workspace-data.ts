@@ -35,14 +35,17 @@ export function deriveAdvisorPriorities(
 ): AdvisorPriorityItem[] {
   const priorities: AdvisorPriorityItem[] = [];
 
-  const reviewsNeeded = metrics.byStage.INTAKE_COMPLETE ?? 0;
+  const reviewsNeeded = metrics.intakesAwaitingReview ?? 0;
   if (reviewsNeeded > 0) {
+    const firstReview = clients.find((c) => c.awaitingIntakeReview);
     priorities.push({
       id: "reviews",
       kind: "review",
       title: "Intakes awaiting review",
-      description: `${reviewsNeeded} client${reviewsNeeded === 1 ? "" : "s"} submitted intake and need your review.`,
-      href: "/advisor/pipeline",
+      description: `${reviewsNeeded} client${reviewsNeeded === 1 ? "" : "s"} submitted intake pending your approval.`,
+      href: firstReview?.intakeReviewInterviewId
+        ? `/advisor/review/${firstReview.intakeReviewInterviewId}`
+        : "/advisor/pipeline?awaitingReview=1",
       count: reviewsNeeded,
     });
   }
@@ -52,8 +55,8 @@ export function deriveAdvisorPriorities(
       id: "documents",
       kind: "documents",
       title: "Document requests outstanding",
-      description: `${metrics.documentsNeeded} client${metrics.documentsNeeded === 1 ? "" : "s"} have unfulfilled document requirements.`,
-      href: "/advisor/pipeline",
+      description: `${metrics.documentsNeeded} client${metrics.documentsNeeded === 1 ? "" : "s"} have unfulfilled required documents.`,
+      href: "/advisor/pipeline?documentsNeeded=1",
       count: metrics.documentsNeeded,
     });
   }
@@ -64,7 +67,7 @@ export function deriveAdvisorPriorities(
       kind: "stalled",
       title: "Stalled clients",
       description: `${metrics.stalled} client${metrics.stalled === 1 ? "" : "s"} with no activity in 7+ days.`,
-      href: "/advisor/pipeline",
+      href: "/advisor/pipeline?stalled=1",
       count: metrics.stalled,
     });
   }

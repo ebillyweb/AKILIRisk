@@ -52,6 +52,9 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/default-branding-fallback.spec.ts` | client with brandingEnabled=false advisor sees the platform default | TBD | Implemented |
 | `tests/smoke/advisor-intake-review.spec.ts` | advisor navigates pipeline -> /advisor/review/[id] and sees transcripts | TBD | Implemented |
 | `tests/smoke/advisor-intake-review.spec.ts` | advisor cannot view another advisor's intake review via direct URL | TBD | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-28 pipeline search + stalled URL filter | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-34 cross-advisor intelligence detail blocked | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-35 notification preferences page | Epic 5.4 | Implemented |
 | `tests/smoke/public-signup.spec.ts` | invite redemption + signup creates user that lands on /intake | TBD | Implemented |
 | `tests/smoke/public-signup.spec.ts` | signup with existing email surfaces "Unable to create account" | TBD | Implemented |
 | `tests/smoke/public-signup.spec.ts` | signup form rejects mismatched passwords | TBD | Implemented |
@@ -147,8 +150,10 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - ~~Open client detail from pipeline~~ *(covered by `advisor-clients.spec.ts`)*
 - ~~Review client intake submission (transcripts on /advisor/review/[id])~~ *(covered by `advisor-intake-review.spec.ts`)*
 - ~~Cross-advisor intake review URL is 404 (tenant isolation)~~ *(covered by `advisor-intake-review.spec.ts`)*
-- Pipeline metrics (`activeInFlight`, `totalAssigned`) match expected counts
-- Pipeline filters (by stage, search) update visible rows
+- ~~Pipeline metrics (`activeInFlight`, `totalAssigned`) match expected counts~~ *(partial: Vitest stage/doc counts; no Playwright DB assert)*
+- ~~Pipeline filters (by stage, search) update visible rows~~ *(covered by `epic-5.4-advisor-workspace.spec.ts` search + stalled filter)*
+- Full client document upload E2E (S3)
+- Cron reminder jobs (needs `CRON_SECRET` + fixtures)
 - ~~Send client invitation~~ *(covered by `client-invitation-onboarding.spec.ts`)*
 - Approve/reject intake (action buttons in ReviewSidebar) *(covered by `epic-5.2-advisor-intake-approval.spec.ts`)*
 - View client assessment results

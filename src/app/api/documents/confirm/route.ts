@@ -6,6 +6,7 @@ import {
   keyMatchesDocumentRequirement,
 } from "@/lib/documents/requirement-access";
 import { headDocumentObject } from "@/lib/documents/s3";
+import { validateStoredDocumentMime } from "@/lib/documents/validation";
 import { triggerDocumentUploadNotification } from "@/lib/notifications/triggers";
 import { z } from "zod";
 
@@ -76,6 +77,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const mimeCheck = validateStoredDocumentMime(head.contentType);
+    if (!mimeCheck.valid) {
+      return NextResponse.json({ error: mimeCheck.error }, { status: 400 });
+    }
+
     // Update the requirement with file metadata. fileMimeType + fileSize
     // come from S3, fileName from the request (display-only).
     const updatedRequirement = await prisma.documentRequirement.update({
@@ -86,7 +92,7 @@ export async function POST(request: NextRequest) {
         fileKey: key,
         fileName,
         fileSize: head.contentLength ?? 0,
-        fileMimeType: head.contentType ?? "application/octet-stream",
+        fileMimeType: mimeCheck.mimeType,
       },
     });
 

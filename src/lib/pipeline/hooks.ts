@@ -66,10 +66,14 @@ export function usePipelineUpdates(initialClients: PipelineClient[]) {
   return { clients, connected, lastUpdated };
 }
 
-export function usePipelineFilters(clients: PipelineClient[]) {
+export function usePipelineFilters(
+  clients: PipelineClient[],
+  initialFilters?: PipelineFilters,
+) {
   const [filters, setFilters] = useState<PipelineFilters>({
-    sortBy: 'lastActivity',
-    sortDir: 'desc',
+    sortBy: "lastActivity",
+    sortDir: "desc",
+    ...initialFilters,
   });
 
   const filteredClients = useMemo(() => {
@@ -81,6 +85,14 @@ export function usePipelineFilters(clients: PipelineClient[]) {
 
     if (filters.stalled) {
       filtered = filtered.filter((client) => client.stalled);
+    }
+
+    if (filters.awaitingIntakeReview) {
+      filtered = filtered.filter((client) => client.awaitingIntakeReview);
+    }
+
+    if (filters.documentsNeeded) {
+      filtered = filtered.filter((client) => client.documentsNeeded);
     }
 
     // Filter by search (name or email)

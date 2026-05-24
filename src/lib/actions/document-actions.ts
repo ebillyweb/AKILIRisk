@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateDownloadUrl, headDocumentObject } from '@/lib/documents/s3';
+import { validateStoredDocumentMime } from '@/lib/documents/validation';
 import {
   getDocumentRequirementForSessionUser,
   keyMatchesDocumentRequirement,
@@ -130,6 +131,11 @@ export async function confirmDocumentUpload(data: unknown) {
       };
     }
 
+    const mimeCheck = validateStoredDocumentMime(head.contentType);
+    if (!mimeCheck.valid) {
+      return { success: false, error: mimeCheck.error };
+    }
+
     // Update the requirement with file metadata
     const updatedRequirement = await prisma.documentRequirement.update({
       where: { id: requirementId },
@@ -139,7 +145,7 @@ export async function confirmDocumentUpload(data: unknown) {
         fileKey: fileMetadata.key,
         fileName: fileMetadata.fileName,
         fileSize: head.contentLength ?? 0,
-        fileMimeType: head.contentType ?? 'application/octet-stream',
+        fileMimeType: mimeCheck.mimeType,
       },
     });
 

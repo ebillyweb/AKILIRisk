@@ -11,6 +11,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import type { NotificationPreference } from '@prisma/client';
+import {
+  localTimeStringToUtc,
+  utcTimeStringToLocal,
+} from '@/lib/notifications/quiet-hours';
 
 const preferencesSchema = z.object({
   emailEnabled: z.boolean(),
@@ -56,8 +60,12 @@ export function NotificationPreferencesForm({
       emailStalled: preferences.emailStalled,
       emailRegistrations: preferences.emailRegistrations,
       reminderFrequencyDays: preferences.reminderFrequencyDays,
-      quietStart: preferences.quietStart ?? '',
-      quietEnd: preferences.quietEnd ?? '',
+      quietStart: preferences.quietStart
+        ? utcTimeStringToLocal(preferences.quietStart)
+        : '',
+      quietEnd: preferences.quietEnd
+        ? utcTimeStringToLocal(preferences.quietEnd)
+        : '',
     },
   });
 
@@ -73,8 +81,16 @@ export function NotificationPreferencesForm({
       formData.append('emailStalled', data.emailStalled.toString());
       formData.append('emailRegistrations', data.emailRegistrations.toString());
       formData.append('reminderFrequencyDays', data.reminderFrequencyDays.toString());
-      formData.append('quietStart', data.quietStart?.trim() ?? '');
-      formData.append('quietEnd', data.quietEnd?.trim() ?? '');
+      const quietStartLocal = data.quietStart?.trim() ?? '';
+      const quietEndLocal = data.quietEnd?.trim() ?? '';
+      formData.append(
+        'quietStart',
+        quietStartLocal ? localTimeStringToUtc(quietStartLocal) : '',
+      );
+      formData.append(
+        'quietEnd',
+        quietEndLocal ? localTimeStringToUtc(quietEndLocal) : '',
+      );
 
       const result = await updatePreferencesAction(formData);
 
@@ -202,11 +218,12 @@ export function NotificationPreferencesForm({
           </div>
         </div>
 
-        {/* Quiet hours (UTC) */}
+        {/* Quiet hours (local → stored as UTC) */}
         <div className="space-y-2">
-          <Label className="font-medium">Quiet hours (UTC)</Label>
+          <Label className="font-medium">Quiet hours (your local time)</Label>
           <p className="text-xs text-muted-foreground">
-            Email notifications are suppressed during this window. Leave blank to disable.
+            Email notifications are suppressed during this window in your browser&apos;s timezone.
+            Leave blank to disable.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <div className="space-y-1">

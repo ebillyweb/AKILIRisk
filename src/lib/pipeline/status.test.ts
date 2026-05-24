@@ -4,6 +4,8 @@ import {
   aggregateMandatoryDocumentCounts,
   hasUnfulfilledMandatoryDocuments,
 } from './documents';
+import { validateStoredDocumentMime } from '@/lib/documents/validation';
+
 import { computeClientStage, isStalled, isWorkflowEscalation } from './status';
 
 describe('aggregateMandatoryDocumentCounts', () => {
@@ -88,6 +90,11 @@ describe('isStalled vs isWorkflowEscalation', () => {
 
   it('does not flag complete clients as stalled', () => {
     expect(isStalled(eightDaysAgo, 'COMPLETE')).toBe(false);
+  });
+
+  it('rejects disallowed MIME from storage HEAD', () => {
+    expect(validateStoredDocumentMime('text/plain').valid).toBe(false);
+    expect(validateStoredDocumentMime('application/pdf').valid).toBe(true);
   });
 
   it('escalates only after more than 30 days', () => {

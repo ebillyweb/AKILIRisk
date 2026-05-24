@@ -1,363 +1,263 @@
 # Epic 5.4 — Advisor Workspace, Pipeline & Documents
 
 **Index:** [User stories README](./README.md)  
-**Status:** Reconciled against codebase (2026-05-23). Core pipeline, documents, intelligence, and notifications are **shipped**; several **Partial** / **Gap** items remain.  
-**BRD alignment:** FR-7 (advisor workspace), Section 3.4 business rules; v1.4 roadmap requirements **STATUS-***, **DOC-***, **NOTIFY-*** (see [.planning/milestones/v1.4-ROADMAP.md](../../.planning/milestones/v1.4-ROADMAP.md), phases 016–018).
+**Status:** **Reconciled** against codebase (2026-05-23). Implementation complete for US-28–US-36; Playwright smoke in `epic-5.4-advisor-workspace.spec.ts`.  
+**BRD alignment:** FR-7 (advisor workspace), Section 3.4 business rules; v1.4 **STATUS-***, **DOC-***, **NOTIFY-*** (see [.planning/milestones/v1.4-ROADMAP.md](../../.planning/milestones/v1.4-ROADMAP.md), phases 016–018).
 
-**Advisor UI (primary):** `/advisor`, `/advisor/pipeline`, `/advisor/pipeline/[clientId]`, `/advisor/intelligence`, `/advisor/settings/notifications`  
+**Advisor UI:** `/advisor`, `/advisor/pipeline`, `/advisor/pipeline/[clientId]`, `/advisor/intelligence`, `/advisor/settings/notifications`  
 **Client UI:** `/documents`
 
 ## Story numbering
 
-This epic uses **US-28 – US-36** (BRD / product brief). Older repo docs listed **US-24 – US-28** for the same scope:
+This epic uses **US-28 – US-36**. Older repo docs listed **US-24 – US-28** for the same scope (see mapping in [README](./README.md)).
 
-| This epic (US-28–36) | Former repo ID | Topic |
-|----------------------|----------------|--------|
-| US-28 | US-24 | Client pipeline |
-| US-29 | US-28 | Workspace priorities |
-| US-30 | US-26 | Document requirements (advisor) |
-| US-31 | US-27 (client) | Document upload |
-| US-32 | US-27 (advisor) | Document download |
-| — | US-25 | Client workflow detail (timeline, reports entry) — **folded into US-28** |
-
-**Collision:** **US-35** here is *advisor notification preferences*. Epic [5.6](./EPIC-5.6-account-security-compliance.md) also uses **US-35** for *client MFA*. Renumber 5.6+ in a future BRD pass or treat 5.4 US-35 as the advisor-notification story only in this file.
+**Collision:** **US-35** here is *advisor notification preferences*. Epic [5.6](./EPIC-5.6-account-security-compliance.md) uses **US-35** for *client MFA* — disambiguate by title in BRD appendix.
 
 ## Reconciliation status key
 
 | Status | Meaning |
 |--------|---------|
 | **Done** | Acceptance criteria met; code and story align |
-| **Partial** | Core behavior shipped; gaps or deviations noted |
-| **Gap** | Story AC not met or implementation incorrect |
-| **Code-only** | Shipped; AC not yet promoted to BRD |
+| **Partial** | Shipped with minor documented deviation |
+| **Gap** | Not met |
+| **Code-only** | Shipped; not yet in BRD body |
 
 ## Coverage summary
 
 | Story | Title | Status | Notes |
 |-------|--------|--------|--------|
-| US-28 | Manage the client pipeline | **Partial** | Doc counts + in-progress assessment + stalled UI fixed 2026-05-23; intake-review priority still coarse |
-| US-29 | Act on advisor priorities | **Partial** | Metrics fixed; intake “review” ≠ advisor approval |
-| US-30 | Define document requirements | **Partial** | Required/optional UI; stage gates mandatory only |
-| US-31 | Upload required documents (client) | **Partial** | Advisor notify wired; Playwright still open |
-| US-32 | Review and download client documents | **Partial** | Shipped; Playwright still open |
-| US-33 | View portfolio risk intelligence | **Partial** | Shipped; Playwright still open |
-| US-34 | Drill into family risk detail | **Partial** | Shipped; Playwright still open |
-| US-35 | Manage notification preferences | **Partial** | Quiet hours UI added; UTC only |
-| US-36 | Receive automated workflow reminders | **Partial** | 30-day advisor escalation; client reminders unchanged |
+| US-28 | Manage the client pipeline | **Done** | Stages, SSE, filters, stalled badge/filter, URL query params |
+| US-29 | Act on advisor priorities | **Done** | Intake review count uses approval state; deep links |
+| US-30 | Define document requirements | **Done** | Required/optional; stage gates mandatory only |
+| US-31 | Upload required documents (client) | **Done** | Notify advisor; MIME validated on confirm |
+| US-32 | Review and download client documents | **Done** | Presigned download + tenant isolation |
+| US-33 | View portfolio risk intelligence | **Done** | `/advisor/intelligence` |
+| US-34 | Drill into family risk detail | **Done** | Assignment gate + smoke isolation test |
+| US-35 | Manage notification preferences | **Done** | Quiet hours in local time (stored UTC) |
+| US-36 | Receive automated workflow reminders | **Done** | 30-day advisor escalation; client/doc crons |
 
 ---
 
 ## US-28 — Manage the Client Pipeline (Advisor)
 
-**As an** advisor, **I want** a pipeline view of every client, **so that** I can track progress and prioritize my attention.
-
-**Status: Partial**
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Each assigned client shows workflow stage and completion % (Invited 10% → Complete 100%) | **Done** — `computeProgress` in `src/lib/pipeline/status.ts` |
-| 2 | Clients with no activity for **more than 7 days** who are not Complete are **flagged stalled** | **Partial** — `isStalled()` + aggregate metric; **no per-row flag** in `PipelineTable`; threshold uses `> 7` days (effectively 8+ calendar days) |
-| 3 | Filter by stage, search by name, sort by name / stage / progress / last activity | **Done** — `PipelineFilters`, `PipelineTable` (TanStack), `usePipelineFilters` |
-| 4 | Clients whose assignment is not **ACTIVE** are excluded | **Done** — `getClientPipeline` filters `status: 'ACTIVE'` |
+| 1 | Workflow stage + completion % (10% → 100%) | **Done** |
+| 2 | No activity **> 7 days**, not Complete → **stalled** | **Done** — row badge, metric, `?stalled=1` filter |
+| 3 | Filter by stage, search, sort | **Done** |
+| 4 | Non-**ACTIVE** assignments excluded | **Done** |
 
 ### Implementation
 
 | Capability | Location |
 |------------|----------|
-| Pipeline list + metrics | `/advisor/pipeline`, `getClientPipeline`, `getPipelineMetrics` |
-| Stage computation | `src/lib/pipeline/status.ts` — `computeClientStage`, `computeProgress`, `isStalled` |
-| Queries | `src/lib/pipeline/queries.ts` |
-| Real-time refresh | `/api/advisor/status-stream`, `usePipelineUpdates` |
-| Client drill-down | `/advisor/pipeline/[clientId]` — `ClientDetailView`, `WorkflowTimeline` |
-| Intake waiver in stage | `intakeWaivedAt` on `ClientAdvisorAssignment` |
-| Report entry from pipeline | `/advisor/pipeline/[clientId]/report` — see [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) |
-
-### Known gaps / bugs
-
-1. **Document count aggregation breaks stage and metrics** — `groupBy` in `getClientPipeline` stores the *unfulfilled* count in `documents.required`, but `computeClientStage` expects *total* required vs fulfilled. Example: 2 fulfilled + 1 open can show **COMPLETE** instead of **DOCUMENTS_REQUIRED**. Fix: count `required: true` rows separately; pass total required and fulfilled into `computeClientStage`.
-2. **Assessment in progress often missing** — pipeline query only includes `assessments` with `status: 'COMPLETED'`. Clients mid-assessment without a prior completion may not show **ASSESSMENT_IN_PROGRESS**.
-3. **Stalled visibility** — `metrics.stalled` appears on the overview strip; individual rows are not badged or filterable as “stalled only.”
-4. **Documents column display** — `fulfilled/required` in the table reflects the mis-aggregated counts until (1) is fixed.
-
-**Reconciliation with Epic 5.1:** Invitation stages feed `computeClientStage` via batched `InviteCode` lookup.
+| Pipeline + metrics | `getClientPipeline`, `getPipelineMetrics`, `/advisor/pipeline` |
+| Stage logic | `src/lib/pipeline/status.ts` |
+| Mandatory documents | `src/lib/pipeline/documents.ts` |
+| SSE refresh | `/api/advisor/status-stream`, `usePipelineUpdates` |
+| URL filters | `parsePipelineFiltersFromSearchParams` — `?stage=`, `?stalled=1`, `?awaitingReview=1`, `?documentsNeeded=1` |
+| Client detail | `/advisor/pipeline/[clientId]` |
 
 ---
 
 ## US-29 — Act on Advisor Priorities (Advisor)
 
-**As an** advisor, **I want** a prioritized list of clients needing action, **so that** I always know what to do next.
-
-**Status: Partial**
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Clients at **Intake Complete** appear as awaiting intake review | **Partial** — all `INTAKE_COMPLETE` stage clients counted; not limited to intake **pending advisor approval** ([Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) `/advisor/review/[id]`) |
-| 2 | Clients with unfulfilled document requirements appear as document actions | **Partial** — `metrics.documentsNeeded` (inherits US-28 doc-count bug) |
-| 3 | Stalled clients appear as stalled items | **Done** — `deriveAdvisorPriorities` |
-| 4 | Pipeline metrics: counts by stage, documents needed, stalled | **Done** on `/advisor` hub + pipeline overview (documents count unreliable until US-28 fix) |
+| 1 | Intakes **awaiting review** (submitted, not approved/rejected) | **Done** — `metrics.intakesAwaitingReview`, not raw `INTAKE_COMPLETE` count |
+| 2 | Unfulfilled **required** documents | **Done** — `metrics.documentsNeeded` |
+| 3 | Stalled clients | **Done** |
+| 4 | Metrics by stage, documents, stalled | **Done** |
 
 ### Implementation
 
-| Capability | Location |
-|------------|----------|
-| Priority derivation | `src/lib/advisor/workspace-data.ts` — `deriveAdvisorPriorities` |
-| Workspace home | `/advisor` — `AdvisorWorkspaceHome` |
-| Intelligence highlights (related) | `deriveIntelligenceHighlights` → `/advisor/intelligence` |
+`deriveAdvisorPriorities` in `src/lib/advisor/workspace-data.ts` — links to `/advisor/review/[id]`, `/advisor/pipeline?awaitingReview=1`, `?documentsNeeded=1`, `?stalled=1`.
 
-**Gap:** Priority cards link to `/advisor/pipeline` without stage-specific query params (e.g. `?stage=INTAKE_COMPLETE` or stalled filter).
+**Intake review rule:** `isIntakeAwaitingAdvisorReview` in `src/lib/pipeline/intake-review.ts` (SUBMITTED + approval `PENDING` / `IN_REVIEW` / missing; excludes waived).
 
 ---
 
-## US-30 — Define Document Requirements for a Client (Advisor)
+## US-30 — Define Document Requirements (Advisor)
 
-**As an** advisor, **I want** to specify the documents a client must provide, **so that** I collect everything I need for their file.
-
-**Status: Partial**
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Create requirement with name, optional description, required or optional | **Partial** — name + description; `DocumentRequirement.required` exists in schema but **not exposed** in `addDocumentRequirement` or `DocumentRequirements` UI (always `true`) |
-| 2 | Unfulfilled until matching file uploaded | **Done** |
-| 3 | Unfulfilled **required** docs after assessment complete → **Documents Required** not Complete | **Gap** — stage logic does not filter `required: true`; doc-count bug (US-28) |
+| 1 | Name, description, **required or optional** | **Done** |
+| 2 | Unfulfilled until upload | **Done** |
+| 3 | Unfulfilled **required** after assessment → **Documents Required** | **Done** |
 
 ### Implementation
 
-| Capability | Location |
-|------------|----------|
-| Add / remove | `addDocumentRequirement`, `removeDocumentRequirement` in `src/lib/actions/pipeline-actions.ts` |
-| UI | `src/components/pipeline/DocumentRequirements.tsx` on client detail |
-| Model | `DocumentRequirement` in `prisma/schema.prisma` |
+`addDocumentRequirement`, `DocumentRequirements.tsx`, `DocumentRequirement.required` in Prisma.
 
-**Undocumented:** Advisors can upload on behalf of the client via `DocumentUpload` embedded on the client detail page (same presigned flow as the client portal).
+**Note:** Advisors may upload on behalf of clients from client detail (`DocumentUpload`).
 
 ---
 
 ## US-31 — Upload Required Documents (Client)
 
-**As a** client, **I want** to upload the documents my advisor requested, **so that** I can complete my onboarding.
-
-**Status: Partial**
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Only PDF, PNG, JPEG up to 10 MB | **Done** — `src/lib/documents/validation.ts`, `ALLOWED_FILE_TYPES`, dropzone on `DocumentUpload` |
-| 2 | Success marks requirement fulfilled with timestamp | **Done** — `fulfilled`, `fulfilledAt` on confirm |
-| 3 | Advisor notified on upload | **Gap** — `triggerDocumentUploadNotification` in `src/lib/notifications/triggers.ts` is **never called** from `confirmDocumentUpload` or `/api/documents/confirm` |
-| 4 | Cannot access another client’s requirement | **Done** — `getDocumentRequirementForSessionUser` |
+| 1 | PDF, PNG, JPEG ≤ 10 MB | **Done** |
+| 2 | Fulfilled + timestamp | **Done** |
+| 3 | Advisor notified | **Done** — `triggerDocumentUploadNotification` on client confirm |
+| 4 | Tenant isolation | **Done** |
 
 ### Implementation
 
-| Capability | Location |
-|------------|----------|
-| Client portal | `/documents`, `ClientDocumentPortal` |
-| Presigned upload | `POST /api/documents/upload-url`, `confirmDocumentUpload` / `POST /api/documents/confirm` |
-| S3 | `src/lib/documents/s3.ts` |
-| Branded portal | Advisor branding on document portal when enabled ([Epic 5.7](./EPIC-5.7-billing-branding-whitelabel.md)) |
-
-**Hardening:** Confirm path should optionally re-validate MIME from S3 `HEAD` against `ALLOWED_FILE_TYPES` (upload-url already validates).
+`/documents`, presigned upload, `validateFileUpload` + `validateStoredDocumentMime` on confirm.
 
 ---
 
 ## US-32 — Review and Download Client Documents (Advisor)
 
-**As an** advisor, **I want** to view and download the documents my clients upload, **so that** I can complete their review.
-
-**Status: Partial**
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Download fulfilled requirement via secure, time-limited link | **Done** — `getDocumentDownloadUrl`, `generateDownloadUrl` (1 hour) |
-| 2 | Cannot access another advisor’s client documents | **Done** — `requirement-access.ts` + assignment on pipeline detail |
-| 3 | Download link expires after one hour | **Done** — `expiresIn: 3600` in `s3.ts` |
-
-### Implementation
-
-| Capability | Location |
-|------------|----------|
-| Download action | `src/lib/actions/document-actions.ts` |
-| UI | `DocumentDownloadButton` on client detail |
-
-**Gap:** No Playwright test for cross-advisor document download denial (pipeline tenant test covers `getClientDetail` only).
+| 1 | Secure download, 1-hour presigned URL | **Done** |
+| 2 | Cross-advisor denied | **Done** |
+| 3 | Link expires after one hour | **Done** |
 
 ---
 
 ## US-33 — View Portfolio Risk Intelligence (Advisor)
 
-**As an** advisor, **I want** a portfolio-level view of risk across all my clients, **so that** I can spot the families most in need of attention.
-
-**Status: Partial** (shipped; previously under-documented in this epic)
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Completed-assessment clients: total families, at risk, critical exposure count | **Done** — `getPortfolioIntelligence` |
-| 2 | Pillar severity: critical ≤ 3.0, moderate ≤ 5.0, else low | **Done** — `getSeverity()` in `src/lib/intelligence/queries.ts` |
-| 3 | Per-client per-pillar heat map; risks grouped by category | **Done** — `RiskHeatMap`, `getPortfolioPillarScores`, `PortfolioRiskList` |
+| 1 | Totals for completed-assessment families | **Done** |
+| 2 | Severity ≤3.0 critical, ≤5.0 moderate | **Done** |
+| 3 | Heat map + risks by category | **Done** |
 
-### Implementation
-
-| Capability | Location |
-|------------|----------|
-| Page | `/advisor/intelligence` |
-| Data | `src/lib/intelligence/queries.ts`, `getPortfolioIntelligenceData` in `advisor-actions.ts` |
-| UI | `RiskSummaryCard`, `RiskDistributionChart`, `RiskHeatMap` |
-
-**Do not confuse with:** `/advisor/dashboard` — governance portfolio table (`GovernanceTable`, `MetricsCards`), separate from intelligence heat map.
-
-**Related:** Extended/legacy module narrative in [Epic 5.9](./EPIC-5.9-extended-risk-modules.md); canonical governance scoring is Epic 5.2.
+**Route:** `/advisor/intelligence` (not `/advisor/dashboard` governance table).
 
 ---
 
 ## US-34 — Drill into a Family's Risk Detail (Advisor)
 
-**As an** advisor, **I want** detailed risk findings for a single family, **so that** I can advise them specifically.
-
-**Status: Partial**
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Active assignment: three lowest-scoring pillars with recommendations | **Done** — `getRiskDetailForFamily`, top 3 by score |
-| 2 | Each top risk shows underlying assessment responses | **Done** — `assessmentResponses` on `RiskDetail` |
-| 3 | Not assigned: cannot view risk detail | **Done** — `ClientAdvisorAssignment` ACTIVE check |
+| 1 | Top 3 lowest pillars + recommendations | **Done** |
+| 2 | Underlying responses | **Done** |
+| 3 | Unassigned → no access | **Done** |
 
-### Implementation
-
-| Capability | Location |
-|------------|----------|
-| Page | `/advisor/intelligence/[familyId]` |
-| UI | `RiskDetailPanel` |
-| Actions | `getFamilyRiskDetailData` → `getRiskDetailForFamily` |
-
-**Gap:** No smoke test for cross-advisor intelligence URL access.
+**Route:** `/advisor/intelligence/[familyId]`
 
 ---
 
 ## US-35 — Manage Notification Preferences (Advisor)
 
-**As an** advisor, **I want** to control which notifications I receive, **so that** I am alerted on my own terms.
-
-**Status: Partial** — *Not the same as Epic 5.6 US-35 (client MFA).*
+**Status: Done** — *Not Epic 5.6 client MFA.*
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Disable category (milestones, reminders, stalled, registrations) → no email for that category | **Done** — `shouldSendNotification`, `NotificationPreferencesForm` |
-| 2 | In-app notifications still recorded regardless of email prefs | **Done** — in-app created when `advisorProfileId` set; email gated separately |
-| 3 | Quiet hours suppress notifications during window | **Partial** — `quietStart` / `quietEnd` in DB + `isInQuietHours()`; **no UI** to set times; not in `updateNotificationPreferencesAction` |
-| 4 | Duplicate in-app notification within 24 hours not created | **Done** — `isDuplicateNotification` in `src/lib/notifications/service.ts` |
+| 1 | Per-category email toggles | **Done** |
+| 2 | In-app always recorded | **Done** |
+| 3 | Quiet hours suppress email | **Done** — local time in UI, stored UTC (`quiet-hours.ts`) |
+| 4 | No duplicate in-app within 24h | **Done** |
 
-### Implementation
-
-| Capability | Location |
-|------------|----------|
-| Settings page | `/advisor/settings/notifications` |
-| Preferences | `src/lib/notifications/preferences.ts` |
-| Dispatch | `src/lib/notifications/service.ts`, `src/lib/notifications/triggers.ts` |
-| In-app center | `/advisor/notifications` |
-
-**Categories map:** `registration`, `milestone`, `reminder`, `stalled` → `NotificationPreference` email* fields.
+**Route:** `/advisor/settings/notifications`
 
 ---
 
 ## US-36 — Receive Automated Workflow Reminders (System)
 
-**As the** platform, **I want** to send reminders automatically, **so that** clients and advisors stay engaged without manual chasing.
-
-**Status: Partial**
+**Status: Done**
 
 ### Acceptance criteria
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Intake in progress **> 7 days** → client reminder | **Done** — `processAssessmentReminders` |
-| 2 | Assessment in progress **> 14 days** → client reminder | **Done** — same |
-| 3 | Document requirement **> 3 days** unfulfilled, remind at most every **7 days** | **Done** — `processDocumentReminders`, `lastReminderSentAt` |
-| 4 | Client stalled **> 30 days** → advisor escalation | **Gap** — `processWorkflowReminders` uses `isStalled()` (**> 7 days**) for advisor email; `isEscalation` at 30 days does not change category or messaging |
+| 1 | Intake in progress > 7d → client reminder | **Done** — `processAssessmentReminders` |
+| 2 | Assessment in progress > 14d → client reminder | **Done** |
+| 3 | Document > 3d unfulfilled, max every 7d | **Done** — `processDocumentReminders` |
+| 4 | Stalled **> 30d** → advisor escalation | **Done** — `isWorkflowEscalation` in `workflow-reminders.ts` |
 
-### Implementation
+| Cron | Path |
+|------|------|
+| Assessment + advisor escalation | `GET /api/cron/workflow-reminders` |
+| Document reminders | `GET /api/cron/document-reminders` |
 
-| Job | Endpoint | Module |
-|-----|----------|--------|
-| Assessment + workflow stall (advisor) | `GET /api/cron/workflow-reminders` | `assessment-reminders.ts`, `workflow-reminders.ts` |
-| Document reminders (client) | `GET /api/cron/document-reminders` | `document-reminders.ts` |
-
-**Security:** `Authorization: Bearer $CRON_SECRET` on cron routes.
-
-**Other issues:** Workflow reminder client link uses `/advisor/clients/{id}` while pipeline uses `/advisor/pipeline/{id}`; invitation lookup in `workflow-reminders.ts` is fragile for stage computation.
+Requires `Authorization: Bearer $CRON_SECRET`.
 
 ---
 
-## Related surfaces (same epic family)
+## Related surfaces
 
-Documented here so reconcilers do not treat them as “undocumented code.”
-
-| Surface | Route | Notes |
-|---------|-------|--------|
-| Advisor workspace home | `/advisor` | Priorities + activity (US-29) |
-| Governance dashboard | `/advisor/dashboard` | Not US-33 intelligence; pillar governance table |
-| Per-client analytics | `/advisor/analytics/[clientId]` | Trend / drill-down |
-| Notifications center | `/advisor/notifications` | In-app feed |
-| Advisor question bank preview | `/advisor/question-bank/[riskAreaId]` | Read-only visibility |
-| Client document portal | `/documents` | US-31 |
-
-**Phase verification (more detail than this file):** `.planning/phases/016-client-status-pipeline/`, `017-*`, `018-*` VERIFICATION.md files.
+| Surface | Route |
+|---------|-------|
+| Workspace home | `/advisor` |
+| Governance dashboard | `/advisor/dashboard` |
+| Per-client analytics | `/advisor/analytics/[clientId]` |
+| Notifications | `/advisor/notifications` |
+| Question bank preview | `/advisor/question-bank/[riskAreaId]` |
 
 ---
 
-## Playwright & unit test coverage
+## Test coverage
 
-See [tests/INVENTORY.md](../../tests/INVENTORY.md).
+### Vitest
 
-| Area | Spec / test | Status |
-|------|-------------|--------|
-| Pipeline load + open client detail | `tests/smoke/advisor-clients.spec.ts` | Implemented |
-| Pipeline → intake review | `tests/smoke/advisor-intake-review.spec.ts` | Implemented |
-| Cross-advisor pipeline detail blocked | `tests/smoke/tenant-isolation.spec.ts` | Implemented |
-| Billing gate on pipeline / hub / dashboard | `tests/smoke/advisor-billing-gate.spec.ts` | Implemented |
-| Stage % / DOCUMENTS_REQUIRED / COMPLETE accuracy | — | **Not implemented** |
-| Stalled row flag or filter | — | **Not implemented** (INVENTORY TODO) |
-| Pipeline metrics vs DB | — | **Not implemented** (INVENTORY TODO) |
-| Filter / search / sort | — | **Not implemented** (INVENTORY TODO) |
-| SSE live refresh | — | **Not implemented** |
-| Document upload / download | — | **Not implemented** |
-| Portfolio intelligence / family detail | — | **Not implemented** |
-| Notification preferences | — | **Not implemented** |
-| Cron reminders | — | **Not implemented** (needs `CRON_SECRET` + fixtures) |
+| Module | File |
+|--------|------|
+| Stage + stall/escalation | `src/lib/pipeline/status.test.ts` |
+| Intake awaiting review | `src/lib/pipeline/intake-review.test.ts` |
+| Quiet hours conversion | `src/lib/notifications/quiet-hours.test.ts` |
 
-**Recommended unit tests:** `computeClientStage`, `computeProgress`, `isStalled`, `getPipelineMetrics`, document `groupBy` aggregation in `queries.ts` (Vitest).
+### Playwright
+
+| Spec | Covers |
+|------|--------|
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | Pipeline search, stalled URL filter, intelligence tenant isolation, notification settings |
+| `tests/smoke/advisor-clients.spec.ts` | Pipeline load + client detail |
+| `tests/smoke/advisor-intake-review.spec.ts` | Pipeline → intake review |
+| `tests/smoke/tenant-isolation.spec.ts` | Cross-advisor pipeline detail |
+
+**Not automated:** full S3 document upload E2E (needs object storage in CI); cron job execution; SSE refresh assertion.
 
 ---
 
-## Engineering backlog (priority)
+## v1.4 requirement traceability
 
-**Done (2026-05-23):** items 1–7 below shipped in code; Vitest `src/lib/pipeline/status.test.ts` added.
-
-**Remaining:**
-
-1. Playwright: documents, intelligence tenant isolation, notification prefs, pipeline filters.
-2. US-29: align “intakes awaiting review” with Epic 5.2 advisor approval state (not only `INTAKE_COMPLETE` stage).
-3. Confirm-path MIME re-check from S3 `HEAD` against allowlist (defense in depth).
-4. Local-time quiet hours (currently UTC in UI copy and server).
+| ID | Story | Status |
+|----|-------|--------|
+| STATUS-01–06 | US-28, US-29 | Done |
+| DOC-01–05 | US-30–31, US-36 | Done |
+| NOTIFY-01–05 | US-31, US-35, US-36 | Done |
+| (portfolio intelligence) | US-33–34 | Done — add INTEL-* to BRD when promoted |
 
 ---
 
 ## Related epics
 
-- [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md) — invitation stages in pipeline
-- [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — intake approval, assessment, reports from pipeline
+- [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md) — invitation stages
+- [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — intake approval, reports
 - [Epic 5.7](./EPIC-5.7-billing-branding-whitelabel.md) — branded document portal
-- [Epic 5.9](./EPIC-5.9-extended-risk-modules.md) — legacy risk modules vs canonical intelligence
+- [Epic 5.9](./EPIC-5.9-extended-risk-modules.md) — legacy risk modules

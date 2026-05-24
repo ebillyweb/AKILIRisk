@@ -3,7 +3,8 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { PipelineClient, PipelineMetrics, ClientWorkflowStage, ClientDetail, WorkflowEvent } from "./types";
-import { aggregateMandatoryDocumentCounts } from "./documents";
+import { aggregateMandatoryDocumentCounts, hasUnfulfilledMandatoryDocuments } from "./documents";
+import { indexAwaitingIntakeReviewByClient, isIntakeAwaitingAdvisorReview } from "./intake-review";
 import { computeClientStage, computeProgress, isStalled } from "./status";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 
@@ -115,7 +116,8 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
   );
 
   // Fire all three independent batch queries in parallel.
-  const [invitations, documentCounts, intakeResponseCounts] = await Promise.all([
+  const [invitations, documentCounts, intakeResponseCounts, intakeInterviews, intakeApprovals] =
+    await Promise.all([
     clientEmails.length > 0
       ? prisma.inviteCode.findMany({
           where: {
@@ -145,6 +147,22 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
           _count: { _all: true },
         })
       : Promise.resolve([]),
+    clientIds.length > 0
+      ? prisma.intakeInterview.findMany({
+          where: { userId: { in: clientIds } },
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            submittedAt: true,
+          },
+          orderBy: { updatedAt: "desc" },
+        })
+      : Promise.resolve([]),
+    prisma.intakeApproval.findMany({
+      where: { advisorId: advisorProfileId },
+      select: { interviewId: true, status: true },
+    }),
   ]);
 
   // Build per-key indexes so the per-client transform is a synchronous lookup.
@@ -162,6 +180,15 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
   }
 
   const documentCountsByClient = aggregateMandatoryDocumentCounts(documentCounts);
+
+  const waivedByClientId = new Map(
+    assignments.map((a) => [a.client.id, a.intakeWaivedAt != null]),
+  );
+  const intakeReviewByClient = indexAwaitingIntakeReviewByClient(
+    intakeInterviews,
+    intakeApprovals,
+    waivedByClientId,
+  );
 
   // Intake response counts (only for interviews that have at least one
   // matching response — interviews with zero matches won't appear in the
@@ -235,6 +262,11 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     });
 
     const stalled = isStalled(lastActivity, stage);
+    const intakeReview = intakeReviewByClient.get(client.id) ?? {
+      awaiting: false,
+      interviewId: null,
+    };
+    const documentsNeeded = hasUnfulfilledMandatoryDocuments(docCounts);
 
     const pipelineClient: PipelineClient = {
       id: client.id,
@@ -245,6 +277,9 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
       progress: computeProgress(stage),
       lastActivity,
       stalled,
+      awaitingIntakeReview: intakeReview.awaiting,
+      intakeReviewInterviewId: intakeReview.interviewId,
+      documentsNeeded,
       invitation: invitation ? {
         status: invitation.status,
         sentAt: invitation.createdAt,
@@ -307,15 +342,12 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
     COMPLETE: byStage.COMPLETE || 0,
   };
 
-  const documentsNeeded = clients.filter(
-    (client) =>
-      client.documents.required > 0 &&
-      client.documents.fulfilled < client.documents.required,
-  ).length;
+  const documentsNeeded = clients.filter((client) => client.documentsNeeded).length;
 
-  // Count stalled clients
-  const stalled = clients.filter(client =>
-    isStalled(client.lastActivity, client.stage)
+  const stalled = clients.filter((client) => client.stalled).length;
+
+  const intakesAwaitingReview = clients.filter(
+    (client) => client.awaitingIntakeReview,
   ).length;
 
   return {
@@ -323,6 +355,7 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
     byStage: allStages,
     documentsNeeded,
     stalled,
+    intakesAwaitingReview,
   };
 }
 
@@ -517,6 +550,18 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     : assignment.assignedAt;
 
   const stalled = isStalled(lastActivity, stage);
+  const intakeApproval = latestIntake
+    ? await prisma.intakeApproval.findUnique({
+        where: { interviewId: latestIntake.id },
+        select: { status: true },
+      })
+    : null;
+  const awaitingIntakeReview = isIntakeAwaitingAdvisorReview(
+    latestIntake,
+    intakeApproval,
+    intakeWaived,
+  );
+  const documentsNeededFlag = hasUnfulfilledMandatoryDocuments(docCounts);
 
   const pipelineClient: PipelineClient = {
     id: client.id,
@@ -527,6 +572,9 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     progress: computeProgress(stage),
     lastActivity,
     stalled,
+    awaitingIntakeReview,
+    intakeReviewInterviewId: awaitingIntakeReview ? latestIntake?.id ?? null : null,
+    documentsNeeded: documentsNeededFlag,
     invitation: invitation ? {
       status: invitation.status,
       sentAt: invitation.createdAt,

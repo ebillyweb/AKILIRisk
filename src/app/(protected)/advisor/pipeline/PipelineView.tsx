@@ -3,19 +3,27 @@
 import { usePipelineUpdates, usePipelineFilters } from "@/lib/pipeline/hooks";
 import { PipelineFilters } from "@/components/pipeline/PipelineFilters";
 import { PipelineTable } from "@/components/pipeline/PipelineTable";
-import type { PipelineClient, PipelineMetrics } from "@/lib/pipeline/types";
+import type { PipelineClient, PipelineFilters, PipelineMetrics } from "@/lib/pipeline/types";
 
 interface PipelineViewProps {
   initialClients: PipelineClient[];
   initialMetrics: PipelineMetrics;
+  initialFilters?: PipelineFilters;
 }
 
-export function PipelineView({ initialClients, initialMetrics }: PipelineViewProps) {
+export function PipelineView({
+  initialClients,
+  initialMetrics,
+  initialFilters,
+}: PipelineViewProps) {
   // Real-time updates via SSE
   const { clients, connected, lastUpdated } = usePipelineUpdates(initialClients);
 
   // Client-side filtering and sorting
-  const { filters, filteredClients, updateFilters } = usePipelineFilters(clients);
+  const { filters, filteredClients, updateFilters } = usePipelineFilters(
+    clients,
+    initialFilters,
+  );
 
   return (
     <div className="space-y-6">

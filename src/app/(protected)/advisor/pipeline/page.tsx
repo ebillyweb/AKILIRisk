@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 
 import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
+import { parsePipelineFiltersFromSearchParams } from "@/lib/pipeline/parse-pipeline-filters";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
 
@@ -31,7 +32,11 @@ function MetricsSummary({ metrics }: { metrics: any }) {
 }
 
 // Async component for data-dependent content
-async function PipelineContent() {
+async function PipelineContent({
+  initialFilters,
+}: {
+  initialFilters: ReturnType<typeof parsePipelineFiltersFromSearchParams>;
+}) {
   const result = await getClientPipelineData();
 
   if (!result.success) {
@@ -59,12 +64,23 @@ async function PipelineContent() {
       </div>
 
       {/* Pipeline view with real-time updates */}
-      <PipelineView initialClients={clients} initialMetrics={metrics} />
+      <PipelineView
+        initialClients={clients}
+        initialMetrics={metrics}
+        initialFilters={initialFilters}
+      />
     </div>
   );
 }
 
-export default function PipelinePage() {
+export default async function PipelinePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const initialFilters = parsePipelineFiltersFromSearchParams(resolvedSearchParams);
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Quick navigation */}
@@ -79,7 +95,7 @@ export default function PipelinePage() {
 
       {/* Data-dependent content with Suspense streaming */}
       <Suspense fallback={<PipelineLoading />}>
-        <PipelineContent />
+        <PipelineContent initialFilters={initialFilters} />
       </Suspense>
     </div>
   );

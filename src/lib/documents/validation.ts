@@ -74,3 +74,25 @@ export function validateFileUpload(
 
   return { valid: true, mimeType };
 }
+
+/** Validates MIME returned from S3 HEAD after upload (defense in depth). */
+export function validateStoredDocumentMime(
+  contentType: string | null,
+):
+  | { valid: true; mimeType: string }
+  | { valid: false; error: string } {
+  const normalized = (contentType ?? "").trim().toLowerCase();
+  const mimeType =
+    normalized === "image/jpg"
+      ? "image/jpeg"
+      : normalized;
+
+  if (!mimeType || !Object.keys(ALLOWED_FILE_TYPES).includes(mimeType)) {
+    return {
+      valid: false,
+      error: `Stored file type is not allowed: ${contentType ?? "unknown"}`,
+    };
+  }
+
+  return { valid: true, mimeType };
+}

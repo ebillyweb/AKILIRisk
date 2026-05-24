@@ -64,8 +64,8 @@ export function PipelineFilters({
     onFilterChange({ ...filters, stage });
   };
 
-  const toggleStalled = () => {
-    onFilterChange({ ...filters, stalled: filters.stalled ? undefined : true });
+  const toggleFlag = (key: "stalled" | "awaitingIntakeReview" | "documentsNeeded") => {
+    onFilterChange({ ...filters, [key]: filters[key] ? undefined : true });
   };
 
   return (
@@ -87,11 +87,33 @@ export function PipelineFilters({
             type="button"
             variant={filters.stalled ? "default" : "outline"}
             size="sm"
-            onClick={toggleStalled}
+            onClick={() => toggleFlag("stalled")}
           >
             Stalled
             <Badge variant="secondary" className="ml-2">
               {metrics.stalled}
+            </Badge>
+          </Button>
+          <Button
+            type="button"
+            variant={filters.awaitingIntakeReview ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleFlag("awaitingIntakeReview")}
+          >
+            Awaiting review
+            <Badge variant="secondary" className="ml-2">
+              {metrics.intakesAwaitingReview}
+            </Badge>
+          </Button>
+          <Button
+            type="button"
+            variant={filters.documentsNeeded ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleFlag("documentsNeeded")}
+          >
+            Docs needed
+            <Badge variant="secondary" className="ml-2">
+              {metrics.documentsNeeded}
             </Badge>
           </Button>
           <Select
@@ -141,6 +163,16 @@ export function PipelineFilters({
         {filters.stalled && (
           <span className="ml-2">
             • <span className="font-medium">Stalled only</span>
+          </span>
+        )}
+        {filters.awaitingIntakeReview && (
+          <span className="ml-2">
+            • <span className="font-medium">Awaiting intake review</span>
+          </span>
+        )}
+        {filters.documentsNeeded && (
+          <span className="ml-2">
+            • <span className="font-medium">Required documents outstanding</span>
           </span>
         )}
       </div>
