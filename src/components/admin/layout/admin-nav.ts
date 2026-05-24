@@ -2,11 +2,15 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   BarChart3,
+  BookOpen,
   ClipboardList,
   Database,
   FileText,
   Gauge,
   Home,
+  ListChecks,
+  Mic,
+  Puzzle,
   Settings,
   Shield,
   TrendingUp,
@@ -14,8 +18,6 @@ import {
   Users,
   UserPlus,
   AlertTriangle,
-  Puzzle,
-  BookOpen,
 } from "lucide-react";
 
 export type AdminNavItem = {
@@ -48,8 +50,25 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       { href: "/admin/leads", label: "Assessment Requests", icon: ClipboardList },
       { href: "/admin/assessment", label: "Active Assessments", icon: ClipboardList },
       { href: "/admin/intake", label: "Intake Management", icon: ClipboardList },
-      { href: "/admin/intake/questions", label: "Intake Scripts", icon: FileText },
+    ],
+  },
+  {
+    id: "configuration",
+    title: "Configuration",
+    items: [
       { href: "/admin/recommendations", label: "Recommendations", icon: BookOpen },
+      { href: "/admin/intake/questions", label: "Intake question bank", icon: Mic },
+      {
+        href: "/admin/assessment/questions",
+        label: "Assessment question bank",
+        icon: ListChecks,
+      },
+      {
+        href: "/admin/scoring/thresholds",
+        label: "Risk-tier thresholds",
+        icon: Shield,
+        superAdminOnly: true,
+      },
     ],
   },
   {
@@ -86,15 +105,8 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         icon: Puzzle,
         superAdminOnly: true,
       },
-      { href: "/admin/question-bank", label: "Configuration", icon: Settings },
       { href: "/admin/audit-log", label: "Audit Logs", icon: Activity },
       { href: "/admin/settings", label: "Settings", icon: Settings },
-      {
-        href: "/admin/scoring/thresholds",
-        label: "Risk Thresholds",
-        icon: Shield,
-        superAdminOnly: true,
-      },
       {
         href: "/admin/exports",
         label: "Data Exports",

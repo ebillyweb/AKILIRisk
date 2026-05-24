@@ -75,7 +75,7 @@ export async function lookupEntityDisplay(
         return {
           displayName: display,
           editHref: riskAreaId
-            ? `/admin/question-bank/${riskAreaId}/${entityId}`
+            ? `/admin/assessment/questions/${riskAreaId}/${entityId}`
             : null,
         };
       }

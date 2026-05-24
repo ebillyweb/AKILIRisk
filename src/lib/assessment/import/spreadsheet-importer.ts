@@ -363,7 +363,7 @@ export class SpreadsheetImporter {
   private async importQuestions(_rows: SpreadsheetRow[], _tx: unknown, _options: ImportOptions): Promise<number> {
     throw new Error(
       "Spreadsheet import to AssessmentBankQuestion was removed. " +
-        "Add questions via /admin/question-bank or npm run seed:pillar-ddl.",
+        "Add questions via /admin/assessment/questions or npm run seed:pillar-ddl.",
     );
   }
 

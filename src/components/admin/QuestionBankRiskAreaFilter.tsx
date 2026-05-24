@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import {
+  ADMIN_ASSESSMENT_QUESTIONS_PATH,
+  adminAssessmentQuestionsAreaPath,
+} from "@/lib/admin/assessment-questions-paths";
 import { RISK_AREAS } from "@/lib/advisor/types";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +20,7 @@ export function QuestionBankRiskAreaFilter({ activeAreaId }: Props) {
   const hrefForArea = (id: string) => {
     const next = new URLSearchParams(searchParams.toString());
     const qs = next.toString();
-    return `/admin/question-bank/${id}${qs ? `?${qs}` : ""}`;
+    return `${adminAssessmentQuestionsAreaPath(id)}${qs ? `?${qs}` : ""}`;
   };
 
   return (
@@ -25,7 +29,10 @@ export function QuestionBankRiskAreaFilter({ activeAreaId }: Props) {
       aria-label="Risk area"
     >
       <Button variant={activeAreaId === null ? "default" : "outline"} size="sm" asChild>
-        <Link href="/admin/question-bank" aria-current={activeAreaId === null ? "page" : undefined}>
+        <Link
+          href={ADMIN_ASSESSMENT_QUESTIONS_PATH}
+          aria-current={activeAreaId === null ? "page" : undefined}
+        >
           All risk areas
         </Link>
       </Button>

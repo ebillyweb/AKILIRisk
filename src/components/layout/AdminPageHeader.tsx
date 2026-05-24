@@ -110,13 +110,13 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
     },
   },
   {
-    path: "/admin/question-bank",
+    path: "/admin/assessment/questions",
     config: {
       icon: ListChecks,
       kicker: "Content management",
-      title: "Assessment question bank",
+      title: "Assessment questions",
       subtitle:
-        "Six assessment pillars — create and manage questions, copy, visibility, and ordering",
+        "Governance assessment question bank by risk area — copy, visibility, and ordering",
     },
   },
   {

@@ -1,110 +1,31 @@
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { requireAdminRole } from "@/lib/admin/auth";
-import { updatePillarQuestionContent } from "@/lib/actions/admin-question-bank-actions";
-import { PillarQuestionBankFields } from "@/components/admin/PillarQuestionBankFields";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
-import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
-import { RISK_AREAS } from "@/lib/advisor/types";
-import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
-import { prisma } from "@/lib/db";
+import { redirect } from "next/navigation";
+import { adminAssessmentQuestionsEditPath } from "@/lib/admin/assessment-questions-paths";
 
-export default async function AdminQuestionBankEditPage({
+function queryString(
+  searchParams: Record<string, string | string[] | undefined>
+): string {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (typeof value === "string") qs.set(key, value);
+    else if (Array.isArray(value)) {
+      for (const v of value) qs.append(key, v);
+    }
+  }
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
+/** Legacy URL — use `/admin/assessment/questions/[riskAreaId]/[questionId]`. */
+export default async function LegacyAdminQuestionBankEditRedirect({
   params,
   searchParams,
 }: {
   params: Promise<{ riskAreaId: string; questionId: string }>;
-  searchParams: Promise<{ err?: string; saved?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireAdminRole();
-  const { riskAreaId, questionId: questionIdParam } = await params;
-  const { err, saved } = await searchParams;
-  const questionId = decodeURIComponent(questionIdParam);
-
-  const legacy = legacyRiskAreaRedirect(riskAreaId);
-  if (legacy) {
-    redirect(`/admin/question-bank/${legacy}/${encodeURIComponent(questionId)}`);
-  }
-
-  if (!isRiskAreaId(riskAreaId)) {
-    notFound();
-  }
-
-  const area = RISK_AREAS.find((a) => a.id === riskAreaId)!;
-
-  const pillarRow = await prisma.pillarQuestion.findUnique({
-    where: { id: questionId },
-    include: { section: { include: { category: true } } },
-  });
-
-  if (
-    !pillarRow ||
-    riskAreaIdForPillarCategory(pillarRow.section.category) !== riskAreaId
-  ) {
-    notFound();
-  }
-
-  return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/admin/question-bank/${riskAreaId}`}>Back to {area.name}</Link>
-        </Button>
-        <Link
-          href={`/admin/audit-log/entity/PillarQuestion/${pillarRow.id}`}
-          className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-        >
-          View history
-        </Link>
-      </div>
-
-      {saved === "1" ? (
-        <Alert>
-          <AlertTitle>Saved</AlertTitle>
-          <AlertDescription>
-            Question bank changes are live for new assessments.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {err ? (
-        <Alert variant="destructive">
-          <AlertTitle>Could not save</AlertTitle>
-          <AlertDescription>{err}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Edit question</CardTitle>
-          <p className="text-sm text-muted-foreground">{area.name}</p>
-        </CardHeader>
-        <CardContent>
-          <form action={updatePillarQuestionContent} className="space-y-4">
-            <input type="hidden" name="questionId" value={pillarRow.id} />
-            <input type="hidden" name="riskAreaId" value={riskAreaId} />
-            <PillarQuestionBankFields
-              answerType={pillarRow.answerType}
-              defaultText={formatQuestionTextForDisplay(pillarRow.questionText)}
-              defaultHelpText={pillarRow.whyThisMatters ?? ""}
-              defaultLearnMore={pillarRow.recommendedActions ?? ""}
-              defaultRiskRelevance=""
-              defaultAnswer0={pillarRow.answer0 ?? ""}
-              defaultAnswer1={pillarRow.answer1 ?? ""}
-              defaultAnswer2={pillarRow.answer2 ?? ""}
-              defaultAnswer3={pillarRow.answer3 ?? ""}
-              defaultCrossReference={pillarRow.crossReference ?? ""}
-              defaultQuestionNumber={pillarRow.questionNumber ?? ""}
-              defaultIsSubQuestion={pillarRow.isSubQuestion}
-              defaultDisplayOrder={pillarRow.displayOrder}
-            />
-            <Button type="submit">Save changes</Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+  const { riskAreaId, questionId } = await params;
+  const sp = await searchParams;
+  redirect(
+    `${adminAssessmentQuestionsEditPath(riskAreaId, questionId)}${queryString(sp)}`
   );
 }

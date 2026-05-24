@@ -1,7 +1,11 @@
+import Link from "next/link";
+import { ListChecks } from "lucide-react";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { getAssessmentsForAdmin } from "@/lib/admin/queries";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ADMIN_ASSESSMENT_QUESTIONS_PATH } from "@/lib/admin/assessment-questions-paths";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { AssessmentRescoreButton } from "@/components/admin/AssessmentRescoreButton";
 
 const STATUS_COLORS: Record<string, "default" | "secondary" | "success" | "warning" | "info" | "outline"> = {
@@ -16,14 +20,26 @@ export default async function AdminAssessmentPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Assessments</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Per-assessment view. Use the Rescore button on completed
-          assessments to re-run scoring under current rules + thresholds
-          (BRD §7.2). Prior scores are preserved in the audit log.
-        </p>
-      </div>
+      <Card>
+        <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-base">Assessment questions</CardTitle>
+            <CardDescription>
+              Create, edit, hide, and reorder governance assessment questions by risk area.
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" className="shrink-0" asChild>
+            <Link
+              href={ADMIN_ASSESSMENT_QUESTIONS_PATH}
+              className="inline-flex items-center gap-2"
+            >
+              <ListChecks className="size-4" aria-hidden />
+              Manage assessment questions
+            </Link>
+          </Button>
+        </CardHeader>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Assessments ({assessments.length})</CardTitle>

@@ -11,6 +11,12 @@ import { reorderPillarQuestionInRiskArea } from "@/lib/assessment/bank/pillar-qu
 import { isPillarQuestionBankActive } from "@/lib/assessment/bank/question-bank-source";
 import { isRiskAreaId } from "@/lib/assessment/bank/risk-areas";
 import { prisma } from "@/lib/db";
+import {
+  ADMIN_ASSESSMENT_QUESTIONS_PATH,
+  adminAssessmentQuestionsAreaPath,
+  adminAssessmentQuestionsEditPath,
+  adminAssessmentQuestionsNewPath,
+} from "@/lib/admin/assessment-questions-paths";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 const PILLAR_ANSWER_TYPES = [
@@ -24,11 +30,14 @@ const PILLAR_ANSWER_TYPES = [
 ] as const;
 
 function revalidateQuestionBankPaths(riskAreaId?: string) {
+  revalidatePath(ADMIN_ASSESSMENT_QUESTIONS_PATH);
+  revalidatePath(ADMIN_ASSESSMENT_QUESTIONS_PATH, "layout");
+  revalidatePath("/admin/assessment", "layout");
+  if (riskAreaId) {
+    revalidatePath(adminAssessmentQuestionsAreaPath(riskAreaId));
+  }
   revalidatePath("/admin/question-bank");
   revalidatePath("/admin/question-bank", "layout");
-  if (riskAreaId) {
-    revalidatePath(`/admin/question-bank/${riskAreaId}`);
-  }
   revalidatePath("/advisor/question-bank");
   revalidatePath("/advisor/question-bank", "layout");
 }
@@ -47,8 +56,8 @@ function redirectCreateError(formData: FormData, message: string): never {
   const riskAreaId = formData.get("riskAreaId");
   const base =
     typeof riskAreaId === "string" && isRiskAreaId(riskAreaId)
-      ? `/admin/question-bank/${riskAreaId}/new`
-      : "/admin/question-bank";
+      ? adminAssessmentQuestionsNewPath(riskAreaId)
+      : ADMIN_ASSESSMENT_QUESTIONS_PATH;
   redirect(`${base}?err=${encodeURIComponent(message)}`);
 }
 
@@ -62,15 +71,15 @@ function redirectUpdateError(formData: FormData, message: string): never {
     questionId.length > 0
   ) {
     redirect(
-      `/admin/question-bank/${riskAreaId}/${encodeURIComponent(questionId)}?err=${encodeURIComponent(message)}`,
+      `${adminAssessmentQuestionsEditPath(riskAreaId, questionId)}?err=${encodeURIComponent(message)}`,
     );
   }
-  redirect(`/admin/question-bank?err=${encodeURIComponent(message)}`);
+  redirect(`${ADMIN_ASSESSMENT_QUESTIONS_PATH}?err=${encodeURIComponent(message)}`);
 }
 
 function redirectAreaSaved(riskAreaId: string, extraQuery?: string): never {
   const q = extraQuery ? `&${extraQuery}` : "";
-  redirect(`/admin/question-bank/${riskAreaId}?saved=1${q}`);
+  redirect(`${adminAssessmentQuestionsAreaPath(riskAreaId)}?saved=1${q}`);
 }
 
 function parseRiskAreaIdFromForm(raw: FormDataEntryValue | null): string | null {
@@ -90,7 +99,7 @@ export async function updatePillarQuestionVisibility(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
   if (!riskAreaId) {
-    redirect("/admin/question-bank");
+    redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
   }
 
   let questionId: string;
@@ -133,14 +142,14 @@ export async function deletePillarQuestion(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
   if (!riskAreaId) {
-    redirect("/admin/question-bank");
+    redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
   }
 
   let questionId: string;
   try {
     questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
   } catch {
-    redirect(`/admin/question-bank/${riskAreaId}`);
+    redirect(adminAssessmentQuestionsAreaPath(riskAreaId));
   }
 
   const row = await prisma.pillarQuestion.findUnique({
@@ -148,7 +157,7 @@ export async function deletePillarQuestion(formData: FormData) {
     include: { section: { include: { category: true } } },
   });
   if (!row || riskAreaIdForPillarCategory(row.section.category) !== riskAreaId) {
-    redirect(`/admin/question-bank/${riskAreaId}`);
+    redirect(adminAssessmentQuestionsAreaPath(riskAreaId));
   }
 
   await prisma.pillarQuestion.delete({ where: { id: questionId } });
@@ -169,7 +178,7 @@ export async function deletePillarQuestion(formData: FormData) {
   });
 
   revalidateQuestionBankPaths(riskAreaId);
-  redirect(`/admin/question-bank/${riskAreaId}`);
+  redirect(adminAssessmentQuestionsAreaPath(riskAreaId));
 }
 
 export async function updatePillarQuestionContent(formData: FormData) {
@@ -267,9 +276,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
     });
 
     revalidateQuestionBankPaths(riskAreaId);
-    redirect(
-      `/admin/question-bank/${riskAreaId}/${encodeURIComponent(questionId)}?saved=1`,
-    );
+    redirect(`${adminAssessmentQuestionsEditPath(riskAreaId, questionId)}?saved=1`);
   } catch (e: unknown) {
     redirectUpdateError(formData, formatActionError(e));
   }
@@ -367,14 +374,14 @@ export async function createPillarQuestion(formData: FormData) {
   }
 
   revalidateQuestionBankPaths(riskAreaId);
-  redirect(`/admin/question-bank/${riskAreaId}?saved=1`);
+  redirect(`${adminAssessmentQuestionsAreaPath(riskAreaId)}?saved=1`);
 }
 
 export async function movePillarQuestionOrder(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
   if (!riskAreaId) {
-    redirect("/admin/question-bank");
+    redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
   }
 
   let questionId: string;

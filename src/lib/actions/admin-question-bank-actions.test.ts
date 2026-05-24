@@ -100,7 +100,7 @@ describe("updatePillarQuestionVisibility", () => {
           isVisible: "false",
         })
       )
-    ).rejects.toThrow("REDIRECT:/admin/question-bank/governance?saved=1");
+    ).rejects.toThrow("REDIRECT:/admin/assessment/questions/governance?saved=1");
 
     expect(prismaSpies.pillarQuestion.update).toHaveBeenCalledWith({
       where: { id: QUESTION_ROW.id },
@@ -147,7 +147,7 @@ describe("updatePillarQuestionVisibility", () => {
           isVisible: "false",
         })
       )
-    ).rejects.toThrow("REDIRECT:/admin/question-bank/governance?saved=1");
+    ).rejects.toThrow("REDIRECT:/admin/assessment/questions/governance?saved=1");
 
     expect(writeAuditSpy).not.toHaveBeenCalled();
     expect(prismaSpies.pillarQuestion.update).not.toHaveBeenCalled();
@@ -166,7 +166,7 @@ describe("deletePillarQuestion", () => {
           riskAreaId: "governance",
         })
       )
-    ).rejects.toThrow("REDIRECT:/admin/question-bank/governance");
+    ).rejects.toThrow("REDIRECT:/admin/assessment/questions/governance");
 
     expect(writeAuditSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -197,7 +197,7 @@ describe("movePillarQuestionOrder", () => {
           direction: "up",
         })
       )
-    ).rejects.toThrow("REDIRECT:/admin/question-bank/governance?saved=1");
+    ).rejects.toThrow("REDIRECT:/admin/assessment/questions/governance?saved=1");
 
     expect(writeAuditSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -219,7 +219,7 @@ describe("movePillarQuestionOrder", () => {
           direction: "up",
         })
       )
-    ).rejects.toThrow("REDIRECT:/admin/question-bank/governance?saved=1");
+    ).rejects.toThrow("REDIRECT:/admin/assessment/questions/governance?saved=1");
 
     expect(writeAuditSpy).not.toHaveBeenCalled();
   });
