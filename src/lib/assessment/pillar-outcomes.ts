@@ -16,7 +16,21 @@ import {
   REPUTATIONAL_SOCIAL_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS,
   REPUTATIONAL_SOCIAL_ALL_YES_NARRATIVE_RECOMMENDATIONS,
 } from "./pillar-outcome-expectations";
-import type { Question, ScoreResult } from "./types";
+import type { Question, RiskLevel, ScoreResult } from "./types";
+
+/** Accepts scoring-engine or Prisma `RiskLevel` enum strings. */
+export function normalizeScoreRiskLevel(riskLevel: RiskLevel | string): RiskLevel {
+  const normalized = String(riskLevel).toLowerCase();
+  if (
+    normalized === "low" ||
+    normalized === "medium" ||
+    normalized === "high" ||
+    normalized === "critical"
+  ) {
+    return normalized;
+  }
+  return "medium";
+}
 
 const ALL_NEGATIVE_NARRATIVES_BY_PILLAR: Partial<
   Record<string, readonly string[]>
@@ -49,11 +63,12 @@ export function pillarNarrativeRecommendations(
   questions: Question[]
 ): string[] {
   const normalized = normalizePillarSlug(pillarId);
+  const riskLevel = normalizeScoreRiskLevel(score.riskLevel);
 
   const negative = ALL_NEGATIVE_NARRATIVES_BY_PILLAR[normalized];
   if (
     negative &&
-    score.riskLevel === "critical" &&
+    riskLevel === "critical" &&
     allVisibleAnswersMatchBand(answers, questions, "lowest")
   ) {
     return [...negative];
@@ -62,13 +77,34 @@ export function pillarNarrativeRecommendations(
   const positive = ALL_YES_NARRATIVES_BY_PILLAR[normalized];
   if (
     positive &&
-    score.riskLevel === "low" &&
+    riskLevel === "low" &&
     allVisibleAnswersMatchBand(answers, questions, "highest")
   ) {
     return [...positive];
   }
 
   return [];
+}
+
+/** Resolve canonical pillar narrative copy from stored score + live answers. */
+export function resolvePillarNarratives(
+  pillarId: string,
+  score: number,
+  riskLevel: RiskLevel | string,
+  answers: Record<string, unknown>,
+  questions: Question[]
+): string[] {
+  return pillarNarrativeRecommendations(
+    pillarId,
+    {
+      score,
+      riskLevel: normalizeScoreRiskLevel(riskLevel),
+      breakdown: [],
+      missingControls: [],
+    },
+    answers,
+    questions
+  );
 }
 
 function allVisibleAnswersMatchBand(

@@ -18,12 +18,20 @@ interface MissingControl {
 
 interface RecommendationsSectionProps {
   missingControls: MissingControl[]
+  pillarNarratives?: string[]
+  riskLevel?: string
   companyName?: string
   /** §4.5 commit 3: see DraftWatermark. */
   draft?: boolean
 }
 
-export function RecommendationsSection({ missingControls, companyName, draft }: RecommendationsSectionProps) {
+export function RecommendationsSection({
+  missingControls,
+  pillarNarratives = [],
+  riskLevel = "medium",
+  companyName,
+  draft,
+}: RecommendationsSectionProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'high':
@@ -51,30 +59,42 @@ export function RecommendationsSection({ missingControls, companyName, draft }: 
   }
 
   if (missingControls.length === 0) {
+    if (pillarNarratives.length > 0) {
+      return null
+    }
+
+    const isLowRisk = riskLevel.toLowerCase() === "low"
+
     return (
       <Page size="A4" style={styles.page}>
         <Text style={styles.header}>Recommendations</Text>
 
         <View style={styles.section}>
-          <Text style={styles.subheader}>No Critical Gaps Identified</Text>
+          <Text style={styles.subheader}>
+            {isLowRisk ? "No Critical Gaps Identified" : "No Itemized Gaps Listed"}
+          </Text>
           <Text style={styles.paragraph}>
-            Congratulations! Your family governance assessment indicates strong controls across all evaluated areas.
-            While there are no critical gaps requiring immediate attention, consider the following best practices
-            for maintaining your governance excellence:
+            {isLowRisk
+              ? "Congratulations! Your assessment indicates strong controls across the evaluated areas. While there are no critical gaps requiring immediate attention, consider the following best practices for maintaining your governance excellence:"
+              : "No individual remediation items were listed for this pillar score. Review the pillar summary and category breakdown for context on overall maturity."}
           </Text>
 
-          <Text style={[styles.paragraph, { marginLeft: 20 }]}>
-            • Conduct annual governance reviews to ensure controls remain effective
-          </Text>
-          <Text style={[styles.paragraph, { marginLeft: 20 }]}>
-            • Stay informed of regulatory changes affecting family wealth structures
-          </Text>
-          <Text style={[styles.paragraph, { marginLeft: 20 }]}>
-            • Consider periodic updates to family policies as circumstances evolve
-          </Text>
-          <Text style={[styles.paragraph, { marginLeft: 20 }]}>
-            • Engage family members in ongoing governance education
-          </Text>
+          {isLowRisk ? (
+            <>
+              <Text style={[styles.paragraph, { marginLeft: 20 }]}>
+                • Conduct annual governance reviews to ensure controls remain effective
+              </Text>
+              <Text style={[styles.paragraph, { marginLeft: 20 }]}>
+                • Stay informed of regulatory changes affecting family wealth structures
+              </Text>
+              <Text style={[styles.paragraph, { marginLeft: 20 }]}>
+                • Consider periodic updates to family policies as circumstances evolve
+              </Text>
+              <Text style={[styles.paragraph, { marginLeft: 20 }]}>
+                • Engage family members in ongoing governance education
+              </Text>
+            </>
+          ) : null}
         </View>
 
         <PageFooter companyName={companyName} />

@@ -226,6 +226,7 @@ vi.mock("@/lib/pdf/build-report-snapshot", () => ({
       riskLevel: "medium",
       breakdown: [],
       missingControls: [],
+      pillarNarratives: [],
       assessmentDate: "March 4, 2026",
       completionPercentage: 100,
       categoryCount: 0,

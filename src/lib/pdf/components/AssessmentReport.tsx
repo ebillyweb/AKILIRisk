@@ -3,6 +3,7 @@ import { ReportCover } from "./ReportCover";
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { RecommendationsSection } from "./RecommendationsSection";
+import { PillarNarrativeSection } from "./PillarNarrativeSection";
 import { HouseholdComposition } from "./HouseholdComposition";
 import { GovernanceRecommendations } from "./GovernanceRecommendations";
 import { RiskHeatMapPdf } from "./RiskHeatMap";
@@ -33,6 +34,8 @@ interface AssessmentReportData {
   riskLevel: string;
   breakdown: CategoryScore[];
   missingControls: MissingControl[];
+  /** Canonical all-no / all-yes pillar narrative; omitted on older snapshots. */
+  pillarNarratives?: string[];
   assessmentDate: string;
   completionPercentage: number;
   categoryCount: number;
@@ -156,9 +159,19 @@ export function AssessmentReport({
       {/* Page 4: Category Breakdown */}
       <CategoryBreakdown breakdown={data.breakdown} companyName={companyName} draft={draft} />
 
-      {/* Page 5+: Recommendations */}
+      {/* Pillar summary (all-no / all-yes bands only) */}
+      <PillarNarrativeSection
+        narratives={data.pillarNarratives ?? []}
+        riskLevel={data.riskLevel}
+        companyName={companyName}
+        draft={draft}
+      />
+
+      {/* Recommendations */}
       <RecommendationsSection
         missingControls={data.missingControls}
+        pillarNarratives={data.pillarNarratives ?? []}
+        riskLevel={data.riskLevel}
         companyName={companyName}
         draft={draft}
       />

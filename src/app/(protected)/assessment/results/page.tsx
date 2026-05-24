@@ -45,6 +45,7 @@ interface ScoreData {
     remediationPriority?: number;
     riskRelevance?: string;
   }>;
+  pillarNarratives?: string[];
   completedAt: string;
   customization?: {
     isCustomized: boolean;
@@ -260,6 +261,7 @@ export default function AssessmentResultsPage() {
               pillarName={pillarLabel}
               riskLevel={scoreData.riskLevel.toLowerCase() as RiskLevel}
               scoreRubric={scoreRubric}
+              pillarNarratives={scoreData.pillarNarratives ?? []}
             />
           </CardContent>
         </Card>

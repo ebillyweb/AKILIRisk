@@ -17,6 +17,10 @@ import { prisma } from "@/lib/db";
 import { RELATIONSHIP_LABELS } from "@/lib/schemas/profile";
 import { getAdvisorBrandingForPDF } from "@/lib/pdf/branding-integration";
 import { getHouseholdProfileForAdvisorView } from "@/lib/household/member-profile";
+import { getPillarAssessmentConfig } from "@/lib/assessment/pillar-config";
+import { loadAssessmentAnswersForQuestions } from "@/lib/assessment/pillar-answer-loader";
+import { resolvePillarNarratives } from "@/lib/assessment/pillar-outcomes";
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 // Re-exported types intentionally narrow — the snapshot is the storage
 // boundary, not a public API. Consumers use `ReportSnapshot` directly.
@@ -69,6 +73,8 @@ export interface ReportSnapshot {
     riskLevel: string;
     breakdown: CategoryScore[];
     missingControls: MissingControl[];
+    /** Canonical all-no / all-yes pillar copy; empty for mixed maturity. */
+    pillarNarratives: string[];
     assessmentDate: string;
     completionPercentage: number;
     categoryCount: number;
@@ -207,6 +213,21 @@ export async function buildReportSnapshot(
     day: "numeric",
   });
 
+  const pillarSlug = normalizePillarSlug(pillarScore.pillar);
+  const pillarConfig = await getPillarAssessmentConfig(pillarSlug);
+  let pillarNarratives: string[] = [];
+  if (pillarConfig) {
+    const questionIds = pillarConfig.questions.map((q) => q.id);
+    const answers = await loadAssessmentAnswersForQuestions(assessmentId, questionIds);
+    pillarNarratives = resolvePillarNarratives(
+      pillarSlug,
+      pillarScore.score,
+      pillarScore.riskLevel,
+      answers,
+      pillarConfig.questions
+    );
+  }
+
   return {
     schemaVersion: 1,
     pillar: pillarScore.pillar,
@@ -220,6 +241,7 @@ export async function buildReportSnapshot(
         subcategoryCount: breakdown.filter((b) => b.name === cat.name).length || 1,
       })),
       missingControls,
+      pillarNarratives,
       assessmentDate,
       completionPercentage,
       categoryCount: breakdown.length,

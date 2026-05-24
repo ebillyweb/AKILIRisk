@@ -14,7 +14,8 @@ import {
   syncAssessmentCompletionStatus,
 } from "@/lib/assessment/assessment-completion";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
-import { safeDecryptAnswer } from "@/lib/data/response-content";
+import { loadAssessmentAnswersForQuestions } from "@/lib/assessment/pillar-answer-loader";
+import { resolvePillarNarratives } from "@/lib/assessment/pillar-outcomes";
 import {
   getCustomizationConfig,
   getEmphasisMultipliers,
@@ -118,6 +119,20 @@ export async function GET(
       );
     }
 
+    const pillarConfig = await getPillarAssessmentConfig(pillar);
+    const questionIds = pillarConfig?.questions.map((q) => q.id) ?? [];
+    const answers = await loadAssessmentAnswersForQuestions(id, questionIds);
+    const pillarNarratives =
+      pillarConfig != null
+        ? resolvePillarNarratives(
+            pillar,
+            score.score,
+            score.riskLevel,
+            answers,
+            pillarConfig.questions
+          )
+        : [];
+
     // Round-12 audit-bucket close-out: client (or owner) self-read of
     // their scored assessment. Fire-and-forget — writeAudit catches its
     // own errors. metadata.pillar lets the audit log distinguish cross-
@@ -145,6 +160,7 @@ export async function GET(
       riskLevel: score.riskLevel,
       breakdown: score.breakdown,
       missingControls: score.missingControls,
+      pillarNarratives,
       completedAt: score.calculatedAt,
     });
   } catch (error) {
@@ -208,28 +224,8 @@ export async function POST(
       );
     }
 
-    // Load responses for this pillar's question IDs (includes rows saved under legacy pillar labels)
     const questionIds = pillarConfig.questions.map((q) => q.id);
-    const responses = await prisma.assessmentResponse.findMany({
-      where: {
-        assessmentId: id,
-        skipped: false,
-        questionId: { in: questionIds },
-      },
-    });
-
-    // Convert responses to answers Record. Round-11 commit 2.5b:
-    // `answer` is now ciphertext; decrypt at the query layer so the
-    // scoring engine sees plaintext. Round-11 cleanup: tamper-
-    // resilient — a corrupted row returns null + warns instead of
-    // crashing the score request.
-    const answers: Record<string, unknown> = {};
-    responses.forEach((response) => {
-      answers[response.questionId] = safeDecryptAnswer(
-        response.answer as unknown as string | null,
-        { rowId: response.questionId, column: "AssessmentResponse.answer" }
-      );
-    });
+    const answers = await loadAssessmentAnswersForQuestions(id, questionIds);
 
     let customizationConfig = null;
     let customizationMetadata = null;
@@ -379,11 +375,20 @@ export async function POST(
       void triggerMilestoneNotification(assessment.userId, "Assessment Complete");
     }
 
+    const pillarNarratives = resolvePillarNarratives(
+      pillar,
+      scoreResult.score,
+      scoreResult.riskLevel,
+      answers,
+      pillarConfig.questions
+    );
+
     const responseData: Record<string, unknown> = {
       score: pillarScore.saved.score,
       riskLevel: pillarScore.saved.riskLevel,
       breakdown: pillarScore.saved.breakdown,
       missingControls: pillarScore.saved.missingControls,
+      pillarNarratives,
       completedAt: pillarScore.saved.calculatedAt,
       allPillarsScored: pillarScore.allPillarsScored,
     };

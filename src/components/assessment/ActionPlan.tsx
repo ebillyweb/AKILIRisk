@@ -12,6 +12,7 @@ import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
 import { governanceTierCopyForRiskLevel } from "@/lib/assessment/governance-rubric";
 import { cyberTierCopyForRiskLevel } from "@/lib/cyber-risk/cyber-rubric";
 import { Target, Clock, Users } from "lucide-react";
+import { PillarNarrativeSummary } from "@/components/assessment/PillarNarrativeSummary";
 
 interface ActionPlanProps {
   missingControls: MissingControl[];
@@ -19,6 +20,8 @@ interface ActionPlanProps {
   /** Overall tier drives required action row (BRD §4.2 action mapping). */
   riskLevel: RiskLevel;
   scoreRubric?: "governance" | "cyber";
+  /** Canonical all-no / all-yes pillar narrative (empty for mixed maturity). */
+  pillarNarratives?: string[];
 }
 
 /**
@@ -66,8 +69,26 @@ export function ActionPlan({
   pillarName,
   riskLevel,
   scoreRubric = "governance",
+  pillarNarratives = [],
 }: ActionPlanProps) {
+  const narrativeVariant =
+    riskLevel === "low" ? ("positive" as const) : ("critical" as const);
+
   if (missingControls.length === 0) {
+    if (pillarNarratives.length > 0) {
+      return (
+        <div className="space-y-4">
+          <h3 className="text-2xl font-semibold text-foreground">
+            Recommended Actions
+          </h3>
+          <PillarNarrativeSummary
+            narratives={pillarNarratives}
+            variant={narrativeVariant}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4">
         <h3 className="text-2xl font-semibold text-foreground">
@@ -116,6 +137,12 @@ export function ActionPlan({
       <h3 className="text-2xl font-semibold text-foreground">
         Recommended Actions
       </h3>
+      {pillarNarratives.length > 0 ? (
+        <PillarNarrativeSummary
+          narratives={pillarNarratives}
+          variant={narrativeVariant}
+        />
+      ) : null}
       <p className="text-sm leading-6 text-muted-foreground">
         {scoreRubric === "cyber" ? (
           <>

@@ -25,6 +25,7 @@ import {
 import {
   buildAllNoVisiblePillarAnswers,
   buildAllYesVisiblePillarAnswers,
+  buildHighestMaturityAnswers,
   scorePillar,
   toPrismaCatalogMocks,
 } from "@/lib/assessment/engines/recommendation-test-helpers";
@@ -659,4 +660,26 @@ describe("Pillar assessment outcomes — all negative answers", () => {
     });
 
   });
+});
+
+describe("Pillar assessment outcomes — mixed maturity answers", () => {
+  for (const pillarId of ASSESSMENT_PILLAR_IDS) {
+    it(`${pillarId}: does not return canonical pillar narratives for mixed answers`, () => {
+      const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers(pillarId);
+      const highest = buildHighestMaturityAnswers(questions, visibleIds);
+      expect(visibleIds.length).toBeGreaterThan(0);
+
+      const mixed = { ...answers, [visibleIds[0]]: highest[visibleIds[0]] };
+      const score = scorePillar(pillarId, mixed, visibleIds, questions);
+
+      const narratives = pillarNarrativeRecommendations(
+        pillarId,
+        score,
+        mixed,
+        questions
+      );
+
+      expect(narratives).toEqual([]);
+    });
+  }
 });
