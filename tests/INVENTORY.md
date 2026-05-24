@@ -100,6 +100,13 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-42 advisor feature flags on settings | Epic 5.5 | Implemented |
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-43 analytics dashboard | Epic 5.5 | Implemented |
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-44 operations health nav + page | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-37 question bank create/delete + reorder | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-39 recommendation catalog create/edit/deactivate | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-40 recommendation rules form | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-41 thresholds save round-trip + non-admin blocked | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-42 feature flag toggle round-trip | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-45 clients, leads, intake, assessment, advisor portal | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-46 staff list + admin user provisioning page | Epic 5.5 | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -179,10 +186,10 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - ~~Admin can edit intake question text (DB round-trip)~~ *(covered by `admin-intake-script.spec.ts`)*
 - ~~Admin can toggle question visibility (DB round-trip)~~ *(covered by `admin-intake-script.spec.ts`)*
 - ~~Admin can soft-delete an advisor (verifies user.soft_delete audit row)~~ *(covered by `audit-log-wiring.spec.ts`)*
-- Admin can list clients (`/admin/clients`)
-- Admin can assign lead to advisor (`/admin/leads`)
-- Admin intake management view (`/admin/intake`)
-- Admin assessment management view (`/admin/assessment`)
+- ~~Admin can list clients (`/admin/clients`)~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
+- ~~Admin can assign lead to advisor (`/admin/leads`)~~ *(covered by `epic-5.5-platform-admin.spec.ts` — list view)*
+- ~~Admin intake management view (`/admin/intake`)~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
+- ~~Admin assessment management view (`/admin/assessment`)~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
 - ~~Admin question bank: hide/show question~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
 - ~~Admin question bank: edit copy~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*
 - ~~Admin settings page renders~~ *(covered by `epic-5.5-platform-admin.spec.ts`)*

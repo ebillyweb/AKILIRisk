@@ -12,14 +12,14 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 |-----------|--------|--------|------------|
 | US-37 | Assessment question bank | **Done** | `epic-5.5-platform-admin.spec.ts` |
 | US-38 | Intake interview script | **Done** | `admin-intake-script.spec.ts` |
-| US-39 | Recommendation catalog | **Done** | `epic-5.5-platform-admin.spec.ts` (list) |
-| US-40 | Recommendation rules | **Done** | Unit: `admin-recommendation-actions.test.ts` |
+| US-39 | Recommendation catalog | **Done** | `epic-5.5-platform-admin.spec.ts` |
+| US-40 | Recommendation rules | **Done** | `epic-5.5-platform-admin.spec.ts` (form) + unit |
 | US-41 | Risk-tier thresholds | **Done** | `epic-5.5-platform-admin.spec.ts` |
 | US-42 | Platform feature flags | **Done** | `epic-5.5-platform-admin.spec.ts` |
 | US-43 | Platform analytics | **Done** | `epic-5.5-platform-admin.spec.ts` |
 | US-44 | Operations & integration health | **Done** | `epic-5.5-platform-admin.spec.ts` |
-| US-45 | Advisor & client accounts | **Done** | `admin-advisors.spec.ts`, `audit-log-wiring.spec.ts` |
-| US-46 | Platform staff accounts | **Done** | Unit: `admin-user-provisioning.test.ts` |
+| US-45 | Advisor & client accounts | **Done** | `admin-advisors.spec.ts`, `epic-5.5-platform-admin.spec.ts` |
+| US-46 | Platform staff accounts | **Done** | `epic-5.5-platform-admin.spec.ts` + unit |
 
 ### Extra capabilities (not in BRD US-37–46 excerpt)
 
@@ -165,10 +165,12 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 | Spec | Stories |
 |------|---------|
-| `epic-5.5-platform-admin.spec.ts` | US-37, US-39 (list), US-41, US-42, US-43, US-44 |
+| `epic-5.5-platform-admin.spec.ts` | US-37, US-39–US-44, US-45 (partial), US-46 (list) |
 | `admin-intake-script.spec.ts` | US-38 |
-| `admin-advisors.spec.ts` | US-45 (partial) |
+| `admin-advisors.spec.ts` | US-45 (advisors list) |
 | `audit-log-*.spec.ts` | US-45 audit + platform audit infrastructure |
+| `admin-user-provisioning.test.ts` (unit) | US-46 provisioning actions |
+| `admin-recommendation-actions.test.ts` (unit) | US-39–US-40 server actions |
 
 ## Related
 
