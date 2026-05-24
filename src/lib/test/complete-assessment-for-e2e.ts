@@ -203,11 +203,11 @@ export async function completeAssessmentForE2E(
           questionId: q.id,
           pillar: q.subCategory ?? pillar,
           subCategory: q.subCategory ?? pillar,
-          answer: encrypted as unknown as Prisma.InputJsonValue,
+          answer: encrypted,
           skipped: false,
         },
         update: {
-          answer: encrypted as unknown as Prisma.InputJsonValue,
+          answer: encrypted,
           skipped: false,
         },
       });
