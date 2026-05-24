@@ -81,6 +81,10 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 advisor rejects intake → client blocked from /assessment | US-11 | Implemented |
 | `tests/smoke/epic-5.2-report-publish.spec.ts` | US-20 client PDF 404 before publish | US-19–20 | Implemented |
 | `tests/smoke/epic-5.2-report-publish.spec.ts` | US-19–20 advisor publish → client PDF download | US-19–20 | Implemented |
+| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-13 governance maturity scale four levels + selection | US-13 | Implemented |
+| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-14 resume after sign-out; server beats stale localStorage | US-14 | Implemented |
+| `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 six-cell heat map after scoring | US-16 | Implemented |
+| `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 empty heat map before scoring | US-16 | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -121,8 +125,9 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Score all six pillars → assessment `COMPLETED` (US-15) *(via `/api/test/assessment/prepare` in report smokes)*
 - Client resilience / heat map after multi-pillar score (US-16)
 - ~~Full flow: score → advisor draft report → publish → client PDF download (US-19–20)~~ *(covered by `epic-5.2-report-publish.spec.ts`)*
-- Resume in-progress assessment from dashboard (US-14)
-- Score persists and renders on dashboard
+- ~~Resume in-progress assessment from dashboard (US-14)~~ *(covered by `epic-5.2-assessment-progress.spec.ts`)*
+- ~~US-13 maturity scale on governance question~~ *(covered by `epic-5.2-assessment-progress.spec.ts`)*
+- ~~US-16 dashboard heat map populated / empty~~ *(covered by `epic-5.2-dashboard-heatmap.spec.ts`)*
 - Hidden questions (`questions.is_visible=false`) excluded
 - Orphan cleanup when branching hides answered question (US-14)
 

@@ -7,7 +7,7 @@ import { completeAssessmentForE2E } from "@/lib/test/complete-assessment-for-e2e
  * Test-only: score all six pillars for a client (Epic 5.2 Playwright).
  *
  * POST /api/test/assessment/prepare
- *   Body: { clientEmail, reset?: boolean, maturityAnswer?: number }
+ *   Body: { clientEmail, reset?: boolean, complete?: boolean, maturityAnswer?: number }
  *   Returns: { userId, clientId, assessmentId, status, draftReportId, pillarsScored }
  *
  * Gated by ENABLE_TEST_AUTH=1.
@@ -19,6 +19,7 @@ const requestSchema = z.object({
     .email()
     .transform((s) => s.trim().toLowerCase()),
   reset: z.boolean().optional().default(true),
+  complete: z.boolean().optional().default(true),
   maturityAnswer: z.number().int().min(0).max(3).optional(),
 });
 

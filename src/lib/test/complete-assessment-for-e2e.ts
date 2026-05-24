@@ -46,6 +46,8 @@ export type CompleteAssessmentForE2EOptions = {
   clientEmail: string;
   /** Remove reports, responses, and pillar scores on the target assessment before scoring. */
   reset?: boolean;
+  /** When false, only reset (if reset=true) without scoring pillars. Default true. */
+  complete?: boolean;
   /** Maturity answer value (0–3) for answered questions. Default 2 (Formalized). */
   maturityAnswer?: number;
 };
@@ -68,6 +70,7 @@ export async function completeAssessmentForE2E(
 ): Promise<CompleteAssessmentForE2EResult> {
   const email = options.clientEmail.trim().toLowerCase();
   const maturityAnswer = options.maturityAnswer ?? 2;
+  const shouldComplete = options.complete !== false;
 
   const user = await findUserByEmail(email);
   if (!user) {
@@ -105,7 +108,12 @@ export async function completeAssessmentForE2E(
     });
     await prisma.assessment.update({
       where: { id: assessment.id },
-      data: { status: "IN_PROGRESS", completedAt: null },
+      data: {
+        status: "IN_PROGRESS",
+        completedAt: null,
+        currentPillar: null,
+        currentQuestionIndex: null,
+      },
     });
   }
 
@@ -127,6 +135,21 @@ export async function completeAssessmentForE2E(
     : null;
 
   const pillarsScored: string[] = [];
+
+  if (!shouldComplete) {
+    const updated = await prisma.assessment.findUnique({
+      where: { id: assessment.id },
+      select: { status: true },
+    });
+    return {
+      userId: user.id,
+      clientId: user.id,
+      assessmentId: assessment.id,
+      status: updated?.status ?? "IN_PROGRESS",
+      draftReportId: null,
+      pillarsScored,
+    };
+  }
 
   for (const pillarId of ASSESSMENT_PILLAR_IDS) {
     const pillar = normalizePillarSlug(pillarId);

@@ -126,6 +126,7 @@ export function MaturityScale({ options, value, onChange }: MaturityScaleProps) 
         return (
           <Card
             key={String(option.value)}
+            data-testid={`maturity-option-${option.value}`}
             className={cn(
               "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 relative overflow-hidden",
               isSelected && "border-brand/50 bg-brand/10"

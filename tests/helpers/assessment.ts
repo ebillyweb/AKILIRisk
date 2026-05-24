@@ -17,6 +17,7 @@ export async function prepareCompletedAssessment(
   options: {
     clientEmail: string;
     reset?: boolean;
+    complete?: boolean;
     maturityAnswer?: number;
   }
 ): Promise<PreparedAssessment> {
@@ -24,6 +25,7 @@ export async function prepareCompletedAssessment(
     data: {
       clientEmail: options.clientEmail,
       reset: options.reset ?? true,
+      complete: options.complete ?? true,
       maturityAnswer: options.maturityAnswer,
     },
   });
@@ -41,4 +43,16 @@ export async function prepareCompletedAssessment(
   }
 
   return (await res.json()) as PreparedAssessment;
+}
+
+/** Wipe in-progress assessment data without scoring pillars (US-13 / US-14 setup). */
+export async function resetAssessmentProgress(
+  request: APIRequestContext,
+  clientEmail: string
+): Promise<PreparedAssessment> {
+  return prepareCompletedAssessment(request, {
+    clientEmail,
+    reset: true,
+    complete: false,
+  });
 }

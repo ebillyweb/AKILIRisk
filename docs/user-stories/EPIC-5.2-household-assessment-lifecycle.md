@@ -14,10 +14,10 @@
 | US-10 | Complete intake interview | **Done** | `client-intake.spec.ts` |
 | US-11 | Review and approve intake | **Done** | `epic-5.2-advisor-intake-approval.spec.ts` |
 | US-12 | Start multi-pillar assessment | **Done** | `six-pillar-assessment.spec.ts` |
-| US-13 | Answer on maturity scale | **Done** | Hub + questionnaire entry smokes |
-| US-14 | Save and resume progress | **Done** | Code-complete; resume E2E TBD |
+| US-13 | Answer on maturity scale | **Done** | `epic-5.2-assessment-progress.spec.ts` |
+| US-14 | Save and resume progress | **Done** | `epic-5.2-assessment-progress.spec.ts` |
 | US-15 | Score pillars & complete assessment | **Done** | `prepare` test API + `epic-5.2-report-publish.spec.ts` |
-| US-16 | View resilience & risk tier | **Done** | Unit/score route; dashboard UI spot-check TBD |
+| US-16 | View resilience & risk tier | **Done** | `epic-5.2-dashboard-heatmap.spec.ts` |
 | US-17 | Surface control gaps | **Done** | Scoring unit tests |
 | US-18 | Generate service recommendations | **Done** | `profile-condition.test.ts`, score route |
 | US-19 | Draft report (advisor) | **Done** | `epic-5.2-report-publish.spec.ts` |
@@ -127,15 +127,16 @@ These criteria reflect **implemented behavior** as of the six-pillar reconciliat
 | `tests/smoke/client-intake.spec.ts` | US-10 |
 | `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 (approve + reject) |
 | `tests/smoke/six-pillar-assessment.spec.ts` | US-12 (hub, gate, waiver) |
+| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-13 (maturity UI), US-14 (resume + server authority) |
+| `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 (populated + empty heat map) |
 | `tests/smoke/epic-5.2-report-publish.spec.ts` | US-15–16 (prepare API), US-19–20 |
 
-**Test-only API:** `POST /api/test/assessment/prepare` (requires `ENABLE_TEST_AUTH=1`) scores all six pillars for a client email—see `tests/helpers/assessment.ts`.
+**Test-only API:** `POST /api/test/assessment/prepare` (requires `ENABLE_TEST_AUTH=1`)
 
-**Still open (optional):**
+- `{ clientEmail, reset: true, complete: true }` — score all six pillars (report/dashboard tests)
+- `{ clientEmail, reset: true, complete: false }` — wipe progress only (`resetAssessmentProgress` helper)
 
-- US-14 full resume session (sign out/in mid-assessment)
-- US-13 UI maturity selection per question
-- US-16 dashboard heat map visual regression
+See `tests/helpers/assessment.ts`.
 
 ---
 
