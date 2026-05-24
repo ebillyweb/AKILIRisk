@@ -13,25 +13,13 @@ import {
   sortPillarQuestionRows,
   type PillarQuestionWithHierarchy,
 } from "./pillar-question-wire";
-import { prismaRowToWire } from "./row-wire";
 
-export { prismaRowToWire } from "./row-wire";
-
-/**
- * BRD-source pillar DDL tables (`categories` / `sections` / `questions`) are the source of truth
- * when they contain any rows. Set `USE_PILLAR_QUESTION_BANK=0` to force `AssessmentBankQuestion` only.
- */
-async function loadGovernanceQuestionWiresFromPillar(options: {
+/** Load assessment questions from Belvedere pillar DDL (`questions` table). */
+export async function loadGovernanceQuestionWires(options: {
+  onlyVisible: boolean;
   riskAreaId?: string;
-  onlyVisible?: boolean;
-}): Promise<GovernanceQuestionWire[] | null> {
-  if (process.env.USE_PILLAR_QUESTION_BANK?.trim() === "0") {
-    return null;
-  }
+}): Promise<GovernanceQuestionWire[]> {
   try {
-    const n = await prisma.pillarQuestion.count();
-    if (n === 0) return null;
-
     const rows = (await prisma.pillarQuestion.findMany({
       where: {
         ...(options.onlyVisible ? { isVisible: true } : {}),
@@ -48,40 +36,11 @@ async function loadGovernanceQuestionWiresFromPillar(options: {
         (r) => riskAreaIdForPillarCategory(r.section.category) === options.riskAreaId
       );
     }
-    const wires = assignSortOrderGlobals(sorted.map(pillarQuestionRowToWire));
-    return wires;
+    return assignSortOrderGlobals(sorted.map(pillarQuestionRowToWire));
   } catch (e) {
-    console.warn("[load-bank] Pillar question bank unavailable, using AssessmentBankQuestion:", e);
-    return null;
+    console.warn("[load-bank] Pillar question bank unavailable:", e);
+    return [];
   }
-}
-
-/**
- * Loads assessment question wires for all pillars (name is historical). Resolution: when
- * `questions` has rows and `USE_PILLAR_QUESTION_BANK` is not `0`, reads pillar DDL; otherwise
- * `AssessmentBankQuestion`.
- */
-export async function loadGovernanceQuestionWires(options: {
-  onlyVisible: boolean;
-  riskAreaId?: string;
-}): Promise<GovernanceQuestionWire[]> {
-  const fromPillar = await loadGovernanceQuestionWiresFromPillar({
-    riskAreaId: options.riskAreaId,
-    onlyVisible: options.onlyVisible,
-  });
-  // Non-null means pillar bank is active (may be an empty list when onlyVisible filters all out).
-  if (fromPillar !== null) {
-    return fromPillar;
-  }
-
-  const rows = await prisma.assessmentBankQuestion.findMany({
-    where: {
-      ...(options.onlyVisible ? { isVisible: true } : {}),
-      ...(options.riskAreaId ? { riskAreaId: options.riskAreaId } : {}),
-    },
-    orderBy: { sortOrderGlobal: "asc" },
-  });
-  return rows.map(prismaRowToWire);
 }
 
 export async function loadGovernanceQuestionsMerged(options: {
@@ -93,17 +52,10 @@ export async function loadGovernanceQuestionsMerged(options: {
 }
 
 export async function countVisibleGovernanceQuestions(): Promise<number> {
-  if (process.env.USE_PILLAR_QUESTION_BANK?.trim() === "0") {
-    return prisma.assessmentBankQuestion.count({ where: { isVisible: true } });
-  }
-  const pillarTotal = await prisma.pillarQuestion.count();
-  if (pillarTotal > 0) {
-    return prisma.pillarQuestion.count({
-      where: {
-        isVisible: true,
-        section: { category: { kind: { not: PillarCategoryKind.INTAKE } } },
-      },
-    });
-  }
-  return prisma.assessmentBankQuestion.count({ where: { isVisible: true } });
+  return prisma.pillarQuestion.count({
+    where: {
+      isVisible: true,
+      section: { category: { kind: { not: PillarCategoryKind.INTAKE } } },
+    },
+  });
 }

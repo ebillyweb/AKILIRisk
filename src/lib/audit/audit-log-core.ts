@@ -75,9 +75,11 @@ export const AUDIT_ACTIONS = {
   BANK_QUESTION_DELETE: "bank_question.delete",
   BANK_QUESTION_VISIBILITY_TOGGLE: "bank_question.visibility_toggle",
   BANK_QUESTION_REORDER: "bank_question.reorder",
+  PILLAR_QUESTION_CREATE: "pillar_question.create",
   PILLAR_QUESTION_UPDATE: "pillar_question.update",
   PILLAR_QUESTION_DELETE: "pillar_question.delete",
   PILLAR_QUESTION_VISIBILITY_TOGGLE: "pillar_question.visibility_toggle",
+  PILLAR_QUESTION_REORDER: "pillar_question.reorder",
 
   // ── C1 (BRD §4.4): Service-recommendation catalog + matching rules ──────
   /** Admin creates a ServiceRecommendation row. */

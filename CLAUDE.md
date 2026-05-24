@@ -50,8 +50,7 @@ npx prisma studio
 # admin hide/show uses `questions.is_visible` from 20260419120000_questions_is_visible):
 # npm run seed:pillar-ddl
 # Default file: scripts/sql/belvedere-pillar-ddl-seed.sql — replace with your INSERTs or set PILLAR_DDL_SEED_PATH.
-# When `questions` has any rows, `/api/assessment/governance-questions` reads the pillar bank (ignores AssessmentBankQuestion).
-# USE_PILLAR_QUESTION_BANK=0 forces the legacy `AssessmentBankQuestion` table only. See .env.example.
+# When pillar DDL is seeded, `/api/assessment/governance-questions` reads the `questions` table.
 # npx prisma migrate deploy   # or migrate dev after pulling migrations
 #
 # If migrate fails with P3009 on `20260410000001_cybersecurity_assessment_bank`, pull latest migrations
@@ -63,9 +62,8 @@ npx prisma studio
 # Assessment bank (spreadsheet is source of truth)
 # Place Belvedere_Household_Risk_Profile.xlsx at repo root, or set BELVEDERE_WORKBOOK_PATH in .env.local.
 # Tab names must match scripts/lib/belvedere-workbook.ts (Governance, Cyber, Physical, …).
-npm run seed:assessment-bank
-# Without a workbook, seed fails unless you opt into the TS catalog (dev/tests only):
-# QUESTION_BANK_FALLBACK_TYPESCRIPT=1 npm run seed:assessment-bank
+npm run seed:pillar-ddl
+# Deprecated alias (runs seed:pillar-ddl): npm run seed:assessment-bank
 # Full deploy (migrations + workbook import + rules): npx tsx scripts/deploy-complete-assessment-system.ts
 # Deploy also requires the workbook or QUESTION_BANK_FALLBACK_TYPESCRIPT=1.
 # Optional: import Reputational & social risk rows from a structured .xlsx (SpreadsheetImporter):

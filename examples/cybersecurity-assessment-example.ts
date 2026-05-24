@@ -6,6 +6,7 @@
 import './load-example-env';
 import { EnhancedScoringEngine } from '@/lib/assessment/engines/enhanced-scoring-engine';
 import { RecommendationEngine } from '@/lib/assessment/engines/recommendation-engine';
+import { loadGovernanceQuestionsMerged } from '@/lib/assessment/bank/load-bank';
 import { prisma } from '@/lib/db';
 import { resolveExampleAssessmentUserId } from './resolve-example-user';
 
@@ -256,13 +257,9 @@ function getRiskTier(score: number) {
 }
 
 async function loadCybersecurityQuestions() {
-  // This would load from your question bank
-  return await prisma.assessmentBankQuestion.findMany({
-    where: {
-      riskAreaId: 'cybersecurity',
-      isVisible: true
-    },
-    orderBy: { sortOrderGlobal: 'asc' }
+  return loadGovernanceQuestionsMerged({
+    onlyVisible: true,
+    riskAreaId: 'cyber-digital',
   });
 }
 

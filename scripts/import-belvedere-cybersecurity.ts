@@ -145,6 +145,9 @@ async function importCybersecurityFromWorkbookCyberTabOnly(): Promise<number> {
  * Prefer `.xlsx` workbook tab (name contains "Cyber"); else optional legacy CSV.
  */
 async function importCybersecurityQuestions(): Promise<number> {
+  throw new Error(
+    "Cybersecurity AssessmentBankQuestion import was removed. Use npm run seed:pillar-ddl.",
+  );
   console.log("Starting import of cybersecurity questions...");
 
   const wbPath = resolveWorkbookPath();

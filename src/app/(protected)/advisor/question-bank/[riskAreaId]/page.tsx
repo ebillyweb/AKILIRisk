@@ -48,10 +48,7 @@ export default async function AdvisorQuestionBankAreaPage({
             {questions.length} question{questions.length === 1 ? "" : "s"}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Includes items hidden from clients when a matching{" "}
-            <code className="text-xs">AssessmentBankQuestion</code> row exists. Pillar DDL (
-            <code className="text-xs">questions</code>) is the live bank when present; advisors view
-            only—admins edit pillar text under{" "}
+            Read-only view of pillar DDL questions for this risk area. Admins edit copy under{" "}
             <code className="text-xs">/admin/question-bank/…</code>.
           </p>
         </CardHeader>

@@ -72,8 +72,9 @@ export async function GET(request: NextRequest) {
 
       const pillarOverview = await Promise.all(
         pillars.map(async (pillar) => {
-          const questionCount = await prisma.assessmentBankQuestion.count({
-            where: { riskAreaId: pillar.pillarId, isVisible: true }
+          const questions = await loadGovernanceQuestionsMerged({
+            onlyVisible: true,
+            riskAreaId: pillar.pillarId,
           });
 
           const subCategories = await prisma.subCategoryConfiguration.findMany({
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
 
           return {
             ...pillar,
-            questionCount,
+            questionCount: questions.length,
             subCategoryCount: subCategories.length
           };
         })

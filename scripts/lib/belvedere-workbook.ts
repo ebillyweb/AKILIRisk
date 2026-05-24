@@ -271,91 +271,14 @@ export type BelvedereWorkbookImportOptions = {
  * Import every worksheet whose name maps to a pillar (same row layout as Belvedere cybersecurity export).
  */
 export async function importBelvedereWorkbookAllSheets(
-  prisma: PrismaClient,
-  filePath: string,
-  options: BelvedereWorkbookImportOptions = {}
+  _prisma: PrismaClient,
+  _filePath: string,
+  _options: BelvedereWorkbookImportOptions = {}
 ): Promise<{ sheets: string[]; questionCount: number }> {
-  const workbook = loadWorkbook(filePath);
-  const sheetsToRun: { name: string; pillarId: string }[] = [];
-
-  for (const name of workbook.SheetNames) {
-    const pillarId = inferPillarIdFromSheetName(name);
-    if (!pillarId) continue;
-    if (options.onlyPillarIds?.length && !options.onlyPillarIds.includes(pillarId)) {
-      continue;
-    }
-    sheetsToRun.push({ name, pillarId });
-  }
-
-  if (sheetsToRun.length === 0) {
-    return { sheets: [], questionCount: 0 };
-  }
-
-  let globalOrder = 0;
-
-  await prisma.$transaction(async (tx) => {
-    const pillarsTouched = new Set<string>();
-    for (const { name, pillarId } of sheetsToRun) {
-      const matrix = sheetToMatrix(workbook.Sheets[name]!);
-      const parsed = parseBelvedereMatrix(matrix, pillarId);
-      if (parsed.length === 0) continue;
-
-      if (!pillarsTouched.has(pillarId)) {
-        await upsertPillar(tx, pillarId);
-        pillarsTouched.add(pillarId);
-      }
-
-      await upsertSubcategoriesForSheet(tx, pillarId);
-
-      for (const q of parsed) {
-        globalOrder += 1;
-        await tx.assessmentBankQuestion.upsert({
-          where: { questionId: q.questionId },
-          create: {
-            questionId: q.questionId,
-            riskAreaId: q.riskAreaId,
-            sortOrderGlobal: globalOrder,
-            isVisible: true,
-            text: q.text,
-            helpText: q.helpText,
-            learnMore: q.learnMore,
-            riskRelevance: q.riskRelevance,
-            type: q.type,
-            options: q.options,
-            required: q.required,
-            weight: q.weight,
-            scoreMap: q.scoreMap,
-            branchingDependsOn: q.branchingDependsOn,
-            branchingPredicate: q.branchingPredicate,
-            profileConditionKey: q.profileConditionKey,
-            omitMaturityScoreWhenYes: q.omitMaturityScoreWhenYes,
-          },
-          update: {
-            riskAreaId: q.riskAreaId,
-            sortOrderGlobal: globalOrder,
-            text: q.text,
-            helpText: q.helpText,
-            learnMore: q.learnMore,
-            riskRelevance: q.riskRelevance,
-            type: q.type,
-            options: q.options,
-            required: q.required,
-            weight: q.weight,
-            scoreMap: q.scoreMap,
-            branchingDependsOn: q.branchingDependsOn,
-            branchingPredicate: q.branchingPredicate,
-            profileConditionKey: q.profileConditionKey,
-            omitMaturityScoreWhenYes: q.omitMaturityScoreWhenYes,
-          },
-        });
-      }
-    }
-  });
-
-  return {
-    sheets: sheetsToRun.map((s) => s.name),
-    questionCount: globalOrder,
-  };
+  throw new Error(
+    "Belvedere workbook import to AssessmentBankQuestion was removed. " +
+      "Use `npm run seed:pillar-ddl` (or set PILLAR_DDL_SEED_PATH) to load the pillar question bank.",
+  );
 }
 
 /** First worksheet matching cybersecurity by tab name. */

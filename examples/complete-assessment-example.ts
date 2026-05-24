@@ -8,8 +8,7 @@
 import './load-example-env';
 import { RecommendationEngine } from '@/lib/assessment/engines/recommendation-engine';
 import { calculatePillarScore, getRiskLevel as aggregateMaturityRiskLevel } from '@/lib/assessment/scoring';
-import { prismaRowToWire } from '@/lib/assessment/bank/row-wire';
-import { wireQuestionsToQuestions } from '@/lib/assessment/bank/behaviors';
+import { loadGovernanceQuestionsMerged } from '@/lib/assessment/bank/load-bank';
 import { pillarForBankRiskArea } from '@/lib/assessment/bank/pillar-for-risk-area';
 import { prisma } from '@/lib/db';
 import { resolveExampleAssessmentUserId } from './resolve-example-user';
@@ -263,17 +262,16 @@ async function runCompleteAssessment(
       }
 
       // Load questions for this pillar
-      const questions = await prisma.assessmentBankQuestion.findMany({
-        where: { riskAreaId: pillar.id, isVisible: true },
-        orderBy: { sortOrderGlobal: 'asc' }
+      const questionModels = await loadGovernanceQuestionsMerged({
+        onlyVisible: true,
+        riskAreaId: pillar.id,
       });
 
-      if (questions.length === 0) {
+      if (questionModels.length === 0) {
         console.log(`   ⚠️ No questions configured for ${pillar.name}, skipping...`);
         continue;
       }
 
-      const questionModels = wireQuestionsToQuestions(questions.map(prismaRowToWire));
       const pillarDef = pillarForBankRiskArea(pillar.id, pillar.name);
       const visibleIds = questionModels.map((q) => q.id);
       const scoreResult = calculatePillarScore(

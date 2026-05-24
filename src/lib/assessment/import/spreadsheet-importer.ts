@@ -358,50 +358,13 @@ export class SpreadsheetImporter {
   }
 
   /**
-   * Import questions into AssessmentBankQuestion table
+   * @deprecated AssessmentBankQuestion was removed — use admin UI or pillar DDL seed.
    */
-  private async importQuestions(rows: SpreadsheetRow[], tx: any, options: ImportOptions): Promise<number> {
-    let importCount = 0;
-
-    for (const row of rows) {
-      const sortBase = options.sortOrderBase ?? 0;
-      const questionData = {
-        questionId: row.questionId,
-        riskAreaId: row.pillarId,
-        sortOrderGlobal: sortBase + importCount + 1,
-        isVisible: true,
-        text: row.questionText,
-        helpText: row.helpText,
-        learnMore: row.learnMore,
-        riskRelevance: row.riskRelevance,
-        type: row.questionType,
-        options: row.options ? JSON.parse(row.options) : null,
-        required: row.required,
-        weight: row.weight,
-        scoreMap: JSON.parse(row.scoreMap),
-        branchingDependsOn: null, // This would need more complex parsing
-        branchingPredicate: null,
-        profileConditionKey: null,
-        omitMaturityScoreWhenYes: false, // Default value
-      };
-
-      const upsert = options.updateExisting !== false;
-      if (upsert) {
-        await tx.assessmentBankQuestion.upsert({
-          where: { questionId: row.questionId },
-          create: questionData,
-          update: questionData,
-        });
-      } else {
-        await tx.assessmentBankQuestion.create({
-          data: questionData,
-        });
-      }
-
-      importCount++;
-    }
-
-    return importCount;
+  private async importQuestions(_rows: SpreadsheetRow[], _tx: unknown, _options: ImportOptions): Promise<number> {
+    throw new Error(
+      "Spreadsheet import to AssessmentBankQuestion was removed. " +
+        "Add questions via /admin/question-bank or npm run seed:pillar-ddl.",
+    );
   }
 
   /**

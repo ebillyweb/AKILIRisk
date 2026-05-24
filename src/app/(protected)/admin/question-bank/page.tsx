@@ -15,12 +15,9 @@ export default async function AdminQuestionBankIndexPage() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground max-w-2xl">
-        Create, reorder, edit, and hide <code className="text-xs">AssessmentBankQuestion</code> rows
-        per pillar. Counts here match what clients can get: pillar DDL (
-        <code className="text-xs">questions</code>) when present, otherwise the assessment bank.
-        Pillar-only rows are read-only in admin. Seed:{" "}
-        <code className="text-xs">npm run seed:pillar-ddl</code> or{" "}
-        <code className="text-xs">npm run seed:assessment-bank</code>.
+        Manage the Belvedere pillar question bank (<code className="text-xs">questions</code>)
+        used for new client assessments. Seed with{" "}
+        <code className="text-xs">npm run seed:pillar-ddl</code>.
       </p>
       <Suspense fallback={null}>
         <QuestionBankRiskAreaFilter activeAreaId={null} />

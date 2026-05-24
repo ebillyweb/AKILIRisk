@@ -10,10 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  deleteAssessmentBankQuestion,
   deletePillarQuestion,
-  moveAssessmentBankQuestionOrder,
-  updateAssessmentBankQuestionVisibility,
+  movePillarQuestionOrder,
   updatePillarQuestionVisibility,
 } from "@/lib/actions/admin-question-bank-actions";
 import { DeleteQuestionBankButton } from "@/components/admin/DeleteQuestionBankButton";
@@ -34,7 +32,6 @@ export default async function AdminQuestionBankAreaPage({
   const typeFilter = isQuestionBankFilterType(typeParam) ? typeParam : undefined;
   const typeQuery = typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : "";
 
-  // F2 / BRD §4.1 — old bookmark URL? 302 to the current ID instead of 404.
   const legacy = legacyRiskAreaRedirect(riskAreaId);
   if (legacy) {
     redirect(`/admin/question-bank/${legacy}${typeQuery}`);
@@ -47,11 +44,10 @@ export default async function AdminQuestionBankAreaPage({
   const area = RISK_AREAS.find((a) => a.id === riskAreaId)!;
 
   const questions = await loadQuestionBankDashboardRows(riskAreaId);
-  const hasPillarOnlyRows = questions.some((q) => !q.hasAssessmentBankRow);
   const filteredQuestions = typeFilter
     ? questions.filter((q) => q.type === typeFilter)
     : questions;
-  const reorderDisabled = hasPillarOnlyRows || Boolean(typeFilter);
+  const reorderDisabled = Boolean(typeFilter);
 
   return (
     <div className="space-y-6">
@@ -80,18 +76,16 @@ export default async function AdminQuestionBankAreaPage({
               Reorder is disabled while filtering.
             </p>
           ) : null}
-          {hasPillarOnlyRows ? (
-            <p className="text-sm text-muted-foreground pt-1 max-w-2xl">
-              Pillar rows live in <code className="text-xs">questions</code> (hide/show/delete apply
-              there). Reorder applies only to <code className="text-xs">AssessmentBankQuestion</code>{" "}
-              rows and is disabled while this list mixes pillar DDL.
-            </p>
-          ) : null}
+          <p className="text-sm text-muted-foreground pt-1 max-w-2xl">
+            Live bank: Belvedere pillar DDL (<code className="text-xs">questions</code>). Create,
+            edit, hide, reorder, and delete apply directly to new assessments.
+          </p>
         </CardHeader>
         <CardContent className="space-y-0 divide-y divide-border p-0">
           {questions.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
-              No questions in the bank for this area. Seed the database first.
+              No questions in the bank for this area. Run{" "}
+              <code className="text-xs">npm run seed:pillar-ddl</code> first.
             </p>
           ) : filteredQuestions.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
@@ -107,9 +101,6 @@ export default async function AdminQuestionBankAreaPage({
                 <div className="min-w-0 space-y-1 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="text-xs text-muted-foreground">{q.questionId}</code>
-                    {!q.hasAssessmentBankRow ? (
-                      <Badge variant="outline">Pillar DDL</Badge>
-                    ) : null}
                     <Badge variant={q.isVisible ? "success" : "secondary"}>
                       {q.isVisible ? "Visible" : "Hidden"}
                     </Badge>
@@ -121,56 +112,46 @@ export default async function AdminQuestionBankAreaPage({
                   <p className="text-sm font-medium leading-snug">{q.text}</p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  {q.hasAssessmentBankRow ? (
-                    <div className="flex gap-1">
-                      <form action={moveAssessmentBankQuestionOrder}>
-                        <input type="hidden" name="questionId" value={q.questionId} />
-                        <input type="hidden" name="direction" value="up" />
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          disabled={index === 0 || reorderDisabled}
-                          aria-label="Move up"
-                        >
-                          <ArrowUp className="size-4" />
-                        </Button>
-                      </form>
-                      <form action={moveAssessmentBankQuestionOrder}>
-                        <input type="hidden" name="questionId" value={q.questionId} />
-                        <input type="hidden" name="direction" value="down" />
-                        <Button
-                          type="submit"
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          disabled={index === filteredQuestions.length - 1 || reorderDisabled}
-                          aria-label="Move down"
-                        >
-                          <ArrowDown className="size-4" />
-                        </Button>
-                      </form>
-                    </div>
-                  ) : null}
-                  {q.hasAssessmentBankRow ? (
-                    <form action={updateAssessmentBankQuestionVisibility}>
-                      <input type="hidden" name="questionId" value={q.questionId} />
-                      <input type="hidden" name="isVisible" value={q.isVisible ? "false" : "true"} />
-                      <Button type="submit" variant="outline" size="sm">
-                        {q.isVisible ? "Hide" : "Show"}
-                      </Button>
-                    </form>
-                  ) : (
-                    <form action={updatePillarQuestionVisibility}>
+                  <div className="flex gap-1">
+                    <form action={movePillarQuestionOrder}>
                       <input type="hidden" name="questionId" value={q.questionId} />
                       <input type="hidden" name="riskAreaId" value={riskAreaId} />
-                      <input type="hidden" name="isVisible" value={q.isVisible ? "false" : "true"} />
-                      <Button type="submit" variant="outline" size="sm">
-                        {q.isVisible ? "Hide" : "Show"}
+                      <input type="hidden" name="direction" value="up" />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        disabled={index === 0 || reorderDisabled}
+                        aria-label="Move up"
+                      >
+                        <ArrowUp className="size-4" />
                       </Button>
                     </form>
-                  )}
+                    <form action={movePillarQuestionOrder}>
+                      <input type="hidden" name="questionId" value={q.questionId} />
+                      <input type="hidden" name="riskAreaId" value={riskAreaId} />
+                      <input type="hidden" name="direction" value="down" />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        disabled={index === filteredQuestions.length - 1 || reorderDisabled}
+                        aria-label="Move down"
+                      >
+                        <ArrowDown className="size-4" />
+                      </Button>
+                    </form>
+                  </div>
+                  <form action={updatePillarQuestionVisibility}>
+                    <input type="hidden" name="questionId" value={q.questionId} />
+                    <input type="hidden" name="riskAreaId" value={riskAreaId} />
+                    <input type="hidden" name="isVisible" value={q.isVisible ? "false" : "true"} />
+                    <Button type="submit" variant="outline" size="sm">
+                      {q.isVisible ? "Hide" : "Show"}
+                    </Button>
+                  </form>
                   <Button variant="default" size="sm" asChild>
                     <Link
                       href={`/admin/question-bank/${riskAreaId}/${encodeURIComponent(q.questionId)}${typeQuery}`}
@@ -178,18 +159,11 @@ export default async function AdminQuestionBankAreaPage({
                       Edit
                     </Link>
                   </Button>
-                  {q.hasAssessmentBankRow ? (
-                    <DeleteQuestionBankButton
-                      formAction={deleteAssessmentBankQuestion}
-                      questionId={q.questionId}
-                    />
-                  ) : (
-                    <DeleteQuestionBankButton
-                      formAction={deletePillarQuestion}
-                      questionId={q.questionId}
-                      extraHidden={[{ name: "riskAreaId", value: riskAreaId }]}
-                    />
-                  )}
+                  <DeleteQuestionBankButton
+                    formAction={deletePillarQuestion}
+                    questionId={q.questionId}
+                    extraHidden={[{ name: "riskAreaId", value: riskAreaId }]}
+                  />
                 </div>
               </div>
             ))

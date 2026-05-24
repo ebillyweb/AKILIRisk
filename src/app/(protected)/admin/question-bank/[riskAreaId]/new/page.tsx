@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAdminRole } from "@/lib/admin/auth";
-import { createAssessmentBankQuestion } from "@/lib/actions/admin-question-bank-actions";
+import { createPillarQuestion } from "@/lib/actions/admin-question-bank-actions";
 import { RISK_AREAS } from "@/lib/advisor/types";
-import { AssessmentBankQuestionFields } from "@/components/admin/AssessmentBankQuestionFields";
+import { PillarQuestionBankFields } from "@/components/admin/PillarQuestionBankFields";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { loadPillarSectionsForRiskArea } from "@/lib/assessment/bank/pillar-sections-for-risk-area";
 import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
-import { prisma } from "@/lib/db";
+import { isPillarQuestionBankActive } from "@/lib/assessment/bank/question-bank-source";
 
 export default async function AdminQuestionBankNewPage({
   params,
@@ -21,7 +22,6 @@ export default async function AdminQuestionBankNewPage({
   const { riskAreaId } = await params;
   const { err } = await searchParams;
 
-  // F2 / BRD §4.1 — old bookmark URL? 302 to the current ID instead of 404.
   const legacy = legacyRiskAreaRedirect(riskAreaId);
   if (legacy) {
     redirect(`/admin/question-bank/${legacy}/new`);
@@ -32,11 +32,8 @@ export default async function AdminQuestionBankNewPage({
   }
 
   const area = RISK_AREAS.find((a) => a.id === riskAreaId)!;
-
-  const pillarBankDisabled = process.env.USE_PILLAR_QUESTION_BANK?.trim() === "0";
-  const pillarQuestionCount = await prisma.pillarQuestion.count();
-  const pillarOverridesAssessmentBank =
-    !pillarBankDisabled && pillarQuestionCount > 0;
+  const bankReady = await isPillarQuestionBankActive();
+  const sections = await loadPillarSectionsForRiskArea(riskAreaId);
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -53,17 +50,22 @@ export default async function AdminQuestionBankNewPage({
         </Alert>
       ) : null}
 
-      {pillarOverridesAssessmentBank ? (
+      {!bankReady ? (
         <Alert>
-          <AlertTitle>Pillar DDL is the live question bank</AlertTitle>
+          <AlertTitle>Seed the question bank first</AlertTitle>
           <AlertDescription>
-            The <code className="text-xs">questions</code> table has {pillarQuestionCount} row
-            {pillarQuestionCount === 1 ? "" : "s"} and <code className="text-xs">USE_PILLAR_QUESTION_BANK</code>{" "}
-            is not <code className="text-xs">0</code>, so client assessments load from pillar DDL first.
-            New rows here only update <code className="text-xs">AssessmentBankQuestion</code>—they will
-            not appear in the live assessment for this pillar unless you disable the pillar bank or add
-            matching pillar rows. Prefer editing existing pillar questions from the area list, or use{" "}
-            <code className="text-xs">npm run seed:pillar-ddl</code> for bulk changes.
+            Run <code className="text-xs">npm run seed:pillar-ddl</code> after migrations to load
+            Belvedere categories, sections, and questions.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {bankReady && sections.length === 0 ? (
+        <Alert variant="destructive">
+          <AlertTitle>No sections for this risk area</AlertTitle>
+          <AlertDescription>
+            Pillar DDL is seeded but {area.name} has no sections. Check category mappings in the
+            seed SQL.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -74,10 +76,30 @@ export default async function AdminQuestionBankNewPage({
           <p className="text-sm text-muted-foreground">{area.name}</p>
         </CardHeader>
         <CardContent>
-          <form action={createAssessmentBankQuestion} className="space-y-4">
+          <form action={createPillarQuestion} className="space-y-4">
             <input type="hidden" name="riskAreaId" value={riskAreaId} />
-            <AssessmentBankQuestionFields showVisibleToggle defaultVisible />
-            <Button type="submit">Create question</Button>
+            <PillarQuestionBankFields
+              mode="create"
+              sections={sections}
+              defaultSectionId={sections[0]?.id ?? ""}
+              answerType="scored_0_3"
+              defaultText=""
+              defaultHelpText=""
+              defaultLearnMore=""
+              defaultRiskRelevance=""
+              defaultAnswer0=""
+              defaultAnswer1=""
+              defaultAnswer2=""
+              defaultAnswer3=""
+              defaultCrossReference=""
+              defaultQuestionNumber=""
+              defaultIsSubQuestion={false}
+              defaultDisplayOrder={0}
+              defaultVisible
+            />
+            <Button type="submit" disabled={!bankReady || sections.length === 0}>
+              Create question
+            </Button>
           </form>
         </CardContent>
       </Card>

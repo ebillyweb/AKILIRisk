@@ -8,14 +8,8 @@ import "./load-repo-env";
 import { PillarCategoryKind } from "@prisma/client";
 import { deploymentVisibleQuestionCount } from "../src/lib/assessment/bank/deployment-question-count";
 import { prisma, disconnectPrismaScript } from './lib/prisma-for-scripts';
-import {
-  workbookExists,
-  resolveWorkbookPath,
-  importBelvedereWorkbookAllSheets,
-} from './lib/belvedere-workbook';
 import { importCybersecurityQuestions, addCybersecurityRecommendations } from './import-belvedere-cybersecurity';
 import { setupCybersecurityRules } from './setup-cybersecurity-rules';
-import { importAllPillars } from './import-all-pillars';
 import { setupAllPillarRules } from './setup-all-pillar-rules';
 
 interface DeploymentStep {
@@ -65,49 +59,22 @@ async function deployCompleteAssessmentSystem() {
     },
 
     {
-      name: 'Import All Pillars',
-      description:
-        'Import questions from Belvedere spreadsheet (source of truth) or optional TypeScript catalog fallback',
+      name: 'Pillar Question Bank',
+      description: 'Verify Belvedere pillar DDL (`questions`) is seeded',
       execute: async () => {
-        const allowTypescriptFallback =
-          process.env.QUESTION_BANK_FALLBACK_TYPESCRIPT?.trim() === '1';
-        const wbPath = resolveWorkbookPath();
-
-        if (workbookExists(wbPath)) {
-          console.log(`     📋 Reading Belvedere workbook: ${wbPath}`);
-          const r = await importBelvedereWorkbookAllSheets(prisma, wbPath);
-          if (r.questionCount > 0) {
-            questionsLoadedFromBelvedereWorkbook = true;
-            console.log(
-              `     ✅ Imported ${r.questionCount} questions from worksheet tabs: ${r.sheets.join(', ')}`
-            );
-            return { source: 'workbook', ...r };
-          }
-          const msg =
-            'Workbook exists but parsed 0 questions (check tab names and A.–F. layout in scripts/lib/belvedere-workbook.ts).';
-          if (!allowTypescriptFallback) {
-            throw new Error(
-              `${msg} Set QUESTION_BANK_FALLBACK_TYPESCRIPT=1 to load built-in questions.ts instead (not spreadsheet-equivalent).`
-            );
-          }
-          console.log(`     ⚠️ ${msg}`);
-          console.log('     ⚠️ QUESTION_BANK_FALLBACK_TYPESCRIPT=1 — using built-in pillar questions.');
-        } else {
-          console.log(`     ℹ️ No workbook at ${wbPath}`);
-          if (!allowTypescriptFallback) {
-            throw new Error(
-              'Spreadsheet-driven bank: add the workbook or set BELVEDERE_WORKBOOK_PATH. ' +
-                'For CI/dev without a file, set QUESTION_BANK_FALLBACK_TYPESCRIPT=1 to seed from questions.ts.'
-            );
-          }
-          console.log('     ⚠️ QUESTION_BANK_FALLBACK_TYPESCRIPT=1 — using built-in pillar questions.');
+        const scoredCount = await prisma.pillarQuestion.count({
+          where: {
+            section: { category: { kind: { not: PillarCategoryKind.INTAKE } } },
+          },
+        });
+        if (scoredCount === 0) {
+          throw new Error(
+            'No pillar assessment questions found. Run `npm run seed:pillar-ddl` after migrations.',
+          );
         }
-
-        questionsLoadedFromBelvedereWorkbook = false;
-        console.log('     📋 Importing built-in pillar questions...');
-        const result = await importAllPillars();
-        console.log(`     ✅ Imported questions for all pillars`);
-        return { source: 'builtin', result };
+        console.log(`     ✅ Pillar question bank: ${scoredCount} scored questions`);
+        questionsLoadedFromBelvedereWorkbook = true;
+        return { source: 'pillar-ddl', questionCount: scoredCount };
       },
       required: true
     },
@@ -272,7 +239,6 @@ async function validateDeployment() {
       where: { isActive: true }
     });
 
-    const pillarBankDisabled = process.env.USE_PILLAR_QUESTION_BANK?.trim() === "0";
     const pillarTotalCount = await prisma.pillarQuestion.count();
     const pillarVisibleCount = await prisma.pillarQuestion.count({
       where: {
@@ -280,14 +246,8 @@ async function validateDeployment() {
         section: { category: { kind: { not: PillarCategoryKind.INTAKE } } },
       },
     });
-    const bankVisibleCount = await prisma.assessmentBankQuestion.count({
-      where: { isVisible: true },
-    });
     const mergedVisibleCount = deploymentVisibleQuestionCount({
-      pillarBankDisabled,
-      pillarTotalCount,
       pillarVisibleCount,
-      bankVisibleCount,
     });
 
     const services = await prisma.serviceRecommendation.findMany({
@@ -315,7 +275,7 @@ async function validateDeployment() {
 
     if (mergedVisibleCount < 50) {
       issues.push(
-        `Only ${mergedVisibleCount} visible questions in merged bank (expected 50+). Pillar DDL total=${pillarTotalCount}, pillar visible=${pillarVisibleCount}, AssessmentBankQuestion visible=${bankVisibleCount}.`
+        `Only ${mergedVisibleCount} visible pillar questions (expected 50+). Pillar DDL total=${pillarTotalCount}, pillar visible=${pillarVisibleCount}. Run npm run seed:pillar-ddl.`
       );
     }
 

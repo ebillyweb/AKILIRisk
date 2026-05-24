@@ -5,7 +5,7 @@ import "server-only";
  *
  * The history page header reads "History — {EntityType} {entityName}";
  * this helper resolves the entity-specific column to use as the display
- * name (e.g. ServiceRecommendation.name, AssessmentBankQuestion.text).
+ * name (e.g. ServiceRecommendation.name, PillarQuestion.questionText).
  * Graceful fallback to `${entityType} ${id.slice(0,8)}` when no lookup
  * is wired or the row no longer exists.
  *
@@ -15,6 +15,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
 
 export interface EntityDisplayInfo {
   /** Friendly name to render in the page header. */
@@ -59,26 +60,24 @@ export async function lookupEntityDisplay(
         };
       }
       case "AssessmentBankQuestion": {
-        const row = await prisma.assessmentBankQuestion.findUnique({
-          where: { id: entityId },
-          select: { text: true, riskAreaId: true },
-        });
-        if (!row) return fallback;
-        const display = row.text.length > 80 ? row.text.slice(0, 80) + "…" : row.text;
-        return {
-          displayName: display,
-          editHref: `/admin/question-bank/${row.riskAreaId}`,
-        };
+        // Legacy entity type — table removed; audit rows may still reference it.
+        return fallback;
       }
       case "PillarQuestion": {
         const row = await prisma.pillarQuestion.findUnique({
           where: { id: entityId },
-          select: { questionText: true },
+          select: { questionText: true, section: { include: { category: true } } },
         });
         if (!row) return fallback;
         const display =
           row.questionText.length > 80 ? row.questionText.slice(0, 80) + "…" : row.questionText;
-        return { displayName: display, editHref: null };
+        const riskAreaId = riskAreaIdForPillarCategory(row.section.category);
+        return {
+          displayName: display,
+          editHref: riskAreaId
+            ? `/admin/question-bank/${riskAreaId}/${entityId}`
+            : null,
+        };
       }
       case "Assessment": {
         // Round-11 commit 2.4b: ciphertext + decrypt fallback.

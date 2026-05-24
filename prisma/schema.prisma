@@ -336,34 +336,6 @@ model PillarScore {
   @@index([assessmentId])
 }
 
-/// Family-governance structured assessment: question copy and visibility per risk area (six intake/scoring pillars).
-model AssessmentBankQuestion {
-  id                  String   @id @default(cuid())
-  questionId          String   @unique
-  riskAreaId          String
-  sortOrderGlobal     Int
-  isVisible           Boolean  @default(true)
-  text                String   @db.Text
-  helpText            String?  @db.Text
-  learnMore           String?  @db.Text
-  riskRelevance       String?  @db.Text
-  type                String
-  options             Json?
-  required            Boolean
-  weight              Int
-  scoreMap            Json
-  branchingDependsOn  String?
-  branchingPredicate  Json?
-  profileConditionKey String?
-  /// Yes/no only: when true, "yes" is excluded from maturity aggregation (follow-ups define 0–3).
-  omitMaturityScoreWhenYes Boolean @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@index([riskAreaId])
-  @@index([riskAreaId, sortOrderGlobal])
-  @@index([isVisible, sortOrderGlobal])
-}
 
 /// Belvedere `categories` row: scored workbook pillars vs. audio/script intake (see `kind`).
 enum PillarCategoryKind {

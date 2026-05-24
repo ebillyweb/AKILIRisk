@@ -392,6 +392,9 @@ const SOCIAL_QUESTIONS = [
 ];
 
 async function importAllPillars() {
+  throw new Error(
+    "import-all-pillars (AssessmentBankQuestion) was removed. Run npm run seed:pillar-ddl instead.",
+  );
   console.log('🏛️ Starting import of all assessment pillars...');
 
   const pillars = [
