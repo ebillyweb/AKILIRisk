@@ -15,6 +15,7 @@ import {
   PHYSICAL_SECURITY_ALL_YES_NARRATIVE_RECOMMENDATIONS,
   REPUTATIONAL_SOCIAL_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS,
   REPUTATIONAL_SOCIAL_ALL_YES_NARRATIVE_RECOMMENDATIONS,
+  PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS,
 } from "./pillar-outcome-expectations";
 import type { Question, RiskLevel, ScoreResult } from "./types";
 
@@ -53,8 +54,10 @@ const ALL_YES_NARRATIVES_BY_PILLAR: Partial<Record<string, readonly string[]>> =
 };
 
 /**
- * Pillar-level narrative recommendations for extreme maturity bands:
- * critical + all lowest choices, or low + all highest choices (e.g. all “yes”).
+ * Pillar-level narrative recommendations:
+ * - All lowest + critical → all-negative copy
+ * - All highest + low → all-yes copy
+ * - Otherwise → mid-band copy for the aggregate risk tier (critical / high / medium / low)
  */
 export function pillarNarrativeRecommendations(
   pillarId: string,
@@ -65,22 +68,28 @@ export function pillarNarrativeRecommendations(
   const normalized = normalizePillarSlug(pillarId);
   const riskLevel = normalizeScoreRiskLevel(score.riskLevel);
 
-  const negative = ALL_NEGATIVE_NARRATIVES_BY_PILLAR[normalized];
   if (
-    negative &&
     riskLevel === "critical" &&
     allVisibleAnswersMatchBand(answers, questions, "lowest")
   ) {
-    return [...negative];
+    const negative = ALL_NEGATIVE_NARRATIVES_BY_PILLAR[normalized];
+    if (negative) return [...negative];
   }
 
-  const positive = ALL_YES_NARRATIVES_BY_PILLAR[normalized];
   if (
-    positive &&
     riskLevel === "low" &&
     allVisibleAnswersMatchBand(answers, questions, "highest")
   ) {
-    return [...positive];
+    const positive = ALL_YES_NARRATIVES_BY_PILLAR[normalized];
+    if (positive) return [...positive];
+  }
+
+  const midBand = PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS[normalized];
+  if (midBand) {
+    const tierNarratives = midBand[riskLevel];
+    if (tierNarratives?.length) {
+      return [...tierNarratives];
+    }
   }
 
   return [];

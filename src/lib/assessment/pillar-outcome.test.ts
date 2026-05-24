@@ -16,7 +16,9 @@ import {
   PHYSICAL_SECURITY_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS,
   PHYSICAL_SECURITY_ALL_YES_NARRATIVE_RECOMMENDATIONS,
   PILLAR_ALL_NEGATIVE_EXPECTED_SERVICE_IDS,
+  PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS,
 } from "@/lib/assessment/pillar-outcome-expectations";
+import type { RiskLevel } from "@/lib/assessment/types";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
 import {
   PRODUCTION_CATALOG_RULES,
@@ -122,7 +124,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/reputational audits/i);
     });
 
-    it("does not return all-yes reputational narrative when risk is critical", () => {
+    it("returns critical mid-band when all-yes answers are scored critical", () => {
       const { answers, visibleIds, questions } = buildAllYesVisiblePillarAnswers(
         "reputational-social"
       );
@@ -133,7 +135,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "critical",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["reputational-social"].critical,
+      ]);
     });
 
     it("does not trigger reputational remediation catalog services when all yes", async () => {
@@ -181,7 +185,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/crisis response protocols/i);
     });
 
-    it("does not return reputational narratives when risk is low", () => {
+    it("returns low mid-band when all-no answers are scored low", () => {
       const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers(
         "reputational-social"
       );
@@ -192,7 +196,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "low",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["reputational-social"].low,
+      ]);
     });
   });
 
@@ -222,7 +228,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/annual re-underwriting/i);
     });
 
-    it("does not return all-yes geographic narrative when risk is critical", () => {
+    it("returns critical mid-band when all-yes answers are scored critical", () => {
       const { answers, visibleIds, questions } = buildAllYesVisiblePillarAnswers(
         "geographic-environmental"
       );
@@ -233,7 +239,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "critical",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["geographic-environmental"].critical,
+      ]);
     });
 
     it("does not trigger geographic remediation catalog services when all yes", async () => {
@@ -282,7 +290,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/flood, wildfire, seismic/i);
     });
 
-    it("does not return geographic narratives when risk is low", () => {
+    it("returns low mid-band when all-no answers are scored low", () => {
       const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers(
         "geographic-environmental"
       );
@@ -293,7 +301,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "low",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["geographic-environmental"].low,
+      ]);
     });
   });
 
@@ -319,7 +329,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/umbrella and excess layers/i);
     });
 
-    it("does not return all-yes insurance narrative when risk is critical", () => {
+    it("returns critical mid-band when all-yes answers are scored critical", () => {
       const { answers, visibleIds, questions } = buildAllYesVisiblePillarAnswers("insurance");
       const score = scorePillar("insurance", answers, visibleIds, questions);
 
@@ -328,7 +338,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "critical",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS.insurance.critical,
+      ]);
     });
 
     it("does not trigger insurance remediation catalog services when all yes", async () => {
@@ -371,7 +383,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/renewals, claims history/i);
     });
 
-    it("does not return insurance narratives when risk is low", () => {
+    it("returns low mid-band when all-no answers are scored low", () => {
       const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers("insurance");
       const score = scorePillar("insurance", answers, visibleIds, questions);
 
@@ -380,7 +392,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "low",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS.insurance.low,
+      ]);
     });
   });
 
@@ -405,7 +419,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/threat intelligence monitoring/i);
     });
 
-    it("does not return all-yes physical security narrative when risk is critical", () => {
+    it("returns critical mid-band when all-yes answers are scored critical", () => {
       const { answers, visibleIds, questions } = buildAllYesVisiblePillarAnswers("physical-security");
       const score = scorePillar("physical-security", answers, visibleIds, questions);
 
@@ -414,7 +428,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "critical",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["physical-security"].critical,
+      ]);
     });
 
     it("does not trigger physical security remediation catalog services when all yes", async () => {
@@ -457,7 +473,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/travel security protocols/i);
     });
 
-    it("does not return physical security narratives when risk is low", () => {
+    it("returns low mid-band when all-no answers are scored low", () => {
       const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers("physical-security");
       const score = scorePillar("physical-security", answers, visibleIds, questions);
 
@@ -466,7 +482,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "low",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["physical-security"].low,
+      ]);
     });
   });
 
@@ -492,7 +510,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/scenario-based simulations/i);
     });
 
-    it("does not return all-yes cyber narrative when risk is critical", () => {
+    it("returns critical mid-band when all-yes answers are scored critical", () => {
       const { answers, visibleIds, questions } = buildAllYesVisiblePillarAnswers("cyber-digital");
       const score = scorePillar("cyber-digital", answers, visibleIds, questions);
 
@@ -501,7 +519,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "critical",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["cyber-digital"].critical,
+      ]);
     });
 
     it("does not trigger cyber uplift catalog service when all yes", async () => {
@@ -541,7 +561,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/incident response plan/i);
     });
 
-    it("does not return cyber narratives when risk is low", () => {
+    it("returns low mid-band when all-no answers are scored low", () => {
       const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers("cyber-digital");
       const score = scorePillar("cyber-digital", answers, visibleIds, questions);
 
@@ -550,7 +570,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "low",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS["cyber-digital"].low,
+      ]);
     });
   });
 
@@ -576,7 +598,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/next-generation readiness/i);
     });
 
-    it("does not return all-yes governance narrative when risk is critical", () => {
+    it("returns critical mid-band when all-yes answers are scored critical", () => {
       const { answers, visibleIds, questions } = buildAllYesVisiblePillarAnswers("governance");
       const score = scorePillar("governance", answers, visibleIds, questions);
 
@@ -585,7 +607,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "critical",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS.governance.critical,
+      ]);
     });
 
     it("does not trigger governance remediation catalog services when all yes", async () => {
@@ -626,7 +650,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       expect(narratives[0]).toMatch(/formal family governance structure/i);
     });
 
-    it("does not return governance narratives when risk is low", () => {
+    it("returns low mid-band when all-no answers are scored low", () => {
       const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers("governance");
       const score = scorePillar("governance", answers, visibleIds, questions);
 
@@ -635,7 +659,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
         riskLevel: "low",
       }, answers, questions);
 
-      expect(narratives).toEqual([]);
+      expect(narratives).toEqual([
+        ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS.governance.low,
+      ]);
     });
 
     it("triggers governance charter, advisor coordination, and succession services", async () => {
@@ -664,7 +690,7 @@ describe("Pillar assessment outcomes — all negative answers", () => {
 
 describe("Pillar assessment outcomes — mixed maturity answers", () => {
   for (const pillarId of ASSESSMENT_PILLAR_IDS) {
-    it(`${pillarId}: does not return canonical pillar narratives for mixed answers`, () => {
+    it(`${pillarId}: returns mid-band pillar narrative for mixed answers`, () => {
       const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers(pillarId);
       const highest = buildHighestMaturityAnswers(questions, visibleIds);
       expect(visibleIds.length).toBeGreaterThan(0);
@@ -679,7 +705,27 @@ describe("Pillar assessment outcomes — mixed maturity answers", () => {
         questions
       );
 
-      expect(narratives).toEqual([]);
+      const tier = score.riskLevel as RiskLevel;
+      const expected = PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS[pillarId]?.[tier];
+      expect(expected?.length).toBeGreaterThan(0);
+      expect(narratives).toEqual([...expected!]);
     });
   }
+
+  it("governance all-no still returns all-negative copy, not critical mid-band", () => {
+    const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers("governance");
+    const score = scorePillar("governance", answers, visibleIds, questions);
+
+    expect(score.riskLevel).toBe("critical");
+
+    const narratives = pillarNarrativeRecommendations(
+      "governance",
+      score,
+      answers,
+      questions
+    );
+
+    expect(narratives).toEqual([...GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS]);
+    expect(narratives[0]).not.toContain("maturity remains uneven");
+  });
 });

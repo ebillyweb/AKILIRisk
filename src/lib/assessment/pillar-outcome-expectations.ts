@@ -1,7 +1,16 @@
 /**
- * Canonical pillar outcomes when every visible answer is at the lowest maturity.
- * Update when product copy or recommendation rules change.
+ * Canonical pillar outcome copy: extreme bands (all-no / all-yes) and mid-band
+ * paragraphs for mixed maturity. Update when product copy or rules change.
+ *
+ * Mid-band copy lives in `pillar-outcome-expectations-mid-band.ts`.
  */
+
+export {
+  PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS,
+  GOVERNANCE_MID_BAND_NARRATIVES,
+  type PillarMidBandRiskTier,
+  type PillarMidBandNarratives,
+} from "./pillar-outcome-expectations-mid-band";
 
 /** Reputational & social risk pillar narrative (all visible answers at highest maturity). */
 export const REPUTATIONAL_SOCIAL_ALL_YES_NARRATIVE_RECOMMENDATIONS = [

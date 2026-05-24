@@ -3,7 +3,10 @@ import {
   normalizeScoreRiskLevel,
   pillarNarrativeRecommendations,
 } from "./pillar-outcomes";
-import { GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS } from "./pillar-outcome-expectations";
+import {
+  GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS,
+  PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS,
+} from "./pillar-outcome-expectations";
 import {
   buildAllNoVisiblePillarAnswers,
   buildHighestMaturityAnswers,
@@ -18,7 +21,7 @@ describe("normalizeScoreRiskLevel", () => {
 });
 
 describe("pillarNarrativeRecommendations — mixed maturity", () => {
-  it("returns no narratives when answers are not uniformly lowest or highest", () => {
+  it("returns critical mid-band when governance is critical but not all lowest", () => {
     const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers("governance");
     const highest = buildHighestMaturityAnswers(questions, visibleIds);
     const mixed = { ...answers, [visibleIds[0]]: highest[visibleIds[0]] };
@@ -31,8 +34,10 @@ describe("pillarNarrativeRecommendations — mixed maturity", () => {
       questions
     );
 
-    expect(narratives).toEqual([]);
-    expect(score.riskLevel).not.toBe("low");
+    expect(score.riskLevel).toBe("critical");
+    expect(narratives).toEqual([
+      ...PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS.governance.critical,
+    ]);
   });
 
   it("returns all-negative governance narrative when risk is CRITICAL (Prisma casing)", () => {

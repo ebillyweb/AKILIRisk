@@ -72,7 +72,11 @@ export function ActionPlan({
   pillarNarratives = [],
 }: ActionPlanProps) {
   const narrativeVariant =
-    riskLevel === "low" ? ("positive" as const) : ("critical" as const);
+    riskLevel === "low"
+      ? ("positive" as const)
+      : riskLevel === "medium"
+        ? ("developing" as const)
+        : ("critical" as const);
 
   if (missingControls.length === 0) {
     if (pillarNarratives.length > 0) {

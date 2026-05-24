@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS } from "@/lib/assessment/pillar-outcome-expectations";
+import {
+  GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS,
+  GOVERNANCE_MID_BAND_NARRATIVES,
+} from "@/lib/assessment/pillar-outcome-expectations";
 import {
   buildAllNoVisiblePillarAnswers,
+  buildHighestMaturityAnswers,
   scorePillar,
 } from "@/lib/assessment/engines/recommendation-test-helpers";
 import { belvedereQuestionsForPillar } from "@/lib/assessment/test-fixtures/belvedere-pillar-questions";
@@ -153,5 +157,40 @@ describe("buildReportSnapshot — pillar narratives (Belvedere fixtures)", () =>
     ]);
     expect(snap.reportData.missingControls.length).toBeGreaterThan(0);
     expect(belvedereQuestionsForPillar("governance").length).toBeGreaterThan(0);
+  });
+
+  it("snapshots governance mixed critical mid-band narrative copy", async () => {
+    const { answers, visibleIds, questions } = buildAllNoVisiblePillarAnswers("governance");
+    const highest = buildHighestMaturityAnswers(questions, visibleIds);
+    const mixed = { ...answers, [visibleIds[0]]: highest[visibleIds[0]] };
+    const score = scorePillar("governance", mixed, visibleIds, questions);
+
+    fakes.pillarScores.push({
+      assessmentId: "asmt-gov",
+      pillar: "governance",
+      score: score.score,
+      riskLevel: "CRITICAL",
+      breakdown: score.breakdown,
+      missingControls: score.missingControls,
+      calculatedAt: new Date(),
+    });
+
+    for (const [questionId, answer] of Object.entries(mixed)) {
+      fakes.responses.push({
+        assessmentId: "asmt-gov",
+        questionId,
+        skipped: false,
+        answer: answer as unknown as string,
+      });
+    }
+
+    const snap = await buildReportSnapshot("asmt-gov", { pillar: "governance" });
+
+    expect(snap.reportData.pillarNarratives).toEqual([
+      ...GOVERNANCE_MID_BAND_NARRATIVES.critical,
+    ]);
+    expect(snap.reportData.pillarNarratives[0]).not.toEqual(
+      GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS[0]
+    );
   });
 });
