@@ -129,158 +129,205 @@ export function ApprovalActions({
     });
   };
 
+  const notesDisabled =
+    disabled || currentStatus === "APPROVED" || currentStatus === "REJECTED";
+
   // Render confirmation dialog
   if (showConfirmation) {
+    const isApprove = showConfirmation === "approve";
+
     return (
-      <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="h-5 w-5 text-amber-500" />
-          <h4 className="font-medium">
-            {showConfirmation === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
-          </h4>
+      <section
+        className="space-y-4 rounded-lg border border-border/80 bg-muted/25 p-4"
+        aria-labelledby="review-confirm-heading"
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <AlertCircle
+              className="h-4 w-4 shrink-0 text-amber-600"
+              aria-hidden
+            />
+            <h3
+              id="review-confirm-heading"
+              className="text-sm font-semibold text-foreground"
+            >
+              {isApprove ? "Confirm approval" : "Confirm rejection"}
+            </h3>
+          </div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {isApprove
+              ? `Approve this client for a customized assessment across ${selectedFocusAreas.length} selected ${selectedFocusAreas.length === 1 ? "area" : "areas"}. They can begin once you confirm.`
+              : "Reject this intake. The client will need to resubmit before you can review again."}
+          </p>
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          {showConfirmation === 'approve'
-            ? `This will approve the client for a customized assessment focusing on ${selectedFocusAreas.length} selected risk areas. The client will be able to begin their assessment.`
-            : 'This will reject the client intake. They will need to resubmit their responses to be reconsidered for assessment.'
-          }
-        </p>
-
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
           <Button
-            onClick={showConfirmation === 'approve' ? handleApprove : handleReject}
-            variant={showConfirmation === 'approve' ? 'default' : 'destructive'}
+            onClick={isApprove ? handleApprove : handleReject}
+            variant={isApprove ? "default" : "destructive"}
             disabled={isPending || disabled}
-            size="sm"
+            className="w-full"
           >
-            {showConfirmation === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
+            {isApprove ? "Confirm approval" : "Confirm rejection"}
           </Button>
           <Button
             onClick={() => setShowConfirmation(null)}
             variant="outline"
             disabled={isPending}
-            size="sm"
+            className="w-full"
           >
             Cancel
           </Button>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Notes section */}
-      <div className="space-y-3">
-        <h4 className="font-medium text-sm">Review Notes</h4>
-        <Textarea
-          value={notes}
-          onChange={(e) => onNotesChange(e.target.value)}
-          placeholder="Add notes about your review of this client intake..."
-          className="min-h-20"
-          disabled={disabled || currentStatus === 'APPROVED' || currentStatus === 'REJECTED'}
-        />
-      </div>
-
+    <div className="space-y-6">
       {/* Status-specific actions */}
-      {(!currentStatus || currentStatus === 'PENDING') && (
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Client intake is pending review. Begin reviewing to make approval decisions.
+      {(!currentStatus || currentStatus === "PENDING") && (
+        <section className="space-y-3" aria-labelledby="review-pending-heading">
+          <h3
+            id="review-pending-heading"
+            className="text-base font-semibold tracking-tight"
+          >
+            Start review
+          </h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Open the intake for review to select focus areas and approve or
+            reject.
           </p>
           <Button
             onClick={handleBeginReview}
             disabled={isPending || disabled}
             className="w-full"
           >
-            <Clock className="h-4 w-4 mr-2" />
-            Begin Review
+            <Clock className="mr-2 h-4 w-4" />
+            Begin review
           </Button>
-        </div>
+        </section>
       )}
 
-      {currentStatus === 'IN_REVIEW' && (
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Review the client's responses and select focus areas for their customized assessment.
-          </p>
-          <div className="flex gap-2">
+      {currentStatus === "IN_REVIEW" && (
+        <section className="space-y-3" aria-labelledby="review-decision-heading">
+          <h3
+            id="review-decision-heading"
+            className="text-base font-semibold tracking-tight"
+          >
+            Decision
+          </h3>
+
+          <div className="flex flex-col gap-2">
             <Button
-              onClick={() => setShowConfirmation('approve')}
+              onClick={() => setShowConfirmation("approve")}
               disabled={isPending || disabled || selectedFocusAreas.length === 0}
-              className="flex-1"
+              className="h-auto w-full whitespace-normal py-2.5"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Approve for Assessment
+              <CheckCircle2 className="mr-2 h-4 w-4 shrink-0" />
+              Approve for assessment
             </Button>
             <Button
-              onClick={() => setShowConfirmation('reject')}
+              onClick={() => setShowConfirmation("reject")}
               disabled={isPending || disabled}
-              variant="destructive"
-              className="flex-1"
+              variant="outline"
+              className="h-auto w-full border-destructive/30 py-2.5 text-destructive hover:bg-destructive/5 hover:text-destructive"
             >
-              <XCircle className="h-4 w-4 mr-2" />
+              <XCircle className="mr-2 h-4 w-4 shrink-0" />
               Reject
             </Button>
           </div>
-          {selectedFocusAreas.length === 0 && (
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
-              Select at least one focus area to enable approval.
+
+          {selectedFocusAreas.length === 0 ? (
+            <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
+              <AlertCircle
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600"
+                aria-hidden
+              />
+              Select at least one focus area above to enable approval.
             </p>
-          )}
-        </div>
+          ) : null}
+        </section>
       )}
 
-      {currentStatus === 'APPROVED' && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="success" className="flex items-center gap-1">
+      {currentStatus === "APPROVED" && (
+        <section className="space-y-3" aria-labelledby="review-approved-heading">
+          <h3
+            id="review-approved-heading"
+            className="text-base font-semibold tracking-tight"
+          >
+            Approved
+          </h3>
+          <div className="space-y-2">
+            <Badge variant="success" className="inline-flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
-              Approved
+              Assessment unlocked
             </Badge>
-            <span className="text-sm text-muted-foreground">
-              Client approved for customized assessment
-            </span>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Client can begin their customized assessment (
+              {selectedFocusAreas.length}{" "}
+              {selectedFocusAreas.length === 1 ? "focus area" : "focus areas"}).
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Client can now access their customized assessment focusing on {selectedFocusAreas.length} selected risk areas.
-          </p>
           <Button
             onClick={handleRevokeApproval}
             disabled={isPending || disabled}
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
           >
-            Revoke Approval
+            Revoke approval
           </Button>
-        </div>
+        </section>
       )}
 
-      {currentStatus === 'REJECTED' && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="warning" className="flex items-center gap-1">
+      {currentStatus === "REJECTED" && (
+        <section className="space-y-3" aria-labelledby="review-rejected-heading">
+          <h3
+            id="review-rejected-heading"
+            className="text-base font-semibold tracking-tight"
+          >
+            Rejected
+          </h3>
+          <div className="space-y-2">
+            <Badge variant="warning" className="inline-flex items-center gap-1">
               <XCircle className="h-3 w-3" />
-              Rejected
+              Intake rejected
             </Badge>
-            <span className="text-sm text-muted-foreground">
-              Intake has been rejected
-            </span>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              The client must resubmit before this intake can be reviewed again.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            This client intake was rejected and requires resubmission for reconsideration.
-          </p>
           <Button
             onClick={handleReopenFromReject}
             disabled={isPending || disabled}
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
           >
-            Reopen for Review
+            Reopen for review
           </Button>
-        </div>
+        </section>
       )}
+
+      <section className="space-y-2" aria-labelledby="review-notes-heading">
+        <div className="space-y-0.5">
+          <h3
+            id="review-notes-heading"
+            className="text-sm font-medium text-foreground"
+          >
+            Review notes
+          </h3>
+          <p className="text-xs text-muted-foreground">Optional — visible to your team.</p>
+        </div>
+        <Textarea
+          value={notes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          placeholder="Context for this review, follow-ups, or rejection reason…"
+          className="min-h-[4.5rem] resize-none text-sm"
+          disabled={notesDisabled}
+        />
+      </section>
     </div>
   );
 }

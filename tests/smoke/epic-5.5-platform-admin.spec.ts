@@ -50,14 +50,15 @@ test.describe("Epic 5.5 platform administration", () => {
 
       await textarea.fill(probeText);
       await page.getByRole("button", { name: /save changes/i }).click();
-      await page.waitForLoadState("networkidle");
+      await page.waitForURL(/saved=1/);
+      await expect(page.getByText(/Question bank changes are live/i)).toBeVisible();
 
       await page.goto(editHref!);
       await expect(textarea).toHaveValue(probeText);
 
       await textarea.fill(originalText);
       await page.getByRole("button", { name: /save changes/i }).click();
-      await page.waitForLoadState("networkidle");
+      await page.waitForURL(/saved=1/);
     });
 
     test("visibility toggle round-trips through the DB", async ({ page }) => {
@@ -70,15 +71,14 @@ test.describe("Epic 5.5 platform administration", () => {
       expect(initialHide).toBeGreaterThan(0);
 
       await hideButtons.first().click();
-      await page.waitForLoadState("networkidle");
-      await page.goto("/admin/question-bank/governance");
+      await page.waitForURL(/\/admin\/question-bank\/governance\?saved=1/);
+      await expect(page.getByText(/Question bank changes are live/i)).toBeVisible();
 
       expect(await hideButtons.count()).toBe(initialHide - 1);
       expect(await showButtons.count()).toBeGreaterThan(0);
 
       await showButtons.first().click();
-      await page.waitForLoadState("networkidle");
-      await page.goto("/admin/question-bank/governance");
+      await page.waitForURL(/\/admin\/question-bank\/governance\?saved=1/);
 
       expect(await hideButtons.count()).toBe(initialHide);
     });
@@ -92,7 +92,7 @@ test.describe("Epic 5.5 platform administration", () => {
       await sectionSelect.selectOption({ index: 1 });
       await page.locator("#text").fill(probeText);
       await page.getByRole("button", { name: /create question/i }).click();
-      await page.waitForURL(/\/admin\/question-bank\/governance$/);
+      await page.waitForURL(/\/admin\/question-bank\/governance(\?saved=1)?$/);
       await expect(page.getByText(probeText)).toBeVisible();
 
       page.once("dialog", (dialog) => dialog.accept());
@@ -115,11 +115,37 @@ test.describe("Epic 5.5 platform administration", () => {
       const enabled = moveDownButtons.filter({ hasNot: page.locator("[disabled]") }).first();
       await expect(enabled).toBeEnabled();
       await enabled.click();
-      await page.waitForLoadState("networkidle");
+      await page.waitForURL(/\/admin\/question-bank\/governance\?saved=1/);
+      await expect(page.getByText(/Question bank changes are live/i)).toBeVisible();
+    });
 
-      const response = await page.goto("/admin/question-bank/governance");
-      expect(response?.status()).toBe(200);
-      await expect(page.getByRole("button", { name: "Move down" }).first()).toBeVisible();
+    test("creating a question writes a pillar_question.create audit row", async ({ page }) => {
+      await new SignInPage(page).signInAs("admin");
+      const probeText = `Audit probe ${Date.now()}`;
+
+      await page.goto("/admin/question-bank/governance/new");
+      await page.locator("#sectionId").selectOption({ index: 1 });
+      await page.locator("#text").fill(probeText);
+      await page.getByRole("button", { name: /create question/i }).click();
+      await page.waitForURL(/\/admin\/question-bank\/governance(\?saved=1)?$/);
+
+      await page.goto("/admin/audit-log?action=pillar_question.create");
+      const createRow = page
+        .locator('[data-testid="audit-log-row"][data-action="pillar_question.create"]')
+        .first();
+      await expect(createRow).toBeVisible();
+      await createRow.locator("details > summary").click();
+      const expandedText = await createRow.locator("details").textContent();
+      expect(expandedText).toMatch(/before[^a-z]+null/i);
+      expect(expandedText).toContain(probeText);
+
+      page.once("dialog", (dialog) => dialog.accept());
+      await page.goto("/admin/question-bank/governance");
+      await page
+        .locator("motion.div, div.flex.flex-col.gap-3.p-4", { hasText: probeText })
+        .getByRole("button", { name: /^Delete$/ })
+        .click();
+      await page.waitForURL(/\/admin\/question-bank\/governance$/);
     });
   });
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { UserRole } from "@prisma/client";
 import { requireAdminRole } from "@/lib/admin/auth";
+import { parsePillarDbUuid, pillarDbUuidSchema } from "@/lib/assessment/bank/pillar-db-uuid";
 import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
 import { reorderPillarQuestionInRiskArea } from "@/lib/assessment/bank/pillar-question-reorder";
 import { isPillarQuestionBankActive } from "@/lib/assessment/bank/question-bank-source";
@@ -21,14 +22,6 @@ const PILLAR_ANSWER_TYPES = [
   "number",
   "date_mm_yyyy",
 ] as const;
-
-/** Postgres @db.Uuid — seed DDL uses non–RFC-v4 ids (e.g. …0001-…). */
-const dbUuid = z
-  .string()
-  .regex(
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    "Invalid UUID",
-  );
 
 function revalidateQuestionBankPaths(riskAreaId?: string) {
   revalidatePath("/admin/question-bank");
@@ -75,6 +68,18 @@ function redirectUpdateError(formData: FormData, message: string): never {
   redirect(`/admin/question-bank?err=${encodeURIComponent(message)}`);
 }
 
+function redirectAreaSaved(riskAreaId: string, extraQuery?: string): never {
+  const q = extraQuery ? `&${extraQuery}` : "";
+  redirect(`/admin/question-bank/${riskAreaId}?saved=1${q}`);
+}
+
+function parseRiskAreaIdFromForm(raw: FormDataEntryValue | null): string | null {
+  if (typeof raw !== "string" || !isRiskAreaId(raw)) {
+    return null;
+  }
+  return raw;
+}
+
 function optionalFormString(raw: FormDataEntryValue | null): string | null {
   if (raw === null || raw === undefined) return null;
   const s = String(raw).trim();
@@ -83,21 +88,26 @@ function optionalFormString(raw: FormDataEntryValue | null): string | null {
 
 export async function updatePillarQuestionVisibility(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
-  const questionId = z.string().uuid().parse(formData.get("questionId"));
-  const isVisible = formData.get("isVisible") === "true";
-  const riskAreaIdRaw = formData.get("riskAreaId");
-  if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
-    return;
+  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  if (!riskAreaId) {
+    redirect("/admin/question-bank");
   }
-  const riskAreaId = riskAreaIdRaw;
+
+  let questionId: string;
+  try {
+    questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
+  } catch {
+    redirectAreaSaved(riskAreaId);
+  }
+
+  const isVisible = formData.get("isVisible") === "true";
 
   const row = await prisma.pillarQuestion.findUnique({
     where: { id: questionId },
     include: { section: { include: { category: true } } },
   });
-  if (!row) return;
-  if (riskAreaIdForPillarCategory(row.section.category) !== riskAreaId) {
-    return;
+  if (!row || riskAreaIdForPillarCategory(row.section.category) !== riskAreaId) {
+    redirectAreaSaved(riskAreaId);
   }
 
   await prisma.pillarQuestion.update({
@@ -116,25 +126,28 @@ export async function updatePillarQuestionVisibility(formData: FormData) {
   });
 
   revalidateQuestionBankPaths(riskAreaId);
+  redirectAreaSaved(riskAreaId);
 }
 
 export async function deletePillarQuestion(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
-  const questionId = z.string().uuid().parse(formData.get("questionId"));
-  const riskAreaIdRaw = formData.get("riskAreaId");
-  if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
+  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  if (!riskAreaId) {
     redirect("/admin/question-bank");
   }
-  const riskAreaId = riskAreaIdRaw;
+
+  let questionId: string;
+  try {
+    questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
+  } catch {
+    redirect(`/admin/question-bank/${riskAreaId}`);
+  }
 
   const row = await prisma.pillarQuestion.findUnique({
     where: { id: questionId },
     include: { section: { include: { category: true } } },
   });
-  if (!row) {
-    redirect(`/admin/question-bank/${riskAreaId}`);
-  }
-  if (riskAreaIdForPillarCategory(row.section.category) !== riskAreaId) {
+  if (!row || riskAreaIdForPillarCategory(row.section.category) !== riskAreaId) {
     redirect(`/admin/question-bank/${riskAreaId}`);
   }
 
@@ -152,7 +165,7 @@ export async function deletePillarQuestion(formData: FormData) {
       sectionId: row.sectionId,
     },
     afterData: null,
-    metadata: { riskAreaId },
+    metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
   });
 
   revalidateQuestionBankPaths(riskAreaId);
@@ -162,7 +175,7 @@ export async function deletePillarQuestion(formData: FormData) {
 export async function updatePillarQuestionContent(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   try {
-    const questionId = z.string().uuid().parse(formData.get("questionId"));
+    const questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
     const riskAreaIdRaw = formData.get("riskAreaId");
     if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
       throw new Error("Invalid risk area.");
@@ -254,6 +267,9 @@ export async function updatePillarQuestionContent(formData: FormData) {
     });
 
     revalidateQuestionBankPaths(riskAreaId);
+    redirect(
+      `/admin/question-bank/${riskAreaId}/${encodeURIComponent(questionId)}?saved=1`,
+    );
   } catch (e: unknown) {
     redirectUpdateError(formData, formatActionError(e));
   }
@@ -275,7 +291,7 @@ export async function createPillarQuestion(formData: FormData) {
       );
     }
 
-    const sectionId = dbUuid.parse(formData.get("sectionId"));
+    const sectionId = pillarDbUuidSchema.parse(formData.get("sectionId"));
     const text = z.string().min(1).parse(formData.get("text"));
     const answerType = z.enum(PILLAR_ANSWER_TYPES).parse(formData.get("answerType") ?? "scored_0_3");
     const isVisible = formData.has("isVisible");
@@ -351,32 +367,41 @@ export async function createPillarQuestion(formData: FormData) {
   }
 
   revalidateQuestionBankPaths(riskAreaId);
-  redirect(`/admin/question-bank/${riskAreaId}`);
+  redirect(`/admin/question-bank/${riskAreaId}?saved=1`);
 }
 
 export async function movePillarQuestionOrder(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
-  const questionId = z.string().uuid().parse(formData.get("questionId"));
-  const direction = z.enum(["up", "down"]).parse(formData.get("direction"));
-  const riskAreaIdRaw = formData.get("riskAreaId");
-  if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
-    return;
+  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  if (!riskAreaId) {
+    redirect("/admin/question-bank");
   }
-  const riskAreaId = riskAreaIdRaw;
+
+  let questionId: string;
+  let direction: "up" | "down";
+  try {
+    questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
+    direction = z.enum(["up", "down"]).parse(formData.get("direction"));
+  } catch {
+    redirectAreaSaved(riskAreaId);
+  }
 
   const before = await prisma.pillarQuestion.findUnique({
     where: { id: questionId },
     include: { section: { include: { category: true } } },
   });
-  if (!before) return;
-  if (riskAreaIdForPillarCategory(before.section.category) !== riskAreaId) return;
+  if (!before || riskAreaIdForPillarCategory(before.section.category) !== riskAreaId) {
+    redirectAreaSaved(riskAreaId);
+  }
 
   const result = await reorderPillarQuestionInRiskArea({
     riskAreaId,
     questionId,
     direction,
   });
-  if (!result.ok) return;
+  if (!result.ok) {
+    redirectAreaSaved(riskAreaId);
+  }
 
   const after = await prisma.pillarQuestion.findUnique({
     where: { id: questionId },
@@ -398,9 +423,11 @@ export async function movePillarQuestionOrder(formData: FormData) {
     metadata: {
       direction,
       riskAreaId,
+      categoryKind: "ASSESSMENT",
       swappedWithId: result.swappedWithId,
     },
   });
 
   revalidateQuestionBankPaths(riskAreaId);
+  redirectAreaSaved(riskAreaId);
 }

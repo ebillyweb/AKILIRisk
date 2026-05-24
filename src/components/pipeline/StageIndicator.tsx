@@ -7,63 +7,127 @@ import type { ClientWorkflowStage } from "@prisma/client";
 interface StageIndicatorProps {
   currentStage: ClientWorkflowStage;
   className?: string;
+  /** Table rows: badge + segment bar. Detail views can use full stepper later. */
+  variant?: "bar" | "stepper";
 }
 
-const stages: { stage: ClientWorkflowStage; label: string }[] = [
-  { stage: 'INVITED', label: 'Inv' },
-  { stage: 'REGISTERED', label: 'Reg' },
-  { stage: 'INTAKE_IN_PROGRESS', label: 'Intake' },
-  { stage: 'ASSESSMENT_IN_PROGRESS', label: 'Assess' },
-  { stage: 'DOCUMENTS_REQUIRED', label: 'Docs' },
-  { stage: 'COMPLETE', label: 'Done' },
+const WORKFLOW_SEGMENTS: {
+  stage: ClientWorkflowStage;
+  label: string;
+  shortLabel: string;
+}[] = [
+  { stage: "INVITED", label: "Invited", shortLabel: "Inv" },
+  { stage: "REGISTERED", label: "Registered", shortLabel: "Reg" },
+  { stage: "INTAKE_IN_PROGRESS", label: "Intake", shortLabel: "Intake" },
+  {
+    stage: "ASSESSMENT_IN_PROGRESS",
+    label: "Assessment",
+    shortLabel: "Assess",
+  },
+  { stage: "DOCUMENTS_REQUIRED", label: "Documents", shortLabel: "Docs" },
+  { stage: "COMPLETE", label: "Complete", shortLabel: "Done" },
 ];
 
-export function StageIndicator({ currentStage, className }: StageIndicatorProps) {
+/** Slim segmented bar for pipeline table rows. */
+export function StageProgressBar({
+  currentStage,
+  className,
+}: Pick<StageIndicatorProps, "currentStage" | "className">) {
   const currentOrder = getStageOrder(currentStage);
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
-      {stages.map((stage, index) => {
-        const stageOrder = getStageOrder(stage.stage);
-        const isCompleted = stageOrder < currentOrder;
-        const isCurrent = stageOrder === currentOrder;
-        const isFuture = stageOrder > currentOrder;
+    <div
+      className={cn("flex w-full max-w-[9.5rem] gap-0.5", className)}
+      role="img"
+      aria-label={`Workflow progress: ${WORKFLOW_SEGMENTS.find((s) => getStageOrder(s.stage) === currentOrder)?.label ?? currentStage}`}
+    >
+      {WORKFLOW_SEGMENTS.map((segment) => {
+        const segmentOrder = getStageOrder(segment.stage);
+        const isComplete = segmentOrder < currentOrder;
+        const isCurrent = segmentOrder === currentOrder;
 
         return (
-          <div key={stage.stage} className="flex items-center">
-            <div className="flex flex-col items-center">
+          <div
+            key={segment.stage}
+            title={segment.label}
+            className={cn(
+              "h-1.5 min-w-0 flex-1 rounded-full transition-colors",
+              isComplete && "bg-primary",
+              isCurrent && "bg-primary ring-1 ring-primary/40 ring-offset-1",
+              !isComplete &&
+                !isCurrent &&
+                "bg-muted-foreground/15"
+            )}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/** Full stepper with labels — use outside cramped tables if needed. */
+function StageStepper({
+  currentStage,
+  className,
+}: Pick<StageIndicatorProps, "currentStage" | "className">) {
+  const currentOrder = getStageOrder(currentStage);
+
+  return (
+    <div className={cn("flex items-center gap-1.5", className)}>
+      {WORKFLOW_SEGMENTS.map((segment, index) => {
+        const segmentOrder = getStageOrder(segment.stage);
+        const isCompleted = segmentOrder < currentOrder;
+        const isCurrent = segmentOrder === currentOrder;
+        const isFuture = segmentOrder > currentOrder;
+
+        return (
+          <div key={segment.stage} className="flex items-center">
+            <div
+              className="flex flex-col items-center gap-0.5"
+              title={segment.label}
+            >
               <div
                 className={cn(
-                  "w-3 h-3 rounded-full flex items-center justify-center text-[0.5rem] font-medium transition-colors",
-                  {
-                    // Completed steps: filled primary color
-                    "bg-primary text-primary-foreground": isCompleted,
-                    // Current step: filled with ring/pulse effect
-                    "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1": isCurrent,
-                    // Future steps: muted/outlined
-                    "bg-muted border-2 border-muted-foreground/20 text-muted-foreground": isFuture,
-                  }
+                  "flex h-2.5 w-2.5 items-center justify-center rounded-full text-[0.5rem] font-medium transition-colors",
+                  isCompleted && "bg-primary text-primary-foreground",
+                  isCurrent &&
+                    "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1",
+                  isFuture &&
+                    "border border-muted-foreground/25 bg-muted"
                 )}
               >
-                {isCompleted ? "✓" : ""}
+                {isCompleted ? "✓" : null}
               </div>
-              <span className="text-[0.55rem] text-muted-foreground mt-0.5">
-                {stage.label}
+              <span className="text-[0.6rem] leading-none text-muted-foreground">
+                {segment.shortLabel}
               </span>
             </div>
-
-            {/* Connection line */}
-            {index < stages.length - 1 && (
+            {index < WORKFLOW_SEGMENTS.length - 1 ? (
               <div
                 className={cn(
-                  "w-3 h-px mx-0.5 transition-colors",
+                  "mx-0.5 h-px w-2 transition-colors",
                   isCompleted ? "bg-primary" : "bg-muted-foreground/20"
                 )}
+                aria-hidden
               />
-            )}
+            ) : null}
           </div>
         );
       })}
     </div>
+  );
+}
+
+export function StageIndicator({
+  currentStage,
+  className,
+  variant = "bar",
+}: StageIndicatorProps) {
+  if (variant === "stepper") {
+    return <StageStepper currentStage={currentStage} className={className} />;
+  }
+
+  return (
+    <StageProgressBar currentStage={currentStage} className={className} />
   );
 }

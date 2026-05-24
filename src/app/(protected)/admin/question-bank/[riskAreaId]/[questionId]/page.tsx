@@ -16,11 +16,11 @@ export default async function AdminQuestionBankEditPage({
   searchParams,
 }: {
   params: Promise<{ riskAreaId: string; questionId: string }>;
-  searchParams: Promise<{ err?: string }>;
+  searchParams: Promise<{ err?: string; saved?: string }>;
 }) {
   await requireAdminRole();
   const { riskAreaId, questionId: questionIdParam } = await params;
-  const { err } = await searchParams;
+  const { err, saved } = await searchParams;
   const questionId = decodeURIComponent(questionIdParam);
 
   const legacy = legacyRiskAreaRedirect(riskAreaId);
@@ -59,6 +59,15 @@ export default async function AdminQuestionBankEditPage({
           View history (BRD §7.2)
         </Link>
       </div>
+
+      {saved === "1" ? (
+        <Alert>
+          <AlertTitle>Saved</AlertTitle>
+          <AlertDescription>
+            Question bank changes are live for new assessments.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {err ? (
         <Alert variant="destructive">

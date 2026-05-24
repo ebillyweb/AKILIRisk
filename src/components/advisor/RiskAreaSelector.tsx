@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { RISK_AREAS } from "@/lib/advisor/types";
+import { cn } from "@/lib/utils";
 
 interface RiskAreaSelectorProps {
   selectedAreas: string[];
@@ -10,104 +11,100 @@ interface RiskAreaSelectorProps {
   disabled?: boolean;
 }
 
-export function RiskAreaSelector({ selectedAreas, onChange, disabled = false }: RiskAreaSelectorProps) {
-  const [validationError, setValidationError] = useState<string | null>(null);
-
+export function RiskAreaSelector({
+  selectedAreas,
+  onChange,
+  disabled = false,
+}: RiskAreaSelectorProps) {
   const handleAreaToggle = (areaId: string) => {
     if (disabled) return;
 
     const isCurrentlySelected = selectedAreas.includes(areaId);
-    let newSelectedAreas: string[];
-
-    if (isCurrentlySelected) {
-      newSelectedAreas = selectedAreas.filter(id => id !== areaId);
-    } else {
-      newSelectedAreas = [...selectedAreas, areaId];
-    }
+    const newSelectedAreas = isCurrentlySelected
+      ? selectedAreas.filter((id) => id !== areaId)
+      : [...selectedAreas, areaId];
 
     onChange(newSelectedAreas);
-
-    // Clear validation error when user makes a selection
-    if (newSelectedAreas.length > 0 && validationError) {
-      setValidationError(null);
-    }
   };
 
-  const triggerValidation = () => {
-    if (selectedAreas.length === 0) {
-      setValidationError("Please select at least one risk area before approving.");
-      return false;
-    }
-    setValidationError(null);
-    return true;
-  };
-
-  // Expose validation function to parent
-  (RiskAreaSelector as any).triggerValidation = triggerValidation;
+  const selectionLabel =
+    selectedAreas.length === 0
+      ? "None selected"
+      : `${selectedAreas.length} of ${RISK_AREAS.length} selected`;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Focus Risk Areas</h3>
-        <p className="text-sm text-muted-foreground">
-          Select the risk areas that require deeper assessment for this client.
-        </p>
+    <section className="space-y-4" aria-labelledby="focus-risk-areas-heading">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h3
+            id="focus-risk-areas-heading"
+            className="text-base font-semibold tracking-tight"
+          >
+            Focus risk areas
+          </h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Choose which pillars need a deeper assessment for this client.
+          </p>
+        </div>
+        <Badge
+          variant={selectedAreas.length > 0 ? "default" : "secondary"}
+          className="shrink-0 tabular-nums"
+        >
+          {selectionLabel}
+        </Badge>
       </div>
 
-      {/* Selection count */}
-      <div className="text-sm text-muted-foreground">
-        {selectedAreas.length} of {RISK_AREAS.length} areas selected
-      </div>
-
-      {/* Grid of checkboxes — min-w-0 so columns can shrink and long titles wrap inside padding */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <ul
+        className="divide-y divide-border overflow-hidden rounded-lg border bg-card"
+        role="list"
+      >
         {RISK_AREAS.map((area) => {
           const isSelected = selectedAreas.includes(area.id);
 
           return (
-            <div
-              key={area.id}
-              className={`min-w-0 rounded-lg border box-border cursor-pointer transition-colors p-2.5 sm:p-3 ${
-                isSelected
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
-              } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => handleAreaToggle(area.id)}
-            >
-              <div className="flex min-w-0 items-start gap-3">
+            <li key={area.id}>
+              <button
+                type="button"
+                disabled={disabled}
+                aria-pressed={isSelected}
+                onClick={() => handleAreaToggle(area.id)}
+                className={cn(
+                  "flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors",
+                  "hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  isSelected && "bg-primary/5 hover:bg-primary/8",
+                  disabled && "cursor-not-allowed opacity-50 hover:bg-transparent"
+                )}
+              >
                 <Checkbox
                   checked={isSelected}
                   disabled={disabled}
-                  className="mt-0.5 shrink-0"
-                  onCheckedChange={() => handleAreaToggle(area.id)}
+                  tabIndex={-1}
+                  aria-hidden
+                  className="mt-0.5 shrink-0 pointer-events-none"
                 />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="break-normal text-sm font-medium leading-snug">
+                <span className="min-w-0 flex-1 space-y-1">
+                  <span className="block text-sm font-medium leading-snug text-foreground">
                     {area.name}
-                  </div>
-                  <p className="break-normal text-xs leading-relaxed text-muted-foreground">
+                  </span>
+                  <span
+                    className={cn(
+                      "block text-xs leading-relaxed text-muted-foreground",
+                      !isSelected && "line-clamp-2"
+                    )}
+                  >
                     {area.summary}
-                  </p>
-                </div>
-              </div>
-            </div>
+                  </span>
+                </span>
+              </button>
+            </li>
           );
         })}
-      </div>
+      </ul>
 
-      {/* Validation error */}
-      {validationError && (
-        <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-          {validationError}
-        </div>
-      )}
-
-      {/* Minimum selection note */}
-      <div className="text-xs text-muted-foreground border-t pt-3">
-        <strong>Note:</strong> At least one risk area must be selected for client approval.
-        Selected areas will determine which assessment questions the client receives.
-      </div>
-    </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        At least one area is required to approve. Selected pillars shape which
+        assessment questions the client receives.
+      </p>
+    </section>
   );
 }

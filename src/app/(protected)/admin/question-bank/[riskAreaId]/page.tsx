@@ -6,6 +6,7 @@ import { RISK_AREAS } from "@/lib/advisor/types";
 import { isQuestionBankFilterType } from "@/lib/assessment/bank/question-bank-types";
 import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
 import { loadQuestionBankDashboardRows } from "@/lib/assessment/bank/question-bank-dashboard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,11 +25,11 @@ export default async function AdminQuestionBankAreaPage({
   searchParams,
 }: {
   params: Promise<{ riskAreaId: string }>;
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; saved?: string }>;
 }) {
   await requireAdminRole();
   const { riskAreaId } = await params;
-  const { type: typeParam } = await searchParams;
+  const { type: typeParam, saved } = await searchParams;
   const typeFilter = isQuestionBankFilterType(typeParam) ? typeParam : undefined;
   const typeQuery = typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : "";
 
@@ -65,6 +66,12 @@ export default async function AdminQuestionBankAreaPage({
           </div>
         </Suspense>
       </div>
+
+      {saved === "1" ? (
+        <Alert>
+          <AlertDescription>Question bank changes are live for new assessments.</AlertDescription>
+        </Alert>
+      ) : null}
 
       <Card>
         <CardHeader>

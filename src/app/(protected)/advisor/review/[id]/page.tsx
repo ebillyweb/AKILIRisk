@@ -74,45 +74,57 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
 
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* Left column - Client info and transcript */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6 lg:col-span-7">
             {/* Client info header */}
             <div className="rounded-lg border bg-card p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-semibold">
-                        {interview.user.name || "Unnamed Client"}
-                      </h2>
-                      <p className="text-muted-foreground">{interview.user.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Submitted:</span>
-                      <span>{submittedAt}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Responses:</span>
-                      <span>{interview.responses.length} of {questions.length}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Status:</span>
-                      <Badge variant={interview.status === 'SUBMITTED' ? 'success' : 'outline'}>
-                        {interview.status}
-                      </Badge>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <User className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-semibold">
+                    {interview.user.name || "Unnamed Client"}
+                  </h2>
+                  <p className="truncate text-muted-foreground">
+                    {interview.user.email}
+                  </p>
                 </div>
               </div>
+
+              <dl className="mt-5 grid gap-4 border-t border-border/60 pt-5 text-sm sm:grid-cols-3 sm:gap-6">
+                <div className="min-w-0 space-y-1">
+                  <dt className="flex items-center gap-1.5 text-muted-foreground">
+                    <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                    Submitted
+                  </dt>
+                  <dd className="font-medium leading-snug text-foreground">
+                    {submittedAt}
+                  </dd>
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <dt className="flex items-center gap-1.5 text-muted-foreground">
+                    <FileText className="h-4 w-4 shrink-0" aria-hidden />
+                    Responses
+                  </dt>
+                  <dd className="font-medium text-foreground">
+                    {interview.responses.length} of {questions.length}
+                  </dd>
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <dt className="text-muted-foreground">Status</dt>
+                  <dd>
+                    <Badge
+                      variant={
+                        interview.status === "SUBMITTED" ? "success" : "outline"
+                      }
+                    >
+                      {interview.status}
+                    </Badge>
+                  </dd>
+                </div>
+              </dl>
             </div>
 
             <AdvisorHouseholdDirectory members={householdMembers} />
@@ -137,10 +149,10 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
             </div>
           </div>
 
-          {/* Right column - Review sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-6">
-              <div className="rounded-lg border bg-card p-6">
+          {/* Right column - Focus areas & approval */}
+          <div className="lg:col-span-5">
+            <div className="sticky top-24">
+              <div className="rounded-xl border bg-card p-6 shadow-sm lg:p-7">
                 <ReviewSidebar
                   interviewId={interview.id}
                   approval={approval}
