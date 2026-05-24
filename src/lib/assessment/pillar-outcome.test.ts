@@ -620,9 +620,9 @@ describe("Pillar assessment outcomes — all negative answers", () => {
       );
 
       expect(narratives).toEqual([...GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS]);
-      expect(narratives).toHaveLength(2);
+      expect(narratives).toHaveLength(1);
       expect(narratives[0]).toMatch(/estate planning attorney/i);
-      expect(narratives[1]).toMatch(/formal family governance structure/i);
+      expect(narratives[0]).toMatch(/formal family governance structure/i);
     });
 
     it("does not return governance narratives when risk is low", () => {

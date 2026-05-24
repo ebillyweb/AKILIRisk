@@ -60,8 +60,7 @@ export const GOVERNANCE_ALL_YES_NARRATIVE_RECOMMENDATIONS = [
 
 /** Governance pillar narrative recommendations (all visible answers negative). */
 export const GOVERNANCE_ALL_NEGATIVE_NARRATIVE_RECOMMENDATIONS = [
-  "Engage an experienced estate planning attorney to establish a comprehensive estate plan to ensure assets are legally structured, titled, and transferred in alignment with the family’s intent. This should include properly drafted wills, trusts, beneficiary designations, and coordinated planning across all entities and jurisdictions.",
-  "Establish formal family governance structure to outline who has authority to make decisions, how leadership transitions occur, and how the family governs itself over time. This should include defined governance bodies (i.e. family council, family office, or investment committee), succession protocols, emergency decision authority, and next-generation preparedness.",
+  "Engage an experienced estate planning attorney to establish a comprehensive estate plan to ensure assets are legally structured, titled, and transferred in alignment with the family's intent. This should include properly drafted wills, trusts, beneficiary designations, and coordinated planning across all entities and jurisdictions. Establish formal family governance structure to outline who has authority to make decisions, how leadership transitions occur, and how the family governs itself over time. This should include defined governance bodies (i.e. family council, family office, or investment committee), succession protocols, emergency decision authority, and next-generation preparedness.",
 ] as const;
 
 /** Catalog services for governance-only lowest answers (Belvedere bank). */
