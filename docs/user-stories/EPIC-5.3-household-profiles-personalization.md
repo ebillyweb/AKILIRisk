@@ -228,11 +228,11 @@
 
 | Area | Status |
 |------|--------|
-| Household CRUD (US-21) | **Not implemented** |
+| Household CRUD (US-21) | **Implemented** — `tests/smoke/epic-5.3-household-profiles.spec.ts` |
 | Personalized question text (US-22) | **Not implemented** |
 | Profile branching (US-23) | **Not implemented** |
-| Consent / visibility (US-48) | **Not implemented** |
-| Advisor disable profiles (US-49) | **Not implemented** |
+| Consent / visibility (US-48) | **Implemented** — advisor review omits hidden members |
+| Advisor disable profiles (US-49) | **Implemented** — nav hidden + disabled notice |
 
 ## Related
 

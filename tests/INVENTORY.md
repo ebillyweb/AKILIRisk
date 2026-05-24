@@ -85,6 +85,9 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-14 resume after sign-out; server beats stale localStorage | US-14 | Implemented |
 | `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 six-cell heat map after scoring | US-16 | Implemented |
 | `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 empty heat map before scoring | US-16 | Implemented |
+| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-21 client adds household member | Epic 5.3 | Implemented |
+| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-48 hidden member omitted from advisor intake review | Epic 5.3 | Implemented |
+| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-49 advisor disables profiles → client nav hidden + notice | Epic 5.3 | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
