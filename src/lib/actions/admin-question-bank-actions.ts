@@ -22,6 +22,14 @@ const PILLAR_ANSWER_TYPES = [
   "date_mm_yyyy",
 ] as const;
 
+/** Postgres @db.Uuid — seed DDL uses non–RFC-v4 ids (e.g. …0001-…). */
+const dbUuid = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    "Invalid UUID",
+  );
+
 function revalidateQuestionBankPaths(riskAreaId?: string) {
   revalidatePath("/admin/question-bank");
   revalidatePath("/admin/question-bank", "layout");
@@ -253,12 +261,13 @@ export async function updatePillarQuestionContent(formData: FormData) {
 
 export async function createPillarQuestion(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+  let riskAreaId: string;
   try {
     const riskAreaIdRaw = formData.get("riskAreaId");
     if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
       throw new Error("Invalid risk area.");
     }
-    const riskAreaId = riskAreaIdRaw;
+    riskAreaId = riskAreaIdRaw;
 
     if (!(await isPillarQuestionBankActive())) {
       throw new Error(
@@ -266,7 +275,7 @@ export async function createPillarQuestion(formData: FormData) {
       );
     }
 
-    const sectionId = z.string().uuid().parse(formData.get("sectionId"));
+    const sectionId = dbUuid.parse(formData.get("sectionId"));
     const text = z.string().min(1).parse(formData.get("text"));
     const answerType = z.enum(PILLAR_ANSWER_TYPES).parse(formData.get("answerType") ?? "scored_0_3");
     const isVisible = formData.has("isVisible");
@@ -337,12 +346,12 @@ export async function createPillarQuestion(formData: FormData) {
       },
       metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
     });
-
-    revalidateQuestionBankPaths(riskAreaId);
-    redirect(`/admin/question-bank/${riskAreaId}`);
   } catch (e: unknown) {
     redirectCreateError(formData, formatActionError(e));
   }
+
+  revalidateQuestionBankPaths(riskAreaId);
+  redirect(`/admin/question-bank/${riskAreaId}`);
 }
 
 export async function movePillarQuestionOrder(formData: FormData) {
