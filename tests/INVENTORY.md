@@ -77,6 +77,10 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/six-pillar-assessment.spec.ts` | US-12 hub entry for governance + cyber-digital pillars | US-10–20 | Implemented |
 | `tests/smoke/six-pillar-assessment.spec.ts` | US-12 gate: client without approved intake redirected from /assessment | US-10–20 | Implemented |
 | `tests/smoke/six-pillar-assessment.spec.ts` | US-12 intake-waived invite shows six pillar hub | US-10–20 | Implemented |
+| `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 advisor approves intake → client sees six pillars | US-11 | Implemented |
+| `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 advisor rejects intake → client blocked from /assessment | US-11 | Implemented |
+| `tests/smoke/epic-5.2-report-publish.spec.ts` | US-20 client PDF 404 before publish | US-19–20 | Implemented |
+| `tests/smoke/epic-5.2-report-publish.spec.ts` | US-19–20 advisor publish → client PDF download | US-19–20 | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
@@ -107,16 +111,16 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Intake "Voice" tab: AudioRecorder upload + transcription *(upload + auth-gated playback covered by `intake-audio-endpoint.spec.ts`; transcription pipeline itself still uncovered)*
 - Intake save-and-resume across sessions (sign out mid-interview, sign back in, resume from last completed question)
 - Submitted intake moves to `IN_REVIEW` state and surfaces on advisor's review queue
-- ~~Advisor approval unlocks assessment (`intakeGate.assessmentUnlocked`)~~ *(partial: gate + hub covered by `six-pillar-assessment.spec.ts`; approval action itself still uncovered)*
-- Advisor rejection surfaces "Update needed" hero state on dashboard
-- ~~Advisor waiver path (intake skipped, assessment unlocked)~~ *(partial: waived invite hub covered by `six-pillar-assessment.spec.ts`)*
+- ~~Advisor approval unlocks assessment (`intakeGate.assessmentUnlocked`)~~ *(covered by `epic-5.2-advisor-intake-approval.spec.ts`)*
+- Advisor rejection surfaces "Update needed" hero state on dashboard *(reject gate covered; dashboard hero copy TBD)*
+- ~~Advisor waiver path (intake skipped, assessment unlocked)~~ *(partial: waived invite hub in `six-pillar-assessment.spec.ts`)*
 
 ### Risk Assessments (Epic 5.2 — six pillars)
 - ~~Six-pillar hub loads for assessment-unlocked client~~ *(covered by `six-pillar-assessment.spec.ts`)*
 - ~~Governance question bank loads on assessment start~~ *(covered by `six-pillar-assessment.spec.ts`)*
-- Score all six pillars → assessment `COMPLETED` (US-15 reconciliation)
+- Score all six pillars → assessment `COMPLETED` (US-15) *(via `/api/test/assessment/prepare` in report smokes)*
 - Client resilience / heat map after multi-pillar score (US-16)
-- Full flow: score → advisor draft report → publish → client PDF download (US-19–20)
+- ~~Full flow: score → advisor draft report → publish → client PDF download (US-19–20)~~ *(covered by `epic-5.2-report-publish.spec.ts`)*
 - Resume in-progress assessment from dashboard (US-14)
 - Score persists and renders on dashboard
 - Hidden questions (`questions.is_visible=false`) excluded
@@ -138,7 +142,7 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Pipeline metrics (`activeInFlight`, `totalAssigned`) match expected counts
 - Pipeline filters (by stage, search) update visible rows
 - ~~Send client invitation~~ *(covered by `client-invitation-onboarding.spec.ts`)*
-- Approve/reject intake (action buttons in ReviewSidebar)
+- Approve/reject intake (action buttons in ReviewSidebar) *(covered by `epic-5.2-advisor-intake-approval.spec.ts`)*
 - View client assessment results
 - Cyber risk advisor review
 - Identity risk advisor review

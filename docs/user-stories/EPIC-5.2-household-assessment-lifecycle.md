@@ -1,5 +1,6 @@
 # Epic 5.2 — Household Assessment Lifecycle
 
+**Index:** [User stories README](./README.md)  
 **BRD:** FR-2 through FR-6; business rules §3.1, §3.2, §3.4  
 **Scope:** Intake interview → advisor review → six-pillar questionnaire → scoring & tiers → control gaps & recommendations → advisor report draft/publish  
 **Client UI:** `/intake`, `/assessment`, `/assessment/results`, `/dashboard`  
@@ -8,205 +9,139 @@
 
 ## Coverage summary
 
-| Story | Title | Status | Notes |
+| Story | Title | Status | Tests |
 |-------|--------|--------|--------|
-| US-10 | Complete intake interview | **Done** | Audio, transcription, submit gate |
-| US-11 | Review and approve intake | **Partial** | Auto IN_REVIEW on open; waiver via invite + advisor action |
-| US-12 | Start multi-pillar assessment | **Done** | Six-pillar hub; focus areas stored for scoring |
-| US-13 | Answer on maturity scale | **Done** | 0–3 scale, visibility, branching, skip |
-| US-14 | Save and resume progress | **Done** | Server-authoritative resume; orphan cleanup |
-| US-15 | Score a completed pillar | **Partial** | **Story drift:** assessment `COMPLETED` only when all 6 pillars scored |
-| US-16 | View resilience & risk tier | **Partial** | Dashboard heat map; some UI still shows legacy `/10` in places |
-| US-17 | Surface control gaps | **Done** | Top 5, priority × severity |
-| US-18 | Generate service recommendations | **Done** | Rule engine + real `evaluateProfileCondition` |
-| US-19 | Draft report (advisor) | **Done** | Single draft, watermark, advisor notes |
-| US-20 | Publish & download report | **Done** | Client blocked until published; audit on download |
+| US-10 | Complete intake interview | **Done** | `client-intake.spec.ts` |
+| US-11 | Review and approve intake | **Done** | `epic-5.2-advisor-intake-approval.spec.ts` |
+| US-12 | Start multi-pillar assessment | **Done** | `six-pillar-assessment.spec.ts` |
+| US-13 | Answer on maturity scale | **Done** | Hub + questionnaire entry smokes |
+| US-14 | Save and resume progress | **Done** | Code-complete; resume E2E TBD |
+| US-15 | Score pillars & complete assessment | **Done** | `prepare` test API + `epic-5.2-report-publish.spec.ts` |
+| US-16 | View resilience & risk tier | **Done** | Unit/score route; dashboard UI spot-check TBD |
+| US-17 | Surface control gaps | **Done** | Scoring unit tests |
+| US-18 | Generate service recommendations | **Done** | `profile-condition.test.ts`, score route |
+| US-19 | Draft report (advisor) | **Done** | `epic-5.2-report-publish.spec.ts` |
+| US-20 | Publish & download report | **Done** | `epic-5.2-report-publish.spec.ts` |
 
 ---
 
-## US-10 — Complete the Intake Interview (Client)
+## Reconciled acceptance criteria (US-10 – US-20)
 
-**Status: Done**
+These criteria reflect **implemented behavior** as of the six-pillar reconciliation. Where they differ from an earlier story draft, the code is authoritative.
 
-| Criterion | Implementation |
-|-----------|----------------|
-| Per-question audio/typed save + transcription queue | `/api/intake/[id]/audio`, `/api/intake/[id]/transcribe`, intake interview UI |
-| Incomplete → refuse submit | Submit validation in intake actions / complete page |
-| All answered → `SUBMITTED` + notify advisors | Intake status update + notification on submit |
-| Transcription failure does not block submit | Async transcription; submit independent of transcript status |
+### US-10 — Complete the Intake Interview (Client)
 
-**Code:** `src/app/(protected)/intake/interview/page.tsx`, `src/lib/actions/intake-actions.ts`  
-**Tests:** `tests/smoke/client-intake.spec.ts`
+- Per-question audio and/or typed response is saved; audio is queued for transcription.
+- Submit is refused until every scripted question has a response.
+- Submit sets intake to **Submitted** and notifies assigned advisors.
+- Transcription failure does **not** block submit.
+
+### US-11 — Review and Approve a Client's Intake (Advisor)
+
+- Opening a **Submitted** intake moves approval to **In Review** and records review time (`getIntakeReviewData`).
+- Approve with focus areas + notes → **Approved**; focus areas stored on `IntakeApproval`.
+- Reject → **Rejected**.
+- Waive intake: invite-time `intakeWaived` **or** advisor sets `ClientAdvisorAssignment.intakeWaivedAt`.
+
+### US-12 — Start the Multi-Pillar Assessment (Client)
+
+- With intake **Approved** or waived, client can start/access assessment linked to approval when present.
+- Hub presents six pillars: Governance, Cyber/Digital, Physical Security, Insurance, Geographic/Environmental, Reputational/Social.
+- Advisor focus areas apply an emphasis multiplier at **score** time.
+
+### US-13 — Answer Pillar Questions on the Maturity Scale (Client)
+
+- Scored questions use maturity **0–3** (Critical gap → Institutionalized).
+- Administrator-hidden questions are not shown (`is_visible` / bank).
+- Answer-based branching shows/hides follow-ups.
+- Skipped questions are recorded and excluded from scoring.
+
+### US-14 — Save and Resume Assessment Progress (Client)
+
+- Server state is authoritative for resume pillar + question index.
+- Orphaned answers (hidden by branching) are removed server-side and from client store.
+- Answers persist via assessment responses API.
+
+### US-15 — Score Pillars and Complete the Assessment (System)
+
+- Scoring a pillar is rejected if **&lt;50%** of that pillar’s **visible** questions are answered (message includes %).
+- With ≥50% answered, rollup uses weighted average of answered questions only; unanswered are excluded (not scored as 0).
+- Focus areas increase emphasis on matching sub-categories in the rollup.
+- **Per pillar:** a `PillarScore` row is written when that pillar’s score succeeds.
+- **Assessment status:** remains `IN_PROGRESS` until **all six** canonical pillars have a `PillarScore`; then status becomes `COMPLETED` and a single milestone notification fires (`syncAssessmentCompletionStatus`).
+
+> **Reconciliation note:** Earlier drafts said “when scoring completes” the assessment becomes Completed after **one** pillar. The product requires **all six** pillars scored—matching the six-pillar hub (US-12).
+
+### US-16 — View My Resilience Score and Risk Tier (Client)
+
+- Maturity 0–3 maps to resilience %: `round((maturity / 3) × 100)`, capped at 100.
+- Tier from active thresholds: Low ≥80%, Medium ≥60%, High ≥40%, else Critical.
+- Threshold changes do not alter stored tier until re-score.
+
+### US-17 — Surface Priority Control Gaps (System)
+
+- Normalized maturity ≤1 → control gap.
+- Top **5** gaps by priority = weight × maturity gap.
+- Severity: High if priority ≥9, Medium if ≥4.5, else Low.
+
+### US-18 — Generate Service Recommendations (System / Advisor)
+
+- Active rules: match when **&gt;50%** of weighted conditions satisfied.
+- Dedupe by service, order by priority; at most **10** persisted per assessment (replaces prior set).
+- Only active rules and services; profile conditions use `evaluateProfileCondition`.
+
+### US-19 — Review the Assessment and Draft a Report (Advisor)
+
+- Completed assessment: at most one **Draft** report with snapshot data.
+- Advisor edits executive summary and per-recommendation notes on draft.
+- Draft PDF is watermarked; **clients** cannot access un-published PDF.
+
+### US-20 — Publish and Download the Risk Report (Advisor / Client)
+
+- Publish freezes an immutable **Published** snapshot; opens next-version **Draft**.
+- Prior Published → **Superseded**, still downloadable.
+- Client, assigned advisor, and admins may download co-branded PDF; download is audited.
+- Client receives **404** on PDF until a Published report exists (`/availability` + PDF route).
 
 ---
 
-## US-11 — Review and Approve a Client's Intake (Advisor)
+## Implementation map
 
-**Status: Partial**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Open submitted intake → `IN_REVIEW` + timestamp | `getIntakeReviewData` auto-transitions `SUBMITTED` → `IN_REVIEW` |
-| Approve with focus areas + notes → `APPROVED` | `approveClientIntake` stores `focusAreas` on `IntakeApproval` |
-| Reject → `REJECTED` | `rejectClientIntake` |
-| Waive intake → assessment without interview | **Two paths:** (1) invite `intakeWaived` at send time; (2) advisor `advisor-intake-waiver-actions` sets `ClientAdvisorAssignment.intakeWaivedAt` |
-
-**Gap:** No dedicated Playwright for advisor approve/reject/waiver UI (only intake-waived invite hub in `six-pillar-assessment.spec.ts`).
-
-**Code:** `src/lib/actions/advisor-actions.ts`, `src/lib/actions/advisor-intake-waiver-actions.ts`, `src/components/advisor/ApprovalActions.tsx`
-
----
-
-## US-12 — Start the Multi-Pillar Assessment (Client)
-
-**Status: Done**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Approved or waived → create/link assessment | Intake gate in `src/lib/client/intake-gate.ts`; assessment creation on hub load |
-| Six pillars presented | `ASSESSMENT_PILLAR_IDS` in `pillar-registry.ts`; hub at `/assessment` |
-| Advisor focus areas emphasized at score time | `focusAreas` on approval passed into score route emphasis multiplier |
+| Story | Primary code |
+|-------|----------------|
+| US-10 | `intake-actions.ts`, `/intake/interview` |
+| US-11 | `advisor-actions.ts`, `advisor-intake-waiver-actions.ts`, `ApprovalActions.tsx` |
+| US-12 | `pillar-registry.ts`, `/assessment/page.tsx` |
+| US-13–14 | `[pillarSlug]/[questionIndex]/page.tsx`, `responses/route.ts`, `store.ts` |
+| US-15–18 | `score/route.ts`, `assessment-completion.ts`, `scoring.ts`, recommendation engine |
+| US-19–20 | `report-actions.ts`, `reports/[id]/pdf`, `DownloadSection.tsx` |
 
 **Pillar slugs:** `governance`, `cyber-digital`, `physical-security`, `insurance`, `geographic-environmental`, `reputational-social`
-
-**Code:** `src/app/(protected)/assessment/page.tsx`, `src/lib/assessment/pillar-registry.ts`  
-**Tests:** `tests/smoke/six-pillar-assessment.spec.ts`
-
----
-
-## US-13 — Answer Pillar Questions on the Maturity Scale (Client)
-
-**Status: Done**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Four maturity levels 0–3 | Question bank + `QuestionCard` maturity options |
-| Hidden questions not shown | `is_visible` / bank visibility in `pillar-config.ts` |
-| Branching show/hide follow-ups | `branching.ts`, profile + answer conditions |
-| Skip recorded, excluded from scoring | Store `skippedQuestions`; score route excludes skipped |
-
-**Code:** `src/app/(protected)/assessment/[pillarSlug]/[questionIndex]/page.tsx`, `src/lib/assessment/branching.ts`
-
----
-
-## US-14 — Save and Resume Assessment Progress (Client)
-
-**Status: Done**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Return → exact pillar + question + answers | Server resume from assessment responses API; hub uses authoritative position |
-| Orphaned answers removed | `orphanedQuestionIds` on responses API; `cleanOrphanedAnswers` in store |
-| Server state authoritative | Hub/question pages fetch server progress before local store |
-
-**Code:** `src/app/api/assessment/[id]/responses/route.ts`, `src/lib/assessment/store.ts`
-
----
-
-## US-15 — Score a Completed Pillar (System)
-
-**Status: Partial — story drift reconciled in code**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| &lt;50% visible answered → reject with % | Score route completion check |
-| ≥50% → weighted rollup, unanswered excluded | Bank-driven scoring via `pillar-config.ts` + scoring engine |
-| Focus areas → emphasis multiplier | Focus sub-categories in score route |
-| Scoring completes → `COMPLETED` + milestone | **Reconciled:** `syncAssessmentCompletionStatus` sets `COMPLETED` only when **all six** pillars have `PillarScore`; milestone notification fires once at full completion |
-
-**Story update recommended:** Change US-15 last AC to “when all pillars are scored” rather than “when scoring completes” (per-pillar score can succeed while assessment stays `IN_PROGRESS`).
-
-**Code:** `src/app/api/assessment/[id]/score/route.ts`, `src/lib/assessment/assessment-completion.ts`
-
----
-
-## US-16 — View My Resilience Score and Risk Tier (Client)
-
-**Status: Partial**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Maturity 0–3 → resilience % = round((m/3)×100) | Scoring + dashboard display |
-| Tier from thresholds Low ≥80, Medium ≥60, High ≥40, else Critical | `RiskThreshold` config + stored tier on `PillarScore` |
-| Threshold change does not alter stored tier until rescore | Tier persisted at score time; admin rescore available |
-
-**Gap:** Some dashboard components may still reference legacy `/10` scale — verify `RiskHeatMap` and results page when touching UI.
-
-**Code:** `src/components/assessment/RiskHeatMap.tsx`, `src/app/(protected)/assessment/results/page.tsx`, `src/app/api/assessment/[id]/pillar-scores/route.ts`
-
----
-
-## US-17 — Surface Priority Control Gaps (System)
-
-**Status: Done**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Maturity ≤1 → control gap | Scoring engine missing-controls / gap detection |
-| Top 5 by priority = weight × gap | Ranking in score results |
-| Severity High ≥9, Medium ≥4.5, else Low | Severity mapping in scoring |
-
-**Code:** `src/lib/assessment/scoring.ts`, score route response payload
-
----
-
-## US-18 — Generate Service Recommendations (System / Advisor)
-
-**Status: Done**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Rules match when &gt;50% weighted conditions satisfied | Recommendation engine in score transaction |
-| Dedupe by service, order by priority, max 10 | Persisted `AssessmentRecommendation` replace set |
-| Active rules and services only | DB filters on rule/service status |
-| Profile conditions | `evaluateProfileCondition` in `profile-condition.ts` (no longer stub) |
-
-**Code:** `src/lib/assessment/engines/recommendation-engine.ts`, `src/lib/assessment/profile-condition.ts`  
-**Tests:** `src/lib/assessment/profile-condition.test.ts`, scoring tests
-
----
-
-## US-19 — Review the Assessment and Draft a Report (Advisor)
-
-**Status: Done**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Completed assessment → at most one Draft | Report actions create/open draft with snapshot |
-| Edit executive summary + per-rec advisor notes | Report edit UI on pipeline report pages |
-| Draft watermark; not visible to client | PDF draft path; client 404 on unpublished |
-
-**Code:** `src/lib/actions/report-actions.ts`, `src/app/(protected)/advisor/pipeline/[clientId]/report/edit/page.tsx`
-
----
-
-## US-20 — Publish and Download the Risk Report (Advisor / Client)
-
-**Status: Done**
-
-| Criterion | Implementation |
-|-----------|----------------|
-| Publish → immutable snapshot, new draft version | `publishReport` freezes snapshot, supersedes prior |
-| Prior published → superseded, still downloadable | Report status enum + by-id PDF route |
-| Co-branded PDF + audit on download | Branding snapshot on report; `writeAudit` on PDF GET |
-| Client cannot download un-watermarked without publish | Client role → 404 when no `PUBLISHED` report; `DownloadSection` checks `/availability` |
-
-**Code:** `src/app/api/reports/[id]/pdf/route.tsx`, `src/app/api/reports/[id]/availability/route.ts`, `src/components/reports/DownloadSection.tsx`
 
 ---
 
 ## Playwright coverage
 
-| Spec | Stories | Status |
-|------|---------|--------|
-| `tests/smoke/client-intake.spec.ts` | US-10 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 (hub, gate, waiver path) | Implemented |
-| Full pillar score → publish → client PDF | US-15–US-20 | **Not implemented** |
-| Advisor intake approve/reject | US-11 | **Not implemented** |
+| Spec | Stories |
+|------|---------|
+| `tests/smoke/client-intake.spec.ts` | US-10 |
+| `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 (approve + reject) |
+| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 (hub, gate, waiver) |
+| `tests/smoke/epic-5.2-report-publish.spec.ts` | US-15–16 (prepare API), US-19–20 |
 
-## Out of epic scope (see other epics)
+**Test-only API:** `POST /api/test/assessment/prepare` (requires `ENABLE_TEST_AUTH=1`) scores all six pillars for a client email—see `tests/helpers/assessment.ts`.
 
-- Invitation/onboarding before intake → [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md)
-- Household profiles & personalization → [Epic 5.3](./EPIC-5.3-household-profiles-personalization.md)
-- Word policy templates → [Epic 5.8](./EPIC-5.8-policy-templates-deliverables.md)
-- Identity/cyber standalone modules → [Epic 5.9](./EPIC-5.9-extended-risk-modules.md)
+**Still open (optional):**
+
+- US-14 full resume session (sign out/in mid-assessment)
+- US-13 UI maturity selection per question
+- US-16 dashboard heat map visual regression
+
+---
+
+## Out of epic scope
+
+- [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md) — invitations  
+- [Epic 5.3](./EPIC-5.3-household-profiles-personalization.md) — household profiles  
+- [Epic 5.8](./EPIC-5.8-policy-templates-deliverables.md) — Word policy templates  
+- [Epic 5.9](./EPIC-5.9-extended-risk-modules.md) — legacy identity/cyber/intelligence surfaces
