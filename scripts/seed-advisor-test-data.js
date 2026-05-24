@@ -727,6 +727,30 @@ async function main() {
     `✅ Created unbranded fixture: ${clientUnbrandedEmail} -> ${advisorUnbrandedEmail} (brandingEnabled=false)`
   );
 
+  // Platform staff with ADMIN (not SUPER_ADMIN) — Playwright super-admin gate tests.
+  const platformAdminEmail = "platform-admin@test.com";
+  const platformAdminCt = userEmailCiphertext(platformAdminEmail);
+  await prisma.user.upsert({
+    where: { emailCiphertext: platformAdminCt },
+    update: {
+      emailCiphertext: platformAdminCt,
+      password: hashedPassword,
+      name: "Platform Admin",
+      firstName: "Platform",
+      lastName: "Admin",
+      role: "ADMIN",
+    },
+    create: {
+      emailCiphertext: platformAdminCt,
+      password: hashedPassword,
+      name: "Platform Admin",
+      firstName: "Platform",
+      lastName: "Admin",
+      role: "ADMIN",
+    },
+  });
+  console.log(`✅ Created platform admin (ADMIN role): ${platformAdminEmail}`);
+
   console.log('\n🎉 Test data seeded successfully!');
   console.log('\n📋 Verification credentials:');
   console.log(`   Advisor: advisor@test.com / testpassword123`);
@@ -734,6 +758,7 @@ async function main() {
   console.log(`   Client: client@test.com / testpassword123`);
   console.log(`   Client (MFA testing): client-mfa@test.com / testpassword123`);
   console.log(`   Client (fresh intake): client-fresh@test.com / testpassword123`);
+  console.log(`   Platform admin (ADMIN role): platform-admin@test.com / testpassword123`);
   console.log(`   Intake ID: ${intakeInterview.id}`);
   console.log('\n🚀 Application should be running at http://localhost:3000');
 }

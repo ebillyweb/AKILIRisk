@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getIntakeQuestionForAdmin } from "@/lib/admin/intake-questions-queries";
 import { updateIntakePillarQuestionContent } from "@/lib/actions/admin-intake-questions-actions";
-import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
 import { FormHasCheckbox } from "@/components/admin/form-submission-checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,7 @@ export default async function AdminIntakeQuestionEditPage({
                 name="questionText"
                 required
                 rows={5}
-                defaultValue={formatQuestionTextForDisplay(question.questionText)}
+                defaultValue={question.questionText}
               />
               <p className="text-xs text-muted-foreground">
                 Spoken aloud during the client interview.

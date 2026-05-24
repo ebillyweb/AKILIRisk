@@ -15,10 +15,6 @@ export default async function AdminAssessmentQuestionsIndexPage() {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground max-w-2xl">
-        Manage governance assessment questions by risk area. Changes apply to new client
-        assessments after you save.
-      </p>
       <Suspense fallback={null}>
         <QuestionBankRiskAreaFilter activeAreaId={null} />
       </Suspense>

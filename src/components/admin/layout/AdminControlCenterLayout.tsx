@@ -3,6 +3,7 @@ import {
   WorkspaceMainPadding,
   WorkspaceSiteFooterRow,
 } from "@/components/layout/WorkspaceMainContent";
+import { AdminPageHeaderFromPath } from "@/components/layout/AdminPageHeader";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminMobileNav } from "./AdminMobileNav";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,12 @@ export function AdminControlCenterLayout({
           <AdminMobileNav superUser={superUser} />
 
           <main className="min-h-0 flex-1 overflow-y-auto">
-            <WorkspaceMainPadding>{children}</WorkspaceMainPadding>
+            <WorkspaceMainPadding>
+              <div className="mb-6 sm:mb-8">
+                <AdminPageHeaderFromPath />
+              </div>
+              {children}
+            </WorkspaceMainPadding>
           </main>
         </div>
       </div>

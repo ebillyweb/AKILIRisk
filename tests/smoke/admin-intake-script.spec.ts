@@ -13,11 +13,14 @@ import { SignInPage } from "../page-objects/SignInPage";
  *
  * Each test undoes its own change so successive runs stay deterministic.
  */
-test.describe("admin intake script management", () => {
-  test("list page shows pillar INTAKE questions with edit + visibility controls", async ({ page }) => {
+test.describe("admin intake question bank", () => {
+  test("list page shows intake questions with shared header, edit, and visibility controls", async ({ page }) => {
     await new SignInPage(page).signInAs("admin");
     const response = await page.goto("/admin/intake/questions");
     expect(response?.status()).toBe(200);
+
+    await expect(page.getByRole("heading", { level: 1, name: "Intake question bank" })).toBeVisible();
+    await expect(page.getByText(/Configuration/i).first()).toBeVisible();
 
     await expect(
       page.locator('[data-slot="card-title"]', {
@@ -59,7 +62,7 @@ test.describe("admin intake script management", () => {
     await page.getByRole("button", { name: /save changes/i }).click();
     await page.waitForURL(/\/admin\/intake\/questions(\?saved=1)?$/);
     await expect(
-      page.getByText(/Intake script changes are live/i)
+      page.getByText(/Changes are live for new interview loads/i)
     ).toBeVisible();
 
     await page.goto(editHref!);
@@ -115,7 +118,7 @@ test.describe("admin intake script management", () => {
     // Plain count() can race past the navigation since the redirect target
     // and submit URL are both /admin/intake/questions?saved=1.
     await expect(hideButtons).toHaveCount(initialHide - 1);
-    await expect(page.getByText(/Intake script changes are live/i)).toBeVisible();
+    await expect(page.getByText(/Changes are live for new interview loads/i)).toBeVisible();
 
     // Restore so successive runs stay deterministic.
     await showButtons.first().click();

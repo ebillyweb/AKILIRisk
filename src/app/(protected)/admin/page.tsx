@@ -5,6 +5,8 @@ import {
   Eye,
   FileText,
   Gauge,
+  ListChecks,
+  Mic,
   Puzzle,
   Settings,
   Shield,
@@ -40,42 +42,69 @@ export default async function AdminControlCenterPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           <div className="space-y-4">
             <h3 className="text-base font-medium text-muted-foreground">
-              Assessment Operations
+              Assessment operations
             </h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <WorkspaceCard
                 href="/admin/leads"
-                title="New Requests"
+                title="Assessment requests"
                 description="Public lead form submissions awaiting assignment"
                 icon={ClipboardList}
                 badge={{ text: "12", variant: "default" }}
               />
               <WorkspaceCard
                 href="/admin/assessment"
-                title="Active Reviews"
+                title="Active assessments"
                 description="In-progress assessments requiring attention"
                 icon={Eye}
                 badge={{ text: "47", variant: "secondary" }}
               />
               <WorkspaceCard
                 href="/admin/intake"
-                title="Intake Queue"
+                title="Intake queue"
                 description="Interview submissions pending review"
                 icon={ClipboardList}
                 badge={{ text: "8", variant: "default" }}
-              />
-              <WorkspaceCard
-                href="/admin/recommendations"
-                title="Recommendation Rules"
-                description="Service catalog and matching engine"
-                icon={BookOpen}
               />
             </div>
           </div>
 
           <div className="space-y-4">
+            <h3 className="text-base font-medium text-muted-foreground">Configuration</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <WorkspaceCard
+                href="/admin/intake/questions"
+                title="Intake question bank"
+                description="Audio intake script — copy, order, and visibility"
+                icon={Mic}
+              />
+              <WorkspaceCard
+                href="/admin/assessment/questions"
+                title="Assessment question bank"
+                description="Governance questions by risk area"
+                icon={ListChecks}
+              />
+              <WorkspaceCard
+                href="/admin/recommendations"
+                title="Recommendations"
+                description="Service catalog and matching rules"
+                icon={BookOpen}
+              />
+              {superUser && (
+                <WorkspaceCard
+                  href="/admin/scoring/thresholds"
+                  title="Risk-tier thresholds"
+                  description="Low, medium, and high resilience cutoffs"
+                  icon={Shield}
+                  badge={{ text: "Super Admin", variant: "outline" }}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
             <h3 className="text-base font-medium text-muted-foreground">
-              People Management
+              People management
             </h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <WorkspaceCard
@@ -95,7 +124,7 @@ export default async function AdminControlCenterPage() {
               {superUser && (
                 <WorkspaceCard
                   href="/admin/staff"
-                  title="Staff Access"
+                  title="Staff access"
                   description="Admin and super-admin role management"
                   icon={Shield}
                   badge={{ text: "Super Admin", variant: "outline" }}
@@ -106,21 +135,19 @@ export default async function AdminControlCenterPage() {
 
           <div className="space-y-4">
             <h3 className="text-base font-medium text-muted-foreground">
-              Platform Operations
+              Platform operations
             </h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              {superUser && (
-                <WorkspaceCard
-                  href="/admin/operations"
-                  title="API Health"
-                  description="Service status and dependency monitoring"
-                  icon={Gauge}
-                  badge={{ text: "Operational", variant: "default" }}
-                />
-              )}
+              <WorkspaceCard
+                href="/admin/operations"
+                title="Operations health"
+                description="Service status and dependency monitoring"
+                icon={Gauge}
+                badge={{ text: "Operational", variant: "default" }}
+              />
               <WorkspaceCard
                 href="/admin/audit-log"
-                title="Audit Logs"
+                title="Audit logs"
                 description="Compliance trail and security events"
                 icon={FileText}
               />
@@ -137,28 +164,28 @@ export default async function AdminControlCenterPage() {
               )}
               <WorkspaceCard
                 href="/admin/settings"
-                title="Configuration"
-                description="Platform settings and feature flags"
+                title="Settings"
+                description="Platform settings and advisor feature flags"
                 icon={Settings}
               />
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-2">
             <h3 className="text-base font-medium text-muted-foreground">
-              Analytics & Intelligence
+              Analytics & intelligence
             </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <WorkspaceCard
                 href="/admin/analytics"
-                title="Business Analytics"
+                title="Executive dashboard"
                 description="Onboarding funnel and platform metrics"
                 icon={BarChart3}
               />
               {superUser && (
                 <WorkspaceCard
                   href="/admin/risk-signals"
-                  title="Risk Signals"
+                  title="Risk signals"
                   description="Platform-wide risk intelligence monitoring"
                   icon={TrendingUp}
                 />
@@ -166,14 +193,8 @@ export default async function AdminControlCenterPage() {
               <WorkspaceCard
                 href="/admin/reports"
                 title="Reports"
-                description="Executive dashboards and data exports"
+                description="Published reports and executive exports"
                 icon={FileText}
-              />
-              <WorkspaceCard
-                href="/admin/analytics"
-                title="Advisor Financial Health"
-                description="Portfolio performance and advisor metrics"
-                icon={TrendingUp}
               />
             </div>
           </div>

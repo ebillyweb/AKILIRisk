@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
   BookOpen,
   ClipboardList,
@@ -13,11 +14,9 @@ import {
   Puzzle,
   Settings,
   Shield,
-  TrendingUp,
+  UserPlus,
   UserRound,
   Users,
-  UserPlus,
-  AlertTriangle,
 } from "lucide-react";
 
 export type AdminNavItem = {
@@ -85,7 +84,6 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: "intelligence",
     title: "Intelligence",
     items: [
-      { href: "/admin/analytics", label: "Analytics", icon: TrendingUp },
       {
         href: "/admin/risk-signals",
         label: "Risk Signals",

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Mic } from "lucide-react";
 import { getIntakeScriptQuestionsForAdmin } from "@/lib/admin/intake-questions-queries";
 import { setIntakePillarQuestionVisibility } from "@/lib/actions/admin-intake-questions-actions";
 import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
@@ -22,17 +21,11 @@ export default async function AdminIntakeQuestionsPage({
       {showSaved ? (
         <Alert variant="success">
           <AlertTitle>Saved</AlertTitle>
-          <AlertDescription>Intake script changes are live for new interview loads.</AlertDescription>
+          <AlertDescription>Changes are live for new interview loads.</AlertDescription>
         </Alert>
       ) : null}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Mic className="size-4 shrink-0" aria-hidden />
-            <span>Questions clients hear during the audio intake interview.</span>
-          </p>
-        </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         <Button variant="outline" size="sm" asChild>
           <Link href="/admin/intake">Back to intake interviews</Link>
         </Button>
@@ -42,8 +35,9 @@ export default async function AdminIntakeQuestionsPage({
         <Alert>
           <AlertTitle>No intake questions yet</AlertTitle>
           <AlertDescription>
-            Add INTAKE category questions to the database, or run the pillar seed, to manage the
-            live script here. Until then, the interview uses the built-in fallback list.
+            No intake questions are configured yet. Run the pillar seed or add intake questions in
+            the database to manage the live interview here. Until then, clients hear the built-in
+            fallback list.
           </AlertDescription>
         </Alert>
       ) : (

@@ -21,6 +21,7 @@ export type Role =
   | "clientUnbranded"
   | "clientMfa"
   | "admin"
+  | "platformAdmin"
   | "clientFresh";
 
 export interface TestUser {
@@ -118,6 +119,16 @@ export const USERS: Record<Role, TestUser> = {
     role: "admin",
     email: env("ADMIN_EMAIL", "buddy@ebilly.com"),
     password: env("ADMIN_PASSWORD", "Test1111!"),
+    expectedLandingPath: "/admin",
+  },
+  /**
+   * Platform staff with ADMIN (not SUPER_ADMIN). Seeded by
+   * `scripts/seed-advisor-test-data.js` for super-admin gate Playwright tests.
+   */
+  platformAdmin: {
+    role: "platformAdmin",
+    email: env("PLATFORM_ADMIN_EMAIL", "platform-admin@test.com"),
+    password: env("PLATFORM_ADMIN_PASSWORD", "testpassword123"),
     expectedLandingPath: "/admin",
   },
   /**

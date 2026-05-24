@@ -20,16 +20,16 @@ export default async function AdminIntakePage() {
       <Card>
         <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-base">Intake interview script</CardTitle>
+            <CardTitle className="text-base">Intake question bank</CardTitle>
             <CardDescription>
-              View and edit the spoken questions loaded from INTAKE pillar rows (or the static
-              fallback when the database has none).
+              Edit the spoken questions clients hear during the audio intake interview — copy,
+              order, and visibility.
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" className="shrink-0" asChild>
             <Link href="/admin/intake/questions" className="inline-flex items-center gap-2">
               <Mic className="size-4" aria-hidden />
-              Manage script questions
+              Open question bank
             </Link>
           </Button>
         </CardHeader>

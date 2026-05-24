@@ -34,17 +34,18 @@ const ADMIN_NAV_ITEMS: { href: string; label: string }[] = [
   // §9.1 (BRD): Belvedere-side aggregate analytics. Slotted between
   // /admin (home/index) and /admin/advisors so it sits visually next to
   // the per-tenant drill-down surfaces it links into.
-  { href: "/admin/analytics", label: "Analytics Dashboard" },
+  { href: "/admin/analytics", label: "Executive dashboard" },
   // Operational health: separate from analytics so platform/system
   // signals never share a page with business metrics.
-  { href: "/admin/operations", label: "Operations Dashboard" },
+  { href: "/admin/operations", label: "Operations health" },
   { href: "/admin/advisors", label: "Advisors" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/staff", label: "Staff" },
   { href: "/admin/leads", label: "Assessment requests" },
-  { href: "/admin/intake", label: "Intake Management" },
-  { href: "/admin/intake/questions", label: "Intake script" },
-  { href: "/admin/assessment", label: "Assessment Management" },
+  { href: "/admin/intake", label: "Intake management" },
+  { href: "/admin/intake/questions", label: "Intake question bank" },
+  { href: "/admin/assessment/questions", label: "Assessment question bank" },
+  { href: "/admin/assessment", label: "Active assessments" },
   { href: "/admin/settings", label: "Settings" },
 ];
 

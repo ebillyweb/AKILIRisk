@@ -140,10 +140,76 @@ test.describe("Epic 5.5 platform administration", () => {
       page.once("dialog", (dialog) => dialog.accept());
       await page.goto("/admin/assessment/questions/governance");
       await page
-        .locator("motion.div, div.flex.flex-col.gap-3.p-4", { hasText: probeText })
+        .locator("div.flex.flex-col.gap-3.p-4", { hasText: probeText })
         .getByRole("button", { name: /^Delete$/ })
         .click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance$/);
+    });
+
+    test("assessment bank index shows shared header and risk-area cards", async ({ page }) => {
+      await new SignInPage(page).signInAs("admin");
+      const response = await page.goto("/admin/assessment/questions");
+      expect(response?.status()).toBe(200);
+
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Assessment question bank" })
+      ).toBeVisible();
+      await expect(page.getByRole("link", { name: /Governance/i })).toBeVisible();
+    });
+
+    test("legacy /admin/question-bank URLs redirect to canonical assessment paths", async ({
+      page,
+    }) => {
+      await new SignInPage(page).signInAs("admin");
+
+      await page.goto("/admin/question-bank");
+      await expect(page).toHaveURL(/\/admin\/assessment\/questions\/?$/);
+
+      await page.goto("/admin/question-bank/governance");
+      await expect(page).toHaveURL(/\/admin\/assessment\/questions\/governance\/?$/);
+    });
+  });
+
+  test.describe("Admin IA and access control", () => {
+    test("control center exposes configuration question bank cards", async ({ page }) => {
+      await new SignInPage(page).signInAs("admin");
+      await page.goto("/admin");
+
+      await expect(page.getByRole("heading", { name: "AKILI Control Center" })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Intake question bank/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Assessment question bank/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Risk-tier thresholds/i })).toBeVisible();
+    });
+
+    test("platform ADMIN can use question banks but not super-admin-only surfaces", async ({
+      page,
+    }) => {
+      await new SignInPage(page).signInAs("platformAdmin");
+      await page.goto("/admin");
+      expect(new URL(page.url()).pathname).toBe("/admin");
+
+      await expect(page.getByRole("link", { name: /Intake question bank/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Assessment question bank/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Risk-tier thresholds/i })).not.toBeVisible();
+
+      const intakeResponse = await page.goto("/admin/intake/questions");
+      expect(intakeResponse?.status()).toBe(200);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Intake question bank" })
+      ).toBeVisible();
+
+      await page.goto("/admin/settings");
+      await expect(page.getByText("Advisor feature flags")).not.toBeVisible();
+
+      const thresholdsResponse = await page.goto("/admin/scoring/thresholds");
+      expect(thresholdsResponse?.status()).not.toBe(200);
+      await expect(page.getByRole("button", { name: /save thresholds/i })).not.toBeVisible();
+
+      const provisionResponse = await page.goto("/admin/staff/admin-users");
+      expect(provisionResponse?.status()).not.toBe(200);
+      await expect(
+        page.getByRole("heading", { name: "Admin User Management" })
+      ).not.toBeVisible();
     });
   });
 
@@ -333,7 +399,7 @@ test.describe("Epic 5.5 platform administration", () => {
       const intakeResponse = await page.goto("/admin/intake");
       expect(intakeResponse?.status()).toBe(200);
       await expect(page.getByText(/Intake interviews \(\d+\)/)).toBeVisible();
-      await expect(page.getByRole("link", { name: /manage script questions/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: /open question bank/i })).toBeVisible();
 
       const assessmentResponse = await page.goto("/admin/assessment");
       expect(assessmentResponse?.status()).toBe(200);

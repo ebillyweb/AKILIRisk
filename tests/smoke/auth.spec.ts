@@ -14,7 +14,7 @@ const DASHBOARDS: DashboardAssertion[] = [
     role: "advisor",
     expectedUrlPath: "/advisor",
     heading: /Overview/i,
-    secondarySignal: /Pipeline at a glance/i,
+    secondarySignal: /Pipeline snapshot/i,
   },
   {
     role: "client",

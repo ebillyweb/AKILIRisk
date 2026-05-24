@@ -29,7 +29,7 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
     config: {
       icon: Activity,
       kicker: "Platform operations",
-      title: "Operations Dashboard",
+      title: "Operations health",
       subtitle:
         "Core service health, external dependency status, and recent failures",
     },
@@ -39,7 +39,7 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
     config: {
       icon: BarChart3,
       kicker: "Business intelligence",
-      title: "Analytics Dashboard",
+      title: "Executive dashboard",
       subtitle:
         "Aggregate view of advisor, client, assessment, and recommendation activity",
     },
@@ -72,51 +72,60 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
     },
   },
   {
-    path: "/admin/leads",
-    config: {
-      icon: Inbox,
-      kicker: "Lead routing",
-      title: "Assessment requests",
-      subtitle:
-        "Review submissions from the public request form and assign them to an advisor",
-    },
-  },
-  {
     path: "/admin/intake/questions",
     config: {
       icon: Mic,
-      kicker: "Content management",
-      title: "Intake interview script",
+      kicker: "Configuration",
+      title: "Intake question bank",
       subtitle:
-        "Edit spoken questions for the client audio intake (pillar INTAKE rows in the database)",
+        "Questions clients hear during the audio intake interview — edit copy, order, and visibility",
     },
   },
   {
     path: "/admin/intake",
     config: {
       icon: FileText,
-      kicker: "Content management",
-      title: "Intake Management",
-      subtitle: "Client intake interviews and status oversight",
+      kicker: "Assessments",
+      title: "Intake management",
+      subtitle: "Review client intake interviews and open the live script editor",
     },
   },
   {
     path: "/admin/assessment",
     config: {
       icon: ClipboardCheck,
-      kicker: "Content management",
-      title: "Assessment Management",
-      subtitle: "Governance assessment oversight and progress tracking",
+      kicker: "Assessments",
+      title: "Active assessments",
+      subtitle: "Governance assessment oversight, progress, and rescore tools",
     },
   },
   {
     path: "/admin/assessment/questions",
     config: {
       icon: ListChecks,
-      kicker: "Content management",
-      title: "Assessment questions",
+      kicker: "Configuration",
+      title: "Assessment question bank",
       subtitle:
-        "Governance assessment question bank by risk area — copy, visibility, and ordering",
+        "Governance assessment questions by risk area — edit copy, visibility, and ordering",
+    },
+  },
+  {
+    path: "/admin/scoring/thresholds",
+    config: {
+      icon: Settings,
+      kicker: "Configuration",
+      title: "Risk-tier thresholds",
+      subtitle: "Low, medium, and high cutoffs for resilience scores (super-admin only)",
+    },
+  },
+  {
+    path: "/admin/leads",
+    config: {
+      icon: Inbox,
+      kicker: "Assessments",
+      title: "Assessment requests",
+      subtitle:
+        "Public lead form submissions awaiting advisor assignment",
     },
   },
   {
@@ -131,6 +140,19 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
   },
 ];
 
+/** Pages that render their own primary `<h1>` — skip the shared header to avoid duplication. */
+const ADMIN_PAGE_HEADER_SKIP_PREFIXES = [
+  "/admin/analytics",
+  "/admin/operations",
+  "/admin/recommendations",
+  "/admin/integrations",
+  "/admin/exports",
+  "/admin/advisors",
+  "/admin/clients",
+  "/admin/audit-log",
+  "/admin/staff",
+];
+
 function getHeaderConfig(pathname: string): AdminPageHeaderConfig | null {
   const sorted = [...ADMIN_HEADER_CONFIG].sort((a, b) => b.path.length - a.path.length);
   for (const { path, config } of sorted) {
@@ -139,6 +161,18 @@ function getHeaderConfig(pathname: string): AdminPageHeaderConfig | null {
     }
   }
   return null;
+}
+
+export function shouldShowAdminPageHeader(pathname: string): boolean {
+  if (pathname === "/admin") return false;
+  if (
+    ADMIN_PAGE_HEADER_SKIP_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    )
+  ) {
+    return false;
+  }
+  return getHeaderConfig(pathname) !== null;
 }
 
 export function AdminPageHeader(props: AdminPageHeaderConfig) {
@@ -181,12 +215,9 @@ export function AdminPageHeader(props: AdminPageHeaderConfig) {
  */
 export function AdminPageHeaderFromPath() {
   const pathname = usePathname();
+  if (!shouldShowAdminPageHeader(pathname)) return null;
   const config = getHeaderConfig(pathname);
   if (!config) return null;
 
-  return (
-    <>
-      <AdminPageHeader {...config} />
-    </>
-  );
+  return <AdminPageHeader {...config} />;
 }

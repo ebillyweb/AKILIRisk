@@ -28,7 +28,7 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 | Rescore assessments | `/admin/assessment`, `admin-rescore-actions.ts` |
 | Audit log UI + CSV | `/admin/audit-log` |
 | GDPR / tenant exports | `/admin/exports` (super-admin) |
-| Control center | `/admin` |
+| Control center | `/admin` — Configuration quick-access cards for both question banks |
 
 ---
 
@@ -50,7 +50,9 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 - Section ids in seed DDL use non–RFC UUIDs; actions validate ids via `pillarDbUuidSchema` (not strict `z.string().uuid()`).
 - Mutating actions redirect with `?saved=1` so the list/edit UI reflects changes without a manual refresh.
 
-**Routes:** `/admin/question-bank`, `/admin/question-bank/[riskAreaId]`, `/admin/question-bank/[riskAreaId]/new`, `/admin/question-bank/[riskAreaId]/[questionId]`
+**Routes:** `/admin/assessment/questions`, `/admin/assessment/questions/[riskAreaId]`, `/admin/assessment/questions/[riskAreaId]/new`, `/admin/assessment/questions/[riskAreaId]/[questionId]` (legacy `/admin/question-bank/*` redirects)
+
+**Nav:** Configuration section in admin sidebar — Intake question bank, Assessment question bank, Recommendations, Risk-tier thresholds
 
 **Seed:** `npm run seed:pillar-ddl`
 
@@ -69,6 +71,8 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 | Audit log | ✅ | `INTAKE_QUESTION_*` |
 
 **Routes:** `/admin/intake/questions`, `/admin/intake/questions/[questionId]/edit`
+
+**UI:** Shared `AdminPageHeader` — kicker “Configuration”, title “Intake question bank” (user-facing subtitle; no pillar/DB jargon on the page chrome)
 
 **Code:** `src/lib/actions/admin-intake-questions-actions.ts`
 
@@ -174,7 +178,7 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 | Spec | Stories |
 |------|---------|
-| `epic-5.5-platform-admin.spec.ts` | US-37 (CRUD + audit), US-39–US-44, US-45 (partial), US-46 (list) |
+| `epic-5.5-platform-admin.spec.ts` | US-37 (CRUD + audit + index header + legacy redirects), US-39–US-44, US-45 (partial), US-46 (list), Control Center IA, ADMIN vs SUPER_ADMIN gates |
 | `admin-intake-script.spec.ts` | US-38 |
 | `admin-advisors.spec.ts` | US-45 (advisors list) |
 | `audit-log-*.spec.ts` | US-45 audit + platform audit infrastructure |

@@ -9,9 +9,12 @@ import { requireAdminRole } from "@/lib/admin/auth";
 import { prisma } from "@/lib/db";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
-function revalidateIntakeQuestionContent() {
+function revalidateIntakeQuestionContent(questionId?: string) {
   revalidatePath("/admin/intake/questions");
   revalidatePath("/admin/intake/questions", "layout");
+  if (questionId) {
+    revalidatePath(`/admin/intake/questions/${questionId}/edit`);
+  }
   revalidatePath("/admin/intake");
   revalidatePath("/intake");
   revalidatePath("/intake/interview");
@@ -68,7 +71,7 @@ export async function setIntakePillarQuestionVisibility(formData: FormData) {
     metadata: { categoryKind: "INTAKE" },
   });
 
-  revalidateIntakeQuestionContent();
+  revalidateIntakeQuestionContent(questionId);
   // Same `?saved=1` redirect target the edit form uses. The query param
   // gives Next.js's client router a different cache key from the page that
   // submitted the form, which forces a fresh server render so the visibility
@@ -124,7 +127,7 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
       metadata: { categoryKind: "INTAKE" },
     });
 
-    revalidateIntakeQuestionContent();
+    revalidateIntakeQuestionContent(questionId);
   } catch (e: unknown) {
     redirect(
       `/admin/intake/questions/${questionId}/edit?err=${encodeURIComponent(formatActionError(e))}`
