@@ -251,10 +251,7 @@ async function main() {
 
   console.log(`✅ Created ${requirements.length} document requirements for ${clientEmail}`);
 
-  // Second client user (round-11: MFA is no longer available for client
-  // accounts; this fixture is preserved for legacy Playwright tests but
-  // its name is misleading post-round-11. Password is null per the
-  // BRD §5.1.AUTH magic-link policy).
+  // Second client user — magic-link auth only (no MFA; see Epic 5.6 US-47).
   const clientMfaEmail = 'client-mfa@test.com';
   const clientMfaCt = userEmailCiphertext(clientMfaEmail);
   const client2User = await prisma.user.upsert({

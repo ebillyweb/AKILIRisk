@@ -60,6 +60,8 @@ export default async function SettingsPage({
     ? (user.mfaRecoveryCodes as string[]).length
     : 0;
 
+  const showMfaSettings = isAdvisorHubNavRole(role);
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">
       {advisorPortalDisabled ? (
@@ -86,17 +88,19 @@ export default async function SettingsPage({
       ) : null}
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
         <Card className="bg-background/60 max-w-xl">
-            <CardContent className="grid gap-3 pt-5 sm:grid-cols-2 sm:pt-6">
+            <CardContent className={`grid gap-3 pt-5 sm:pt-6 ${showMfaSettings ? "sm:grid-cols-2" : ""}`}>
               <div>
                 <p className="editorial-kicker">Email</p>
                 <p className="mt-2 text-lg font-semibold break-all">{user.email}</p>
               </div>
-              <div>
-                <p className="editorial-kicker">MFA Status</p>
-                <p className="mt-2 text-lg font-semibold">
-                  {user.mfaEnabled ? "Enabled" : "Not Enabled"}
-                </p>
-              </div>
+              {showMfaSettings ? (
+                <div>
+                  <p className="editorial-kicker">MFA Status</p>
+                  <p className="mt-2 text-lg font-semibold">
+                    {user.mfaEnabled ? "Enabled" : "Not Enabled"}
+                  </p>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
       </section>
@@ -138,6 +142,7 @@ export default async function SettingsPage({
           </Card>
         )}
 
+        {showMfaSettings ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl">Two-Factor Authentication</CardTitle>
@@ -215,6 +220,7 @@ export default async function SettingsPage({
             )}
           </CardContent>
         </Card>
+        ) : null}
       </div>
 
       <Card>

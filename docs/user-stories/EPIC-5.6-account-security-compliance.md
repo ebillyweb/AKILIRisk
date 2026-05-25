@@ -1,65 +1,120 @@
 # Epic 5.6 — Account Security, Consent & Compliance
 
-**Status:** **Code-only** → stories US-35–US-38 proposed  
-**Scope:** Authentication beyond magic-link invite, MFA, legal consent, encryption, audit (cross-cutting)
+**Status:** **Mostly implemented** (MFA, RBAC, PII policy/consent, encryption, audit, cron auth)  
+**Scope:** Authentication strength, access control, personal-data consent, encryption at rest, audit trail (cross-cutting; relates to BRD §3.5 / §5.1)
 
 ## Coverage summary
 
 | Story | Title | Status | Notes |
 |-------|--------|--------|--------|
-| US-35 | Enable MFA (client) | **Code-only** | TOTP enroll/verify/recovery |
-| US-36 | Accept platform consent | **Code-only** | `/consent/pending` gate |
-| US-37 | Encrypt sensitive responses | **Code-only** | Answers + transcriptions at rest |
-| US-38 | Audit sensitive actions | **Code-only** | Central audit log (see also US-34) |
+| US-47 | Enrol in MFA | **Done** | Advisor/admin only; not clients (magic-link auth) |
+| US-48 | Sign in with MFA & recovery codes | **Done** | Credentials sign-in + MFA gate in `proxy.ts` |
+| US-49 | Enforce RBAC | **Done** | Role helpers, soft-delete sign-out, super-admin gates |
+| US-50 | Configure PII disclosure policy (advisor) | **Done** | `/advisor/settings/pii-policy` |
+| US-51 | Capture client PII consent | **Done** | `/consent/pending`, `consent-decision-actions` |
+| US-52 | Protect sensitive data at rest | **Done** | App-layer encryption (MFA secrets, answers, PII, email) |
+| US-53 | Tamper-evident audit trail | **Done** | `writeAudit`, retention sweep cron |
+| US-54 | Secure scheduled jobs | **Done** | `CRON_SECRET` bearer on all `/api/cron/*` routes |
 
 ---
 
-## US-35 — Enable Two-Factor Authentication (Client)
+## US-47 — Enrol in Multi-Factor Authentication
+
+**Eligible roles:** `ADVISOR`, `ADMIN`, `SUPER_ADMIN` only.
+
+Clients (`role = USER`) authenticate via **magic link** ([Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md) US-6). They do not use passwords or MFA — email inbox possession is the sole sign-in factor. MFA APIs return **403** for client sessions; the Settings MFA card is hidden for clients.
 
 | Capability | Implementation |
 |------------|----------------|
-| MFA setup in settings | `/settings`, `/mfa/setup` |
-| Verify on sign-in | `/mfa/verify`, auth callbacks |
-| Recovery codes | `/api/auth/mfa/recovery` |
+| MFA setup (QR + manual secret; not active until verify) | `/settings` → `/mfa/setup`, `enrollMFA()` |
+| Activate with valid 6-digit TOTP | `/api/auth/mfa/verify` (`action: "enable"`) |
+| 10 single-use recovery codes, shown once | `enableMFA()` + setup UI |
+| Block re-enrollment when already enabled | Enroll API **409**; setup page redirect |
 
-**Code:** `src/lib/mfa.ts`, `src/app/api/auth/mfa/**`  
-**Test fixture:** `client-mfa@test.com` (see CLAUDE.md)
-
-**Reconciliation with Epic 5.1:** Clients primarily use magic-link (US-6); password + MFA is optional/hardening path.
+**Code:** `src/lib/mfa.ts`, `src/app/api/auth/mfa/**`, `src/app/(auth)/mfa/setup/**`  
+**Test credentials:** `advisor@test.com` / `testpassword123` (see CLAUDE.md)
 
 ---
 
-## US-36 — Accept Legal Consent Before Use (Client / Advisor)
+## US-48 — Sign In with MFA and Recovery Codes
+
+Applies to **advisor/admin** credential sign-in only.
 
 | Capability | Implementation |
 |------------|----------------|
-| Pending consent redirect | `/consent/pending`, `pending-consent.ts` |
-| Record consent decision | `consent-decision-actions.ts` |
-
-**Code:** `src/lib/advisor/pending-consent.ts`, `src/components/consent/ConsentDecisionForm.tsx`
+| Session not fully authorized until TOTP | JWT `mfaVerified`; `proxy.ts` → `/mfa/verify` |
+| ±1 TOTP period drift tolerance | `verifyMFAToken()` `epochTolerance: 60` |
+| Recovery code sign-in (single-use) | `/api/auth/mfa/recovery`, `verifyRecoveryCode()` |
 
 ---
 
-## US-37 — Protect Sensitive Data at Rest (System)
+## US-49 — Enforce Role-Based Access Control
 
 | Capability | Implementation |
 |------------|----------------|
-| Encrypted assessment answers | `src/lib/encryption.ts` |
-| Encrypted intake transcriptions | Field-level encryption on sensitive models |
-| Advisor PII policy settings | `/advisor/settings/pii-policy` |
-
-**Docs:** [operations/s3-sse-kms.md](../operations/s3-sse-kms.md) for document/audio storage
+| Protected pages/APIs deny wrong role | `requireAdminRole`, `requireAdvisorRole`, `requireSuperAdminRole` |
+| Unknown/missing role → `USER` | `normalizeUserRoleString()` |
+| Soft-deleted account → signed out | `proxy.ts` `accountDeactivated`; `auth.config.ts` |
+| Platform settings/thresholds → super-admin | `requireSuperAdminRole()` |
 
 ---
 
-## US-38 — Record Audit Trail (System)
+## US-50 — Configure the PII Disclosure Policy (Advisor)
 
 | Capability | Implementation |
 |------------|----------------|
-| Structured audit writes | `writeAudit`, `AUDIT_ACTIONS` |
-| Covers invites, intake, reports, documents, admin | Used across actions |
+| Default opt-out (all fields enabled) | `DEFAULT_PII_POLICY` |
+| Disabled field never visible to advisor | Policy + `fieldVisibility` enforcement |
+| Policy changes audit-logged | `updatePiiPolicy()` → `PII_POLICY_*` audit rows |
 
-**Reconciliation:** US-20 requires download audit; US-38 is the platform-wide pattern. Admin UI in [Epic 5.5](./EPIC-5.5-platform-administration.md) US-34.
+**Code:** `src/lib/advisor/pii-policy.ts`, `src/lib/actions/pii-policy-actions.ts`
+
+---
+
+## US-51 — Capture Client PII Consent
+
+| Capability | Implementation |
+|------------|----------------|
+| Omitted field defaults to No | `recordConsentDecision()` |
+| Yes/No both audit-logged | `CLIENT_PII_INTAKE_CONSENT` |
+| Advisor-disabled field stays hidden | Filtered from consent form + forced false |
+| Unchanged value → no duplicate audit | Idempotency on prior `fieldVisibility` |
+
+**Code:** `src/lib/actions/consent-decision-actions.ts`, `src/components/consent/ConsentDecisionForm.tsx`
+
+---
+
+## US-52 — Protect Sensitive Data at Rest
+
+| Capability | Implementation |
+|------------|----------------|
+| MFA secrets, answers, transcriptions, PII encrypted | `src/lib/encryption.ts`, `response-content.ts`, `client-pii.ts` |
+| Email: deterministic encryption for lookup | `encryptDeterministic`, `User.emailCiphertext` |
+| Plaintext + ciphertext coexist during migration | `isCiphertext()`, `safeDecrypt*` |
+
+**Docs:** [operations/s3-sse-kms.md](../operations/s3-sse-kms.md) for S3 blobs
+
+---
+
+## US-53 — Maintain a Tamper-Evident Audit Trail
+
+| Capability | Implementation |
+|------------|----------------|
+| Actor, role, action, entity, redacted before/after, email hash | `writeAudit()`, `redactForAudit()` |
+| Audit failure does not break action | `writeAudit` catch + log |
+| 365-day retention sweep + self-audit | `/api/cron/audit-log-retention`, `runAuditLogRetentionSweep()` |
+
+Admin audit UI: [Epic 5.5](./EPIC-5.5-platform-administration.md) US-34.
+
+---
+
+## US-54 — Secure Scheduled Jobs
+
+| Capability | Implementation |
+|------------|----------------|
+| Invalid/missing bearer → 401 | All four `/api/cron/*` routes |
+| No `CRON_SECRET` → 500 (fail closed) | Same pattern |
+| Valid secret → job runs | `timingSafeEqual` comparison |
 
 ---
 
@@ -67,10 +122,11 @@
 
 | Area | Status |
 |------|--------|
-| MFA flows | **Not implemented** (debug routes exist) |
+| MFA flows (advisor/admin) | **Not implemented** |
 | Consent gate | **Not implemented** |
+| Cron auth smoke | Partial (`epic-5.4-documents-cron-sse.spec.ts`) |
 
 ## Related
 
-- [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md) — US-6 magic-link auth
-- [Epic 5.5](./EPIC-5.5-platform-administration.md) — audit log UI
+- [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md) — client magic-link auth (no MFA)
+- [Epic 5.5](./EPIC-5.5-platform-administration.md) — audit log UI, admin RBAC

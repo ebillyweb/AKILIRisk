@@ -199,6 +199,40 @@ export async function enableMFA(userId: string, token: string) {
 }
 
 /**
+ * Mark the user's most recent active session as MFA-verified.
+ * Used after a successful TOTP challenge (login or enrollment) or
+ * recovery-code sign-in so the JWT callback reads mfaVerified=true.
+ */
+export async function markSessionMfaVerified(userId: string): Promise<void> {
+  const existingSessions = await prisma.session.findMany({
+    where: {
+      userId,
+      expires: { gt: new Date() },
+    },
+    orderBy: { expires: "desc" },
+    take: 1,
+  });
+
+  if (existingSessions.length > 0) {
+    await prisma.session.update({
+      where: { id: existingSessions[0].id },
+      data: { mfaVerified: true },
+    });
+    return;
+  }
+
+  const sessionToken = crypto.randomBytes(32).toString("hex");
+  await prisma.session.create({
+    data: {
+      sessionToken,
+      userId,
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      mfaVerified: true,
+    },
+  });
+}
+
+/**
  * Verify and consume a recovery code
  * Recovery codes are single-use
  */

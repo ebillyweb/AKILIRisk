@@ -104,10 +104,8 @@ export const USERS: Record<Role, TestUser> = {
     expectedLandingPath: "/dashboard",
   },
   /**
-   * Client account seeded for MFA enrollment / challenge tests. MFA is
-   * NOT enabled at seed time — tests that exercise the verify flow enable
-   * it via Settings before signing out and back in. Lands on /dashboard
-   * when MFA is off; lands on /mfa/verify when MFA is on and unverified.
+   * Client account for magic-link sign-in smokes. MFA is not available for
+   * clients — use advisor@test.com for MFA enrollment tests.
    */
   clientMfa: {
     role: "clientMfa",

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { verifyRecoveryCode } from "@/lib/mfa";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { verifyRecoveryCode, markSessionMfaVerified } from "@/lib/mfa";
 import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
-import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Round-11 commit 3 (BRD §5.1.AUTH): MFA is advisor/admin only.
-    if (session.user.role === "USER") {
+    // MFA is for credential-based advisor/admin accounts only.
+    if (!isAdvisorHubNavRole(session.user.role)) {
       return NextResponse.json(
         { error: "MFA is not available for client accounts" },
         { status: 403 }
@@ -93,34 +93,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Mark session as MFA verified (same as TOTP)
-    const existingSessions = await prisma.session.findMany({
-      where: {
-        userId: session.user.id,
-        expires: { gt: new Date() },
-      },
-      orderBy: { expires: "desc" },
-      take: 1,
-    });
-
-    if (existingSessions.length > 0) {
-      // Update existing session
-      await prisma.session.update({
-        where: { id: existingSessions[0].id },
-        data: { mfaVerified: true },
-      });
-    } else {
-      // Create new session for MFA tracking (expires in 30 days)
-      const sessionToken = crypto.randomBytes(32).toString("hex");
-      await prisma.session.create({
-        data: {
-          sessionToken,
-          userId: session.user.id,
-          expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          mfaVerified: true,
-        },
-      });
-    }
+    await markSessionMfaVerified(session.user.id);
 
     // Get remaining recovery code count
     const user = await prisma.user.findUnique({

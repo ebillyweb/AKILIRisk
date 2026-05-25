@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { prisma } from "@/lib/db";
 import { enrollMFA } from "@/lib/mfa";
 
 export async function POST(_req: NextRequest) {
@@ -14,13 +16,24 @@ export async function POST(_req: NextRequest) {
       );
     }
 
-    // Round-11 commit 3 (BRD §5.1.AUTH): MFA is for advisor + admin
-    // accounts only. Clients use magic link and have no password to
-    // protect with a second factor.
-    if (session.user.role === "USER") {
+    // MFA is for credential-based advisor/admin accounts only. Clients
+    // (role=USER) authenticate via magic link per BRD §5.1 / Epic 5.1.
+    if (!isAdvisorHubNavRole(session.user.role)) {
       return NextResponse.json(
         { error: "MFA is not available for client accounts" },
         { status: 403 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { mfaEnabled: true },
+    });
+
+    if (user?.mfaEnabled) {
+      return NextResponse.json(
+        { error: "MFA is already enabled on this account" },
+        { status: 409 }
       );
     }
 
