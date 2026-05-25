@@ -29,6 +29,7 @@ function advisorHubAccessFromRow(
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
     stripeSubscriptionId: string | null;
+    createdAt: Date;
   } | null
 ): boolean {
   if (!portalFlag) return false;

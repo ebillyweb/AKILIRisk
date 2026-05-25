@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { findUserSpy, updateSpy, enrollSpy, enableSpy } = vi.hoisted(() => ({
@@ -94,7 +95,7 @@ describe("POST /api/test/mfa/prepare", () => {
       data: {
         mfaEnabled: false,
         mfaSecret: null,
-        mfaRecoveryCodes: null,
+        mfaRecoveryCodes: Prisma.DbNull,
       },
     });
     expect(enrollSpy).toHaveBeenCalledWith("adv-1");

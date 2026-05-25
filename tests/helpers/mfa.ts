@@ -1,7 +1,7 @@
 import { TOTP } from "@otplib/totp";
 import { NobleCryptoPlugin } from "@otplib/plugin-crypto-noble";
 import { ScureBase32Plugin } from "@otplib/plugin-base32-scure";
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, APIResponse, Page } from "@playwright/test";
 
 import { USERS } from "../fixtures/users";
 import { TEST_AUTH_SKIP_REASON } from "./test-auth";
@@ -32,7 +32,7 @@ async function postMfaPrepare(
   request: APIRequestContext,
   email: string,
   resetOnly: boolean
-): Promise<Response> {
+): Promise<APIResponse> {
   return request.post("/api/test/mfa/prepare", {
     data: { email, resetOnly },
   });

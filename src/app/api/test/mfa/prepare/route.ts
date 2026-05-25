@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { TOTP } from "@otplib/totp";
@@ -33,7 +34,7 @@ async function resetMfaForUser(userId: string): Promise<void> {
     data: {
       mfaEnabled: false,
       mfaSecret: null,
-      mfaRecoveryCodes: null,
+      mfaRecoveryCodes: Prisma.DbNull,
     },
   });
 }

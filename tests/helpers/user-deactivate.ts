@@ -1,4 +1,4 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, APIResponse } from "@playwright/test";
 
 import { USERS } from "../fixtures/users";
 import { TEST_AUTH_SKIP_REASON } from "./test-auth";
@@ -10,7 +10,7 @@ async function postDeactivate(
   request: APIRequestContext,
   email: string,
   restoreOnly: boolean
-): Promise<Response> {
+): Promise<APIResponse> {
   return request.post("/api/test/user/deactivate", {
     data: { email, restoreOnly },
   });
