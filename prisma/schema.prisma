@@ -63,6 +63,10 @@ model User {
   /// delete (deleted advisor preserves report attribution-as-null rather
   /// than orphaning published rows).
   publishedReports        Report[] @relation("ReportPublisher")
+  intakeResponseAdminNotesCreated     IntakeResponseAdminNote[]     @relation("IntakeResponseAdminNoteCreatedBy")
+  intakeResponseAdminNotesUpdated     IntakeResponseAdminNote[]     @relation("IntakeResponseAdminNoteUpdatedBy")
+  assessmentResponseAdminNotesCreated AssessmentResponseAdminNote[] @relation("AssessmentResponseAdminNoteCreatedBy")
+  assessmentResponseAdminNotesUpdated AssessmentResponseAdminNote[] @relation("AssessmentResponseAdminNoteUpdatedBy")
 
   /// Round-11 commit 2.4a: @@index([email]) + the phase-A
   /// User_emailCiphertext_idx are dropped at the SQL level by
@@ -315,9 +319,28 @@ model AssessmentResponse {
   updatedAt    DateTime @updatedAt
 
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  adminNote    AssessmentResponseAdminNote?
 
   @@unique([assessmentId, questionId])
   @@index([assessmentId])
+}
+
+/// US-46b: platform-admin advisory note on a single assessment answer.
+/// Does not modify the encrypted answer or scoring inputs.
+model AssessmentResponseAdminNote {
+  id                   String   @id @default(cuid())
+  assessmentResponseId String   @unique
+  body                 String   @db.Text
+  createdByUserId      String
+  updatedByUserId      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  assessmentResponse AssessmentResponse @relation(fields: [assessmentResponseId], references: [id], onDelete: Cascade)
+  createdBy          User               @relation("AssessmentResponseAdminNoteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy          User?              @relation("AssessmentResponseAdminNoteUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdByUserId])
 }
 
 model PillarScore {
@@ -575,9 +598,28 @@ model IntakeResponse {
   updatedAt           DateTime            @updatedAt
 
   interview           IntakeInterview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  adminNote           IntakeResponseAdminNote?
 
   @@unique([interviewId, questionId])
   @@index([interviewId])
+}
+
+/// US-46b: platform-admin advisory note on a single intake answer.
+/// Does not modify transcription/audio or pipeline scoring.
+model IntakeResponseAdminNote {
+  id               String   @id @default(cuid())
+  intakeResponseId String   @unique
+  body             String   @db.Text
+  createdByUserId  String
+  updatedByUserId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  intakeResponse IntakeResponse @relation(fields: [intakeResponseId], references: [id], onDelete: Cascade)
+  createdBy      User           @relation("IntakeResponseAdminNoteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy      User?          @relation("IntakeResponseAdminNoteUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdByUserId])
 }
 
 enum AssignmentStatus {

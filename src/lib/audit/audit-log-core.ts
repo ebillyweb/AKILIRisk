@@ -120,6 +120,14 @@ export const AUDIT_ACTIONS = {
    *  free-form `reason` string the admin entered in the UI. */
   ASSESSMENT_RESCORE: "assessment.rescore",
 
+  // ── US-46b: per-answer platform-admin advisory notes ─────────────────────
+  INTAKE_RESPONSE_NOTE_CREATE: "intake_response_note.create",
+  INTAKE_RESPONSE_NOTE_UPDATE: "intake_response_note.update",
+  INTAKE_RESPONSE_NOTE_DELETE: "intake_response_note.delete",
+  ASSESSMENT_RESPONSE_NOTE_CREATE: "assessment_response_note.create",
+  ASSESSMENT_RESPONSE_NOTE_UPDATE: "assessment_response_note.update",
+  ASSESSMENT_RESPONSE_NOTE_DELETE: "assessment_response_note.delete",
+
   // ── Auth events (P3) ──────────────────────────────────────────────────────
   AUTH_SIGNIN_SUCCESS: "auth.signin_success",
   AUTH_SIGNIN_FAILURE: "auth.signin_failure",
@@ -176,6 +184,10 @@ export const AUDIT_ACTIONS = {
   DATA_ACCESS_ADMIN_CLIENTS_LIST: "data_access.admin_clients_list",
   DATA_ACCESS_ADMIN_INTAKE_LIST: "data_access.admin_intake_list",
   DATA_ACCESS_ADMIN_ASSESSMENTS_LIST: "data_access.admin_assessments_list",
+  /** US-46b: admin opens a single intake interview for answer-level review. */
+  DATA_ACCESS_ADMIN_INTAKE_REVIEW: "data_access.admin_intake_review",
+  /** US-46b: admin opens a single assessment for answer-level review. */
+  DATA_ACCESS_ADMIN_ASSESSMENT_REVIEW: "data_access.admin_assessment_review",
   DATA_ACCESS_AUDIO_STREAM: "data_access.audio_stream",
   DATA_ACCESS_AUDIT_LOG_VIEW: "data_access.audit_log_view",
   DATA_ACCESS_EXPORT: "data_access.export",

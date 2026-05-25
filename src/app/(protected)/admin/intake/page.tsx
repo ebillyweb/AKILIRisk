@@ -54,7 +54,12 @@ export default async function AdminIntakePage() {
                       {i.approval && ` · Approval: ${i.approval.status}`}
                     </p>
                   </div>
-                  <Badge variant={STATUS_COLORS[i.status] ?? "outline"}>{i.status}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/admin/intake/${i.id}`}>Review answers</Link>
+                    </Button>
+                    <Badge variant={STATUS_COLORS[i.status] ?? "outline"}>{i.status}</Badge>
+                  </div>
                 </li>
               ))}
             </ul>

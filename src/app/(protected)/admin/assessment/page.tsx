@@ -58,7 +58,10 @@ export default async function AdminAssessmentPage() {
                       v{a.version} · {a._count.responses} responses · {a._count.scores} scores
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/admin/assessment/${a.id}`}>Review answers</Link>
+                    </Button>
                     <Badge variant={STATUS_COLORS[a.status] ?? "outline"}>{a.status}</Badge>
                     {a.status === "COMPLETED" && a._count.scores > 0 ? (
                       <AssessmentRescoreButton assessmentId={a.id} />
