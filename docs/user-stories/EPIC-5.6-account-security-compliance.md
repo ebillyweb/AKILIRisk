@@ -10,8 +10,8 @@
 | US-47 | Enrol in MFA | **Done** | Advisor/admin only; not clients (magic-link auth) |
 | US-48 | Sign in with MFA & recovery codes | **Done** | Workspace pages, APIs, role gates until `mfaVerified` |
 | US-49 | Enforce RBAC | **Done** | Role helpers, soft-delete sign-out, super-admin gates |
-| US-50 | Configure PII disclosure policy (advisor) | **Done** | `/advisor/settings/pii-policy` |
-| US-51 | Capture client PII consent | **Done** | `/consent/pending`, `consent-decision-actions` |
+| US-50 | Configure PII disclosure policy (advisor) | **Done** | Policy UI + read-side enforcement |
+| US-51 | Capture client PII consent | **Done** | `/consent/pending`, settings revisit, audit |
 | US-52 | Protect sensitive data at rest | **Done** | App-layer encryption (MFA secrets, answers, PII, email) |
 | US-53 | Tamper-evident audit trail | **Done** | `writeAudit`, retention sweep cron |
 | US-54 | Secure scheduled jobs | **Done** | `CRON_SECRET` bearer on all `/api/cron/*` routes |
@@ -76,10 +76,10 @@ Applies to **advisor/admin** credential sign-in only (clients use magic link; no
 | Capability | Implementation |
 |------------|----------------|
 | Default opt-out (all fields enabled) | `DEFAULT_PII_POLICY` |
-| Disabled field never visible to advisor | Policy + `fieldVisibility` enforcement |
+| Disabled field never visible to advisor | `resolveEffectiveFieldVisibility()` on pipeline, dashboard, intake review, exports, notifications |
 | Policy changes audit-logged | `updatePiiPolicy()` → `PII_POLICY_*` audit rows |
 
-**Code:** `src/lib/advisor/pii-policy.ts`, `src/lib/actions/pii-policy-actions.ts`
+**Code:** `src/lib/advisor/pii-policy.ts`, `src/lib/advisor/field-visibility.ts`, `src/lib/actions/pii-policy-actions.ts`
 
 ---
 
@@ -89,10 +89,12 @@ Applies to **advisor/admin** credential sign-in only (clients use magic link; no
 |------------|----------------|
 | Omitted field defaults to No | `recordConsentDecision()` |
 | Yes/No both audit-logged | `CLIENT_PII_INTAKE_CONSENT` |
-| Advisor-disabled field stays hidden | Filtered from consent form + forced false |
+| Advisor-disabled field stays hidden | Consent form filter + `resolveEffectiveFieldVisibility` |
 | Unchanged value → no duplicate audit | Idempotency on prior `fieldVisibility` |
+| Settings revisit | `ClientPiiConsentForm` on `/settings` |
+| Incremental opt-in when filling a field | `recordPiiFieldConsent()` → `CLIENT_PII_FIELD_CONSENT` |
 
-**Code:** `src/lib/actions/consent-decision-actions.ts`, `src/components/consent/ConsentDecisionForm.tsx`
+**Code:** `src/lib/actions/consent-decision-actions.ts`, `src/lib/actions/pii-field-consent-actions.ts`, `src/components/consent/ConsentDecisionForm.tsx`, `src/components/settings/ClientPiiConsentForm.tsx`, `src/lib/advisor/require-consent-resolved.ts`
 
 ---
 
@@ -138,7 +140,7 @@ Admin audit UI: [Epic 5.5](./EPIC-5.5-platform-administration.md) US-34.
 | MFA sign-in (E2E) | **Implemented** — `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` (TOTP gate, API 403, recovery reuse) |
 | RBAC / soft-delete (unit) | **Implemented** — `src/lib/auth-roles.test.ts`, `mfa-session-status.test.ts` |
 | RBAC / soft-delete (E2E) | **Implemented** — `tests/smoke/auth-edge-cases.spec.ts`, `epic-5.5-platform-admin.spec.ts`, `epic-5.6-rbac.spec.ts` |
-| Consent gate | **Not implemented** |
+| Consent gate + read-side redaction | **Implemented** — `epic-5.6-pii-consent.spec.ts` (gate, dashboard redirect, settings revisit, pipeline redaction, advisor-disabled prompt) |
 | Cron auth smoke | Partial (`epic-5.4-documents-cron-sse.spec.ts`) |
 
 ## Related

@@ -9,7 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
 import { ClientPersonalDetailsForm } from "@/components/settings/ClientPersonalDetailsForm";
+import { ClientPiiConsentForm } from "@/components/settings/ClientPiiConsentForm";
+import { ClientOptionalPiiForm } from "@/components/settings/ClientOptionalPiiForm";
 import { getAdvisorPersonalDetails, getClientPersonalDetails } from "@/lib/actions/personal-profile";
+import { listClientConsentPreferences } from "@/lib/advisor/client-consent-settings";
+import {
+  getClientOptionalPiiSettings,
+  settingsOffersOptionalPii,
+} from "@/lib/advisor/client-optional-pii-settings";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 
@@ -47,13 +54,25 @@ export default async function SettingsPage({
   // Fetch personal details for profile section (advisor or client by role)
   let advisorDetails: Awaited<ReturnType<typeof getAdvisorPersonalDetails>>["data"] = null;
   let clientDetails: Awaited<ReturnType<typeof getClientPersonalDetails>>["data"] = null;
+  let clientConsentAssignments: Awaited<
+    ReturnType<typeof listClientConsentPreferences>
+  > = [];
+  let clientOptionalPii: Awaited<
+    ReturnType<typeof getClientOptionalPiiSettings>
+  > = null;
   if (isAdvisorHubNavRole(role)) {
     const res = await getAdvisorPersonalDetails();
     if (res.success && res.data) advisorDetails = res.data;
   }
   if (role === "USER") {
-    const res = await getClientPersonalDetails();
+    const [res, consent, optionalPii] = await Promise.all([
+      getClientPersonalDetails(),
+      listClientConsentPreferences(session.user.id),
+      getClientOptionalPiiSettings(session.user.id),
+    ]);
     if (res.success && res.data) clientDetails = res.data;
+    clientConsentAssignments = consent;
+    clientOptionalPii = optionalPii;
   }
 
   const recoveryCodesRemaining = user.mfaRecoveryCodes
@@ -141,6 +160,14 @@ export default async function SettingsPage({
             </CardContent>
           </Card>
         )}
+
+        {settingsOffersOptionalPii(clientOptionalPii) ? (
+          <ClientOptionalPiiForm initialData={clientOptionalPii} />
+        ) : null}
+
+        {clientConsentAssignments.length > 0 ? (
+          <ClientPiiConsentForm assignments={clientConsentAssignments} />
+        ) : null}
 
         {showMfaSettings ? (
         <Card>

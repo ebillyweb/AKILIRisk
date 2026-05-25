@@ -81,3 +81,10 @@ export const clientPersonalDetailsSchema = z.object({
   lastName: z.string().max(80, 'Last name must be 80 characters or less').optional().or(z.literal('')),
 });
 export type ClientPersonalDetailsFormData = z.infer<typeof clientPersonalDetailsSchema>;
+
+/** Optional PII the client may provide on /settings (Option D session 2.1). */
+export const clientOptionalPiiSchema = z.object({
+  legalName: z.string().max(120, 'Legal name must be 120 characters or less').optional().or(z.literal('')),
+  phone: z.string().max(30, 'Phone must be 30 characters or less').optional().or(z.literal('')),
+});
+export type ClientOptionalPiiFormData = z.infer<typeof clientOptionalPiiSchema>;

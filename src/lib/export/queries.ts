@@ -18,6 +18,18 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { userEmailForDisplay } from "@/lib/auth/user-email";
 import { safeDecryptAnswer, safeDecryptTranscription } from "@/lib/data/response-content";
+import {
+  buildEffectiveVisibilityByClientId,
+  isPiiFieldVisibleToAdvisor,
+} from "@/lib/advisor/field-visibility";
+import { parsePiiPolicy } from "@/lib/advisor/pii-policy";
+import {
+  safeDecryptClientPhone,
+  safeDecryptHouseholdFullName,
+  safeDecryptHouseholdNotes,
+  safeDecryptHouseholdPhone,
+  safeDecryptUserName,
+} from "@/lib/data/client-pii";
 import type { TenantBundle } from "./types";
 import {
   fetchTenantAuditLog,
@@ -177,13 +189,73 @@ export async function fetchTenantBundle(
   // was dropped — we always decrypt at this layer and write `email`
   // back onto each row so the downstream CSV serializer's column list
   // (which keeps `email` as the header) sees plaintext.
+  const advisorPolicy = parsePiiPolicy(advisorProfile?.piiPolicy);
+  const visibilityByClientId = buildEffectiveVisibilityByClientId(
+    advisorPolicy,
+    assignments.map((a) => ({
+      clientId: a.clientId,
+      fieldVisibility: a.fieldVisibility,
+    }))
+  );
+
   const clients = clientUsers
     .filter((u) => clientUserIdSet.has(u.id))
     .map((u) => {
-      const cu = u as unknown as { emailCiphertext: string };
+      const cu = u as unknown as { emailCiphertext: string; name: string | null };
+      const email = userEmailForDisplay({ emailCiphertext: cu.emailCiphertext });
+      const effective = visibilityByClientId.get(u.id);
+      const name =
+        effective && isPiiFieldVisibleToAdvisor("User.name", effective)
+          ? safeDecryptUserName(cu.name, { rowId: u.id })
+          : null;
       return {
         ...u,
-        email: userEmailForDisplay({ emailCiphertext: cu.emailCiphertext }),
+        email,
+        name,
+      };
+    });
+
+  const redactedClientProfiles = clientProfiles.map((profile) => {
+    const row = profile as { userId: string; phone: string | null; id: string };
+    const effective = visibilityByClientId.get(row.userId);
+    const phone =
+      effective && isPiiFieldVisibleToAdvisor("ClientProfile.phone", effective)
+        ? safeDecryptClientPhone(row.phone, { rowId: row.id })
+        : null;
+    return { ...profile, phone };
+  });
+
+  const redactedHouseholdMembers = householdMembers
+    .filter((member) => {
+      const row = member as { shareWithAdvisor?: boolean };
+      return row.shareWithAdvisor !== false;
+    })
+    .map((member) => {
+      const row = member as {
+        userId: string;
+        id: string;
+        fullName: string | null;
+        phone: string | null;
+        notes: string | null;
+      };
+      const effective = visibilityByClientId.get(row.userId);
+      return {
+        ...member,
+        fullName:
+          effective &&
+          isPiiFieldVisibleToAdvisor("HouseholdMember.fullName", effective)
+            ? safeDecryptHouseholdFullName(row.fullName, { rowId: row.id })
+            : null,
+        phone:
+          effective &&
+          isPiiFieldVisibleToAdvisor("HouseholdMember.phone", effective)
+            ? safeDecryptHouseholdPhone(row.phone, { rowId: row.id })
+            : null,
+        notes:
+          effective &&
+          isPiiFieldVisibleToAdvisor("HouseholdMember.notes", effective)
+            ? safeDecryptHouseholdNotes(row.notes, { rowId: row.id })
+            : null,
       };
     });
 
@@ -191,11 +263,11 @@ export async function fetchTenantBundle(
     advisor: advisorProfile as Record<string, unknown> | null,
     advisorSubdomain: advisorSubdomain as Record<string, unknown> | null,
     clients: clients as Record<string, unknown>[],
-    clientProfiles: clientProfiles as Record<string, unknown>[],
+    clientProfiles: redactedClientProfiles as Record<string, unknown>[],
     subscriptions: subscriptions as Record<string, unknown>[],
     clientAdvisorAssignments: assignments as Record<string, unknown>[],
     inviteCodes: inviteCodes as Record<string, unknown>[],
-    householdMembers: householdMembers as Record<string, unknown>[],
+    householdMembers: redactedHouseholdMembers as Record<string, unknown>[],
     intakeInterviews: intakeInterviews as Record<string, unknown>[],
     intakeResponses: intakeResponses as Record<string, unknown>[],
     intakeApprovals: intakeApprovals as Record<string, unknown>[],

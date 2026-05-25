@@ -250,6 +250,11 @@ export const AUDIT_ACTIONS = {
    *  metadata.surface is "consent_modal". Distinct from session 2.1
    *  settings/profile fill side-effects. */
   CLIENT_PII_INTAKE_CONSENT: "client_pii.intake_consent",
+  /** One row when the client grants visibility by filling an optional
+   *  PII field on /settings or /profiles (session 2.1). Never emitted
+   *  for No — only incremental Yes opt-ins. metadata.surface is
+   *  "field_fill". */
+  CLIENT_PII_FIELD_CONSENT: "client_pii.field_consent",
 
   // ── System actions (P1) ───────────────────────────────────────────────────
   /** Written by /api/cron/audit-log-retention each successful sweep. */

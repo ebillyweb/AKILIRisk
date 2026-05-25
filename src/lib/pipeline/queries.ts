@@ -7,6 +7,10 @@ import { aggregateMandatoryDocumentCounts, hasUnfulfilledMandatoryDocuments } fr
 import { indexAwaitingIntakeReviewByClient, isIntakeAwaitingAdvisorReview } from "./intake-review";
 import { computeClientStage, computeProgress, isStalled } from "./status";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import {
+  loadAdvisorPiiPolicy,
+  resolveAdvisorClientIdentity,
+} from "@/lib/advisor/field-visibility";
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -46,7 +50,8 @@ function whereIntakeResponsesForInterviewsHaveAnswer(
  * Fetches complete pipeline data for an advisor's clients
  */
 export async function getClientPipeline(advisorProfileId: string): Promise<PipelineClient[]> {
-  const assignments = await prisma.clientAdvisorAssignment.findMany({
+  const [assignments, advisorPolicy] = await Promise.all([
+    prisma.clientAdvisorAssignment.findMany({
     where: {
       advisorId: advisorProfileId,
       status: 'ACTIVE',
@@ -82,7 +87,9 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
         }
       }
     }
-  });
+  }),
+    loadAdvisorPiiPolicy(advisorProfileId),
+  ]);
 
   // ── Batched lookups ──────────────────────────────────────────────────────
   // The previous shape ran 3 sequential queries per client inside the
@@ -202,7 +209,13 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
   const clients: PipelineClient[] = assignments.map((assignment) => {
     const client = assignment.client;
     // Round-11 commit 2.4b: decrypt once per row.
-    const clientEmail = decryptUserEmail(client.emailCiphertext);
+    const clientIdentity = resolveAdvisorClientIdentity(
+      client,
+      assignment.fieldVisibility,
+      advisorPolicy
+    );
+    const clientEmail = clientIdentity.email;
+    const clientDisplayName = clientIdentity.name;
 
     const invitation = invitationByEmail.get(clientEmail) ?? null;
     const docCounts = documentCountsByClient.get(client.id) ?? {
@@ -270,7 +283,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
 
     const pipelineClient: PipelineClient = {
       id: client.id,
-      name: client.name,
+      name: clientDisplayName,
       email: clientEmail,
       assignedAt: assignment.assignedAt,
       stage,
@@ -396,9 +409,15 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     throw new Error('Client not found or not assigned to you');
   }
 
+  const advisorPolicy = await loadAdvisorPiiPolicy(advisorProfileId);
   const client = assignment.client;
-  // Round-11 commit 2.4b: client.email is gone; decrypt once.
-  const clientEmail = decryptUserEmail(client.emailCiphertext);
+  const clientIdentity = resolveAdvisorClientIdentity(
+    client,
+    assignment.fieldVisibility,
+    advisorPolicy
+  );
+  const clientEmail = clientIdentity.email;
+  const clientDisplayName = clientIdentity.name;
 
   // Fetch invitation data
   const invitation = await prisma.inviteCode.findFirst({
@@ -565,7 +584,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
 
   const pipelineClient: PipelineClient = {
     id: client.id,
-    name: client.name,
+    name: clientDisplayName,
     email: clientEmail,
     assignedAt: assignment.assignedAt,
     stage,

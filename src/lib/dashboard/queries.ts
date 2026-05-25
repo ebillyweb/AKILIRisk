@@ -3,13 +3,14 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { DashboardClient, DashboardMetrics, RiskDistribution } from "./types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import {
+  loadAdvisorPiiPolicy,
+  resolveAdvisorClientIdentity,
+} from "@/lib/advisor/field-visibility";
 
 export async function getAdvisorDashboardClients(advisorProfileId: string): Promise<DashboardClient[]> {
-  // Round-11 commit 2.4b: include `client` (full row) so we read
-  // emailCiphertext alongside id/name; decrypt at exit. Prisma's
-  // generated type for `include: { client: true }` carries
-  // emailCiphertext automatically.
-  const assignments = await prisma.clientAdvisorAssignment.findMany({
+  const [assignments, advisorPolicy] = await Promise.all([
+    prisma.clientAdvisorAssignment.findMany({
     where: {
       advisorId: advisorProfileId,
       status: 'ACTIVE',
@@ -36,17 +37,24 @@ export async function getAdvisorDashboardClients(advisorProfileId: string): Prom
         },
       },
     },
-  });
+  }),
+    loadAdvisorPiiPolicy(advisorProfileId),
+  ]);
 
   return assignments.map(assignment => {
     const completedAssessments = assignment.client.assessments;
     const latestAssessment = completedAssessments[0] || null;
     const latestScore = latestAssessment?.scores[0] || null;
+    const identity = resolveAdvisorClientIdentity(
+      assignment.client,
+      assignment.fieldVisibility,
+      advisorPolicy
+    );
 
     return {
       id: assignment.client.id,
-      name: assignment.client.name,
-      email: decryptUserEmail(assignment.client.emailCiphertext),
+      name: identity.name,
+      email: identity.email,
       assignedAt: assignment.assignedAt,
       latestScore: latestScore ? {
         score: latestScore.score,

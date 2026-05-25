@@ -5,6 +5,10 @@ import { PILLAR_WEIGHTS } from "@/lib/analytics/queries";
 import { CATEGORY_LABELS } from "@/lib/analytics/formatters";
 import type { RiskSeverity, RiskIndicator, FamilyRiskSummary, PortfolioIntelligence, RiskDetail, RiskRecommendation, AssessmentResponseDetail, PortfolioPillarRow } from "./types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import {
+  loadAdvisorPiiPolicy,
+  resolveAdvisorClientIdentity,
+} from "@/lib/advisor/field-visibility";
 import { safeDecryptAnswer } from "@/lib/data/response-content";
 
 /**
@@ -481,13 +485,15 @@ export async function getPortfolioPillarScores(
   advisorProfileId: string
 ): Promise<PortfolioPillarRow[]> {
   // 1. Active assignments with client display info.
-  const assignments = await prisma.clientAdvisorAssignment.findMany({
+  const [assignments, advisorPolicy] = await Promise.all([
+    prisma.clientAdvisorAssignment.findMany({
     where: { advisorId: advisorProfileId, status: "ACTIVE" },
     include: {
-      // Round-11 commit 2.4b: ciphertext, decrypt at usage.
       client: { select: { id: true, name: true, emailCiphertext: true } },
     },
-  });
+  }),
+    loadAdvisorPiiPolicy(advisorProfileId),
+  ]);
   if (assignments.length === 0) return [];
 
   const clientIds = assignments.map((a) => a.clientId);
@@ -510,7 +516,11 @@ export async function getPortfolioPillarScores(
     // pillarScores so the heat map shows them all unassessed.
     return assignments.map((a) => ({
       clientId: a.clientId,
-      clientName: a.client.name ?? decryptUserEmail(a.client.emailCiphertext),
+      clientName: resolveAdvisorClientIdentity(
+        a.client,
+        a.fieldVisibility,
+        advisorPolicy
+      ).name,
       pillarScores: [],
     }));
   }
@@ -554,7 +564,11 @@ export async function getPortfolioPillarScores(
 
   return assignments.map((a) => ({
     clientId: a.clientId,
-    clientName: a.client.name ?? decryptUserEmail(a.client.emailCiphertext),
+    clientName: resolveAdvisorClientIdentity(
+      a.client,
+      a.fieldVisibility,
+      advisorPolicy
+    ).name,
     pillarScores: scoresByUserId.get(a.clientId) ?? [],
   }));
 }

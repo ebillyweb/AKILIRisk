@@ -115,7 +115,7 @@
 
 **As a** client, **I want** to choose which aspects of my household information my advisor can see, **so that** I can participate in the assessment while protecting sensitive details.
 
-**Status: Gap** (partial foundation in Epic 5.6 / Option D PII policy)
+**Status:** **Partial** — consent surfaces and read-side enforcement implemented; `shareWithAdvisor` member-level sharing still tracked separately
 
 ### Background — what already exists
 
@@ -125,7 +125,9 @@
 | Advisor PII policy | Advisor toggles which **optional** fields future clients may be offered | `AdvisorProfile.piiPolicy`, `/advisor/settings/pii-policy` |
 | Per-assignment consent | Client Yes/No on intake consent modal; snapshotted to `ClientAdvisorAssignment.fieldVisibility` | `/consent/pending`, `consent-decision-actions.ts` |
 | Eligible optional fields | `User.name`, `ClientProfile.phone`, `HouseholdMember.fullName`, `HouseholdMember.phone`, `HouseholdMember.notes` | `src/lib/advisor/pii-policy.ts` |
-| Settings-side opt-in | Client can grant visibility when filling a gated field | `recordPiiFieldConsent` (Epic 5.6) |
+| Settings-side opt-in | Client can grant visibility when filling a gated field | `recordPiiFieldConsent` in `pii-field-consent-actions.ts` |
+| Settings revisit Yes/No | Client changes prior decisions from `/settings` | `ClientPiiConsentForm` + `recordConsentDecision` |
+| Advisor read enforcement | Pipeline, dashboard, review, exports respect consent | `field-visibility.ts` |
 
 ### Acceptance criteria
 

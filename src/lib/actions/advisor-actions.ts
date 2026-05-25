@@ -20,6 +20,11 @@ import { getFamilyGovernanceTrends } from '@/lib/analytics/queries';
 import { getPortfolioIntelligence, getTopRisksForFamily, getRiskDetailForFamily, getPortfolioPillarScores } from '@/lib/intelligence/queries';
 import { approveClientSchema } from '@/lib/schemas/advisor';
 import { decryptUserEmail } from '@/lib/auth/user-email';
+import {
+  loadAdvisorPiiPolicy,
+  resolveAdvisorClientIdentity,
+  resolveEffectiveFieldVisibility,
+} from '@/lib/advisor/field-visibility';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
 import { toAdvisorHouseholdMemberViews } from '@/lib/profiles/advisor-household-view';
 import type { IntakeReviewData } from '@/lib/advisor/types';
@@ -126,7 +131,24 @@ export async function getIntakeReviewData(interviewId: string) {
           orderBy: { createdAt: 'asc' },
         })
       : [];
-    const householdMembers = toAdvisorHouseholdMemberViews(rawHouseholdMembers);
+
+    const assignment = await prisma.clientAdvisorAssignment.findFirst({
+      where: {
+        advisorId: profile.id,
+        clientId: reviewData.interview.userId,
+        status: 'ACTIVE',
+      },
+      select: { fieldVisibility: true },
+    });
+    const advisorPolicy = await loadAdvisorPiiPolicy(profile.id);
+    const effective = resolveEffectiveFieldVisibility(
+      advisorPolicy,
+      assignment?.fieldVisibility ?? null
+    );
+    const householdMembers = toAdvisorHouseholdMemberViews(
+      rawHouseholdMembers,
+      effective
+    );
 
     const intakeReviewData: IntakeReviewData = {
       interview: reviewData.interview,
@@ -577,7 +599,8 @@ export async function getCyberRiskDashboardData() {
     const profile = await getAdvisorProfileOrThrow(userId);
 
     // Get advisor's assigned clients
-    const assignments = await prisma.clientAdvisorAssignment.findMany({
+    const [assignments, advisorPolicy] = await Promise.all([
+      prisma.clientAdvisorAssignment.findMany({
       where: {
         advisorId: profile.id,
         status: 'ACTIVE',
@@ -599,7 +622,9 @@ export async function getCyberRiskDashboardData() {
           },
         },
       },
-    });
+    }),
+      loadAdvisorPiiPolicy(profile.id),
+    ]);
 
     // Build cyber risk client data (cybersecurity slice of comprehensive assessment, or legacy cyber-risk pillar)
     type CyberRiskClient = {
@@ -642,11 +667,16 @@ export async function getCyberRiskDashboardData() {
         }
       }
 
+      const identity = resolveAdvisorClientIdentity(
+        assignment.client,
+        assignment.fieldVisibility,
+        advisorPolicy
+      );
+
       return {
         id: assignment.client.id,
-        name: assignment.client.name,
-        // Round-11 commit 2.4b: decrypt at exit.
-        email: decryptUserEmail(assignment.client.emailCiphertext),
+        name: identity.name,
+        email: identity.email,
         cyberScore,
         riskLevel,
         assessedAt,
@@ -695,7 +725,8 @@ export async function getIdentityRiskDashboardData() {
     const profile = await getAdvisorProfileOrThrow(userId);
 
     // Get advisor's assigned clients
-    const assignments = await prisma.clientAdvisorAssignment.findMany({
+    const [assignments, advisorPolicy] = await Promise.all([
+      prisma.clientAdvisorAssignment.findMany({
       where: {
         advisorId: profile.id,
         status: 'ACTIVE',
@@ -722,7 +753,9 @@ export async function getIdentityRiskDashboardData() {
           },
         },
       },
-    });
+    }),
+      loadAdvisorPiiPolicy(profile.id),
+    ]);
 
     // Build identity risk client data
     type IdentityRiskClient = {
@@ -741,11 +774,16 @@ export async function getIdentityRiskDashboardData() {
       const latestIdentityAssessment = identityAssessments[0] || null;
       const latestIdentityScore = latestIdentityAssessment?.scores[0] || null;
 
+      const identity = resolveAdvisorClientIdentity(
+        assignment.client,
+        assignment.fieldVisibility,
+        advisorPolicy
+      );
+
       return {
         id: assignment.client.id,
-        name: assignment.client.name,
-        // Round-11 commit 2.4b: decrypt at exit.
-        email: decryptUserEmail(assignment.client.emailCiphertext),
+        name: identity.name,
+        email: identity.email,
         identityScore: latestIdentityScore?.score || null,
         riskLevel: latestIdentityScore?.riskLevel || null,
         assessedAt: latestIdentityScore?.calculatedAt || null,

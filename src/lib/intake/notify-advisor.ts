@@ -6,6 +6,12 @@ import { createNotification } from "@/lib/data/advisor";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import {
+  advisorClientDisplayName,
+  resolveEffectiveFieldVisibility,
+} from "@/lib/advisor/field-visibility";
+import { parsePiiPolicy } from "@/lib/advisor/pii-policy";
+import { safeDecryptUserName } from "@/lib/data/client-pii";
 
 /**
  * Notify every advisor with an ACTIVE assignment to the intake's owning
@@ -36,16 +42,23 @@ export async function notifyAdvisorsOfIntake(
 
   const assignments = await prisma.clientAdvisorAssignment.findMany({
     where: { clientId: interview.userId, status: "ACTIVE" },
-    include: {
+    select: {
+      id: true,
+      advisorId: true,
+      fieldVisibility: true,
       advisor: {
-        include: {
+        select: {
+          id: true,
+          piiPolicy: true,
           user: { select: { id: true, name: true, emailCiphertext: true } },
         },
       },
     },
   });
-  // Round-11 commit 2.4b: client email used in the outbound email body.
   const clientEmail = decryptUserEmail(interview.user.emailCiphertext);
+  const decryptedClientName = safeDecryptUserName(interview.user.name, {
+    rowId: interview.user.id,
+  });
 
   // Strict env-only resolver — see comment in getPublicAppUrlStrict. Null
   // here means "we don't have a usable public origin in prod"; we still
@@ -62,12 +75,20 @@ export async function notifyAdvisorsOfIntake(
   for (const assignment of assignments) {
     const advisor = assignment.advisor;
     const advisorUser = advisor.user;
+    const clientDisplayName = advisorClientDisplayName(
+      decryptedClientName,
+      clientEmail,
+      resolveEffectiveFieldVisibility(
+        parsePiiPolicy(advisor.piiPolicy),
+        assignment.fieldVisibility
+      )
+    );
     try {
       await createNotification(
         advisor.id,
         "NEW_INTAKE",
-        `New Intake: ${interview.user.name}`,
-        `${interview.user.name} has completed their intake interview and is ready for review.`,
+        `New Intake: ${clientDisplayName}`,
+        `${clientDisplayName} has completed their intake interview and is ready for review.`,
         interviewId
       );
 
@@ -76,7 +97,7 @@ export async function notifyAdvisorsOfIntake(
         await sendAdvisorIntakeNotification(
           decryptUserEmail(advisorUser.emailCiphertext),
           advisorUser.name || "Advisor",
-          interview.user.name || "Client",
+          clientDisplayName,
           clientEmail,
           reviewUrl
         );

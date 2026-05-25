@@ -3,6 +3,10 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { AdvisorDashboardClient } from "@/lib/advisor/types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import {
+  loadAdvisorPiiPolicy,
+  resolveAdvisorClientIdentity,
+} from "@/lib/advisor/field-visibility";
 import { safeDecryptTranscription } from "@/lib/data/response-content";
 
 export async function getAdvisorProfile(userId: string) {
@@ -31,25 +35,24 @@ export async function getAdvisorProfile(userId: string) {
 }
 
 export async function getAssignedClients(advisorProfileId: string): Promise<AdvisorDashboardClient[]> {
-  const assignments = await prisma.clientAdvisorAssignment.findMany({
-    where: {
-      advisorId: advisorProfileId,
-      status: 'ACTIVE',
-    },
-    include: {
-      client: {
-        select: {
-          id: true,
-          name: true,
-          // Round-11 commit 2.4b: ciphertext, decrypt below.
-          emailCiphertext: true,
-          // Round-11 commit 2.1 (BRD §5.1 amendment): clientProfile
-          // contact + address fields were dropped. The advisor card
-          // shows name + email only.
+  const [assignments, advisorPolicy] = await Promise.all([
+    prisma.clientAdvisorAssignment.findMany({
+      where: {
+        advisorId: advisorProfileId,
+        status: 'ACTIVE',
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            emailCiphertext: true,
+          },
         },
       },
-    },
-  });
+    }),
+    loadAdvisorPiiPolicy(advisorProfileId),
+  ]);
 
   // Get all interviews for assigned clients so we can pick the right one per client
   const clientIds = assignments.map(a => a.client.id);
@@ -88,15 +91,22 @@ export async function getAssignedClients(advisorProfileId: string): Promise<Advi
     }
   }
 
-  return assignments.map(assignment => ({
+  return assignments.map(assignment => {
+    const identity = resolveAdvisorClientIdentity(
+      assignment.client,
+      assignment.fieldVisibility,
+      advisorPolicy
+    );
+    return {
     id: assignment.client.id,
-    name: assignment.client.name,
-    email: decryptUserEmail(assignment.client.emailCiphertext),
+    name: identity.name,
+    email: identity.email,
     assignedAt: assignment.assignedAt,
     // Round-11 commit 2.1: clientProfile field removed from
     // AdvisorDashboardClient — see src/lib/advisor/types.ts.
     latestInterview: interviewsByClient.get(assignment.client.id) || null,
-  }));
+  };
+  });
 }
 
 export async function getClientIntakeForReview(advisorProfileId: string, interviewId: string) {
@@ -134,6 +144,24 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
     return null;
   }
 
+  const [assignment, advisorPolicy] = await Promise.all([
+    prisma.clientAdvisorAssignment.findFirst({
+      where: {
+        advisorId: advisorProfileId,
+        clientId: interview.userId,
+        status: "ACTIVE",
+      },
+      select: { fieldVisibility: true },
+    }),
+    loadAdvisorPiiPolicy(advisorProfileId),
+  ]);
+
+  const identity = resolveAdvisorClientIdentity(
+    interview.user,
+    assignment?.fieldVisibility ?? null,
+    advisorPolicy
+  );
+
   // Get the approval if one exists
   const approval = await prisma.intakeApproval.findUnique({
     where: {
@@ -146,7 +174,8 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
       ...interview,
       user: {
         ...interview.user,
-        email: decryptUserEmail(interview.user.emailCiphertext),
+        name: identity.name,
+        email: identity.email,
       },
       // Round-11 bug-hunt fix (commit B / RISK 3): decrypt
       // transcription at the query-layer exit. Without this the
