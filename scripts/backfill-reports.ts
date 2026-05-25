@@ -29,6 +29,7 @@ import {
   processOneAssessment,
   type BackfillDeps,
 } from "../src/lib/reports/backfill-core";
+import { fromReportTemplateUi } from "../src/lib/reports/report-template-choice";
 
 const PAGE_SIZE = 100;
 
@@ -63,13 +64,14 @@ const deps: BackfillDeps = {
   buildSnapshot: buildReportSnapshot,
   buildBranding: buildBrandingSnapshot,
   async insertSyntheticPublishedAndDraft(input) {
+    const templateChoice = fromReportTemplateUi(input.templateChoice);
     return prisma.$transaction(async (tx) => {
       const published = await tx.report.create({
         data: {
           assessmentId: input.assessmentId,
           version: 1,
           status: "PUBLISHED",
-          templateChoice: input.templateChoice,
+          templateChoice,
           snapshotData: input.snapshot as unknown as Prisma.InputJsonValue,
           brandingSnapshot: (input.branding ??
             Prisma.JsonNull) as Prisma.InputJsonValue | typeof Prisma.JsonNull,
@@ -83,7 +85,7 @@ const deps: BackfillDeps = {
           assessmentId: input.assessmentId,
           version: 2,
           status: "DRAFT",
-          templateChoice: input.templateChoice,
+          templateChoice,
         },
       });
       return { publishedReportId: published.id };

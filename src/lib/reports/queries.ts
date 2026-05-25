@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/db";
+import {
+  toReportTemplateUi,
+  type ReportTemplateUi,
+} from "@/lib/reports/report-template-choice";
 
 /**
  * §4.5 commit 3 (BRD §4.5): per-client report-list query helpers used by
@@ -11,7 +15,7 @@ export interface ReportListRow {
   id: string;
   version: number;
   status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
-  templateChoice: "AKILI" | "COBRANDED";
+  templateChoice: ReportTemplateUi;
   publishedAt: Date | null;
   publishedById: string | null;
   hasExecutiveSummary: boolean;
@@ -57,7 +61,7 @@ export async function getReportListForClient(clientUserId: string): Promise<{
       id: r.id,
       version: r.version,
       status: r.status,
-      templateChoice: r.templateChoice,
+      templateChoice: toReportTemplateUi(r.templateChoice),
       publishedAt: r.publishedAt,
       publishedById: r.publishedById,
       hasExecutiveSummary: !!r.executiveSummary && r.executiveSummary.length > 0,
@@ -81,7 +85,7 @@ export async function getDraftWithRecommendations(
   draft: {
     id: string;
     version: number;
-    templateChoice: "AKILI" | "COBRANDED";
+    templateChoice: ReportTemplateUi;
     executiveSummary: string | null;
     advisorNotes: Record<string, string>;
   };
@@ -136,7 +140,7 @@ export async function getDraftWithRecommendations(
     draft: {
       id: draft.id,
       version: draft.version,
-      templateChoice: draft.templateChoice,
+      templateChoice: toReportTemplateUi(draft.templateChoice),
       executiveSummary: draft.executiveSummary,
       advisorNotes: draftNotes,
     },

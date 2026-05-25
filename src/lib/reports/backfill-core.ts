@@ -12,6 +12,7 @@
  */
 
 import type { ReportSnapshot } from "@/lib/pdf/build-report-snapshot";
+import type { ReportTemplateUi } from "@/lib/reports/report-template-choice";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 export interface BackfillDeps {
@@ -35,7 +36,7 @@ export interface BackfillDeps {
     publishedAt: Date;
     snapshot: ReportSnapshot;
     branding: AdvisorBrandingData | null;
-    templateChoice: "BELVEDERE" | "COBRANDED";
+    templateChoice: ReportTemplateUi;
   }): Promise<{ publishedReportId: string }>;
 }
 
@@ -69,8 +70,8 @@ export async function processOneAssessment(
   const branding = await deps.buildBranding(assessmentId);
 
   // Per the design proposal §5: COBRANDED when an active advisor is
-  // resolved (branding non-null), else BELVEDERE.
-  const templateChoice = branding ? "COBRANDED" : "BELVEDERE";
+  // resolved (branding non-null), else AKILI.
+  const templateChoice = branding ? "COBRANDED" : "AKILI";
 
   const inserted = await deps.insertSyntheticPublishedAndDraft({
     assessmentId,

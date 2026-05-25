@@ -27,6 +27,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { saveDraftEdits, publishReport } from "@/lib/actions/report-actions";
+import {
+  fromReportTemplateUi,
+  type ReportTemplateUi,
+} from "@/lib/reports/report-template-choice";
 
 const EXECUTIVE_SUMMARY_MAX = 2000;
 const ADVISOR_NOTE_MAX = 1000;
@@ -36,7 +40,7 @@ export interface EditDraftFormProps {
   draft: {
     id: string;
     version: number;
-    templateChoice: "BELVEDERE" | "COBRANDED";
+    templateChoice: ReportTemplateUi;
     executiveSummary: string | null;
   };
   recommendations: Array<{
@@ -60,9 +64,9 @@ export function EditDraftForm({
   const [executiveSummary, setExecutiveSummary] = useState(
     draft.executiveSummary ?? ""
   );
-  const [templateChoice, setTemplateChoice] = useState<
-    "BELVEDERE" | "COBRANDED"
-  >(draft.templateChoice);
+  const [templateChoice, setTemplateChoice] = useState<ReportTemplateUi>(
+    draft.templateChoice
+  );
   const [notes, setNotes] = useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {};
     for (const r of recommendations) {
@@ -80,7 +84,7 @@ export function EditDraftForm({
         reportId: draft.id,
         executiveSummary: executiveSummary.length > 0 ? executiveSummary : null,
         advisorNotes: notes,
-        templateChoice,
+        templateChoice: fromReportTemplateUi(templateChoice),
       });
       if (!result.ok) {
         toast.error(result.message);
@@ -136,7 +140,7 @@ export function EditDraftForm({
           <div className="space-y-2">
             <Label>Template</Label>
             <div className="flex items-center gap-4">
-              {(["COBRANDED", "BELVEDERE"] as const).map((choice) => (
+              {(["COBRANDED", "AKILI"] as const).map((choice) => (
                 <label
                   key={choice}
                   className="flex items-center gap-2 text-sm cursor-pointer"
@@ -150,7 +154,7 @@ export function EditDraftForm({
                   />
                   {choice === "COBRANDED"
                     ? "Co-branded (advisor logo + firm name)"
-                    : "Belvedere only"}
+                    : "AKILI only"}
                 </label>
               ))}
             </div>

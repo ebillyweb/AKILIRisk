@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getOrphanedAnswerIds } from './branching';
-import { allQuestions } from './questions';
 import type { HouseholdProfile } from './personalization';
 import type { Question } from './types';
 import { allIdentityQuestions } from '../identity-risk/questions';
@@ -39,7 +38,7 @@ interface AssessmentState {
   isHydrated: boolean;
   orphanedAnswerIds: string[];
   householdProfile: HouseholdProfile | null;
-  /** Merged DB-backed family-governance questions (visible only). Falls back to static bank when unset. */
+  /** DB-backed family-governance questions (visible only). Loaded before assessment UI renders. */
   familyGovernanceQuestionBank: Question[] | null;
 
   // Actions
@@ -73,9 +72,7 @@ const initialState = {
 };
 
 function questionUniverseForOrphans(state: AssessmentState): Question[] {
-  const gov = state.familyGovernanceQuestionBank?.length
-    ? state.familyGovernanceQuestionBank
-    : allQuestions;
+  const gov = state.familyGovernanceQuestionBank ?? [];
   return [...gov, ...allIdentityQuestions];
 }
 
