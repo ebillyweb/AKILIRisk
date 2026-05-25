@@ -37,8 +37,9 @@ export async function loadPillarScoreForTemplate(
     return {
       score: row.score,
       riskLevel: row.riskLevel.toLowerCase() as ScoreResult["riskLevel"],
-      breakdown: row.breakdown as ScoreResult["breakdown"],
-      missingControls: row.missingControls as ScoreResult["missingControls"],
+      breakdown: (row.breakdown ?? []) as unknown as ScoreResult["breakdown"],
+      missingControls: (row.missingControls ??
+        []) as unknown as ScoreResult["missingControls"],
     };
   }
 
