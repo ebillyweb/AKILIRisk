@@ -8,7 +8,7 @@
 | Story | Title | Status | Notes |
 |-------|--------|--------|--------|
 | US-47 | Enrol in MFA | **Done** | Advisor/admin only; not clients (magic-link auth) |
-| US-48 | Sign in with MFA & recovery codes | **Done** | Credentials sign-in + MFA gate in `proxy.ts` |
+| US-48 | Sign in with MFA & recovery codes | **Done** | Workspace pages, APIs, role gates until `mfaVerified` |
 | US-49 | Enforce RBAC | **Done** | Role helpers, soft-delete sign-out, super-admin gates |
 | US-50 | Configure PII disclosure policy (advisor) | **Done** | `/advisor/settings/pii-policy` |
 | US-51 | Capture client PII consent | **Done** | `/consent/pending`, `consent-decision-actions` |
@@ -38,13 +38,21 @@ Clients (`role = USER`) authenticate via **magic link** ([Epic 5.1](./EPIC-5.1-c
 
 ## US-48 — Sign In with MFA and Recovery Codes
 
-Applies to **advisor/admin** credential sign-in only.
+Applies to **advisor/admin** credential sign-in only (clients use magic link; no MFA).
 
-| Capability | Implementation |
-|------------|----------------|
-| Session not fully authorized until TOTP | JWT `mfaVerified`; `proxy.ts` → `/mfa/verify` |
-| ±1 TOTP period drift tolerance | `verifyMFAToken()` `epochTolerance: 60` |
-| Recovery code sign-in (single-use) | `/api/auth/mfa/recovery`, `verifyRecoveryCode()` |
+| Acceptance criterion | Implementation |
+|---------------------|----------------|
+| MFA enabled → session not fully authorized until valid 6-digit TOTP | On sign-in, `Session.mfaVerified=false` when `mfaEnabled`; JWT mirrors DB; `(protected)/layout` + `proxy.ts` redirect workspace pages; **API routes** return **403** until verified; `requireAdvisorRole` / `requireAdminRole` throw |
+| ±1 TOTP period drift | `verifyMFAToken()` `epochTolerance: 60` (±30s) |
+| Valid recovery code signs in; code single-use | `/api/auth/mfa/recovery`, `verifyRecoveryCode()` removes hash; `markSessionMfaVerified()`; audit `AUTH_MFA_RECOVERY_USED` |
+
+**Code:** `src/lib/auth/mfa-gate.ts`, `src/lib/auth/require-mfa-verified.ts`, `src/proxy.ts`, `src/app/(auth)/mfa/verify/*`, `src/lib/mfa.ts`
+
+**Tests:** `mfa-gate.test.ts`, `mfa-recovery.test.ts`, `mfa-session.test.ts`, `mfa.test.ts` (TOTP drift)
+
+**Post-verify navigation:** full `window.location.assign` after TOTP/recovery so the session cookie/JWT refresh matches credentials sign-in behavior.
+
+**Exempt while challenge pending:** `/api/auth/*` (including `mfa/verify` + `mfa/recovery`), `/mfa/verify`, cron/webhooks.
 
 ---
 
@@ -122,7 +130,8 @@ Admin audit UI: [Epic 5.5](./EPIC-5.5-platform-administration.md) US-34.
 
 | Area | Status |
 |------|--------|
-| MFA flows (advisor/admin) | **Not implemented** |
+| MFA sign-in (unit) | **Implemented** — gate helpers, recovery reuse, TOTP drift |
+| MFA sign-in (E2E) | **Implemented** — `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` (TOTP gate, API 403, recovery reuse) |
 | Consent gate | **Not implemented** |
 | Cron auth smoke | Partial (`epic-5.4-documents-cron-sse.spec.ts`) |
 

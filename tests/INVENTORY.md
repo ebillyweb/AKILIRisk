@@ -24,6 +24,8 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/auth.spec.ts` | advisor can sign in and load `/advisor` | TBD | Implemented |
 | `tests/smoke/auth.spec.ts` | client can sign in and load `/dashboard` | TBD | Implemented |
 | `tests/smoke/auth.spec.ts` | admin can sign in and load `/admin` | TBD | Implemented |
+| `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` | advisor MFA sign-in blocked until TOTP; API 403; workspace redirect | Epic 5.6 / US-48 | Implemented |
+| `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` | recovery code sign-in; single-use enforcement | Epic 5.6 / US-48 | Implemented |
 | `tests/smoke/client-dashboard.spec.ts` | client dashboard reflects submitted intake state | TBD | Implemented |
 | `tests/smoke/advisor-clients.spec.ts` | advisor can view client list and open a client | TBD | Implemented |
 | `tests/smoke/admin-advisors.spec.ts` | admin can view advisors list with at least one row | TBD | Implemented |

@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { WorkspaceSlimHeader } from "@/components/layout/WorkspaceSlimHeader";
+import { redirectIfMfaChallengePending } from "@/lib/auth/require-mfa-verified";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
 const BRANDED_CLIENT_HEADER_KICKER = "Brought to you by AKILI Risk Intelligence";
@@ -38,6 +39,8 @@ export default async function ProtectedLayout({
   if (!session?.user) {
     redirect("/signin");
   }
+
+  await redirectIfMfaChallengePending(session);
 
   if (session.user.id) {
     const userRow = await prisma.user.findUnique({

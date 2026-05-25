@@ -9,6 +9,7 @@ import {
   normalizeUserRoleString,
 } from "@/lib/auth-roles";
 import { DESIGNATED_ADMIN_EMAIL } from "@/lib/auth-shared";
+import { assertMfaVerified } from "@/lib/auth/require-mfa-verified";
 
 /** Re-export for back-compat with existing imports. */
 export const ADMIN_ALLOWED_EMAIL = DESIGNATED_ADMIN_EMAIL;
@@ -63,6 +64,8 @@ export async function requireAdminRole(): Promise<PlatformAdminContext> {
     );
   }
 
+  await assertMfaVerified(session);
+
   return {
     userId: session.user.id,
     email: session.user.email,
@@ -85,6 +88,8 @@ export async function requireSuperAdminRole(): Promise<PlatformAdminContext> {
       "Unauthorized: This action requires the SUPER_ADMIN role."
     );
   }
+
+  await assertMfaVerified(session);
 
   return {
     userId: session.user.id,

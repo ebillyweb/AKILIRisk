@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { safeAfterSignInPath } from "@/lib/auth-callback-path";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ interface MFAVerifyFormProps {
 }
 
 export function MFAVerifyForm({ callbackUrl }: MFAVerifyFormProps) {
-  const router = useRouter();
   const [useRecovery, setUseRecovery] = useState(false);
   const [token, setToken] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -43,8 +42,7 @@ export function MFAVerifyForm({ callbackUrl }: MFAVerifyFormProps) {
         throw new Error(data.error || "Verification failed");
       }
 
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.assign(safeAfterSignInPath(callbackUrl));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -78,8 +76,7 @@ export function MFAVerifyForm({ callbackUrl }: MFAVerifyFormProps) {
         );
       }
 
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.assign(safeAfterSignInPath(callbackUrl));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {

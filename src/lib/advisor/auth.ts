@@ -7,6 +7,7 @@ import { subscriptionQualifiesForPortalEnablement } from "@/lib/billing/advisor-
 import { isBillingEnabled } from "@/lib/billing/config";
 import { prisma } from "@/lib/db";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { assertMfaVerified } from "@/lib/auth/require-mfa-verified";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 
 /** Thrown by `requireAdvisorRole` when an admin has disabled advisor hub/API access. */
@@ -119,6 +120,8 @@ export async function requireAdvisorSession() {
     throw new Error("Unauthorized: Advisor access required");
   }
 
+  await assertMfaVerified(session);
+
   return {
     userId: session.user.id,
     role: userRole ?? "USER",
@@ -136,6 +139,8 @@ export async function requireAdvisorRole() {
   if (!isAdvisorHubNavRole(userRole)) {
     throw new Error("Unauthorized: Advisor access required");
   }
+
+  await assertMfaVerified(session);
 
   if (userRole === "ADVISOR") {
     await assertAdvisorPortalAccessForAdvisorRole(session.user.id);

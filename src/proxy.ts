@@ -6,6 +6,12 @@ import {
   extractTenantSubdomainLabel,
   isPlatformHostname,
 } from "@/lib/advisor/platform-subdomain";
+import {
+  isPageMfaExempt,
+  isWorkspacePath,
+  shouldBlockApiForMfaPending,
+} from "@/lib/auth/mfa-gate";
+import { isMfaChallengePendingForUser } from "@/lib/auth/mfa-session-status";
 
 /** For server layouts (e.g. advisor) that branch on URL without middleware.
  *
@@ -132,40 +138,39 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  // Continue with existing authentication logic (token from above)
-  // `/admin`, `/advisor`, `/intake` are MFA-gated alongside the legacy
-  // client surfaces — privileged routes were previously *less* protected
-  // than the dashboard, which is the inverse of what we want.
-  const protectedRoutes = [
-    "/dashboard",
-    "/assessment",
-    "/settings",
-    "/admin",
-    "/advisor",
-    "/intake",
-  ];
+  // US-48: block workspace API calls until MFA challenge completes. Auth
+  // routes (/api/auth/* including mfa/verify) stay reachable so the user
+  // can finish the challenge; cron/webhooks use their own secrets.
+  const mfaClaims = token as {
+    id?: string;
+    mfaEnabled?: boolean;
+    mfaVerified?: boolean;
+  };
+  if (
+    isAuthenticated &&
+    (await isMfaChallengePendingForUser(mfaClaims)) &&
+    shouldBlockApiForMfaPending(pathname)
+  ) {
+    return NextResponse.json(
+      { error: "MFA verification required" },
+      { status: 403 }
+    );
+  }
 
-  // Segment-aware match: `/admin` matches `/admin` and `/admin/anything`
-  // but NOT `/administration`. Plain startsWith would over-match.
-  const matchesProtectedPrefix = (route: string): boolean =>
-    pathname === route || pathname.startsWith(`${route}/`);
-  const isProtectedRoute = protectedRoutes.some(matchesProtectedPrefix);
+  const isWorkspace = isWorkspacePath(pathname);
 
-  const mfaRoutes = ["/mfa/verify", "/mfa/setup"];
-  const isMFARoute = mfaRoutes.some((route) => pathname.startsWith(route));
-
-  if (isProtectedRoute && !isAuthenticated) {
+  if (isWorkspace && !isAuthenticated) {
     const signInUrl = new URL("/signin", req.url);
     signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);
   }
 
-  if (isAuthenticated && !isMFARoute && isProtectedRoute) {
-    const mfaEnabled = Boolean((token as { mfaEnabled?: boolean })?.mfaEnabled);
-    const mfaVerified = Boolean(
-      (token as { mfaVerified?: boolean })?.mfaVerified
-    );
-    if (mfaEnabled && !mfaVerified) {
+  if (
+    isAuthenticated &&
+    !isPageMfaExempt(pathname) &&
+    isWorkspace
+  ) {
+    if (await isMfaChallengePendingForUser(mfaClaims)) {
       const mfaVerifyUrl = new URL("/mfa/verify", req.url);
       mfaVerifyUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(mfaVerifyUrl);
@@ -179,6 +184,6 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
