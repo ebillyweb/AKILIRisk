@@ -19,6 +19,7 @@ import { getStageLabel } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
+import { TemplateList } from "@/components/reports/TemplateList";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
@@ -309,6 +310,25 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {assessmentDetails?.id && assessmentDetails.pillarScores.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Policy documents</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Download Word policies per risk pillar, pre-filled with this
+                  household&apos;s scores and gaps. Member references use
+                  anonymized labels only.
+                </p>
+                <TemplateList
+                  assessmentId={assessmentDetails.id}
+                  variant="advisor"
+                />
               </CardContent>
             </Card>
           )}

@@ -111,7 +111,7 @@ export async function getAdvisorBrandingForPDFByUserId(userId: string): Promise<
 /**
  * Create branded PDF metadata
  */
-function pdfDisplayNameFromBranding(branding?: AdvisorBrandingData | null): string {
+export function pdfDisplayNameFromBranding(branding?: AdvisorBrandingData | null): string {
   if (!branding) return "Akili Risk";
   const t = clientPortalBrandingDisplayTitle(branding);
   return t === "Partner portal" ? "Akili Risk" : t;

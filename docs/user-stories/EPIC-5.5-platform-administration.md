@@ -27,14 +27,34 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 |------------|--------------|
 | Rescore assessments | `/admin/assessment`, `admin-rescore-actions.ts` |
 | Audit log UI + CSV | `/admin/audit-log` |
-| GDPR / tenant exports | `/admin/exports` (super-admin) |
+| GDPR / tenant exports | `/admin/exports` (super-admin) — see **US-64** below |
 | Control center | `/admin` — Configuration quick-access cards for both question banks |
+
+**BRD mapping:** Tenant export is **US-64** in some BRDs labeled “Epic 5.9”; in this repo it lives under **5.5**, not [Epic 5.9](./EPIC-5.9-extended-risk-modules.md). See [FR-6 reconciliation](./EPIC-FR6-EXTENDED-DELIVERABLES-RECONCILIATION.md).
+
+---
+
+## US-64 — Export a tenant data bundle (admin)
+
+**As a** platform admin, **I want** to export a tenant-scoped data bundle, **so that** I can fulfill data requests without leaking other tenants' data.
+
+| Acceptance criterion | Met | Implementation |
+|---------------------|-----|----------------|
+| Bundle strictly scoped to one tenant's client assignments | ✅ | `composeTenantZip` / `fetchTenantBundle` scoped by `ClientAdvisorAssignment` (`src/lib/export/queries.ts`) |
+| Non-admin → not found (not forbidden) | ✅ | `GET /api/admin/exports` → **404** |
+| Audit before stream; size cap | ✅ | `writeAudit` (`DATA_ACCESS_EXPORT`) before ZIP; `EXPORT_BYTE_CAP` (50 MB) |
+
+**UI:** `/admin/exports`. **API:** `?scope=tenant&advisorProfileId=...` or `scope=system`.
+
+**Playwright:** **Not implemented** (unit coverage in `src/lib/export/bundle.test.ts`, `queries.test.ts`).
+
+**Not the same as:** Per-pillar policy download — [Epic 5.8](./EPIC-5.8-policy-templates-deliverables.md).
 
 ---
 
 ## US-37 — Administer the Assessment Question Bank
 
-**Single source:** Belvedere pillar DDL (`questions` table / `PillarQuestion`). Legacy `AssessmentBankQuestion` removed (migration `20260523140000`).
+**Single source:** Belvedere pillar DDL (`questions` table / `PillarQuestion`). Legacy `AssessmentBankQuestion` removed (migration `20260523140000`). BRD **US-65** legacy-table fallback is **not** implemented — see [FR-6 reconciliation](./EPIC-FR6-EXTENDED-DELIVERABLES-RECONCILIATION.md).
 
 | Acceptance criterion | Met | Implementation |
 |---------------------|-----|----------------|
@@ -194,6 +214,8 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 ## Related
 
+- [FR-6 reconciliation](./EPIC-FR6-EXTENDED-DELIVERABLES-RECONCILIATION.md) — US-64 vs BRD “Epic 5.9”; US-65/66
+- [Epic 5.8](./EPIC-5.8-policy-templates-deliverables.md) — policy Word/PDF (not tenant export)
 - [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — scoring, control gaps, pillar narratives (US-17b), catalog services (US-18), reports
 - [ACCESS-LEVELS-BY-ROLE.md](../ACCESS-LEVELS-BY-ROLE.md)
 

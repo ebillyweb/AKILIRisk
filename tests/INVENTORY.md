@@ -91,6 +91,7 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 | `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 advisor rejects intake → client blocked from /assessment | US-11 | Implemented |
 | `tests/smoke/epic-5.2-report-publish.spec.ts` | US-20 client PDF 404 before publish | US-19–20 | Implemented |
 | `tests/smoke/epic-5.2-report-publish.spec.ts` | US-19–20 advisor publish → client PDF download | US-19–20 | Implemented |
+| `tests/smoke/epic-5.8-advisor-policy-templates.spec.ts` | US-62 / US-63 advisor Word + PDF policy templates; unassigned 404 | Epic 5.8 | Implemented |
 | `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-13 governance maturity scale four levels + selection | US-13 | Implemented |
 | `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-14 resume after sign-out; server beats stale localStorage | US-14 | Implemented |
 | `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 six-cell heat map after scoring | US-16 | Implemented |

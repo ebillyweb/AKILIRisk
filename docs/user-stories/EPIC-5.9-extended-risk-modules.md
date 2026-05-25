@@ -3,6 +3,8 @@
 **Status:** **Legacy / reconcile** → stories US-45–US-47 proposed  
 **Purpose:** Document parallel product surfaces that are **not** part of the canonical six-pillar Epic 5.2 path. Use this epic to decide **retire**, **merge**, or **promote** each module.
 
+> **Naming warning:** Some BRDs call **“Epic 5.10”** the platform-continuity work (US-65 legacy question bank, US-66 pillar aliases). **That is not this file.** Tenant export (BRD “5.9”) lives in [Epic 5.5](./EPIC-5.5-platform-administration.md). Policy templates (BRD “5.8”) live in [Epic 5.8](./EPIC-5.8-policy-templates-deliverables.md). See [FR-6 reconciliation](./EPIC-FR6-EXTENDED-DELIVERABLES-RECONCILIATION.md).
+
 ## Reconciliation decision matrix
 
 | Module | Routes / entry | vs Epic 5.2 | Recommended action |
@@ -88,6 +90,7 @@
 
 ## Related
 
+- [FR-6 reconciliation](./EPIC-FR6-EXTENDED-DELIVERABLES-RECONCILIATION.md) — BRD 5.10 ≠ this epic
 - [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — canonical six-pillar path
 - [README](./README.md) — canonical vs parallel paths table
 - [.planning/PROJECT.md](../../.planning/PROJECT.md) — v1.5 cyber risk intelligence milestone
