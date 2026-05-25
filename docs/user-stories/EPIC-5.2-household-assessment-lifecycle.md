@@ -83,16 +83,33 @@ These criteria reflect **implemented behavior** as of the six-pillar reconciliat
 - Normalized maturity ≤1 → control gap.
 - Top **5** gaps by priority = weight × maturity gap.
 - Severity: High if priority ≥9, Medium if ≥4.5, else Low.
+- Per-gap remediation text comes from the question bank (`remediationAction`, then `learnMore` / `helpText`) and appears in the results **Action plan** and PDF itemized recommendations.
+
+### US-17b — Surface Pillar Summary Narratives (System)
+
+Pillar-level paragraphs are **product copy** in code (`pillar-outcome-expectations.ts`, `pillar-outcome-expectations-mid-band.ts`), not the admin recommendation catalog (US-39/40).
+
+| Profile | Narrative shown |
+|--------|------------------|
+| **Critical** + every visible answer at lowest maturity | All-negative pillar block (e.g. governance estate + family governance paragraph) |
+| **Low** + every visible answer at highest maturity | All-yes pillar block |
+| **Any other** scored profile | Mid-band paragraph for that pillar’s stored risk tier (`critical`, `high`, `medium`, or `low`) |
+
+- Mixed NO/YES answers use the mid-band paragraph for the aggregate tier, plus per-question gaps from US-17 (not the all-negative or all-yes blocks).
+- Narratives are returned on `POST`/`GET` `/api/assessment/[id]/score` as `pillarNarratives` and rendered on `/assessment/results` (Action plan summary).
+- Published report snapshots include `reportData.pillarNarratives` and a dedicated PDF **Pillar Summary** page (`buildReportSnapshot`, `PillarNarrativeSection`).
 
 ### US-18 — Generate Service Recommendations (System / Advisor)
 
 - Active rules: match when **&gt;50%** of weighted conditions satisfied.
 - Dedupe by service, order by priority; at most **10** persisted per assessment (replaces prior set).
 - Only active rules and services; profile conditions use `evaluateProfileCondition`.
+- Catalog services are distinct from pillar summary narratives (US-17b); both may appear on the same assessment.
 
 ### US-19 — Review the Assessment and Draft a Report (Advisor)
 
 - Completed assessment: at most one **Draft** report with snapshot data.
+- Snapshot includes pillar summary narratives (US-17b) at publish/draft build time from live answers + stored tier.
 - Advisor edits executive summary and per-recommendation notes on draft.
 - Draft PDF is watermarked; **clients** cannot access un-published PDF.
 
@@ -113,7 +130,8 @@ These criteria reflect **implemented behavior** as of the six-pillar reconciliat
 | US-11 | `advisor-actions.ts`, `advisor-intake-waiver-actions.ts`, `ApprovalActions.tsx` |
 | US-12 | `pillar-registry.ts`, `/assessment/page.tsx` |
 | US-13–14 | `[pillarSlug]/[questionIndex]/page.tsx`, `responses/route.ts`, `store.ts` |
-| US-15–18 | `score/route.ts`, `assessment-completion.ts`, `scoring.ts`, recommendation engine |
+| US-15–18 | `score/route.ts`, `assessment-completion.ts`, `scoring.ts`, `pillar-outcomes.ts`, recommendation engine |
+| US-17b | `pillar-outcome-expectations*.ts`, `pillar-outcomes.ts`, `PillarNarrativeSummary.tsx`, `build-report-snapshot.ts` |
 | US-19–20 | `report-actions.ts`, `reports/[id]/pdf`, `DownloadSection.tsx` |
 
 **Pillar slugs:** `governance`, `cyber-digital`, `physical-security`, `insurance`, `geographic-environmental`, `reputational-social`

@@ -88,6 +88,8 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 **Routes:** `/admin/recommendations`, `/admin/recommendations/services/*`
 
+**Out of scope (see [Epic 5.2 US-17b](./EPIC-5.2-household-assessment-lifecycle.md)):** Pillar summary paragraphs (all-no / all-yes / mid-band by risk tier) are **not** catalog rows. They are versioned in `src/lib/assessment/pillar-outcome-expectations*.ts` and require a code release to change unless a future admin CMS is added.
+
 ---
 
 ## US-40 — Manage Recommendation Rules
@@ -100,6 +102,8 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 **Routes:** `/admin/recommendations/rules/*`
 
+**Functional-spec note:** Rules drive **catalog service** recommendations (US-18), not pillar summary copy. Condition types: `score_threshold`, `risk_level`, `answer_match`, `missing_control`, `profile_condition`; a rule matches when **&gt;50%** of weighted conditions are satisfied (`RecommendationEngine`).
+
 ---
 
 ## US-41 — Configure Risk-Tier Thresholds (Super-Admin)
@@ -108,7 +112,7 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 |---------------------|-----|-------|
 | Non–super-admin blocked | ✅ | `requireSuperAdminRole()` |
 | 0–100, strictly decreasing | ✅ | Zod + form |
-| New scores only; stored tiers unchanged | ⚠️ | Admin **rescore** recomputes tiers with current thresholds (by design) |
+| New scores only; stored tiers unchanged until re-score | ⚠️ | Admin **rescore** recomputes tiers with current thresholds (by design). Re-score also refreshes which **mid-band pillar narrative** applies (tier from thresholds; copy in code — Epic 5.2 US-17b). |
 
 **Route:** `/admin/scoring/thresholds`
 
@@ -190,5 +194,13 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 ## Related
 
-- [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — scoring consumes question bank + rules
+- [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — scoring, control gaps, pillar narratives (US-17b), catalog services (US-18), reports
 - [ACCESS-LEVELS-BY-ROLE.md](../ACCESS-LEVELS-BY-ROLE.md)
+
+## Suggested Functional Spec amendments (§5.5)
+
+The BRD stories **US-37–US-46** in §5.5 remain accurate for admin configuration. Add a **cross-reference** (not a new admin story) in §5.2 or §3.2:
+
+- **Pillar summary narratives** — tier-based paragraphs on results and PDF; not editable via US-39/40.
+- **Per-question remediation** — editable via US-37 question fields where exposed in admin UI.
+- **Catalog services** — US-39/40 as written.
