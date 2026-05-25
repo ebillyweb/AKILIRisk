@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getOrphanedAnswerIds } from './branching';
+import { allQuestions } from './questions';
 import type { HouseholdProfile } from './personalization';
 import type { Question } from './types';
 import { allIdentityQuestions } from '../identity-risk/questions';
@@ -38,7 +39,7 @@ interface AssessmentState {
   isHydrated: boolean;
   orphanedAnswerIds: string[];
   householdProfile: HouseholdProfile | null;
-  /** DB-backed pillar questions (visible only), keyed by assessment flow. */
+  /** Merged DB-backed family-governance questions (visible only). Falls back to static bank when unset. */
   familyGovernanceQuestionBank: Question[] | null;
 
   // Actions
@@ -72,7 +73,9 @@ const initialState = {
 };
 
 function questionUniverseForOrphans(state: AssessmentState): Question[] {
-  const gov = state.familyGovernanceQuestionBank ?? [];
+  const gov = state.familyGovernanceQuestionBank?.length
+    ? state.familyGovernanceQuestionBank
+    : allQuestions;
   return [...gov, ...allIdentityQuestions];
 }
 
@@ -152,28 +155,13 @@ export const useAssessmentStore = create<AssessmentState>()(
         set({ isLoading: loading }),
 
       cleanOrphanedAnswers: () =>
-        set((state) => {
-          const orphanedIds = getOrphanedAnswerIds(
+        set((state) => ({
+          orphanedAnswerIds: getOrphanedAnswerIds(
             state.answers,
             questionUniverseForOrphans(state),
             state.householdProfile
-          );
-          if (orphanedIds.length === 0) {
-            return { orphanedAnswerIds: [] };
-          }
-          const newAnswers = { ...state.answers };
-          for (const id of orphanedIds) {
-            delete newAnswers[id];
-          }
-          return {
-            answers: newAnswers,
-            skippedQuestions: state.skippedQuestions.filter(
-              (id) => !orphanedIds.includes(id)
-            ),
-            orphanedAnswerIds: [],
-            lastSaved: new Date().toISOString(),
-          };
-        }),
+          ),
+        })),
 
       setHouseholdProfile: (profile: HouseholdProfile | null) =>
         set({ householdProfile: profile }),
@@ -182,7 +170,7 @@ export const useAssessmentStore = create<AssessmentState>()(
         set({ familyGovernanceQuestionBank: questions }),
     }),
     {
-      name: 'belvedere-assessment',
+      name: 'akili-assessment',
       partialize: (state) => ({
         assessmentId: state.assessmentId,
         currentPillar: state.currentPillar,

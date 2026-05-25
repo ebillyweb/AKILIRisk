@@ -16,11 +16,6 @@
 import { prisma } from "@/lib/db";
 import { RELATIONSHIP_LABELS } from "@/lib/schemas/profile";
 import { getAdvisorBrandingForPDF } from "@/lib/pdf/branding-integration";
-import { getHouseholdProfileForAdvisorView } from "@/lib/household/member-profile";
-import { getPillarAssessmentConfig } from "@/lib/assessment/pillar-config";
-import { loadAssessmentAnswersForQuestions } from "@/lib/assessment/pillar-answer-loader";
-import { resolvePillarNarratives } from "@/lib/assessment/pillar-outcomes";
-import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 // Re-exported types intentionally narrow — the snapshot is the storage
 // boundary, not a public API. Consumers use `ReportSnapshot` directly.
@@ -73,8 +68,6 @@ export interface ReportSnapshot {
     riskLevel: string;
     breakdown: CategoryScore[];
     missingControls: MissingControl[];
-    /** Canonical all-no / all-yes pillar copy; empty for mixed maturity. */
-    pillarNarratives: string[];
     assessmentDate: string;
     completionPercentage: number;
     categoryCount: number;
@@ -154,15 +147,26 @@ export async function buildReportSnapshot(
     Math.round((responseCount / estimatedTotalQuestions) * 100)
   );
 
-  const householdProfileRaw = await getHouseholdProfileForAdvisorView(assessment.userId);
-  const householdProfile = householdProfileRaw
+  const householdMembers = await prisma.householdMember.findMany({
+    where: { userId: assessment.userId },
+    select: {
+      displayLabel: true,
+      birthYear: true,
+      sex: true,
+      relationship: true,
+      governanceRoles: true,
+      isResident: true,
+    },
+  });
+
+  const householdProfile = householdMembers.length > 0
     ? {
-        members: householdProfileRaw.members.map((m) => ({
+        members: householdMembers.map((m) => ({
           displayLabel: m.displayLabel,
           relationship: RELATIONSHIP_LABELS[m.relationship] ?? m.relationship,
           birthYear: m.birthYear ?? null,
           sex: m.sex ?? null,
-          governanceRoles: m.governanceRoles,
+          governanceRoles: m.governanceRoles as string[],
           isResident: m.isResident,
         })),
       }
@@ -213,21 +217,6 @@ export async function buildReportSnapshot(
     day: "numeric",
   });
 
-  const pillarSlug = normalizePillarSlug(pillarScore.pillar);
-  const pillarConfig = await getPillarAssessmentConfig(pillarSlug);
-  let pillarNarratives: string[] = [];
-  if (pillarConfig) {
-    const questionIds = pillarConfig.questions.map((q) => q.id);
-    const answers = await loadAssessmentAnswersForQuestions(assessmentId, questionIds);
-    pillarNarratives = resolvePillarNarratives(
-      pillarSlug,
-      pillarScore.score,
-      pillarScore.riskLevel,
-      answers,
-      pillarConfig.questions
-    );
-  }
-
   return {
     schemaVersion: 1,
     pillar: pillarScore.pillar,
@@ -241,7 +230,6 @@ export async function buildReportSnapshot(
         subcategoryCount: breakdown.filter((b) => b.name === cat.name).length || 1,
       })),
       missingControls,
-      pillarNarratives,
       assessmentDate,
       completionPercentage,
       categoryCount: breakdown.length,
@@ -263,7 +251,7 @@ export async function buildReportSnapshot(
  * if the advisor later renames their firm.
  *
  * Returns null when no active advisor is assigned to the assessment
- * owner. The renderer falls back to the Belvedere lockup in that case.
+ * owner. The renderer falls back to the AKILI lockup in that case.
  */
 export async function buildBrandingSnapshot(
   assessmentId: string

@@ -11,7 +11,7 @@ export interface ReportListRow {
   id: string;
   version: number;
   status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
-  templateChoice: "BELVEDERE" | "COBRANDED";
+  templateChoice: "AKILI" | "COBRANDED";
   publishedAt: Date | null;
   publishedById: string | null;
   hasExecutiveSummary: boolean;
@@ -81,7 +81,7 @@ export async function getDraftWithRecommendations(
   draft: {
     id: string;
     version: number;
-    templateChoice: "BELVEDERE" | "COBRANDED";
+    templateChoice: "AKILI" | "COBRANDED";
     executiveSummary: string | null;
     advisorNotes: Record<string, string>;
   };

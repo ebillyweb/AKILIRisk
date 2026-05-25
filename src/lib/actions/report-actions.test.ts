@@ -31,7 +31,7 @@ const { dbState, fakes } = vi.hoisted(() => {
       assessmentId: string;
       version: number;
       status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
-      templateChoice: "BELVEDERE" | "COBRANDED";
+      templateChoice: "AKILI" | "COBRANDED";
       executiveSummary: string | null;
       advisorNotes: unknown;
       snapshotData: unknown;
@@ -101,7 +101,7 @@ const { dbState, fakes } = vi.hoisted(() => {
         version: data.version as number,
         status: (data.status ?? "DRAFT") as "DRAFT" | "PUBLISHED" | "SUPERSEDED",
         templateChoice: (data.templateChoice ?? "COBRANDED") as
-          | "BELVEDERE"
+          | "AKILI"
           | "COBRANDED",
         executiveSummary: (data.executiveSummary ?? null) as string | null,
         advisorNotes: data.advisorNotes ?? null,
@@ -226,7 +226,6 @@ vi.mock("@/lib/pdf/build-report-snapshot", () => ({
       riskLevel: "medium",
       breakdown: [],
       missingControls: [],
-      pillarNarratives: [],
       assessmentDate: "March 4, 2026",
       completionPercentage: 100,
       categoryCount: 0,
@@ -392,13 +391,13 @@ describe("saveDraftEdits", () => {
       reportId: "draft-1",
       executiveSummary: "All looking good.",
       advisorNotes: { "rec-1": "Discuss next quarter." },
-      templateChoice: "BELVEDERE",
+      templateChoice: "AKILI",
     });
     expect(result.ok).toBe(true);
     const row = dbState.reports.find((r) => r.id === "draft-1");
     expect(row?.executiveSummary).toBe("All looking good.");
     expect(row?.advisorNotes).toEqual({ "rec-1": "Discuss next quarter." });
-    expect(row?.templateChoice).toBe("BELVEDERE");
+    expect(row?.templateChoice).toBe("AKILI");
   });
 
   it("rejects executive summaries over 2000 chars", async () => {

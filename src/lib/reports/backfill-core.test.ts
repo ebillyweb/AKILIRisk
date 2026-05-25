@@ -6,7 +6,7 @@
  *   • Idempotent: skips when at least one Report already exists.
  *   • Skips when no PillarScore exists yet.
  *   • Skips when assessment id unknown (deleted between cursor + read).
- *   • Honors the COBRANDED-when-branding / BELVEDERE-when-no-branding
+ *   • Honors the COBRANDED-when-branding / AKILI-when-no-branding
  *     templateChoice rule.
  */
 
@@ -24,7 +24,6 @@ const STUB_SNAPSHOT = {
     riskLevel: "medium",
     breakdown: [],
     missingControls: [],
-    pillarNarratives: [],
     assessmentDate: "March 4, 2026",
     completionPercentage: 100,
     categoryCount: 0,
@@ -112,7 +111,7 @@ describe("processOneAssessment (backfill core)", () => {
     expect(result).toEqual({ status: "skipped", reason: "not_found" });
   });
 
-  it("uses BELVEDERE template when no advisor branding resolves", async () => {
+  it("uses AKILI template when no advisor branding resolves", async () => {
     const deps = makeDeps({
       buildBranding: vi.fn(async () => null),
     });
@@ -122,7 +121,7 @@ describe("processOneAssessment (backfill core)", () => {
     const call = (
       deps.insertSyntheticPublishedAndDraft as ReturnType<typeof vi.fn>
     ).mock.calls[0][0];
-    expect(call.templateChoice).toBe("BELVEDERE");
+    expect(call.templateChoice).toBe("AKILI");
     expect(call.branding).toBeNull();
   });
 });
