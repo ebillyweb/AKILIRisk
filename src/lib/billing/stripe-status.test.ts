@@ -17,4 +17,15 @@ describe("mapStripeSubscriptionStatus", () => {
     expect(mapStripeSubscriptionStatus("canceled")).toBe("CANCELLED");
     expect(mapStripeSubscriptionStatus("incomplete_expired")).toBe("CANCELLED");
   });
+
+  it("maps incomplete and paused to UNPAID (fail closed)", () => {
+    expect(mapStripeSubscriptionStatus("incomplete")).toBe("UNPAID");
+    expect(mapStripeSubscriptionStatus("paused")).toBe("UNPAID");
+  });
+
+  it("maps unrecognized Stripe statuses to UNPAID (fail closed)", () => {
+    expect(
+      mapStripeSubscriptionStatus("needs_attention" as "active")
+    ).toBe("UNPAID");
+  });
 });

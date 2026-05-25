@@ -22,7 +22,12 @@ import { FileUpload } from '@/components/ui/file-upload';
 import { BrandingSidebarPreview } from '@/components/advisor/settings/BrandingSidebarPreview';
 import { PreviewContainer } from '@/components/advisor/settings/BrandingPreview';
 import { SubdomainManager } from '@/components/advisor/settings/SubdomainManager';
-import { brandingUpdateSchema, BrandingFormData, SubscriptionFeatures } from '@/lib/validation/branding';
+import {
+  brandingUpdateSchema,
+  BrandingFormData,
+  LOGO_MAX_BYTES,
+  SubscriptionFeatures,
+} from '@/lib/validation/branding';
 import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
 import { updateAdvisorBrandingAction } from '@/lib/actions/advisor-branding-actions';
 import { resolveAdvisorLogoSrcForPreview } from '@/lib/branding/advisor-logo-display';
@@ -492,12 +497,12 @@ export function EnhancedBrandingForm({
               <TabsContent value="assets" className="mt-0 outline-none">
                 <SettingsSection
                   title="Logo"
-                  description="PNG, JPEG, or SVG — max 2MB. Shown on client portals and reports."
+                  description="PNG, JPEG, or SVG — max 5MB. Shown on client portals and reports."
                   icon={ImageIcon}
                 >
                   <FileUpload
                     accept="image/*"
-                    maxSize={2 * 1024 * 1024}
+                    maxSize={LOGO_MAX_BYTES}
                     onUpload={handleLogoUpload}
                     currentFile={watchedValues.logoUrl || profile.logoUrl || null}
                   />

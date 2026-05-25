@@ -9,6 +9,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { prisma } from '@/lib/db';
 import { resolveAwsCredentials } from '@/lib/s3/aws-credentials';
 import { s3EncryptionParams } from '@/lib/s3/encryption-params';
+import { LOGO_MAX_BYTES } from '@/lib/validation/branding';
 
 // Must match the bucket’s actual region (see `aws s3api head-bucket --bucket ...` → x-amz-bucket-region).
 // Wrong region → PermanentRedirect, presigned host mismatch, or OPTIONS 500 on the wrong regional endpoint.
@@ -81,10 +82,11 @@ function validateUploadRequest(request: UploadUrlRequest): void {
     throw new Error(`File type ${fileType} not allowed. Allowed types: PNG, JPEG, SVG`);
   }
 
-  // Validate file size (2MB for starter, could be higher for other tiers)
-  const maxSize = 2 * 1024 * 1024; // 2MB
-  if (fileSize > maxSize) {
-    throw new Error(`File size ${fileSize} exceeds maximum of ${maxSize} bytes (2MB)`);
+  if (fileSize > LOGO_MAX_BYTES) {
+    const maxMb = LOGO_MAX_BYTES / (1024 * 1024);
+    throw new Error(
+      `File size ${fileSize} exceeds maximum of ${LOGO_MAX_BYTES} bytes (${maxMb}MB)`
+    );
   }
 
   // Validate file name

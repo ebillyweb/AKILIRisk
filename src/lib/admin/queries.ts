@@ -89,6 +89,7 @@ export async function getAdvisorForAdmin(userId: string) {
           currentPeriodEnd: true,
           cancelAtPeriodEnd: true,
           stripeSubscriptionId: true,
+          createdAt: true,
         },
       },
       advisorProfile: {

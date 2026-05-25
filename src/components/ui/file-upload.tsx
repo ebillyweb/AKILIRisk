@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { resolveAdvisorLogoSrcForPreview } from '@/lib/branding/advisor-logo-display';
+import { LOGO_MAX_BYTES } from '@/lib/validation/branding';
+
+const LOGO_MAX_MB = LOGO_MAX_BYTES / (1024 * 1024);
 
 interface FileUploadProps {
   accept?: string;
@@ -33,13 +36,13 @@ const ALLOWED_TYPES = {
 
 export function FileUpload({
   accept = 'image/*',
-  maxSize = 2 * 1024 * 1024, // 2MB default
+  maxSize = LOGO_MAX_BYTES,
   onUpload,
   currentFile,
   disabled = false,
   className = '',
   label = 'Upload Logo',
-  description = 'Drag and drop your logo here, or click to browse. PNG, JPEG, or SVG up to 2MB.',
+  description = `Drag and drop your logo here, or click to browse. PNG, JPEG, or SVG up to ${LOGO_MAX_MB}MB.`,
 }: FileUploadProps) {
   const [uploadState, setUploadState] = useState<UploadState>({ status: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);

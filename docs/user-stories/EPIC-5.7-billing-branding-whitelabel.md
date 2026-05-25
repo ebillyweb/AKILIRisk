@@ -1,78 +1,135 @@
 # Epic 5.7 — Billing, Branding & White-Label
 
-**Status:** **Code-only** → stories US-39–US-42 proposed  
-**BRD alignment:** FR-11 (subscription), BRAND-* (v1.4), white-label subdomains
+**Status:** Implemented (core flows)  
+**BRD alignment:** FR-8 (advisor commercial / portal access), BRAND-* (v1.4), white-label subdomains
 
 ## Coverage summary
 
 | Story | Title | Status | Notes |
 |-------|--------|--------|--------|
-| US-39 | Subscribe and manage billing | **Code-only** | Stripe, `/advisor/billing` |
-| US-40 | Enforce client limit by plan | **Done** | Epic 5.1 US-2 at invite time |
-| US-41 | Configure advisor branding | **Code-only** | Logo, colors, firm name |
-| US-42 | Serve tenant on custom subdomain | **Code-only** | Staging + production hosts |
+| US-55 | Subscribe to an Advisor Plan | **Done** | Stripe Checkout, tier limits 25/50/100 |
+| US-56 | Change or Manage Subscription | **Done** | Prorated plan switch, Customer Portal, invoices |
+| US-57 | Reconcile subscription from provider | **Done** | Webhook idempotency + fail-closed status map |
+| US-58 | New-advisor grace period | **Done** | Admin create + 30-day paid-signup enforcement |
+| US-59 | Configure firm branding | **Done** | Logo up to 5 MB, private S3 proxy for clients |
+| US-60 | Claim white-label subdomain | **Done** | 3–20 chars, reserved labels, 3 changes / 24h |
+| US-61 | Serve branded client portal | **Done** | `src/proxy.ts`, active + verified only |
+
+**Cross-epic:** Client limit at invite — [Epic 5.1 US-2](./EPIC-5.1-client-invitation-onboarding.md#us-2--enforce-subscription-client-limit-at-invite-time-system) (`assertCanAddClientForAdvisorProfile`).
 
 ---
 
-## US-39 — Manage Advisor Subscription (Advisor)
+## US-55 — Subscribe to an Advisor Plan (Advisor)
 
-| Capability | Implementation |
+| Acceptance | Implementation |
 |------------|----------------|
-| Billing portal / checkout | `/advisor/billing`, Stripe integration |
-| Subscription status gate | Billing gate for unverified/inactive tenants |
+| Tier + cycle → subscription + client limit | `TIER_LIMITS`, `upsertSubscriptionFromStripe`, Checkout metadata |
+| Checkout → **ACTIVE** | Webhook `checkout.session.completed`, `mapStripeSubscriptionStatus("active")` |
+| Billing on, no qualifying sub → no hub | `getAdvisorHubAccessForUserId`, `(protected)/advisor/layout.tsx` → `/advisor/billing` |
 
-**Code:** `src/lib/billing/**`, `src/app/(protected)/advisor/billing/page.tsx`
+**Code:** `src/lib/billing/**`, `src/lib/actions/billing.ts`, `src/app/(protected)/advisor/billing/page.tsx`
 
-**Test fixtures:** `advisor3@test.com` (unverified), `advisor4@test.com` (deactivated) — see CLAUDE.md
-
----
-
-## US-40 — Enforce Client Limit at Invite (System)
-
-**Status: Done** — documented in [Epic 5.1 US-2](./EPIC-5.1-client-invitation-onboarding.md#us-2--enforce-subscription-client-limit-at-invite-time-system)
-
-**Reconciliation:** Single implementation (`assertCanAddClientForAdvisorProfile`); story lives in 5.1, billing epic cross-links here.
+**Tests:** `tests/smoke/advisor-billing-gate.spec.ts`
 
 ---
 
-## US-41 — Configure Firm Branding (Advisor)
+## US-56 — Change or Manage Subscription (Advisor)
 
-| Capability | Implementation |
+| Acceptance | Implementation |
 |------------|----------------|
-| Branding toggle and assets | Advisor settings, `brandingEnabled` |
-| Branded emails | Epic 5.1 US-3 / US-1B |
-| Branded client portal | Dashboard / document portal theming |
-| Co-branded PDF reports | Report `brandingSnapshot` on publish (Epic 5.2 US-20) |
-| Branded invitation links | `buildInvitationSignupUrl` on tenant host |
+| Tier/cycle change, proration, limit update | `switchSubscriptionPlan` (`proration_behavior: "create_prorations"`) |
+| Billing portal, invoices | `createPortalSession`, `getBillingHistory` |
 
-**Code:** `src/lib/validation/branding.ts`, advisor settings components
-
-**Tests:** `tests/smoke/client-portal-branding.spec.ts`, `default-branding-fallback` patterns
+**UI:** `src/components/advisor/billing/BillingDashboard.tsx`
 
 ---
 
-## US-42 — Access Platform on Advisor Subdomain (Client / Advisor)
+## US-57 — Reconcile Subscription Status (System)
 
-| Capability | Implementation |
+| Acceptance | Implementation |
 |------------|----------------|
-| Tenant subdomain routing | `src/proxy.ts`, `platform-subdomain.ts` |
-| Claim / verify subdomain | `/api/advisor/subdomain/claim` |
-| Staging suffix `-staging` | Env `TENANT_SUBDOMAIN_SUFFIX` |
+| Process events once | `claimWebhookEvent` on `StripeWebhookEvent.id` |
+| Payment failure → PAST_DUE / UNPAID | `mapStripeSubscriptionStatus`, `invoice.payment_failed` |
+| Unknown Stripe status → UNPAID | `stripe-status.ts` default arm |
+
+**Code:** `src/app/api/webhooks/stripe/route.ts`, `src/lib/billing/subscription-service.ts`
+
+**Tests:** `tests/smoke/stripe-webhook-endpoint.spec.ts`, `src/lib/billing/stripe-status.test.ts`
+
+**Policy — PAST_DUE portal access:** Advisors retain hub access while `PAST_DUE` (aligned with STRIPE-SPEC payment-failure grace / `BILLING_GRACE_PERIOD_DAYS`). Client adds use the same rule in `subscriptionAllowsNewClients`. UNPAID blocks access.
+
+---
+
+## US-58 — New-Advisor Grace Period (Advisor)
+
+| Acceptance | Implementation |
+|------------|----------------|
+| Admin create → Growth (50), welcome email | `createAdvisorByAdmin`, `buildNewAdvisorWelcomeEmailHtml` |
+| Grace ends 00:00 UTC next day; 30 days paid signup | `newAdvisorGracePeriodEndsAt`, `newAdvisorPaidSignupDeadline` |
+| After grace, no paid sub → blocked | `subscriptionQualifiesForPortalEnablement` + `isPastPaidSignupDeadline` |
+
+**Code:** `src/lib/billing/new-advisor-grace.ts`, `src/lib/billing/advisor-portal-subscription.ts`
+
+**Tests:** `src/lib/billing/new-advisor-grace.test.ts`, `src/lib/billing/advisor-portal-subscription.test.ts`
+
+---
+
+## US-59 — Configure Firm Branding (Advisor)
+
+| Acceptance | Implementation |
+|------------|----------------|
+| Logo, colors, tagline on portal + reports | `BrandingProvider`, `brandingSnapshot`, PDF routes |
+| Logo ≤ 5 MB, private storage | `LOGO_MAX_BYTES`, S3 + `/api/client/advisor-logo` |
+| No branding / disabled → Akili lockup | `brandingEnabled`, `default-branding-fallback.spec.ts` |
+
+**Code:** `src/lib/validation/branding.ts`, `src/lib/s3/branding-uploads.ts`, advisor settings
+
+**Tests:** `tests/smoke/client-portal-branding.spec.ts`, `tests/smoke/default-branding-fallback.spec.ts`
+
+---
+
+## US-60 — Claim White-Label Subdomain (Advisor)
+
+| Acceptance | Implementation |
+|------------|----------------|
+| 3–20 chars, lowercase alphanumeric + hyphens, not reserved | `subdomainClaimSchema`, `PLATFORM_SUBDOMAIN_LABELS` |
+| 3 changes / 24h | `checkRateLimit(..., 'subdomain_change', 24)` |
+| Active or pending + DNS instructions | `SUBDOMAIN_AUTO_ACTIVATE`, `SubdomainManager` |
+
+**Code:** `src/app/api/advisor/subdomain/claim/route.ts`, `src/lib/advisor/platform-subdomain.ts`
+
+**Tests:** `src/lib/subscription/rate-limit.test.ts`, `src/lib/advisor/platform-subdomain.test.ts`
+
+---
+
+## US-61 — Serve Branded Client Portal (System)
+
+| Acceptance | Implementation |
+|------------|----------------|
+| Active + verified subdomain → branded portal | `src/proxy.ts` rewrite to `/branded/*` |
+| Inactive / unverified → not served | 404 “Subdomain Not Available” |
+| Platform hostname → main app | `isPlatformHostname` |
 
 **Docs:** [white-label-subdomains.md](../white-label-subdomains.md)
 
-**Reconciliation:** Invite links should target tenant host when branding enabled (US-1B).
+**Tests:** `tests/smoke/subdomain-routing.spec.ts`
+
+**Fixtures:** `advisor2` (active+verified), `advisor3` (unverified), `advisor4` (inactive) — CLAUDE.md
 
 ---
 
-## Playwright coverage
+## Playwright / unit coverage
 
-| Area | Status |
-|------|--------|
-| Client portal branding | `client-portal-branding.spec.ts` |
-| Billing gate / subdomain | **Partial** — fixture users exist; dedicated specs TBD |
+| Area | Spec / test file |
+|------|------------------|
+| Billing gate | `advisor-billing-gate.spec.ts` |
+| Client branding + fallback | `client-portal-branding.spec.ts`, `default-branding-fallback.spec.ts` |
+| Subdomain routing | `subdomain-routing.spec.ts` |
+| Stripe webhooks | `stripe-webhook-endpoint.spec.ts` |
+| Portal qualification / grace | `advisor-portal-subscription.test.ts` |
+| Subdomain rate limit | `rate-limit.test.ts` |
 
 ## Related
 
-- [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md)
+- [Epic 5.1](./EPIC-5.1-client-invitation-onboarding.md) — invites, branded signup URLs
 - [Epic 5.2](./EPIC-5.2-household-assessment-lifecycle.md) — co-branded report PDF

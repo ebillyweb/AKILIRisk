@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 /**
  * Legacy: backfill Subscription rows without Stripe IDs (historical STRIPE-SPEC migration).
- * Tier: >25 active clients → PROFESSIONAL (75), else GROWTH (25). Status GRACE_PERIOD, 30-day window.
  *
- * With billing enabled, this does NOT qualify an advisor for portal access (Stripe subscription
- * id is required). Prefer real Checkout / webhooks for production advisors.
+ * Tier: >25 active clients → PROFESSIONAL (100-client limit), else GROWTH (50).
+ * Status GRACE_PERIOD with calendar grace end (next UTC midnight), not a 30-day hub window.
+ *
+ * With billing enabled, advisors still need a qualifying Stripe subscription for portal
+ * access after calendar grace (see subscriptionQualifiesForPortalEnablement). Prefer admin
+ * createAdvisorByAdmin or real Checkout / webhooks for new advisors.
  *
  * Usage: node scripts/migrate-advisor-subscriptions.js
  */
@@ -19,11 +22,18 @@ const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { Pool } = require("pg");
 
+const TIER_LIMITS = { GROWTH: 50, PROFESSIONAL: 100 };
+
+function newAdvisorGracePeriodEndsAt(from = new Date()) {
+  const y = from.getUTCFullYear();
+  const m = from.getUTCMonth();
+  const d = from.getUTCDate();
+  return new Date(Date.UTC(y, m, d + 1, 0, 0, 0, 0));
+}
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-
-const GRACE_DAYS = 30;
 
 async function main() {
   console.log("Migrating advisor subscriptions…");
@@ -40,8 +50,8 @@ async function main() {
   let created = 0;
   let skipped = 0;
 
-  const periodEnd = new Date();
-  periodEnd.setDate(periodEnd.getDate() + GRACE_DAYS);
+  const createdAt = new Date();
+  const gracePeriodEnd = newAdvisorGracePeriodEndsAt(createdAt);
 
   for (const user of advisors) {
     if (!user.advisorProfile) continue;
@@ -59,7 +69,7 @@ async function main() {
     });
 
     const tier = clientCount > 25 ? "PROFESSIONAL" : "GROWTH";
-    const clientLimit = clientCount > 25 ? 75 : 25;
+    const clientLimit = TIER_LIMITS[tier];
 
     await prisma.subscription.create({
       data: {
@@ -68,7 +78,7 @@ async function main() {
         status: "GRACE_PERIOD",
         clientLimit,
         billingCycle: "MONTHLY",
-        currentPeriodEnd: periodEnd,
+        currentPeriodEnd: gracePeriodEnd,
       },
     });
 
@@ -82,13 +92,14 @@ async function main() {
           metadata: {
             clientCountAtMigration: clientCount,
             email: user.email,
+            gracePeriodEnd: gracePeriodEnd.toISOString(),
           },
         },
       });
     }
 
     created += 1;
-    console.log(`  + ${user.email} → ${tier} (${clientCount} clients)`);
+    console.log(`  + ${user.email} → ${tier} (${clientCount} clients, limit ${clientLimit})`);
   }
 
   console.log(`Done. Created ${created}, skipped (already had subscription) ${skipped}.`);

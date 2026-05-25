@@ -214,6 +214,7 @@ export async function setAdvisorPortalAccessByAdmin(input: unknown) {
           currentPeriodEnd: true,
           cancelAtPeriodEnd: true,
           stripeSubscriptionId: true,
+          createdAt: true,
         },
       });
       const billingOn = isBillingEnabled();
@@ -221,7 +222,7 @@ export async function setAdvisorPortalAccessByAdmin(input: unknown) {
         return {
           success: false,
           error: billingOn
-            ? "Complete an active Stripe subscription for this advisor before enabling portal access. Grace period only qualifies until the current period end date."
+            ? "Complete an active Stripe subscription for this advisor before enabling portal access. Calendar grace qualifies only until the next UTC day; paid signup is required within 30 days of account creation."
             : "Subscription must be qualifying (active, past due, or grace period before current period end). Update the subscription row before enabling portal access.",
         };
       }

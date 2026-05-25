@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { SubscriptionFeatures } from '@/lib/validation/branding';
+import { LOGO_MAX_BYTES, SubscriptionFeatures } from '@/lib/validation/branding';
 
 /**
  * Feature mapping by subscription tier.
@@ -215,7 +215,7 @@ export async function requireSubdomainAccess(userId: string): Promise<{
  */
 export function getFeatureLimits(tier: 'STARTER' | 'GROWTH' | 'PROFESSIONAL') {
   const professional = {
-    logoMaxSize: 5 * 1024 * 1024, // 5MB
+    logoMaxSize: LOGO_MAX_BYTES,
     customColors: 3,
     subdomainChangesPerDay: 3,
     brandingFields: [

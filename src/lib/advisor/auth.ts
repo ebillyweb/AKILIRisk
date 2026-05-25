@@ -66,6 +66,7 @@ export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
           currentPeriodEnd: true,
           cancelAtPeriodEnd: true,
           stripeSubscriptionId: true,
+          createdAt: true,
         },
       },
     },

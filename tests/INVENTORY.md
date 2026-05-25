@@ -233,7 +233,8 @@ Not Implemented (feature exists, not yet covered):
 - Advisor branding edit flow (admin or advisor sets `brandName`/colors/logo, change is reflected in client portal)
 - Advisor branding audit log entries created on update (`AdvisorBrandingAuditLog`)
 - ~~`subscriptionQualifiesForPortalEnablement` gate: no-sub advisor redirected to `/advisor/billing`~~ *(covered by `advisor-billing-gate.spec.ts`)*
-- Subscription edge states (UNPAID; CANCELLED with cancelAtPeriodEnd=true; expired GRACE_PERIOD)
+- ~~Subscription edge states (grace expiry, 30-day paid signup, qualifying Stripe)~~ *(covered by `advisor-portal-subscription.test.ts`)*
+- ~~Subdomain change rate limit (3 / 24h)~~ *(covered by `rate-limit.test.ts`)*
 
 Subdomain routing (see `docs/white-label-subdomains.md`). Seeded **slugs**; Playwright builds hosts with `TENANT_SUBDOMAIN_SUFFIX` (default `-staging` when `PLAYWRIGHT_BASE_URL` is `preview.akilirisk.com`):
 - `independent-wealth` (+ suffix) -> advisor2, active+verified -> branded portal. *(covered by `subdomain-routing.spec.ts`)*

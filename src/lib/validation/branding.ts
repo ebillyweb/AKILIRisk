@@ -3,6 +3,9 @@ import { z } from 'zod';
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const SUBDOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 
+/** US-59 / BRD: advisor logo uploads up to 5 MB (all paid tiers). */
+export const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+
 function isHttpsUrl(url: string): boolean {
   try {
     return new URL(url).protocol === 'https:';
@@ -125,7 +128,7 @@ export const logoUploadSchema = z.object({
   }),
   fileSize: z.number()
     .min(1, 'File cannot be empty')
-    .max(2 * 1024 * 1024, 'File size must be less than 2MB'),
+    .max(LOGO_MAX_BYTES, `File size must be less than ${LOGO_MAX_BYTES / (1024 * 1024)}MB`),
 });
 
 /**
