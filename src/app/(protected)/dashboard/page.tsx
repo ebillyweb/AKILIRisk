@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { prisma } from "@/lib/db";
-import { isPlatformAdminRole } from "@/lib/auth-roles";
+import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
@@ -43,7 +43,7 @@ export default async function DashboardPage({
     sp.error === "unauthorized" ? "?error=unauthorized" : "";
 
   // Advisors and admins land on the advisor hub instead of the client dashboard
-  const role = session.user.role?.toString().toUpperCase();
+  const role = normalizeUserRoleString(session.user.role);
   if (role === "ADVISOR") {
     const hub = await getAdvisorHubAccessForUserId(session.user.id);
     if (!hub.allowed) {

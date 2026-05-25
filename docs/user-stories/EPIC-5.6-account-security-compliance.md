@@ -58,12 +58,16 @@ Applies to **advisor/admin** credential sign-in only (clients use magic link; no
 
 ## US-49 — Enforce Role-Based Access Control
 
-| Capability | Implementation |
-|------------|----------------|
-| Protected pages/APIs deny wrong role | `requireAdminRole`, `requireAdvisorRole`, `requireSuperAdminRole` |
-| Unknown/missing role → `USER` | `normalizeUserRoleString()` |
-| Soft-deleted account → signed out | `proxy.ts` `accountDeactivated`; `auth.config.ts` |
-| Platform settings/thresholds → super-admin | `requireSuperAdminRole()` |
+| Acceptance criterion | Implementation | Tests |
+|---------------------|----------------|-------|
+| Wrong role → protected page/API denied | `requireAdminRole`, `requireAdvisorRole`, `requireSuperAdminRole`; `/admin` + `/advisor` layouts; client API ownership checks | `tests/smoke/auth-edge-cases.spec.ts`, `tests/smoke/epic-5.5-platform-admin.spec.ts` |
+| Unknown/missing role → `USER` | `normalizeUserRoleString()` in session callback + role helpers | `src/lib/auth-roles.test.ts` |
+| Soft-deleted account → signed out | `auth.config.ts` sign-in block; `(protected)/layout` DB check; `proxy.ts` `accountDeactivated`; advisor hub `deactivated` path | `tests/smoke/epic-5.6-rbac.spec.ts` |
+| Platform settings/thresholds → super-admin only | `requireSuperAdminRole()` on thresholds, integrations, staff provisioning, feature-flag actions | `tests/smoke/epic-5.5-platform-admin.spec.ts` (US-41, US-42) |
+
+**Code:** `src/lib/auth-roles.ts`, `src/lib/admin/auth.ts`, `src/lib/advisor/auth.ts`, `src/proxy.ts`, `src/app/(protected)/admin/layout.tsx`, `src/app/(protected)/advisor/layout.tsx`
+
+**Test fixture API:** `POST /api/test/user/deactivate` (`restoreOnly: true` to reset) — requires `ENABLE_TEST_AUTH=1`; `*@test.com` emails only.
 
 ---
 
@@ -132,6 +136,8 @@ Admin audit UI: [Epic 5.5](./EPIC-5.5-platform-administration.md) US-34.
 |------|--------|
 | MFA sign-in (unit) | **Implemented** — gate helpers, recovery reuse, TOTP drift |
 | MFA sign-in (E2E) | **Implemented** — `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` (TOTP gate, API 403, recovery reuse) |
+| RBAC / soft-delete (unit) | **Implemented** — `src/lib/auth-roles.test.ts`, `mfa-session-status.test.ts` |
+| RBAC / soft-delete (E2E) | **Implemented** — `tests/smoke/auth-edge-cases.spec.ts`, `epic-5.5-platform-admin.spec.ts`, `epic-5.6-rbac.spec.ts` |
 | Consent gate | **Not implemented** |
 | Cron auth smoke | Partial (`epic-5.4-documents-cron-sse.spec.ts`) |
 
