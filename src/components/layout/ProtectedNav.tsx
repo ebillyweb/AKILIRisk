@@ -31,21 +31,20 @@ const ADVISOR_NAV_ITEMS: { href: string; label: string }[] = [
 
 const ADMIN_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/admin", label: "Admin" },
-  // §9.1 (BRD): Belvedere-side aggregate analytics. Slotted between
+  // §9.1 (BRD): AKILI-side aggregate analytics. Slotted between
   // /admin (home/index) and /admin/advisors so it sits visually next to
   // the per-tenant drill-down surfaces it links into.
-  { href: "/admin/analytics", label: "Executive dashboard" },
+  { href: "/admin/analytics", label: "Analytics Dashboard" },
   // Operational health: separate from analytics so platform/system
   // signals never share a page with business metrics.
-  { href: "/admin/operations", label: "Operations health" },
+  { href: "/admin/operations", label: "Operations Dashboard" },
   { href: "/admin/advisors", label: "Advisors" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/staff", label: "Staff" },
   { href: "/admin/leads", label: "Assessment requests" },
-  { href: "/admin/intake", label: "Intake management" },
-  { href: "/admin/intake/questions", label: "Intake question bank" },
-  { href: "/admin/assessment/questions", label: "Assessment question bank" },
-  { href: "/admin/assessment", label: "Active assessments" },
+  { href: "/admin/intake", label: "Intake Management" },
+  { href: "/admin/intake/questions", label: "Intake script" },
+  { href: "/admin/assessment", label: "Assessment Management" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
@@ -55,8 +54,6 @@ interface ProtectedNavProps {
   restrictNavToIntake?: boolean;
   /** When false for clients, Assessment link is disabled until advisor approves intake or waives it */
   assessmentUnlockedForClient?: boolean;
-  /** US-49: hide Profiles & Roles when advisor disabled household profiles */
-  hideProfilesNav?: boolean;
   /** Client portal + assigned advisor: match `BrandingPreview` nav (primary text, light active pill) */
   clientBrandHex?: PreviewBrandHex | null;
   /** When omitted for advisors, both features are shown (backward compatible). */
@@ -70,7 +67,6 @@ export function ProtectedNav({
   assessmentUnlockedForClient = false,
   clientBrandHex = null,
   advisorFeatureFlags = null,
-  hideProfilesNav = false,
 }: ProtectedNavProps) {
   const pathname = usePathname();
 
@@ -97,9 +93,7 @@ export function ProtectedNav({
     ? ADMIN_NAV_ITEMS
     : advisorNavItems !== undefined
       ? advisorNavItems
-      : hideProfilesNav
-        ? CLIENT_NAV_ITEMS.filter((item) => item.href !== '/profiles')
-        : CLIENT_NAV_ITEMS;
+      : CLIENT_NAV_ITEMS;
 
   // When restrictNavToIntake (client, intake not submitted), only Intake is enabled
   const isClientRestricted = restrictNavToIntake && !showAdvisor && !showAdmin;

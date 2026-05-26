@@ -10,7 +10,7 @@ import { SignInPage } from "../page-objects/SignInPage";
  * -> BrandingProvider applies the advisor's firmName, colors, and logo.
  *
  * client@test.com is assigned to advisor@test.com (firmName edited to
- * "Belvedere Risk Management" via the admin UI on staging). The exact name
+ * "AKILI Risk Management" via the admin UI on staging). The exact name
  * could change, so this test verifies the branding signals (kicker, logo
  * route, CSS var) rather than a specific firm name.
  */

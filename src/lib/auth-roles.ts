@@ -31,7 +31,7 @@ export function isSuperAdminRole(role: string | null | undefined): boolean {
   return normalizeUserRoleString(role) === "SUPER_ADMIN";
 }
 
-/** `ADMIN` or `SUPER_ADMIN` — Belvedere / platform staff admin UI. */
+/** `ADMIN` or `SUPER_ADMIN` — AKILI / platform staff admin UI. */
 export function isPlatformAdminRole(role: string | null | undefined): boolean {
   const r = normalizeUserRoleString(role);
   return r === "ADMIN" || r === "SUPER_ADMIN";

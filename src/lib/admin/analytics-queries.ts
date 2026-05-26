@@ -5,7 +5,7 @@ import { RISK_AREAS } from "@/lib/advisor/types";
 import type { RiskLevelPalette } from "@/lib/assessment/risk-color-palette";
 
 /**
- * §9.1 (BRD): Belvedere-side aggregate analytics queries. Server-only;
+ * §9.1 (BRD): AKILI-side aggregate analytics queries. Server-only;
  * read every advisor's data; admin-gated at the page layer (see
  * `/admin/analytics/page.tsx`).
  *

@@ -4,7 +4,7 @@ import type { MissingControlRow } from "@/lib/admin/analytics-queries";
 
 /**
  * §9.1 (BRD) — top 10 ServiceRecommendations by AssessmentRecommendation
- * row count. Highest-signal product card on the page: tells Belvedere
+ * row count. Highest-signal product card on the page: tells AKILI
  * which controls are most-commonly missing across every advisor's
  * client base, useful for product strategy + curriculum prioritization.
  */
