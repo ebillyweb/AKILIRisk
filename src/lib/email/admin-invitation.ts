@@ -1,6 +1,8 @@
 "use server";
 
 import { Resend } from "resend";
+import { escapeHtml } from "@/lib/escape-html";
+import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -40,14 +42,25 @@ export async function sendAdminInvitationEmail(data: AdminInvitationData) {
   const { email, name, tempPassword, role, invitedBy } = data;
 
   const roleLabel = role === "SUPER_ADMIN" ? "Super Administrator" : "Administrator";
-  const loginUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/signin`;
+  const baseUrl = getPublicAppUrlStrict();
+  if (!baseUrl) {
+    console.error(
+      "admin-invitation: no public app URL configured (AUTH_URL / NEXT_PUBLIC_URL / NEXTAUTH_URL / VERCEL_URL)"
+    );
+    return {
+      success: false,
+      error:
+        "Email service misconfigured: public app URL is not set for this environment",
+    };
+  }
+  const loginUrl = `${baseUrl}/signin`;
 
   try {
     const result = await resend.emails.send({
       from: formatFromAddress(),
       to: [email],
       subject: `Welcome to AKILI Risk Intelligence - ${roleLabel} Access`,
-      html: generateAdminInvitationHTML({
+      html: renderAdminInvitationHtml({
         name,
         email,
         role: roleLabel,
@@ -72,7 +85,8 @@ export async function sendAdminInvitationEmail(data: AdminInvitationData) {
   }
 }
 
-function generateAdminInvitationHTML(data: {
+/** Exported for unit tests (escape + URL behavior without Resend). */
+export function renderAdminInvitationHtml(data: {
   name: string;
   email: string;
   role: string;
@@ -80,6 +94,13 @@ function generateAdminInvitationHTML(data: {
   loginUrl: string;
   invitedBy: string;
 }): string {
+  const safeName = escapeHtml(data.name);
+  const safeEmail = escapeHtml(data.email);
+  const safeRole = escapeHtml(data.role);
+  const safePassword = escapeHtml(data.tempPassword);
+  const safeLoginUrl = escapeHtml(data.loginUrl);
+  const safeInvitedBy = escapeHtml(data.invitedBy);
+
   return `
 <!DOCTYPE html>
 <html>
@@ -205,10 +226,10 @@ function generateAdminInvitationHTML(data: {
 
     <div class="content">
       <div class="welcome-message">
-        Hello ${data.name},
+        Hello ${safeName},
       </div>
 
-      <p>You have been invited by ${data.invitedBy} to join AKILI Risk Intelligence as a <strong>${data.role}</strong>.</p>
+      <p>You have been invited by ${safeInvitedBy} to join AKILI Risk Intelligence as a <strong>${safeRole}</strong>.</p>
 
       <p>Your account has been created and is ready to use. Please sign in using the credentials below and change your password immediately after your first login.</p>
 
@@ -216,22 +237,22 @@ function generateAdminInvitationHTML(data: {
         <h3>🔐 Your Login Credentials</h3>
         <div class="credential-item">
           <span class="credential-label">Email:</span>
-          <span class="credential-value">${data.email}</span>
+          <span class="credential-value">${safeEmail}</span>
         </div>
         <div class="credential-item">
           <span class="credential-label">Password:</span>
-          <span class="credential-value">${data.tempPassword}</span>
+          <span class="credential-value">${safePassword}</span>
         </div>
       </div>
 
-      <a href="${data.loginUrl}" class="login-button">Sign In to AKILI</a>
+      <a href="${safeLoginUrl}" class="login-button">Sign In to AKILI</a>
 
       <div class="security-notice">
         <h4>🔒 Security Notice</h4>
         <p>Please change your password immediately after your first login. This temporary password will expire in 48 hours for security purposes.</p>
       </div>
 
-      <p>As a ${data.role}, you'll have access to:</p>
+      <p>As a ${safeRole}, you'll have access to:</p>
       <ul>
         <li>Platform administration tools</li>
         <li>User management capabilities</li>
@@ -243,7 +264,7 @@ function generateAdminInvitationHTML(data: {
     </div>
 
     <div class="footer">
-      <p>This invitation was sent to ${data.email}. If you did not expect this invitation, please contact your system administrator.</p>
+      <p>This invitation was sent to ${safeEmail}. If you did not expect this invitation, please contact your system administrator.</p>
       <p>&copy; 2024 AKILI Risk Intelligence. All rights reserved.</p>
     </div>
   </div>
