@@ -1,5 +1,3 @@
-"use server";
-
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
