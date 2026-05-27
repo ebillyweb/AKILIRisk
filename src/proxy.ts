@@ -11,6 +11,7 @@ import {
   isWorkspacePath,
   shouldBlockApiForMfaPending,
 } from "@/lib/auth/mfa-gate";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { isMfaChallengePendingForUser } from "@/lib/auth/mfa-session-status";
 
 /** For server layouts (e.g. advisor) that branch on URL without middleware.
@@ -160,9 +161,8 @@ export default async function proxy(req: NextRequest) {
   const isWorkspace = isWorkspacePath(pathname);
 
   if (isWorkspace && !isAuthenticated) {
-    const signInUrl = new URL("/signin", req.url);
-    signInUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(signInUrl);
+    const signInHref = buildSignInHref({ callbackUrl: pathname });
+    return NextResponse.redirect(new URL(signInHref, req.url));
   }
 
   if (

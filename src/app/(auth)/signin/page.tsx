@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, FormEvent, Suspense } from "react";
+import { useEffect, useState, FormEvent, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
+import {
+  buildSignInHref,
+  shouldRedirectCredentialsSignInToMagicLink,
+} from "@/lib/auth/sign-in-routes";
 
 function SignInForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
   const accountDeactivatedNotice = searchParams.get("notice") === "account_deactivated";
@@ -21,6 +26,13 @@ function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!shouldRedirectCredentialsSignInToMagicLink(callbackUrl)) return;
+    router.replace(
+      buildSignInHref({ callbackUrl, audience: "client" })
+    );
+  }, [callbackUrl, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,15 +47,14 @@ function SignInForm() {
       });
 
       if (result?.error || result?.ok === false) {
-        setError("Invalid email or password");
+        setError(
+          "Invalid email or password. Client accounts must use an email sign-in link."
+        );
         setIsLoading(false);
         return;
       }
 
       const redirectTo = safeAfterSignInPath(callbackUrl);
-      // Full navigation so the next document request includes the session cookie.
-      // router.push + refresh can run before the browser applies Set-Cookie from
-      // the credentials callback, so auth() on the server sees no session.
       window.location.assign(redirectTo);
     } catch (err) {
       console.error("Sign in error:", err);
@@ -52,37 +63,27 @@ function SignInForm() {
     }
   };
 
+  const magicLinkHref = buildSignInHref({
+    callbackUrl,
+    audience: "client",
+  });
+
   return (
     <AuthPanel
-      eyebrow={isAdvisorPortal ? "Advisor Portal" : "Client Access"}
+      eyebrow={isAdvisorPortal ? "Advisor Workspace" : "Advisor & Admin"}
       title="Sign in"
-      description="Continue your assessment workspace with a streamlined, security-conscious sign-in flow."
+      description="Email and password sign-in is for advisors and platform administrators. Client accounts use a one-time email link."
       footer={
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Don&apos;t have an account?{" "}
-            <Link
-              href={
-                callbackUrl
-                  ? `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`
-                  : "/signup"
-              }
-              className="font-semibold text-foreground hover:underline"
-            >
-              Sign up
-            </Link>
-          </span>
-          <Link
-            href={
-              callbackUrl
-                ? `/forgot-password?callbackUrl=${encodeURIComponent(callbackUrl)}`
-                : "/forgot-password"
-            }
-            className="font-semibold text-foreground hover:underline"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <Link
+          href={
+            callbackUrl
+              ? `/forgot-password?callbackUrl=${encodeURIComponent(callbackUrl)}`
+              : "/forgot-password"
+          }
+          className="font-semibold text-foreground hover:underline"
+        >
+          Forgot password?
+        </Link>
       }
     >
       {accountDeactivatedNotice ? (
@@ -103,7 +104,7 @@ function SignInForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            placeholder="name@familyoffice.com"
+            placeholder={isAdvisorPortal ? "you@firm.com" : "admin@firm.com"}
           />
         </div>
 
@@ -129,12 +130,9 @@ function SignInForm() {
           {isLoading ? "Signing in..." : "Sign In"}
         </Button>
 
-        {/* Round-11 commit 3 (BRD §5.1.AUTH): client sign-in is via
-            magic link, not email + password. Surface the path here for
-            anyone who landed on the credentials form by accident. */}
-        <p className="text-center text-xs text-muted-foreground pt-2">
+        <p className="text-center text-sm text-muted-foreground pt-2">
           Client account?{" "}
-          <Link href="/signin/magic-link" className="text-primary hover:underline">
+          <Link href={magicLinkHref} className="font-semibold text-foreground hover:underline">
             Sign in with an email link
           </Link>
         </p>

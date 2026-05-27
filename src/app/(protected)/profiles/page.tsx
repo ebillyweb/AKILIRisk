@@ -3,6 +3,7 @@ import { listHouseholdMembers } from '@/lib/data/household-members';
 import { getClientHouseholdProfilesEnabled } from '@/lib/household/profiles-policy';
 import { Badge } from '@/components/ui/badge';
 import { redirect } from 'next/navigation';
+import { buildSignInHref } from '@/lib/auth/sign-in-routes';
 import { ProfilesClient } from './ProfilesClient';
 import { ProfilesDisabledNotice } from '@/components/profiles/ProfilesDisabledNotice';
 
@@ -10,7 +11,7 @@ export default async function ProfilesPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect('/signin');
+    redirect(buildSignInHref({ callbackUrl: "/profiles" }));
   }
 
   const householdProfilesEnabled = await getClientHouseholdProfilesEnabled(session.user.id);

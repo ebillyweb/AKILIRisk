@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { redirect } from "next/navigation";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { getFamilyDashboardData } from "@/lib/family/queries";
 import { HouseholdMemberList } from "@/components/family/HouseholdMemberList";
 import { FamilyScoreDisplay } from "@/components/family/FamilyScoreDisplay";
@@ -13,7 +14,7 @@ export default async function FamilyDashboardPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/auth/signin");
+    redirect(buildSignInHref({ callbackUrl: "/family/dashboard" }));
   }
 
   // Check role: if ADVISOR or ADMIN, redirect to /advisor

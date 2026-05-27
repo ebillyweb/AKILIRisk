@@ -20,14 +20,17 @@ test.describe("auth edge cases", () => {
     await expect(
       page.getByText(/Invalid email or password/i)
     ).toBeVisible();
+    await expect(
+      page.getByText(/email sign-in link/i)
+    ).toBeVisible();
 
     expect(new URL(page.url()).pathname).toBe("/signin");
   });
 
-  test("unauthenticated user hitting /dashboard is sent to /signin with callbackUrl", async ({ page }) => {
+  test("unauthenticated user hitting /dashboard is sent to magic-link sign-in with callbackUrl", async ({ page }) => {
     await page.goto("/dashboard");
     const url = new URL(page.url());
-    expect(url.pathname).toBe("/signin");
+    expect(url.pathname).toBe("/signin/magic-link");
     expect(url.searchParams.get("callbackUrl")).toBe("/dashboard");
   });
 

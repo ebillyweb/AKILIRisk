@@ -55,9 +55,9 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
       title: "Start your governance assessment",
     },
     secondaryCta: {
-      label: "Sign In",
-      href: "/signin",
-      title: "Sign in to continue your assessment",
+      label: "Sign In with Email Link",
+      href: "/signin/magic-link",
+      title: "Request a one-time sign-in link by email",
     },
     helperLinks: [
       {

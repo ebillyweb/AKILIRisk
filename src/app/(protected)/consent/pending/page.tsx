@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { listAssignmentsAwaitingConsent } from "@/lib/advisor/pending-consent";
 import { ConsentDecisionForm } from "@/components/consent/ConsentDecisionForm";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 
 /**
  * Option D session 2.2 (BRD §5.1 amendment) — per-assignment consent
@@ -19,7 +20,9 @@ import { ConsentDecisionForm } from "@/components/consent/ConsentDecisionForm";
  */
 export default async function ConsentPendingPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/signin");
+  if (!session?.user?.id) {
+    redirect(buildSignInHref({ callbackUrl: "/consent/pending" }));
+  }
 
   const role = session.user.role?.toString().toUpperCase();
   if (role === "ADVISOR") redirect("/advisor");

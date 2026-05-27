@@ -53,6 +53,7 @@ export const PAGE_MFA_EXEMPT_PREFIXES = [
   "/mfa/verify",
   "/mfa/setup",
   "/signin",
+  "/signin/magic-link",
   "/signup",
   "/auth/",
   "/forgot-password",

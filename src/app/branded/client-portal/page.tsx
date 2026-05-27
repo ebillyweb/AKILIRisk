@@ -55,7 +55,7 @@ export default async function BrandedClientPortalPage() {
 
           <nav className="hidden md:flex items-center gap-6">
             <Link
-              href="/signin"
+              href="/signin/magic-link"
               className="text-sm hover:underline"
               style={{ color: primaryColor }}
             >

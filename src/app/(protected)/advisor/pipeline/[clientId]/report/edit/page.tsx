@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { getDraftWithRecommendations } from "@/lib/reports/queries";
 import { getOrCreateDraft } from "@/lib/actions/report-actions";
 import { EditDraftForm } from "@/components/reports/EditDraftForm";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 
 /**
  * §4.5 commit 3 (BRD §4.5) — advisor edit-draft page. Server component
@@ -25,7 +26,13 @@ export default async function AdvisorEditDraftPage({
   const { clientId } = await params;
 
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) {
+    redirect(
+      buildSignInHref({
+        callbackUrl: `/advisor/pipeline/${clientId}/report/edit`,
+      })
+    );
+  }
   if (!isAdvisorHubNavRole(session.user.role)) {
     notFound();
   }

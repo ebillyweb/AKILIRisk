@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
 import { getClientDocumentRequirements } from "@/lib/actions/document-actions";
 import { ClientDocumentPortal } from "@/components/documents/ClientDocumentPortal";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 
 export default async function DocumentsPage() {
   const result = await getClientDocumentRequirements();
 
   if (!result.success) {
     if (result.error === 'Not authenticated') {
-      redirect('/auth/signin');
+      redirect(buildSignInHref({ callbackUrl: '/documents' }));
     }
 
     return (

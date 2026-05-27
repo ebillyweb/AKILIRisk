@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, User, ArrowRight, UsersRound } from "lucide-react"
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { listHouseholdMembers } from "@/lib/data/household-members";
 import { getClientHouseholdProfilesEnabled } from "@/lib/household/profiles-policy";
 
@@ -18,7 +19,7 @@ import { getClientHouseholdProfilesEnabled } from "@/lib/household/profiles-poli
 export default async function CompletePage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/signin");
+    redirect(buildSignInHref({ callbackUrl: "/intake/complete" }));
   }
 
   const members = await listHouseholdMembers(session.user.id);

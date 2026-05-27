@@ -19,6 +19,7 @@ import {
 } from "@/lib/advisor/client-optional-pii-settings";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 
 export default async function SettingsPage({
   searchParams,
@@ -31,7 +32,7 @@ export default async function SettingsPage({
   const advisorSubscriptionRequired = notice === "advisor_subscription_required";
 
   if (!session?.user?.id) {
-    redirect("/signin");
+    redirect(buildSignInHref({ callbackUrl: "/settings" }));
   }
 
   const role = session.user.role?.toString().toUpperCase();
@@ -47,7 +48,7 @@ export default async function SettingsPage({
   });
 
   if (!userRow) {
-    redirect("/signin");
+    redirect(buildSignInHref({ callbackUrl: "/settings" }));
   }
   const user = { ...userRow, email: decryptUserEmail(userRow.emailCiphertext) };
 

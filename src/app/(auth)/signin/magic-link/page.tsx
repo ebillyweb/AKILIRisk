@@ -79,8 +79,9 @@ export default function MagicLinkRequestPage() {
 
   return (
     <AuthPanel
-      title="Sign in"
-      description="Enter your email and we'll send you a sign-in link."
+      eyebrow="Client Access"
+      title="Sign in with email link"
+      description="Enter the email your advisor used for your account. We'll send a one-time sign-in link—no password required."
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
@@ -103,12 +104,14 @@ export default function MagicLinkRequestPage() {
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Sending…" : "Send me a sign-in link"}
         </Button>
-        <p className="text-xs text-muted-foreground pt-2">
-          Are you an advisor?{" "}
-          <Link href="/signin?portal=advisor" className="text-primary hover:underline">
-            Sign in with email + password
+        <p className="text-sm text-muted-foreground pt-2">
+          Advisor or platform admin?{" "}
+          <Link
+            href="/signin?portal=advisor"
+            className="font-semibold text-foreground hover:underline"
+          >
+            Sign in with email and password
           </Link>
-          .
         </p>
       </form>
     </AuthPanel>

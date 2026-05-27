@@ -232,8 +232,9 @@ export function LandingHero({
                 </>
               ) : (
                 <>
-                  Existing clients can sign in to continue an assessment,
-                  review recommendations, and manage account security settings.
+                  Existing clients sign in with a one-time email link to continue
+                  an assessment, review recommendations, and manage account
+                  settings.
                 </>
               )}
             </div>

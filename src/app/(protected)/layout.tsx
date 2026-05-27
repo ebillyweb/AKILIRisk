@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { WorkspaceSlimHeader } from "@/components/layout/WorkspaceSlimHeader";
 import { redirectIfMfaChallengePending } from "@/lib/auth/require-mfa-verified";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { redirectIfPendingConsent } from "@/lib/advisor/require-consent-resolved";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
@@ -38,7 +39,9 @@ export default async function ProtectedLayout({
   const session = await auth();
 
   if (!session?.user) {
-    redirect("/signin");
+    const pathname =
+      (await headers()).get("x-akili-pathname") ?? "/dashboard";
+    redirect(buildSignInHref({ callbackUrl: pathname }));
   }
 
   await redirectIfMfaChallengePending(session);

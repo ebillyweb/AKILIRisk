@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { redirect, notFound } from "next/navigation";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 
 /**
  * §4.5 commit 3 (BRD §4.5) — advisor "Reports" view per client. Lists
@@ -28,7 +29,13 @@ export default async function AdvisorReportListPage({
   const { clientId } = await params;
 
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) {
+    redirect(
+      buildSignInHref({
+        callbackUrl: `/advisor/pipeline/${clientId}/report`,
+      })
+    );
+  }
   if (!isAdvisorHubNavRole(session.user.role)) {
     notFound();
   }
