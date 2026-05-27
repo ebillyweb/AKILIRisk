@@ -22,7 +22,7 @@ import {
   buildEffectiveVisibilityByClientId,
   isPiiFieldVisibleToAdvisor,
 } from "@/lib/advisor/field-visibility";
-import { parsePiiPolicy } from "@/lib/advisor/pii-policy";
+import { DEFAULT_PII_POLICY, parsePiiPolicy } from "@/lib/advisor/pii-policy";
 import {
   safeDecryptClientPhone,
   safeDecryptHouseholdFullName,
@@ -189,7 +189,11 @@ export async function fetchTenantBundle(
   // was dropped — we always decrypt at this layer and write `email`
   // back onto each row so the downstream CSV serializer's column list
   // (which keeps `email` as the header) sees plaintext.
-  const advisorPolicy = parsePiiPolicy(advisorProfile?.piiPolicy);
+  const rawPiiPolicy = advisorProfile?.piiPolicy;
+  const advisorPolicy =
+    rawPiiPolicy && typeof rawPiiPolicy === "object" && !Array.isArray(rawPiiPolicy)
+      ? parsePiiPolicy(rawPiiPolicy)
+      : DEFAULT_PII_POLICY;
   const visibilityByClientId = buildEffectiveVisibilityByClientId(
     advisorPolicy,
     assignments.map((a) => ({

@@ -199,6 +199,40 @@ export async function enableMFA(userId: string, token: string) {
 }
 
 /**
+ * Mark the newest active DB session as MFA verified.
+ * Falls back to creating a verified session row when none exists.
+ */
+export async function markSessionMfaVerified(userId: string): Promise<void> {
+  const [activeSession] = await prisma.session.findMany({
+    where: {
+      userId,
+      expires: { gt: new Date() },
+    },
+    orderBy: { expires: "desc" },
+    take: 1,
+    select: { id: true },
+  });
+
+  if (activeSession?.id) {
+    await prisma.session.update({
+      where: { id: activeSession.id },
+      data: { mfaVerified: true },
+    });
+    return;
+  }
+
+  const sessionToken = crypto.randomBytes(32).toString("hex");
+  await prisma.session.create({
+    data: {
+      sessionToken,
+      userId,
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      mfaVerified: true,
+    },
+  });
+}
+
+/**
  * Verify and consume a recovery code
  * Recovery codes are single-use
  */

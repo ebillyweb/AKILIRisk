@@ -144,15 +144,30 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
     return null;
   }
 
+  const clientAdvisorAssignmentDelegate = (
+    prisma as unknown as {
+      clientAdvisorAssignment?: {
+        findFirst?: (args: {
+          where: { advisorId: string; clientId: string; status: "ACTIVE" };
+          select: { fieldVisibility: true };
+        }) => Promise<{ fieldVisibility: unknown } | null>;
+      };
+    }
+  ).clientAdvisorAssignment;
+
+  const assignmentPromise = clientAdvisorAssignmentDelegate?.findFirst
+    ? clientAdvisorAssignmentDelegate.findFirst({
+        where: {
+          advisorId: advisorProfileId,
+          clientId: interview.userId,
+          status: "ACTIVE",
+        },
+        select: { fieldVisibility: true },
+      })
+    : Promise.resolve(null);
+
   const [assignment, advisorPolicy] = await Promise.all([
-    prisma.clientAdvisorAssignment.findFirst({
-      where: {
-        advisorId: advisorProfileId,
-        clientId: interview.userId,
-        status: "ACTIVE",
-      },
-      select: { fieldVisibility: true },
-    }),
+    assignmentPromise,
     loadAdvisorPiiPolicy(advisorProfileId),
   ]);
 

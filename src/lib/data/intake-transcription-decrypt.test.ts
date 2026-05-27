@@ -24,6 +24,7 @@ const TEST_KEY = "test-key-do-not-use-in-prod-0123456789ABCDEF";
 const { prismaSpies } = vi.hoisted(() => ({
   prismaSpies: {
     intakeInterview: { findFirst: vi.fn() },
+    advisorProfile: { findUnique: vi.fn() },
   },
 }));
 
@@ -39,6 +40,19 @@ import { userEmailCiphertext } from "@/lib/auth/user-email";
 beforeEach(() => {
   process.env.ENCRYPTION_KEY = TEST_KEY;
   prismaSpies.intakeInterview.findFirst.mockReset();
+  prismaSpies.advisorProfile.findUnique.mockReset();
+  prismaSpies.advisorProfile.findUnique.mockResolvedValue({
+    piiPolicy: {
+      schemaVersion: 1,
+      fields: {
+        "User.name": true,
+        "ClientProfile.phone": true,
+        "HouseholdMember.fullName": true,
+        "HouseholdMember.phone": true,
+        "HouseholdMember.notes": true,
+      },
+    },
+  });
 });
 
 describe("getIntakeInterview decrypt mapper", () => {

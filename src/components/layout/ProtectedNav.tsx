@@ -54,6 +54,8 @@ interface ProtectedNavProps {
   restrictNavToIntake?: boolean;
   /** When false for clients, Assessment link is disabled until advisor approves intake or waives it */
   assessmentUnlockedForClient?: boolean;
+  /** Hide client-only Profiles & Roles link when feature is unavailable. */
+  hideProfilesNav?: boolean;
   /** Client portal + assigned advisor: match `BrandingPreview` nav (primary text, light active pill) */
   clientBrandHex?: PreviewBrandHex | null;
   /** When omitted for advisors, both features are shown (backward compatible). */
@@ -65,6 +67,7 @@ export function ProtectedNav({
   showAdmin = false,
   restrictNavToIntake = false,
   assessmentUnlockedForClient = false,
+  hideProfilesNav = false,
   clientBrandHex = null,
   advisorFeatureFlags = null,
 }: ProtectedNavProps) {
@@ -89,11 +92,15 @@ export function ProtectedNav({
       : ADVISOR_NAV_ITEMS
     : undefined;
 
-  const items = showAdmin
+  const baseItems = showAdmin
     ? ADMIN_NAV_ITEMS
     : advisorNavItems !== undefined
       ? advisorNavItems
       : CLIENT_NAV_ITEMS;
+  const items =
+    hideProfilesNav && !showAdvisor && !showAdmin
+      ? baseItems.filter((item) => item.href !== "/profiles")
+      : baseItems;
 
   // When restrictNavToIntake (client, intake not submitted), only Intake is enabled
   const isClientRestricted = restrictNavToIntake && !showAdvisor && !showAdmin;
