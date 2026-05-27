@@ -1,7 +1,13 @@
 import { Resend } from "resend";
 import { DESIGNATED_ADMIN_EMAIL } from "@/lib/auth-shared";
 import { escapeHtml } from "@/lib/escape-html";
+import {
+  renderPlatformEmailHeadline,
+  wrapPlatformEmailContent,
+} from "@/lib/email/platform-email-layout";
+import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { LEGAL_ENTITY_NAME } from "@/lib/legal/documents";
+import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
@@ -20,39 +26,31 @@ export function renderContactFormEmailHtml(
   const safeSubject = escapeHtml(payload.subject);
   const safeMessage = escapeHtml(payload.message).replace(/\n/g, "<br />");
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-          <h1 style="color: #18181b; margin-top: 0;">New contact form message</h1>
-          <p style="margin: 16px 0; font-size: 14px; color: #666;">
-            Submitted via the ${escapeHtml(LEGAL_ENTITY_NAME)} website contact form.
-          </p>
-          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; vertical-align: top; width: 120px;">Name</td>
-              <td style="padding: 8px 0;">${safeName}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; vertical-align: top;">Email</td>
-              <td style="padding: 8px 0;"><a href="mailto:${safeEmail}" style="color: #18181b;">${safeEmail}</a></td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; font-weight: 600; vertical-align: top;">Subject</td>
-              <td style="padding: 8px 0;">${safeSubject}</td>
-            </tr>
-          </table>
-          <h2 style="font-size: 16px; margin: 24px 0 8px;">Message</h2>
-          <p style="margin: 0; font-size: 14px; white-space: pre-wrap;">${safeMessage}</p>
-        </div>
-      </body>
-    </html>
-  `;
+  const bodyHtml = `
+    ${renderPlatformEmailHeadline("New contact form message")}
+    <p style="margin:0 0 20px;font-size:14px;color:#64748b;">Submitted via the ${escapeHtml(LEGAL_ENTITY_NAME)} website contact form.</p>
+    <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr>
+        <td style="padding:8px 0;font-weight:600;vertical-align:top;width:120px;color:#0f172a;">Name</td>
+        <td style="padding:8px 0;">${safeName}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-weight:600;vertical-align:top;color:#0f172a;">Email</td>
+        <td style="padding:8px 0;"><a href="mailto:${safeEmail}" style="color:#18181b;text-decoration:none;">${safeEmail}</a></td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;font-weight:600;vertical-align:top;color:#0f172a;">Subject</td>
+        <td style="padding:8px 0;">${safeSubject}</td>
+      </tr>
+    </table>
+    <h2 style="font-size:16px;margin:24px 0 8px;color:#0f172a;">Message</h2>
+    <p style="margin:0;font-size:14px;">${safeMessage}</p>`;
+
+  return wrapPlatformEmailContent({
+    documentTitle: "New contact form message",
+    appOrigin: getPublicAppUrlStrict(),
+    bodyHtml,
+  });
 }
 
 export function getContactFormRecipientEmail(): string {
@@ -78,13 +76,15 @@ export async function sendContactFormEmail(
       ? `[Contact] ${payload.subject}`
       : `[Contact] Message from ${payload.name}`;
 
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to,
-      replyTo: payload.email,
-      subject: subjectLine,
-      html: renderContactFormEmailHtml(payload),
-    });
+    await resend.emails.send(
+      withPlatformLogoAttachment({
+        from: FROM_EMAIL,
+        to,
+        replyTo: payload.email,
+        subject: subjectLine,
+        html: renderContactFormEmailHtml(payload),
+      })
+    );
 
     return { success: true };
   } catch (error) {

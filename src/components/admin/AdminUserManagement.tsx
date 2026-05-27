@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminUserProvisioningForm } from "./AdminUserProvisioningForm";
@@ -79,21 +78,10 @@ export function AdminUserManagement({
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between">
-          <TabsList className="grid w-full max-w-[400px] grid-cols-2">
-            <TabsTrigger value="users">Admin Users ({adminUsers.length})</TabsTrigger>
-            <TabsTrigger value="create">Create New</TabsTrigger>
-          </TabsList>
-
-          <Button
-            onClick={() => setActiveTab("create")}
-            className="ml-4"
-            size="sm"
-          >
-            <Plus className="size-4 mr-2" />
-            Create Admin User
-          </Button>
-        </div>
+        <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+          <TabsTrigger value="users">Admin Users ({adminUsers.length})</TabsTrigger>
+          <TabsTrigger value="create">Create New</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="users" className="space-y-6">
           {isLoading ? (

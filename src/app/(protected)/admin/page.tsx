@@ -123,9 +123,9 @@ export default async function AdminControlCenterPage() {
               />
               {superUser && (
                 <WorkspaceCard
-                  href="/admin/staff"
-                  title="Staff access"
-                  description="Admin and super-admin role management"
+                  href="/admin/staff/admin-users"
+                  title="Admin users"
+                  description="Create and manage platform administrator accounts"
                   icon={Shield}
                   badge={{ text: "Super Admin", variant: "outline" }}
                 />

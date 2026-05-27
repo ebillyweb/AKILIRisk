@@ -1,5 +1,13 @@
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/escape-html";
+import {
+  renderPlatformEmailCta,
+  renderPlatformEmailNotice,
+  renderPlatformEmailPanel,
+  renderPlatformEmailUrlFallback,
+  wrapPlatformEmailContent,
+} from "@/lib/email/platform-email-layout";
+import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -18,6 +26,14 @@ function resendErrorMessage(error: unknown): string {
     if (typeof msg === "string" && msg.trim()) return msg;
   }
   return "Failed to send invitation email";
+}
+
+function appOriginFromUrl(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
 }
 
 interface AdminInvitationData {
@@ -54,27 +70,29 @@ export async function sendAdminInvitationEmail(data: AdminInvitationData) {
   const loginUrl = `${baseUrl}/signin`;
 
   try {
-    const result = await resend.emails.send({
-      from: formatFromAddress(),
-      to: [email],
-      subject: `Welcome to AKILI Risk Intelligence - ${roleLabel} Access`,
-      html: renderAdminInvitationHtml({
-        name,
-        email,
-        role: roleLabel,
-        tempPassword,
-        loginUrl,
-        invitedBy,
-      }),
-      text: generateAdminInvitationText({
-        name,
-        email,
-        role: roleLabel,
-        tempPassword,
-        loginUrl,
-        invitedBy,
-      }),
-    });
+    const result = await resend.emails.send(
+      withPlatformLogoAttachment({
+        from: formatFromAddress(),
+        to: [email],
+        subject: `Welcome to AKILI Risk Intelligence - ${roleLabel} Access`,
+        html: renderAdminInvitationHtml({
+          name,
+          email,
+          role: roleLabel,
+          tempPassword,
+          loginUrl,
+          invitedBy,
+        }),
+        text: generateAdminInvitationText({
+          name,
+          email,
+          role: roleLabel,
+          tempPassword,
+          loginUrl,
+          invitedBy,
+        }),
+      })
+    );
 
     return { success: true, data: result };
   } catch (error) {
@@ -96,179 +114,47 @@ export function renderAdminInvitationHtml(data: {
   const safeEmail = escapeHtml(data.email);
   const safeRole = escapeHtml(data.role);
   const safePassword = escapeHtml(data.tempPassword);
-  const safeLoginUrl = escapeHtml(data.loginUrl);
   const safeInvitedBy = escapeHtml(data.invitedBy);
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to AKILI Risk Intelligence</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.6;
-      color: #1f2937;
-      margin: 0;
-      padding: 0;
-      background-color: #f9fafb;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-    }
-    .header {
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-      color: white;
-      padding: 32px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0 0 8px 0;
-      font-size: 24px;
-      font-weight: 600;
-    }
-    .header p {
-      margin: 0;
-      opacity: 0.9;
-      font-size: 16px;
-    }
-    .content {
-      padding: 32px;
-    }
-    .welcome-message {
-      font-size: 18px;
-      margin-bottom: 24px;
-      color: #1f2937;
-    }
-    .credentials-box {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 20px;
-      margin: 24px 0;
-    }
-    .credentials-box h3 {
-      margin: 0 0 16px 0;
-      color: #1f2937;
-      font-size: 16px;
-      font-weight: 600;
-    }
-    .credential-item {
-      margin: 12px 0;
-    }
-    .credential-label {
-      font-weight: 600;
-      color: #374151;
-      display: inline-block;
-      width: 120px;
-    }
-    .credential-value {
-      font-family: 'Monaco', 'Menlo', monospace;
-      background: white;
-      padding: 8px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      display: inline-block;
-      font-size: 14px;
-    }
-    .login-button {
-      display: inline-block;
-      background: #2563eb;
-      color: white;
-      padding: 12px 24px;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: 600;
-      margin: 24px 0;
-    }
-    .security-notice {
-      background: #fef3c7;
-      border: 1px solid #f59e0b;
-      border-radius: 6px;
-      padding: 16px;
-      margin: 24px 0;
-    }
-    .security-notice h4 {
-      margin: 0 0 8px 0;
-      color: #92400e;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .security-notice p {
-      margin: 0;
-      color: #92400e;
-      font-size: 14px;
-    }
-    .footer {
-      background: #f8fafc;
-      padding: 24px 32px;
-      border-top: 1px solid #e2e8f0;
-      color: #6b7280;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Welcome to AKILI</h1>
-      <p>Risk Intelligence Platform</p>
-    </div>
+  const credentialsInner = `
+    <p style="margin:0 0 10px;font-size:14px;color:#334155;"><strong style="color:#0f172a;">Email:</strong><br />
+      <span style="font-family:Monaco,Menlo,monospace;font-size:14px;color:#0f172a;">${safeEmail}</span></p>
+    <p style="margin:0;font-size:14px;color:#334155;"><strong style="color:#0f172a;">Password:</strong><br />
+      <span style="font-family:Monaco,Menlo,monospace;font-size:14px;color:#0f172a;">${safePassword}</span></p>`;
 
-    <div class="content">
-      <div class="welcome-message">
-        Hello ${safeName},
-      </div>
+  const superAdminBullet =
+    data.role === "Super Administrator"
+      ? "<li>Advanced configuration and user provisioning</li>"
+      : "";
 
-      <p>You have been invited by ${safeInvitedBy} to join AKILI Risk Intelligence as a <strong>${safeRole}</strong>.</p>
+  const bodyHtml = `
+    <p style="margin:0 0 16px;font-size:16px;color:#0f172a;">Hello ${safeName},</p>
+    <p style="margin:0 0 16px;">You have been invited by ${safeInvitedBy} to join as a <strong style="color:#0f172a;">${safeRole}</strong>.</p>
+    <p style="margin:0 0 8px;">Your account is ready. Sign in with the credentials below and change your password immediately after your first login.</p>
+    ${renderPlatformEmailPanel("Your login credentials", credentialsInner)}
+    ${renderPlatformEmailCta({ label: "Sign in to AKILI", href: data.loginUrl })}
+    ${renderPlatformEmailUrlFallback(data.loginUrl)}
+    ${renderPlatformEmailNotice(
+      "Security notice",
+      "Please change your password immediately after your first login. This temporary password expires in 48 hours."
+    )}
+    <p style="margin:24px 0 8px;font-weight:600;color:#0f172a;">As a ${safeRole}, you will have access to:</p>
+    <ul style="margin:0;padding-left:20px;color:#334155;">
+      <li>Platform administration tools</li>
+      <li>User management capabilities</li>
+      <li>System monitoring and analytics</li>
+      ${superAdminBullet}
+    </ul>
+    <p style="margin:24px 0 0;font-size:14px;color:#64748b;">If you have questions, contact your system administrator.</p>`;
 
-      <p>Your account has been created and is ready to use. Please sign in using the credentials below and change your password immediately after your first login.</p>
+  const footerHtml = `<p style="margin:0;font-size:12px;line-height:1.55;color:#64748b;text-align:center;">This invitation was sent to ${safeEmail}. If you did not expect it, contact your system administrator.</p>`;
 
-      <div class="credentials-box">
-        <h3>🔐 Your Login Credentials</h3>
-        <div class="credential-item">
-          <span class="credential-label">Email:</span>
-          <span class="credential-value">${safeEmail}</span>
-        </div>
-        <div class="credential-item">
-          <span class="credential-label">Password:</span>
-          <span class="credential-value">${safePassword}</span>
-        </div>
-      </div>
-
-      <a href="${safeLoginUrl}" class="login-button">Sign In to AKILI</a>
-
-      <div class="security-notice">
-        <h4>🔒 Security Notice</h4>
-        <p>Please change your password immediately after your first login. This temporary password will expire in 48 hours for security purposes.</p>
-      </div>
-
-      <p>As a ${safeRole}, you'll have access to:</p>
-      <ul>
-        <li>Platform administration tools</li>
-        <li>User management capabilities</li>
-        <li>System monitoring and analytics</li>
-        ${data.role === "Super Administrator" ? "<li>Advanced configuration and user provisioning</li>" : ""}
-      </ul>
-
-      <p>If you have any questions or need assistance, please contact your system administrator.</p>
-    </div>
-
-    <div class="footer">
-      <p>This invitation was sent to ${safeEmail}. If you did not expect this invitation, please contact your system administrator.</p>
-      <p>&copy; 2024 AKILI Risk Intelligence. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim();
+  return wrapPlatformEmailContent({
+    documentTitle: "Welcome to AKILI Risk Intelligence",
+    appOrigin: appOriginFromUrl(data.loginUrl),
+    bodyHtml,
+    footerHtml,
+  });
 }
 
 function generateAdminInvitationText(data: {
@@ -307,6 +193,6 @@ If you have any questions or need assistance, please contact your system adminis
 
 This invitation was sent to ${data.email}. If you did not expect this invitation, please contact your system administrator.
 
-© 2024 AKILI Risk Intelligence. All rights reserved.
+© ${new Date().getFullYear()} AKILI Risk Intelligence. All rights reserved.
   `.trim();
 }

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import {
   deactivateAdminUser,
+  promoteAdminUserToSuperAdmin,
   resendAdminInvitation,
 } from "@/lib/actions/admin-user-provisioning";
 import {
@@ -62,6 +63,7 @@ export function AdminUserManagementList({
 }: AdminUserManagementListProps) {
   const [isDeactivating, setIsDeactivating] = useState<string | null>(null);
   const [isResending, setIsResending] = useState<string | null>(null);
+  const [isPromoting, setIsPromoting] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<AdminUserEditTarget | null>(
     null
   );
@@ -100,6 +102,37 @@ export function AdminUserManagementList({
       alert("An unexpected error occurred. Please try again.");
     } finally {
       setIsResending(null);
+    }
+  };
+
+  const handlePromoteToSuperAdmin = async (
+    userId: string,
+    userName: string,
+    email: string | null
+  ) => {
+    const label = userName || email || "this user";
+    if (
+      !confirm(
+        `Promote ${label} to Super Admin? They will have full platform administration access.`
+      )
+    ) {
+      return;
+    }
+
+    setIsPromoting(userId);
+
+    try {
+      const result = await promoteAdminUserToSuperAdmin(userId);
+
+      if (result.success) {
+        onUserUpdated?.();
+      } else {
+        alert(`Failed to promote user: ${result.error}`);
+      }
+    } catch {
+      alert("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsPromoting(null);
     }
   };
 
@@ -166,6 +199,13 @@ export function AdminUserManagementList({
     );
   };
 
+  const activeSuperAdminCount = adminUsers.filter(
+    (u) => u.role === "SUPER_ADMIN"
+  ).length;
+
+  const canDeactivateUser = (user: AdminUser) =>
+    user.role !== "SUPER_ADMIN" || activeSuperAdminCount > 1;
+
   if (adminUsers.length === 0) {
     return (
       <Card>
@@ -217,9 +257,13 @@ export function AdminUserManagementList({
               const isCurrentUser = user.id === currentUserId;
               const isDeactivatingThis = isDeactivating === user.id;
               const isResendingThis = isResending === user.id;
+              const isPromotingThis = isPromoting === user.id;
               const isEditingThis = editingUser?.id === user.id;
               const isRowBusy =
-                isDeactivatingThis || isResendingThis || isEditingThis;
+                isDeactivatingThis ||
+                isResendingThis ||
+                isPromotingThis ||
+                isEditingThis;
 
               return (
                 <TableRow key={user.id}>
@@ -296,15 +340,42 @@ export function AdminUserManagementList({
                           {isResendingThis ? "Sending..." : "Resend Invitation"}
                         </DropdownMenuItem>
 
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => handleDeactivateUser(user.id, user.name || user.email || "this user")}
-                          disabled={isRowBusy}
-                        >
-                          <UserX className="mr-2 h-4 w-4" />
-                          {isDeactivatingThis ? "Deactivating..." : "Deactivate"}
-                        </DropdownMenuItem>
+                        {user.role === "ADMIN" ? (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handlePromoteToSuperAdmin(
+                                user.id,
+                                user.name || "",
+                                user.email
+                              )
+                            }
+                            disabled={isRowBusy}
+                          >
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                            {isPromotingThis
+                              ? "Promoting..."
+                              : "Promote to Super Admin"}
+                          </DropdownMenuItem>
+                        ) : null}
+
+                        {canDeactivateUser(user) ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() =>
+                                handleDeactivateUser(
+                                  user.id,
+                                  user.name || user.email || "this user"
+                                )
+                              }
+                              disabled={isRowBusy}
+                            >
+                              <UserX className="mr-2 h-4 w-4" />
+                              {isDeactivatingThis ? "Deactivating..." : "Deactivate"}
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

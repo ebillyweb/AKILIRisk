@@ -60,6 +60,8 @@ export const AUDIT_ACTIONS = {
   ADMIN_USER_DEACTIVATED: "admin_user.deactivated",
   /** Super admin resends invitation email with a new temporary password. */
   ADMIN_USER_INVITATION_RESENT: "admin_user.invitation_resent",
+  /** First successful credentials sign-in after an invitation (emailVerified set). */
+  ADMIN_USER_EMAIL_VERIFIED: "admin_user.email_verified",
 
   // ── Admin actions on configuration (P2) ───────────────────────────────────
   PLATFORM_SETTINGS_UPDATE: "platform_settings.update",
@@ -196,6 +198,8 @@ export const AUDIT_ACTIONS = {
    *  AKILI see on date X" trail without a separate snapshot table.
    *  Aggregate page only — no per-client identifiers in metadata. */
   DATA_ACCESS_ANALYTICS_VIEW: "data_access.analytics_view",
+  /** Super-admin opens /admin/risk-signals. Aggregate counts only in metadata. */
+  DATA_ACCESS_RISK_SIGNALS_VIEW: "data_access.risk_signals_view",
   /** Round-12 audit-bucket close-out: client (or owner) loads their own
    *  scored assessment via GET /api/assessment/[id]/score. metadata.pillar
    *  records the requested pillar; metadata.assessmentId is duplicated

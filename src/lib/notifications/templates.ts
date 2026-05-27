@@ -2,6 +2,12 @@ import "server-only";
 
 import { NotificationCategory } from "./types";
 import { escapeHtml } from "@/lib/escape-html";
+import {
+  renderPlatformEmailCta,
+  renderPlatformEmailHeadline,
+  renderPlatformEmailUrlFallback,
+  wrapPlatformEmailContent,
+} from "@/lib/email/platform-email-layout";
 
 /**
  * Validates logo URL (must be HTTPS)
@@ -59,17 +65,37 @@ type TemplateData =
   | StalledWorkflowTemplateData
   | AssessmentReminderTemplateData;
 
-/**
- * Renders the header section with optional advisor branding
- */
-function renderHeader(firmName?: string, logoUrl?: string): string {
-  const logoHtml = logoUrl && isValidLogoUrl(logoUrl) && firmName
-    ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(firmName)} Logo" style="max-height: 60px; display: block;">`
-    : '';
+function appOriginFromUrl(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
 
-  return logoHtml
-    ? `<div style="margin-bottom: 24px; text-align: center;">${logoHtml}</div>`
-    : '';
+/**
+ * Advisor logo block inside the platform email body (when firm branding is present).
+ */
+function renderAdvisorLogoHeader(firmName?: string, logoUrl?: string): string {
+  if (!logoUrl || !isValidLogoUrl(logoUrl) || !firmName) return "";
+  return `<div style="margin-bottom:24px;text-align:center;">
+    <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(firmName)} Logo" style="max-height:60px;display:block;margin:0 auto;">
+  </div>`;
+}
+
+function wrapAdvisorNotificationEmail(options: {
+  documentTitle: string;
+  actionUrl: string;
+  bodyHtml: string;
+  footerHtml: string;
+  firmName?: string;
+  logoUrl?: string;
+}): string {
+  return wrapPlatformEmailContent({
+    documentTitle: options.documentTitle,
+    appOrigin: appOriginFromUrl(options.actionUrl),
+    bodyHtml: `${renderAdvisorLogoHeader(options.firmName, options.logoUrl)}${options.bodyHtml}${options.footerHtml}`,
+  });
 }
 
 /**
@@ -115,47 +141,20 @@ function renderFooter(advisorName?: string, firmName?: string): string {
  */
 function renderRegistrationTemplate(data: RegistrationTemplateData): string {
   const { clientName, pipelineUrl, advisorName, firmName, logoUrl } = data;
-
-  const header = renderHeader(firmName, logoUrl);
   const footer = renderFooter(advisorName, firmName);
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-          ${header}
-
-          <h1 style="color: #18181b; margin-top: 0;">New Client Registration</h1>
-
-          <p style="margin: 16px 0;">
-            <strong>${escapeHtml(clientName)}</strong> has registered from your invitation and is ready to begin their governance assessment.
-          </p>
-
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${pipelineUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-              View Pipeline
-            </a>
-          </div>
-
-          <p style="margin: 16px 0; font-size: 14px; color: #666;">
-            Or copy and paste this URL into your browser:
-          </p>
-          <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-            <a href="${pipelineUrl}" style="color: #18181b;">${pipelineUrl}</a>
-          </p>
-
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-
-          ${footer}
-        </div>
-      </body>
-    </html>
-  `;
+  return wrapAdvisorNotificationEmail({
+    documentTitle: "New client registration",
+    actionUrl: pipelineUrl,
+    firmName,
+    logoUrl,
+    bodyHtml: `
+      ${renderPlatformEmailHeadline("New client registration")}
+      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has registered from your invitation and is ready to begin their governance assessment.</p>
+      ${renderPlatformEmailCta({ label: "View pipeline", href: pipelineUrl })}
+      ${renderPlatformEmailUrlFallback(pipelineUrl)}`,
+    footerHtml: footer,
+  });
 }
 
 /**
@@ -163,47 +162,20 @@ function renderRegistrationTemplate(data: RegistrationTemplateData): string {
  */
 function renderMilestoneTemplate(data: MilestoneTemplateData): string {
   const { clientName, milestoneName, clientDetailUrl, advisorName, firmName, logoUrl } = data;
-
-  const header = renderHeader(firmName, logoUrl);
   const footer = renderFooter(advisorName, firmName);
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-          ${header}
-
-          <h1 style="color: #18181b; margin-top: 0;">Milestone Complete</h1>
-
-          <p style="margin: 16px 0;">
-            <strong>${escapeHtml(clientName)}</strong> has completed <strong>${escapeHtml(milestoneName)}</strong> in their governance assessment workflow.
-          </p>
-
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${clientDetailUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-              View Client Details
-            </a>
-          </div>
-
-          <p style="margin: 16px 0; font-size: 14px; color: #666;">
-            Or copy and paste this URL into your browser:
-          </p>
-          <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-            <a href="${clientDetailUrl}" style="color: #18181b;">${clientDetailUrl}</a>
-          </p>
-
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-
-          ${footer}
-        </div>
-      </body>
-    </html>
-  `;
+  return wrapAdvisorNotificationEmail({
+    documentTitle: "Milestone complete",
+    actionUrl: clientDetailUrl,
+    firmName,
+    logoUrl,
+    bodyHtml: `
+      ${renderPlatformEmailHeadline("Milestone complete")}
+      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has completed <strong style="color:#0f172a;">${escapeHtml(milestoneName)}</strong> in their governance assessment workflow.</p>
+      ${renderPlatformEmailCta({ label: "View client details", href: clientDetailUrl })}
+      ${renderPlatformEmailUrlFallback(clientDetailUrl)}`,
+    footerHtml: footer,
+  });
 }
 
 /**
@@ -211,51 +183,21 @@ function renderMilestoneTemplate(data: MilestoneTemplateData): string {
  */
 function renderStalledWorkflowTemplate(data: StalledWorkflowTemplateData): string {
   const { clientName, days, stage, clientDetailUrl, advisorName, firmName, logoUrl } = data;
-
-  const header = renderHeader(firmName, logoUrl);
   const footer = renderFooter(advisorName, firmName);
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-          ${header}
-
-          <h1 style="color: #18181b; margin-top: 0;">Workflow Stalled</h1>
-
-          <p style="margin: 16px 0;">
-            <strong>${escapeHtml(clientName)}</strong> has been inactive for <strong>${days} days</strong> at the <strong>${escapeHtml(stage)}</strong> stage.
-          </p>
-
-          <p style="margin: 16px 0;">
-            This client may need follow-up to continue their governance assessment.
-          </p>
-
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${clientDetailUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-              Review Client
-            </a>
-          </div>
-
-          <p style="margin: 16px 0; font-size: 14px; color: #666;">
-            Or copy and paste this URL into your browser:
-          </p>
-          <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-            <a href="${clientDetailUrl}" style="color: #18181b;">${clientDetailUrl}</a>
-          </p>
-
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-
-          ${footer}
-        </div>
-      </body>
-    </html>
-  `;
+  return wrapAdvisorNotificationEmail({
+    documentTitle: "Workflow stalled",
+    actionUrl: clientDetailUrl,
+    firmName,
+    logoUrl,
+    bodyHtml: `
+      ${renderPlatformEmailHeadline("Workflow stalled")}
+      <p style="margin:0 0 12px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has been inactive for <strong>${days} days</strong> at the <strong style="color:#0f172a;">${escapeHtml(stage)}</strong> stage.</p>
+      <p style="margin:0 0 8px;">This client may need follow-up to continue their governance assessment.</p>
+      ${renderPlatformEmailCta({ label: "Review client", href: clientDetailUrl })}
+      ${renderPlatformEmailUrlFallback(clientDetailUrl)}`,
+    footerHtml: footer,
+  });
 }
 
 /**
@@ -263,52 +205,22 @@ function renderStalledWorkflowTemplate(data: StalledWorkflowTemplateData): strin
  */
 function renderAssessmentReminderTemplate(data: AssessmentReminderTemplateData): string {
   const { clientName, assessmentUrl, advisorName, firmName, logoUrl } = data;
-
-  const header = renderHeader(firmName, logoUrl);
   const footer = renderFooter(advisorName, firmName);
-  const greeting = clientName ? `Dear ${escapeHtml(clientName)},` : 'Dear client,';
+  const greeting = clientName ? `Dear ${escapeHtml(clientName)},` : "Dear client,";
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-          ${header}
-
-          <p style="margin: 16px 0; font-size: 16px;">
-            ${greeting}
-          </p>
-
-          <h1 style="color: #18181b; margin-top: 0;">Your Assessment is Waiting</h1>
-
-          <p style="margin: 16px 0;">
-            Your governance assessment is ready to complete. Finishing this assessment will help us provide you with personalized recommendations for protecting and managing your family wealth.
-          </p>
-
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${assessmentUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-              Complete Assessment
-            </a>
-          </div>
-
-          <p style="margin: 16px 0; font-size: 14px; color: #666;">
-            Or copy and paste this URL into your browser:
-          </p>
-          <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-            <a href="${assessmentUrl}" style="color: #18181b;">${assessmentUrl}</a>
-          </p>
-
-          <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-
-          ${footer}
-        </div>
-      </body>
-    </html>
-  `;
+  return wrapAdvisorNotificationEmail({
+    documentTitle: "Your assessment is waiting",
+    actionUrl: assessmentUrl,
+    firmName,
+    logoUrl,
+    bodyHtml: `
+      <p style="margin:0 0 16px;font-size:16px;color:#0f172a;">${greeting}</p>
+      ${renderPlatformEmailHeadline("Your assessment is waiting")}
+      <p style="margin:0 0 8px;">Your governance assessment is ready to complete. Finishing it helps us provide personalized recommendations for protecting and managing your family wealth.</p>
+      ${renderPlatformEmailCta({ label: "Complete assessment", href: assessmentUrl })}
+      ${renderPlatformEmailUrlFallback(assessmentUrl)}`,
+    footerHtml: footer,
+  });
 }
 
 /**

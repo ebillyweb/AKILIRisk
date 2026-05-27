@@ -61,7 +61,7 @@ describe("renderAdvisorIntakeNotificationHtml", () => {
       "https://app.example/advisor/review/abc"
     );
     expect(html).toContain("Hello Advisor Name,");
-    expect(html).toContain("<strong>Client Name</strong>");
+    expect(html).toContain("Client Name</strong>");
   });
 });
 

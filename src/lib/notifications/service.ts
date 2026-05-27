@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import { prisma } from "../db";
 import { NotificationCategory, SendNotificationParams } from "./types";
 import { shouldSendNotification } from "./preferences";
+import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { renderNotificationEmail } from "./templates";
 import { NotificationType } from "@prisma/client";
 
@@ -103,12 +104,14 @@ export async function sendNotification(params: SendNotificationParams): Promise<
         // Generate subject if not provided
         const subject = emailSubject || `${title} - Akili Risk`;
 
-        const result = await resend.emails.send({
-          from: FROM_EMAIL,
-          to: recipientEmail,
-          subject,
-          html: htmlContent,
-        });
+        const result = await resend.emails.send(
+          withPlatformLogoAttachment({
+            from: FROM_EMAIL,
+            to: recipientEmail,
+            subject,
+            html: htmlContent,
+          })
+        );
 
         if (result.error) {
           console.error("Failed to send notification email:", result.error);

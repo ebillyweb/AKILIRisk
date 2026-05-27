@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import { prisma } from "@/lib/db";
 import authConfig from "@/lib/auth.config";
 import { normalizeUserRoleString } from "@/lib/auth-roles";
+import { verifyAdminEmailOnFirstSignIn } from "@/lib/auth/verify-admin-on-sign-in";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 /** Short, non-reversible identifier for an email so log lines stay
@@ -88,6 +89,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           entityId: user.id,
           metadata: { mfaEnabled: Boolean(dbUser?.mfaEnabled) },
         });
+
+        await verifyAdminEmailOnFirstSignIn(user.id);
       }
       return true;
     },

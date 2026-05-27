@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { PLATFORM_EMAIL_LOGO_CID } from "@/lib/email/platform-email-logo";
 import { renderInvitationTemplate } from "./email";
 import { resolveInvitationEmailTheme } from "./invitation-email-theme";
 
@@ -28,7 +29,8 @@ describe("renderInvitationTemplate (US-1B)", () => {
 
     expect(html).not.toContain("https://cdn.example.com/logo.png");
     expect(html).toContain("AKILI Risk Intelligence");
-    expect(html).toContain('background: #18181b');
+    expect(html).toContain(`cid:${PLATFORM_EMAIL_LOGO_CID}`);
+    expect(html).toContain("background:#18181b");
   });
 
   it("includes logo and custom CTA when branding is enabled", () => {

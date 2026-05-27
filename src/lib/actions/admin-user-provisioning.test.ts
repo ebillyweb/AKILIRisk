@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { createAdminUser, updateAdminUser, deactivateAdminUser, getAdminUsers } from "./admin-user-provisioning";
+import {
+  createAdminUser,
+  updateAdminUser,
+  deactivateAdminUser,
+  getAdminUsers,
+  promoteAdminUserToSuperAdmin,
+} from "./admin-user-provisioning";
 import { prisma } from "@/lib/db";
 import { requireSuperAdminRole } from "@/lib/admin/auth";
 import { sendAdminInvitationEmail } from "@/lib/email/admin-invitation";
@@ -92,7 +98,7 @@ describe("Admin User Provisioning", () => {
       sendInvitation: true,
     };
 
-    it("should create an admin user with auto-verified email", async () => {
+    it("should create an invited admin as pending until first sign-in", async () => {
       const mockCreatedUser = {
         id: "user-123",
         name: "New Admin",
@@ -109,13 +115,12 @@ describe("Admin User Provisioning", () => {
 
       expect(result.success).toBe(true);
 
-      // Verify user creation with auto-verified email
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           name: "New Admin",
           role: "ADMIN",
           password: "hashed_password",
-          emailVerified: expect.any(Date), // ✅ Auto-verification check
+          emailVerified: null,
           emailCiphertext: "encrypted_email",
         }),
       });
@@ -133,7 +138,7 @@ describe("Admin User Provisioning", () => {
       );
     });
 
-    it("should reactivate deleted user with auto-verified email", async () => {
+    it("should reactivate deleted user as pending when invitation is sent", async () => {
       const existingDeletedUser = {
         id: "user-123",
         deletedAt: new Date(),
@@ -155,7 +160,6 @@ describe("Admin User Provisioning", () => {
 
       expect(result.success).toBe(true);
 
-      // Verify reactivation with auto-verified email
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-123" },
         data: expect.objectContaining({
@@ -163,10 +167,30 @@ describe("Admin User Provisioning", () => {
           role: "ADMIN",
           password: "hashed_password",
           deletedAt: null,
-          emailVerified: expect.any(Date), // ✅ Auto-verification check
+          emailVerified: null,
           updatedAt: expect.any(Date),
         }),
       });
+    });
+
+    it("should verify immediately when invitation email is not sent", async () => {
+      const mockCreatedUser = {
+        id: "user-123",
+        name: "New Admin",
+        role: "ADMIN",
+      };
+
+      (findUserByEmail as any).mockResolvedValue(null);
+      (prisma.user.create as any).mockResolvedValue(mockCreatedUser);
+
+      await createAdminUser({ ...validInput, sendInvitation: false });
+
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          emailVerified: expect.any(Date),
+        }),
+      });
+      expect(sendAdminInvitationEmail).not.toHaveBeenCalled();
     });
 
     it("should handle invitation email failures gracefully", async () => {
@@ -186,7 +210,7 @@ describe("Admin User Provisioning", () => {
       expect(result.success).toBe(true);
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          emailVerified: expect.any(Date), // ✅ Still auto-verified despite email failure
+          emailVerified: null,
         }),
       });
     });
@@ -283,8 +307,54 @@ describe("Admin User Provisioning", () => {
     });
   });
 
+  describe("promoteAdminUserToSuperAdmin", () => {
+    it("promotes an ADMIN to SUPER_ADMIN", async () => {
+      const adminUser = {
+        id: "user-admin",
+        emailCiphertext: "encrypted",
+        name: "Admin",
+        role: "ADMIN",
+        deletedAt: null,
+      };
+
+      const promotedUser = {
+        id: "user-admin",
+        emailCiphertext: "encrypted",
+        name: "Admin",
+        role: "SUPER_ADMIN",
+      };
+
+      (prisma.user.findUnique as any)
+        .mockResolvedValueOnce(adminUser)
+        .mockResolvedValueOnce(adminUser);
+      (prisma.user.update as any).mockResolvedValue(promotedUser);
+
+      const result = await promoteAdminUserToSuperAdmin("user-admin");
+
+      expect(result.success).toBe(true);
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: "user-admin" },
+        data: expect.objectContaining({ role: "SUPER_ADMIN" }),
+      });
+    });
+
+    it("rejects when user is already a super admin", async () => {
+      (prisma.user.findUnique as any).mockResolvedValue({
+        id: "user-sa",
+        role: "SUPER_ADMIN",
+        deletedAt: null,
+      });
+
+      const result = await promoteAdminUserToSuperAdmin("user-sa");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("already a super admin");
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe("deactivateAdminUser", () => {
-    it("should prevent self-deactivation when last super admin", async () => {
+    it("should prevent deactivating the last super admin (including self)", async () => {
       const currentUser = {
         id: "admin-123", // Same as admin context userId
         emailCiphertext: "encrypted",
@@ -294,15 +364,16 @@ describe("Admin User Provisioning", () => {
       };
 
       (prisma.user.findUnique as any).mockResolvedValue(currentUser);
-      (prisma.user.count as any).mockResolvedValue(0); // No other super admins
+      (prisma.user.count as any).mockResolvedValue(1); // Only one super admin on platform
 
       const result = await deactivateAdminUser("admin-123");
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Cannot deactivate the last super admin");
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
-    it("should allow self-deactivation when other super admins exist", async () => {
+    it("should allow super admin deactivation when another super admin exists", async () => {
       const currentUser = {
         id: "admin-123",
         emailCiphertext: "encrypted",
@@ -312,7 +383,7 @@ describe("Admin User Provisioning", () => {
       };
 
       (prisma.user.findUnique as any).mockResolvedValue(currentUser);
-      (prisma.user.count as any).mockResolvedValue(1); // Other super admin exists
+      (prisma.user.count as any).mockResolvedValue(2);
       (prisma.user.update as any).mockResolvedValue({});
 
       const result = await deactivateAdminUser("admin-123");

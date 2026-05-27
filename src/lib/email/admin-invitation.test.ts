@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PLATFORM_EMAIL_LOGO_CID } from "@/lib/email/platform-email-logo";
 import { renderAdminInvitationHtml } from "./admin-invitation";
 
 describe("renderAdminInvitationHtml", () => {
@@ -23,5 +24,12 @@ describe("renderAdminInvitationHtml", () => {
   it("includes the staging login URL in the sign-in link", () => {
     const html = renderAdminInvitationHtml(base);
     expect(html).toContain('href="https://preview.akilirisk.com/signin"');
+  });
+
+  it("uses the inline CID logo and brand header", () => {
+    const html = renderAdminInvitationHtml(base);
+    expect(html).toContain(`cid:${PLATFORM_EMAIL_LOGO_CID}`);
+    expect(html).not.toContain("linear-gradient(135deg, #1e40af");
+    expect(html).toContain("Sign in to AKILI");
   });
 });

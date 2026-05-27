@@ -197,7 +197,7 @@ export default async function AdminReportsPage({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="space-y-2">
         <h1 className="text-lg font-semibold tracking-tight">
           Intelligence reports{" "}
@@ -213,17 +213,17 @@ export default async function AdminReportsPage({
         </p>
       </div>
 
-      <Card>
+      <Card className="min-w-0">
         <CardHeader className="space-y-4">
           <CardTitle className="text-base">Filters</CardTitle>
-          <form className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex flex-wrap gap-2">
+          <form className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {STATUS_FILTERS.map((opt) => (
                 <Button
                   key={opt.value}
                   variant={status === opt.value ? "default" : "outline"}
                   size="sm"
-                  className="h-8"
+                  className="h-9 w-full justify-center px-2"
                   asChild
                 >
                   <Link
@@ -245,39 +245,46 @@ export default async function AdminReportsPage({
                 </Button>
               ))}
             </div>
-            <div className="flex w-full max-w-xl items-center gap-2 lg:ml-auto">
-              <Search className="size-4 text-muted-foreground" />
-              <Input
-                name="q"
-                defaultValue={query}
-                placeholder="Search by client name, report ID, or assessment ID"
-                className="h-9"
-              />
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_auto]">
+              <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Client, report ID, or assessment ID"
+                  className="h-9 min-w-0 pl-9"
+                />
+              </div>
               <Input
                 type="date"
                 name="from"
                 defaultValue={fromValue}
-                className="h-9 w-[10.5rem]"
+                className="h-9 min-w-0 w-full"
                 aria-label="From date"
               />
               <Input
                 type="date"
                 name="to"
                 defaultValue={toValue}
-                className="h-9 w-[10.5rem]"
+                className="h-9 min-w-0 w-full"
                 aria-label="To date"
               />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <input type="hidden" name="status" value={status} />
               <input type="hidden" name="page" value="1" />
-              <Button type="submit" size="sm">
+              <Button type="submit" size="sm" className="min-h-9">
                 Search
               </Button>
               {hasActiveFilters ? (
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="sm" className="min-h-9" asChild>
                   <Link href="/admin/reports">Clear filters</Link>
                 </Button>
               ) : null}
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="outline" size="sm" className="min-h-9 sm:ml-auto" asChild>
                 <a href={exportHref({ status, q: query, from: fromValue, to: toValue })} download>
                   Export CSV
                 </a>
@@ -354,27 +361,27 @@ export default async function AdminReportsPage({
                             : `Created ${format(row.createdAt, "MMM d, yyyy 'at' p")}`}
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button variant="outline" size="sm" asChild>
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                           <Link href={`/admin/clients/${row.assessment.userId}/reports`}>
-                            <FileText className="w-4 h-4 mr-2" />
+                            <FileText className="mr-2 h-4 w-4" />
                             Client reports
                           </Link>
                         </Button>
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                           <Link href={`/admin/audit-log/entity/Report/${row.id}`}>
-                            <History className="w-4 h-4 mr-2" />
+                            <History className="mr-2 h-4 w-4" />
                             Audit history
                           </Link>
                         </Button>
                         {row.status !== "DRAFT" ? (
-                          <Button variant="outline" size="sm" asChild>
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                             <a
                               href={`/api/reports/by-id/${row.id}/pdf`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <FileDown className="w-4 h-4 mr-2" />
+                              <FileDown className="mr-2 h-4 w-4" />
                               Download
                             </a>
                           </Button>
@@ -389,11 +396,11 @@ export default async function AdminReportsPage({
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           Page {Math.min(page, totalPages).toLocaleString()} of {totalPages.toLocaleString()}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
         {page > 1 ? (
           <Button variant="outline" size="sm" asChild>
             <Link

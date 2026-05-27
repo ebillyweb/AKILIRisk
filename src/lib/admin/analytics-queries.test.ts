@@ -126,6 +126,7 @@ vi.mock("@/lib/db", () => ({
               want.includes(`${p.assessmentId}|${p.pillar}|${p.calculatedAt.getTime()}`)
             )
             .map((p) => ({
+              assessmentId: p.assessmentId,
               pillar: p.pillar,
               score: p.score,
               riskLevel: p.riskLevel,

@@ -333,20 +333,3 @@ export async function getAdvisorProfilesForLeadAssignment() {
   }));
 }
 
-/** Platform staff (`ADMIN` / `SUPER_ADMIN`) for the admin Staff page. */
-export async function getPlatformStaffForAdmin() {
-  await requireAdminRole();
-  const rows = await prisma.user.findMany({
-    where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
-    select: {
-      id: true,
-      emailCiphertext: true,
-      name: true,
-      role: true,
-      deletedAt: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
-  return rows.map(withDecryptedEmail);
-}

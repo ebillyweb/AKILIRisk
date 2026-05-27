@@ -2,6 +2,12 @@ import "server-only";
 
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/escape-html";
+import {
+  renderPlatformEmailCta,
+  renderPlatformEmailUrlFallback,
+  wrapPlatformEmailContent,
+} from "@/lib/email/platform-email-layout";
+import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import type { InvitationEmailTheme } from "@/lib/invitations/invitation-email-theme";
 import { PLATFORM_INVITATION_CTA_COLOR } from "@/lib/invitations/invitation-email-theme";
 
@@ -91,6 +97,37 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
             Sent via <strong>AKILI Risk Intelligence</strong> on behalf of ${safeAdvisorName} at ${safeAdvisorFirmName}.
           </p>`
     : '';
+
+  if (theme.showPlatformAttribution) {
+    let appOrigin: string | null = null;
+    try {
+      appOrigin = new URL(invitationUrl).origin;
+    } catch {
+      appOrigin = null;
+    }
+
+    const bodyHtml = `
+      <p style="margin:0 0 16px;font-size:16px;color:#0f172a;">${greeting}</p>
+      <div style="margin:24px 0;padding:16px;background:#f8fafc;border-radius:12px;border-left:4px solid ${accentColor};">
+        <p style="margin:0;font-style:italic;color:#334155;">${safePersonalMessage}</p>
+      </div>
+      ${renderPlatformEmailCta({ label: "Get started", href: invitationUrl })}
+      ${renderPlatformEmailUrlFallback(invitationUrl)}
+      <div style="margin:32px 0 0;padding-top:20px;border-top:1px solid #e2e8f0;">
+        <p style="margin:8px 0;font-size:16px;"><strong style="color:#0f172a;">${safeAdvisorName}</strong></p>
+        <p style="margin:4px 0;color:#64748b;">${safeAdvisorJobTitle} at ${safeAdvisorFirmName}</p>
+        <p style="margin:4px 0;"><a href="mailto:${safeAdvisorEmail}" style="color:#18181b;text-decoration:none;">${safeAdvisorEmail}</a></p>
+        <p style="margin:4px 0;color:#64748b;">${safeAdvisorPhone}</p>
+        <p style="margin:4px 0;color:#64748b;font-size:14px;">License: ${safeAdvisorLicenseNumber}</p>
+      </div>
+      <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;">This invitation link expires in 7 days. Contact ${safeAdvisorName} with any questions.</p>`;
+
+    return wrapPlatformEmailContent({
+      documentTitle: `Invitation from ${advisorName}`,
+      appOrigin,
+      bodyHtml,
+    });
+  }
 
   return `
     <!DOCTYPE html>
@@ -192,12 +229,14 @@ export async function sendAdvisorInvitationEmail(data: SendInvitationData): Prom
       theme: data.theme,
     });
 
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: data.clientEmail,
-      subject: `Invitation from ${data.advisorInfo.advisorName} - Family Governance Assessment`,
-      html: htmlContent,
-    });
+    const result = await resend.emails.send(
+      withPlatformLogoAttachment({
+        from: FROM_EMAIL,
+        to: data.clientEmail,
+        subject: `Invitation from ${data.advisorInfo.advisorName} - Family Governance Assessment`,
+        html: htmlContent,
+      })
+    );
 
     if (result.error) {
       console.error("Resend API error:", result.error);

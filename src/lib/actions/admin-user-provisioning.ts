@@ -65,6 +65,9 @@ export async function createAdminUser(input: CreateAdminUserInput) {
     const tempPassword = generateSecurePassword();
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
+    // Invited admins stay Pending until first sign-in; manual create (no email) is Verified immediately.
+    const emailVerified = sendInvitation ? null : new Date();
+
     // Create or reactivate the user
     const user = existingUser?.deletedAt
       ? await prisma.user.update({
@@ -74,7 +77,7 @@ export async function createAdminUser(input: CreateAdminUserInput) {
             role: role as UserRole,
             password: hashedPassword,
             deletedAt: null,
-            emailVerified: new Date(), // Auto-verify admin users
+            emailVerified,
             updatedAt: new Date(),
           },
         })
@@ -84,7 +87,7 @@ export async function createAdminUser(input: CreateAdminUserInput) {
             name,
             role: role as UserRole,
             password: hashedPassword,
-            emailVerified: new Date(), // Auto-verify admin users
+            emailVerified,
           },
         });
 
@@ -283,6 +286,39 @@ export async function updateAdminUser(input: UpdateAdminUserInput) {
 }
 
 /**
+ * Promote an administrator to super admin (super admin only).
+ */
+export async function promoteAdminUserToSuperAdmin(userId: string) {
+  await requireSuperAdminRole();
+
+  if (!userId?.trim()) {
+    return { success: false, error: "User ID is required" };
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, deletedAt: true },
+  });
+
+  if (!target || target.deletedAt) {
+    return { success: false, error: "Admin user not found" };
+  }
+
+  if (target.role === "SUPER_ADMIN") {
+    return { success: false, error: "This user is already a super admin" };
+  }
+
+  if (target.role !== "ADMIN") {
+    return {
+      success: false,
+      error: "Only administrator accounts can be promoted here",
+    };
+  }
+
+  return updateAdminUser({ id: userId, role: "SUPER_ADMIN" });
+}
+
+/**
  * Deactivate an admin user (super admin only).
  */
 export async function deactivateAdminUser(userId: string) {
@@ -308,18 +344,16 @@ export async function deactivateAdminUser(userId: string) {
       };
     }
 
-    // Prevent self-deactivation only if this is the last active super admin
-    if (currentUser.id === adminContext.userId) {
-      // Check if there are other active super admins
+    // Platform must always retain at least one active super admin.
+    if (currentUser.role === "SUPER_ADMIN") {
       const activeSuperAdminCount = await prisma.user.count({
         where: {
           role: "SUPER_ADMIN",
           deletedAt: null,
-          id: { not: adminContext.userId }, // Exclude current user
         },
       });
 
-      if (activeSuperAdminCount === 0) {
+      if (activeSuperAdminCount <= 1) {
         return {
           success: false,
           error: "Cannot deactivate the last super admin. Promote another user to super admin first.",

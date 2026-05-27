@@ -1,7 +1,41 @@
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/escape-html";
+import {
+  renderPlatformEmailCta,
+  renderPlatformEmailHeadline,
+  renderPlatformEmailUrlFallback,
+  wrapPlatformEmailContent,
+} from "@/lib/email/platform-email-layout";
+import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+
+function appOriginFromUrl(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+function renderSimplePlatformEmail(
+  documentTitle: string,
+  headline: string,
+  bodyParagraphs: string,
+  cta: { label: string; href: string },
+  disclaimer: string
+): string {
+  return wrapPlatformEmailContent({
+    documentTitle,
+    appOrigin: appOriginFromUrl(cta.href),
+    bodyHtml: `
+      ${renderPlatformEmailHeadline(headline)}
+      ${bodyParagraphs}
+      ${renderPlatformEmailCta(cta)}
+      ${renderPlatformEmailUrlFallback(cta.href)}
+      <p style="margin:24px 0 0;font-size:14px;color:#64748b;">${disclaimer}</p>`,
+  });
+}
 
 /**
  * Render the password-reset email body. Pure function — exported so
@@ -13,48 +47,14 @@ const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
  * than trusting per-field provenance audits to stay correct over time.
  */
 export function renderPasswordResetEmailHtml(resetUrl: string): string {
-  const safeUrl = escapeHtml(resetUrl);
-  return `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-              <h1 style="color: #18181b; margin-top: 0;">Reset Your Password</h1>
-
-              <p style="margin: 16px 0;">
-                You requested a password reset for your Akili Risk account.
-              </p>
-
-              <p style="margin: 16px 0;">
-                Click the button below to reset your password. This link will expire in <strong>15 minutes</strong>.
-              </p>
-
-              <div style="text-align: center; margin: 32px 0;">
-                <a href="${safeUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-                  Reset Password
-                </a>
-              </div>
-
-              <p style="margin: 16px 0; font-size: 14px; color: #666;">
-                Or copy and paste this URL into your browser:
-              </p>
-              <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-                <a href="${safeUrl}" style="color: #18181b;">${safeUrl}</a>
-              </p>
-
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-
-              <p style="margin: 16px 0; font-size: 14px; color: #666;">
-                If you didn't request this password reset, you can safely ignore this email. Your password will not be changed.
-              </p>
-            </div>
-          </body>
-        </html>
-      `;
+  return renderSimplePlatformEmail(
+    "Reset your password",
+    "Reset your password",
+    `<p style="margin:0 0 16px;">You requested a password reset for your AKILI Risk Intelligence account.</p>
+     <p style="margin:0;">Use the button below to choose a new password. This link expires in <strong>15 minutes</strong>.</p>`,
+    { label: "Reset password", href: resetUrl },
+    "If you did not request this reset, you can ignore this email. Your password will not change."
+  );
 }
 
 /**
@@ -66,44 +66,13 @@ export function renderPasswordResetEmailHtml(resetUrl: string): string {
  * against any future drift that lets user input leak into the URL.
  */
 export function renderMagicLinkEmailHtml(magicLinkUrl: string): string {
-  const safeUrl = escapeHtml(magicLinkUrl);
-  return `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-              <h1 style="color: #18181b; margin-top: 0;">Sign in to Akili Risk</h1>
-
-              <p style="margin: 16px 0;">
-                Click the button below to sign in. This link will expire in <strong>15 minutes</strong> and can only be used once.
-              </p>
-
-              <div style="text-align: center; margin: 32px 0;">
-                <a href="${safeUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-                  Sign in
-                </a>
-              </div>
-
-              <p style="margin: 16px 0; font-size: 14px; color: #666;">
-                Or copy and paste this URL into your browser:
-              </p>
-              <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-                <a href="${safeUrl}" style="color: #18181b;">${safeUrl}</a>
-              </p>
-
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-
-              <p style="margin: 16px 0; font-size: 14px; color: #666;">
-                If you didn't request this sign-in link, you can safely ignore this email. The link will expire on its own and no action will be taken.
-              </p>
-            </div>
-          </body>
-        </html>
-      `;
+  return renderSimplePlatformEmail(
+    "Sign in to AKILI",
+    "Sign in to AKILI",
+    `<p style="margin:0;">Use the button below to sign in. This link expires in <strong>15 minutes</strong> and can only be used once.</p>`,
+    { label: "Sign in", href: magicLinkUrl },
+    "If you did not request this sign-in link, you can ignore this email. The link will expire on its own."
+  );
 }
 
 export async function sendMagicLinkEmail(
@@ -118,12 +87,14 @@ export async function sendMagicLinkEmail(
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: "Sign in to Akili Risk",
-      html: renderMagicLinkEmailHtml(magicLinkUrl),
-    });
+    await resend.emails.send(
+      withPlatformLogoAttachment({
+        from: FROM_EMAIL,
+        to: email,
+        subject: "Sign in to Akili Risk",
+        html: renderMagicLinkEmailHtml(magicLinkUrl),
+      })
+    );
   } catch (error) {
     // Same error semantics as sendPasswordResetEmail: log + swallow to
     // prevent enumeration via response timing or error-shape.
@@ -145,12 +116,14 @@ export async function sendPasswordResetEmail(
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: "Reset your Akili Risk password",
-      html: renderPasswordResetEmailHtml(resetUrl),
-    });
+    await resend.emails.send(
+      withPlatformLogoAttachment({
+        from: FROM_EMAIL,
+        to: email,
+        subject: "Reset your Akili Risk password",
+        html: renderPasswordResetEmailHtml(resetUrl),
+      })
+    );
   } catch (error) {
     // Log error but don't throw - prevents email enumeration attacks
     // In production, use proper logging service (e.g., Sentry)
@@ -181,49 +154,20 @@ export function renderAdvisorIntakeNotificationHtml(
   const safeAdvisorName = escapeHtml(advisorName);
   const safeClientName = escapeHtml(clientName);
   const safeClientEmail = escapeHtml(clientEmail);
-  const safeReviewUrl = escapeHtml(reviewUrl);
 
-  return `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-              <h1 style="color: #18181b; margin-top: 0;">New Intake Ready for Review</h1>
-
-              <p style="margin: 16px 0;">
-                Hello ${safeAdvisorName},
-              </p>
-
-              <p style="margin: 16px 0;">
-                <strong>${safeClientName}</strong> (<a href="mailto:${safeClientEmail}" style="color: #18181b;">${safeClientEmail}</a>) has completed their intake interview and is ready for your review.
-              </p>
-
-              <div style="text-align: center; margin: 32px 0;">
-                <a href="${safeReviewUrl}" style="display: inline-block; background: #18181b; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-                  Review Intake
-                </a>
-              </div>
-
-              <p style="margin: 16px 0; font-size: 14px; color: #666;">
-                Or copy and paste this URL into your browser:
-              </p>
-              <p style="margin: 8px 0; font-size: 14px; word-break: break-all;">
-                <a href="${safeReviewUrl}" style="color: #18181b;">${safeReviewUrl}</a>
-              </p>
-
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-
-              <p style="margin: 16px 0; font-size: 14px; color: #666;">
-                This is an automated notification from Akili Risk.
-              </p>
-            </div>
-          </body>
-        </html>
-      `;
+  return wrapPlatformEmailContent({
+    documentTitle: "New intake ready for review",
+    appOrigin: appOriginFromUrl(reviewUrl),
+    bodyHtml: `
+      ${renderPlatformEmailHeadline("New intake ready for review")}
+      <p style="margin:0 0 16px;">Hello ${safeAdvisorName},</p>
+      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">${safeClientName}</strong>
+        (<a href="mailto:${safeClientEmail}" style="color:#18181b;text-decoration:none;">${safeClientEmail}</a>)
+        has completed their intake interview and is ready for your review.</p>
+      ${renderPlatformEmailCta({ label: "Review intake", href: reviewUrl })}
+      ${renderPlatformEmailUrlFallback(reviewUrl)}
+      <p style="margin:24px 0 0;font-size:14px;color:#64748b;">This is an automated notification from AKILI Risk Intelligence.</p>`,
+  });
 }
 
 /**
@@ -256,17 +200,19 @@ export async function sendAdvisorIntakeNotification(
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: advisorEmail,
-      subject: `New Intake Ready for Review - ${sanitizeSubjectFragment(clientName)}`,
-      html: renderAdvisorIntakeNotificationHtml(
-        advisorName,
-        clientName,
-        clientEmail,
-        reviewUrl
-      ),
-    });
+    await resend.emails.send(
+      withPlatformLogoAttachment({
+        from: FROM_EMAIL,
+        to: advisorEmail,
+        subject: `New Intake Ready for Review - ${sanitizeSubjectFragment(clientName)}`,
+        html: renderAdvisorIntakeNotificationHtml(
+          advisorName,
+          clientName,
+          clientEmail,
+          reviewUrl
+        ),
+      })
+    );
   } catch (error) {
     // Log error but don't throw - prevents blocking the notification flow
     // In production, use proper logging service (e.g., Sentry)

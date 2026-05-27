@@ -94,8 +94,20 @@ export async function getPlatformKpis(): Promise<PlatformKpis> {
  * Assessment per client by `completedAt`. The composite ensures every
  * cross-tenant aggregate is a "current state" snapshot.
  */
-async function loadLatestPillarScoresPlatformWide(): Promise<
-  Array<{ pillar: string; score: number; riskLevel: string }>
+export type LatestPillarScoreByClientRow = {
+  userId: string;
+  pillar: string;
+  score: number;
+  riskLevel: string;
+};
+
+/**
+ * Latest pillar score per domain for each client's most recent COMPLETED
+ * assessment. Includes `userId` for server-side aggregation only — admin
+ * pages must not surface per-client identifiers (see risk-signals-queries).
+ */
+export async function loadLatestPillarScoresByClient(): Promise<
+  LatestPillarScoreByClientRow[]
 > {
   // 1. Most recent COMPLETED assessment per client.
   const latestPerClient = await prisma.assessment.groupBy({
@@ -117,10 +129,14 @@ async function loadLatestPillarScoresPlatformWide(): Promise<
         status: "COMPLETED" as const,
       })),
     },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
   const assessmentIds = latestAssessments.map((a) => a.id);
   if (assessmentIds.length === 0) return [];
+
+  const userIdByAssessmentId = new Map(
+    latestAssessments.map((a) => [a.id, a.userId] as const)
+  );
 
   // 2. For each of those assessments, take the latest PillarScore per
   //    pillar. groupBy(assessmentId, pillar) max(calculatedAt) gives
@@ -142,10 +158,37 @@ async function loadLatestPillarScoresPlatformWide(): Promise<
           calculatedAt: g._max.calculatedAt!,
         })),
     },
-    select: { pillar: true, score: true, riskLevel: true },
+    select: {
+      assessmentId: true,
+      pillar: true,
+      score: true,
+      riskLevel: true,
+    },
   });
 
-  return scoreRows;
+  const rows: LatestPillarScoreByClientRow[] = [];
+  for (const row of scoreRows) {
+    const userId = userIdByAssessmentId.get(row.assessmentId);
+    if (!userId) continue;
+    rows.push({
+      userId,
+      pillar: row.pillar,
+      score: row.score,
+      riskLevel: row.riskLevel,
+    });
+  }
+  return rows;
+}
+
+async function loadLatestPillarScoresPlatformWide(): Promise<
+  Array<{ pillar: string; score: number; riskLevel: string }>
+> {
+  const rows = await loadLatestPillarScoresByClient();
+  return rows.map(({ pillar, score, riskLevel }) => ({
+    pillar,
+    score,
+    riskLevel,
+  }));
 }
 
 // ── 2. Risk-level distribution ─────────────────────────────────────────────

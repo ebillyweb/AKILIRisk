@@ -10,7 +10,6 @@ import {
   ClipboardCheck,
   ListChecks,
   Settings,
-  UserCog,
   Activity,
   BarChart3,
   type LucideIcon,
@@ -60,15 +59,6 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
       kicker: "User management",
       title: "Clients",
       subtitle: "Client accounts and advisor assignments",
-    },
-  },
-  {
-    path: "/admin/staff",
-    config: {
-      icon: UserCog,
-      kicker: "User management",
-      title: "Platform staff",
-      subtitle: "Admin and super-admin accounts; role changes are super-admin only",
     },
   },
   {
@@ -143,6 +133,7 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
 /** Pages that render their own primary `<h1>` — skip the shared header to avoid duplication. */
 const ADMIN_PAGE_HEADER_SKIP_PREFIXES = [
   "/admin/analytics",
+  "/admin/risk-signals",
   "/admin/operations",
   "/admin/recommendations",
   "/admin/integrations",

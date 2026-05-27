@@ -300,6 +300,30 @@ test.describe("Epic 5.5 platform administration", () => {
     });
   });
 
+  test.describe("Platform risk signals", () => {
+    test("super admin can open risk signals dashboard", async ({ page }) => {
+      await new SignInPage(page).signInAs("admin");
+      const response = await page.goto("/admin/risk-signals");
+      expect(response?.status()).toBe(200);
+
+      await expect(
+        page.getByRole("heading", { name: "Risk signals", level: 1 })
+      ).toBeVisible();
+      await expect(page.getByText("Portfolio risk snapshot")).toBeVisible();
+    });
+
+    test("platform admin cannot open super-admin risk signals", async ({
+      page,
+    }) => {
+      await new SignInPage(page).signInAs("platformAdmin");
+      const response = await page.goto("/admin/risk-signals");
+      expect(response?.status()).not.toBe(200);
+      await expect(
+        page.getByRole("heading", { name: "Risk signals", level: 1 })
+      ).not.toBeVisible();
+    });
+  });
+
   test.describe("US-42 feature flags", () => {
     test("super admin settings shows advisor feature flag controls", async ({ page }) => {
       await new SignInPage(page).signInAs("admin");
@@ -407,16 +431,11 @@ test.describe("Epic 5.5 platform administration", () => {
   });
 
   test.describe("US-46 platform staff accounts", () => {
-    test("staff list and super-admin provisioning page load", async ({ page }) => {
+    test("legacy staff route redirects to admin user management", async ({ page }) => {
       await new SignInPage(page).signInAs("admin");
 
-      const staffResponse = await page.goto("/admin/staff");
-      expect(staffResponse?.status()).toBe(200);
-      await expect(page.getByText("Platform staff")).toBeVisible();
-      await expect(page.getByText(USERS.admin.email)).toBeVisible();
-
-      const provisionResponse = await page.goto("/admin/staff/admin-users");
-      expect(provisionResponse?.status()).toBe(200);
+      await page.goto("/admin/staff");
+      await expect(page).toHaveURL(/\/admin\/staff\/admin-users$/);
       await expect(page.getByRole("heading", { name: "Admin User Management" })).toBeVisible();
     });
   });
