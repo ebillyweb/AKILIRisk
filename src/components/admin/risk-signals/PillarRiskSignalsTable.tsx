@@ -46,7 +46,7 @@ export function PillarRiskSignalsTable({ pillars }: { pillars: PillarRiskSignal[
                     </td>
                     <td className="px-3 py-2 text-right align-middle tabular-nums">
                       {p.familiesAtRisk > 0 ? (
-                        <Badge variant="destructive">{p.familiesAtRisk}</Badge>
+                        <Badge variant="warning">{p.familiesAtRisk}</Badge>
                       ) : (
                         <span className="text-muted-foreground">0</span>
                       )}
