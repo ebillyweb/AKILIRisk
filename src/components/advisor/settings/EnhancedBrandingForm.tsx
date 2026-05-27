@@ -89,14 +89,14 @@ const FORM_SECTIONS = [
   {
     id: 'identity',
     title: 'Brand Identity',
-    shortTitle: 'Identity',
+    shortTitle: 'Brand',
     icon: Building,
     description: 'Basic brand information',
   },
   {
     id: 'colors',
     title: 'Colors & Style',
-    shortTitle: 'Colors',
+    shortTitle: 'Style',
     icon: Palette,
     description: 'Brand colors and theming',
     premium: true,
@@ -191,6 +191,7 @@ export function EnhancedBrandingForm({
   const [showSavedFlash, setShowSavedFlash] = useState(false);
   const savedFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeSection, setActiveSection] = useState('identity');
+  const mobileTabsListRef = useRef<HTMLDivElement | null>(null);
 
   const {
     register,
@@ -232,6 +233,30 @@ export function EnhancedBrandingForm({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (xlSidebar || !mobileTabsListRef.current) {
+      return;
+    }
+
+    if (mobileTabsListRef.current.scrollWidth <= mobileTabsListRef.current.clientWidth) {
+      return;
+    }
+
+    const activeTab = mobileTabsListRef.current.querySelector<HTMLElement>(
+      '[role="tab"][data-state="active"]'
+    );
+
+    if (!activeTab) {
+      return;
+    }
+
+    activeTab.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [activeSection, xlSidebar]);
 
   const flashSaved = useCallback(() => {
     if (savedFlashTimerRef.current) {
@@ -336,11 +361,12 @@ export function EnhancedBrandingForm({
           <TabsList
             variant="line"
             aria-label="Branding settings sections"
+            ref={mobileTabsListRef}
             className={cn(
               'h-auto w-full shrink-0 gap-0 rounded-none border-border/60 bg-muted/25 p-2 text-muted-foreground',
               xlSidebar
                 ? 'xl:sticky xl:top-20 xl:z-10 xl:w-[13.5rem] xl:flex-col xl:border-r xl:bg-muted/20 xl:px-2 xl:py-4'
-                : 'grid grid-cols-2 gap-1 border-b sm:grid-cols-3'
+                : 'grid w-full grid-cols-3 gap-1 border-b'
             )}
           >
               {FORM_SECTIONS.map((section) => {
@@ -361,7 +387,7 @@ export function EnhancedBrandingForm({
                       'data-[state=active]:bg-background/90 data-[state=active]:shadow-none',
                       xlSidebar
                         ? 'h-auto flex-col items-stretch gap-1 px-3 py-2.5'
-                        : 'justify-center px-2 py-2'
+                        : 'h-auto min-w-0 justify-center px-2 py-2'
                     )}
                   >
                     <span
@@ -370,7 +396,13 @@ export function EnhancedBrandingForm({
                         xlSidebar ? 'justify-start' : 'justify-center sm:justify-center'
                       )}
                     >
-                      <section.icon className="size-4 shrink-0 transition-opacity" aria-hidden />
+                      <section.icon
+                        className={cn(
+                          'size-4 shrink-0 transition-opacity',
+                          !xlSidebar && 'hidden'
+                        )}
+                        aria-hidden
+                      />
                       <span className="leading-tight">
                         {xlSidebar ? section.title : section.shortTitle}
                       </span>

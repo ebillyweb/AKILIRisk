@@ -333,7 +333,7 @@ export async function getTopTenantsByClientCount(): Promise<TopTenantRow[]> {
   for (const a of assignmentRows) advisorByClient.set(a.clientId, a.advisorId);
 
   const clientIds = Array.from(advisorByClient.keys());
-  let scoredByAdvisor = new Map<string, number>();
+  const scoredByAdvisor = new Map<string, number>();
   if (clientIds.length > 0) {
     const scoredAssessments = await prisma.assessment.findMany({
       where: {

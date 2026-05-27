@@ -21,7 +21,7 @@ vi.mock("stripe", () => {
   class StripeAuthenticationError extends Error {}
   class Stripe {
     balance = { retrieve: mockBalanceRetrieve };
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     constructor(_key: string, _options?: unknown) {}
     static errors = { StripeAuthenticationError };
   }

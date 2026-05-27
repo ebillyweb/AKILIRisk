@@ -41,7 +41,7 @@ export async function listServiceRecommendations(
       { description: { contains: filter.q, mode: "insensitive" } },
     ];
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return prisma.serviceRecommendation.findMany({
     where: where as any,
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],

@@ -99,7 +99,7 @@ export function withDecryptedRelationEmail<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { ...row, user: null } as any;
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   return {
     ...row,
     user: { ...row.user, email: decryptUserEmail(row.user.emailCiphertext) },

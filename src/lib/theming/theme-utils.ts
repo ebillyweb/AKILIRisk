@@ -72,7 +72,7 @@ export function hexToHSL(hex: string): string {
 
   let h = 0;
   let s = 0;
-  let l = (max + min) / 2;
+  const l = (max + min) / 2;
 
   if (diff !== 0) {
     s = diff / (1 - Math.abs(2 * l - 1));
