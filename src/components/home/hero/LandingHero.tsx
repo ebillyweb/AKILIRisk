@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState, type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
@@ -13,9 +13,11 @@ import {
 } from "@/components/home/hero/hero-audience-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useHeroAudience } from "@/components/home/hero/useHeroAudience";
 import { cn } from "@/lib/utils";
 
 type LandingHeroProps = {
+  initialAudience?: HeroAudience;
   authenticated: boolean;
   userEmail?: string | null;
   authenticatedActions?: ReactNode;
@@ -29,6 +31,7 @@ const contentMotion = {
 };
 
 export function LandingHero({
+  initialAudience = "families",
   authenticated,
   userEmail,
   authenticatedActions,
@@ -36,7 +39,7 @@ export function LandingHero({
 }: LandingHeroProps) {
   const baseId = useId();
   const prefersReducedMotion = useReducedMotion();
-  const [audience, setAudience] = useState<HeroAudience>("families");
+  const { audience, setAudience } = useHeroAudience(initialAudience);
   const copy = HERO_AUDIENCE_CONTENT[audience];
   const panelId = `${baseId}-panel-${audience}`;
   const tabId = `${baseId}-tab-${audience}`;
@@ -65,6 +68,8 @@ export function LandingHero({
               id={panelId}
               role="tabpanel"
               aria-labelledby={tabId}
+              data-testid="landing-hero-panel"
+              data-audience={audience}
               initial={contentMotion.initial}
               animate={contentMotion.animate}
               exit={contentMotion.exit}
@@ -102,6 +107,7 @@ export function LandingHero({
                         <Link
                           href={copy.primaryCta.href}
                           title={copy.primaryCta.title}
+                          data-testid="landing-hero-primary-cta"
                         >
                           {copy.primaryCta.label}
                           <ArrowRight className="size-4" />
@@ -116,6 +122,7 @@ export function LandingHero({
                         <Link
                           href={copy.secondaryCta.href}
                           title={copy.secondaryCta.title}
+                          data-testid="landing-hero-secondary-cta"
                         >
                           {copy.secondaryCta.label}
                         </Link>

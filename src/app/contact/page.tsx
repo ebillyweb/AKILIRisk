@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ContactForm } from "@/components/marketing/ContactForm";
 import { MarketingPage } from "@/components/marketing/MarketingPage";
 import { contactUsSections } from "@/lib/marketing/content";
@@ -14,7 +15,9 @@ export default function ContactUsPage() {
       sections={contactUsSections}
       kicker="Contact"
     >
-      <ContactForm />
+      <Suspense fallback={null}>
+        <ContactForm />
+      </Suspense>
     </MarketingPage>
   );
 }

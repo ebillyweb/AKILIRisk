@@ -64,6 +64,7 @@ export function HeroAudienceSwitcher({
       <div
         role="tablist"
         aria-label="Choose your path"
+        data-testid="landing-hero-audience-switcher"
         className={cn(
           "relative inline-flex w-full max-w-md rounded-full border border-border/70 bg-muted/40 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-sm sm:w-auto",
           className
@@ -77,6 +78,7 @@ export function HeroAudienceSwitcher({
           return (
             <button
               key={option.id}
+              data-testid={`landing-hero-tab-${option.id}`}
               ref={(node) => {
                 tabRefs.current[option.id] = node ?? undefined;
               }}

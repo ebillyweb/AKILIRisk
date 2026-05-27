@@ -3,16 +3,24 @@ import { ArrowRight } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LandingHero } from "@/components/home/hero/LandingHero";
+import { parseHeroAudienceParam } from "@/components/home/hero/hero-audience-persistence";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 
-export default async function Home() {
+type HomePageProps = {
+  searchParams: Promise<{ audience?: string }>;
+};
+
+export default async function Home({ searchParams }: HomePageProps) {
   const session = await auth();
+  const { audience: audienceParam } = await searchParams;
+  const initialAudience = parseHeroAudienceParam(audienceParam) ?? "families";
 
   return (
     <>
       <main id="main-content" className="min-h-screen py-6 sm:py-8" tabIndex={-1}>
         <div className="page-shell">
           <LandingHero
+            initialAudience={initialAudience}
             authenticated={Boolean(session?.user)}
             userEmail={session?.user?.email}
             authenticatedActions={

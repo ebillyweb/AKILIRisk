@@ -106,7 +106,7 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     },
     secondaryCta: {
       label: "Request Demo",
-      href: "/contact",
+      href: "/contact?intent=demo",
       title: "Request a platform demonstration",
     },
     helperLinks: [

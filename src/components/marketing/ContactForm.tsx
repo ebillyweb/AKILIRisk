@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { submitContactForm } from "@/lib/actions/contact-form-actions";
 import { TurnstileWidget } from "@/components/marketing/TurnstileWidget";
+import {
+  getContactFormIntentPreset,
+  parseContactFormIntent,
+} from "@/lib/marketing/contact-form-intent";
 
 const TURNSTILE_SITE_KEY =
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
@@ -19,6 +24,8 @@ interface ContactFormProps {
 }
 
 export function ContactForm({ className }: ContactFormProps) {
+  const searchParams = useSearchParams();
+  const intentAppliedRef = useRef(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
@@ -27,6 +34,16 @@ export function ContactForm({ className }: ContactFormProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (intentAppliedRef.current) return;
+    const intent = parseContactFormIntent(searchParams.get("intent"));
+    const preset = getContactFormIntentPreset(intent);
+    if (!preset) return;
+    setSubject((current) => (current.trim() ? current : preset.subject));
+    setMessage((current) => (current.trim() ? current : preset.message));
+    intentAppliedRef.current = true;
+  }, [searchParams]);
 
   const handleTokenChange = useCallback((token: string | null) => {
     setTurnstileToken(token);
@@ -78,7 +95,11 @@ export function ContactForm({ className }: ContactFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className={className}>
+    <form
+      onSubmit={handleSubmit}
+      className={className}
+      data-testid="contact-form"
+    >
       <div className="space-y-5 rounded-[1.25rem] border border-border/70 bg-card/80 p-5 sm:p-6">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold text-foreground">Send a message</h2>
@@ -147,6 +168,7 @@ export function ContactForm({ className }: ContactFormProps) {
             onChange={(e) => setSubject(e.target.value)}
             placeholder="How can we help?"
             disabled={isLoading}
+            data-testid="contact-form-subject"
           />
         </div>
 
