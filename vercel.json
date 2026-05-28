@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/magic-link-prune",
       "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/advisory-outreach-reminder",
+      "schedule": "0 13 * * *"
     }
   ]
 }

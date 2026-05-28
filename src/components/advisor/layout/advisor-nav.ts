@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Bell,
+  Briefcase,
   ClipboardList,
   CreditCard,
   FileText,
@@ -99,6 +100,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     items: [
       { href: "/advisor/pipeline", label: "Intake", icon: ClipboardList },
       { href: "/advisor/pipeline", label: "Document requests", icon: Mail },
+      { href: "/advisor/engagements", label: "Engagements", icon: Briefcase },
       {
         label: "Tasks",
         icon: ListTodo,
