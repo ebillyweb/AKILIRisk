@@ -49,6 +49,29 @@ const { dbState, fakes } = vi.hoisted(() => {
     auditWrites: [] as Array<{ action: string; metadata: unknown; entityId: string | null }>,
     /** When true, the next report.create({status:'DRAFT'}) throws P2002. */
     failNextDraftCreateWithP2002: false,
+    // BRD §6.3 / Epic 5.10 — publish-path additions:
+    pillarScores: [] as Array<{
+      assessmentId: string;
+      pillar: string;
+      score: number;
+      riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    }>,
+    pillarQuestions: [] as Array<{
+      id: string;
+      isKeyRiskIndicator: boolean;
+      answerType: string;
+    }>,
+    /** Answers keyed by questionId, used by the mocked answer loader. */
+    answers: {} as Record<string, unknown>,
+    /** Phase tracker — keyed by assessmentId. */
+    phases: {} as Record<
+      string,
+      {
+        deliverablePhase: "PREVIEW" | "PROFILE" | "PORTFOLIO";
+        profileEnteredAt: Date | null;
+        upsellTriggersFired: unknown;
+      }
+    >,
   };
 
   const session = { userId: "user-advisor", role: "ADVISOR", email: "advisor@x.com" };
@@ -193,12 +216,89 @@ vi.mock("@/lib/db", () => ({
     },
     report: fakes.reportApi,
     $transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) => {
-      // Pass the same prisma object as the tx argument.
+      // Pass a tx-shaped object covering every method the action calls
+      // inside the transaction: report ops (the same in-memory fake) plus
+      // the BRD §6.3 publish-path additions (pillarScore.findMany,
+      // pillarQuestion.findMany, and assessment.findUnique/update which
+      // the enterProfile helper uses).
       return cb({
         report: fakes.reportApi,
+        pillarScore: {
+          findMany: async ({
+            where,
+          }: {
+            where?: { assessmentId?: string };
+          }) =>
+            dbState.pillarScores.filter((r) =>
+              where?.assessmentId ? r.assessmentId === where.assessmentId : true
+            ),
+        },
+        pillarQuestion: {
+          findMany: async ({
+            where,
+          }: {
+            where?: { isKeyRiskIndicator?: boolean };
+          }) =>
+            dbState.pillarQuestions.filter((q) =>
+              where?.isKeyRiskIndicator === undefined
+                ? true
+                : q.isKeyRiskIndicator === where.isKeyRiskIndicator
+            ),
+        },
+        assessment: {
+          findUnique: async ({ where }: { where: { id: string } }) => {
+            const row = dbState.phases[where.id];
+            if (!row) return null;
+            return {
+              deliverablePhase: row.deliverablePhase,
+              profileEnteredAt: row.profileEnteredAt,
+            };
+          },
+          update: async ({
+            where,
+            data,
+          }: {
+            where: { id: string };
+            data: {
+              deliverablePhase?: "PREVIEW" | "PROFILE" | "PORTFOLIO";
+              profileEnteredAt?: Date | null;
+              upsellTriggersFired?: unknown;
+            };
+          }) => {
+            const row = dbState.phases[where.id];
+            if (!row) return;
+            if (data.deliverablePhase) row.deliverablePhase = data.deliverablePhase;
+            if (data.profileEnteredAt !== undefined)
+              row.profileEnteredAt = data.profileEnteredAt;
+            if (data.upsellTriggersFired !== undefined)
+              row.upsellTriggersFired = data.upsellTriggersFired;
+          },
+        },
       });
     }),
   },
+}));
+
+// BRD §6.3 / Epic 5.10 — the publish path decrypts answers for KRI-flagged
+// questions through this loader. The test fake just returns whatever the
+// dbState.answers map holds for the requested ids.
+vi.mock("@/lib/assessment/pillar-answer-loader", () => ({
+  loadAssessmentAnswersForQuestions: async (
+    _assessmentId: string,
+    questionIds: string[]
+  ) => {
+    const out: Record<string, unknown> = {};
+    for (const id of questionIds) {
+      if (id in dbState.answers) out[id] = dbState.answers[id];
+    }
+    return out;
+  },
+}));
+
+// BRD §6.3 / Epic 5.10 — the trigger notification is fire-and-forget.
+// Mock so it doesn't try to hit the real notifications stack from a unit test.
+vi.mock("@/lib/notifications/deliverable-phase-triggers", () => ({
+  triggerProfilePublished: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/audit/audit-log", async () => {
@@ -283,6 +383,10 @@ beforeEach(() => {
   dbState.assignments.length = 0;
   dbState.auditWrites.length = 0;
   dbState.failNextDraftCreateWithP2002 = false;
+  dbState.pillarScores.length = 0;
+  dbState.pillarQuestions.length = 0;
+  for (const k of Object.keys(dbState.answers)) delete dbState.answers[k];
+  for (const k of Object.keys(dbState.phases)) delete dbState.phases[k];
   fakes.session.userId = "user-advisor";
   fakes.session.role = "ADVISOR";
   fakes.session.email = "advisor@x.com";
@@ -537,6 +641,80 @@ describe("publishReport", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.code).toBe("not_draft");
+  });
+
+  // BRD §6.3 / Epic 5.10 — publish-time deliverable-phase wiring.
+  describe("deliverable-phase transition (BRD §6.3)", () => {
+    function seedPhase() {
+      dbState.phases["asmt-1"] = {
+        deliverablePhase: "PREVIEW",
+        profileEnteredAt: null,
+        upsellTriggersFired: null,
+      };
+    }
+
+    it("transitions the assessment from PREVIEW to PROFILE on publish", async () => {
+      seedPhase();
+      // Seed a healthy pillar score so no triggers fire on score side.
+      dbState.pillarScores.push({
+        assessmentId: "asmt-1",
+        pillar: "governance",
+        score: 2.5,
+        riskLevel: "LOW",
+      });
+
+      const result = await publishReport("draft-1");
+      expect(result.ok).toBe(true);
+      expect(dbState.phases["asmt-1"].deliverablePhase).toBe("PROFILE");
+      expect(dbState.phases["asmt-1"].profileEnteredAt).toBeInstanceOf(Date);
+    });
+
+    it("emits a kri:<questionId> trigger when a KRI question is answered at maturity ≤ 1", async () => {
+      seedPhase();
+      // No domain-flag triggers; one KRI hit only.
+      dbState.pillarScores.push({
+        assessmentId: "asmt-1",
+        pillar: "cyber-digital",
+        score: 2.5,
+        riskLevel: "LOW",
+      });
+      dbState.pillarQuestions.push(
+        {
+          id: "q-kri-fired",
+          isKeyRiskIndicator: true,
+          answerType: "scored_0_3",
+        },
+        {
+          id: "q-kri-passed",
+          isKeyRiskIndicator: true,
+          answerType: "scored_0_3",
+        }
+      );
+      dbState.answers["q-kri-fired"] = 1; // maturity ≤ 1 → fires
+      dbState.answers["q-kri-passed"] = 3; // maturity > 1 → does not fire
+
+      const result = await publishReport("draft-1");
+      expect(result.ok).toBe(true);
+      const triggers = dbState.phases["asmt-1"].upsellTriggersFired;
+      expect(Array.isArray(triggers)).toBe(true);
+      const arr = triggers as string[];
+      expect(arr).toContain("kri:q-kri-fired");
+      expect(arr).not.toContain("kri:q-kri-passed");
+    });
+
+    it("stores an empty triggers list when nothing fires", async () => {
+      seedPhase();
+      dbState.pillarScores.push({
+        assessmentId: "asmt-1",
+        pillar: "governance",
+        score: 2.8,
+        riskLevel: "LOW",
+      });
+      // No KRI questions, healthy pillar score.
+      const result = await publishReport("draft-1");
+      expect(result.ok).toBe(true);
+      expect(dbState.phases["asmt-1"].upsellTriggersFired).toEqual([]);
+    });
   });
 });
 
