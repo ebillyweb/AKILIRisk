@@ -7,6 +7,8 @@ under `tests/`.
 **Epic & story mapping:** [docs/user-stories/README.md](../docs/user-stories/README.md)  
 Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests below should align with [Epic 5.9](../docs/user-stories/EPIC-5.9-extended-risk-modules.md) reconciliation.
 
+**Current suite:** **141** Playwright tests in **38** spec files under `tests/smoke/`. Regenerate the list with `npx playwright test --list`.
+
 > **Note:** The BRD test plan document is not committed to this repo. TC IDs
 > below should be filled in from the Google Drive doc as tests are implemented.
 > Until then, tests are listed by feature area.
@@ -17,101 +19,190 @@ Canonical assessment path: **Epic 5.2** (US-10 – US-20). Legacy module tests b
 - **Failing** - implemented but currently red
 - **Skipped** - implemented but disabled (note reason)
 
+## Last preview run
+
+Target: `https://preview.akilirisk.com` (2026-05-27, local runner)
+
+| Result | Count |
+|--------|------:|
+| Passed | 83 |
+| Failed | 55 |
+| Skipped | 3 |
+| **Total** | **141** |
+
+| Epic / area | Pass | Fail | Skip |
+|-------------|-----:|-----:|-----:|
+| 5.1 Public / onboarding | 21 | 2 | 0 |
+| 5.2 Assessment lifecycle | 0 | 19 | 0 |
+| 5.3 Household profiles | 0 | 3 | 0 |
+| 5.4 Advisor workspace | 9 | 5 | 0 |
+| 5.5 Platform admin | 36 | 6 | 0 |
+| 5.6 Security / compliance | 9 | 14 | 0 |
+| 5.7 Branding / tenants | 7 | 5 | 0 |
+| 5.8 Policy templates | 1 | 1 | 0 |
+| Billing / Stripe | 0 | 0 | 3 |
+
+**Failure themes (preview):**
+- **Client auth timeouts** — many client specs never reach `/dashboard` (magic-link verify or post-login redirect; likely **PII consent gate** at `/consent/pending` and/or `auth.spec.ts` still using password sign-in for clients instead of `signInAs`).
+- **Admin/advisor UI drift** — heading/locator mismatches on admin sign-in, audit-log 404 expectations, advisor pipeline/review pages.
+- **Env-conditional skips (expected):** Stripe webhook suite skipped without `STRIPE_WEBHOOK_SECRET` + remote flag; cron/S3 tests may skip without `CRON_SECRET` / AWS creds.
+
+Re-run locally: `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2e` (install browsers once with `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2e:install`).
+
+## Skipped / conditional
+
+| Spec | Reason |
+|------|--------|
+| `tests/smoke/public-signup.spec.ts` | Entire `describe.skip` — retired post-round-11; invitation + magic-link flows cover signup |
+| `tests/smoke/stripe-webhook-endpoint.spec.ts` | Skipped unless `STRIPE_WEBHOOK_SECRET` is set and remote/local flag matches deployment |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` (US-31) | Skipped unless AWS + `S3_BUCKET_NAME` configured |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` (US-36) | Skipped unless `CRON_SECRET` (+ `E2E_CRON_REMOTE=1` against preview) |
+
 ## Implemented
 
 | Spec | Test | BRD TC ID(s) | Status |
 |---|---|---|---|
-| `tests/smoke/auth.spec.ts` | advisor can sign in and load `/advisor` | TBD | Implemented |
-| `tests/smoke/auth.spec.ts` | client can sign in and load `/dashboard` | TBD | Implemented |
-| `tests/smoke/auth.spec.ts` | admin can sign in and load `/admin` | TBD | Implemented |
-| `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` | advisor MFA sign-in blocked until TOTP; API 403; workspace redirect | Epic 5.6 / US-48 | Implemented |
-| `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` | recovery code sign-in; single-use enforcement | Epic 5.6 / US-48 | Implemented |
-| `tests/smoke/epic-5.6-rbac.spec.ts` | soft-deleted advisor session ended; deactivated notice; sign-in blocked | Epic 5.6 / US-49 | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | client/advisor/admin cross-role access denied | Epic 5.6 / US-49 | Implemented |
-| `tests/smoke/client-dashboard.spec.ts` | client dashboard reflects submitted intake state | TBD | Implemented |
-| `tests/smoke/advisor-clients.spec.ts` | advisor can view client list and open a client | TBD | Implemented |
 | `tests/smoke/admin-advisors.spec.ts` | admin can view advisors list with at least one row | TBD | Implemented |
-| `tests/smoke/client-intake.spec.ts` | intake wizard end-to-end via Type tab (Q1..Q18 → /intake/complete) | TBD | Implemented |
-| `tests/smoke/client-intake.spec.ts` | Next + Save disabled until response is typed | TBD | Implemented |
-| `tests/smoke/client-portal-branding.spec.ts` | branded client sees advisor branding signals on /dashboard | TBD | Implemented |
-| `tests/smoke/tenant-isolation.spec.ts` | advisor cannot open another advisor's client via direct URL | TBD | Implemented |
-| `tests/smoke/subdomain-routing.spec.ts` | active subdomain serves the branded client portal | TBD | Implemented |
-| `tests/smoke/subdomain-routing.spec.ts` | "Subdomain Not Available" renders for both inactive-tenant (active+unverified) and disabled-tenant (verified+inactive) | TBD | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | wrong password shows credential error and stays on /signin | TBD | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | unauthenticated /dashboard sent to /signin with callbackUrl | TBD | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /admin (redirected to dashboard) | TBD | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /advisor (redirected to dashboard) | TBD | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | advisor cannot view admin content via direct /admin nav | TBD | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | advisor sees an unauthorized notice after attempting /admin | TBD | Implemented |
-| `tests/smoke/auth-edge-cases.spec.ts` | client sees an unauthorized notice after attempting /admin | TBD | Implemented |
-| `tests/smoke/admin-intake-script.spec.ts` | admin intake script list renders with edit + visibility controls | TBD | Implemented |
-| `tests/smoke/admin-intake-script.spec.ts` | admin can edit intake question; text round-trips through DB | TBD | Implemented |
-| `tests/smoke/admin-intake-script.spec.ts` | admin can toggle visibility (DB round-trips) | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | list page shows intake questions with shared header, edit, and visibility controls | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | editing a question round-trips the text through the DB | TBD | Implemented |
+| `tests/smoke/admin-intake-script.spec.ts` | toggling a question's visibility round-trips through the DB | TBD | Implemented |
 | `tests/smoke/admin-intake-script.spec.ts` | visibility toggle updates the rendered counts without a hard reload | TBD | Implemented |
-| `tests/smoke/advisor-logo-endpoint.spec.ts` | unauthenticated GET on /api/client/advisor-logo -> 401 | TBD | Implemented |
-| `tests/smoke/advisor-logo-endpoint.spec.ts` | non-USER (admin) GET on /api/client/advisor-logo -> 403 | TBD | Implemented |
-| `tests/smoke/advisor-logo-endpoint.spec.ts` | client GET returns image bytes with valid PNG/JPEG magic | TBD | Implemented |
-| `tests/smoke/advisor-billing-gate.spec.ts` | advisor without active sub redirected to /advisor/billing on signin | TBD | Implemented |
-| `tests/smoke/advisor-billing-gate.spec.ts` | /advisor + /advisor/pipeline + /advisor/dashboard all redirect no-sub advisor to billing | TBD | Implemented |
-| `tests/smoke/default-branding-fallback.spec.ts` | client with brandingEnabled=false advisor sees the platform default | TBD | Implemented |
-| `tests/smoke/advisor-intake-review.spec.ts` | advisor navigates pipeline -> /advisor/review/[id] and sees transcripts | TBD | Implemented |
+| `tests/smoke/advisor-billing-gate.spec.ts` | advisor without an active subscription is sent to /advisor/billing | TBD | Implemented |
+| `tests/smoke/advisor-billing-gate.spec.ts` | /advisor, /advisor/pipeline, and /advisor/dashboard all redirect the no-sub advisor to billing | TBD | Implemented |
+| `tests/smoke/advisor-clients.spec.ts` | advisor can view client list and open a client | TBD | Implemented |
+| `tests/smoke/advisor-intake-review.spec.ts` | advisor can navigate from pipeline to /advisor/review/[id] and see transcripts | TBD | Implemented |
 | `tests/smoke/advisor-intake-review.spec.ts` | advisor cannot view another advisor's intake review via direct URL | TBD | Implemented |
-| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-28 pipeline search + stalled URL filter | Epic 5.4 | Implemented |
-| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-34 cross-advisor intelligence detail blocked | Epic 5.4 | Implemented |
-| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-35 notification preferences page | Epic 5.4 | Implemented |
-| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | US-31 S3 document upload presign → confirm | Epic 5.4 | Implemented |
-| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | US-36 cron endpoints auth + scheduled GET | Epic 5.4 | Implemented |
-| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | US-28 pipeline SSE connected + pipeline_update | Epic 5.4 | Implemented |
-| `tests/smoke/public-signup.spec.ts` | invite redemption + signup creates user that lands on /intake | TBD | Implemented |
-| `tests/smoke/public-signup.spec.ts` | signup with existing email surfaces "Unable to create account" | TBD | Implemented |
-| `tests/smoke/public-signup.spec.ts` | signup form rejects mismatched passwords | TBD | Implemented |
-| `tests/smoke/intake-audio-endpoint.spec.ts` | owner client GET on /api/intake/[id]/audio/[questionId] returns audio bytes (200) | TBD | Implemented |
-| `tests/smoke/intake-audio-endpoint.spec.ts` | assigned advisor GET returns audio bytes (200) | TBD | Implemented |
-| `tests/smoke/intake-audio-endpoint.spec.ts` | unassigned advisor GET returns 404 (cross-tenant audio isolation) | TBD | Implemented |
-| `tests/smoke/intake-audio-endpoint.spec.ts` | unauthenticated GET returns 401 | TBD | Implemented |
-| `tests/smoke/stripe-webhook-endpoint.spec.ts` | same event.id delivered twice is deduped (idempotency) | TBD | Implemented |
-| `tests/smoke/stripe-webhook-endpoint.spec.ts` | bad signature returns 400 and creates no dedupe row | TBD | Implemented |
+| `tests/smoke/advisor-logo-endpoint.spec.ts` | unauthenticated GET returns 401 | TBD | Implemented |
+| `tests/smoke/advisor-logo-endpoint.spec.ts` | non-USER role (admin) is blocked with 403 | TBD | Implemented |
+| `tests/smoke/advisor-logo-endpoint.spec.ts` | client receives the assigned advisor's logo as image bytes | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | admin can view /admin/audit-log | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | advisor gets 404 on /admin/audit-log | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | client gets 404 on /admin/audit-log | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | unauthenticated request to /admin/audit-log redirects or 404s | TBD | Implemented |
+| `tests/smoke/audit-log-access.spec.ts` | non-admin gets 404 on /api/admin/audit-log/export | TBD | Implemented |
+| `tests/smoke/audit-log-csv-export.spec.ts` | admin can download CSV; rows parse; export action self-audits | TBD | Implemented |
+| `tests/smoke/audit-log-wiring.spec.ts` | admin create + soft-delete each leave a single audit row with the right shape | TBD | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | wrong password shows the credential error and stays on /signin | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | unauthenticated user hitting /dashboard is sent to magic-link sign-in with callbackUrl | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /admin and lands on /dashboard?error=unauthorized | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | client cannot reach /advisor and lands on /dashboard?error=unauthorized | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | advisor cannot view admin content when navigating directly to /admin | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | advisor sees an unauthorized notice after attempting /admin | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/auth-edge-cases.spec.ts` | client sees an unauthorized notice after attempting /admin | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/auth.spec.ts` | advisor can sign in and load their dashboard | TBD | Implemented |
+| `tests/smoke/auth.spec.ts` | client can sign in and load their dashboard | TBD | Implemented |
+| `tests/smoke/auth.spec.ts` | admin can sign in and load their dashboard | TBD | Implemented |
+| `tests/smoke/client-dashboard.spec.ts` | dashboard reflects submitted intake state | TBD | Implemented |
+| `tests/smoke/client-intake.spec.ts` | can complete the wizard end-to-end via the Type tab | TBD | Implemented |
+| `tests/smoke/client-intake.spec.ts` | Next is disabled and Save is disabled until a response is typed | TBD | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-1: send invitation normalizes email and shows Sent in history | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-9: filter invitations by status and client email search | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-8 / US-9: expire invitation hides resend; resend is not offered for Expired | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-8: advisor can resend a sent invitation | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | test invitation issue endpoint returns signup URL with invite param | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-1: intake-waived invitation links to assessment callback | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-6: password registration endpoint returns 410 Gone | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-6: invalid invite token shows a clear error | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-5: opened API advances SENT to OPENED | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-5 / US-6 / US-7: client redeems invite and lands on intake | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-6 / US-7: intake-waived invite lands on assessment | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | US-4: shareable link alert when initial send email fails | Epic 5.1 | Implemented |
+| `tests/smoke/client-invitation-onboarding.spec.ts` | resend shows shareable link when email delivery fails | Epic 5.1 | Implemented |
+| `tests/smoke/client-portal-branding.spec.ts` | branded client sees advisor branding signals on /dashboard | TBD | Implemented |
+| `tests/smoke/default-branding-fallback.spec.ts` | client with brandingEnabled=false advisor sees the platform default | TBD | Implemented |
+| `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | advisor approves submitted intake and client unlocks assessment | US-11 | Implemented |
+| `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | advisor rejects submitted intake | US-11 | Implemented |
+| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | governance question shows four maturity levels and saves selection | US-13 / US-14 | Implemented |
+| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | client resumes at saved pillar question after sign-out and sign-in | US-13 / US-14 | Implemented |
+| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | server position wins over stale localStorage on hub reload | US-13 / US-14 | Implemented |
+| `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | client dashboard shows populated six-cell heat map after scoring | US-16 | Implemented |
+| `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | client dashboard shows empty heat map placeholder before scoring | US-16 | Implemented |
+| `tests/smoke/epic-5.2-report-publish.spec.ts` | client cannot download PDF before advisor publishes | US-19–20 | Implemented |
+| `tests/smoke/epic-5.2-report-publish.spec.ts` | advisor publishes draft and client downloads published PDF | US-19–20 | Implemented |
+| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-21: client adds a household member | Epic 5.3 | Implemented |
+| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-48: hidden members are omitted from advisor intake review | Epic 5.3 | Implemented |
+| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-49: advisor disabling profiles hides client nav and /profiles | Epic 5.3 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-28: pipeline search filters to assigned client | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-28: pipeline stalled filter toggle is available | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-34: advisor cannot open another advisor's intelligence detail | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-35: notification preferences page loads | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | presigned upload-url → S3 PUT → confirm marks requirement fulfilled | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | rejects missing and invalid Authorization | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | accepts Bearer CRON_SECRET and returns processing JSON | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | status-stream sends connected and pipeline_update for advisor | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | pipeline UI shows Live updates after SSE connects | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | governance area lists pillar questions with edit and visibility controls | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | editing question text round-trips through the DB | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | visibility toggle round-trips through the DB | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | creating and deleting a question round-trips through the DB | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | reorder controls are enabled and submit without error | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | creating a question writes a pillar_question.create audit row | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | assessment bank index shows shared header and risk-area cards | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | legacy /admin/question-bank URLs redirect to canonical assessment paths | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | control center exposes configuration question bank cards | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | platform ADMIN can use question banks but not super-admin-only surfaces | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | catalog page renders services and rules tabs | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | creating a catalog service round-trips through the list | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | rules tab and new rule form render | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | super admin can open risk thresholds form | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | super admin can save and restore threshold values | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | non-admin users cannot reach super-admin threshold settings | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | super admin can open risk signals dashboard | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | platform admin cannot open super-admin risk signals | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | super admin settings shows advisor feature flag controls | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | toggling a feature flag round-trips through the DB | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | analytics dashboard loads aggregate view | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | admin sidebar exposes Operations Health link | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | operations health page loads for admin | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | client accounts list renders seeded client | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | advisor edit page exposes portal access controls | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | governance leads page renders assignment table | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | intake management and assessment admin views load | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.5-platform-admin.spec.ts` | legacy staff route redirects to admin user management | Epic 5.5 | Implemented |
+| `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` | credentials sign-in stops at MFA verify until TOTP is entered | Epic 5.6 / US-48 | Implemented |
+| `tests/smoke/epic-5.6-mfa-sign-in.spec.ts` | recovery code completes sign-in and cannot be reused | Epic 5.6 / US-48 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | advisor can open the policy page and save a toggle | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | pending consent redirects to /consent/pending and Continue reaches dashboard | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | omitted fields default to No when Continue is clicked | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | signed-in client navigating to /dashboard is redirected to consent | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | settings revisit saves updated privacy preferences | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | advisor-disabled field is omitted from the consent prompt | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | pipeline shows client email instead of legal name when User.name consent is No | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | filling optional legal name grants advisor visibility | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | field fill writes client_pii.field_consent audit row | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-pii-consent.spec.ts` | advisor policy toggle writes pii_policy.field_disable audit row | Epic 5.6 / US-50–51 | Implemented |
+| `tests/smoke/epic-5.6-rbac.spec.ts` | active session is ended after soft-delete and sign-in is blocked | Epic 5.6 / US-49 | Implemented |
+| `tests/smoke/epic-5.7-platform-host.spec.ts` | main app sign-in is served on the default Playwright base URL | Epic 5.7 / US-61 | Implemented |
+| `tests/smoke/epic-5.8-advisor-policy-templates.spec.ts` | assigned advisor downloads Word and PDF from pipeline UI and API | Epic 5.8 / US-62–63 | Implemented |
+| `tests/smoke/epic-5.8-advisor-policy-templates.spec.ts` | unassigned advisor receives 404 for client assessment templates | Epic 5.8 / US-62–63 | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | owner receives the audio bytes (200) | TBD | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | assigned advisor receives the audio bytes (200) | TBD | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | unassigned advisor gets 404 (regression: no cross-tenant audio access) | TBD | Implemented |
+| `tests/smoke/intake-audio-endpoint.spec.ts` | unauthenticated request gets 401 | TBD | Implemented |
+| `tests/smoke/landing-hero-audience.spec.ts` | families tab is default and exposes family CTAs | Marketing | Implemented |
+| `tests/smoke/landing-hero-audience.spec.ts` | advisors tab shows advisor workspace copy and CTAs | Marketing | Implemented |
+| `tests/smoke/landing-hero-audience.spec.ts` | ?audience=advisors deep-links the advisor tab | Marketing | Implemented |
+| `tests/smoke/landing-hero-audience.spec.ts` | #advisors hash deep-links the advisor tab | Marketing | Implemented |
+| `tests/smoke/landing-hero-audience.spec.ts` | request demo pre-fills the contact form | Marketing | Implemented |
+| `tests/smoke/landing-hero-audience.spec.ts` | remembers last audience in session storage | Marketing | Implemented |
+| `tests/smoke/magic-link-test-helper.spec.ts` | POST /api/test/magic-link/issue returns rawToken + verifyUrl | Infra | Implemented |
+| `tests/smoke/magic-link-test-helper.spec.ts` | issue → verify URL → dashboard signs the client in | Infra | Implemented |
+| `tests/smoke/magic-link-test-helper.spec.ts` | malformed email returns 400, not 500 | Infra | Implemented |
+| `tests/smoke/signin-after-phase-b.spec.ts` | magic-link issue → verify → dashboard, session.user.email is the original plaintext | Infra | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | approved client sees all six pillar cards | US-12 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | client can open governance pillar and reach the questionnaire | US-12 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | client can open governance and cyber pillars from the hub | US-12 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | client without approved intake cannot open /assessment | US-12 | Implemented |
+| `tests/smoke/six-pillar-assessment.spec.ts` | waived invitation redemption shows six pillar cards | US-12 | Implemented |
+| `tests/smoke/stripe-webhook-endpoint.spec.ts` | same event.id delivered twice → second call is deduped (no double-processing) | TBD | Implemented |
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | two parallel deliveries of same event.id → exactly one is processed (atomic claim) | TBD | Implemented |
-| `tests/smoke/audit-log-access.spec.ts` | admin can view /admin/audit-log; meta-audit row appears on reload | TBD | Implemented |
-| `tests/smoke/audit-log-access.spec.ts` | advisor / client / unauthenticated → 404 on /admin/audit-log (no existence leak) | TBD | Implemented |
-| `tests/smoke/audit-log-access.spec.ts` | unauthenticated GET /api/admin/audit-log/export → 404 | TBD | Implemented |
-| `tests/smoke/audit-log-wiring.spec.ts` | admin create advisor → user.create row with redacted password + emailHash + before=null | TBD | Implemented |
-| `tests/smoke/audit-log-wiring.spec.ts` | admin soft-delete advisor → user.soft_delete row with deletedAt + portal access diff | TBD | Implemented |
-| `tests/smoke/audit-log-csv-export.spec.ts` | admin downloads CSV; rows parse; column count matches header | TBD | Implemented |
-| `tests/smoke/audit-log-csv-export.spec.ts` | export action self-audits as data_access.export with filterHash + format=csv | TBD | Implemented |
-| `tests/smoke/client-invitation-onboarding.spec.ts` | US-1 send + email normalize; US-9 filters/expire; US-8 resend | Epic 5.1 | Implemented |
-| `tests/smoke/client-invitation-onboarding.spec.ts` | US-5 opened API; US-6 invalid invite + register 410; US-7 redeem → intake/assessment | Epic 5.1 | Implemented |
-| `tests/smoke/client-invitation-onboarding.spec.ts` | US-4 shareable link when email send fails (send + resend) | Epic 5.1 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 approved client sees six pillar cards on /assessment | US-10–20 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 client opens governance pillar questionnaire | US-10–20 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 hub entry for governance + cyber-digital pillars | US-10–20 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 gate: client without approved intake redirected from /assessment | US-10–20 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | US-12 intake-waived invite shows six pillar hub | US-10–20 | Implemented |
-| `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 advisor approves intake → client sees six pillars | US-11 | Implemented |
-| `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | US-11 advisor rejects intake → client blocked from /assessment | US-11 | Implemented |
-| `tests/smoke/epic-5.2-report-publish.spec.ts` | US-20 client PDF 404 before publish | US-19–20 | Implemented |
-| `tests/smoke/epic-5.2-report-publish.spec.ts` | US-19–20 advisor publish → client PDF download | US-19–20 | Implemented |
-| `tests/smoke/epic-5.8-advisor-policy-templates.spec.ts` | US-62 / US-63 advisor Word + PDF policy templates; unassigned 404 | Epic 5.8 | Implemented |
-| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-13 governance maturity scale four levels + selection | US-13 | Implemented |
-| `tests/smoke/epic-5.2-assessment-progress.spec.ts` | US-14 resume after sign-out; server beats stale localStorage | US-14 | Implemented |
-| `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 six-cell heat map after scoring | US-16 | Implemented |
-| `tests/smoke/epic-5.2-dashboard-heatmap.spec.ts` | US-16 empty heat map before scoring | US-16 | Implemented |
-| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-21 client adds household member | Epic 5.3 | Implemented |
-| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-48 hidden member omitted from advisor intake review | Epic 5.3 | Implemented |
-| `tests/smoke/epic-5.3-household-profiles.spec.ts` | US-49 advisor disables profiles → client nav hidden + notice | Epic 5.3 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-37 question bank list + edit + visibility round-trip | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-39 recommendations catalog page | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-41 risk thresholds form (super admin) | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-42 advisor feature flags on settings | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-43 analytics dashboard | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-44 operations health nav + page | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-37 question bank create/delete + reorder | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-39 recommendation catalog create/edit/deactivate | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-40 recommendation rules form | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-41 thresholds save round-trip + non-admin blocked | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-42 feature flag toggle round-trip | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-45 clients, leads, intake, assessment, advisor portal | Epic 5.5 | Implemented |
-| `tests/smoke/epic-5.5-platform-admin.spec.ts` | US-46 staff list + admin user provisioning page | Epic 5.5 | Implemented |
+| `tests/smoke/stripe-webhook-endpoint.spec.ts` | bad signature → 400 and no StripeWebhookEvent row created | TBD | Implemented |
+| `tests/smoke/subdomain-routing.spec.ts` | active subdomain serves the branded client portal | TBD | Implemented |
+| `tests/smoke/subdomain-routing.spec.ts` | Not Available page renders when subdomain is active but not dnsVerified | TBD | Implemented |
+| `tests/smoke/subdomain-routing.spec.ts` | Not Available page renders when subdomain is dnsVerified but not active | TBD | Implemented |
+| `tests/smoke/tenant-isolation.spec.ts` | advisor cannot open another advisor's client via direct URL | TBD | Implemented |
+| `tests/smoke/us-46b-answer-admin-notes.spec.ts` | platform admin can add and remove an intake answer note | US-46b | Implemented |
+| `tests/smoke/us-46b-answer-admin-notes.spec.ts` | advisor cannot access admin intake review or see admin notes | US-46b | Implemented |
 
 ## Not Implemented (BRD Test Plan Coverage Gap)
 
