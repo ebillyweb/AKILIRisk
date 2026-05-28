@@ -42,33 +42,14 @@ describe("loadPillarScoreForTemplate", () => {
     expect(findUnique).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to legacy family-governance slug", async () => {
-    findUnique.mockImplementation(
-      async ({
-        where,
-      }: {
-        where: { assessmentId_pillar: { pillar: string } };
-      }) => {
-        if (where.assessmentId_pillar.pillar === "family-governance") {
-          return {
-            pillar: "family-governance",
-            score: 6,
-            riskLevel: "MEDIUM",
-            breakdown: [],
-            missingControls: [],
-          };
-        }
-        return null;
-      }
-    );
+  it("returns null when no canonical row exists", async () => {
+    findUnique.mockResolvedValue(null);
 
     const result = await loadPillarScoreForTemplate("asmt-1", "governance");
-    expect(result?.score).toBe(6);
+    expect(result).toBeNull();
+    expect(findUnique).toHaveBeenCalledTimes(1);
     expect(findUnique.mock.calls[0][0].where.assessmentId_pillar.pillar).toBe(
       "governance"
-    );
-    expect(findUnique.mock.calls[1][0].where.assessmentId_pillar.pillar).toBe(
-      "family-governance"
     );
   });
 });

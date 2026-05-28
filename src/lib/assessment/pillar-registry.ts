@@ -4,15 +4,13 @@ import type { Pillar } from "@/lib/assessment/types";
 /** Canonical six-pillar ids (BRD §4.1). */
 export const ASSESSMENT_PILLAR_IDS = RISK_AREAS.map((a) => a.id);
 
-/** Legacy slugs stored on older Assessment rows / PillarScore rows. */
-const LEGACY_PILLAR_ALIASES: Record<string, string> = {
-  "family-governance": "governance",
-  "cyber-risk": "cyber-digital",
-  "identity-risk": "governance",
-};
-
+/**
+ * Pass-through for pillar slugs. Pre-launch we have no legacy data, so no
+ * legacy→canonical aliasing is required; the function is retained as the
+ * single point of normalization should it be needed again.
+ */
 export function normalizePillarSlug(slug: string): string {
-  return LEGACY_PILLAR_ALIASES[slug] ?? slug;
+  return slug;
 }
 
 export function normalizePillarScoreId(pillar: string): string {

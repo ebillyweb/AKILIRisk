@@ -50,7 +50,7 @@ vi.mock("@/lib/db", () => ({
           const k = where.assessmentId_pillar;
           if (
             k.assessmentId === "asmt-1" &&
-            (k.pillar === "governance" || k.pillar === "family-governance")
+            k.pillar === "governance"
           ) {
             return {
               score: 7.5,
@@ -89,7 +89,7 @@ describe("GET /api/assessment/[id]/score audit wiring", () => {
 
     const res = await GET(
       makeRequest(
-        "http://localhost/api/assessment/asmt-1/score?pillar=family-governance"
+        "http://localhost/api/assessment/asmt-1/score?pillar=governance"
       ),
       { params: params("asmt-1") }
     );

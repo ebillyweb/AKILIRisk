@@ -65,7 +65,7 @@ npx prisma studio
 npm run seed:pillar-ddl
 # Deprecated alias (runs seed:pillar-ddl): npm run seed:assessment-bank
 # Full deploy (migrations + workbook import + rules): npx tsx scripts/deploy-complete-assessment-system.ts
-# Deploy also requires the workbook or QUESTION_BANK_FALLBACK_TYPESCRIPT=1.
+# Deploy requires the workbook; there is no legacy fallback path.
 # Optional: import Reputational & social risk rows from a structured .xlsx (SpreadsheetImporter):
 # REPUTATIONAL_SOCIAL_IMPORT_PATH=./path/to/questions.xlsx npm run import:reputational-social
 # Starter CSV: examples/reputational-social-import-template.csv
