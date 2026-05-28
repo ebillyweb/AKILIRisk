@@ -102,6 +102,7 @@ export default async function AdminQuestionBankEditPage({
               defaultCrossReference={pillarRow.crossReference ?? ""}
               defaultQuestionNumber={pillarRow.questionNumber ?? ""}
               defaultIsSubQuestion={pillarRow.isSubQuestion}
+              defaultIsKeyRiskIndicator={pillarRow.isKeyRiskIndicator}
               defaultDisplayOrder={pillarRow.displayOrder}
             />
             <Button type="submit">Save changes</Button>

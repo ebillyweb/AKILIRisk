@@ -24,6 +24,7 @@ import {
   resolveTopRisks,
 } from "@/lib/dashboard/client-summary";
 import { ChevronRight } from "lucide-react";
+import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
 
 export default async function DashboardPage({
   searchParams,
@@ -114,6 +115,15 @@ export default async function DashboardPage({
       scores: {
         orderBy: { calculatedAt: "desc" },
         take: 1,
+      },
+      // BRD §6.3 / Epic 5.10: surface engagement state to the dashboard
+      // so the Phase 3 banner can render meeting / status copy.
+      portfolioEngagement: {
+        select: {
+          status: true,
+          meetingScheduledAt: true,
+          meetingAt: true,
+        },
       },
     },
     orderBy: { updatedAt: "desc" },
@@ -217,6 +227,28 @@ export default async function DashboardPage({
           </div>
         </div>
       </section>
+
+      {/* BRD §6.3 / Epic 5.10: deliverable-phase status banner. Shown
+          once the assessment is COMPLETED (deliverablePhase is set).
+          Adapts copy and call-to-action per phase; surfaces the
+          Accept-the-recommendation button when upsell triggers fired. */}
+      {latestAssessmentForHeatMap?.status === "COMPLETED" &&
+      showHeatMap ? (
+        <section>
+          <DeliverablePhaseBanner
+            assessmentId={latestAssessmentForHeatMap.id}
+            phase={latestAssessmentForHeatMap.deliverablePhase}
+            upsellTriggersFired={
+              Array.isArray(latestAssessmentForHeatMap.upsellTriggersFired)
+                ? (latestAssessmentForHeatMap.upsellTriggersFired as string[])
+                : null
+            }
+            engagement={latestAssessmentForHeatMap.portfolioEngagement ?? null}
+            previewEnteredAt={latestAssessmentForHeatMap.previewEnteredAt}
+            profileEnteredAt={latestAssessmentForHeatMap.profileEnteredAt}
+          />
+        </section>
+      ) : null}
 
       {/* §4.3 close-out: Risk by Domain heat map + Top Risks. The heat
           map is the same component the advisor side uses, fed by the

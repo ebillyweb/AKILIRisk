@@ -35,6 +35,8 @@ type Props = {
   sections?: SectionOption[];
   defaultSectionId?: string;
   defaultVisible?: boolean;
+  /** BRD §6.2 / Epic 5.10 US-72: Key Risk Indicator flag. */
+  defaultIsKeyRiskIndicator?: boolean;
 };
 
 const ANSWER_TYPE_OPTIONS = [
@@ -70,6 +72,7 @@ export function PillarQuestionBankFields({
   sections = [],
   defaultSectionId = "",
   defaultVisible = true,
+  defaultIsKeyRiskIndicator = false,
 }: Props) {
   const isCreate = mode === "create";
   const answerOptions = getAnswerOptionFields(answerType, {
@@ -240,6 +243,14 @@ export function PillarQuestionBankFields({
               name="isSubQuestion"
               defaultChecked={defaultIsSubQuestion}
               label="Sub-question (nested under a parent question)"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <FormHasCheckbox
+              id="isKeyRiskIndicator"
+              name="isKeyRiskIndicator"
+              defaultChecked={defaultIsKeyRiskIndicator}
+              label="Key Risk Indicator (fires an upsell trigger at answer ≤ 1)"
             />
           </div>
         </div>

@@ -21,6 +21,7 @@ import {
   getEmphasisMultipliers,
 } from "@/lib/assessment/customization";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
+import { triggerPreviewAvailable } from "@/lib/notifications/deliverable-phase-triggers";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
 
@@ -373,6 +374,8 @@ export async function POST(
 
     if (pillarScore.allPillarsScored) {
       void triggerMilestoneNotification(assessment.userId, "Assessment Complete");
+      // BRD §6.3 / Epic 5.10 US-71: Phase 1 entry notification.
+      void triggerPreviewAvailable(id);
     }
 
     const pillarNarratives = resolvePillarNarratives(

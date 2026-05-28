@@ -28,6 +28,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { enterPortfolio } from "@/lib/assessment/deliverable-phase";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
+import {
+  triggerEngagementAccepted,
+  triggerMeetingScheduled,
+} from "@/lib/notifications/deliverable-phase-triggers";
 
 export type AcceptRecommendationInput = {
   assessmentId: string;
@@ -111,10 +115,8 @@ export async function acceptRecommendation(
       },
     });
 
-    // TODO Epic 5.10: dispatch ENGAGEMENT_ACCEPTED notification to the
-    // assigned advisor (email + in-app) once the notification slice is
-    // wired. Recording the engagement is the durable source of truth;
-    // notification dispatch can be replayed from this row + audit log.
+    // BRD §6.3 / Epic 5.10 US-74: advisor notification on Phase 3 entry.
+    void triggerEngagementAccepted(result.engagementId);
 
     return { ok: true, engagementId: result.engagementId, alreadyExisted: false };
   } catch (e) {
@@ -213,6 +215,11 @@ export async function updateEngagementStatus(
     afterData: { status: input.status },
     metadata: { assessmentId: engagement.assessmentId },
   });
+
+  // BRD §6.3 / Epic 5.10 US-75: notify the client when the advisor sets a meeting.
+  if (input.status === "MEETING_SCHEDULED") {
+    void triggerMeetingScheduled(engagement.id);
+  }
 
   return { ok: true };
 }

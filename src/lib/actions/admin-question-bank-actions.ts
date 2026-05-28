@@ -95,6 +95,54 @@ function optionalFormString(raw: FormDataEntryValue | null): string | null {
   return s === "" ? null : s;
 }
 
+/**
+ * BRD §6.2 / Epic 5.10 US-72: toggle the Key Risk Indicator flag on a
+ * question. KRI-flagged questions fire an upsell trigger at publish time
+ * when answered at maturity ≤ 1.
+ */
+export async function updatePillarQuestionKriFlag(formData: FormData) {
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  if (!riskAreaId) {
+    redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
+  }
+
+  let questionId: string;
+  try {
+    questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
+  } catch {
+    redirectAreaSaved(riskAreaId);
+  }
+
+  const isKeyRiskIndicator = formData.get("isKeyRiskIndicator") === "true";
+
+  const row = await prisma.pillarQuestion.findUnique({
+    where: { id: questionId },
+    include: { section: { include: { category: true } } },
+  });
+  if (!row || riskAreaIdForPillarCategory(row.section.category) !== riskAreaId) {
+    redirectAreaSaved(riskAreaId);
+  }
+
+  await prisma.pillarQuestion.update({
+    where: { id: questionId },
+    data: { isKeyRiskIndicator },
+  });
+
+  await writeAudit({
+    actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+    action: AUDIT_ACTIONS.PILLAR_QUESTION_KRI_TOGGLE,
+    entityType: "PillarQuestion",
+    entityId: row.id,
+    beforeData: { isKeyRiskIndicator: row.isKeyRiskIndicator },
+    afterData: { isKeyRiskIndicator },
+    metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
+  });
+
+  revalidateQuestionBankPaths(riskAreaId);
+  redirectAreaSaved(riskAreaId);
+}
+
 export async function updatePillarQuestionVisibility(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
   const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
@@ -214,6 +262,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
 
     const displayOrder = z.coerce.number().int().min(0).parse(formData.get("displayOrder"));
     const isSubQuestion = formData.has("isSubQuestion");
+    const isKeyRiskIndicator = formData.has("isKeyRiskIndicator");
 
     const existing = await prisma.pillarQuestion.findUnique({
       where: { id: questionId },
@@ -240,6 +289,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
         questionNumber,
         displayOrder,
         isSubQuestion,
+        isKeyRiskIndicator,
       },
     });
 
@@ -260,6 +310,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
         questionNumber: existing.questionNumber,
         displayOrder: existing.displayOrder,
         isSubQuestion: existing.isSubQuestion,
+        isKeyRiskIndicator: existing.isKeyRiskIndicator,
       },
       afterData: {
         questionText: text,
@@ -273,6 +324,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
         questionNumber,
         displayOrder,
         isSubQuestion,
+        isKeyRiskIndicator,
       },
       metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
     });
@@ -330,6 +382,7 @@ export async function createPillarQuestion(formData: FormData) {
     const questionNumber =
       questionNumberRaw === null ? null : z.string().max(20).parse(questionNumberRaw);
     const isSubQuestion = formData.has("isSubQuestion");
+    const isKeyRiskIndicator = formData.has("isKeyRiskIndicator");
 
     const maxOrder = await prisma.pillarQuestion.aggregate({
       where: { sectionId },
@@ -353,6 +406,7 @@ export async function createPillarQuestion(formData: FormData) {
         displayOrder,
         isSubQuestion,
         isVisible,
+        isKeyRiskIndicator,
       },
     });
 
@@ -368,6 +422,7 @@ export async function createPillarQuestion(formData: FormData) {
         sectionId: created.sectionId,
         displayOrder: created.displayOrder,
         isVisible: created.isVisible,
+        isKeyRiskIndicator: created.isKeyRiskIndicator,
       },
       metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
     });

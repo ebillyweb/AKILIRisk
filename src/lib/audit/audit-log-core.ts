@@ -81,6 +81,10 @@ export const AUDIT_ACTIONS = {
   PILLAR_QUESTION_UPDATE: "pillar_question.update",
   PILLAR_QUESTION_DELETE: "pillar_question.delete",
   PILLAR_QUESTION_VISIBILITY_TOGGLE: "pillar_question.visibility_toggle",
+  /** BRD §6.2 / Epic 5.10 US-72: admin flipped the Key Risk Indicator
+   *  flag on a question. KRI questions fire an upsell trigger at publish
+   *  time when answered at maturity ≤ 1, regardless of the pillar score. */
+  PILLAR_QUESTION_KRI_TOGGLE: "pillar_question.kri_toggle",
   PILLAR_QUESTION_REORDER: "pillar_question.reorder",
 
   // ── C1 (BRD §4.4): Service-recommendation catalog + matching rules ──────

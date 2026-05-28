@@ -30,6 +30,8 @@ import { Prisma, type ReportStatus, type ReportTemplate } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { enterProfile } from "@/lib/assessment/deliverable-phase";
 import { evaluateUpsellTriggers } from "@/lib/assessment/upsell-triggers";
+import { loadAssessmentAnswersForQuestions } from "@/lib/assessment/pillar-answer-loader";
+import { triggerProfilePublished } from "@/lib/notifications/deliverable-phase-triggers";
 import { prisma } from "@/lib/db";
 import { isPlatformAdminRole } from "@/lib/auth-roles";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
@@ -364,14 +366,30 @@ export async function publishReport(
           },
         ])
       );
-      const triggers = evaluateUpsellTriggers({
-        pillarScores,
-        // TODO Epic 5.10: KRI evaluation (Key Risk Indicator question flags)
-        // is wired once the admin question-bank surfaces the
-        // `isKeyRiskIndicator` toggle and a normalized-maturity lookup is
-        // available inside the publish transaction.
-        kriHits: [],
+      // BRD §6.2 / Epic 5.10 US-72: KRI evaluation. Resolve questions
+      // flagged as Key Risk Indicators, decrypt their answers, normalize
+      // to 0–3 maturity, and surface every question whose maturity is 1
+      // or below as a `kri:<questionId>` trigger code. Today this covers
+      // the default `scored_0_3` answer type; other answer-type families
+      // can extend the normalization as they're introduced.
+      const kriQuestions = await tx.pillarQuestion.findMany({
+        where: { isKeyRiskIndicator: true },
+        select: { id: true, answerType: true },
       });
+      const kriAnswers = await loadAssessmentAnswersForQuestions(
+        reread.assessmentId,
+        kriQuestions.map((q) => q.id)
+      );
+      const kriHits: string[] = [];
+      for (const q of kriQuestions) {
+        if (q.answerType !== "scored_0_3") continue;
+        const raw = kriAnswers[q.id];
+        const value = typeof raw === "number" ? raw : Number(raw);
+        if (Number.isFinite(value) && value <= 1) {
+          kriHits.push(q.id);
+        }
+      }
+      const triggers = evaluateUpsellTriggers({ pillarScores, kriHits });
       await enterProfile(tx, reread.assessmentId, triggers, publishedAt);
 
       // Open the next DRAFT. Inherit editorial from the just-published
@@ -411,6 +429,9 @@ export async function publishReport(
         actorBucket: auth.bucket,
       },
     });
+
+    // BRD §6.3 / Epic 5.10 US-72: Phase 2 entry notification to the client.
+    void triggerProfilePublished(draft.assessmentId);
 
     return {
       ok: true,
