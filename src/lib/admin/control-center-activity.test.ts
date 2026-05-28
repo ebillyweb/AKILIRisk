@@ -39,8 +39,12 @@ describe("getControlCenterActivity", () => {
         entityId: "intake_abcdef12",
         actorUserId: "user_1",
         actorRole: "USER",
+        actorEmailHash: null,
         beforeData: null,
         afterData: { status: "SUBMITTED" },
+        metadata: null,
+        ipAddress: null,
+        userAgent: null,
         createdAt,
       },
     ]);
@@ -50,15 +54,16 @@ describe("getControlCenterActivity", () => {
 
     const rows = await getControlCenterActivity();
 
+    expect(rows).not.toBeNull();
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
+    expect(rows![0]).toMatchObject({
       id: "log_1",
       type: "intake",
       iconKey: "clipboardList",
       title: "Intake submitted",
       user: "Test Client",
     });
-    expect(rows[0].description).toContain("IntakeInterview");
-    expect(rows[0].description).toContain("created with:");
+    expect(rows![0].description).toContain("IntakeInterview");
+    expect(rows![0].description).toContain("created with:");
   });
 });

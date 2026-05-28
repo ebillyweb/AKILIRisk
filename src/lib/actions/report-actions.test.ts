@@ -31,7 +31,7 @@ const { dbState, fakes } = vi.hoisted(() => {
       assessmentId: string;
       version: number;
       status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
-      templateChoice: "AKILI" | "COBRANDED";
+      templateChoice: "BELVEDERE" | "COBRANDED";
       executiveSummary: string | null;
       advisorNotes: unknown;
       snapshotData: unknown;
@@ -101,7 +101,7 @@ const { dbState, fakes } = vi.hoisted(() => {
         version: data.version as number,
         status: (data.status ?? "DRAFT") as "DRAFT" | "PUBLISHED" | "SUPERSEDED",
         templateChoice: (data.templateChoice ?? "COBRANDED") as
-          | "AKILI"
+          | "BELVEDERE"
           | "COBRANDED",
         executiveSummary: (data.executiveSummary ?? null) as string | null,
         advisorNotes: data.advisorNotes ?? null,
@@ -391,13 +391,13 @@ describe("saveDraftEdits", () => {
       reportId: "draft-1",
       executiveSummary: "All looking good.",
       advisorNotes: { "rec-1": "Discuss next quarter." },
-      templateChoice: "AKILI",
+      templateChoice: "BELVEDERE",
     });
     expect(result.ok).toBe(true);
     const row = dbState.reports.find((r) => r.id === "draft-1");
     expect(row?.executiveSummary).toBe("All looking good.");
     expect(row?.advisorNotes).toEqual({ "rec-1": "Discuss next quarter." });
-    expect(row?.templateChoice).toBe("AKILI");
+    expect(row?.templateChoice).toBe("BELVEDERE");
   });
 
   it("rejects executive summaries over 2000 chars", async () => {

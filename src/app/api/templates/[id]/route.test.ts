@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 
 const { accessSpy, buildSpy } = vi.hoisted(() => ({
   accessSpy: vi.fn(),
@@ -21,7 +22,7 @@ beforeEach(() => {
 });
 
 function makeRequest(url: string) {
-  return new Request(url, { method: "GET" });
+  return new NextRequest(url, { method: "GET" });
 }
 
 const params = (id: string) => Promise.resolve({ id });

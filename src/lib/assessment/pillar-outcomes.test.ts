@@ -46,7 +46,7 @@ describe("pillarNarrativeRecommendations — mixed maturity", () => {
 
     const narratives = pillarNarrativeRecommendations(
       "governance",
-      { ...score, riskLevel: "CRITICAL" },
+      { ...score, riskLevel: "critical" },
       answers,
       questions
     );

@@ -7,7 +7,6 @@ import {
 describe("verifyTurnstileToken", () => {
   const originalSecret = process.env.TURNSTILE_SECRET_KEY;
   const originalSkip = process.env.CONTACT_FORM_SKIP_CAPTCHA;
-  const originalEnv = process.env.NODE_ENV;
 
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
@@ -16,7 +15,7 @@ describe("verifyTurnstileToken", () => {
   afterEach(() => {
     process.env.TURNSTILE_SECRET_KEY = originalSecret;
     process.env.CONTACT_FORM_SKIP_CAPTCHA = originalSkip;
-    process.env.NODE_ENV = originalEnv;
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 
@@ -44,7 +43,7 @@ describe("verifyTurnstileToken", () => {
   it("uses bypass in non-production when configured and secret missing", async () => {
     delete process.env.TURNSTILE_SECRET_KEY;
     process.env.CONTACT_FORM_SKIP_CAPTCHA = "1";
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
 
     const ok = await verifyTurnstileToken("any", null);
     expect(ok).toBe(isContactCaptchaBypassEnabled());

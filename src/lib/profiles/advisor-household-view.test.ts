@@ -14,6 +14,9 @@ describe("toAdvisorHouseholdMemberViews", () => {
         governanceRoles: ["DECISION_MAKER"],
         isResident: true,
         shareWithAdvisor: true,
+        notes: null,
+        phone: null,
+        fullName: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -27,10 +30,13 @@ describe("toAdvisorHouseholdMemberViews", () => {
         governanceRoles: [],
         isResident: true,
         shareWithAdvisor: false,
+        notes: null,
+        phone: null,
+        fullName: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ] as const;
+    ] as const satisfies ReadonlyArray<Parameters<typeof toAdvisorHouseholdMemberViews>[0][number]>;
 
     const views = toAdvisorHouseholdMemberViews([...members]);
     expect(views).toHaveLength(1);

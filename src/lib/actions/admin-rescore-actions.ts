@@ -63,7 +63,7 @@ const rescoreBulkInputSchema = z
     maxAssessments: z.number().int().min(1).max(500).default(100),
   })
   .strict();
-export type RescoreBulkInput = z.infer<typeof rescoreBulkInputSchema>;
+export type RescoreBulkInput = z.input<typeof rescoreBulkInputSchema>;
 
 // ── Result shapes ────────────────────────────────────────────────────────
 

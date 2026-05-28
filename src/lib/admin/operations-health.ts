@@ -118,7 +118,7 @@ function resolvePlatform(): OperationsHealthSnapshot["platform"] {
 
 /** Resolve build metadata from env (testable; no secrets). */
 export function resolveBuildFromEnv(
-  env: NodeJS.ProcessEnv
+  env: Record<string, string | undefined>
 ): OperationsHealthSnapshot["build"] {
   // Vercel exposes SHA/ref at runtime; commit date is injected at build via
   // next.config `env` (BUILD_GIT_COMMIT_* from git) — there is no

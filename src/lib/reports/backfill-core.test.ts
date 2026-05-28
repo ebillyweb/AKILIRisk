@@ -29,6 +29,7 @@ const STUB_SNAPSHOT = {
     categoryCount: 0,
     missingControlsCount: 0,
     pillarScores: [],
+    pillarNarratives: [],
   },
   householdProfile: null,
 };

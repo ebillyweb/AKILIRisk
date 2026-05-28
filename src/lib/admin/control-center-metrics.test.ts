@@ -30,7 +30,7 @@ describe("getControlCenterMetrics", () => {
     mockHealthSnapshot.mockResolvedValue({
       overall: "healthy",
       failedIntegrations: [],
-    } as Awaited<ReturnType<typeof getOperationsHealthSnapshot>>);
+    } as unknown as Awaited<ReturnType<typeof getOperationsHealthSnapshot>>);
   });
 
   it("maps platform health and failed integration counts", async () => {

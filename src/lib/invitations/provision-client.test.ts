@@ -102,7 +102,10 @@ describe("provisionClientFromInviteCode", () => {
       clientName: null,
       status: InvitationStatus.REGISTERED,
     });
-    vi.mocked(findUserByEmail).mockResolvedValue({ id: "user-1", role: "USER" });
+    vi.mocked(findUserByEmail).mockResolvedValue({
+      id: "user-1",
+      role: "USER",
+    } as Awaited<ReturnType<typeof findUserByEmail>>);
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue({ id: "asg-1" });
 
     const result = await provisionClientFromInviteCode("ic-1", "client@example.com");

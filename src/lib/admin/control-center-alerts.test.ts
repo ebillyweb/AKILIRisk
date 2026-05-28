@@ -57,10 +57,19 @@ describe("getControlCenterAlerts", () => {
     const webhookAt = new Date("2026-05-17T10:00:00Z");
 
     mockAssessmentCount.mockResolvedValue(3);
-    mockAssessmentFindFirst.mockResolvedValue({ updatedAt: stalledAt });
+    mockAssessmentFindFirst.mockResolvedValue({
+      updatedAt: stalledAt,
+    } as Awaited<ReturnType<typeof prisma.assessment.findFirst>>);
     mockStripeFindMany.mockResolvedValue([
-      { id: "wh_1", receivedAt: webhookAt, eventType: "invoice.payment_failed" },
-    ]);
+      {
+        id: "wh_1",
+        receivedAt: webhookAt,
+        eventType: "invoice.payment_failed",
+        status: "FAILED",
+        eventCreated: webhookAt,
+        processedAt: null,
+      },
+    ] as Awaited<ReturnType<typeof prisma.stripeWebhookEvent.findMany>>);
 
     const alerts = await getControlCenterAlerts();
 

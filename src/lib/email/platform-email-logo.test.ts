@@ -18,7 +18,7 @@ describe("platform email logo attachment", () => {
     const payload = withPlatformLogoAttachment({
       html: `<img src="cid:${PLATFORM_EMAIL_LOGO_CID}" />`,
       to: "a@b.com",
-    });
+    }) as { html: string; to: string; attachments?: Array<{ contentId?: string }> };
     expect(payload.attachments).toHaveLength(1);
     expect(payload.attachments?.[0]?.contentId).toBe(PLATFORM_EMAIL_LOGO_CID);
   });
@@ -28,6 +28,6 @@ describe("platform email logo attachment", () => {
       html: "<p>Hello</p>",
       to: "a@b.com",
     });
-    expect(payload.attachments).toBeUndefined();
+    expect("attachments" in payload ? payload.attachments : undefined).toBeUndefined();
   });
 });

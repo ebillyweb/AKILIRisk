@@ -428,6 +428,9 @@ describe("Admin User Provisioning", () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toHaveLength(2);
+      if (!result.success || !result.data) {
+        throw new Error("expected getAdminUsers success with data");
+      }
 
       // Check verification status mapping
       expect(result.data[0].isVerified).toBe(true); // emailVerified is set

@@ -202,7 +202,7 @@ describe("probeWhiteLabelDns", () => {
 
   it("returns healthy when DNS and HTTP succeed", async () => {
     process.env.PRODUCTION_DOMAIN = "akilirisk.com";
-    vi.spyOn(dns, "lookup").mockResolvedValue([{ address: "1.2.3.4", family: 4 }]);
+    vi.spyOn(dns, "lookup").mockResolvedValue({ address: "1.2.3.4", family: 4 });
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({ ok: true, status: 200 })

@@ -242,6 +242,16 @@ export const AUDIT_ACTIONS = {
    *  metadata.processed / metadata.skipped / metadata.failed counts. */
   REPORT_BACKFILL_SUMMARY: "report.backfill_summary",
 
+  // ── Deliverable-phase engagement lifecycle (BRD §6.3 / Epic 5.10) ─────────
+  /** Client accepted the recommendation on their RISK PROFILE. Creates the
+   *  PortfolioEngagement row and transitions the assessment to PORTFOLIO.
+   *  entityType = "PortfolioEngagement", entityId = engagement id.
+   *  metadata.assessmentId records the source assessment. */
+  PORTFOLIO_ENGAGEMENT_ACCEPT: "portfolio_engagement.accept",
+  /** Advisor advanced engagement status (e.g., ACCEPTED →
+   *  MEETING_SCHEDULED). afterData.status captures the new state. */
+  PORTFOLIO_ENGAGEMENT_STATUS_UPDATE: "portfolio_engagement.status_update",
+
   // ── Option D session 1: advisor-configured PII policy ────────────────────
   /** One row per field whose value flipped false → true on a piiPolicy
    *  save. entityType "AdvisorProfile"; entityId is the advisor profile

@@ -153,7 +153,8 @@ vi.mock("@/lib/assessment/pillar-answer-loader", () => ({
 }));
 
 vi.mock("@/lib/assessment/pillar-outcomes", () => ({
-  resolvePillarNarratives: (...args: unknown[]) => resolvePillarNarrativesSpy(...args),
+  resolvePillarNarratives: (...args: Parameters<typeof resolvePillarNarrativesSpy>) =>
+    resolvePillarNarrativesSpy(...args),
 }));
 
 import { buildReportSnapshot } from "./build-report-snapshot";

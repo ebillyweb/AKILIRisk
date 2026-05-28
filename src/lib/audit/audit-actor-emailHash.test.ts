@@ -18,7 +18,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const TEST_KEY = "test-key-do-not-use-in-prod-0123456789ABCDEF";
 
 const { auditLogCreate } = vi.hoisted(() => ({
-  auditLogCreate: vi.fn(async () => ({ id: "audit-1" })),
+  auditLogCreate: vi.fn<
+    (args: { data: { actorEmailHash: string | null } }) => Promise<{ id: string }>
+  >(async () => ({ id: "audit-1" })),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -47,9 +49,7 @@ describe("writeAudit actorEmailHash equivalence", () => {
       entityType: "User",
       entityId: "u-1",
     });
-    const plaintextCall = auditLogCreate.mock.calls[0]?.[0] as {
-      data: { actorEmailHash: string | null };
-    };
+    const plaintextCall = auditLogCreate.mock.calls[0]![0];
 
     auditLogCreate.mockClear();
 
@@ -63,9 +63,7 @@ describe("writeAudit actorEmailHash equivalence", () => {
       entityType: "User",
       entityId: "u-1",
     });
-    const ciphertextCall = auditLogCreate.mock.calls[0]?.[0] as {
-      data: { actorEmailHash: string | null };
-    };
+    const ciphertextCall = auditLogCreate.mock.calls[0]![0];
 
     expect(plaintextCall.data.actorEmailHash).not.toBeNull();
     expect(ciphertextCall.data.actorEmailHash).toEqual(
@@ -89,9 +87,7 @@ describe("writeAudit actorEmailHash equivalence", () => {
       entityId: "u-2",
     });
 
-    const dualInputHash = (auditLogCreate.mock.calls[0]?.[0] as {
-      data: { actorEmailHash: string };
-    }).data.actorEmailHash;
+    const dualInputHash = auditLogCreate.mock.calls[0]![0].data.actorEmailHash;
 
     auditLogCreate.mockClear();
 
@@ -106,9 +102,7 @@ describe("writeAudit actorEmailHash equivalence", () => {
       entityId: "u-2",
     });
 
-    const intendedHash = (auditLogCreate.mock.calls[0]?.[0] as {
-      data: { actorEmailHash: string };
-    }).data.actorEmailHash;
+    const intendedHash = auditLogCreate.mock.calls[0]![0].data.actorEmailHash;
 
     expect(dualInputHash).toEqual(intendedHash);
   });
@@ -121,9 +115,7 @@ describe("writeAudit actorEmailHash equivalence", () => {
       entityId: null,
     });
 
-    const call = auditLogCreate.mock.calls[0]?.[0] as {
-      data: { actorEmailHash: string | null };
-    };
+    const call = auditLogCreate.mock.calls[0]![0];
     expect(call.data.actorEmailHash).toBeNull();
   });
 });

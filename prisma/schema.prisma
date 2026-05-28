@@ -67,6 +67,11 @@ model User {
   intakeResponseAdminNotesUpdated     IntakeResponseAdminNote[]     @relation("IntakeResponseAdminNoteUpdatedBy")
   assessmentResponseAdminNotesCreated AssessmentResponseAdminNote[] @relation("AssessmentResponseAdminNoteCreatedBy")
   assessmentResponseAdminNotesUpdated AssessmentResponseAdminNote[] @relation("AssessmentResponseAdminNoteUpdatedBy")
+  /// BRD §6.3 Phase 3 / Epic 5.10: portfolio engagements where this user
+  /// is the client (cascade with the User row) or the advisor (restrict
+  /// so engagements aren't orphaned by accidental advisor deletion).
+  portfolioEngagementsAsClient  PortfolioEngagement[] @relation("PortfolioEngagementClient")
+  portfolioEngagementsAsAdvisor PortfolioEngagement[] @relation("PortfolioEngagementAdvisor")
 
   /// Round-11 commit 2.4a: @@index([email]) + the phase-A
   /// User_emailCiphertext_idx are dropped at the SQL level by
@@ -286,6 +291,19 @@ model Assessment {
   updatedAt     DateTime         @updatedAt
   approvalId    String?          // Links to IntakeApproval for customized assessments
 
+  /// BRD §6.3 / Epic 5.10: which deliverable phase this assessment is in.
+  /// Set to PREVIEW on scoring completion, PROFILE on report publish, and
+  /// PORTFOLIO when the client accepts the recommendation.
+  deliverablePhase   DeliverablePhase @default(PREVIEW)
+  previewEnteredAt   DateTime?
+  profileEnteredAt   DateTime?
+  portfolioEnteredAt DateTime?
+  /// BRD §6.2 / Epic 5.10: snapshot of upsell triggers that fired at the
+  /// time the assessment was scored / re-scored. Array of typed codes such
+  /// as `"score_threshold:overall"`, `"domain_flag:cyber-digital"`, or
+  /// `"kri:<questionId>"`.
+  upsellTriggersFired Json?
+
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   responses     AssessmentResponse[]
   scores        PillarScore[]
@@ -295,9 +313,11 @@ model Assessment {
   /// versions. Cascade on delete so RTBF wipes every Report row for this
   /// assessment (frozen reports include client PII in snapshotData).
   reports        Report[]
+  portfolioEngagement PortfolioEngagement?
 
   @@index([userId])
   @@index([status])
+  @@index([deliverablePhase])
 }
 
 model AssessmentResponse {
@@ -421,6 +441,11 @@ model PillarQuestion {
   crossReference       String?  @map("cross_reference") @db.Text
   displayOrder         Int      @default(0) @map("display_order")
   isVisible            Boolean  @default(true) @map("is_visible")
+  /// BRD §6.2 / Epic 5.10: marks the question as a Key Risk Indicator. A
+  /// KRI-flagged question fires an upsell trigger when answered at a
+  /// failing maturity level (≤ 1), regardless of the pillar's overall
+  /// score. Managed in the question-bank admin (US-37 extension).
+  isKeyRiskIndicator   Boolean  @default(false) @map("is_key_risk_indicator")
 
   section PillarSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
@@ -429,6 +454,7 @@ model PillarQuestion {
   @@index([sectionId])
   @@index([answerType])
   @@index([isVisible])
+  @@index([isKeyRiskIndicator])
   @@map("questions")
 }
 
@@ -436,6 +462,28 @@ enum AssessmentStatus {
   IN_PROGRESS
   COMPLETED
   ARCHIVED
+}
+
+/// BRD §6.1 / §6.3 / Epic 5.10: the deliverable tier currently represented
+/// by an assessment's results. PREVIEW = heat map only (Phase 1), PROFILE =
+/// detailed plan published by the advisor (Phase 2), PORTFOLIO = client has
+/// engaged the advisory team for execution (Phase 3).
+enum DeliverablePhase {
+  PREVIEW
+  PROFILE
+  PORTFOLIO
+}
+
+/// BRD §6.3 Phase 3 / Epic 5.10: lifecycle of a client's portfolio
+/// engagement after they accept the recommendation. Status is advanced
+/// manually by the advisor; AKILI Risk Intelligence does not collect
+/// payment (advisor invoices client off-platform per BR-23).
+enum PortfolioEngagementStatus {
+  ACCEPTED
+  MEETING_SCHEDULED
+  IN_PROGRESS
+  COMPLETE
+  DECLINED
 }
 
 enum RiskLevel {
@@ -1196,6 +1244,38 @@ model Report {
   @@unique([assessmentId, version])
   @@index([assessmentId, status])
   @@index([publishedAt])
+}
+
+/// BRD §6.3 Phase 3 / Epic 5.10: the engagement record created when a
+/// client accepts the recommendation on their RISK PROFILE. Tracks status
+/// from ACCEPTED through MEETING_SCHEDULED, IN_PROGRESS, COMPLETE (or
+/// DECLINED if the advisor later reverses). One engagement per assessment.
+model PortfolioEngagement {
+  id                 String                    @id @default(cuid())
+  assessmentId       String                    @unique
+  clientId           String
+  advisorId          String
+
+  status             PortfolioEngagementStatus @default(ACCEPTED)
+  acceptedAt         DateTime                  @default(now())
+  meetingScheduledAt DateTime?
+  meetingAt          DateTime?
+  completedAt        DateTime?
+  declinedAt         DateTime?
+  /// Advisor's working notes about the engagement. No PII rules beyond
+  /// the usual application-layer encryption applied to free-text fields.
+  notes              String?                   @db.Text
+
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  client     User       @relation("PortfolioEngagementClient", fields: [clientId], references: [id], onDelete: Cascade)
+  advisor    User       @relation("PortfolioEngagementAdvisor", fields: [advisorId], references: [id], onDelete: Restrict)
+
+  @@index([clientId])
+  @@index([advisorId])
+  @@index([status])
 }
 
 model PillarConfiguration {

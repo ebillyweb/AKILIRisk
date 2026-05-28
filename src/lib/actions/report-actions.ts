@@ -28,6 +28,8 @@
 
 import { Prisma, type ReportStatus, type ReportTemplate } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { enterProfile } from "@/lib/assessment/deliverable-phase";
+import { evaluateUpsellTriggers } from "@/lib/assessment/upsell-triggers";
 import { prisma } from "@/lib/db";
 import { isPlatformAdminRole } from "@/lib/auth-roles";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
@@ -326,6 +328,7 @@ export async function publishReport(
           : null;
 
       // DRAFT → PUBLISHED.
+      const publishedAt = new Date();
       const published = await tx.report.update({
         where: { id: reportId },
         data: {
@@ -333,11 +336,43 @@ export async function publishReport(
           snapshotData: snapshot as unknown as Prisma.InputJsonValue,
           brandingSnapshot: (branding ??
             Prisma.JsonNull) as Prisma.InputJsonValue | typeof Prisma.JsonNull,
-          publishedAt: new Date(),
+          publishedAt,
           publishedById: session.userId,
         },
         select: { id: true, version: true },
       });
+
+      // BRD §6.3 / Epic 5.10: publishing the report transitions the
+      // assessment to Phase 2 (RISK PROFILE). Evaluate upsell triggers
+      // from the persisted PillarScores at the moment of publish so the
+      // banner shown on the client and advisor dashboards reflects the
+      // published snapshot rather than later live edits.
+      const scoreRows = await tx.pillarScore.findMany({
+        where: { assessmentId: reread.assessmentId },
+        select: { pillar: true, score: true, riskLevel: true },
+      });
+      const pillarScores = Object.fromEntries(
+        scoreRows.map((r) => [
+          r.pillar,
+          {
+            resilience: Math.min(100, Math.round((r.score / 3) * 100)),
+            riskLevel: r.riskLevel.toLowerCase() as
+              | "low"
+              | "medium"
+              | "high"
+              | "critical",
+          },
+        ])
+      );
+      const triggers = evaluateUpsellTriggers({
+        pillarScores,
+        // TODO Epic 5.10: KRI evaluation (Key Risk Indicator question flags)
+        // is wired once the admin question-bank surfaces the
+        // `isKeyRiskIndicator` toggle and a normalized-maturity lookup is
+        // available inside the publish transaction.
+        kriHits: [],
+      });
+      await enterProfile(tx, reread.assessmentId, triggers, publishedAt);
 
       // Open the next DRAFT. Inherit editorial from the just-published
       // row so the advisor can continue iterating without retyping.

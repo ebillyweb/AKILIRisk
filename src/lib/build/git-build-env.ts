@@ -24,7 +24,7 @@ const COMMIT_DATE_FORMAT = "%cI";
  */
 export function resolveGitBuildEnv(options: {
   cwd: string;
-  env?: NodeJS.ProcessEnv;
+  env?: Record<string, string | undefined>;
   runGit?: GitCommandRunner;
 }): Record<string, string> {
   const env = options.env ?? process.env;
