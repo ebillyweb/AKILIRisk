@@ -10,6 +10,7 @@ import {
   uniqueInvitationEmail,
   invitationPathFromUrl,
 } from "../helpers/invitations";
+import { restoreClientConsent } from "../helpers/consent-prepare";
 
 /**
  * US-12 / US-14 smoke — six-pillar assessment hub and pillar entry.
@@ -111,7 +112,15 @@ test.describe("Intake-waived six-pillar hub", () => {
     });
 
     await page.goto(invitationPathFromUrl(url));
-    await page.waitForURL(/\/assessment(\/|$|\?)/, { timeout: 45_000 });
+    await page.waitForURL(/\/(assessment|consent\/pending)(\/|$|\?)/, {
+      timeout: 45_000,
+    });
+
+    if (new URL(page.url()).pathname === "/consent/pending") {
+      await restoreClientConsent(request, email);
+      await page.goto("/assessment");
+      await page.waitForURL(/\/assessment(\/|$|\?)/, { timeout: 30_000 });
+    }
 
     const hub = new AssessmentHubPage(page);
     await hub.expectSixPillarsVisible();

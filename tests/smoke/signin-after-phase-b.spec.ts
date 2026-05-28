@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { USERS } from "../fixtures/users";
+import { restoreClientConsent } from "../helpers/consent-prepare";
 
 /**
  * Round-11 commit 2.4a (BRD §5.1.AUTH / phase B — soft-drop step 1):
@@ -30,6 +31,8 @@ test.describe("signin after phase-B flip", () => {
     page,
   }) => {
     const expectedEmail = USERS.client.email;
+
+    await restoreClientConsent(page.request, expectedEmail);
 
     // (1) Issue a magic-link for the client. The endpoint goes through
     //     issueMagicLinkToken which now stores under the ciphertext key.

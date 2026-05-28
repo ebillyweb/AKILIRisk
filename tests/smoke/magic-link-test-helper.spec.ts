@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { USERS } from "../fixtures/users";
+import { restoreClientConsent } from "../helpers/consent-prepare";
 
 /**
  * Round-11 session-2 meta-smoke: exercises the test-only magic-link
@@ -37,6 +38,8 @@ test.describe("magic-link test helper", () => {
   });
 
   test("issue → verify URL → dashboard signs the client in", async ({ page }) => {
+    await restoreClientConsent(page.request, USERS.client.email);
+
     const res = await page.request.post("/api/test/magic-link/issue", {
       data: { email: USERS.client.email },
     });

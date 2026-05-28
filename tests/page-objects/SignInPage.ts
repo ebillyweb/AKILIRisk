@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { USERS, type Role } from "../fixtures/users";
+import { restoreClientConsent } from "../helpers/consent-prepare";
 
 /**
  * Round-11 session-2: client roles authenticate via magic link, not
@@ -33,10 +34,16 @@ export class SignInPage {
     await this.page.getByRole("button", { name: /^sign in$/i }).click();
   }
 
-  async signInAs(role: Role) {
+  async signInAs(
+    role: Role,
+    options?: {
+      /** Skip US-51 consent restore (only for consent-gate specs). */
+      skipConsentPrepare?: boolean;
+    }
+  ) {
     const user = USERS[role];
     if (isClientRole(role)) {
-      await this.signInViaMagicLink(user.email, user.expectedLandingPath);
+      await this.signInViaMagicLink(user.email, user.expectedLandingPath, options);
       return;
     }
     await this.goto();
@@ -55,7 +62,15 @@ export class SignInPage {
    * If the endpoint returns 404 the helper throws a clear error pointing at
    * the env-var setup so the failure mode is debuggable from CI logs.
    */
-  private async signInViaMagicLink(email: string, expectedLandingPath: string) {
+  private async signInViaMagicLink(
+    email: string,
+    expectedLandingPath: string,
+    options?: { skipConsentPrepare?: boolean }
+  ) {
+    if (!options?.skipConsentPrepare) {
+      await restoreClientConsent(this.page.request, email);
+    }
+
     const issueRes = await this.page.request.post(
       "/api/test/magic-link/issue",
       { data: { email } }
@@ -87,9 +102,26 @@ export class SignInPage {
     // sending the page to the wrong host.
     const u = new URL(verifyUrl);
     await this.page.goto(u.pathname + u.search);
-    await this.page.waitForURL(
-      new RegExp(`${expectedLandingPath}(/|$|\\?)`),
-      { timeout: 30_000 }
-    );
+    await this.waitForClientLanding(email, expectedLandingPath);
+  }
+
+  /** Wait for post-login landing; recover if US-51 consent gate intercepts. */
+  private async waitForClientLanding(
+    email: string,
+    expectedLandingPath: string
+  ) {
+    const landingPattern = new RegExp(`${expectedLandingPath}(/|$|\\?)`);
+    try {
+      await this.page.waitForURL(landingPattern, { timeout: 30_000 });
+      return;
+    } catch (err) {
+      if (new URL(this.page.url()).pathname !== "/consent/pending") {
+        throw err;
+      }
+    }
+
+    await restoreClientConsent(this.page.request, email);
+    await this.page.goto(expectedLandingPath);
+    await this.page.waitForURL(landingPattern, { timeout: 30_000 });
   }
 }

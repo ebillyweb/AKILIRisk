@@ -22,6 +22,25 @@ export async function prepareClientConsent(
   return res.json();
 }
 
+/** Satisfy the US-51 consent gate so client smokes land on their dashboard. */
+export async function restoreClientConsent(
+  request: APIRequestContext,
+  clientEmail: string
+) {
+  const res = await request.post("/api/test/consent/prepare", {
+    data: { clientEmail, restoreConsented: true },
+  });
+  if (res.status() === 404) {
+    return false;
+  }
+  if (!res.ok()) {
+    throw new Error(
+      `Consent restore failed: ${res.status()} ${await res.text()}`
+    );
+  }
+  return true;
+}
+
 export async function prepareAdvisorPiiPolicy(
   request: APIRequestContext,
   body:
