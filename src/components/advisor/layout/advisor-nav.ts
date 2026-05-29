@@ -98,8 +98,16 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     id: "workflows",
     title: "Workflows",
     items: [
-      { href: "/advisor/pipeline", label: "Intake", icon: ClipboardList },
-      { href: "/advisor/pipeline", label: "Document requests", icon: Mail },
+      {
+        href: "/advisor/pipeline?awaitingReview=1",
+        label: "Intake",
+        icon: ClipboardList,
+      },
+      {
+        href: "/advisor/pipeline?documentsNeeded=1",
+        label: "Document requests",
+        icon: Mail,
+      },
       { href: "/advisor/engagements", label: "Engagements", icon: Briefcase },
       {
         label: "Tasks",
@@ -138,19 +146,49 @@ export function getVisibleAdvisorNavSections(
   })).filter((section) => section.items.length > 0);
 }
 
+function hrefMatchesPath(pathname: string, path: string, hasQuery: boolean): boolean {
+  if (hasQuery) {
+    return pathname === path;
+  }
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
+function hrefQueryMatches(
+  query: string,
+  searchParams?: Record<string, string | undefined> | URLSearchParams
+): boolean {
+  if (!searchParams) return false;
+  const expected = new URLSearchParams(query);
+  for (const [key, value] of expected.entries()) {
+    const actual =
+      searchParams instanceof URLSearchParams
+        ? searchParams.get(key)
+        : searchParams[key];
+    if (actual !== value) return false;
+  }
+  return true;
+}
+
 export function getActiveAdvisorNavHref(
   pathname: string,
-  sections: AdvisorNavSection[]
+  sections: AdvisorNavSection[],
+  searchParams?: Record<string, string | undefined> | URLSearchParams
 ): string | undefined {
-  const hrefs = sections
+  const items = sections
     .flatMap((section) => section.items)
-    .map((item) => item.href)
-    .filter((href): href is string => Boolean(href))
-    .sort((a, b) => b.length - a.length);
+    .filter((item): item is AdvisorNavItem & { href: string } =>
+      Boolean(item.href && !item.disabled)
+    )
+    .sort((a, b) => b.href.length - a.href.length);
 
-  return hrefs.find(
-    (href) => pathname === href || pathname.startsWith(`${href}/`)
-  );
+  for (const item of items) {
+    const [path, query] = item.href.split("?");
+    if (!hrefMatchesPath(pathname, path, Boolean(query))) continue;
+    if (query && !hrefQueryMatches(query, searchParams)) continue;
+    return item.href;
+  }
+
+  return undefined;
 }
 
 export function getAdvisorNavSectionForHref(

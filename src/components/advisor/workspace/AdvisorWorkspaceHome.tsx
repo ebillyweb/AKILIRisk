@@ -2,7 +2,10 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Briefcase,
+  ClipboardList,
   GitBranch,
+  Mail,
   Send,
   Settings,
   Radio,
@@ -280,6 +283,24 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
           <CardTitle className="text-base">Quick actions</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <QuickActionButton
+            href="/advisor/pipeline?awaitingReview=1"
+            label="Intake queue"
+            description="Review submitted client intakes"
+            icon={ClipboardList}
+          />
+          <QuickActionButton
+            href="/advisor/pipeline?documentsNeeded=1"
+            label="Document requests"
+            description="Outstanding mandatory uploads"
+            icon={Mail}
+          />
+          <QuickActionButton
+            href="/advisor/engagements"
+            label="Engagements"
+            description="Accepted recommendations in progress"
+            icon={Briefcase}
+          />
           <QuickActionButton
             href="/advisor/pipeline"
             label="Pipeline"

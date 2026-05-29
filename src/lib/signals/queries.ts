@@ -45,7 +45,9 @@ function workflowHref(type: NotificationType, referenceId: string | null): strin
     return "/advisor/pipeline?stalled=1";
   }
   if (type === "DOCUMENT_UPLOADED") {
-    return "/advisor/pipeline";
+    return referenceId
+      ? `/advisor/pipeline/${referenceId}`
+      : "/advisor/pipeline?documentsNeeded=1";
   }
   return "/advisor/notifications";
 }

@@ -3,8 +3,40 @@ import Link from "next/link";
 
 import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
 import { parsePipelineFiltersFromSearchParams } from "@/lib/pipeline/parse-pipeline-filters";
+import type { PipelineFilters } from "@/lib/pipeline/types";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
+
+function pipelineWorkflowHeading(filters: PipelineFilters): {
+  kicker: string;
+  title: string;
+  subtitle: string;
+} | null {
+  if (filters.awaitingIntakeReview) {
+    return {
+      kicker: "Workflows",
+      title: "Intake review queue",
+      subtitle:
+        "Clients who submitted intake and are waiting for your approval before assessment.",
+    };
+  }
+  if (filters.documentsNeeded) {
+    return {
+      kicker: "Workflows",
+      title: "Document requests",
+      subtitle:
+        "Clients with mandatory document requirements still outstanding.",
+    };
+  }
+  if (filters.stalled) {
+    return {
+      kicker: "Workflows",
+      title: "Stalled clients",
+      subtitle: "Assigned clients with no activity in the last 7 days.",
+    };
+  }
+  return null;
+}
 
 // Metrics summary component
 function MetricsSummary({ metrics }: { metrics: any }) {
@@ -80,9 +112,30 @@ export default async function PipelinePage({
 }) {
   const resolvedSearchParams = await searchParams;
   const initialFilters = parsePipelineFiltersFromSearchParams(resolvedSearchParams);
+  const workflowHeading = pipelineWorkflowHeading(initialFilters);
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      {workflowHeading ? (
+        <header className="space-y-1 border-b border-border/50 pb-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {workflowHeading.kicker}
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {workflowHeading.title}
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">{workflowHeading.subtitle}</p>
+          <p className="pt-2 text-sm">
+            <Link
+              href="/advisor/pipeline"
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              View full pipeline
+            </Link>
+          </p>
+        </header>
+      ) : null}
+
       {/* Quick navigation */}
       <div className="flex justify-center">
         <Link

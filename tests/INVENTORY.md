@@ -126,6 +126,9 @@ Re-run locally: `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2
 | `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-28: pipeline stalled filter toggle is available | Epic 5.4 | Implemented |
 | `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-34: advisor cannot open another advisor's intelligence detail | Epic 5.4 | Implemented |
 | `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | US-35: notification preferences page loads | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | Workflows nav: Intake → intake review pipeline filter | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | Workflows nav: Document requests → documents-needed filter | Epic 5.4 | Implemented |
+| `tests/smoke/epic-5.4-advisor-workspace.spec.ts` | Workflows nav: Engagements → engagements workspace | Epic 5.4 | Implemented |
 | `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | presigned upload-url → S3 PUT → confirm marks requirement fulfilled | Epic 5.4 | Implemented |
 | `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | rejects missing and invalid Authorization | Epic 5.4 | Implemented |
 | `tests/smoke/epic-5.4-documents-cron-sse.spec.ts` | accepts Bearer CRON_SECRET and returns processing JSON | Epic 5.4 | Implemented |
@@ -264,6 +267,7 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - ~~Cross-advisor intake review URL is 404 (tenant isolation)~~ *(covered by `advisor-intake-review.spec.ts`)*
 - ~~Pipeline metrics (`activeInFlight`, `totalAssigned`) match expected counts~~ *(partial: Vitest stage/doc counts; no Playwright DB assert)*
 - ~~Pipeline filters (by stage, search) update visible rows~~ *(covered by `epic-5.4-advisor-workspace.spec.ts` search + stalled filter)*
+- ~~Workflows sidebar: Intake, Document requests, Engagements deep links~~ *(covered by `epic-5.4-advisor-workspace.spec.ts`)*
 - ~~Full client document upload E2E (S3)~~ *(covered by `epic-5.4-documents-cron-sse.spec.ts`; needs AWS + S3_BUCKET_NAME)*
 - ~~Cron reminder jobs (CRON_SECRET + GET smoke)~~ *(covered by `epic-5.4-documents-cron-sse.spec.ts`)*
 - ~~Send client invitation~~ *(covered by `client-invitation-onboarding.spec.ts`)*

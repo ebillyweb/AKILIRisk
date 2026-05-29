@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -112,8 +112,9 @@ export function AdvisorSidebarNav({
   className,
 }: AdvisorSidebarNavProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const visibleSections = getVisibleAdvisorNavSections(featureFlags);
-  const activeHref = getActiveAdvisorNavHref(pathname, visibleSections);
+  const activeHref = getActiveAdvisorNavHref(pathname, visibleSections, searchParams);
   const activeSectionId = getAdvisorNavSectionForHref(visibleSections, activeHref);
 
   return (
