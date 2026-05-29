@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, FormEvent, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthPanel } from "@/components/auth/AuthPanel";
@@ -10,11 +10,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
-import { safeAfterSignInPath } from "@/lib/auth-callback-path";
 import {
   buildSignInHref,
   shouldRedirectCredentialsSignInToMagicLink,
 } from "@/lib/auth/sign-in-routes";
+import {
+  isPlatformAdminRole,
+  normalizeUserRoleString,
+} from "@/lib/auth-roles";
+
+function resolvePostSignInPath(
+  callbackUrl: string | null,
+  role: string | undefined
+): string {
+  if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
+    return callbackUrl;
+  }
+  if (isPlatformAdminRole(role)) return "/admin";
+  if (normalizeUserRoleString(role) === "ADVISOR") return "/advisor";
+  return "/dashboard";
+}
 
 function SignInForm() {
   const router = useRouter();
@@ -48,13 +63,17 @@ function SignInForm() {
 
       if (result?.error || result?.ok === false) {
         setError(
-          "Invalid email or password. Client accounts must use an email sign-in link."
+          "Invalid email or password. Platform administrators and advisors must sign in here with a password — client accounts use an email link instead."
         );
         setIsLoading(false);
         return;
       }
 
-      const redirectTo = safeAfterSignInPath(callbackUrl);
+      const session = await getSession();
+      const redirectTo = resolvePostSignInPath(
+        callbackUrl,
+        session?.user?.role
+      );
       window.location.assign(redirectTo);
     } catch (err) {
       console.error("Sign in error:", err);

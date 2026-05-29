@@ -348,6 +348,60 @@ export async function rescoreAssessment(
     revalidatePath(`/admin/clients`);
     revalidatePath(`/advisor/pipeline`);
     revalidatePath(`/advisor/analytics`);
+    revalidatePath(`/advisor/signals`);
+
+    const { emitAssessmentSignals } = await import("@/lib/signals/emit");
+    const { evaluateUpsellTriggers } = await import("@/lib/assessment/upsell-triggers");
+    type PillarScoreSnapshot = import("@/lib/signals/types").PillarScoreSnapshot;
+
+    const beforeRows = (beforeSnapshot?.pillarScores ?? []) as Array<{
+      pillar: string;
+      score: number;
+      riskLevel: string;
+    }>;
+    const afterRows = (afterSnapshot?.pillarScores ?? []) as Array<{
+      pillar: string;
+      score: number;
+      riskLevel: string;
+    }>;
+    const toSnapshot = (rows: typeof beforeRows): PillarScoreSnapshot[] =>
+      rows.map((r) => ({
+        pillar: r.pillar,
+        score: r.score,
+        riskLevel: r.riskLevel,
+      }));
+
+    const pillarScoresForTriggers = Object.fromEntries(
+      newPillarRows.map((p) => [
+        p.pillar,
+        {
+          resilience: Math.min(100, Math.round((p.score / 3) * 100)),
+          riskLevel: p.riskLevel.toLowerCase() as "low" | "medium" | "high" | "critical",
+        },
+      ])
+    );
+    const triggersAfter = evaluateUpsellTriggers({
+      pillarScores: pillarScoresForTriggers,
+      kriHits: [],
+    });
+    const priorAssessment = await prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      select: { upsellTriggersFired: true },
+    });
+    const triggersBefore = Array.isArray(priorAssessment?.upsellTriggersFired)
+      ? (priorAssessment.upsellTriggersFired as string[])
+      : [];
+
+    void emitAssessmentSignals({
+      clientId: assessment.userId,
+      assessmentId,
+      version: newVersion,
+      event: "rescored",
+      beforeScores: toSnapshot(beforeRows),
+      afterScores: toSnapshot(afterRows),
+      upsellTriggersBefore: triggersBefore,
+      upsellTriggersAfter: triggersAfter,
+    });
 
     return ok({
       assessmentId,

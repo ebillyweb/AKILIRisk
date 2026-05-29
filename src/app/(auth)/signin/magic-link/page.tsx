@@ -104,15 +104,15 @@ export default function MagicLinkRequestPage() {
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? "Sending…" : "Send me a sign-in link"}
         </Button>
-        <p className="text-sm text-muted-foreground pt-2">
-          Advisor or platform admin?{" "}
-          <Link
-            href="/signin?portal=advisor"
-            className="font-semibold text-foreground hover:underline"
-          >
-            Sign in with email and password
-          </Link>
-        </p>
+        <Alert className="mt-2" variant="info">
+          <AlertDescription>
+            <strong>Advisors and platform administrators</strong> must use{" "}
+            <Link href="/signin" className="font-semibold text-foreground hover:underline">
+              email and password sign-in
+            </Link>
+            . Email links work for client accounts only.
+          </AlertDescription>
+        </Alert>
       </form>
     </AuthPanel>
   );

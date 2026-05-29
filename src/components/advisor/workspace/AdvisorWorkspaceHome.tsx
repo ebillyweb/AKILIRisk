@@ -5,7 +5,7 @@ import {
   GitBranch,
   Send,
   Settings,
-  Shield,
+  Radio,
   UserPlus,
 } from "lucide-react";
 import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
@@ -249,13 +249,13 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
             <div>
               <CardTitle className="text-base">Intelligence highlights</CardTitle>
               <CardDescription>
-                Portfolio risk signals — assessment pillars live under Risk intelligence
+                Recent portfolio changes — open Signals for the full feed
               </CardDescription>
             </div>
             <Button asChild variant="ghost" size="sm" className="shrink-0">
-              <Link href="/advisor/intelligence" className="inline-flex items-center gap-1">
-                <Shield className="size-3.5" />
-                Risk intelligence
+              <Link href="/advisor/signals" className="inline-flex items-center gap-1">
+                <Radio className="size-3.5" />
+                All signals
               </Link>
             </Button>
           </CardHeader>

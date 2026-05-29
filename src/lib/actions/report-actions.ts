@@ -295,6 +295,18 @@ export async function publishReport(
   const snapshot = await buildReportSnapshot(draft.assessmentId);
   const branding = await buildBrandingSnapshot(draft.assessmentId);
 
+  const assessmentMeta = await prisma.assessment.findUnique({
+    where: { id: draft.assessmentId },
+    select: {
+      userId: true,
+      version: true,
+      upsellTriggersFired: true,
+    },
+  });
+  const upsellTriggersBefore = Array.isArray(assessmentMeta?.upsellTriggersFired)
+    ? (assessmentMeta.upsellTriggersFired as string[])
+    : [];
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       // Re-check status under the txn; another caller may have already
@@ -406,7 +418,13 @@ export async function publishReport(
         },
       });
 
-      return { publishedId: published.id, version: published.version, supersededReportId };
+      return {
+        publishedId: published.id,
+        version: published.version,
+        supersededReportId,
+        publishTriggers: triggers,
+        scoreRows,
+      };
     });
 
     void writeAudit({
@@ -432,6 +450,33 @@ export async function publishReport(
 
     // BRD §6.3 / Epic 5.10 US-72: Phase 2 entry notification to the client.
     void triggerProfilePublished(draft.assessmentId);
+
+    if (assessmentMeta) {
+      const { emitAssessmentSignals, emitReportPublishedSignal } = await import(
+        "@/lib/signals/emit"
+      );
+      const snapshots = result.scoreRows.map((s) => ({
+        pillar: s.pillar,
+        score: s.score,
+        riskLevel: s.riskLevel,
+      }));
+      void emitAssessmentSignals({
+        clientId: assessmentMeta.userId,
+        assessmentId: draft.assessmentId,
+        version: assessmentMeta.version ?? 1,
+        event: "pillar_scored",
+        beforeScores: snapshots,
+        afterScores: snapshots,
+        upsellTriggersBefore,
+        upsellTriggersAfter: result.publishTriggers,
+      });
+      void emitReportPublishedSignal({
+        clientId: assessmentMeta.userId,
+        assessmentId: draft.assessmentId,
+        reportId: result.publishedId,
+        version: result.version,
+      });
+    }
 
     return {
       ok: true,

@@ -24,6 +24,8 @@ import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { triggerPreviewAvailable } from "@/lib/notifications/deliverable-phase-triggers";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
+import { emitAssessmentSignals } from "@/lib/signals/emit";
+import type { PillarScoreSnapshot } from "@/lib/signals/types";
 
 /**
  * Assessment Score API Routes
@@ -198,7 +200,13 @@ export async function POST(
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
       where: { id },
-      select: { userId: true, approvalId: true },
+      select: {
+        userId: true,
+        approvalId: true,
+        status: true,
+        version: true,
+        scores: { select: { pillar: true, score: true, riskLevel: true } },
+      },
     });
 
     if (!assessment) {
@@ -377,6 +385,31 @@ export async function POST(
       // BRD §6.3 / Epic 5.10 US-71: Phase 1 entry notification.
       void triggerPreviewAvailable(id);
     }
+
+    const beforeSnapshots: PillarScoreSnapshot[] = (assessment.scores ?? []).map((s) => ({
+      pillar: s.pillar,
+      score: s.score,
+      riskLevel: s.riskLevel,
+    }));
+    const afterRows = await prisma.pillarScore.findMany({
+      where: { assessmentId: id },
+      select: { pillar: true, score: true, riskLevel: true },
+    });
+    const afterSnapshots: PillarScoreSnapshot[] = afterRows.map((s) => ({
+      pillar: s.pillar,
+      score: s.score,
+      riskLevel: s.riskLevel,
+    }));
+    const wasCompleted = assessment.status === "COMPLETED";
+    void emitAssessmentSignals({
+      clientId: assessment.userId,
+      assessmentId: id,
+      version: assessment.version ?? 1,
+      event:
+        pillarScore.allPillarsScored && !wasCompleted ? "completed" : "pillar_scored",
+      beforeScores: beforeSnapshots,
+      afterScores: afterSnapshots,
+    });
 
     const pillarNarratives = resolvePillarNarratives(
       pillar,

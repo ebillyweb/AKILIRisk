@@ -56,6 +56,7 @@ model User {
   advisorProfile AdvisorProfile?
   clientProfile  ClientProfile?
   clientAssignments ClientAdvisorAssignment[] @relation("ClientAssignments")
+  advisorSignals    AdvisorSignal[]
   documentRequirements DocumentRequirement[] @relation("ClientDocuments")
   notificationPreference NotificationPreference?
   subscription            Subscription?
@@ -693,6 +694,22 @@ enum NotificationType {
   DOCUMENT_UPLOADED
 }
 
+/// Advisor Signals feed — assessment/risk events (workflow uses AdvisorNotification).
+enum SignalSource {
+  INTERNAL_ASSESSMENT
+  INTERNAL_WORKFLOW
+}
+
+enum SignalType {
+  PILLAR_CRITICAL
+  PILLAR_MODERATE
+  SCORE_DECLINED
+  UPSELL_TRIGGER
+  ASSESSMENT_COMPLETED
+  ASSESSMENT_RESCORED
+  REPORT_PUBLISHED
+}
+
 enum FamilyComplexity {
   SINGLE_HOUSEHOLD
   MULTI_GENERATIONAL
@@ -810,6 +827,7 @@ model AdvisorProfile {
   intakeWaiversSet  ClientAdvisorAssignment[] @relation("IntakeWaiverSetBy")
   approvals        IntakeApproval[]
   notifications    AdvisorNotification[]
+  signals            AdvisorSignal[]
   invitations      InviteCode[]
   documentRequirements DocumentRequirement[]
   assignedGovernanceLeads GovernanceReviewLead[] @relation("GovernanceLeadAssignment")
@@ -903,6 +921,30 @@ model AdvisorNotification {
   advisor     AdvisorProfile   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
 
   @@index([advisorId, read])
+}
+
+model AdvisorSignal {
+  id          String       @id @default(cuid())
+  advisorId   String
+  clientId    String
+  source      SignalSource @default(INTERNAL_ASSESSMENT)
+  type        SignalType
+  /// critical | moderate | low
+  severity    String
+  title       String
+  message     String
+  payload     Json?
+  dedupeKey   String
+  readAt      DateTime?
+  createdAt   DateTime     @default(now())
+
+  advisor     AdvisorProfile @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  client      User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([advisorId, dedupeKey])
+  @@index([advisorId, createdAt(sort: Desc)])
+  @@index([advisorId, readAt])
+  @@index([clientId])
 }
 
 model DocumentRequirement {

@@ -27,6 +27,16 @@ vi.mock("@/lib/audit/audit-log", async () => {
   };
 });
 
+vi.mock("@/lib/assessment/pillar-config", () => ({
+  getPillarAssessmentConfig: vi.fn(async () => ({
+    questions: [{ id: "q-1", text: "Stub question" }],
+  })),
+}));
+
+vi.mock("@/lib/assessment/pillar-answer-loader", () => ({
+  loadAssessmentAnswersForQuestions: vi.fn(async () => ({})),
+}));
+
 vi.mock("@/lib/db", () => ({
   prisma: {
     assessment: {

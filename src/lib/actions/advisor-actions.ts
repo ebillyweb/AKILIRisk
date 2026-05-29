@@ -18,6 +18,16 @@ import {
 import { getAdvisorDashboardClients, getDashboardMetrics } from '@/lib/dashboard/queries';
 import { getFamilyGovernanceTrends } from '@/lib/analytics/queries';
 import { getPortfolioIntelligence, getTopRisksForFamily, getRiskDetailForFamily, getPortfolioPillarScores } from '@/lib/intelligence/queries';
+import {
+  getAdvisorSignalFeed,
+  markAdvisorSignalRead,
+  markAllAdvisorSignalsRead,
+} from '@/lib/signals/queries';
+import type { SignalFeedFilters } from '@/lib/signals/types';
+import { getPortfolioRecommendations } from '@/lib/recommendations/queries';
+import type { PortfolioRecommendationsFilters } from '@/lib/recommendations/types';
+import { getPortfolioReports } from '@/lib/reports/portfolio-queries';
+import type { PortfolioReportsFilters } from '@/lib/reports/portfolio-types';
 import { approveClientSchema } from '@/lib/schemas/advisor';
 import { decryptUserEmail } from '@/lib/auth/user-email';
 import {
@@ -875,6 +885,84 @@ export async function updateAdvisorBranding(formData: FormData) {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update branding';
+    return { success: false, error: message };
+  }
+}
+
+export async function getPortfolioReportsAction(filters?: PortfolioReportsFilters) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const data = await getPortfolioReports(profile.id, filters);
+    return { success: true, data };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to load portfolio reports';
+    return { success: false, error: message };
+  }
+}
+
+export async function getPortfolioRecommendationsAction(
+  filters?: PortfolioRecommendationsFilters
+) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const data = await getPortfolioRecommendations(profile.id, filters);
+    return { success: true, data };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to load portfolio recommendations';
+    return { success: false, error: message };
+  }
+}
+
+export async function getAdvisorSignalsAction(filters?: SignalFeedFilters) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const feed = await getAdvisorSignalFeed(profile.id, filters);
+    return { success: true, data: feed };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to load signals';
+    return { success: false, error: message };
+  }
+}
+
+export async function markSignalReadAction(signalId: string) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const parsed = z.object({ signalId: z.string().cuid() }).safeParse({ signalId });
+    if (!parsed.success) {
+      return { success: false, error: 'Invalid signal ID' };
+    }
+    const updated = await markAdvisorSignalRead(parsed.data.signalId, profile.id);
+    if (!updated) {
+      return { success: false, error: 'Signal not found' };
+    }
+    revalidatePath('/advisor/signals');
+    revalidatePath('/advisor');
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to mark signal as read';
+    return { success: false, error: message };
+  }
+}
+
+export async function markAllSignalsReadAction() {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    await markAllAdvisorSignalsRead(profile.id);
+    await markAllNotificationsRead(profile.id);
+    revalidatePath('/advisor/signals');
+    revalidatePath('/advisor/notifications');
+    revalidatePath('/advisor');
+    return { success: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to mark all signals as read';
     return { success: false, error: message };
   }
 }

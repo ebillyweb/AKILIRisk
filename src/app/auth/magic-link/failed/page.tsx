@@ -17,6 +17,14 @@ const REASON_COPY: Record<string, { title: string; body: string }> = {
     title: "Sign-in link not valid",
     body: "This link is no longer valid for sign-in. If you think this is a mistake, contact your advisor.",
   },
+  staff_use_password: {
+    title: "Use email and password instead",
+    body: "Advisor and platform administrator accounts cannot sign in with an email link. Use the password sign-in page for your workspace.",
+  },
+  sign_in_failed: {
+    title: "Sign-in could not be completed",
+    body: "This link may have expired or already been used. Request a new sign-in link, or contact your advisor if the problem continues.",
+  },
 };
 
 export default async function MagicLinkFailedPage({
@@ -32,13 +40,22 @@ export default async function MagicLinkFailedPage({
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 space-y-4">
         <h1 className="text-xl font-semibold text-destructive">{copy.title}</h1>
         <p className="text-sm text-foreground/80">{copy.body}</p>
-        <div className="flex gap-3 pt-2">
-          <Link
-            href="/signin/magic-link"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Request a new link
-          </Link>
+        <div className="flex flex-wrap gap-3 pt-2">
+          {sp.reason === "staff_use_password" ? (
+            <Link
+              href="/signin"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Sign in with password
+            </Link>
+          ) : (
+            <Link
+              href="/signin/magic-link"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Request a new link
+            </Link>
+          )}
         </div>
       </div>
     </div>

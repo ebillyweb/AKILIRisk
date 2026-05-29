@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     const [user, inviteCode] = await Promise.all([
       findUserByEmail(email, {
         where: { deletedAt: null },
-        select: { id: true, emailCiphertext: true },
+        select: { id: true, emailCiphertext: true, role: true },
       }),
       prisma.inviteCode.findFirst({
         where: {
@@ -138,8 +138,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Off-the-response-timeline issuance + email send. Same
-    // enumeration-safety reasoning as forgot-password.
-    if (user || inviteCode) {
+    // enumeration-safety reasoning as forgot-password. Do not email
+    // magic links to advisor/admin accounts — they must use /signin.
+    const isClientUser = user?.role === "USER";
+    if (isClientUser || (!user && inviteCode)) {
       void issueMagicLinkInBackground(
         email,
         baseUrl,

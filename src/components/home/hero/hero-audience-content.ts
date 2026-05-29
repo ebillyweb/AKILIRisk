@@ -111,6 +111,13 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     },
     helperLinks: [
       {
+        id: "platform-admin",
+        content: "link",
+        text: "Platform administrator?",
+        linkLabel: "Sign in with password",
+        href: "/signin",
+      },
+      {
         id: "family-path",
         content: "link",
         text: "Assessing as a family?",

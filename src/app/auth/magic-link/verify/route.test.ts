@@ -1,19 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { validateMagicLinkToken, signIn } = vi.hoisted(() => ({
+const { validateMagicLinkToken, signIn, findUserByEmail } = vi.hoisted(() => ({
   validateMagicLinkToken: vi.fn(),
   signIn: vi.fn(),
+  findUserByEmail: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/magic-link", () => ({ validateMagicLinkToken }));
 vi.mock("@/lib/auth", () => ({ signIn }));
+vi.mock("@/lib/auth/user-email", () => ({ findUserByEmail }));
 
 import { GET } from "./route";
 
 beforeEach(() => {
   validateMagicLinkToken.mockReset();
   signIn.mockReset();
+  findUserByEmail.mockReset();
+  findUserByEmail.mockResolvedValue({ role: "USER" });
 });
 
 describe("GET /auth/magic-link/verify", () => {
@@ -40,6 +44,26 @@ describe("GET /auth/magic-link/verify", () => {
     expect(res.headers.get("location")).toBe(
       "http://localhost:3000/auth/magic-link/failed?reason=expired"
     );
+  });
+
+  it("redirects staff accounts to password sign-in help", async () => {
+    validateMagicLinkToken.mockResolvedValue({
+      success: true,
+      tokenId: "mlt-1",
+      email: "buddy@ebilly.com",
+      inviteCodeId: null,
+    });
+    findUserByEmail.mockResolvedValue({ role: "SUPER_ADMIN" });
+
+    const req = new NextRequest(
+      "http://localhost:3000/auth/magic-link/verify?token=valid"
+    );
+    const res = await GET(req);
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(
+      "http://localhost:3000/auth/magic-link/failed?reason=staff_use_password"
+    );
+    expect(signIn).not.toHaveBeenCalled();
   });
 
   it("calls signIn and redirects to dashboard on valid token", async () => {
