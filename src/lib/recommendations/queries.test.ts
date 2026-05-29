@@ -126,6 +126,7 @@ describe("getPortfolioRecommendations — projection and sorting", () => {
         recommendations: [
           rec({
             id: "rec-1",
+            serviceRecommendationId: "svc-1",
             priority: 1,
             status: "PENDING",
             advisorNotes: "Discuss next quarter.",

@@ -187,6 +187,7 @@ export async function updateEngagementStatus(
     return { ok: false, code: "invalid_status" };
   }
 
+  const statusBefore = engagement.status;
   const now = new Date();
   const data: Prisma.PortfolioEngagementUpdateInput = { status: input.status };
   if (input.status === "MEETING_SCHEDULED" && input.meetingScheduledAt !== undefined) {
@@ -211,7 +212,7 @@ export async function updateEngagementStatus(
     action: AUDIT_ACTIONS.PORTFOLIO_ENGAGEMENT_STATUS_UPDATE,
     entityType: "PortfolioEngagement",
     entityId: engagement.id,
-    beforeData: { status: engagement.status },
+    beforeData: { status: statusBefore },
     afterData: { status: input.status },
     metadata: { assessmentId: engagement.assessmentId },
   });

@@ -184,6 +184,11 @@ vi.mock("@/lib/auth", () => ({
   })),
 }));
 
+vi.mock("@/lib/signals/emit", () => ({
+  emitAssessmentSignals: vi.fn().mockResolvedValue(undefined),
+  emitReportPublishedSignal: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/db", () => ({
   prisma: {
     assessment: {
@@ -211,6 +216,20 @@ vi.mock("@/lib/db", () => ({
               a.status === where.status
           );
           return found ? { id: "assn-1" } : null;
+        }
+      ),
+      findMany: vi.fn(
+        async ({
+          where,
+        }: {
+          where: { clientId: string; status: string };
+        }) => {
+          return dbState.assignments
+            .filter(
+              (a) =>
+                a.clientId === where.clientId && a.status === where.status
+            )
+            .map((a) => ({ advisorId: a.advisorId }));
         }
       ),
     },

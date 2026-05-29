@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { ReportStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { resolveClientDisplayName } from "@/lib/signals/emit";
 import { toReportTemplateUi } from "@/lib/reports/report-template-choice";

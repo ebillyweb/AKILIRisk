@@ -55,6 +55,10 @@ const { prismaSpies, writeAuditSpy, requireAdminRoleSpy, scoringSpies, engineCto
 });
 
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
+vi.mock("@/lib/signals/emit", () => ({
+  emitAssessmentSignals: vi.fn().mockResolvedValue(undefined),
+  emitReportPublishedSignal: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/audit/audit-log", async () => {
   const actual = await vi.importActual<typeof import("@/lib/audit/audit-log")>("@/lib/audit/audit-log");
   return { ...actual, writeAudit: (...args: unknown[]) => writeAuditSpy(...args) };
@@ -124,6 +128,7 @@ beforeEach(() => {
   recommendationEngineMatchSpy.mockResolvedValue([]);
   getActiveThresholdsSpy.mockClear();
   getActiveThresholdsSpy.mockResolvedValue({ lowMin: 80, mediumMin: 60, highMin: 40 });
+  prismaSpies.clientAdvisorAssignment.findMany.mockResolvedValue([]);
 
   // Default $transaction passthrough — runs the callback with a fake tx
   // that proxies to the same prisma mocks.
