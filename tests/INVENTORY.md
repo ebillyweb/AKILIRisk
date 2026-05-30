@@ -75,6 +75,18 @@ Re-run locally: `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | unauthenticated GET returns 401 | TBD | Implemented |
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | non-USER role (admin) is blocked with 403 | TBD | Implemented |
 | `tests/smoke/advisor-logo-endpoint.spec.ts` | client receives the assigned advisor's logo as image bytes | TBD | Implemented |
+| `tests/smoke/admin-api-authz.spec.ts` | unauthenticated GET on existence-leak admin endpoints returns 404 | TBD | Implemented |
+| `tests/smoke/admin-api-authz.spec.ts` | non-admin advisor receives 404 from /api/admin/control-center | TBD | Implemented |
+| `tests/smoke/admin-api-authz.spec.ts` | client receives 404 from /api/admin/audit-log/export | TBD | Implemented |
+| `tests/smoke/admin-api-authz.spec.ts` | admin gets CSV from /api/admin/audit-log/export | TBD | Implemented |
+| `tests/smoke/admin-api-authz.spec.ts` | admin gets JSON from /api/admin/control-center | TBD | Implemented |
+| `tests/smoke/admin-api-authz.spec.ts` | admin gets ZIP from /api/admin/exports?scope=system | TBD | Implemented |
+| `tests/smoke/admin-route-coverage.spec.ts` | admin can load every nav target without 5xx | TBD | Implemented |
+| `tests/smoke/auth-flow-hardening.spec.ts` | magic-link verify is single-use (replay -> /failed?reason=used) | TBD | Implemented |
+| `tests/smoke/auth-flow-hardening.spec.ts` | magic-link verify rejects a tampered token (/failed?reason=not_found) | TBD | Implemented |
+| `tests/smoke/auth-flow-hardening.spec.ts` | magic-link issuance rate-limits per (ip, email) | TBD | Implemented |
+| `tests/smoke/auth-flow-hardening.spec.ts` | stripe webhook rejects POST without Stripe-Signature header | TBD | Implemented |
+| `tests/smoke/auth-flow-hardening.spec.ts` | stripe webhook rejects POST with a bogus Stripe-Signature header | TBD | Implemented |
 | `tests/smoke/audit-log-access.spec.ts` | admin can view /admin/audit-log | TBD | Implemented |
 | `tests/smoke/audit-log-access.spec.ts` | advisor gets 404 on /admin/audit-log | TBD | Implemented |
 | `tests/smoke/audit-log-access.spec.ts` | client gets 404 on /admin/audit-log | TBD | Implemented |
@@ -368,7 +380,83 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-_None outstanding. See "Fixed" below._
+### Minor: `/api/admin/reports/export` returns 500 instead of 404 on unauthorized callers
+
+- **Where:** `src/app/api/admin/reports/export/route.ts:186-189` — the
+  catch block returns `new NextResponse(null, { status: 500 })` for every
+  error including `requireAdminRole()`'s auth throw.
+- **Expected:** Match the rest of the admin API surface
+  (`/api/admin/exports`, `/api/admin/audit-log/export`,
+  `/api/admin/control-center`) which use `getAuditAdminActorOrNull()` and
+  return **404** on missing/non-admin caller — the documented
+  "existence-leak posture".
+- **Actual:** Unauthenticated, advisor2, and client all receive **500**
+  with empty body. Reveals endpoint exists; inconsistent posture lets a
+  scanner separate "admin endpoint" from "missing endpoint".
+- **Severity:** Minor. No data exposure.
+- **Fix sketch:** Switch to `getAuditAdminActorOrNull()` (or distinguish
+  auth errors from server errors and 404 the former).
+- **Tests:** `tests/smoke/admin-api-authz.spec.ts` — two test.fixme cases
+  for unauth + non-admin.
+
+### Minor: `/api/admin/advisors/[userId]/logo` returns 500 instead of 404 on unauthorized callers
+
+- **Where:** `src/app/api/admin/advisors/[userId]/logo/route.ts:45-48` —
+  same broad catch returning 500 for everything including auth.
+- **Expected:** 404 (existence-leak posture).
+- **Actual:** Unauth/advisor2/client all get 500.
+- **Severity:** Minor. Same posture inconsistency as the reports export.
+- **Fix sketch:** Move `requireAdminRole()` outside the try-block, or
+  treat the auth error as a 404 explicitly.
+- **Test:** `tests/smoke/admin-api-authz.spec.ts` — one test.fixme.
+
+### Minor: `/api/advisor/branding` returns 500 with "Not authenticated" body for non-advisor callers
+
+- **Where:** likely `src/app/api/advisor/branding/route.ts`'s catch block
+  (similar pattern). Response body is the well-formed
+  `{success:false, error:"Not authenticated"}` JSON the advisor auth helper
+  produces — but the HTTP status is 500, not 401.
+- **Expected:** 401 (matches the body), or 404 to align with the admin
+  endpoints' existence-leak posture.
+- **Actual:** Client (USER role) and unauth both receive 500.
+- **Severity:** Minor. Same wrong-status info leak.
+- **Fix sketch:** Inside the catch, branch on error type and use the
+  proper status code; or return 401 directly without wrapping the auth
+  check in a try.
+- **Test:** `tests/smoke/admin-api-authz.spec.ts` — one test.fixme.
+
+### Cosmetic: `/admin/scoring` 404s instead of redirecting to its only subroute
+
+- **Where:** `src/app/(protected)/admin/scoring/` — directory exists with
+  only a `thresholds/page.tsx` child; no parent `page.tsx`.
+- **Expected:** Either redirect to `/admin/scoring/thresholds` (so stale
+  links / typed URLs resolve), or have nothing claim `/admin/scoring` at all.
+- **Actual:** Visiting `/admin/scoring` directly renders the custom 404
+  ("This page did not pass due diligence."). Admin nav already links to
+  `/admin/scoring/thresholds` (`src/app/(protected)/admin/page.tsx:95`),
+  so the parent path is unreachable from the UI — but discoverable by
+  guessing or via stale bookmarks.
+- **Severity:** Cosmetic.
+- **Fix sketch:** Add `src/app/(protected)/admin/scoring/page.tsx` with
+  `redirect("/admin/scoring/thresholds")`.
+- **Test:** `tests/smoke/admin-route-coverage.spec.ts` — one test.fixme.
+
+### Cosmetic: `/api/address/suggestions` is public + unauthenticated + unrate-limited
+
+- **Where:** `src/app/api/address/suggestions/route.ts` — fully open
+  `GET` that proxies queries to OpenStreetMap Nominatim with a
+  hard-coded `User-Agent: "AkiliRisk/1.0 (address-completion)"`.
+- **Expected:** Either require an authenticated session (the only legit
+  callers are the signup/profile forms) or add an IP-based rate limit.
+- **Actual:** Any internet caller can hit the endpoint indefinitely.
+  Nominatim's published usage policy caps absolute usage at 1 req/sec —
+  abuse via this proxy could get the AkiliRisk User-Agent throttled or
+  blocked entirely by OSM, breaking the legitimate signup/profile UX.
+- **Severity:** Cosmetic / future-cost. No security or data implication.
+- **Fix sketch:** `auth()` check + `rateLimit({ key: clientIp, limit: 20,
+  windowMs: 60_000 })` at the top of the GET handler.
+- **Test:** `tests/smoke/admin-route-coverage.spec.ts` — one test.fixme
+  under the "public API hardening" describe block.
 
 ## Fixed
 
