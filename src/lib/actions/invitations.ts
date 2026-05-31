@@ -8,9 +8,10 @@ import {
 } from "@/lib/billing/subscription-service";
 import {
   createAdvisorInvitation,
-  resendInvitation,
+  DuplicateInvitationError,
   expireInvitation,
   getAdvisorInvitations,
+  resendInvitation,
 } from "@/lib/invitations/service";
 import { resolveInvitationEmailTheme } from "@/lib/invitations/invitation-email-theme";
 import { sendInvitationEmail } from "@/lib/invitations/send-invitation-email";
@@ -160,11 +161,10 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
     if (error instanceof ClientLimitError) {
       return { success: false, error: error.message };
     }
-    // Handle duplicate email gracefully
+    if (error instanceof DuplicateInvitationError) {
+      return { success: false, error: error.message };
+    }
     if (error instanceof Error) {
-      if (error.message.includes("Unique constraint")) {
-        return { success: false, error: "An invitation has already been sent to this email address." };
-      }
       return { success: false, error: error.message };
     }
     return { success: false, error: "An unexpected error occurred while sending the invitation." };

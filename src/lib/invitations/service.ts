@@ -29,6 +29,62 @@ export function invitationCanResend(invitation: {
   );
 }
 
+export class DuplicateInvitationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DuplicateInvitationError";
+  }
+}
+
+export const PENDING_INVITATION_RESEND_MESSAGE =
+  "An invitation to this email is already pending. Use Resend in the invitation list below to send it again and extend the expiry.";
+
+export const REGISTERED_INVITATION_MESSAGE =
+  "This client has already registered using a previous invitation.";
+
+export const PENDING_INVITATION_RESEND_LIMIT_MESSAGE =
+  "An invitation to this email is already pending and has reached the resend limit. Expire it in the invitation list below, then send a new invitation.";
+
+const BLOCKING_INVITATION_STATUSES: InvitationStatus[] = [
+  InvitationStatus.SENT,
+  InvitationStatus.OPENED,
+  InvitationStatus.REGISTERED,
+];
+
+/**
+ * Prevents duplicate pending invites for the same advisor + client email.
+ * EXPIRED rows are ignored so advisors can issue a fresh invitation.
+ */
+export async function assertNoBlockingInvitationForEmail(
+  advisorId: string,
+  clientEmail: string
+): Promise<void> {
+  const normalizedEmail = clientEmail.trim().toLowerCase();
+  if (!normalizedEmail) return;
+
+  const existing = await prisma.inviteCode.findFirst({
+    where: {
+      createdBy: advisorId,
+      prefillEmail: normalizedEmail,
+      status: { in: BLOCKING_INVITATION_STATUSES },
+    },
+    select: { status: true, resendCount: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!existing) return;
+
+  if (existing.status === InvitationStatus.REGISTERED) {
+    throw new DuplicateInvitationError(REGISTERED_INVITATION_MESSAGE);
+  }
+
+  if (existing.resendCount >= 3) {
+    throw new DuplicateInvitationError(PENDING_INVITATION_RESEND_LIMIT_MESSAGE);
+  }
+
+  throw new DuplicateInvitationError(PENDING_INVITATION_RESEND_MESSAGE);
+}
+
 function withDecryptedAdvisorEmail<T extends {
   advisor: {
     id: string;
@@ -80,6 +136,8 @@ export async function createAdvisorInvitation(
   input: CreateInvitationInput,
   options?: { subscriptionFeatures?: Pick<SubscriptionFeatures, "customSubdomainEnabled"> }
 ): Promise<InvitationWithDetails & { url: string }> {
+  await assertNoBlockingInvitationForEmail(advisorId, input.clientEmail);
+
   const code = generateInviteCode();
   const expiresAt = new Date(Date.now() + INVITATION_TTL_SEC * 1000);
 

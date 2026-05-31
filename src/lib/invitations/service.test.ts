@@ -7,6 +7,7 @@ const createdRows: Record<string, unknown>[] = [];
 
 const prismaSpies = vi.hoisted(() => ({
   inviteCode: {
+    findFirst: vi.fn(async () => null),
     create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
       const row = {
         id: "invite-1",
@@ -51,7 +52,13 @@ vi.mock("@/lib/invitations/invitation-link", () => ({
   ) => `${origin}/signup?invite=${token}&callbackUrl=${encodeURIComponent(callback)}`,
 }));
 
-import { createAdvisorInvitation } from "./service";
+import {
+  assertNoBlockingInvitationForEmail,
+  createAdvisorInvitation,
+  PENDING_INVITATION_RESEND_LIMIT_MESSAGE,
+  PENDING_INVITATION_RESEND_MESSAGE,
+  REGISTERED_INVITATION_MESSAGE,
+} from "./service";
 
 describe("createAdvisorInvitation (US-1)", () => {
   const originalNextAuthUrl = process.env.NEXTAUTH_URL;
@@ -112,5 +119,74 @@ describe("createAdvisorInvitation (US-1)", () => {
     expect(createdRows[0]).toMatchObject({ intakeWaived: true });
     expect(result.url).toContain(encodeURIComponent("/assessment"));
     expect(result.url).not.toContain(encodeURIComponent("/intake"));
+  });
+
+  it("blocks duplicate sends when a pending invitation already exists", async () => {
+    prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
+      status: InvitationStatus.SENT,
+      resendCount: 0,
+    });
+
+    await expect(
+      createAdvisorInvitation("advisor-profile-1", {
+        clientEmail: "client@example.com",
+      })
+    ).rejects.toThrow(PENDING_INVITATION_RESEND_MESSAGE);
+
+    expect(prismaSpies.inviteCode.create).not.toHaveBeenCalled();
+  });
+
+  it("allows a new invitation when the prior one is expired", async () => {
+    prismaSpies.inviteCode.findFirst.mockResolvedValueOnce(null);
+
+    await createAdvisorInvitation("advisor-profile-1", {
+      clientEmail: "client@example.com",
+    });
+
+    expect(prismaSpies.inviteCode.create).toHaveBeenCalledOnce();
+  });
+});
+
+describe("assertNoBlockingInvitationForEmail", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaSpies.inviteCode.findFirst.mockResolvedValue(null);
+  });
+
+  it("rejects when the client already registered", async () => {
+    prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
+      status: InvitationStatus.REGISTERED,
+      resendCount: 0,
+    });
+
+    await expect(
+      assertNoBlockingInvitationForEmail("advisor-profile-1", "client@example.com")
+    ).rejects.toThrow(REGISTERED_INVITATION_MESSAGE);
+  });
+
+  it("rejects when resend limit is reached on a pending invite", async () => {
+    prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
+      status: InvitationStatus.OPENED,
+      resendCount: 3,
+    });
+
+    await expect(
+      assertNoBlockingInvitationForEmail("advisor-profile-1", "client@example.com")
+    ).rejects.toThrow(PENDING_INVITATION_RESEND_LIMIT_MESSAGE);
+  });
+
+  it("normalizes email before lookup", async () => {
+    await assertNoBlockingInvitationForEmail(
+      "advisor-profile-1",
+      "  Client@Example.com  "
+    );
+
+    expect(prismaSpies.inviteCode.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          prefillEmail: "client@example.com",
+        }),
+      })
+    );
   });
 });
