@@ -158,6 +158,30 @@ export async function requireAdvisorRole() {
   };
 }
 
+/**
+ * Discriminator for `requireAdvisorRole()`'s thrown Error objects so route
+ * catch handlers can map them to 401 instead of the generic 500. Keeps the
+ * fix from being duplicated across every advisor API route — sweep applied
+ * in commit "fix(api): sweep remaining auth-throws-as-500 endpoints".
+ *
+ * Recognized messages (kept in sync with the helpers above):
+ *   - "Not authenticated"
+ *   - "Unauthorized: ..."           (role / hub access denied)
+ *   - ADVISOR_PORTAL_DISABLED_MESSAGE
+ *   - ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE
+ *   - ADVISOR_ACCOUNT_DEACTIVATED_MESSAGE
+ */
+export function isAdvisorAuthError(e: unknown): boolean {
+  if (!(e instanceof Error)) return false;
+  const m = e.message;
+  if (m === "Not authenticated") return true;
+  if (m.startsWith("Unauthorized")) return true;
+  if (m === ADVISOR_PORTAL_DISABLED_MESSAGE) return true;
+  if (m === ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE) return true;
+  if (m === ADVISOR_ACCOUNT_DEACTIVATED_MESSAGE) return true;
+  return false;
+}
+
 export async function getAdvisorProfileOrThrow(userId: string) {
   // Round-11 commit 2.4b: emailCiphertext + decrypt at exit so callers
   // (billing, advisor settings page, invitation actions) keep reading

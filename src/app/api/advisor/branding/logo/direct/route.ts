@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 import { uploadLogoDirectAction } from '@/lib/actions/advisor-branding-actions';
 import { auditLogoUpload } from '@/lib/audit/branding-audit';
 import { prisma } from '@/lib/db';
@@ -50,6 +50,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    if (isAdvisorAuthError(error)) {
+      return NextResponse.json(
+        { success: false, error: (error as Error).message },
+        { status: 401 }
+      );
+    }
     console.error('Direct logo upload error:', error);
 
     return NextResponse.json(

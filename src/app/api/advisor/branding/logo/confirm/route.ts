@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { confirmLogoUploadAction } from '@/lib/actions/advisor-branding-actions';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 import { auditLogoUpload } from '@/lib/audit/branding-audit';
 
 const confirmUploadSchema = z.object({
@@ -59,14 +59,20 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Logo upload confirmation error:', error);
-
+    if (isAdvisorAuthError(error)) {
+      return NextResponse.json(
+        { success: false, error: (error as Error).message },
+        { status: 401 }
+      );
+    }
     if (error instanceof Error && error.name === 'ZodError') {
       return NextResponse.json(
         { success: false, error: 'Invalid request data', details: error.message },
         { status: 400 }
       );
     }
+
+    console.error('Logo upload confirmation error:', error);
 
     return NextResponse.json(
       { success: false, error: 'Failed to confirm upload' },

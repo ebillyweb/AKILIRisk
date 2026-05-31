@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 import { requireSubdomainAccess, checkRateLimit } from '@/lib/subscription/validation';
 import {
   validateSubdomainFormat,
@@ -157,8 +157,12 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Subdomain claim error:', error);
-
+    if (isAdvisorAuthError(error)) {
+      return NextResponse.json(
+        { success: false, error: (error as Error).message },
+        { status: 401 }
+      );
+    }
     if (error instanceof Error) {
       if (error.name === 'ZodError') {
         return NextResponse.json(
@@ -181,6 +185,8 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    console.error('Subdomain claim error:', error);
 
     const message = error instanceof Error ? error.message : 'Failed to claim subdomain';
     return NextResponse.json(
@@ -215,14 +221,20 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Subdomain release error:', error);
-
+    if (isAdvisorAuthError(error)) {
+      return NextResponse.json(
+        { success: false, error: (error as Error).message },
+        { status: 401 }
+      );
+    }
     if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
       return NextResponse.json(
         { success: false, error: 'No subdomain found to release' },
         { status: 404 }
       );
     }
+
+    console.error('Subdomain release error:', error);
 
     const message = error instanceof Error ? error.message : 'Failed to release subdomain';
     return NextResponse.json(

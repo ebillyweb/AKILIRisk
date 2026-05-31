@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdvisorBrandingAction, updateAdvisorBrandingAction } from '@/lib/actions/advisor-branding-actions';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
-
-/**
- * Map `requireAdvisorRole()` thrown errors to a real HTTP status. The role
- * helper throws plain `Error` objects with one of two messages:
- *   - "Not authenticated"            -> session missing
- *   - "Unauthorized: ..."            -> wrong role / portal disabled
- * Anything else from the catch is an unexpected server error (500).
- */
-function isAuthError(e: unknown): boolean {
-  if (!(e instanceof Error)) return false;
-  const m = e.message;
-  return m === 'Not authenticated' || m.startsWith('Unauthorized');
-}
+import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    if (isAuthError(error)) {
+    if (isAdvisorAuthError(error)) {
       return NextResponse.json(
         { success: false, error: (error as Error).message },
         { status: 401 }
@@ -77,7 +64,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    if (isAuthError(error)) {
+    if (isAdvisorAuthError(error)) {
       return NextResponse.json(
         { success: false, error: (error as Error).message },
         { status: 401 }

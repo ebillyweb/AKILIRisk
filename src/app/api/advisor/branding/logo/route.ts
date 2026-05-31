@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteLogoAction } from '@/lib/actions/advisor-branding-actions';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 import { auditLogoDelete } from '@/lib/audit/branding-audit';
 
 export async function DELETE(request: NextRequest) {
@@ -51,6 +51,12 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    if (isAdvisorAuthError(error)) {
+      return NextResponse.json(
+        { success: false, error: (error as Error).message },
+        { status: 401 }
+      );
+    }
     console.error('Logo deletion error:', error);
 
     return NextResponse.json(

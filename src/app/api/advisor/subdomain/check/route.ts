@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkSubdomainAvailabilityAction } from '@/lib/actions/advisor-branding-actions';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 import { requireSubdomainAccess } from '@/lib/subscription/validation';
 
 const subdomainCheckSchema = z.object({
@@ -27,8 +27,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Subdomain check error:', error);
-
+    if (isAdvisorAuthError(error)) {
+      return NextResponse.json(
+        { success: false, error: (error as Error).message },
+        { status: 401 }
+      );
+    }
     if (error instanceof Error && error.name === 'ZodError') {
       return NextResponse.json(
         { success: false, error: 'Invalid subdomain format', details: error.message },
@@ -42,6 +46,8 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    console.error('Subdomain check error:', error);
 
     const message = error instanceof Error ? error.message : 'Failed to check subdomain availability';
     return NextResponse.json(

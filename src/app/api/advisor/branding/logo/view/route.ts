@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 import { prisma } from '@/lib/db';
 import { getBrandingLogoObjectBytes } from '@/lib/s3/branding-uploads';
 
@@ -37,6 +37,9 @@ export async function GET() {
       },
     });
   } catch (error) {
+    if (isAdvisorAuthError(error)) {
+      return new NextResponse(null, { status: 401 });
+    }
     console.error('Advisor logo view error:', error);
     return new NextResponse(null, { status: 500 });
   }
