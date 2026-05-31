@@ -108,43 +108,42 @@ test.describe("admin API authorization", () => {
   });
 
   // ─────────────────────────────────────────────────────────────
-  // Surfaced bugs — locked in via fixme. See tests/INVENTORY.md.
+  // Regression tests for previously-500 endpoints — see "Fixed" in
+  // tests/INVENTORY.md.
   // ─────────────────────────────────────────────────────────────
-  test.fixme(
-    "unauthenticated GET /api/admin/reports/export returns 404 (not 500)",
-    async ({ request }) => {
-      const r = await getAs(request, null, "/api/admin/reports/export");
-      expect(r.status()).toBe(404);
-    }
-  );
+  test("unauthenticated GET /api/admin/reports/export returns 404 (not 500)", async ({
+    request,
+  }) => {
+    const r = await getAs(request, null, "/api/admin/reports/export");
+    expect(r.status()).toBe(404);
+  });
 
-  test.fixme(
-    "non-admin GET /api/admin/reports/export returns 404 (not 500)",
-    async ({ page, request }) => {
-      await new SignInPage(page).signInAs("advisor2");
-      const r = await getAs(request, page, "/api/admin/reports/export");
-      expect(r.status()).toBe(404);
-    }
-  );
+  test("non-admin GET /api/admin/reports/export returns 404 (not 500)", async ({
+    page,
+    request,
+  }) => {
+    await new SignInPage(page).signInAs("advisor2");
+    const r = await getAs(request, page, "/api/admin/reports/export");
+    expect(r.status()).toBe(404);
+  });
 
-  test.fixme(
-    "unauthenticated GET /api/admin/advisors/[userId]/logo returns 404 (not 500)",
-    async ({ request }) => {
-      const r = await getAs(
-        request,
-        null,
-        "/api/admin/advisors/cmp7bp0vr0001slg89drf26da/logo"
-      );
-      expect(r.status()).toBe(404);
-    }
-  );
+  test("unauthenticated GET /api/admin/advisors/[userId]/logo returns 404 (not 500)", async ({
+    request,
+  }) => {
+    const r = await getAs(
+      request,
+      null,
+      "/api/admin/advisors/cmp7bp0vr0001slg89drf26da/logo"
+    );
+    expect(r.status()).toBe(404);
+  });
 
-  test.fixme(
-    "non-advisor authenticated GET /api/advisor/branding returns 401 (not 500)",
-    async ({ page, request }) => {
-      await new SignInPage(page).signInAs("client");
-      const r = await getAs(request, page, "/api/advisor/branding");
-      expect(r.status()).toBe(401);
-    }
-  );
+  test("non-advisor authenticated GET /api/advisor/branding returns 401 (not 500)", async ({
+    page,
+    request,
+  }) => {
+    await new SignInPage(page).signInAs("client");
+    const r = await getAs(request, page, "/api/advisor/branding");
+    expect(r.status()).toBe(401);
+  });
 });

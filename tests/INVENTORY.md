@@ -384,83 +384,7 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-### Minor: `/api/admin/reports/export` returns 500 instead of 404 on unauthorized callers
-
-- **Where:** `src/app/api/admin/reports/export/route.ts:186-189` — the
-  catch block returns `new NextResponse(null, { status: 500 })` for every
-  error including `requireAdminRole()`'s auth throw.
-- **Expected:** Match the rest of the admin API surface
-  (`/api/admin/exports`, `/api/admin/audit-log/export`,
-  `/api/admin/control-center`) which use `getAuditAdminActorOrNull()` and
-  return **404** on missing/non-admin caller — the documented
-  "existence-leak posture".
-- **Actual:** Unauthenticated, advisor2, and client all receive **500**
-  with empty body. Reveals endpoint exists; inconsistent posture lets a
-  scanner separate "admin endpoint" from "missing endpoint".
-- **Severity:** Minor. No data exposure.
-- **Fix sketch:** Switch to `getAuditAdminActorOrNull()` (or distinguish
-  auth errors from server errors and 404 the former).
-- **Tests:** `tests/smoke/admin-api-authz.spec.ts` — two test.fixme cases
-  for unauth + non-admin.
-
-### Minor: `/api/admin/advisors/[userId]/logo` returns 500 instead of 404 on unauthorized callers
-
-- **Where:** `src/app/api/admin/advisors/[userId]/logo/route.ts:45-48` —
-  same broad catch returning 500 for everything including auth.
-- **Expected:** 404 (existence-leak posture).
-- **Actual:** Unauth/advisor2/client all get 500.
-- **Severity:** Minor. Same posture inconsistency as the reports export.
-- **Fix sketch:** Move `requireAdminRole()` outside the try-block, or
-  treat the auth error as a 404 explicitly.
-- **Test:** `tests/smoke/admin-api-authz.spec.ts` — one test.fixme.
-
-### Minor: `/api/advisor/branding` returns 500 with "Not authenticated" body for non-advisor callers
-
-- **Where:** likely `src/app/api/advisor/branding/route.ts`'s catch block
-  (similar pattern). Response body is the well-formed
-  `{success:false, error:"Not authenticated"}` JSON the advisor auth helper
-  produces — but the HTTP status is 500, not 401.
-- **Expected:** 401 (matches the body), or 404 to align with the admin
-  endpoints' existence-leak posture.
-- **Actual:** Client (USER role) and unauth both receive 500.
-- **Severity:** Minor. Same wrong-status info leak.
-- **Fix sketch:** Inside the catch, branch on error type and use the
-  proper status code; or return 401 directly without wrapping the auth
-  check in a try.
-- **Test:** `tests/smoke/admin-api-authz.spec.ts` — one test.fixme.
-
-### Cosmetic: `/admin/scoring` 404s instead of redirecting to its only subroute
-
-- **Where:** `src/app/(protected)/admin/scoring/` — directory exists with
-  only a `thresholds/page.tsx` child; no parent `page.tsx`.
-- **Expected:** Either redirect to `/admin/scoring/thresholds` (so stale
-  links / typed URLs resolve), or have nothing claim `/admin/scoring` at all.
-- **Actual:** Visiting `/admin/scoring` directly renders the custom 404
-  ("This page did not pass due diligence."). Admin nav already links to
-  `/admin/scoring/thresholds` (`src/app/(protected)/admin/page.tsx:95`),
-  so the parent path is unreachable from the UI — but discoverable by
-  guessing or via stale bookmarks.
-- **Severity:** Cosmetic.
-- **Fix sketch:** Add `src/app/(protected)/admin/scoring/page.tsx` with
-  `redirect("/admin/scoring/thresholds")`.
-- **Test:** `tests/smoke/admin-route-coverage.spec.ts` — one test.fixme.
-
-### Cosmetic: `/api/address/suggestions` is public + unauthenticated + unrate-limited
-
-- **Where:** `src/app/api/address/suggestions/route.ts` — fully open
-  `GET` that proxies queries to OpenStreetMap Nominatim with a
-  hard-coded `User-Agent: "AkiliRisk/1.0 (address-completion)"`.
-- **Expected:** Either require an authenticated session (the only legit
-  callers are the signup/profile forms) or add an IP-based rate limit.
-- **Actual:** Any internet caller can hit the endpoint indefinitely.
-  Nominatim's published usage policy caps absolute usage at 1 req/sec —
-  abuse via this proxy could get the AkiliRisk User-Agent throttled or
-  blocked entirely by OSM, breaking the legitimate signup/profile UX.
-- **Severity:** Cosmetic / future-cost. No security or data implication.
-- **Fix sketch:** `auth()` check + `rateLimit({ key: clientIp, limit: 20,
-  windowMs: 60_000 })` at the top of the GET handler.
-- **Test:** `tests/smoke/admin-route-coverage.spec.ts` — one test.fixme
-  under the "public API hardening" describe block.
+_None outstanding. See "Fixed" below._
 
 ## Fixed
 
@@ -504,6 +428,38 @@ the user in NOT_STARTED state.
   `/advisor` and `/admin`. Regression tests in `auth-edge-cases.spec.ts`
   (`advisor sees an unauthorized notice...` + `client sees an unauthorized
   notice...`) cover both flows.
+- **`/api/admin/reports/export` + `/api/admin/advisors/[userId]/logo`
+  returned 500 instead of 404 on unauthorized callers**. Both routes
+  wrapped `requireAdminRole()` in the same try-block as the rest of the
+  handler, so the auth throw was caught by the generic 500 handler.
+  Switched both to call `getAuditAdminActorOrNull()` outside the try and
+  early-return 404 when the actor is missing — matches the existence-leak
+  posture already used by `/api/admin/exports`,
+  `/api/admin/audit-log/export`, and `/api/admin/control-center`.
+  Regression: `admin-api-authz.spec.ts` — 3 fixme()s flipped live
+  (unauth + non-admin reports export, unauth advisors-logo).
+- **`/api/advisor/branding` returned 500 with a `Not authenticated`
+  body to unauthenticated/non-advisor callers**. The body had the right
+  shape but the wrong status. Added an `isAuthError` check inside both
+  GET and PUT catch blocks that maps `requireAdvisorRole()`'s thrown
+  messages (`"Not authenticated"`, `"Unauthorized: ..."`) to 401 instead
+  of 500. Regression: `admin-api-authz.spec.ts` — 1 fixme flipped live
+  (client GET returns 401).
+- **`/admin/scoring` 404'd ("This page did not pass due diligence.")
+  because the directory had no parent `page.tsx`** — only the
+  `thresholds/` child existed. Added a 4-line redirect-only `page.tsx`
+  modeled on the existing `/admin/question-bank` legacy redirect.
+  Regression: `admin-route-coverage.spec.ts` `/admin/scoring redirects
+  to /admin/scoring/thresholds` (fixme flipped live).
+- **`/api/address/suggestions` was public + unrate-limited**. Anyone
+  could use AkiliRisk as a free OSM Nominatim proxy; sustained abuse
+  would get our User-Agent banned. Added an `auth()` check (return 401
+  if no session) and a per-IP `rateLimit({ key: "address-suggestions:
+  <ip>", limit: 20, windowMs: 60_000 })`. The sole UI consumer
+  (`<AddressSearch />` in `src/components/settings/`) is post-auth, so
+  no flow breaks. Regression: `admin-route-coverage.spec.ts` —
+  fixme replaced with two live tests (401 unauth + at-least-one-429
+  under sustained authenticated load).
 
 ## Process
 

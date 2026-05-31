@@ -58,42 +58,54 @@ test.describe("admin route coverage", () => {
     expect(failures, JSON.stringify(failures)).toEqual([]);
   });
 
-  // Surfaced bug — /admin/scoring 404s because only the /thresholds child has
-  // a page.tsx. Should redirect to /admin/scoring/thresholds for stale links.
-  test.fixme(
-    "/admin/scoring redirects to /admin/scoring/thresholds instead of 404",
-    async ({ page }) => {
-      await new SignInPage(page).signInAs("admin");
-      const response = await page.goto("/admin/scoring");
-      expect(response?.status()).toBe(200);
-      expect(new URL(page.url()).pathname).toBe("/admin/scoring/thresholds");
-      await expect(
-        page.getByText(/did not pass due diligence/i)
-      ).not.toBeVisible();
-    }
-  );
+  test("/admin/scoring redirects to /admin/scoring/thresholds", async ({ page }) => {
+    await new SignInPage(page).signInAs("admin");
+    const response = await page.goto("/admin/scoring");
+    expect(response?.status()).toBe(200);
+    expect(new URL(page.url()).pathname).toBe("/admin/scoring/thresholds");
+    await expect(
+      page.getByText(/did not pass due diligence/i)
+    ).not.toBeVisible();
+  });
 });
 
 /**
- * Public/unauthenticated endpoints that lack rate limiting today.
- * Failing here means the limit was added — flip the fixme to a regular test.
+ * `/api/address/suggestions` proxies OSM Nominatim. Both gates were added
+ * in the same commit that flipped these fixmes — see "Fixed" in
+ * tests/INVENTORY.md.
  */
-test.describe("public API hardening", () => {
-  test.fixme(
-    "/api/address/suggestions rate-limits aggressive callers",
-    async ({ request }) => {
-      // Hit it 25 times rapid-fire from a single client. The OSM Nominatim
-      // backend has a 1 req/sec policy; AkiliRisk is currently a free proxy
-      // for any internet caller — no auth, no rate limit.
-      const statuses: number[] = [];
-      for (let i = 0; i < 25; i++) {
-        const r = await request.get(
-          `/api/address/suggestions?q=test-${i}-${Date.now()}`
-        );
-        statuses.push(r.status());
-      }
-      // Expectation once fixed: at least some 429s in the tail.
-      expect(statuses.filter((s) => s === 429).length).toBeGreaterThan(0);
+test.describe("address suggestions hardening", () => {
+  test("unauthenticated callers get 401", async ({ request }) => {
+    const r = await request.get(
+      `/api/address/suggestions?q=test-${Date.now()}`
+    );
+    expect(r.status()).toBe(401);
+  });
+
+  test("authenticated callers are rate-limited under sustained load", async ({
+    page,
+    request,
+  }) => {
+    await new SignInPage(page).signInAs("admin");
+    const cookies = (await page.context().cookies())
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+
+    // Limit is 20/min per IP. Send 35 to leave headroom for Vercel's
+    // per-instance limiter fanout (same caveat as the magic-link
+    // rate-limit test in auth-flow-hardening.spec.ts).
+    const codes: number[] = [];
+    for (let i = 0; i < 35; i++) {
+      const r = await request.get(
+        `/api/address/suggestions?q=test-${i}-${Date.now()}`,
+        { headers: { cookie: cookies } }
+      );
+      codes.push(r.status());
     }
-  );
+    const limited = codes.filter((c) => c === 429).length;
+    expect(
+      limited,
+      `expected at least one 429 across 35 authenticated requests, saw ${codes.join(",")}`
+    ).toBeGreaterThan(0);
+  });
 });
