@@ -2,6 +2,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { getAdvisorBrandingBySubdomain } from "@/lib/advisor/subdomain";
+import { mapAdvisorProfileToBrandingData } from "@/lib/client/advisor-branding-profile";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 /**
@@ -25,23 +26,5 @@ export async function getTenantBrandingFromRequestHeaders(): Promise<AdvisorBran
     return null;
   }
 
-  return {
-    brandName: row.brandName?.trim() || null,
-    advisorFirmName: row.brandName?.trim() || null,
-    tagline: row.tagline,
-    primaryColor: row.primaryColor,
-    secondaryColor: row.secondaryColor,
-    accentColor: row.accentColor,
-    logoUrl: row.logoUrl,
-    logoS3Key: row.logoS3Key,
-    logoContentType: null,
-    logoFileSize: null,
-    logoUploadedAt: null,
-    websiteUrl: row.websiteUrl,
-    emailFooterText: row.emailFooterText,
-    supportEmail: row.supportEmail,
-    supportPhone: row.supportPhone,
-    brandingEnabled: row.brandingEnabled,
-    customDomainEnabled: row.customDomainEnabled ?? false,
-  };
+  return mapAdvisorProfileToBrandingData(row);
 }

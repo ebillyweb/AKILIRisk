@@ -73,8 +73,16 @@ const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] =
 ];
 
 function getHeaderConfig(pathname: string): ClientPageHeaderConfig | null {
-  const match = CLIENT_HEADER_CONFIG.find(({ path }) => pathname === path);
+  const match = CLIENT_HEADER_CONFIG.find(
+    ({ path }) => pathname === path || pathname.startsWith(`${path}/`)
+  );
   return match?.config ?? null;
+}
+
+export function getClientPageHeaderConfig(
+  pathname: string
+): ClientPageHeaderConfig | null {
+  return getHeaderConfig(pathname);
 }
 
 export function ClientPageHeader(

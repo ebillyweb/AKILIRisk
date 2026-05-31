@@ -119,6 +119,7 @@ export async function getAdvisorBrandingBySubdomain(subdomain: string) {
     const advisor = await prisma.advisorProfile.findUnique({
       where: { id: advisorData.advisorId },
       select: {
+        firmName: true,
         brandName: true,
         tagline: true,
         primaryColor: true,

@@ -10,8 +10,7 @@ import { RedirectIncompleteIntake } from "@/components/layout/RedirectIncomplete
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
 import { clientPortalBrandingDisplayTitle, clientPortalLogoImgSrc } from "@/lib/client/client-portal-branding";
-import { getAssignedAdvisorBrandingForClient } from "@/lib/client/assigned-advisor-branding";
-import { getTenantBrandingFromRequestHeaders } from "@/lib/client/tenant-portal-branding";
+import { resolveClientPortalBrandingForUser } from "@/lib/client/resolve-client-portal-branding";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { getClientHouseholdProfilesEnabled } from "@/lib/household/profiles-policy";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
@@ -70,18 +69,19 @@ export default async function ProtectedLayout({
   let assessmentUnlockedForClient = false;
   let hideProfilesNav = false;
   let clientAdvisorBranding: Awaited<
-    ReturnType<typeof getAssignedAdvisorBrandingForClient>
+    ReturnType<typeof resolveClientPortalBrandingForUser>
   > = null;
 
   if (role === "USER" && session.user.id) {
-    const [gate, assignmentBranding, tenantBranding, householdProfilesEnabled] =
-      await Promise.all([
+    const [gate, portalBranding, householdProfilesEnabled] = await Promise.all([
       getClientIntakeGateState(session.user.id),
-      getAssignedAdvisorBrandingForClient(session.user.id),
-      getTenantBrandingFromRequestHeaders(),
+      resolveClientPortalBrandingForUser({
+        userId: session.user.id,
+        email: session.user.email ?? "",
+      }),
       getClientHouseholdProfilesEnabled(session.user.id),
     ]);
-    clientAdvisorBranding = assignmentBranding ?? tenantBranding;
+    clientAdvisorBranding = portalBranding;
     restrictNavToIntake = gate.restrictNavToIntake;
     assessmentUnlockedForClient = gate.assessmentUnlocked;
     hideProfilesNav = !householdProfilesEnabled;
