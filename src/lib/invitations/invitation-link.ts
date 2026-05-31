@@ -28,7 +28,9 @@ function buildAdvisorPortalOrigin(canonicalSlug: string): string {
 
 /**
  * Resolves the public origin for invitation signup links.
- * Uses the advisor's verified platform subdomain when white-label is enabled.
+ * Uses the advisor's verified platform subdomain when branding and the
+ * subscription white-label entitlement are active. `customDomainEnabled`
+ * governs bring-your-own-domain routing only — not `*.akilirisk.com` tenants.
  */
 export async function resolveInvitationLinkContext(
   advisorProfileId: string,
@@ -38,7 +40,6 @@ export async function resolveInvitationLinkContext(
     where: { id: advisorProfileId },
     select: {
       brandingEnabled: true,
-      customDomainEnabled: true,
       subdomain: {
         select: {
           subdomain: true,
@@ -53,7 +54,6 @@ export async function resolveInvitationLinkContext(
 
   if (
     !profile?.brandingEnabled ||
-    !profile.customDomainEnabled ||
     !features.customSubdomainEnabled
   ) {
     return { origin: defaultOrigin, usesAdvisorSubdomain: false };

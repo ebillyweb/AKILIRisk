@@ -8,13 +8,20 @@ const prismaSpies = vi.hoisted(() => ({
   inviteCode: {
     findFirst: vi.fn(),
   },
+  user: {
+    findUnique: vi.fn(),
+  },
 }));
 
 const headersMock = vi.hoisted(() => vi.fn());
+const userEmailForDisplayMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
 vi.mock("next/headers", () => ({
   headers: headersMock,
+}));
+vi.mock("@/lib/auth/user-email", () => ({
+  userEmailForDisplay: (...args: unknown[]) => userEmailForDisplayMock(...args),
 }));
 
 import {
@@ -63,8 +70,10 @@ describe("resolveClientPortalBrandingForUser", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     headersMock.mockResolvedValue(new Headers());
+    userEmailForDisplayMock.mockReturnValue("");
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue(null);
     prismaSpies.inviteCode.findFirst.mockResolvedValue(null);
+    prismaSpies.user.findUnique.mockResolvedValue(null);
   });
 
   it("prefers assignment branding and resolves the logo URL", async () => {
@@ -96,7 +105,7 @@ describe("resolveClientPortalBrandingForUser", () => {
     expect(prismaSpies.inviteCode.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          prefillEmail: "invited@example.com",
+          prefillEmail: { equals: "invited@example.com", mode: "insensitive" },
           status: {
             in: [
               InvitationStatus.SENT,
@@ -104,6 +113,33 @@ describe("resolveClientPortalBrandingForUser", () => {
               InvitationStatus.REGISTERED,
             ],
           },
+        }),
+      })
+    );
+  });
+
+  it("loads client email from the database when the session email is missing", async () => {
+    prismaSpies.user.findUnique.mockResolvedValueOnce({
+      emailCiphertext: "cipher-invited@example.com",
+    });
+    userEmailForDisplayMock.mockReturnValueOnce("invited@example.com");
+    prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
+      advisor: brandedAdvisor,
+    });
+
+    const branding = await resolveClientPortalBrandingForUser({
+      userId: "client-1",
+      email: "",
+    });
+
+    expect(branding?.primaryColor).toBe("#112233");
+    expect(prismaSpies.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "client-1" } })
+    );
+    expect(prismaSpies.inviteCode.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          prefillEmail: { equals: "invited@example.com", mode: "insensitive" },
         }),
       })
     );

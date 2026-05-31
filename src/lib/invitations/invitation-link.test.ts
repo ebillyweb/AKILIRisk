@@ -25,7 +25,6 @@ describe("invitation-link", () => {
   it("uses advisor subdomain origin when white-label is enabled and verified", async () => {
     prismaSpies.advisorProfile.findUnique.mockResolvedValue({
       brandingEnabled: true,
-      customDomainEnabled: true,
       subdomain: {
         subdomain: "independent-wealth",
         isActive: true,
@@ -41,10 +40,44 @@ describe("invitation-link", () => {
     expect(ctx.origin).toBe("https://independent-wealth.akilirisk.com");
   });
 
+  it("uses advisor subdomain without customDomainEnabled (platform tenant only)", async () => {
+    prismaSpies.advisorProfile.findUnique.mockResolvedValue({
+      brandingEnabled: true,
+      subdomain: {
+        subdomain: "ebilly",
+        isActive: true,
+        dnsVerified: true,
+      },
+    });
+
+    const ctx = await resolveInvitationLinkContext("adv-1", {
+      customSubdomainEnabled: true,
+    });
+
+    expect(ctx.usesAdvisorSubdomain).toBe(true);
+    expect(ctx.origin).toBe("https://ebilly.akilirisk.com");
+  });
+
+  it("falls back to platform origin when branding is disabled", async () => {
+    prismaSpies.advisorProfile.findUnique.mockResolvedValue({
+      brandingEnabled: false,
+      subdomain: {
+        subdomain: "independent-wealth",
+        isActive: true,
+        dnsVerified: true,
+      },
+    });
+
+    const ctx = await resolveInvitationLinkContext("adv-1", {
+      customSubdomainEnabled: true,
+    });
+
+    expect(ctx.usesAdvisorSubdomain).toBe(false);
+  });
+
   it("falls back to platform origin when subdomain is not verified", async () => {
     prismaSpies.advisorProfile.findUnique.mockResolvedValue({
       brandingEnabled: true,
-      customDomainEnabled: true,
       subdomain: {
         subdomain: "pending-firm",
         isActive: false,

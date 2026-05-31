@@ -1,5 +1,6 @@
 'use client';
 
+import { getPreviewBrandHex } from '@/lib/branding/preview-hex';
 import { clientPortalBrandingDisplayTitle } from '@/lib/client/client-portal-branding';
 import { AdvisorBrandingData } from '@/lib/validation/branding';
 
@@ -208,62 +209,63 @@ export function applyAdvisorTheme(branding: AdvisorBrandingData): void {
 
   clearThemeVariablesFromRoot(root);
 
-  // Apply primary color
-  if (branding.primaryColor) {
-    const primaryHSL = hexToHSL(branding.primaryColor);
-    const primaryForeground = getSafeTextColor(branding.primaryColor);
+  const resolvedHex = getPreviewBrandHex(branding);
+  if (!resolvedHex) return;
 
-    root.style.setProperty(THEME_VARIABLES.ADVISOR_PRIMARY, primaryHSL);
-    root.style.setProperty(THEME_VARIABLES.ADVISOR_PRIMARY_FOREGROUND, hexToHSL(primaryForeground));
+  const primaryColor = resolvedHex.primary;
+  const primaryHSL = hexToHSL(primaryColor);
+  const primaryForeground = getSafeTextColor(primaryColor);
 
-    // Button variants
-    root.style.setProperty(THEME_VARIABLES.BUTTON_PRIMARY, branding.primaryColor);
-    root.style.setProperty(THEME_VARIABLES.BUTTON_PRIMARY_HOVER, darkenColor(branding.primaryColor, 10));
+  root.style.setProperty(THEME_VARIABLES.ADVISOR_PRIMARY, primaryHSL);
+  root.style.setProperty(
+    THEME_VARIABLES.ADVISOR_PRIMARY_FOREGROUND,
+    hexToHSL(primaryForeground)
+  );
+  root.style.setProperty(THEME_VARIABLES.BUTTON_PRIMARY, primaryColor);
+  root.style.setProperty(
+    THEME_VARIABLES.BUTTON_PRIMARY_HOVER,
+    darkenColor(primaryColor, 10)
+  );
+  root.style.setProperty(THEME_VARIABLES.BORDER_ACCENT, primaryColor);
 
-    // Border accent
-    root.style.setProperty(THEME_VARIABLES.BORDER_ACCENT, branding.primaryColor);
+  const primaryCss = `hsl(${primaryHSL})`;
+  const primaryFgCss = `hsl(${hexToHSL(primaryForeground)})`;
+  root.style.setProperty('--primary', primaryCss);
+  root.style.setProperty('--primary-foreground', primaryFgCss);
+  root.style.setProperty('--ring', primaryCss);
+  root.style.setProperty('--sidebar-primary', primaryCss);
+  root.style.setProperty('--sidebar-primary-foreground', primaryFgCss);
 
-    // App-wide tokens (Buttons, links, focus rings, etc.)
-    const primaryCss = `hsl(${primaryHSL})`;
-    const primaryFgCss = `hsl(${hexToHSL(primaryForeground)})`;
-    root.style.setProperty('--primary', primaryCss);
-    root.style.setProperty('--primary-foreground', primaryFgCss);
-    root.style.setProperty('--ring', primaryCss);
-    root.style.setProperty('--sidebar-primary', primaryCss);
-    root.style.setProperty('--sidebar-primary-foreground', primaryFgCss);
-  }
+  const secondaryColor = resolvedHex.secondary;
+  const secondaryHSL = hexToHSL(secondaryColor);
+  const secondaryForeground = getSafeTextColor(secondaryColor);
 
-  // Apply secondary color
-  if (branding.secondaryColor) {
-    const secondaryHSL = hexToHSL(branding.secondaryColor);
-    const secondaryForeground = getSafeTextColor(branding.secondaryColor);
+  root.style.setProperty(THEME_VARIABLES.ADVISOR_SECONDARY, secondaryHSL);
+  root.style.setProperty(
+    THEME_VARIABLES.ADVISOR_SECONDARY_FOREGROUND,
+    hexToHSL(secondaryForeground)
+  );
+  root.style.setProperty(THEME_VARIABLES.HEADER_BACKGROUND, secondaryColor);
+  root.style.setProperty('--secondary', `hsl(${secondaryHSL})`);
+  root.style.setProperty(
+    '--secondary-foreground',
+    `hsl(${hexToHSL(secondaryForeground)})`
+  );
 
-    root.style.setProperty(THEME_VARIABLES.ADVISOR_SECONDARY, secondaryHSL);
-    root.style.setProperty(THEME_VARIABLES.ADVISOR_SECONDARY_FOREGROUND, hexToHSL(secondaryForeground));
+  const accentColor = resolvedHex.accent;
+  const accentHSL = hexToHSL(accentColor);
+  const accentForeground = getSafeTextColor(accentColor);
 
-    // Header background
-    root.style.setProperty(THEME_VARIABLES.HEADER_BACKGROUND, branding.secondaryColor);
-
-    root.style.setProperty('--secondary', `hsl(${secondaryHSL})`);
-    root.style.setProperty('--secondary-foreground', `hsl(${hexToHSL(secondaryForeground)})`);
-  }
-
-  // Apply accent color
-  if (branding.accentColor) {
-    const accentHSL = hexToHSL(branding.accentColor);
-    const accentForeground = getSafeTextColor(branding.accentColor);
-
-    root.style.setProperty(THEME_VARIABLES.ADVISOR_ACCENT, accentHSL);
-    root.style.setProperty(THEME_VARIABLES.ADVISOR_ACCENT_FOREGROUND, hexToHSL(accentForeground));
-
-    // Card accent
-    root.style.setProperty(THEME_VARIABLES.CARD_ACCENT, branding.accentColor);
-
-    root.style.setProperty('--accent', `hsl(${accentHSL})`);
-    root.style.setProperty('--accent-foreground', `hsl(${hexToHSL(accentForeground)})`);
-    root.style.setProperty('--brand', `hsl(${accentHSL})`);
-    root.style.setProperty('--brand-foreground', `hsl(${hexToHSL(accentForeground)})`);
-  }
+  root.style.setProperty(THEME_VARIABLES.ADVISOR_ACCENT, accentHSL);
+  root.style.setProperty(
+    THEME_VARIABLES.ADVISOR_ACCENT_FOREGROUND,
+    hexToHSL(accentForeground)
+  );
+  root.style.setProperty(THEME_VARIABLES.CARD_ACCENT, accentColor);
+  root.style.setProperty('--accent', `hsl(${accentHSL})`);
+  root.style.setProperty('--accent-foreground', `hsl(${hexToHSL(accentForeground)})`);
+  root.style.setProperty('--brand', `hsl(${accentHSL})`);
+  root.style.setProperty('--brand-foreground', `hsl(${hexToHSL(accentForeground)})`);
 
   // Apply logo URL
   if (branding.logoUrl) {

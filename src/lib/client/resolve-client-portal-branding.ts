@@ -1,6 +1,7 @@
 import "server-only";
 
 import { InvitationStatus } from "@prisma/client";
+import { userEmailForDisplay } from "@/lib/auth/user-email";
 import { prisma } from "@/lib/db";
 import { brandedPortalLogoImgSrc } from "@/lib/branding/branded-portal-logo";
 import { getAssignedAdvisorBrandingForClient } from "@/lib/client/assigned-advisor-branding";
@@ -30,6 +31,22 @@ export function withClientPortalLogoSrc(
   return { ...branding, logoUrl: logoSrc };
 }
 
+async function resolveClientEmailForBranding(
+  userId: string,
+  sessionEmail?: string | null
+): Promise<string> {
+  const fromSession = sessionEmail?.trim().toLowerCase() ?? "";
+  if (fromSession) return fromSession;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailCiphertext: true },
+  });
+  if (!user) return "";
+
+  return userEmailForDisplay(user).trim().toLowerCase();
+}
+
 async function getInvitingAdvisorBrandingForEmail(
   clientEmail: string
 ): Promise<AdvisorBrandingData | null> {
@@ -38,7 +55,7 @@ async function getInvitingAdvisorBrandingForEmail(
 
   const invite = await prisma.inviteCode.findFirst({
     where: {
-      prefillEmail: normalizedEmail,
+      prefillEmail: { equals: normalizedEmail, mode: "insensitive" },
       status: { in: INVITING_ADVISOR_STATUSES },
       createdBy: { not: null },
       advisor: { brandingEnabled: true },
@@ -63,8 +80,13 @@ async function getInvitingAdvisorBrandingForEmail(
  */
 export async function resolveClientPortalBrandingForUser(input: {
   userId: string;
-  email: string;
+  email?: string | null;
 }): Promise<AdvisorBrandingData | null> {
+  const clientEmail = await resolveClientEmailForBranding(
+    input.userId,
+    input.email
+  );
+
   const [assignmentBranding, tenantBranding] = await Promise.all([
     getAssignedAdvisorBrandingForClient(input.userId),
     getTenantBrandingFromRequestHeaders(),
@@ -73,7 +95,7 @@ export async function resolveClientPortalBrandingForUser(input: {
   const raw =
     assignmentBranding ??
     tenantBranding ??
-    (await getInvitingAdvisorBrandingForEmail(input.email));
+    (await getInvitingAdvisorBrandingForEmail(clientEmail));
 
   if (!raw) return null;
 
