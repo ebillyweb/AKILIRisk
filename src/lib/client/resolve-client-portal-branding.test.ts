@@ -15,10 +15,18 @@ const prismaSpies = vi.hoisted(() => ({
 
 const headersMock = vi.hoisted(() => vi.fn());
 const userEmailForDisplayMock = vi.hoisted(() => vi.fn());
+const tenantBrandingMock = vi.hoisted(() => vi.fn(async () => null as ReturnType<typeof mapAdvisorProfileToBrandingData> | null));
+const isTenantBrandedRequestMock = vi.hoisted(() => vi.fn(async () => false));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
 vi.mock("next/headers", () => ({
   headers: headersMock,
+}));
+vi.mock("@/lib/client/branded-portal-requirements", () => ({
+  isTenantBrandedRequest: isTenantBrandedRequestMock,
+}));
+vi.mock("@/lib/client/tenant-portal-branding", () => ({
+  getTenantBrandingFromRequestHeaders: tenantBrandingMock,
 }));
 vi.mock("@/lib/auth/user-email", () => ({
   userEmailForDisplay: (...args: unknown[]) => userEmailForDisplayMock(...args),
@@ -70,6 +78,8 @@ describe("resolveClientPortalBrandingForUser", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     headersMock.mockResolvedValue(new Headers());
+    isTenantBrandedRequestMock.mockResolvedValue(false);
+    tenantBrandingMock.mockResolvedValue(null);
     userEmailForDisplayMock.mockReturnValue("");
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue(null);
     prismaSpies.inviteCode.findFirst.mockResolvedValue(null);
@@ -88,7 +98,32 @@ describe("resolveClientPortalBrandingForUser", () => {
 
     expect(branding?.advisorFirmName).toBe("eBilly's WebSolutions");
     expect(branding?.logoUrl).toBe("/api/client/advisor-logo");
-    expect(prismaSpies.inviteCode.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("prefers tenant branding on tenant host before assignment", async () => {
+    isTenantBrandedRequestMock.mockResolvedValueOnce(true);
+
+    const tenantAdvisor = {
+      ...brandedAdvisor,
+      brandName: "Tenant Brand",
+      primaryColor: "#abcdef",
+    };
+
+    tenantBrandingMock.mockResolvedValueOnce(
+      mapAdvisorProfileToBrandingData(tenantAdvisor)
+    );
+    prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValueOnce({
+      advisor: brandedAdvisor,
+    });
+    prismaSpies.inviteCode.findFirst.mockResolvedValueOnce(null);
+
+    const branding = await resolveClientPortalBrandingForUser({
+      userId: "client-1",
+      email: "client@example.com",
+    });
+
+    expect(branding?.primaryColor).toBe("#abcdef");
+    expect(branding?.logoUrl).toBe("/api/branded/advisor-logo");
   });
 
   it("falls back to the inviting advisor when no assignment exists yet", async () => {

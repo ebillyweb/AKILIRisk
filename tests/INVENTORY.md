@@ -460,6 +460,19 @@ _None outstanding. See "Fixed" below._
   no flow breaks. Regression: `admin-route-coverage.spec.ts` —
   fixme replaced with two live tests (401 unauth + at-least-one-429
   under sustained authenticated load).
+- **Sweep — seven more advisor API routes returning 500-on-unauth**
+  (95295db). Same root cause as cbb4668: `requireAdvisorRole()` thrown
+  inside a try-block whose catch returned a generic 500 for every error
+  including auth. Promoted the inline `isAuthError` helper from
+  `/api/advisor/branding` to a shared `isAdvisorAuthError(e)` export in
+  `src/lib/advisor/auth.ts`; routes patched: DELETE
+  `/api/advisor/branding/logo`, POST `/api/advisor/branding/logo/direct`,
+  POST `/api/advisor/branding/logo/confirm`, POST
+  `/api/advisor/branding/logo/upload-url`, GET
+  `/api/advisor/branding/logo/view`, POST `/api/advisor/subdomain/check`,
+  POST + DELETE `/api/advisor/subdomain/claim`. Regression:
+  `advisor-api-authz-sweep.spec.ts` — 8 unauth probes, one per
+  (verb, path).
 
 ## Process
 

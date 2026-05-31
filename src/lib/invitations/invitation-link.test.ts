@@ -104,3 +104,68 @@ describe("invitation-link", () => {
     );
   });
 });
+
+describe("resolveInvitationLinkContextForSend", () => {
+  const originalDomain = process.env.PRODUCTION_DOMAIN;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.PRODUCTION_DOMAIN = "akilirisk.com";
+  });
+
+  afterEach(() => {
+    process.env.PRODUCTION_DOMAIN = originalDomain;
+  });
+
+  it("returns tenant origin when branding is enabled and subdomain is ready", async () => {
+    prismaSpies.advisorProfile.findUnique.mockResolvedValue({
+      brandingEnabled: true,
+      subdomain: {
+        subdomain: "independent-wealth",
+        isActive: true,
+        dnsVerified: true,
+      },
+    });
+
+    const { resolveInvitationLinkContextForSend } = await import("./invitation-link");
+    const ctx = await resolveInvitationLinkContextForSend("adv-1", {
+      customSubdomainEnabled: true,
+    });
+
+    expect(ctx.usesAdvisorSubdomain).toBe(true);
+  });
+
+  it("throws when branding is enabled but tenant link is not ready", async () => {
+    prismaSpies.advisorProfile.findUnique.mockResolvedValue({
+      brandingEnabled: true,
+      subdomain: {
+        subdomain: "pending-firm",
+        isActive: false,
+        dnsVerified: false,
+      },
+    });
+
+    const { resolveInvitationLinkContextForSend, BrandedInvitationLinkNotReadyError } =
+      await import("./invitation-link");
+
+    await expect(
+      resolveInvitationLinkContextForSend("adv-1", {
+        customSubdomainEnabled: true,
+      })
+    ).rejects.toBeInstanceOf(BrandedInvitationLinkNotReadyError);
+  });
+
+  it("allows platform origin when branding is disabled", async () => {
+    prismaSpies.advisorProfile.findUnique.mockResolvedValue({
+      brandingEnabled: false,
+      subdomain: null,
+    });
+
+    const { resolveInvitationLinkContextForSend } = await import("./invitation-link");
+    const ctx = await resolveInvitationLinkContextForSend("adv-1", {
+      customSubdomainEnabled: true,
+    });
+
+    expect(ctx.usesAdvisorSubdomain).toBe(false);
+  });
+});

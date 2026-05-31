@@ -11,6 +11,7 @@ import {
   mapAdvisorProfileToBrandingData,
 } from "@/lib/client/advisor-branding-profile";
 import { getTenantBrandingFromRequestHeaders } from "@/lib/client/tenant-portal-branding";
+import { isTenantBrandedRequest } from "@/lib/client/branded-portal-requirements";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 const INVITING_ADVISOR_STATUSES: InvitationStatus[] = [
@@ -73,6 +74,24 @@ async function getInvitingAdvisorBrandingForEmail(
   return mapAdvisorProfileToBrandingData(advisor);
 }
 
+/** Branding for a specific invite row (signup page on platform host). */
+export async function getInvitingAdvisorBrandingForInviteCode(
+  inviteCodeId: string
+): Promise<AdvisorBrandingData | null> {
+  const invite = await prisma.inviteCode.findUnique({
+    where: { id: inviteCodeId },
+    select: {
+      advisor: {
+        select: ADVISOR_BRANDING_PROFILE_SELECT,
+      },
+    },
+  });
+
+  const advisor = invite?.advisor;
+  if (!advisor?.brandingEnabled) return null;
+  return mapAdvisorProfileToBrandingData(advisor);
+}
+
 /**
  * Resolves advisor branding for authenticated client routes (dashboard, intake,
  * assessment). Prefers active assignment, then tenant host headers, then the
@@ -87,18 +106,20 @@ export async function resolveClientPortalBrandingForUser(input: {
     input.email
   );
 
-  const [assignmentBranding, tenantBranding] = await Promise.all([
-    getAssignedAdvisorBrandingForClient(input.userId),
-    getTenantBrandingFromRequestHeaders(),
-  ]);
+  const [assignmentBranding, tenantBranding, onTenantHost, inviteBranding] =
+    await Promise.all([
+      getAssignedAdvisorBrandingForClient(input.userId),
+      getTenantBrandingFromRequestHeaders(),
+      isTenantBrandedRequest(),
+      getInvitingAdvisorBrandingForEmail(clientEmail),
+    ]);
 
-  const raw =
-    assignmentBranding ??
-    tenantBranding ??
-    (await getInvitingAdvisorBrandingForEmail(clientEmail));
+  const raw = onTenantHost
+    ? (tenantBranding ?? assignmentBranding ?? inviteBranding)
+    : (assignmentBranding ?? tenantBranding ?? inviteBranding);
 
   if (!raw) return null;
 
-  const preferBrandedLogoApi = !assignmentBranding && !!tenantBranding;
+  const preferBrandedLogoApi = onTenantHost && !!tenantBranding;
   return withClientPortalLogoSrc(raw, preferBrandedLogoApi);
 }

@@ -6,7 +6,7 @@ import { decryptUserEmail } from "@/lib/auth/user-email";
 import { createInvitationToken, INVITATION_TTL_SEC } from "@/lib/invite";
 import {
   buildInvitationSignupUrl,
-  resolveInvitationLinkContext,
+  resolveInvitationLinkContextForSend,
 } from "@/lib/invitations/invitation-link";
 import type { SubscriptionFeatures } from "@/lib/validation/branding";
 import {
@@ -138,7 +138,7 @@ async function invitationSignupUrl(
   intakeWaived: boolean,
   features: Pick<SubscriptionFeatures, "customSubdomainEnabled">
 ): Promise<string> {
-  const linkContext = await resolveInvitationLinkContext(advisorId, features);
+  const linkContext = await resolveInvitationLinkContextForSend(advisorId, features);
   const token = createInvitationToken(inviteCodeId);
   const callback = intakeWaived ? "/assessment" : "/intake";
   return buildInvitationSignupUrl(linkContext.origin, token, callback);

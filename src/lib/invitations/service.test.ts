@@ -44,7 +44,7 @@ vi.mock("@/lib/invite", async (importOriginal) => {
   };
 });
 vi.mock("@/lib/invitations/invitation-link", () => ({
-  resolveInvitationLinkContext: vi.fn(async () => ({
+  resolveInvitationLinkContextForSend: vi.fn(async () => ({
     origin: "https://app.akilirisk.com",
     usesAdvisorSubdomain: false,
   })),

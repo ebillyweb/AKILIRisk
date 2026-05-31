@@ -9,8 +9,10 @@ import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalB
 import { RedirectIncompleteIntake } from "@/components/layout/RedirectIncompleteIntake";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
 import { clientPortalBrandingDisplayTitle, clientPortalLogoImgSrc } from "@/lib/client/client-portal-branding";
 import { resolveClientPortalBrandingForUser } from "@/lib/client/resolve-client-portal-branding";
+import { clientExpectsBrandedPortal, getTenantSubdomainFromHeaders } from "@/lib/client/branded-portal-requirements";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { getClientHouseholdProfilesEnabled } from "@/lib/household/profiles-policy";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
@@ -29,6 +31,8 @@ import { redirectIfPendingConsent } from "@/lib/advisor/require-consent-resolved
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
 const BRANDED_CLIENT_HEADER_KICKER = "Brought to you by AKILI Risk Intelligence";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProtectedLayout({
   children,
@@ -71,20 +75,40 @@ export default async function ProtectedLayout({
   let clientAdvisorBranding: Awaited<
     ReturnType<typeof resolveClientPortalBrandingForUser>
   > = null;
+  let clientPortalSubdomain: string | null = null;
+  let requiresBrandedPortal = false;
 
   if (role === "USER" && session.user.id) {
-    const [gate, portalBranding, householdProfilesEnabled] = await Promise.all([
-      getClientIntakeGateState(session.user.id),
-      resolveClientPortalBrandingForUser({
-        userId: session.user.id,
-        email: session.user.email ?? "",
-      }),
-      getClientHouseholdProfilesEnabled(session.user.id),
-    ]);
+    const [gate, portalBranding, householdProfilesEnabled, expectsBranded, tenantSubdomain] =
+      await Promise.all([
+        getClientIntakeGateState(session.user.id),
+        resolveClientPortalBrandingForUser({
+          userId: session.user.id,
+          email: session.user.email ?? "",
+        }),
+        getClientHouseholdProfilesEnabled(session.user.id),
+        clientExpectsBrandedPortal({
+          userId: session.user.id,
+          email: session.user.email ?? "",
+        }),
+        getTenantSubdomainFromHeaders(),
+      ]);
     clientAdvisorBranding = portalBranding;
+    requiresBrandedPortal = expectsBranded;
+    clientPortalSubdomain = tenantSubdomain;
     restrictNavToIntake = gate.restrictNavToIntake;
     assessmentUnlockedForClient = gate.assessmentUnlocked;
     hideProfilesNav = !householdProfilesEnabled;
+  }
+
+  if (role === "USER" && requiresBrandedPortal && !clientAdvisorBranding) {
+    return (
+      <div className="min-h-screen py-3 sm:py-6">
+        <div className="page-shell">
+          <BrandingUnavailable audience="client" />
+        </div>
+      </div>
+    );
   }
 
   const brandTitle = clientAdvisorBranding
@@ -306,7 +330,10 @@ export default async function ProtectedLayout({
 
   if (clientAdvisorBranding) {
     return (
-      <BrandingProvider branding={clientAdvisorBranding} subdomain={null}>
+      <BrandingProvider
+        branding={clientAdvisorBranding}
+        subdomain={clientPortalSubdomain}
+      >
         {shell}
       </BrandingProvider>
     );

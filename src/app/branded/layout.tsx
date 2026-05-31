@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getAdvisorBrandingBySubdomain } from '@/lib/advisor/subdomain';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
+import { BrandingUnavailable } from '@/components/branding/BrandingUnavailable';
 import { Toaster } from 'react-hot-toast';
 import '@/app/globals.css';
 import { brandedPortalLogoImgSrc } from '@/lib/branding/branded-portal-logo';
@@ -54,16 +55,7 @@ export default async function BrandedLayout({
     return (
       <html lang="en">
         <body className="min-h-screen bg-background font-sans antialiased">
-          <div className="flex min-h-screen items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900">
-                Branding Not Available
-              </h1>
-              <p className="mt-2 text-gray-600">
-                The advisor branding for this subdomain is not configured.
-              </p>
-            </div>
-          </div>
+          <BrandingUnavailable audience="client" />
         </body>
       </html>
     );

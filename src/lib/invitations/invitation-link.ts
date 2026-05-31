@@ -16,6 +16,18 @@ export type InvitationLinkContext = {
   usesAdvisorSubdomain: boolean;
 };
 
+/** Thrown when branding is enabled but a tenant signup URL cannot be built. */
+export class BrandedInvitationLinkNotReadyError extends Error {
+  readonly code = "BRANDED_INVITE_LINK_NOT_READY" as const;
+
+  constructor(
+    message = "Your white-label subdomain is not ready. Claim and verify your subdomain in Settings before sending branded invitations."
+  ) {
+    super(message);
+    this.name = "BrandedInvitationLinkNotReadyError";
+  }
+}
+
 function buildAdvisorPortalOrigin(canonicalSlug: string): string {
   const domain = getProductionDomain();
   if (!domain) {
@@ -68,6 +80,31 @@ export async function resolveInvitationLinkContext(
     origin: buildAdvisorPortalOrigin(row.subdomain),
     usesAdvisorSubdomain: true,
   };
+}
+
+/**
+ * Resolves invitation link origin for send/resend. When advisor branding is
+ * enabled, fails closed instead of falling back to the platform host.
+ */
+export async function resolveInvitationLinkContextForSend(
+  advisorProfileId: string,
+  features: Pick<SubscriptionFeatures, "customSubdomainEnabled">
+): Promise<InvitationLinkContext> {
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { id: advisorProfileId },
+    select: { brandingEnabled: true },
+  });
+
+  const linkContext = await resolveInvitationLinkContext(
+    advisorProfileId,
+    features
+  );
+
+  if (profile?.brandingEnabled && !linkContext.usesAdvisorSubdomain) {
+    throw new BrandedInvitationLinkNotReadyError();
+  }
+
+  return linkContext;
 }
 
 export function buildInvitationSignupUrl(
