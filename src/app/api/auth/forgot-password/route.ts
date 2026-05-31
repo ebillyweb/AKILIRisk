@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
+import { issuePasswordResetToken } from "@/lib/auth/password-reset";
+import { recordTestPasswordResetToken } from "@/lib/auth/password-reset-test-store";
+import { isTestAuthEnabled } from "@/lib/auth/test-auth-enabled";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import crypto from "crypto";
 
@@ -170,33 +172,17 @@ export async function POST(req: NextRequest) {
  *  but never propagate to the client. */
 async function issueResetEmail(email: string, baseUrl: string): Promise<void> {
   try {
-    // Delete any existing unexpired tokens for this email
-    await prisma.verificationToken.deleteMany({
-      where: {
-        identifier: email,
-        expires: { gt: new Date() },
-      },
-    });
+    const issued = await issuePasswordResetToken(email);
+    const resetUrl = `${baseUrl}/reset-password?token=${issued.rawToken}&email=${encodeURIComponent(email)}`;
 
-    // Generate reset token (raw token sent to user)
-    const rawToken = crypto.randomBytes(32).toString("hex");
-    // Hash before persisting so a DB read never exposes a usable token.
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(rawToken)
-      .digest("hex");
+    if (isTestAuthEnabled()) {
+      recordTestPasswordResetToken(email, {
+        rawToken: issued.rawToken,
+        resetUrl,
+        expires: issued.expires,
+      });
+    }
 
-    // 15-minute expiry
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-    await prisma.verificationToken.create({
-      data: {
-        identifier: email,
-        token: hashedToken,
-        expires: expiresAt,
-      },
-    });
-
-    const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
     await sendPasswordResetEmail(email, resetUrl);
   } catch (e) {
     console.error("Background reset-email task failed:", e);

@@ -1,5 +1,6 @@
 /**
- * Gate for test-only /api/test/* routes (magic-link issue, invitation issue).
+ * Gate for test-only /api/test/* routes (magic-link issue, invitation issue,
+ * password-reset latest).
  *
  * Requires ENABLE_TEST_AUTH=1. Blocks Vercel Production. Allows local dev and
  * Vercel Preview/Development (Next.js runs with NODE_ENV=production there).
