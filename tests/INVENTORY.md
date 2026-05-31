@@ -122,6 +122,7 @@ Re-run locally: `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2
 | `tests/smoke/client-invitation-onboarding.spec.ts` | resend shows shareable link when email delivery fails | Epic 5.1 | Implemented |
 | `tests/smoke/client-portal-branding.spec.ts` | branded client sees advisor branding signals on /dashboard | TBD | Implemented |
 | `tests/smoke/default-branding-fallback.spec.ts` | client with brandingEnabled=false advisor sees the platform default | TBD | Implemented |
+| `tests/smoke/advisor-branding-edit.spec.ts` | advisor saves tagline/colors; client portal + branding audit; negative validation | TBD | Implemented |
 | `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | advisor approves submitted intake and client unlocks assessment | US-11 | Implemented |
 | `tests/smoke/epic-5.2-advisor-intake-approval.spec.ts` | advisor rejects submitted intake | US-11 | Implemented |
 | `tests/smoke/epic-5.2-assessment-progress.spec.ts` | governance question shows four maturity levels and saves selection | US-13 / US-14 | Implemented |
@@ -341,8 +342,8 @@ Not Implemented (feature exists, not yet covered):
 - Default Akili branding when client has no active advisor assignment (different code path - findFirst returns null)
 - ~~`/api/client/advisor-logo` returns advisor's actual S3 logo bytes~~ *(covered by `advisor-logo-endpoint.spec.ts`)*
 - ~~`/api/client/advisor-logo` blocks non-USER and unauthenticated callers~~ *(covered by `advisor-logo-endpoint.spec.ts`)*
-- Advisor branding edit flow (admin or advisor sets `brandName`/colors/logo, change is reflected in client portal)
-- Advisor branding audit log entries created on update (`AdvisorBrandingAuditLog`)
+- ~~Advisor branding edit flow (tagline/colors at `/advisor/settings`, reflected in client portal)~~ *(covered by `advisor-branding-edit.spec.ts`; `firmName`/`brandName` are admin-managed read-only on that page)*
+- ~~Advisor branding audit log entries created on update (`AdvisorBrandingAuditLog`)~~ *(covered by `advisor-branding-edit.spec.ts`)*
 - ~~`subscriptionQualifiesForPortalEnablement` gate: no-sub advisor redirected to `/advisor/billing`~~ *(covered by `advisor-billing-gate.spec.ts`)*
 - ~~Subscription edge states (grace expiry, 30-day paid signup, qualifying Stripe)~~ *(covered by `advisor-portal-subscription.test.ts`)*
 - ~~Subdomain change rate limit (3 / 24h)~~ *(covered by `rate-limit.test.ts`)*
