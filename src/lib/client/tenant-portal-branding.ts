@@ -26,5 +26,6 @@ export async function getTenantBrandingFromRequestHeaders(): Promise<AdvisorBran
     return null;
   }
 
-  return mapAdvisorProfileToBrandingData(row);
+  const { user: _user, ...profile } = row;
+  return mapAdvisorProfileToBrandingData(profile);
 }

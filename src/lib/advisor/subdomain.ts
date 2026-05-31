@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { ADVISOR_BRANDING_PROFILE_SELECT } from '@/lib/client/advisor-branding-profile';
 import {
   getTenantSubdomainSuffix,
   isPlatformSubdomainLabel,
@@ -119,31 +120,18 @@ export async function getAdvisorBrandingBySubdomain(subdomain: string) {
     const advisor = await prisma.advisorProfile.findUnique({
       where: { id: advisorData.advisorId },
       select: {
-        firmName: true,
-        brandName: true,
-        tagline: true,
-        primaryColor: true,
-        secondaryColor: true,
-        accentColor: true,
-        logoUrl: true,
-        logoS3Key: true,
-        websiteUrl: true,
-        emailFooterText: true,
-        supportEmail: true,
-        supportPhone: true,
-        brandingEnabled: true,
-        customDomainEnabled: true,
+        ...ADVISOR_BRANDING_PROFILE_SELECT,
         user: {
           select: {
             subscription: {
               select: {
                 tier: true,
                 status: true,
-              }
-            }
-          }
-        }
-      }
+              },
+            },
+          },
+        },
+      },
     });
 
     return advisor;
