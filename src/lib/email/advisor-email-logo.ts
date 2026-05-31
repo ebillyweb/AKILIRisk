@@ -4,6 +4,7 @@ import {
   looksLikeAdvisorBrandingS3Url,
   resolveBrandingLogoS3Key,
 } from "@/lib/branding/advisor-logo-display";
+import type { ResendEmailAttachment, ResendEmailPayload } from "@/lib/email/resend-payload";
 import { getBrandingLogoObjectBytes } from "@/lib/s3/branding-uploads";
 
 /** CID referenced in advisor-branded invitation HTML (`<img src="cid:…">`). */
@@ -14,7 +15,7 @@ export type AdvisorEmailLogoInput = {
   logoUrl?: string | null;
 };
 
-export type AdvisorEmailLogoAttachment = {
+export type AdvisorEmailLogoAttachment = ResendEmailAttachment & {
   content: string;
   filename: string;
   contentId: string;
@@ -83,12 +84,13 @@ export async function resolveAdvisorEmailLogo(
   return null;
 }
 
-export function appendAdvisorLogoAttachment<
-  T extends { attachments?: Array<Record<string, unknown>> },
->(payload: T, attachment: AdvisorEmailLogoAttachment | null): T {
+export function appendAdvisorLogoAttachment<T extends ResendEmailPayload>(
+  payload: T,
+  attachment: AdvisorEmailLogoAttachment | null
+): T {
   if (!attachment) return payload;
 
-  const attachments = payload.attachments ?? [];
+  const attachments: ResendEmailAttachment[] = [...(payload.attachments ?? [])];
   if (attachments.some((a) => a.contentId === ADVISOR_EMAIL_LOGO_CID)) {
     return payload;
   }

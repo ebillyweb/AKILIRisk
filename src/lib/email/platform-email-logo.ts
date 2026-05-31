@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import type { ResendEmailAttachment, ResendEmailPayload } from "@/lib/email/resend-payload";
+
 /** CID referenced in platform email HTML (`<img src="cid:…">`). */
 export const PLATFORM_EMAIL_LOGO_CID = "platform-akili-logo";
 
@@ -37,16 +39,13 @@ export function getPlatformEmailLogoAttachment():
   };
 }
 
-type ResendSendPayload = {
-  html?: string;
-  attachments?: Array<Record<string, unknown>>;
-};
-
 /**
  * When HTML references the platform logo CID, attach the PNG so clients
  * (including Gmail) render it without fetching a public URL.
  */
-export function withPlatformLogoAttachment<T extends ResendSendPayload>(payload: T): T {
+export function withPlatformLogoAttachment<T extends ResendEmailPayload>(
+  payload: T
+): T {
   const cidRef = `cid:${PLATFORM_EMAIL_LOGO_CID}`;
   if (!payload.html?.includes(cidRef)) {
     return payload;
@@ -55,7 +54,7 @@ export function withPlatformLogoAttachment<T extends ResendSendPayload>(payload:
   const logo = getPlatformEmailLogoAttachment();
   if (!logo) return payload;
 
-  const attachments = payload.attachments ?? [];
+  const attachments: ResendEmailAttachment[] = [...(payload.attachments ?? [])];
   if (attachments.some((a) => a.contentId === PLATFORM_EMAIL_LOGO_CID)) {
     return payload;
   }
