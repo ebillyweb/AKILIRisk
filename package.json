@@ -22,6 +22,7 @@
     "test:e2e:report": "playwright show-report",
     "seed:assessment-bank": "npm run seed:pillar-ddl",
     "seed:pillar-ddl": "npx tsx scripts/seed-pillar-ddl-sql.ts",
+    "seed:risk-signals-fixtures": "node scripts/seed-risk-signals-fixtures.js",
     "import:reputational-social": "npx tsx scripts/import-reputational-social-spreadsheet.ts",
     "db:fix-cyber-migration": "bash scripts/fix-cybersecurity-migration-failure.sh",
     "db:fix-enhanced-migration": "bash scripts/fix-failed-enhanced-migration.sh",

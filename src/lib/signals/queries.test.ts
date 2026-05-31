@@ -105,6 +105,37 @@ describe("getAdvisorSignalFeed", () => {
     expect(Math.abs(sinceNotif.getTime() - expected.getTime())).toBeLessThan(5_000);
   });
 
+  it("scopes risk signal queries to the requesting advisor profile", async () => {
+    await getAdvisorSignalFeed("adv-tenant-a");
+    expect(findManySignals.mock.calls[0][0].where.advisorId).toBe("adv-tenant-a");
+    await getAdvisorSignalFeed("adv-tenant-b");
+    expect(findManySignals.mock.calls[1][0].where.advisorId).toBe("adv-tenant-b");
+  });
+
+  it("does not return another advisor's risk rows when the DB is scoped per advisor", async () => {
+    findAssignments.mockResolvedValue([{ clientId: "client-a" }]);
+    findManySignals.mockResolvedValue([
+      {
+        id: "sig-a",
+        advisorId: "adv-tenant-a",
+        clientId: "client-a",
+        source: "INTERNAL_ASSESSMENT",
+        type: "PILLAR_CRITICAL",
+        severity: "critical",
+        title: "Tenant A signal",
+        message: "...",
+        payload: { assessmentId: "asmt-1", href: "/advisor/intelligence/client-a" },
+        readAt: null,
+        createdAt: new Date("2026-05-20T12:00:00Z"),
+        client: client("Client A", "client-a"),
+      },
+    ]);
+
+    const result = await getAdvisorSignalFeed("adv-tenant-a");
+    expect(result.items.map((i) => i.id)).toEqual(["sig-a"]);
+    expect(findManySignals.mock.calls[0][0].where.advisorId).toBe("adv-tenant-a");
+  });
+
   it("applies the default Critical+Moderate severity filter to risk signals", async () => {
     await getAdvisorSignalFeed("adv-1");
     const call = findManySignals.mock.calls[0][0];

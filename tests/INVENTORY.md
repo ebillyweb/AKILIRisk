@@ -164,6 +164,9 @@ Re-run locally: `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | non-admin users cannot reach super-admin threshold settings | Epic 5.5 | Implemented |
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | super admin can open risk signals dashboard | Epic 5.5 | Implemented |
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | platform admin cannot open super-admin risk signals | Epic 5.5 | Implemented |
+| `tests/smoke/risk-signals-data.spec.ts` | admin tenant exposure rows match fixture counts per advisor | Epic 5.5 | Implemented |
+| `tests/smoke/risk-signals-data.spec.ts` | advisor A signal feed shows only A fixture signals (90-day window) | Epic 5.4 | Implemented |
+| `tests/smoke/risk-signals-data.spec.ts` | advisor B signal feed shows only B fixture signals (90-day window) | Epic 5.4 | Implemented |
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | super admin settings shows advisor feature flag controls | Epic 5.5 | Implemented |
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | toggling a feature flag round-trips through the DB | Epic 5.5 | Implemented |
 | `tests/smoke/epic-5.5-platform-admin.spec.ts` | analytics dashboard loads aggregate view | Epic 5.5 | Implemented |

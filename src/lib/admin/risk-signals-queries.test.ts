@@ -148,6 +148,68 @@ describe("getPlatformRiskSignals", () => {
     expect(result.topTenantsByRisk[0].familiesWithAssessment).toBe(2);
     expect(result.topTenantsByRisk[0].email).toBe("email:adv-A");
   });
+
+  it("does not attribute a client assigned only to advisor B in advisor A tenant stats", async () => {
+    loadLatestPillarScoresByClient.mockResolvedValue([
+      { userId: "c-a", pillar: "governance", score: 2, riskLevel: "CRITICAL" },
+      { userId: "c-b", pillar: "governance", score: 2.5, riskLevel: "CRITICAL" },
+    ]);
+    db.assignments.push(
+      { advisorId: "adv-A", clientId: "c-a", status: "ACTIVE" },
+      { advisorId: "adv-B", clientId: "c-b", status: "ACTIVE" }
+    );
+    db.advisorProfiles.push(
+      {
+        id: "adv-A",
+        userId: "user-A",
+        firmName: "Firm A",
+        user: { emailCiphertext: "adv-A" },
+      },
+      {
+        id: "adv-B",
+        userId: "user-B",
+        firmName: "Firm B",
+        user: { emailCiphertext: "adv-B" },
+      }
+    );
+
+    const result = await getPlatformRiskSignals();
+    const rowA = result.topTenantsByRisk.find((r) => r.advisorProfileId === "adv-A");
+    const rowB = result.topTenantsByRisk.find((r) => r.advisorProfileId === "adv-B");
+
+    expect(rowA).toMatchObject({
+      familiesWithAssessment: 1,
+      familiesAtRisk: 1,
+      criticalIndicators: 1,
+    });
+    expect(rowB).toMatchObject({
+      familiesWithAssessment: 1,
+      familiesAtRisk: 1,
+      criticalIndicators: 1,
+    });
+  });
+
+  it("ignores inactive assignments when building tenant exposure", async () => {
+    loadLatestPillarScoresByClient.mockResolvedValue([
+      { userId: "c1", pillar: "governance", score: 2, riskLevel: "CRITICAL" },
+    ]);
+    db.assignments.push(
+      { advisorId: "adv-A", clientId: "c1", status: "INACTIVE" },
+      { advisorId: "adv-B", clientId: "c1", status: "ACTIVE" }
+    );
+    db.advisorProfiles.push({
+      id: "adv-B",
+      userId: "user-B",
+      firmName: "Firm B",
+      user: { emailCiphertext: "adv-B" },
+    });
+
+    const result = await getPlatformRiskSignals();
+    expect(result.topTenantsByRisk.map((r) => r.advisorProfileId)).toEqual([
+      "adv-B",
+    ]);
+    expect(result.topTenantsByRisk[0].familiesWithAssessment).toBe(1);
+  });
 });
 
 describe("PII invariant (risk signals)", () => {
