@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma, ReportStatus } from "@prisma/client";
 
-import { requireAdminRole } from "@/lib/admin/auth";
+import { getAuditAdminActorOrNull } from "@/lib/audit/admin-gate";
 import { prisma } from "@/lib/db";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 
@@ -38,9 +38,16 @@ function fileDate(raw: Date): string {
 }
 
 export async function GET(request: Request) {
-  try {
-    await requireAdminRole();
+  // Auth check runs OUTSIDE the try/catch so a missing/non-admin actor
+  // returns the existence-leak 404 used by /api/admin/exports,
+  // /api/admin/audit-log/export, and /api/admin/control-center, instead of
+  // being captured by the catch handler below and bounced as a 500.
+  const actor = await getAuditAdminActorOrNull();
+  if (!actor) {
+    return new NextResponse(null, { status: 404 });
+  }
 
+  try {
     const url = new URL(request.url);
     const status = toStatusFilter(url.searchParams.get("status"));
     const query = (url.searchParams.get("q") ?? "").trim();

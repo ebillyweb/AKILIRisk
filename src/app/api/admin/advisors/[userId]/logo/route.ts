@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminRole } from "@/lib/admin/auth";
+import { getAuditAdminActorOrNull } from "@/lib/audit/admin-gate";
 import { prisma } from "@/lib/db";
 import { getBrandingLogoObjectBytes } from "@/lib/s3/branding-uploads";
 
@@ -11,8 +11,15 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ userId: string }> }
 ) {
+  // Auth check runs OUTSIDE the try/catch so a missing/non-admin actor
+  // returns 404 (existence-leak posture) instead of being caught by the
+  // generic 500 handler below.
+  const actor = await getAuditAdminActorOrNull();
+  if (!actor) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   try {
-    await requireAdminRole();
     const { userId } = await context.params;
 
     const advisor = await prisma.advisorProfile.findUnique({
