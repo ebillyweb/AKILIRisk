@@ -3,6 +3,8 @@
  * brandingEnabled and subscription entitlements.
  */
 
+import { resolveBrandingLogoS3Key } from "@/lib/branding/advisor-logo-display";
+
 export const PLATFORM_INVITATION_CTA_COLOR = "#18181b";
 
 export type InvitationEmailTheme = {
@@ -10,6 +12,8 @@ export type InvitationEmailTheme = {
   /** When false, logo must not appear even if profile still has logoUrl. */
   showAdvisorLogo: boolean;
   logoUrl?: string;
+  /** Resolved at send time (CID for private S3 logos, HTTPS for public URLs). */
+  logoEmailSrc?: string;
   /** CTA button + accent border; platform default when branding off or no advanced color. */
   accentColor: string;
   /** Short line when branding is off. */
@@ -20,6 +24,7 @@ export type InvitationEmailThemeInput = {
   brandingEnabled: boolean;
   advancedBrandingEnabled: boolean;
   logoUrl?: string | null;
+  logoS3Key?: string | null;
   primaryColor?: string | null;
 };
 
@@ -51,6 +56,12 @@ export function resolveInvitationEmailTheme(
   const logoUrl = isValidHttpsLogoUrl(input.logoUrl)
     ? input.logoUrl!.trim()
     : undefined;
+  const hasStoredLogo = Boolean(
+    resolveBrandingLogoS3Key({
+      logoS3Key: input.logoS3Key,
+      logoUrl: input.logoUrl,
+    }) || logoUrl
+  );
 
   const accentColor =
     input.advancedBrandingEnabled &&
@@ -60,7 +71,7 @@ export function resolveInvitationEmailTheme(
 
   return {
     brandingEnabled: true,
-    showAdvisorLogo: Boolean(logoUrl),
+    showAdvisorLogo: hasStoredLogo,
     logoUrl,
     accentColor,
     showPlatformAttribution: false,

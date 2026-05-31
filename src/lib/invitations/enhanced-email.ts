@@ -3,6 +3,11 @@ import "server-only";
 import { Resend } from "resend";
 import { AdvisorBrandingData } from '@/lib/validation/branding';
 import { escapeHtml } from '@/lib/escape-html';
+import { looksLikeAdvisorBrandingS3Url } from '@/lib/branding/advisor-logo-display';
+import {
+  appendAdvisorLogoAttachment,
+  type AdvisorEmailLogoAttachment,
+} from '@/lib/email/advisor-email-logo';
 import type { SendEmailResult } from '@/lib/invitations/email';
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
@@ -18,6 +23,8 @@ interface EnhancedAdvisorBranding extends AdvisorBrandingData {
   advisorEmail?: string;
   advisorPhone?: string;
   advisorLicenseNumber?: string;
+  /** Resolved at send time (CID for private S3 logos, HTTPS for public URLs). */
+  logoEmailSrc?: string | null;
 }
 
 interface EnhancedEmailTemplateData {
@@ -97,12 +104,23 @@ function darkenColor(hex: string, percent: number): string {
 /**
  * Renders enhanced email header with branding
  */
+function resolveHeaderLogoSrc(branding: EnhancedAdvisorBranding): string | null {
+  if (branding.logoEmailSrc) return branding.logoEmailSrc;
+
+  const logoUrl = branding.logoUrl;
+  if (logoUrl && isValidLogoUrl(logoUrl) && !looksLikeAdvisorBrandingS3Url(logoUrl)) {
+    return logoUrl;
+  }
+
+  return null;
+}
+
 function renderEnhancedEmailHeader(branding: EnhancedAdvisorBranding): string {
   const brandName = branding.brandName || branding.advisorFirmName || 'AkiliRisk';
-  const logoUrl = branding.logoUrl;
+  const logoSrc = resolveHeaderLogoSrc(branding);
 
-  const logoHtml = logoUrl && isValidLogoUrl(logoUrl)
-    ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(brandName)} Logo" style="max-height: 60px; display: block; margin: 0 auto;">`
+  const logoHtml = logoSrc
+    ? `<img src="${escapeHtml(logoSrc)}" alt="${escapeHtml(brandName)} Logo" style="max-height: 60px; display: block; margin: 0 auto;">`
     : '';
 
   const headerStyle = branding.secondaryColor
@@ -371,10 +389,12 @@ export type SendEnhancedInvitationData = {
     advisorEmail?: string;
     advisorPhone?: string;
     advisorLicenseNumber?: string;
+    logoEmailSrc?: string | null;
   };
   personalMessage: string;
   invitationUrl: string;
   clientName?: string;
+  logoAttachment?: AdvisorEmailLogoAttachment | null;
 };
 
 /**
@@ -411,12 +431,17 @@ export async function sendEnhancedAdvisorInvitationEmail(
       templateType: "invitation",
     });
 
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: data.clientEmail,
-      subject: `Invitation from ${advisorName} - Family Governance Assessment`,
-      html: htmlContent,
-    });
+    const result = await resend.emails.send(
+      appendAdvisorLogoAttachment(
+        {
+          from: FROM_EMAIL,
+          to: data.clientEmail,
+          subject: `Invitation from ${advisorName} - Family Governance Assessment`,
+          html: htmlContent,
+        },
+        data.logoAttachment ?? null
+      )
+    );
 
     if (result.error) {
       console.error("Resend API error:", result.error);

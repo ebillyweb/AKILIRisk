@@ -8,6 +8,11 @@ import {
   wrapPlatformEmailContent,
 } from "@/lib/email/platform-email-layout";
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
+import {
+  appendAdvisorLogoAttachment,
+  type AdvisorEmailLogoAttachment,
+} from "@/lib/email/advisor-email-logo";
+import { looksLikeAdvisorBrandingS3Url } from "@/lib/branding/advisor-logo-display";
 import type { InvitationEmailTheme } from "@/lib/invitations/invitation-email-theme";
 import { PLATFORM_INVITATION_CTA_COLOR } from "@/lib/invitations/invitation-email-theme";
 
@@ -42,6 +47,7 @@ interface SendInvitationData {
   invitationUrl: string;
   clientName?: string;
   theme: InvitationEmailTheme;
+  logoAttachment?: AdvisorEmailLogoAttachment | null;
 }
 
 /**
@@ -54,6 +60,15 @@ function isValidLogoUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function resolveInvitationLogoSrc(theme: InvitationEmailTheme): string | null {
+  if (!theme.showAdvisorLogo) return null;
+  if (theme.logoEmailSrc) return theme.logoEmailSrc;
+  if (theme.logoUrl && isValidLogoUrl(theme.logoUrl) && !looksLikeAdvisorBrandingS3Url(theme.logoUrl)) {
+    return theme.logoUrl;
+  }
+  return null;
 }
 
 /**
@@ -85,10 +100,10 @@ export function renderInvitationTemplate(data: InvitationTemplateData): string {
   const safePersonalMessage = escapeHtml(personalMessage);
   const safeClientName = clientName ? escapeHtml(clientName) : null;
 
-  const logoHtml =
-    theme.showAdvisorLogo && theme.logoUrl && isValidLogoUrl(theme.logoUrl)
-      ? `<img src="${escapeHtml(theme.logoUrl)}" alt="${safeAdvisorFirmName} Logo" style="max-height: 60px; display: block;">`
-      : '';
+  const logoSrc = resolveInvitationLogoSrc(theme);
+  const logoHtml = logoSrc
+    ? `<img src="${escapeHtml(logoSrc)}" alt="${safeAdvisorFirmName} Logo" style="max-height: 60px; display: block;">`
+    : '';
 
   const greeting = safeClientName ? `Dear ${safeClientName},` : "Hello,";
 
@@ -230,12 +245,15 @@ export async function sendAdvisorInvitationEmail(data: SendInvitationData): Prom
     });
 
     const result = await resend.emails.send(
-      withPlatformLogoAttachment({
-        from: FROM_EMAIL,
-        to: data.clientEmail,
-        subject: `Invitation from ${data.advisorInfo.advisorName} - Family Governance Assessment`,
-        html: htmlContent,
-      })
+      appendAdvisorLogoAttachment(
+        withPlatformLogoAttachment({
+          from: FROM_EMAIL,
+          to: data.clientEmail,
+          subject: `Invitation from ${data.advisorInfo.advisorName} - Family Governance Assessment`,
+          html: htmlContent,
+        }),
+        data.logoAttachment ?? null
+      )
     );
 
     if (result.error) {

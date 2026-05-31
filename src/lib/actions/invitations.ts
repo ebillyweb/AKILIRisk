@@ -33,6 +33,7 @@ function invitationEmailThemeForProfile(
   profile: {
     brandingEnabled: boolean;
     logoUrl: string | null;
+    logoS3Key: string | null;
     primaryColor: string | null;
     userId: string;
   },
@@ -42,6 +43,7 @@ function invitationEmailThemeForProfile(
     brandingEnabled: profile.brandingEnabled,
     advancedBrandingEnabled: features.advancedBrandingEnabled,
     logoUrl: profile.logoUrl,
+    logoS3Key: profile.logoS3Key,
     primaryColor: profile.primaryColor,
   });
 }
@@ -113,6 +115,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
         secondaryColor: profile.secondaryColor,
         accentColor: profile.accentColor,
         logoUrl: profile.logoUrl,
+        logoS3Key: profile.logoS3Key,
         websiteUrl: profile.websiteUrl,
         emailFooterText: profile.emailFooterText,
         supportEmail: profile.supportEmail,
@@ -216,6 +219,7 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
         secondaryColor: profile.secondaryColor,
         accentColor: profile.accentColor,
         logoUrl: profile.logoUrl,
+        logoS3Key: profile.logoS3Key,
         websiteUrl: profile.websiteUrl,
         emailFooterText: profile.emailFooterText,
         supportEmail: profile.supportEmail,

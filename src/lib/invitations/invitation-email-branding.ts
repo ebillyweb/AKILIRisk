@@ -8,6 +8,7 @@ export type InvitationAdvisorProfile = {
   secondaryColor: string | null;
   accentColor: string | null;
   logoUrl: string | null;
+  logoS3Key: string | null;
   websiteUrl: string | null;
   emailFooterText: string | null;
   supportEmail: string | null;
@@ -37,6 +38,7 @@ export function buildInvitationEmailBranding(
     secondaryColor: profile.secondaryColor,
     accentColor: profile.accentColor,
     logoUrl: profile.logoUrl,
+    logoS3Key: profile.logoS3Key,
     websiteUrl: profile.websiteUrl,
     emailFooterText: profile.emailFooterText,
     supportEmail: profile.supportEmail || contact.advisorEmail,

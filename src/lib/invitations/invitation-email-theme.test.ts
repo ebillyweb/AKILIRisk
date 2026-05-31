@@ -32,6 +32,18 @@ describe("resolveInvitationEmailTheme (US-1B)", () => {
     expect(theme.showPlatformAttribution).toBe(false);
   });
 
+  it("shows logo when branding enabled and only private S3 logo is stored", () => {
+    const theme = resolveInvitationEmailTheme({
+      brandingEnabled: true,
+      advancedBrandingEnabled: false,
+      logoS3Key: "advisors/adv-1/logos/logo.png",
+      logoUrl:
+        "https://akili-advisor-assets.s3.us-east-2.amazonaws.com/advisors/adv-1/logos/logo.png",
+    });
+
+    expect(theme.showAdvisorLogo).toBe(true);
+  });
+
   it("omits logo when branding enabled but URL is not HTTPS", () => {
     const theme = resolveInvitationEmailTheme({
       brandingEnabled: true,

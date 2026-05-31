@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { PLATFORM_EMAIL_LOGO_CID } from "@/lib/email/platform-email-logo";
+import { ADVISOR_EMAIL_LOGO_CID } from "@/lib/email/advisor-email-logo";
 import { renderInvitationTemplate } from "./email";
 import { resolveInvitationEmailTheme } from "./invitation-email-theme";
 
@@ -43,12 +44,36 @@ describe("renderInvitationTemplate (US-1B)", () => {
 
     const html = renderInvitationTemplate({
       ...baseAdvisor,
-      theme,
+      theme: {
+        ...theme,
+        logoEmailSrc: "https://cdn.example.com/logo.png",
+      },
     });
 
     expect(html).toContain("https://cdn.example.com/logo.png");
     expect(html).toContain("background: #4EA5D9");
     expect(html).not.toContain("Sent via <strong>AKILI Risk Intelligence</strong>");
+  });
+
+  it("embeds private S3 logos via CID instead of raw S3 URLs", () => {
+    const theme = resolveInvitationEmailTheme({
+      brandingEnabled: true,
+      advancedBrandingEnabled: true,
+      logoS3Key: "advisors/adv-1/logos/logo.png",
+      logoUrl:
+        "https://akili-advisor-assets.s3.us-east-2.amazonaws.com/advisors/adv-1/logos/logo.png",
+    });
+
+    const html = renderInvitationTemplate({
+      ...baseAdvisor,
+      theme: {
+        ...theme,
+        logoEmailSrc: `cid:${ADVISOR_EMAIL_LOGO_CID}`,
+      },
+    });
+
+    expect(html).toContain(`cid:${ADVISOR_EMAIL_LOGO_CID}`);
+    expect(html).not.toContain("akili-advisor-assets.s3.us-east-2.amazonaws.com");
   });
 
   it("uses a neutral greeting when client name is omitted", () => {
