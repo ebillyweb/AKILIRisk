@@ -27,6 +27,9 @@ const prismaSpies = vi.hoisted(() => ({
       return row;
     }),
   },
+  $transaction: vi.fn(
+    async (fn: (tx: typeof prismaSpies) => Promise<unknown>) => fn(prismaSpies)
+  ),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
@@ -184,7 +187,26 @@ describe("assertNoBlockingInvitationForEmail", () => {
     expect(prismaSpies.inviteCode.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          prefillEmail: "client@example.com",
+          prefillEmail: { equals: "client@example.com", mode: "insensitive" },
+        }),
+      })
+    );
+  });
+
+  it("blocks when legacy prefillEmail casing differs from normalized input", async () => {
+    prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
+      status: InvitationStatus.SENT,
+      resendCount: 0,
+    });
+
+    await expect(
+      assertNoBlockingInvitationForEmail("advisor-profile-1", "client@example.com")
+    ).rejects.toThrow(PENDING_INVITATION_RESEND_MESSAGE);
+
+    expect(prismaSpies.inviteCode.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          prefillEmail: { equals: "client@example.com", mode: "insensitive" },
         }),
       })
     );

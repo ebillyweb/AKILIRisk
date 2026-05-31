@@ -51,21 +51,27 @@ const BLOCKING_INVITATION_STATUSES: InvitationStatus[] = [
   InvitationStatus.REGISTERED,
 ];
 
+type InviteCodeDb = Pick<typeof prisma, "inviteCode">;
+
 /**
  * Prevents duplicate pending invites for the same advisor + client email.
  * EXPIRED rows are ignored so advisors can issue a fresh invitation.
+ *
+ * Uses case-insensitive `prefillEmail` matching so legacy rows created before
+ * email normalization (commit 6cba4cd) still block duplicate sends.
  */
 export async function assertNoBlockingInvitationForEmail(
   advisorId: string,
-  clientEmail: string
+  clientEmail: string,
+  db: InviteCodeDb = prisma
 ): Promise<void> {
   const normalizedEmail = clientEmail.trim().toLowerCase();
   if (!normalizedEmail) return;
 
-  const existing = await prisma.inviteCode.findFirst({
+  const existing = await db.inviteCode.findFirst({
     where: {
       createdBy: advisorId,
-      prefillEmail: normalizedEmail,
+      prefillEmail: { equals: normalizedEmail, mode: "insensitive" },
       status: { in: BLOCKING_INVITATION_STATUSES },
     },
     select: { status: true, resendCount: true },
@@ -73,6 +79,13 @@ export async function assertNoBlockingInvitationForEmail(
   });
 
   if (!existing) return;
+
+  console.info("[invitations] blocked duplicate send", {
+    advisorId,
+    clientEmail: normalizedEmail,
+    status: existing.status,
+    resendCount: existing.resendCount,
+  });
 
   if (existing.status === InvitationStatus.REGISTERED) {
     throw new DuplicateInvitationError(REGISTERED_INVITATION_MESSAGE);
@@ -136,38 +149,48 @@ export async function createAdvisorInvitation(
   input: CreateInvitationInput,
   options?: { subscriptionFeatures?: Pick<SubscriptionFeatures, "customSubdomainEnabled"> }
 ): Promise<InvitationWithDetails & { url: string }> {
-  await assertNoBlockingInvitationForEmail(advisorId, input.clientEmail);
+  const normalizedEmail = input.clientEmail.trim().toLowerCase();
 
-  const code = generateInviteCode();
-  const expiresAt = new Date(Date.now() + INVITATION_TTL_SEC * 1000);
+  const invitation = await prisma.$transaction(async (tx) => {
+    await assertNoBlockingInvitationForEmail(advisorId, normalizedEmail, tx);
 
-  const invitation = await prisma.inviteCode.create({
-    data: {
-      code,
-      prefillEmail: input.clientEmail,
-      expiresAt,
-      maxUses: 1,
-      createdBy: advisorId,
-      status: InvitationStatus.SENT,
-      personalMessage: input.personalMessage,
-      intakeWaived: input.intakeWaived ?? false,
-      clientName: input.clientName,
-    },
-    include: {
-      advisor: {
-        select: {
-          id: true,
-          firmName: true,
-          user: {
-            select: {
-              name: true,
-              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
-              emailCiphertext: true,
+    const code = generateInviteCode();
+    const expiresAt = new Date(Date.now() + INVITATION_TTL_SEC * 1000);
+
+    return tx.inviteCode.create({
+      data: {
+        code,
+        prefillEmail: normalizedEmail,
+        expiresAt,
+        maxUses: 1,
+        createdBy: advisorId,
+        status: InvitationStatus.SENT,
+        personalMessage: input.personalMessage,
+        intakeWaived: input.intakeWaived ?? false,
+        clientName: input.clientName,
+      },
+      include: {
+        advisor: {
+          select: {
+            id: true,
+            firmName: true,
+            user: {
+              select: {
+                name: true,
+                // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
+                emailCiphertext: true,
+              },
             },
           },
         },
       },
-    },
+    });
+  });
+
+  console.info("[invitations] created invite row", {
+    advisorId,
+    inviteCodeId: invitation.id,
+    clientEmail: normalizedEmail,
   });
 
   const features = options?.subscriptionFeatures ?? { customSubdomainEnabled: false };

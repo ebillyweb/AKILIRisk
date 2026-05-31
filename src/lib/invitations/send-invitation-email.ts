@@ -30,6 +30,11 @@ export type SendInvitationEmailInput = {
 export async function sendInvitationEmail(
   input: SendInvitationEmailInput
 ): Promise<SendEmailResult> {
+  console.info("[invitations] sending invitation email", {
+    clientEmail: input.clientEmail.trim().toLowerCase(),
+    brandingEnabled: input.theme.brandingEnabled,
+  });
+
   const resolvedLogo =
     input.theme.showAdvisorLogo || input.profile.brandingEnabled
       ? await resolveAdvisorEmailLogo({
