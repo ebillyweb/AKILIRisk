@@ -40,10 +40,11 @@ function shouldHandleSubdomain(pathname: string): boolean {
   return !skipPaths.some(path => pathname.startsWith(path));
 }
 
-/** Client journey routes served on the main app tree with tenant headers (not /branded rewrites). */
+/** Routes served on the main app tree with tenant headers (not /branded rewrites). */
 const TENANT_PASS_THROUGH_PREFIXES = [
   "/signup",
   "/signin",
+  "/advisor",
   "/intake",
   "/assessment",
   "/dashboard",

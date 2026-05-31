@@ -217,8 +217,12 @@ Re-run locally: `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | two parallel deliveries of same event.id → exactly one is processed (atomic claim) | TBD | Implemented |
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | bad signature → 400 and no StripeWebhookEvent row created | TBD | Implemented |
 | `tests/smoke/subdomain-routing.spec.ts` | active subdomain serves the branded client portal | TBD | Implemented |
+| `tests/smoke/subdomain-routing.spec.ts` | advisor sign-in on tenant host reaches /advisor workspace | TBD | Implemented |
 | `tests/smoke/subdomain-routing.spec.ts` | Not Available page renders when subdomain is active but not dnsVerified | TBD | Implemented |
 | `tests/smoke/subdomain-routing.spec.ts` | Not Available page renders when subdomain is dnsVerified but not active | TBD | Implemented |
+| `tests/smoke/invited-tenant-branding.spec.ts` | tenant invite URL uses advisor subdomain (KAN-1 / KAN-113) | KAN-1 | Implemented |
+| `tests/smoke/invited-tenant-branding.spec.ts` | signup on tenant host shows advisor branding then intake | KAN-1 | Implemented |
+| `tests/smoke/invited-tenant-branding.spec.ts` | intake-waived tenant invite shows branding on assessment | KAN-1 | Implemented |
 | `tests/smoke/tenant-isolation.spec.ts` | advisor cannot open another advisor's client via direct URL | TBD | Implemented |
 | `tests/smoke/us-46b-answer-admin-notes.spec.ts` | platform admin can add and remove an intake answer note | US-46b | Implemented |
 | `tests/smoke/us-46b-answer-admin-notes.spec.ts` | advisor cannot access admin intake review or see admin notes | US-46b | Implemented |
@@ -349,7 +353,7 @@ Not Implemented (feature exists, not yet covered):
 - ~~Subdomain change rate limit (3 / 24h)~~ *(covered by `rate-limit.test.ts`)*
 
 Subdomain routing (see `docs/white-label-subdomains.md`). Seeded **slugs**; Playwright builds hosts with `TENANT_SUBDOMAIN_SUFFIX` (default `-staging` when `PLAYWRIGHT_BASE_URL` is `preview.akilirisk.com`):
-- `independent-wealth` (+ suffix) -> advisor2, active+verified -> branded portal. *(covered by `subdomain-routing.spec.ts`)*
+- `independent-wealth` (+ suffix) -> advisor2, active+verified -> branded portal. *(covered by `subdomain-routing.spec.ts`, invite journey by `invited-tenant-branding.spec.ts` / KAN-113)*
 - `inactive-tenant` (+ suffix) -> advisor3, not verified -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
 - `disabled-tenant` (+ suffix) -> advisor4, inactive -> "Subdomain Not Available". *(covered by `subdomain-routing.spec.ts`)*
 

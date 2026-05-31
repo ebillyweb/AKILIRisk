@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { SignInPage } from "../page-objects/SignInPage";
+import { USERS } from "../fixtures/users";
+import { tenantHostOrigin } from "../helpers/tenant-host";
 
 /**
  * Subdomain-based white-label routing.
@@ -8,8 +11,8 @@ import { test, expect } from "@playwright/test";
  *    via `getAdvisorBySubdomain` (returns the row whenever `brandingEnabled`
  *    on the advisor; the proxy decides what to do with it).
  *  - If `isActive && dnsVerified` -> rewrites to `/branded/<path>` with
- *    `x-advisor-id`/`x-subdomain` headers; the branded layout reads those
- *    and applies the advisor's branding.
+ *    `x-advisor-id`/`x-subdomain` headers for client-portal pages, OR passes
+ *    through to the main app tree for `/signup`, `/signin`, `/advisor`, etc.
  *  - Anything else (row exists but `dnsVerified=false`, or `isActive=false`)
  *    -> static 404 HTML "Subdomain Not Available".
  *
@@ -65,6 +68,24 @@ test.describe("subdomain routing", () => {
 
     const signInLink = page.getByRole("link", { name: /^Sign In$/i });
     await expect(signInLink.first()).toHaveAttribute("href", "/signin/magic-link");
+  });
+
+  test("advisor credentials sign-in on tenant host reaches /advisor workspace", async ({
+    page,
+  }) => {
+    const signInUrl = `${tenantHostOrigin("independent-wealth")}/signin?portal=advisor&callbackUrl=%2Fadvisor`;
+    await page.goto(signInUrl);
+
+    const user = USERS.advisor2;
+    await page.locator("#email").fill(user.email);
+    await page.locator("#password").fill(user.password);
+    await page.getByRole("button", { name: /^sign in$/i }).click();
+
+    await page.waitForURL(/\/advisor(\/|$|\?)/, { timeout: 30_000 });
+    expect(page.url()).toContain("independent-wealth");
+    await expect(
+      page.getByRole("navigation", { name: "Advisor workspace" })
+    ).toBeVisible();
   });
 
   for (const { label, url } of NOT_AVAILABLE_CASES) {
