@@ -37,7 +37,15 @@ function withAkiliPathname(req: NextRequest): Headers {
  * Check if path should be handled by subdomain routing
  */
 function shouldHandleSubdomain(pathname: string): boolean {
-  const skipPaths = ['/api', '/_next', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/.well-known'];
+  const skipPaths = [
+    '/api',
+    '/_next',
+    '/favicon.ico',
+    '/site.webmanifest',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/.well-known',
+  ];
   return !skipPaths.some(path => pathname.startsWith(path));
 }
 
@@ -161,6 +169,6 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|site.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
