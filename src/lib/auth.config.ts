@@ -281,6 +281,14 @@ export default {
               },
             });
           }
+        } else if (user && validation.inviteCodeId) {
+          const { provisionClientFromInviteCode } = await import(
+            "@/lib/invitations/provision-client"
+          );
+          await provisionClientFromInviteCode(
+            validation.inviteCodeId,
+            validation.email,
+          );
         }
 
         if (!user) {

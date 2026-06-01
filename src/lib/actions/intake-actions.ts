@@ -17,7 +17,9 @@ import type { IntakeQuestion } from '@/lib/intake/types';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
 import { personalizeIntakeScript } from '@/lib/intake/personalize-intake-question';
 import { getAssignedAdvisorFirmNameForClient } from '@/lib/client/assigned-advisor-firm-name';
+import { prisma } from '@/lib/db';
 import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
+import { syncInvitationStatusForClientEmail } from '@/lib/invitations/redeem-invitation';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 import type { UserRole } from '@prisma/client';
 
@@ -198,6 +200,21 @@ export async function submitIntakeInterviewAction(interviewId: string) {
     void notifyAdvisorsOfIntake(interviewId).catch((error) => {
       console.error('Advisor notification failed:', error);
     });
+
+    if (actor.email) {
+      const assignments = await prisma.clientAdvisorAssignment.findMany({
+        where: { clientId: userId, status: "ACTIVE" },
+        select: { advisorId: true },
+      });
+      for (const assignment of assignments) {
+        void syncInvitationStatusForClientEmail(
+          actor.email,
+          assignment.advisorId,
+        ).catch((error) => {
+          console.error("Invitation status sync failed:", error);
+        });
+      }
+    }
 
     revalidatePath(`/intake/${interviewId}`);
     return { success: true, interview: submittedInterview };

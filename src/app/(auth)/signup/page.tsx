@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
 import { verifyInviteToken } from "@/lib/invite";
+import { redeemInvitationFromToken } from "@/lib/invitations/redeem-invitation";
+import { prisma } from "@/lib/db";
 import {
   ClientSignupInfoPanel,
   InviteAcceptFailure,
@@ -38,6 +40,32 @@ export default async function SignupPage({
 
   const session = await auth();
   if (session?.user) {
+    const sessionEmail = session.user.email?.trim().toLowerCase() ?? "";
+    const invite = await prisma.inviteCode.findUnique({
+      where: { id: inviteCodeId },
+      select: { prefillEmail: true, intakeWaived: true },
+    });
+    const inviteEmail = invite?.prefillEmail?.trim().toLowerCase() ?? "";
+
+    if (
+      session.user.role === "USER" &&
+      sessionEmail &&
+      inviteEmail &&
+      sessionEmail === inviteEmail
+    ) {
+      const redeemed = await redeemInvitationFromToken(inviteToken);
+      if (redeemed.ok) {
+        const defaultCallback = invite?.intakeWaived ? "/assessment" : "/intake";
+        redirect(safeAfterSignInPath(sp.callbackUrl, defaultCallback));
+      }
+    }
+
+    if (sessionEmail && inviteEmail && sessionEmail !== inviteEmail) {
+      return (
+        <InviteAcceptFailure message="This invitation is for a different email address. Sign out and open the link again, or sign in with the invited email." />
+      );
+    }
+
     redirect(safeAfterSignInPath(sp.callbackUrl, "/dashboard"));
   }
 

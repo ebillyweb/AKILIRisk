@@ -15,6 +15,7 @@ import {
   InvitationListFilters,
   InvitationStatus
 } from "./types";
+import { reconcileAdvisorInvitationStatuses } from "./redeem-invitation";
 
 export function invitationCanResend(invitation: {
   status: InvitationStatus;
@@ -213,6 +214,8 @@ export async function getAdvisorInvitations(
   advisorId: string,
   filters?: InvitationListFilters
 ): Promise<InvitationWithDetails[]> {
+  await reconcileAdvisorInvitationStatuses(advisorId);
+
   const where: any = {
     createdBy: advisorId,
   };
