@@ -6,6 +6,7 @@ import {
   extractTenantSubdomainLabel,
   isPlatformHostname,
 } from "@/lib/advisor/platform-subdomain";
+import { isTenantPassThroughPath } from "@/lib/advisor/tenant-pass-through-paths";
 import {
   isPageMfaExempt,
   isWorkspacePath,
@@ -41,33 +42,6 @@ function shouldHandleSubdomain(pathname: string): boolean {
 }
 
 /** Routes served on the main app tree with tenant headers (not /branded rewrites). */
-const TENANT_PASS_THROUGH_PREFIXES = [
-  "/signup",
-  "/signin",
-  "/consent",
-  "/advisor",
-  "/intake",
-  "/assessment",
-  "/dashboard",
-  "/settings",
-  "/mfa",
-  "/forgot-password",
-  "/reset-password",
-  "/request-review",
-  "/start",
-  "/terms",
-  "/privacy",
-  "/about",
-  "/contact",
-] as const;
-
-function isTenantPassThroughPath(pathname: string): boolean {
-  return TENANT_PASS_THROUGH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
-}
-
-/**
  * Edge-compatible proxy using getToken (no NextAuth config in Edge).
  * Protects routes and enforces MFA redirect using JWT claims only.
  * Also handles subdomain routing for advisor branding.
