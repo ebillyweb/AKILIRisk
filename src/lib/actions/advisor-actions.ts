@@ -36,6 +36,8 @@ import {
   resolveEffectiveFieldVisibility,
 } from '@/lib/advisor/field-visibility';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
+import { personalizeIntakeScript } from '@/lib/intake/personalize-intake-question';
+import { getAssignedAdvisorFirmNameForClient } from '@/lib/client/assigned-advisor-firm-name';
 import { toAdvisorHouseholdMemberViews } from '@/lib/profiles/advisor-household-view';
 import type { IntakeReviewData } from '@/lib/advisor/types';
 import { getAdvisorInvitations } from '@/lib/invitations/service';
@@ -133,7 +135,11 @@ export async function getIntakeReviewData(interviewId: string) {
       }
     }
 
-    const script = await loadIntakeScriptQuestions();
+    const [script, firmName] = await Promise.all([
+      loadIntakeScriptQuestions(),
+      getAssignedAdvisorFirmNameForClient(reviewData.interview.userId),
+    ]);
+    const personalizedScript = personalizeIntakeScript(script, firmName);
 
     const rawHouseholdMembers = profile.householdProfilesEnabled
       ? await prisma.householdMember.findMany({
@@ -163,7 +169,7 @@ export async function getIntakeReviewData(interviewId: string) {
     const intakeReviewData: IntakeReviewData = {
       interview: reviewData.interview,
       approval,
-      questions: script.map((q) => ({
+      questions: personalizedScript.map((q) => ({
         id: q.id,
         text: q.questionText,
         helpText: q.context,

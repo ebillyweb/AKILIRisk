@@ -121,7 +121,7 @@ ON CONFLICT (category_id, code) DO NOTHING;
 INSERT INTO questions (section_id, question_number, question_text, answer_type, answer_0, answer_1, answer_2, answer_3, why_this_matters, recommended_actions, is_sub_question, cross_reference, display_order, is_visible) VALUES
 
 -- General Discovery
-('00000000-0000-0000-0001-000000000001', '1', 'How did your financial advisor describe what we do at AKILI?', 'fillable', NULL, NULL, NULL, NULL, 'Opportunity to describe our services deeper', NULL, FALSE, NULL, 1, TRUE),
+('00000000-0000-0000-0001-000000000001', '1', 'How did your financial advisor describe what we do at {{firmName}}?', 'fillable', NULL, NULL, NULL, NULL, 'Opportunity to describe our services deeper', NULL, FALSE, NULL, 1, TRUE),
 ('00000000-0000-0000-0001-000000000001', '2', 'Have you talked to your professional advisors about your personal and "family risk"?', 'yes_no', NULL, NULL, NULL, NULL, 'Level set sophistication of audience; Value Proposition', NULL, FALSE, 'See 1_A.5', 2, TRUE),
 ('00000000-0000-0000-0001-000000000001', '3', 'How involved are you personally in managing your family''s or business''s risk protection—do you rely mostly on advisors, or do you like to be hands-on?', 'fillable', NULL, NULL, NULL, NULL, 'Level set sophistication of audience', NULL, FALSE, NULL, 3, TRUE),
 ('00000000-0000-0000-0001-000000000001', '4', 'Do you know where your key risk reside?', 'yes_no', NULL, NULL, NULL, NULL, 'Level set sophistication of audience', NULL, FALSE, NULL, 4, TRUE),

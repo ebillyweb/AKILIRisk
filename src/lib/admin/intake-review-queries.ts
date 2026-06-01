@@ -7,6 +7,8 @@ import { decryptUserEmail } from "@/lib/auth/user-email-crypto";
 import { safeDecryptTranscription } from "@/lib/data/response-content";
 import { prisma } from "@/lib/db";
 import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
+import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
+import { getAssignedAdvisorFirmNameForClient } from "@/lib/client/assigned-advisor-firm-name";
 import type { IntakeQuestion } from "@/lib/intake/types";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
@@ -79,7 +81,10 @@ export async function getIntakeInterviewForAdminReview(
     },
   });
 
-  const questions = await loadIntakeScriptQuestions();
+  const [questions, firmName] = await Promise.all([
+    loadIntakeScriptQuestions(),
+    getAssignedAdvisorFirmNameForClient(interview.user.id),
+  ]);
 
   return {
     interview: {
@@ -110,6 +115,6 @@ export async function getIntakeInterviewForAdminReview(
           : null,
       })),
     },
-    questions,
+    questions: personalizeIntakeScript(questions, firmName),
   };
 }

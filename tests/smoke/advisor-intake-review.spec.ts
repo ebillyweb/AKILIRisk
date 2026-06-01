@@ -59,7 +59,7 @@ test.describe("advisor reviews intake", () => {
 
     // Question text from the seeded intake script (first INTAKE pillar question).
     await expect(
-      page.getByText(/How did your financial advisor describe what we do/i)
+      page.getByText(/How did your financial advisor describe what we do at Test Advisory Firm/i)
     ).toBeVisible();
 
     // Each question gets a "Play question" control

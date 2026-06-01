@@ -15,6 +15,8 @@ import { saveResponseSchema, submitInterviewSchema } from '@/lib/schemas/intake'
 import { revalidatePath } from 'next/cache';
 import type { IntakeQuestion } from '@/lib/intake/types';
 import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
+import { personalizeIntakeScript } from '@/lib/intake/personalize-intake-question';
+import { getAssignedAdvisorFirmNameForClient } from '@/lib/client/assigned-advisor-firm-name';
 import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 import type { UserRole } from '@prisma/client';
@@ -249,9 +251,15 @@ export async function getLatestIntakeInterviewAction() {
 /** Ordered script for the audio intake interview (pillar `INTAKE` category or legacy fallback). */
 export async function getIntakeScriptQuestionsAction() {
   try {
-    await getAuthUserId();
-    const questions = await loadIntakeScriptQuestions();
-    return { success: true as const, questions };
+    const userId = await getAuthUserId();
+    const [questions, firmName] = await Promise.all([
+      loadIntakeScriptQuestions(),
+      getAssignedAdvisorFirmNameForClient(userId),
+    ]);
+    return {
+      success: true as const,
+      questions: personalizeIntakeScript(questions, firmName),
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load intake questions';
     return { success: false as const, error: message, questions: [] as IntakeQuestion[] };
