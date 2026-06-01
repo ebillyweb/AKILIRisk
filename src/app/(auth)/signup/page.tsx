@@ -10,6 +10,7 @@ import { SignupInviteProcessor } from "@/components/auth/SignupInviteProcessor";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { BrandedAuthShell } from "@/components/auth/BrandedAuthShell";
 import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
+import { ClientPortalRootTheme } from "@/components/branding/ClientPortalRootTheme";
 import {
   getInvitingAdvisorBrandingForInviteCode,
   withClientPortalLogoSrc,
@@ -62,6 +63,7 @@ export default async function SignupPage({
       const branding = withClientPortalLogoSrc(inviteBranding);
       return (
         <BrandingProvider branding={branding} subdomain={null}>
+          <ClientPortalRootTheme branding={branding} />
           <BrandedAuthShell branding={branding}>
             <SignupInviteProcessor
               inviteCodeId={inviteCodeId}

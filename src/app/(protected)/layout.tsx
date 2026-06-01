@@ -10,6 +10,7 @@ import { RedirectIncompleteIntake } from "@/components/layout/RedirectIncomplete
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
 import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
+import { ClientPortalRootTheme } from "@/components/branding/ClientPortalRootTheme";
 import { clientPortalBrandingDisplayTitle, clientPortalLogoImgSrc } from "@/lib/client/client-portal-branding";
 import { resolveClientPortalBrandingForUser } from "@/lib/client/resolve-client-portal-branding";
 import { clientExpectsBrandedPortal, getTenantSubdomainFromHeaders } from "@/lib/client/branded-portal-requirements";
@@ -334,6 +335,7 @@ export default async function ProtectedLayout({
         branding={clientAdvisorBranding}
         subdomain={clientPortalSubdomain}
       >
+        <ClientPortalRootTheme branding={clientAdvisorBranding} />
         {shell}
       </BrandingProvider>
     );

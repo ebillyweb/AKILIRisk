@@ -44,6 +44,7 @@ function shouldHandleSubdomain(pathname: string): boolean {
 const TENANT_PASS_THROUGH_PREFIXES = [
   "/signup",
   "/signin",
+  "/consent",
   "/advisor",
   "/intake",
   "/assessment",

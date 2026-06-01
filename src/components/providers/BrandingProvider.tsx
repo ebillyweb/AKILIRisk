@@ -53,7 +53,7 @@ export function BrandingProvider({
   const contextValue: BrandingContextValue = {
     branding,
     subdomain,
-    isThemeActive: !!(branding && typeof document !== 'undefined' && document.documentElement.hasAttribute('data-advisor-theme')),
+    isThemeActive: !!(branding && autoApply),
     applyTheme: () => {
       if (branding) {
         applyAdvisorTheme(branding);

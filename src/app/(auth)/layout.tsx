@@ -3,6 +3,7 @@ import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { DefaultAuthShell } from "@/components/auth/DefaultAuthShell";
 import { BrandedAuthShell } from "@/components/auth/BrandedAuthShell";
 import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
+import { ClientPortalRootTheme } from "@/components/branding/ClientPortalRootTheme";
 import { getTenantBrandingFromRequestHeaders } from "@/lib/client/tenant-portal-branding";
 import { getTenantSubdomainFromHeaders } from "@/lib/client/branded-portal-requirements";
 import { withClientPortalLogoSrc } from "@/lib/client/resolve-client-portal-branding";
@@ -33,6 +34,7 @@ export default async function AuthLayout({
 
     return (
       <BrandingProvider branding={branding} subdomain={subdomain}>
+        <ClientPortalRootTheme branding={branding} />
         <BrandedAuthShell branding={branding} subdomain={subdomain}>
           {children}
         </BrandedAuthShell>

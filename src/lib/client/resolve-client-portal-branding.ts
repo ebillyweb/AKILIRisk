@@ -120,6 +120,6 @@ export async function resolveClientPortalBrandingForUser(input: {
 
   if (!raw) return null;
 
-  const preferBrandedLogoApi = onTenantHost && !!tenantBranding;
+  const preferBrandedLogoApi = onTenantHost;
   return withClientPortalLogoSrc(raw, preferBrandedLogoApi);
 }
