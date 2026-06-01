@@ -66,6 +66,30 @@ async function uploadOwnerAudio(
   return body;
 }
 
+async function uploadOwnerAudioWithMime(
+  request: APIRequestContext,
+  cookies: string,
+  iId: string,
+  qId: string,
+  mimeType: string
+): Promise<{ audioUrl: string }> {
+  const resp = await request.post(`/api/intake/${iId}/audio`, {
+    headers: { cookie: cookies },
+    multipart: {
+      audio: {
+        name: `${qId}.webm`,
+        mimeType,
+        buffer: TINY_WEBM,
+      },
+      questionId: qId,
+    },
+  });
+  expect(resp.status(), await resp.text()).toBe(200);
+  const body = (await resp.json()) as { success: boolean; audioUrl: string };
+  expect(body.success).toBe(true);
+  return body;
+}
+
 test.describe("intake audio streaming endpoint", () => {
   test.beforeAll(() => {
     // Discover the seeded client's interviewId + questionId so we can
@@ -84,6 +108,29 @@ test.describe("intake audio streaming endpoint", () => {
     interviewId = parsed.interviewId;
     questionId = parsed.questionId;
     audioPath = `/api/intake/${interviewId}/audio/${questionId}`;
+  });
+
+  test("accepts parameterized MediaRecorder MIME types (200)", async ({
+    page,
+    request,
+  }) => {
+    await new SignInPage(page).signInAs("client");
+    const cookies = await cookieHeaderFromPage(page);
+
+    await uploadOwnerAudioWithMime(
+      request,
+      cookies,
+      interviewId,
+      questionId,
+      "audio/webm;codecs=opus"
+    );
+    await uploadOwnerAudioWithMime(
+      request,
+      cookies,
+      interviewId,
+      questionId,
+      "audio/mp4;codecs=mp4a.40.2"
+    );
   });
 
   test("owner receives the audio bytes (200)", async ({ page, request }) => {

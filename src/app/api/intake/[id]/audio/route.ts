@@ -8,6 +8,10 @@ import {
 } from '@/lib/s3/intake-audio-uploads';
 import { prisma } from '@/lib/db';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
+import {
+  isAllowedAudioMime,
+  normalizeAudioMimeType,
+} from '@/lib/intake/audio-mime';
 
 /** Voice intake responses cap. 25MB is generous for a single answer at typical
  *  webm/opus bitrates (~32 kbps → ~100 minutes). Anything larger is almost
@@ -18,20 +22,6 @@ const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
  *  before the value reaches the filesystem. Question IDs come from our own
  *  question bank — the bank uses cuid()/uuid, both of which fit this regex. */
 const QUESTION_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
-
-/** Audio container types we accept. Browsers' MediaRecorder typically emits
- *  webm/opus on Chromium and mp4/aac on Safari; we accept the common siblings
- *  too. The blob's reported `type` is a soft check (clients can lie) — the
- *  fixed `.webm` filename means files saved here are never interpreted by the
- *  filesystem as something else. */
-const ALLOWED_AUDIO_MIMES = new Set<string>([
-  'audio/webm',
-  'audio/ogg',
-  'audio/mp4',
-  'audio/mpeg',
-  'audio/wav',
-  'audio/x-m4a',
-]);
 
 export async function POST(
   request: NextRequest,
@@ -105,11 +95,10 @@ export async function POST(
       );
     }
 
-    // MIME allowlist on the blob's reported type. Clients can lie about
-    // this header, but combined with the fixed `.webm` extension and the
-    // strict filename, a wrong type just produces an unplayable file —
-    // not a code-execution vector.
-    if (!ALLOWED_AUDIO_MIMES.has(audioBlob.type)) {
+    // MIME allowlist on the blob's reported type (parameterized types like
+    // `audio/webm;codecs=opus` are normalized before checking).
+    const contentType = normalizeAudioMimeType(audioBlob.type);
+    if (!isAllowedAudioMime(audioBlob.type)) {
       return NextResponse.json(
         { success: false, error: 'Unsupported audio type' },
         { status: 415 }
@@ -142,7 +131,7 @@ export async function POST(
     const upload = await uploadIntakeAudioFromBuffer(
       interviewId,
       questionId,
-      audioBlob.type,
+      contentType,
       buffer
     );
 
