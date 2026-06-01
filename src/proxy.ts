@@ -41,7 +41,8 @@ function shouldHandleSubdomain(pathname: string): boolean {
   return !skipPaths.some(path => pathname.startsWith(path));
 }
 
-/** Routes served on the main app tree with tenant headers (not /branded rewrites). */
+/**
+ * Routes served on the main app tree with tenant headers (not /branded rewrites).
  * Edge-compatible proxy using getToken (no NextAuth config in Edge).
  * Protects routes and enforces MFA redirect using JWT claims only.
  * Also handles subdomain routing for advisor branding.
