@@ -140,7 +140,7 @@ export function InvitationTable({
           <table className="w-full">
             <thead className="border-b bg-muted/50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Client</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Sent</th>
