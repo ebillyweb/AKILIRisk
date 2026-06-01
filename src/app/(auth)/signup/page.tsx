@@ -38,6 +38,13 @@ export default async function SignupPage({
     return <ClientSignupInfoPanel />;
   }
 
+  const inviteCodeId = verifyInviteToken(inviteToken);
+  if (!inviteCodeId) {
+    return (
+      <InviteAcceptFailure message="This invitation link is invalid or has expired." />
+    );
+  }
+
   const session = await auth();
   if (session?.user) {
     const sessionEmail = session.user.email?.trim().toLowerCase() ?? "";
@@ -67,13 +74,6 @@ export default async function SignupPage({
     }
 
     redirect(safeAfterSignInPath(sp.callbackUrl, "/dashboard"));
-  }
-
-  const inviteCodeId = verifyInviteToken(inviteToken);
-  if (!inviteCodeId) {
-    return (
-      <InviteAcceptFailure message="This invitation link is invalid or has expired." />
-    );
   }
 
   const onTenantHost = await isTenantBrandedRequest();
