@@ -66,6 +66,22 @@ describe('computeClientStage — documents', () => {
       }),
     ).toBe('ASSESSMENT_IN_PROGRESS');
   });
+
+  it('returns INTAKE_COMPLETE ahead of invitation REGISTERED', () => {
+    expect(
+      computeClientStage({
+        invitation: {
+          status: 'REGISTERED',
+          statusUpdatedAt: new Date(),
+        },
+        intake: {
+          status: 'SUBMITTED',
+          updatedAt: new Date(),
+          submittedAt: new Date(),
+        },
+      }),
+    ).toBe('INTAKE_COMPLETE');
+  });
 });
 
 describe('hasUnfulfilledMandatoryDocuments', () => {

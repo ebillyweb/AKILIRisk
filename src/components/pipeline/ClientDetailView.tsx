@@ -178,6 +178,24 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     Require intake again
                   </Button>
                 </div>
+              ) : intakeFinished ? (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <Badge variant="success">Intake completed</Badge>
+                    {intakeDetails?.submittedAt && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Submitted {formatDistanceToNow(new Date(intakeDetails.submittedAt), { addSuffix: true })}
+                      </p>
+                    )}
+                  </div>
+                  {client.awaitingIntakeReview && client.intakeReviewInterviewId && (
+                    <Button asChild variant="outline">
+                      <Link href={`/advisor/review/${client.intakeReviewInterviewId}`}>
+                        Review intake
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <Button
                   type="button"

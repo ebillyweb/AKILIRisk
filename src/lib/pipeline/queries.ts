@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import type { PipelineClient, PipelineMetrics, ClientWorkflowStage, ClientDetail, WorkflowEvent } from "./types";
 import { aggregateMandatoryDocumentCounts, hasUnfulfilledMandatoryDocuments } from "./documents";
 import { indexAwaitingIntakeReviewByClient, isIntakeAwaitingAdvisorReview } from "./intake-review";
+import { pickIntakeForPipeline } from "./pick-intake-for-pipeline";
 import { computeClientStage, computeProgress, isStalled } from "./status";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import {
@@ -62,13 +63,6 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
           // Round-11 commit 2.1: clientProfile no longer carries
           // contact/address/DOB columns; the include was unused after
           // those drops, so remove it entirely.
-          // Get latest intake interview
-          intakeInterviews: {
-            orderBy: {
-              updatedAt: 'desc'
-            },
-            take: 1,
-          },
           // Latest assessment by activity (includes IN_PROGRESS)
           assessments: {
             orderBy: {
@@ -114,16 +108,8 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     )
   );
   const clientIds = Array.from(new Set(assignments.map((a) => a.client.id)));
-  const latestIntakeIds = Array.from(
-    new Set(
-      assignments
-        .map((a) => a.client.intakeInterviews[0]?.id)
-        .filter((id): id is string => typeof id === 'string')
-    )
-  );
 
-  // Fire all three independent batch queries in parallel.
-  const [invitations, documentCounts, intakeResponseCounts, intakeInterviews, intakeApprovals] =
+  const [invitations, documentCounts, intakeInterviews, intakeApprovals] =
     await Promise.all([
     clientEmails.length > 0
       ? prisma.inviteCode.findMany({
@@ -147,13 +133,6 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
           },
         })
       : Promise.resolve([]),
-    latestIntakeIds.length > 0
-      ? prisma.intakeResponse.groupBy({
-          by: ['interviewId'],
-          where: whereIntakeResponsesForInterviewsHaveAnswer(latestIntakeIds),
-          _count: { _all: true },
-        })
-      : Promise.resolve([]),
     clientIds.length > 0
       ? prisma.intakeInterview.findMany({
           where: { userId: { in: clientIds } },
@@ -162,6 +141,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
             userId: true,
             status: true,
             submittedAt: true,
+            updatedAt: true,
           },
           orderBy: { updatedAt: "desc" },
         })
@@ -171,6 +151,36 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
       select: { interviewId: true, status: true },
     }),
   ]);
+
+  const interviewsByUserId = new Map<string, typeof intakeInterviews>();
+  for (const interview of intakeInterviews) {
+    const rows = interviewsByUserId.get(interview.userId) ?? [];
+    rows.push(interview);
+    interviewsByUserId.set(interview.userId, rows);
+  }
+
+  const effectiveIntakeByUserId = new Map<string, (typeof intakeInterviews)[number]>();
+  for (const [userId, rows] of interviewsByUserId) {
+    const picked = pickIntakeForPipeline(rows);
+    if (picked) {
+      effectiveIntakeByUserId.set(userId, picked);
+    }
+  }
+
+  const latestIntakeIds = Array.from(
+    new Set(
+      Array.from(effectiveIntakeByUserId.values()).map((interview) => interview.id),
+    ),
+  );
+
+  const intakeResponseCounts =
+    latestIntakeIds.length > 0
+      ? await prisma.intakeResponse.groupBy({
+          by: ['interviewId'],
+          where: whereIntakeResponsesForInterviewsHaveAnswer(latestIntakeIds),
+          _count: { _all: true },
+        })
+      : [];
 
   // Build per-key indexes so the per-client transform is a synchronous lookup.
 
@@ -224,7 +234,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
     };
 
     // Get the most recent activity date
-    const latestIntake = client.intakeInterviews[0];
+    const latestIntake = effectiveIntakeByUserId.get(client.id) ?? null;
     const latestAssessment = client.assessments[0];
 
     const activityDates = [
@@ -437,8 +447,8 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     orderBy: { createdAt: 'asc' }
   });
 
-  // Get the latest intake and assessment
-  const latestIntake = client.intakeInterviews[0];
+  // Get the effective intake and assessment for stage/timeline display
+  const latestIntake = pickIntakeForPipeline(client.intakeInterviews);
   const latestAssessment = client.assessments[0];
 
   // Build timeline events

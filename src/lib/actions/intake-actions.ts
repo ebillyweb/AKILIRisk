@@ -50,6 +50,17 @@ export async function startIntakeInterview() {
   try {
     const userId = await getAuthUserId();
 
+    const submittedInterview = await prisma.intakeInterview.findFirst({
+      where: {
+        userId,
+        OR: [{ status: "SUBMITTED" }, { submittedAt: { not: null } }],
+      },
+      orderBy: { submittedAt: "desc" },
+    });
+    if (submittedInterview) {
+      return { success: true, interview: submittedInterview };
+    }
+
     // Check if there's an active interview
     let interview = await getActiveIntakeInterview(userId);
 
