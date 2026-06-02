@@ -14,12 +14,17 @@ import { LOGO_MAX_BYTES } from '@/lib/validation/branding';
 // Must match the bucket’s actual region (see `aws s3api head-bucket --bucket ...` → x-amz-bucket-region).
 // Wrong region → PermanentRedirect, presigned host mismatch, or OPTIONS 500 on the wrong regional endpoint.
 // Prefer S3_BRANDING_REGION when other AWS calls use a different AWS_REGION.
-const BRANDING_S3_REGION =
-  process.env.S3_BRANDING_REGION?.trim() ||
-  process.env.AWS_REGION?.trim() ||
-  'us-east-2';
+function getBrandingS3Region(): string {
+  return (
+    process.env.S3_BRANDING_REGION?.trim() ||
+    process.env.AWS_REGION?.trim() ||
+    "us-east-2"
+  );
+}
 
-function requireBrandingBucket(): string {
+let s3Client: S3Client | undefined;
+
+function getBrandingBucketName(): string {
   const bucket = process.env.S3_BRANDING_BUCKET?.trim();
   if (!bucket) {
     throw new Error("S3_BRANDING_BUCKET is required for advisor branding uploads.");
@@ -27,21 +32,24 @@ function requireBrandingBucket(): string {
   return bucket;
 }
 
-// Initialize S3 client (WHEN_REQUIRED avoids default CRC checksum params on presigned PUTs that break browser uploads)
-// `credentials: undefined` lets the SDK use its default credential provider chain
-// (IAM role on Vercel/ECS/EC2). resolveAwsCredentials() only returns explicit keys
-// when both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set.
-const s3Client = new S3Client({
-  region: BRANDING_S3_REGION,
-  followRegionRedirects: true,
-  credentials: resolveAwsCredentials(),
-  requestChecksumCalculation: 'WHEN_REQUIRED',
-});
+function getBrandingS3Client(): S3Client {
+  if (!s3Client) {
+    s3Client = new S3Client({
+      region: getBrandingS3Region(),
+      followRegionRedirects: true,
+      credentials: resolveAwsCredentials(),
+      requestChecksumCalculation: "WHEN_REQUIRED",
+    });
+  }
+  return s3Client;
+}
 
-const BUCKET_NAME = requireBrandingBucket();
-const CDN_BASE_URL =
-  process.env.CLOUDFRONT_BASE_URL ||
-  `https://${BUCKET_NAME}.s3.${BRANDING_S3_REGION}.amazonaws.com`;
+function getBrandingCdnBaseUrl(): string {
+  const cloudfront = process.env.CLOUDFRONT_BASE_URL?.trim();
+  if (cloudfront) return cloudfront.replace(/\/$/, "");
+  const bucket = getBrandingBucketName();
+  return `https://${bucket}.s3.${getBrandingS3Region()}.amazonaws.com`;
+}
 
 interface UploadUrlRequest {
   advisorId: string;
@@ -185,7 +193,7 @@ export async function generateLogoUploadUrl(request: UploadUrlRequest): Promise<
   // x-amz-server-side-encryption / x-amz-server-side-encryption-aws-kms-key-id
   // forwarding, otherwise S3 returns SignatureDoesNotMatch.
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: getBrandingBucketName(),
     Key: s3Key,
     ContentType: fileType,
     ContentLength: fileSize,
@@ -198,7 +206,7 @@ export async function generateLogoUploadUrl(request: UploadUrlRequest): Promise<
   });
 
   const expiresIn = 3600; // 1 hour
-  const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+  const signedUrl = await getSignedUrl(getBrandingS3Client(), command, { expiresIn });
 
   // Generate tracking ID
   const uploadId = generateUploadId();
@@ -229,7 +237,7 @@ async function persistAdvisorLogo(
   actualType: string,
   actualSize: number
 ): Promise<ConfirmUploadResponse> {
-  const logoUrl = `${CDN_BASE_URL}/${s3Key}`;
+  const logoUrl = `${getBrandingCdnBaseUrl()}/${s3Key}`;
 
   const advisor = await prisma.advisorProfile.findUnique({
     where: { id: advisorId },
@@ -276,9 +284,9 @@ export async function uploadLogoFromBuffer(
   const s3Key = generateS3Key(advisorId, fileName);
 
   try {
-    await s3Client.send(
+    await getBrandingS3Client().send(
       new PutObjectCommand({
-        Bucket: BUCKET_NAME,
+        Bucket: getBrandingBucketName(),
         Key: s3Key,
         Body: body,
         ContentType: fileType,
@@ -318,11 +326,11 @@ export async function confirmLogoUpload(request: ConfirmUploadRequest): Promise<
   try {
     // Verify file exists in S3 and get metadata
     const headCommand = new HeadObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: getBrandingBucketName(),
       Key: s3Key,
     });
 
-    const s3Response = await s3Client.send(headCommand);
+    const s3Response = await getBrandingS3Client().send(headCommand);
     const actualSize = s3Response.ContentLength || 0;
     const actualType = s3Response.ContentType || uploadInfo.fileType;
 
@@ -390,11 +398,11 @@ export async function deleteLogo(advisorId: string): Promise<void> {
 async function deleteS3Object(s3Key: string): Promise<void> {
   try {
     const deleteCommand = new DeleteObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: getBrandingBucketName(),
       Key: s3Key,
     });
 
-    await s3Client.send(deleteCommand);
+    await getBrandingS3Client().send(deleteCommand);
   } catch (error) {
     console.error('Failed to delete S3 object:', s3Key, error);
     throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -405,7 +413,7 @@ async function deleteS3Object(s3Key: string): Promise<void> {
  * Generates a public URL for an S3 object
  */
 export function generateAssetUrl(s3Key: string): string {
-  return `${CDN_BASE_URL}/${s3Key}`;
+  return `${getBrandingCdnBaseUrl()}/${s3Key}`;
 }
 
 /**
@@ -414,9 +422,9 @@ export function generateAssetUrl(s3Key: string): string {
 export async function getBrandingLogoObjectBytes(
   s3Key: string
 ): Promise<{ data: Uint8Array; contentType: string }> {
-  const obj = await s3Client.send(
+  const obj = await getBrandingS3Client().send(
     new GetObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: getBrandingBucketName(),
       Key: s3Key,
     })
   );

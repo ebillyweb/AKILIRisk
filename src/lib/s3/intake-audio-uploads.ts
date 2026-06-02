@@ -16,10 +16,22 @@ import { s3EncryptionParams } from "@/lib/s3/encryption-params";
  * route at `/api/intake/[interviewId]/audio/[questionId]` is the only path
  * that authorizes byte access.
  *
- * Requires `S3_INTAKE_BUCKET` — no fallback to the branding bucket.
+ * Requires `S3_INTAKE_BUCKET` at runtime — no fallback to the branding bucket.
+ * Bucket/client are resolved lazily so `next build` can import this module
+ * during page-data collection without env vars present at build time.
  */
 
-function requireIntakeAudioBucket(): string {
+let s3Client: S3Client | undefined;
+
+function getIntakeAudioS3Region(): string {
+  return (
+    process.env.S3_INTAKE_REGION?.trim() ||
+    process.env.AWS_REGION?.trim() ||
+    "us-east-2"
+  );
+}
+
+function getIntakeAudioBucketName(): string {
   const bucket = process.env.S3_INTAKE_BUCKET?.trim();
   if (!bucket) {
     throw new Error(
@@ -29,24 +41,17 @@ function requireIntakeAudioBucket(): string {
   return bucket;
 }
 
-// Wrong region → PermanentRedirect or signed-host mismatch.
-const INTAKE_AUDIO_S3_REGION =
-  process.env.S3_INTAKE_REGION?.trim() ||
-  process.env.AWS_REGION?.trim() ||
-  "us-east-2";
-
-// `credentials: undefined` lets the SDK use its default credential provider chain
-// (IAM role on Vercel/ECS/EC2). resolveAwsCredentials() only returns explicit keys
-// when both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set — matches the
-// branding-uploads helper this module was modeled on.
-const s3Client = new S3Client({
-  region: INTAKE_AUDIO_S3_REGION,
-  followRegionRedirects: true,
-  credentials: resolveAwsCredentials(),
-  requestChecksumCalculation: "WHEN_REQUIRED",
-});
-
-const BUCKET_NAME = requireIntakeAudioBucket();
+function getIntakeAudioS3Client(): S3Client {
+  if (!s3Client) {
+    s3Client = new S3Client({
+      region: getIntakeAudioS3Region(),
+      followRegionRedirects: true,
+      credentials: resolveAwsCredentials(),
+      requestChecksumCalculation: "WHEN_REQUIRED",
+    });
+  }
+  return s3Client;
+}
 
 /** Tight allowlist on the path components we interpolate into the S3 key.
  *  Matches the upload-route allowlist so cross-validation lines up. */
@@ -92,10 +97,12 @@ export async function uploadIntakeAudioFromBuffer(
   body: Uint8Array
 ): Promise<UploadIntakeAudioResult> {
   const s3Key = generateIntakeAudioKey(interviewId, questionId);
+  const bucket = getIntakeAudioBucketName();
+  const client = getIntakeAudioS3Client();
   try {
-    await s3Client.send(
+    await client.send(
       new PutObjectCommand({
-        Bucket: BUCKET_NAME,
+        Bucket: bucket,
         Key: s3Key,
         Body: body,
         ContentType: contentType,
@@ -132,9 +139,9 @@ export async function uploadIntakeAudioFromBuffer(
 export async function getIntakeAudioObjectBytes(
   s3Key: string
 ): Promise<{ data: Uint8Array; contentType: string }> {
-  const obj = await s3Client.send(
+  const obj = await getIntakeAudioS3Client().send(
     new GetObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: getIntakeAudioBucketName(),
       Key: s3Key,
     })
   );
@@ -156,9 +163,9 @@ export async function getIntakeAudioObjectBytes(
  * when an upload fails partway through.
  */
 export async function deleteIntakeAudioObject(s3Key: string): Promise<void> {
-  await s3Client.send(
+  await getIntakeAudioS3Client().send(
     new DeleteObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: getIntakeAudioBucketName(),
       Key: s3Key,
     })
   );
