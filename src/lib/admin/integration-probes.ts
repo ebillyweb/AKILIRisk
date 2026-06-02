@@ -41,7 +41,7 @@ const INTEGRATION_LABELS: Record<
   },
   s3: {
     label: "Object storage (S3)",
-    description: "Intake audio + document uploads",
+    description: "Branding, intake audio, and document buckets",
   },
   "white-label-dns": {
     label: "White-label DNS",
@@ -354,28 +354,58 @@ export async function probeResend(): Promise<IntegrationProbeResult> {
   }
 }
 
-function resolveS3BucketName(): string | undefined {
-  return (
-    process.env.S3_BRANDING_BUCKET?.trim() ||
-    process.env.S3_BUCKET_NAME?.trim() ||
-    undefined
-  );
-}
-
-function resolveS3Region(): string {
+function resolveS3RegionForBucket(
+  bucketEnv: "branding" | "intake" | "documents"
+): string {
+  if (bucketEnv === "intake") {
+    return (
+      process.env.S3_INTAKE_REGION?.trim() ||
+      process.env.AWS_REGION?.trim() ||
+      "us-east-2"
+    );
+  }
+  if (bucketEnv === "documents") {
+    return (
+      process.env.S3_DOCUMENTS_REGION?.trim() ||
+      process.env.AWS_REGION?.trim() ||
+      "us-east-2"
+    );
+  }
   return (
     process.env.S3_BRANDING_REGION?.trim() ||
-    process.env.S3_DOCUMENTS_REGION?.trim() ||
     process.env.AWS_REGION?.trim() ||
     "us-east-2"
   );
 }
 
+type S3ProbeTarget = {
+  envVar: string;
+  bucket: string | undefined;
+  region: string;
+};
+
+function getS3ProbeTargets(): S3ProbeTarget[] {
+  return [
+    {
+      envVar: "S3_BRANDING_BUCKET",
+      bucket: process.env.S3_BRANDING_BUCKET?.trim(),
+      region: resolveS3RegionForBucket("branding"),
+    },
+    {
+      envVar: "S3_INTAKE_BUCKET",
+      bucket: process.env.S3_INTAKE_BUCKET?.trim(),
+      region: resolveS3RegionForBucket("intake"),
+    },
+    {
+      envVar: "S3_BUCKET_NAME",
+      bucket: process.env.S3_BUCKET_NAME?.trim(),
+      region: resolveS3RegionForBucket("documents"),
+    },
+  ];
+}
+
 function s3Configured(): boolean {
-  const bucket = resolveS3BucketName();
-  if (!bucket) return false;
   if (resolveAwsCredentials()) return true;
-  // Vercel / ECS may use the default credential chain without explicit keys.
   if (process.env.VERCEL === "1" || process.env.AWS_EXECUTION_ENV) return true;
   return Boolean(
     process.env.AWS_ACCESS_KEY_ID?.trim() &&
@@ -383,88 +413,123 @@ function s3Configured(): boolean {
   );
 }
 
+function classifyHeadBucketError(
+  err: unknown,
+  bucket: string,
+  region: string
+): IntegrationProbeResult {
+  const message = sanitizeProbeError(err);
+  const checkedAt = checkedNow();
+  const errName =
+    err && typeof err === "object" && "name" in err
+      ? String((err as { name?: string }).name)
+      : "";
+  const httpStatus =
+    err &&
+    typeof err === "object" &&
+    "$metadata" in err &&
+    (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+
+  const accessDenied =
+    httpStatus === 403 ||
+    errName === "Forbidden" ||
+    /accessdenied|403|not authorized|invalidaccesskeyid/i.test(message);
+  const notFound =
+    httpStatus === 404 ||
+    errName === "NotFound" ||
+    /nosuchbucket|not found/i.test(message);
+
+  if (accessDenied) {
+    return {
+      id: "s3",
+      status: "down",
+      message: `S3 HeadBucket denied for "${bucket}" in ${region}. Check IAM s3:HeadBucket (and bucket name).`,
+      checkedAt,
+    };
+  }
+  if (notFound) {
+    return {
+      id: "s3",
+      status: "down",
+      message: `S3 bucket "${bucket}" was not found in ${region}.`,
+      checkedAt,
+    };
+  }
+  return {
+    id: "s3",
+    status: "degraded",
+    message:
+      message === "Unknown"
+        ? `S3 HeadBucket failed for "${bucket}".`
+        : message,
+    checkedAt,
+  };
+}
+
 export async function probeS3(): Promise<IntegrationProbeResult> {
   const id = "s3";
-  const bucket = resolveS3BucketName();
-  if (!bucket) {
+  const targets = getS3ProbeTargets();
+  const missing = targets.filter((t) => !t.bucket).map((t) => t.envVar);
+  if (missing.length > 0) {
     return notConfigured(
       id,
-      "S3_BRANDING_BUCKET or S3_BUCKET_NAME is not set."
+      `Missing required bucket env: ${missing.join(", ")}.`
     );
   }
   if (!s3Configured()) {
     return notConfigured(
       id,
-      "Bucket is set but AWS credentials are not available for probing."
+      "Bucket env is set but AWS credentials are not available for probing."
     );
   }
 
   const checkedAt = checkedNow();
-  const region = resolveS3Region();
-  const client = new S3Client({
-    region,
-    followRegionRedirects: true,
-    credentials: resolveAwsCredentials(),
-    requestChecksumCalculation: "WHEN_REQUIRED",
-  });
-
-  try {
-    await withTimeout(
-      client.send(new HeadBucketCommand({ Bucket: bucket })),
-      INTEGRATION_PROBE_TIMEOUT_MS,
-      "S3"
-    );
-    return {
-      id,
-      status: "healthy",
-      message: `S3 bucket "${bucket}" is reachable (HeadBucket).`,
-      checkedAt,
-    };
-  } catch (err) {
-    const message = sanitizeProbeError(err);
-    const errName =
-      err && typeof err === "object" && "name" in err
-        ? String((err as { name?: string }).name)
-        : "";
-    const httpStatus =
-      err &&
-      typeof err === "object" &&
-      "$metadata" in err &&
-      (err as { $metadata?: { httpStatusCode?: number } }).$metadata
-        ?.httpStatusCode;
-
-    const accessDenied =
-      httpStatus === 403 ||
-      errName === "Forbidden" ||
-      /accessdenied|403|not authorized|invalidaccesskeyid/i.test(message);
-    const notFound =
-      httpStatus === 404 ||
-      errName === "NotFound" ||
-      /nosuchbucket|not found/i.test(message);
-
-    if (accessDenied) {
-      return {
-        id,
-        status: "down",
-        message: `S3 HeadBucket denied for "${bucket}" in ${region}. Check IAM s3:HeadBucket (and bucket name).`,
-        checkedAt,
-      };
+  const uniqueBuckets = new Map<string, { bucket: string; region: string }>();
+  for (const target of targets) {
+    const key = `${target.bucket}@${target.region}`;
+    if (!uniqueBuckets.has(key)) {
+      uniqueBuckets.set(key, { bucket: target.bucket!, region: target.region });
     }
-    if (notFound) {
-      return {
-        id,
-        status: "down",
-        message: `S3 bucket "${bucket}" was not found in ${region}. Set S3_BRANDING_BUCKET / S3_BUCKET_NAME to an existing bucket.`,
-        checkedAt,
-      };
-    }
-    return {
-      id,
-      status: "degraded",
-      message: message === "Unknown" ? `S3 HeadBucket failed for "${bucket}".` : message,
-      checkedAt,
-    };
   }
+
+  const failures: IntegrationProbeResult[] = [];
+  for (const { bucket, region } of uniqueBuckets.values()) {
+    const client = new S3Client({
+      region,
+      followRegionRedirects: true,
+      credentials: resolveAwsCredentials(),
+      requestChecksumCalculation: "WHEN_REQUIRED",
+    });
+    try {
+      await withTimeout(
+        client.send(new HeadBucketCommand({ Bucket: bucket })),
+        INTEGRATION_PROBE_TIMEOUT_MS,
+        "S3"
+      );
+    } catch (err) {
+      failures.push(classifyHeadBucketError(err, bucket, region));
+    }
+  }
+
+  if (failures.some((f) => f.status === "down")) {
+    const first = failures.find((f) => f.status === "down")!;
+    return { ...first, id };
+  }
+  if (failures.some((f) => f.status === "degraded")) {
+    const first = failures.find((f) => f.status === "degraded")!;
+    return { ...first, id };
+  }
+
+  const bucketList = [...uniqueBuckets.values()]
+    .map(({ bucket }) => `"${bucket}"`)
+    .join(", ");
+  return {
+    id,
+    status: "healthy",
+    message: `S3 buckets reachable (HeadBucket): ${bucketList}.`,
+    checkedAt,
+  };
 }
 
 export async function probeWhiteLabelDns(): Promise<IntegrationProbeResult> {

@@ -7,6 +7,7 @@ import { shouldSendNotification } from "@/lib/notifications/preferences";
 import { sendNotification } from "@/lib/notifications/service";
 import { renderNotificationEmail } from "@/lib/notifications/templates";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 interface ProcessResult {
   advisorsNotified: number;
   clientsEscalated: number;
@@ -27,6 +28,14 @@ interface ProcessResult {
 export async function processWorkflowReminders(): Promise<ProcessResult> {
   let advisorsNotified = 0;
   let clientsEscalated = 0;
+
+  const appUrl = getPublicAppUrlStrict();
+  if (!appUrl) {
+    console.error(
+      "Workflow reminders skipped: public app URL not configured (AUTH_URL / NEXT_PUBLIC_URL)."
+    );
+    return { advisorsNotified: 0, clientsEscalated: 0 };
+  }
 
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -226,7 +235,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
         const daysSinceActivity = Math.floor((Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
 
         // Client detail URL
-        const clientDetailUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/advisor/pipeline/${clientId}`;
+        const clientDetailUrl = `${appUrl}/advisor/pipeline/${clientId}`;
 
         // Generate email HTML using the stalled workflow template
         const emailHtml = renderNotificationEmail('stalled', {

@@ -28,6 +28,7 @@
     "db:fix-enhanced-migration": "bash scripts/fix-failed-enhanced-migration.sh",
     "db:backfill-advisor-subscriptions": "node scripts/migrate-advisor-subscriptions.js",
     "db:migrate-intake-to-client": "node scripts/migrate-intake-to-client.js",
+    "s3:copy-intake-audio-to-intake-bucket": "node scripts/copy-intake-audio-to-intake-bucket.js",
     "db:backfill-user-email-ciphertext": "npx tsx scripts/backfill-user-email-ciphertext.ts",
     "env:vercel:link": "npx vercel link",
     "env:vercel": "npx vercel env pull .env.local",

@@ -7,8 +7,7 @@ import {
   wrapPlatformEmailContent,
 } from "@/lib/email/platform-email-layout";
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
-
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 
 function appOriginFromUrl(url: string): string | null {
   try {
@@ -89,7 +88,7 @@ export async function sendMagicLinkEmail(
     const resend = new Resend(apiKey);
     await resend.emails.send(
       withPlatformLogoAttachment({
-        from: FROM_EMAIL,
+        from: resolveFromEmail(),
         to: email,
         subject: "Sign in to Akili Risk",
         html: renderMagicLinkEmailHtml(magicLinkUrl),
@@ -118,7 +117,7 @@ export async function sendPasswordResetEmail(
     const resend = new Resend(apiKey);
     await resend.emails.send(
       withPlatformLogoAttachment({
-        from: FROM_EMAIL,
+        from: resolveFromEmail(),
         to: email,
         subject: "Reset your Akili Risk password",
         html: renderPasswordResetEmailHtml(resetUrl),
@@ -202,7 +201,7 @@ export async function sendAdvisorIntakeNotification(
     const resend = new Resend(apiKey);
     await resend.emails.send(
       withPlatformLogoAttachment({
-        from: FROM_EMAIL,
+        from: resolveFromEmail(),
         to: advisorEmail,
         subject: `New Intake Ready for Review - ${sanitizeSubjectFragment(clientName)}`,
         html: renderAdvisorIntakeNotificationHtml(

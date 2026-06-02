@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { sendDocumentReminderEmail } from "./reminder-email";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 interface ProcessResult {
   clientsReminded: number;
@@ -23,6 +24,14 @@ interface ProcessResult {
 export async function processDocumentReminders(): Promise<ProcessResult> {
   let clientsReminded = 0;
   let documentsIncluded = 0;
+
+  const appUrl = getPublicAppUrlStrict();
+  if (!appUrl) {
+    console.error(
+      "Document reminders skipped: public app URL not configured (AUTH_URL / NEXT_PUBLIC_URL)."
+    );
+    return { clientsReminded: 0, documentsIncluded: 0 };
+  }
 
   try {
     // Calculate cutoff dates
@@ -105,7 +114,7 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
         const missingDocuments = clientDocs.map(doc => doc.name);
 
         // Portal URL (assuming standard documents path)
-        const portalUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/documents`;
+        const portalUrl = `${appUrl}/documents`;
 
         // Round-11 commit 2.4b: decrypt once per client.
         const clientEmail = decryptUserEmail(client.emailCiphertext);

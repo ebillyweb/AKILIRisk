@@ -2,8 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/escape-html";
-
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 
 interface DocumentReminderData {
   clientEmail: string;
@@ -151,7 +150,7 @@ export async function sendDocumentReminderEmail(data: DocumentReminderData): Pro
     const subject = `${documentsText} Needed - ${data.advisorFirmName}`;
 
     const result = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: resolveFromEmail(),
       to: data.clientEmail,
       subject,
       html: htmlContent,

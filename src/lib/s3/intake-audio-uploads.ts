@@ -16,16 +16,22 @@ import { s3EncryptionParams } from "@/lib/s3/encryption-params";
  * route at `/api/intake/[interviewId]/audio/[questionId]` is the only path
  * that authorizes byte access.
  *
- * Region/bucket env conventions match the branding module so a single
- * `AWS_REGION` + bucket can serve both. Set `S3_INTAKE_BUCKET` to isolate.
+ * Requires `S3_INTAKE_BUCKET` — no fallback to the branding bucket.
  */
 
-// Wrong region → PermanentRedirect or signed-host mismatch. Prefer the
-// intake-specific override; fall through to whatever the branding region is
-// (these typically share a bucket).
+function requireIntakeAudioBucket(): string {
+  const bucket = process.env.S3_INTAKE_BUCKET?.trim();
+  if (!bucket) {
+    throw new Error(
+      "S3_INTAKE_BUCKET is required for intake voice recordings."
+    );
+  }
+  return bucket;
+}
+
+// Wrong region → PermanentRedirect or signed-host mismatch.
 const INTAKE_AUDIO_S3_REGION =
   process.env.S3_INTAKE_REGION?.trim() ||
-  process.env.S3_BRANDING_REGION?.trim() ||
   process.env.AWS_REGION?.trim() ||
   "us-east-2";
 
@@ -40,10 +46,7 @@ const s3Client = new S3Client({
   requestChecksumCalculation: "WHEN_REQUIRED",
 });
 
-const BUCKET_NAME =
-  process.env.S3_INTAKE_BUCKET ||
-  process.env.S3_BRANDING_BUCKET ||
-  "akili-advisor-assets";
+const BUCKET_NAME = requireIntakeAudioBucket();
 
 /** Tight allowlist on the path components we interpolate into the S3 key.
  *  Matches the upload-route allowlist so cross-validation lines up. */

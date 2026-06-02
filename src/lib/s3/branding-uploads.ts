@@ -19,6 +19,14 @@ const BRANDING_S3_REGION =
   process.env.AWS_REGION?.trim() ||
   'us-east-2';
 
+function requireBrandingBucket(): string {
+  const bucket = process.env.S3_BRANDING_BUCKET?.trim();
+  if (!bucket) {
+    throw new Error("S3_BRANDING_BUCKET is required for advisor branding uploads.");
+  }
+  return bucket;
+}
+
 // Initialize S3 client (WHEN_REQUIRED avoids default CRC checksum params on presigned PUTs that break browser uploads)
 // `credentials: undefined` lets the SDK use its default credential provider chain
 // (IAM role on Vercel/ECS/EC2). resolveAwsCredentials() only returns explicit keys
@@ -30,7 +38,7 @@ const s3Client = new S3Client({
   requestChecksumCalculation: 'WHEN_REQUIRED',
 });
 
-const BUCKET_NAME = process.env.S3_BRANDING_BUCKET || 'akili-advisor-assets';
+const BUCKET_NAME = requireBrandingBucket();
 const CDN_BASE_URL =
   process.env.CLOUDFRONT_BASE_URL ||
   `https://${BUCKET_NAME}.s3.${BRANDING_S3_REGION}.amazonaws.com`;

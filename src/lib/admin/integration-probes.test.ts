@@ -150,15 +150,21 @@ describe("probeResend", () => {
 });
 
 describe("probeS3", () => {
-  it("returns not_configured when bucket env is missing", async () => {
+  it("returns not_configured when any required bucket env is missing", async () => {
     delete process.env.S3_BRANDING_BUCKET;
+    delete process.env.S3_INTAKE_BUCKET;
     delete process.env.S3_BUCKET_NAME;
     const result = await probeS3();
     expect(result.status).toBe("not_configured");
+    expect(result.message).toContain("S3_BRANDING_BUCKET");
+    expect(result.message).toContain("S3_INTAKE_BUCKET");
+    expect(result.message).toContain("S3_BUCKET_NAME");
   });
 
-  it("returns healthy when HeadBucket succeeds", async () => {
+  it("returns healthy when HeadBucket succeeds for all buckets", async () => {
     process.env.S3_BRANDING_BUCKET = "akili-advisor-assets";
+    process.env.S3_INTAKE_BUCKET = "akili-intake-audio";
+    process.env.S3_BUCKET_NAME = "akili-advisor-assets";
     process.env.AWS_ACCESS_KEY_ID = "AKIA";
     process.env.AWS_SECRET_ACCESS_KEY = "secret";
     process.env.AWS_REGION = "us-east-2";
@@ -166,9 +172,13 @@ describe("probeS3", () => {
     const result = await probeS3();
     expect(result.status).toBe("healthy");
     expect(mockS3Send).toHaveBeenCalled();
+    expect(result.message).toContain("akili-advisor-assets");
+    expect(result.message).toContain("akili-intake-audio");
   });
 
   it("returns down on access denied", async () => {
+    process.env.S3_BRANDING_BUCKET = "my-bucket";
+    process.env.S3_INTAKE_BUCKET = "my-intake";
     process.env.S3_BUCKET_NAME = "my-bucket";
     process.env.AWS_ACCESS_KEY_ID = "AKIA";
     process.env.AWS_SECRET_ACCESS_KEY = "secret";
@@ -178,6 +188,8 @@ describe("probeS3", () => {
   });
 
   it("returns down when bucket is not found (404 / NotFound)", async () => {
+    process.env.S3_BRANDING_BUCKET = "missing-bucket";
+    process.env.S3_INTAKE_BUCKET = "missing-intake";
     process.env.S3_BUCKET_NAME = "missing-bucket";
     process.env.AWS_ACCESS_KEY_ID = "AKIA";
     process.env.AWS_SECRET_ACCESS_KEY = "secret";

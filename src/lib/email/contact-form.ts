@@ -8,8 +8,7 @@ import {
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { LEGAL_ENTITY_NAME } from "@/lib/legal/documents";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
-
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 
 export type ContactFormEmailPayload = {
   name: string;
@@ -78,7 +77,7 @@ export async function sendContactFormEmail(
 
     await resend.emails.send(
       withPlatformLogoAttachment({
-        from: FROM_EMAIL,
+        from: resolveFromEmail(),
         to,
         replyTo: payload.email,
         subject: subjectLine,

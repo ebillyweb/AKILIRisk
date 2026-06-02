@@ -5,10 +5,10 @@ import { prisma } from "../db";
 import { NotificationCategory, SendNotificationParams } from "./types";
 import { shouldSendNotification } from "./preferences";
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
+import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import { renderNotificationEmail } from "./templates";
 import { NotificationType } from "@prisma/client";
-
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
 /**
  * Maps notification categories to Prisma NotificationType enum values
@@ -90,33 +90,39 @@ export async function sendNotification(params: SendNotificationParams): Promise<
         console.warn("RESEND_API_KEY not configured - notification email will not be sent");
       } else {
         const resend = new Resend(apiKey);
+        const appUrl = getPublicAppUrlStrict();
 
         // Use provided HTML or render from template
-        const htmlContent = emailHtml || renderNotificationEmail(category, {
-          // Templates will need specific data - this is a simplified approach
-          // In practice, the caller should provide the emailHtml for complex templates
-          clientName: 'Client', // Placeholder - caller should provide proper template data
-          pipelineUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-          assessmentUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-          clientDetailUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-        } as any);
+        const htmlContent = emailHtml || (appUrl
+          ? renderNotificationEmail(category, {
+              clientName: "Client",
+              pipelineUrl: appUrl,
+              assessmentUrl: appUrl,
+              clientDetailUrl: appUrl,
+            } as Parameters<typeof renderNotificationEmail>[1])
+          : null);
 
-        // Generate subject if not provided
-        const subject = emailSubject || `${title} - Akili Risk`;
-
-        const result = await resend.emails.send(
-          withPlatformLogoAttachment({
-            from: FROM_EMAIL,
-            to: recipientEmail,
-            subject,
-            html: htmlContent,
-          })
-        );
-
-        if (result.error) {
-          console.error("Failed to send notification email:", result.error);
+        if (!htmlContent) {
+          console.warn(
+            "Notification email skipped: public app URL not configured (AUTH_URL / NEXT_PUBLIC_URL)."
+          );
         } else {
-          emailSent = true;
+          const subject = emailSubject || `${title} - Akili Risk`;
+
+          const result = await resend.emails.send(
+            withPlatformLogoAttachment({
+              from: resolveFromEmail(),
+              to: recipientEmail,
+              subject,
+              html: htmlContent,
+            })
+          );
+
+          if (result.error) {
+            console.error("Failed to send notification email:", result.error);
+          } else {
+            emailSent = true;
+          }
         }
       }
     } catch (error) {

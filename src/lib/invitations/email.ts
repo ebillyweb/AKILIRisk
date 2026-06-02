@@ -15,8 +15,7 @@ import {
 import { looksLikeAdvisorBrandingS3Url } from "@/lib/branding/advisor-logo-display";
 import type { InvitationEmailTheme } from "@/lib/invitations/invitation-email-theme";
 import { PLATFORM_INVITATION_CTA_COLOR } from "@/lib/invitations/invitation-email-theme";
-
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 
 interface AdvisorInfo {
   advisorName: string;
@@ -247,7 +246,7 @@ export async function sendAdvisorInvitationEmail(data: SendInvitationData): Prom
     const result = await resend.emails.send(
       appendAdvisorLogoAttachment(
         withPlatformLogoAttachment({
-          from: FROM_EMAIL,
+          from: resolveFromEmail(),
           to: data.clientEmail,
           subject: `Invitation from ${data.advisorInfo.advisorName} - Family Governance Assessment`,
           html: htmlContent,

@@ -5,6 +5,7 @@ import { shouldSendNotification } from "@/lib/notifications/preferences";
 import { sendNotification } from "@/lib/notifications/service";
 import { renderNotificationEmail } from "@/lib/notifications/templates";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 interface ProcessResult {
   clientsReminded: number;
@@ -24,6 +25,14 @@ interface ProcessResult {
  */
 export async function processAssessmentReminders(): Promise<ProcessResult> {
   let clientsReminded = 0;
+
+  const appUrl = getPublicAppUrlStrict();
+  if (!appUrl) {
+    console.error(
+      "Assessment reminders skipped: public app URL not configured (AUTH_URL / NEXT_PUBLIC_URL)."
+    );
+    return { clientsReminded: 0 };
+  }
 
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days for intake
@@ -161,8 +170,8 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
         // Determine assessment URL based on what's incomplete
         const hasIncompleteIntake = client.intakeInterviews?.[0]?.status === 'IN_PROGRESS';
         const assessmentUrl = hasIncompleteIntake
-          ? `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/intake`
-          : `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/assessment`;
+          ? `${appUrl}/intake`
+          : `${appUrl}/assessment`;
 
         // Generate email HTML using the assessment reminder template
         const emailHtml = renderNotificationEmail('reminder', {

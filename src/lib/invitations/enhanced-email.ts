@@ -9,8 +9,7 @@ import {
   type AdvisorEmailLogoAttachment,
 } from '@/lib/email/advisor-email-logo';
 import type { SendEmailResult } from '@/lib/invitations/email';
-
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 
 /**
  * Enhanced advisor branding data for emails
@@ -434,7 +433,7 @@ export async function sendEnhancedAdvisorInvitationEmail(
     const result = await resend.emails.send(
       appendAdvisorLogoAttachment(
         {
-          from: FROM_EMAIL,
+          from: resolveFromEmail(),
           to: data.clientEmail,
           subject: `Invitation from ${advisorName} - Family Governance Assessment`,
           html: htmlContent,

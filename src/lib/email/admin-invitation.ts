@@ -9,15 +9,14 @@ import {
 } from "@/lib/email/platform-email-layout";
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
+import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-/** Must match a domain verified in Resend (see FROM_EMAIL in .env). */
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
-
 function formatFromAddress(): string {
-  if (FROM_EMAIL.includes("<")) return FROM_EMAIL;
-  return `AKILI Risk Intelligence <${FROM_EMAIL}>`;
+  const from = resolveFromEmail();
+  if (from.includes("<")) return from;
+  return `AKILI Risk Intelligence <${from}>`;
 }
 
 function resendErrorMessage(error: unknown): string {
