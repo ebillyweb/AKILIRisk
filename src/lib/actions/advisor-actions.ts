@@ -110,7 +110,7 @@ export async function getIntakeReviewData(interviewId: string) {
       };
     }
 
-    const reviewData = await getClientIntakeForReview(profile.id, interviewId);
+    const reviewData = await getClientIntakeForReview(profile.id, interviewId, userId);
     if (!reviewData) {
       return {
         success: false,

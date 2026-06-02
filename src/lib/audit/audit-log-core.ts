@@ -134,6 +134,18 @@ export const AUDIT_ACTIONS = {
   ASSESSMENT_RESPONSE_NOTE_UPDATE: "assessment_response_note.update",
   ASSESSMENT_RESPONSE_NOTE_DELETE: "assessment_response_note.delete",
 
+  // ── US-46c: per-answer advisor-scoped advisory notes ─────────────────────
+  /// Distinct from the US-46b admin variants above so the audit-log reader
+  /// can filter advisor vs platform-admin annotations independently. Each
+  /// advisor has at most one note per response (composite unique on
+  /// (responseId, advisorId)); two advisors on the same client coexist.
+  INTAKE_RESPONSE_ADVISOR_NOTE_CREATE: "intake_response_advisor_note.create",
+  INTAKE_RESPONSE_ADVISOR_NOTE_UPDATE: "intake_response_advisor_note.update",
+  INTAKE_RESPONSE_ADVISOR_NOTE_DELETE: "intake_response_advisor_note.delete",
+  ASSESSMENT_RESPONSE_ADVISOR_NOTE_CREATE: "assessment_response_advisor_note.create",
+  ASSESSMENT_RESPONSE_ADVISOR_NOTE_UPDATE: "assessment_response_advisor_note.update",
+  ASSESSMENT_RESPONSE_ADVISOR_NOTE_DELETE: "assessment_response_advisor_note.delete",
+
   // ── Auth events (P3) ──────────────────────────────────────────────────────
   AUTH_SIGNIN_SUCCESS: "auth.signin_success",
   AUTH_SIGNIN_FAILURE: "auth.signin_failure",

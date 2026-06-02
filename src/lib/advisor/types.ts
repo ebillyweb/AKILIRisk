@@ -19,6 +19,15 @@ export type AdvisorDashboardClient = {
   } | null;
 };
 
+/** US-46c: per-advisor advisory note view shape. Filtered server-side to
+ *  the calling advisor's own note (the DB row can carry one note per
+ *  assigned advisor). */
+export type AdvisorIntakeResponseNoteView = {
+  id: string;
+  body: string;
+  updatedAt: string;
+};
+
 // Complete data for reviewing a client's intake interview
 export type IntakeReviewData = {
   interview: IntakeInterview & {
@@ -27,7 +36,7 @@ export type IntakeReviewData = {
       name: string | null;
       email: string;
     };
-    responses: IntakeResponse[];
+    responses: Array<IntakeResponse & { advisorNote: AdvisorIntakeResponseNoteView | null }>;
   };
   approval: IntakeApproval | null;
   questions: IntakeQuestion[];

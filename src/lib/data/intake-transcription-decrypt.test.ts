@@ -129,6 +129,189 @@ describe("getIntakeInterview decrypt mapper", () => {
   });
 });
 
+describe("getClientIntakeForReview advisor-note scoping (US-46c)", () => {
+  it("scopes the advisorNotes join to the calling advisor's user id when advisorUserId is provided", async () => {
+    prismaSpies.intakeInterview.findFirst.mockResolvedValue({
+      id: "iv-scoped",
+      userId: "u-scoped",
+      status: "SUBMITTED",
+      currentQuestionIndex: 0,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      submittedAt: new Date(),
+      updatedAt: new Date(),
+      user: {
+        id: "u-scoped",
+        name: "Scoped Client",
+        emailCiphertext: userEmailCiphertext("scoped@example.com"),
+      },
+      responses: [],
+    });
+    (prismaSpies as Record<string, unknown>).intakeApproval = {
+      findUnique: vi.fn().mockResolvedValue(null),
+    };
+
+    await getClientIntakeForReview("adv-1", "iv-scoped", "advisor-user-7");
+
+    // Inspect the include shape we passed to prisma. The advisorNotes
+    // filter MUST scope to the calling advisor's user id — never global.
+    const findFirstSpy = prismaSpies.intakeInterview.findFirst as unknown as {
+      mock: { calls: Array<[Record<string, unknown>]> };
+    };
+    const args = findFirstSpy.mock.calls[0][0] as {
+      include: {
+        responses: {
+          include?: { advisorNotes?: { where: { advisorId: string } } };
+        };
+      };
+    };
+    expect(args.include.responses.include?.advisorNotes?.where).toEqual({
+      advisorId: "advisor-user-7",
+    });
+  });
+
+  it("omits the advisorNotes join entirely when advisorUserId is not provided (back-compat)", async () => {
+    prismaSpies.intakeInterview.findFirst.mockResolvedValue({
+      id: "iv-noscope",
+      userId: "u-noscope",
+      status: "SUBMITTED",
+      currentQuestionIndex: 0,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      submittedAt: new Date(),
+      updatedAt: new Date(),
+      user: {
+        id: "u-noscope",
+        name: "No-scope Client",
+        emailCiphertext: userEmailCiphertext("noscope@example.com"),
+      },
+      responses: [],
+    });
+    (prismaSpies as Record<string, unknown>).intakeApproval = {
+      findUnique: vi.fn().mockResolvedValue(null),
+    };
+
+    await getClientIntakeForReview("adv-1", "iv-noscope");
+
+    const findFirstSpy = prismaSpies.intakeInterview.findFirst as unknown as {
+      mock: { calls: Array<[Record<string, unknown>]> };
+    };
+    const args = findFirstSpy.mock.calls[0][0] as {
+      include: {
+        responses: { include?: unknown };
+      };
+    };
+    // No include on responses ⇒ no advisor-note join attempted.
+    expect(args.include.responses.include).toBeUndefined();
+  });
+
+  it("does NOT include the admin-note relation (admins use a separate query)", async () => {
+    prismaSpies.intakeInterview.findFirst.mockResolvedValue({
+      id: "iv-noadmin",
+      userId: "u-noadmin",
+      status: "SUBMITTED",
+      currentQuestionIndex: 0,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      submittedAt: new Date(),
+      updatedAt: new Date(),
+      user: {
+        id: "u-noadmin",
+        name: "Plain Client",
+        emailCiphertext: userEmailCiphertext("plain@example.com"),
+      },
+      responses: [],
+    });
+    (prismaSpies as Record<string, unknown>).intakeApproval = {
+      findUnique: vi.fn().mockResolvedValue(null),
+    };
+
+    await getClientIntakeForReview("adv-1", "iv-noadmin", "advisor-user-7");
+
+    const findFirstSpy = prismaSpies.intakeInterview.findFirst as unknown as {
+      mock: { calls: Array<[Record<string, unknown>]> };
+    };
+    const args = findFirstSpy.mock.calls[0][0] as {
+      include: {
+        responses: {
+          include?: Record<string, unknown>;
+        };
+      };
+    };
+    // The advisor query must never pull in `adminNote` — that's the admin
+    // channel's view (admin-intake-queries / `IntakeResponseAdminNote`).
+    expect(args.include.responses.include?.adminNote).toBeUndefined();
+    expect(args.include.responses.include?.adminNotes).toBeUndefined();
+  });
+
+  it("returns null (tenant gate) when prisma findFirst yields nothing — no advisor-note fetch follow-up", async () => {
+    prismaSpies.intakeInterview.findFirst.mockResolvedValue(null);
+
+    const out = await getClientIntakeForReview(
+      "adv-1",
+      "iv-missing",
+      "advisor-user-7"
+    );
+    expect(out).toBeNull();
+  });
+
+  it("reshapes the advisorNotes array → singular `advisorNote` on each response", async () => {
+    const noteUpdatedAt = new Date("2026-04-30T12:34:56Z");
+    prismaSpies.intakeInterview.findFirst.mockResolvedValue({
+      id: "iv-reshape",
+      userId: "u-reshape",
+      status: "SUBMITTED",
+      currentQuestionIndex: 0,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      submittedAt: new Date(),
+      updatedAt: new Date(),
+      user: {
+        id: "u-reshape",
+        name: "Reshape Client",
+        emailCiphertext: userEmailCiphertext("reshape@example.com"),
+      },
+      responses: [
+        {
+          id: "ir-reshape",
+          interviewId: "iv-reshape",
+          questionId: "q-reshape",
+          audioUrl: null,
+          audioS3Key: null,
+          audioContentType: null,
+          audioDuration: null,
+          transcription: null,
+          hasTranscription: false,
+          transcriptionStatus: null,
+          answeredAt: new Date(),
+          updatedAt: new Date(),
+          advisorNotes: [
+            { id: "n-1", body: "scoped note", updatedAt: noteUpdatedAt },
+          ],
+        },
+      ],
+    });
+    (prismaSpies as Record<string, unknown>).intakeApproval = {
+      findUnique: vi.fn().mockResolvedValue(null),
+    };
+
+    const out = await getClientIntakeForReview(
+      "adv-1",
+      "iv-reshape",
+      "advisor-user-7"
+    );
+    expect(out).not.toBeNull();
+    const response = out!.interview.responses[0] as unknown as {
+      advisorNote: { id: string; body: string; updatedAt: string } | null;
+    };
+    expect(response.advisorNote).toEqual({
+      id: "n-1",
+      body: "scoped note",
+      updatedAt: noteUpdatedAt.toISOString(),
+    });
+  });
+});
+
 describe("getClientIntakeForReview decrypt mapper", () => {
   it("decrypts response.transcription AND user.email on the way out", async () => {
     const plain = "Family-office governance is currently informal.";

@@ -9,6 +9,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AudioPlayer } from "./AudioPlayer";
+import { AnswerAdvisorNotePanel } from "./AnswerAdvisorNotePanel";
+import {
+  deleteIntakeResponseAdvisorNote,
+  saveIntakeResponseAdvisorNote,
+} from "@/lib/actions/advisor-answer-note-actions";
 import type { IntakeReviewData } from "@/lib/advisor/types";
 
 interface AdvisorIntakeViewProps {
@@ -48,6 +53,19 @@ export function AdvisorIntakeView({
               totalQuestions={totalQuestions}
             />
             <ClientResponseBlock response={response} questionNumber={num} />
+            {response ? (
+              <AnswerAdvisorNotePanel
+                targetLabel={`intake Q${num}`}
+                initialNote={response.advisorNote ?? null}
+                onSave={(body) =>
+                  saveIntakeResponseAdvisorNote({
+                    intakeResponseId: response.id,
+                    body,
+                  })
+                }
+                onDelete={() => deleteIntakeResponseAdvisorNote(response.id)}
+              />
+            ) : null}
           </section>
         );
       })}

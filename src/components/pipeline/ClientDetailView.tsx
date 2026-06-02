@@ -317,7 +317,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   </div>
 
                   {assessmentDetails.completedAt && (
-                    <div className="pt-2">
+                    <div className="flex flex-wrap items-center gap-4 pt-2">
                       <Link
                         href={`/advisor/analytics/${client.id}`}
                         className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
@@ -325,6 +325,17 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         <BarChart3 className="w-3 h-3" />
                         View Full Analytics
                       </Link>
+                      {assessmentDetails.id && (
+                        // US-46c: deep-link into the per-answer review surface
+                        // where advisors leave answer-level advisory notes.
+                        <Link
+                          href={`/advisor/pipeline/${client.id}/assessment/${assessmentDetails.id}`}
+                          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                        >
+                          <FileText className="w-3 h-3" />
+                          Review answers
+                        </Link>
+                      )}
                     </div>
                   )}
                 </div>

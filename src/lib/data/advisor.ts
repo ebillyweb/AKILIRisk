@@ -110,7 +110,18 @@ export async function getAssignedClients(advisorProfileId: string): Promise<Advi
   });
 }
 
-export async function getClientIntakeForReview(advisorProfileId: string, interviewId: string) {
+export async function getClientIntakeForReview(
+  advisorProfileId: string,
+  interviewId: string,
+  /**
+   * US-46c: User id of the calling advisor — used to scope the
+   * IntakeResponseAdvisorNote join to this advisor's own note. Optional
+   * (back-compat) so callers that don't yet pass it (e.g. older test
+   * fixtures) get a `null` advisorNote on every response rather than
+   * crashing. New advisor-facing call sites should always pass it.
+   */
+  advisorUserId?: string,
+) {
   // First verify the advisor has access to this client's interview
   const interview = await prisma.intakeInterview.findFirst({
     where: {
@@ -137,6 +148,15 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
         orderBy: {
           questionId: 'asc',
         },
+        include: advisorUserId
+          ? {
+              advisorNotes: {
+                where: { advisorId: advisorUserId },
+                select: { id: true, body: true, updatedAt: true },
+                take: 1,
+              },
+            }
+          : undefined,
       },
     },
   });
@@ -200,16 +220,36 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
       // transcription text.
       // Round-11 cleanup: tamper-resilient decrypt — corrupted rows
       // surface as null instead of crashing the advisor review page.
-      responses: interview.responses.map((r) => ({
-        ...r,
-        audioUrl: r.audioS3Key
-          ? (r.audioUrl ?? intakeResponsePlaybackUrl(interviewId, r.questionId))
-          : r.audioUrl,
-        transcription: safeDecryptTranscription(r.transcription, {
-          rowId: r.id,
-          column: "IntakeResponse.transcription",
-        }),
-      })),
+      responses: interview.responses.map((r) => {
+        // US-46c: filtered include returns 0-or-1 row for this advisor.
+        // Reshape to a single `advisorNote` field for the UI.
+        const advisorNotes = (r as unknown as {
+          advisorNotes?: Array<{
+            id: string;
+            body: string;
+            updatedAt: Date;
+          }>;
+        }).advisorNotes;
+        const firstNote = advisorNotes && advisorNotes.length > 0 ? advisorNotes[0] : null;
+        const advisorNote = firstNote
+          ? {
+              id: firstNote.id,
+              body: firstNote.body,
+              updatedAt: firstNote.updatedAt.toISOString(),
+            }
+          : null;
+        return {
+          ...r,
+          audioUrl: r.audioS3Key
+            ? (r.audioUrl ?? intakeResponsePlaybackUrl(interviewId, r.questionId))
+            : r.audioUrl,
+          transcription: safeDecryptTranscription(r.transcription, {
+            rowId: r.id,
+            column: "IntakeResponse.transcription",
+          }),
+          advisorNote,
+        };
+      }),
     },
     approval,
   };

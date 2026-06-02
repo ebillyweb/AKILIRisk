@@ -68,6 +68,16 @@ model User {
   intakeResponseAdminNotesUpdated     IntakeResponseAdminNote[]     @relation("IntakeResponseAdminNoteUpdatedBy")
   assessmentResponseAdminNotesCreated AssessmentResponseAdminNote[] @relation("AssessmentResponseAdminNoteCreatedBy")
   assessmentResponseAdminNotesUpdated AssessmentResponseAdminNote[] @relation("AssessmentResponseAdminNoteUpdatedBy")
+  /// US-46c: advisor-scoped advisory notes on individual intake/assessment
+  /// answers. `advisorId` is the advisor User; createdBy/updatedBy are the
+  /// audit-trail authors (always the same User row in practice but kept
+  /// separate so the FK semantics mirror the admin tables).
+  intakeResponseAdvisorNotesOwned       IntakeResponseAdvisorNote[]     @relation("IntakeResponseAdvisorNoteAdvisor")
+  intakeResponseAdvisorNotesCreated     IntakeResponseAdvisorNote[]     @relation("IntakeResponseAdvisorNoteCreatedBy")
+  intakeResponseAdvisorNotesUpdated     IntakeResponseAdvisorNote[]     @relation("IntakeResponseAdvisorNoteUpdatedBy")
+  assessmentResponseAdvisorNotesOwned   AssessmentResponseAdvisorNote[] @relation("AssessmentResponseAdvisorNoteAdvisor")
+  assessmentResponseAdvisorNotesCreated AssessmentResponseAdvisorNote[] @relation("AssessmentResponseAdvisorNoteCreatedBy")
+  assessmentResponseAdvisorNotesUpdated AssessmentResponseAdvisorNote[] @relation("AssessmentResponseAdvisorNoteUpdatedBy")
   /// BRD §6.3 Phase 3 / Epic 5.10: portfolio engagements where this user
   /// is the client (cascade with the User row) or the advisor (restrict
   /// so engagements aren't orphaned by accidental advisor deletion).
@@ -341,6 +351,9 @@ model AssessmentResponse {
 
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   adminNote    AssessmentResponseAdminNote?
+  /// US-46c: zero-or-more advisor notes — one per assigned advisor. Two
+  /// active advisors on the same client can each leave their own note.
+  advisorNotes AssessmentResponseAdvisorNote[]
 
   @@unique([assessmentId, questionId])
   @@index([assessmentId])
@@ -361,6 +374,32 @@ model AssessmentResponseAdminNote {
   createdBy          User               @relation("AssessmentResponseAdminNoteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
   updatedBy          User?              @relation("AssessmentResponseAdminNoteUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
+  @@index([createdByUserId])
+}
+
+/// US-46c: per-advisor advisory note on a single assessment answer. Sister
+/// to AssessmentResponseAdminNote (US-46b) — both channels coexist on the
+/// same response and neither overwrites the other. `advisorId` is the
+/// advisor User (not AdvisorProfile) for parity with createdBy/updatedBy.
+/// Tenant isolation (ACTIVE ClientAdvisorAssignment) is enforced at the
+/// application layer, not the DB schema.
+model AssessmentResponseAdvisorNote {
+  id                   String   @id @default(cuid())
+  assessmentResponseId String
+  advisorId            String
+  body                 String   @db.Text
+  createdByUserId      String
+  updatedByUserId      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  assessmentResponse AssessmentResponse @relation(fields: [assessmentResponseId], references: [id], onDelete: Cascade)
+  advisor            User               @relation("AssessmentResponseAdvisorNoteAdvisor", fields: [advisorId], references: [id], onDelete: Cascade)
+  createdBy          User               @relation("AssessmentResponseAdvisorNoteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy          User?              @relation("AssessmentResponseAdvisorNoteUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([assessmentResponseId, advisorId])
+  @@index([advisorId])
   @@index([createdByUserId])
 }
 
@@ -648,6 +687,9 @@ model IntakeResponse {
 
   interview           IntakeInterview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   adminNote           IntakeResponseAdminNote?
+  /// US-46c: zero-or-more advisor notes — one per assigned advisor. Two
+  /// active advisors on the same client can each leave their own note.
+  advisorNotes        IntakeResponseAdvisorNote[]
 
   @@unique([interviewId, questionId])
   @@index([interviewId])
@@ -668,6 +710,32 @@ model IntakeResponseAdminNote {
   createdBy      User           @relation("IntakeResponseAdminNoteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
   updatedBy      User?          @relation("IntakeResponseAdminNoteUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
+  @@index([createdByUserId])
+}
+
+/// US-46c: per-advisor advisory note on a single intake answer. Sister to
+/// IntakeResponseAdminNote (US-46b) — both channels coexist on the same
+/// response and neither overwrites the other. `advisorId` is the advisor
+/// User (not AdvisorProfile) for parity with createdBy/updatedBy. Tenant
+/// isolation (ACTIVE ClientAdvisorAssignment) is enforced at the
+/// application layer, not the DB schema.
+model IntakeResponseAdvisorNote {
+  id               String   @id @default(cuid())
+  intakeResponseId String
+  advisorId        String
+  body             String   @db.Text
+  createdByUserId  String
+  updatedByUserId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  intakeResponse IntakeResponse @relation(fields: [intakeResponseId], references: [id], onDelete: Cascade)
+  advisor        User           @relation("IntakeResponseAdvisorNoteAdvisor", fields: [advisorId], references: [id], onDelete: Cascade)
+  createdBy      User           @relation("IntakeResponseAdvisorNoteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy      User?          @relation("IntakeResponseAdvisorNoteUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([intakeResponseId, advisorId])
+  @@index([advisorId])
   @@index([createdByUserId])
 }
 
