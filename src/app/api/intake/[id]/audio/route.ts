@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { UserRole } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { assertClientRoleForMutationApi } from '@/lib/client/require-client-role';
 import { getIntakeInterview, saveIntakeResponse } from '@/lib/data/intake';
 import {
   uploadIntakeAudioFromBuffer,
@@ -36,6 +37,9 @@ export async function POST(
         { status: 401 }
       );
     }
+
+    const roleDenied = assertClientRoleForMutationApi(session);
+    if (roleDenied) return roleDenied;
 
     // Reject oversized uploads before reading the body. We can't reliably
     // bail mid-read inside the Next.js formData parser, so the

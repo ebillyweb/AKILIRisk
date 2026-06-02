@@ -10,7 +10,8 @@ import {
 } from "@/lib/branding/preview-hex";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 
-const CLIENT_NAV_ITEMS: { href: string; label: string }[] = [
+/** Client portal only — not shown when `showAdvisor` / `showAdmin` (see baseItems below). */
+export const CLIENT_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/intake", label: "Intake" },
   { href: "/assessment", label: "Assessment" },
@@ -19,7 +20,7 @@ const CLIENT_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/settings", label: "Settings" },
 ];
 
-const ADVISOR_NAV_ITEMS: { href: string; label: string }[] = [
+export const ADVISOR_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/advisor", label: "Subscriber hub" },
   { href: "/advisor/invitations", label: "Invitations" },
   { href: "/advisor/dashboard", label: "Dashboard" },

@@ -138,7 +138,8 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Review each intake question as the client saw it. Use &quot;Play question&quot; to hear the question, then listen to the client&apos;s recorded response and read the transcript.
+                Read each question and listen to voice recordings where the client recorded an answer.
+                Typed-only answers show the transcript without a recording.
               </p>
 
               <AdvisorIntakeView

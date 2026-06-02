@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { assertClientRoleForMutationApi } from '@/lib/client/require-client-role';
 import { getIntakeInterview, saveIntakeResponse } from '@/lib/data/intake';
 import { getIntakeAudioObjectBytes } from '@/lib/s3/intake-audio-uploads';
 
@@ -16,6 +17,9 @@ export async function POST(
         { status: 401 }
       );
     }
+
+    const roleDenied = assertClientRoleForMutationApi(session);
+    if (roleDenied) return roleDenied;
 
     const userId = session.user.id;
     const { id: interviewId } = await params;

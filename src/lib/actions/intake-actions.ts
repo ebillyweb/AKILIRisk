@@ -21,14 +21,16 @@ import { prisma } from '@/lib/db';
 import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
 import { syncInvitationStatusForClientEmail } from '@/lib/invitations/redeem-invitation';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
+import { requireClientUserRole } from '@/lib/client/require-client-role';
 import type { UserRole } from '@prisma/client';
 
-// Helper function to get authenticated user ID
+// Helper function to get authenticated client user ID
 async function getAuthUserId() {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Not authenticated');
   }
+  requireClientUserRole(session.user.role);
   return session.user.id;
 }
 
@@ -38,6 +40,7 @@ async function getAuthActor() {
   if (!session?.user?.id) {
     throw new Error('Not authenticated');
   }
+  requireClientUserRole(session.user.role);
   return {
     userId: session.user.id,
     role: session.user.role as UserRole | undefined,

@@ -1,11 +1,12 @@
 import { auth } from "@/lib/auth";
-import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
+import { redirectPathUnlessClientRole } from "@/lib/client/require-client-role";
 import { redirect } from "next/navigation";
 
 /**
- * For clients (USER role): only allow access to /assessment when intake is
- * submitted and approved, or the assigned advisor has waived the intake requirement.
+ * Client assessment flow is USER-only. Staff use advisor/admin workspaces.
+ * For clients: only allow access when intake is submitted and approved,
+ * or the assigned advisor has waived the intake requirement.
  */
 export default async function AssessmentLayout({
   children,
@@ -15,10 +16,8 @@ export default async function AssessmentLayout({
   const session = await auth();
   if (!session?.user?.id) return <>{children}</>;
 
-  const role = session.user.role?.toString().toUpperCase();
-  if (isAdvisorHubNavRole(role)) {
-    return <>{children}</>;
-  }
+  const staffRedirect = redirectPathUnlessClientRole(session.user.role);
+  if (staffRedirect) redirect(staffRedirect);
 
   const gate = await getClientIntakeGateState(session.user.id);
   if (!gate.assessmentUnlocked) {

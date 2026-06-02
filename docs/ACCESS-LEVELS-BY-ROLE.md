@@ -34,24 +34,25 @@ Summary of what each role can see and do. All protected routes require an authen
 
 ## ADVISOR (and ADMIN)
 
-**Nav:** Advisor Hub, Portfolio, Client View, Intake, Assessment, Profiles, Settings.
+**Nav:** Subscriber hub, Invitations, Dashboard (when enabled), Risk Intelligence (when enabled), Notifications, Billing, Settings — not client Intake / Assessment / Profiles.
 
 | Area | Access |
 |------|--------|
 | **Advisor Hub** (`/advisor`) | Advisor dashboard: assigned clients, pending reviews, notifications. Guarded by `advisor/layout.tsx` and `requireAdvisorRole()` in actions. |
 | **Portfolio** (`/advisor/dashboard`) | Governance/portfolio dashboard. Same guards; data via `getGovernanceDashboardData()` (assigned clients only). |
-| **Advisor review/notifications** | `/advisor/review/[id]`, `/advisor/notifications`. Same layout guard; actions use `requireAdvisorRole()` and advisor profile. |
-| **Client View** (`/dashboard`) | **Currently:** Redirects to `/advisor` from the dashboard page, so “Client View” always sends them back to Advisor Hub. So advisors do not get a distinct “client” view unless you change this (see note below). |
-| **Intake / Assessment / Profiles / Settings** | Same pages as clients. Advisors use them for **their own** intake, assessments, household, and account (e.g. demo or personal use). Data still scoped by `session.user.id` in APIs. |
-| **APIs** | Client-facing APIs (assessment, intake, reports, templates) still enforce ownership by `session.user.id`. Advisor-only data (client list, reviews, approvals) goes through `requireAdvisorRole()` and advisor profile / assignments. Advisors do not get other users’ data via the generic assessment/intake APIs. |
+| **Advisor review/notifications** | `/advisor/review/[id]`, `/advisor/notifications`. Review assigned clients’ submitted intakes here — not `/intake`. |
+| **Client dashboard** (`/dashboard`) | Redirects to `/advisor` (or `/admin` for platform staff). |
+| **Client routes** (`/intake`, `/assessment`, `/profiles`, `/documents`) | **No access.** Layouts call `redirectPathUnlessClientRole()`; intake server actions and intake mutation APIs require `USER`. |
+| **Settings** (`/settings`, `/advisor/settings`) | Account and MFA via advisor settings. |
+| **APIs** | Advisor data via `requireAdvisorRole()`. Intake audio stream GET still allows advisors with an assignment (review playback). Intake upload/transcribe/submit are client-only. |
 
-**Makes sense:** Advisors have a dedicated area (Hub + Portfolio) and role checks on all advisor actions; they can also use client-facing pages for their own data only.
+**Makes sense:** Advisors work in the hub; clients complete intake and assessment on their own accounts.
 
 ---
 
 ## ADMIN (designated admin: buddy@ebilly.com only)
 
-**Nav:** Admin, Advisor Hub, Portfolio, Client View, Intake, Assessment, Profiles, Settings.
+**Nav:** Admin workspace (and advisor hub when applicable). Not client `/intake` or `/assessment`.
 
 | Area | Access |
 |------|--------|
@@ -74,7 +75,7 @@ Summary of what each role can see and do. All protected routes require an authen
    ADMIN is a distinct role restricted to the designated admin account (buddy@ebilly.com). Only that user sees the "Admin" nav item and can access `/admin`. Session callback in `lib/auth.ts` strips ADMIN from any other user. Use `scripts/set-admin-role.js` to create or set the admin user.
 
 3. **Advisors and client routes**  
-   Advisors can open Intake, Assessment, Profiles, Settings and use them as a normal user (their own data). If the product should be “advisors only use Advisor Hub and Portfolio,” you could hide those four links for ADVISOR/ADMIN and only show Advisor Hub, Portfolio, and Settings (or similar).
+   **Done:** Client `/intake`, `/assessment`, `/profiles`, and `/documents` are `USER`-only (layouts + intake actions/APIs). Advisors review client intakes at `/advisor/review/[id]` and manage the script at `/admin/intake/questions`.
 
 ---
 
@@ -88,6 +89,7 @@ Summary of what each role can see and do. All protected routes require an authen
 | **Admin layout** | `(protected)/admin/layout.tsx` | Only allows access if `isAdminUser(email, role)` (ADMIN + buddy@ebilly.com). |
 | **requireAdvisorRole()** | `lib/advisor/auth.ts` | Used by all advisor server actions; throws if not ADVISOR/ADMIN. |
 | **requireAdminRole()** | `lib/admin/auth.ts` | Used for admin-only actions; throws unless ADMIN and email is buddy@ebilly.com. |
-| **API ownership** | Assessment, intake, reports, templates APIs | Compare `assessment.userId` or interview owner to `session.user.id`; no role-based override. |
+| **Client-only routes** | `intake/layout.tsx`, `assessment/layout.tsx`, `profiles/layout.tsx`, `documents/layout.tsx` | `redirectPathUnlessClientRole()` sends staff to `/advisor` or `/admin`. |
+| **API ownership** | Assessment, intake, reports, templates APIs | Compare `assessment.userId` or interview owner to `session.user.id`; intake mutations also require `USER`. |
 
 Role is normalized (`.toString().toUpperCase()`) in layout and advisor auth so “ADVISOR”/“ADMIN” match regardless of casing from the DB/JWT.

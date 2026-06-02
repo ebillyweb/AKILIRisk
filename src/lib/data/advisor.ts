@@ -8,6 +8,7 @@ import {
   resolveAdvisorClientIdentity,
 } from "@/lib/advisor/field-visibility";
 import { safeDecryptTranscription } from "@/lib/data/response-content";
+import { intakeResponsePlaybackUrl } from "@/lib/intake/playback-url";
 
 export async function getAdvisorProfile(userId: string) {
   // Round-11 commit 2.4b: ciphertext + decrypt at exit so callers
@@ -201,6 +202,9 @@ export async function getClientIntakeForReview(advisorProfileId: string, intervi
       // surface as null instead of crashing the advisor review page.
       responses: interview.responses.map((r) => ({
         ...r,
+        audioUrl: r.audioS3Key
+          ? (r.audioUrl ?? intakeResponsePlaybackUrl(interviewId, r.questionId))
+          : r.audioUrl,
         transcription: safeDecryptTranscription(r.transcription, {
           rowId: r.id,
           column: "IntakeResponse.transcription",

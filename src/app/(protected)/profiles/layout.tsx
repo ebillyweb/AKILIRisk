@@ -2,8 +2,8 @@ import { auth } from "@/lib/auth";
 import { redirectPathUnlessClientRole } from "@/lib/client/require-client-role";
 import { redirect } from "next/navigation";
 
-/** Client document portal is client-only. */
-export default async function DocumentsLayout({
+/** Household profiles are client-only. */
+export default async function ProfilesLayout({
   children,
 }: {
   children: React.ReactNode;

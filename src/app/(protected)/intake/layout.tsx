@@ -2,8 +2,8 @@ import { auth } from "@/lib/auth";
 import { redirectPathUnlessClientRole } from "@/lib/client/require-client-role";
 import { redirect } from "next/navigation";
 
-/** Client document portal is client-only. */
-export default async function DocumentsLayout({
+/** Governance intake is client-only; advisors review at `/advisor/review/[id]`. */
+export default async function IntakeLayout({
   children,
 }: {
   children: React.ReactNode;

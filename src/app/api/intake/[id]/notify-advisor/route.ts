@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { assertClientRoleForMutationApi } from "@/lib/client/require-client-role";
 import { prisma } from "@/lib/db";
 import { notifyAdvisorsOfIntake } from "@/lib/intake/notify-advisor";
 import { NextRequest, NextResponse } from "next/server";
@@ -27,6 +28,9 @@ export async function POST(
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
+
+    const roleDenied = assertClientRoleForMutationApi(session);
+    if (roleDenied) return roleDenied;
 
     const { id: interviewId } = await props.params;
     if (!interviewId) {

@@ -75,6 +75,9 @@ node scripts/seed-advisor-test-data.js
 node scripts/seed-invite-code.js
 node scripts/set-advisor-role.js
 node scripts/set-admin-role.js
+# One-off: reassign SUBMITTED intake from advisor login → assigned client (`scripts/migrate-intake-to-client.js`)
+# DRY_RUN=1 npm run db:migrate-intake-to-client
+# Optional: CLIENT_EMAIL=buddy+client2@ebilly.com INTERVIEW_ID=<cuid>
 # Optional: platform-reserved subdomain labels (preview, www, app, …)
 node scripts/seed-platform-reserved-subdomains.js
 ```

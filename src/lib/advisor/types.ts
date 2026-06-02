@@ -42,7 +42,7 @@ export type IntakeQuestion = {
   learnMore?: string;
   type: string;
   options?: Array<{ value: number; label: string; description?: string }>;
-  /** Full intake form fields for advisor view: same as client sees, enables "Play question" TTS */
+  /** Full intake form fields for advisor read-only review */
   questionNumber?: number;
   questionText?: string;
   context?: string;
