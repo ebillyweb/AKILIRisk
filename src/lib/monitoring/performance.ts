@@ -24,6 +24,7 @@ export function getPerformanceLevel(durationMs: number): PerformanceLevel {
   if (durationMs <= PERFORMANCE_THRESHOLDS.FAST) return "FAST";
   if (durationMs <= PERFORMANCE_THRESHOLDS.WARNING) return "WARNING";
   if (durationMs <= PERFORMANCE_THRESHOLDS.SLOW) return "SLOW";
+  if (durationMs <= PERFORMANCE_THRESHOLDS.CRITICAL) return "SLOW";
   return "CRITICAL";
 }
 

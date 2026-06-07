@@ -27,6 +27,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { saveDraftEdits, publishReport } from "@/lib/actions/report-actions";
+import { QueuedPillarActionsPanel } from "@/components/reports/QueuedPillarActionsPanel";
+import type { QueuedPillarAction } from "@/lib/reports/pillar-action-queue";
 import {
   fromReportTemplateUi,
   type ReportTemplateUi,
@@ -51,12 +53,14 @@ export interface EditDraftFormProps {
     priority: number;
     notes: string;
   }>;
+  queuedPillarActions?: QueuedPillarAction[];
 }
 
 export function EditDraftForm({
   clientId,
   draft,
   recommendations,
+  queuedPillarActions = [],
 }: EditDraftFormProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -183,6 +187,12 @@ export function EditDraftForm({
           </div>
         </CardContent>
       </Card>
+
+      <QueuedPillarActionsPanel
+        reportId={draft.id}
+        actions={queuedPillarActions}
+        onChange={() => router.refresh()}
+      />
 
       <Card>
         <CardHeader>

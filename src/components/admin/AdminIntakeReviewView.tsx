@@ -1,6 +1,7 @@
 "use client";
 
 import { AudioPlayer } from "@/components/advisor/AudioPlayer";
+import { StaffQuestionContextPanels } from "@/components/staff/StaffQuestionContextPanels";
 import { Badge } from "@/components/ui/badge";
 import { AnswerAdminNotePanel } from "@/components/admin/AnswerAdminNotePanel";
 import type { AdminIntakeReviewPayload } from "@/lib/admin/intake-review-queries";
@@ -70,6 +71,14 @@ export function AdminIntakeReviewView({ data }: Props) {
                     )}
                   </div>
                 </div>
+                <StaffQuestionContextPanels
+                  whyThisMatters={question.whyThisMatters}
+                  recommendedActions={question.recommendedActions}
+                  questionId={question.id}
+                  questionLabel={question.questionText}
+                  clientUserId={interview.user.id}
+                  source="intake"
+                />
                 <AnswerAdminNotePanel
                   targetLabel={`intake Q${num}`}
                   initialNote={response.adminNote}
@@ -83,9 +92,19 @@ export function AdminIntakeReviewView({ data }: Props) {
                 />
               </>
             ) : (
-              <p className="text-sm italic text-muted-foreground border-t pt-4">
-                No client response — admin notes can be added once an answer is recorded.
-              </p>
+              <>
+                <p className="text-sm italic text-muted-foreground border-t pt-4">
+                  No client response — admin notes can be added once an answer is recorded.
+                </p>
+                <StaffQuestionContextPanels
+                  whyThisMatters={question.whyThisMatters}
+                  recommendedActions={question.recommendedActions}
+                  questionId={question.id}
+                  questionLabel={question.questionText}
+                  clientUserId={interview.user.id}
+                  source="intake"
+                />
+              </>
             )}
           </section>
         );

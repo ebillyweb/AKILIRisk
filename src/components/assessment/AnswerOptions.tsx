@@ -154,7 +154,8 @@ export function MaturityScale({ options, value, onChange }: MaturityScaleProps) 
                 <div className="font-medium text-foreground">
                   {option.label}
                 </div>
-                {option.description && (
+                {option.description &&
+                  option.description !== option.label && (
                   <div className="text-sm text-muted-foreground mt-1 leading-6">
                     {option.description}
                   </div>

@@ -8,8 +8,22 @@
  * - Succession questions skip if no heirs
  */
 
-import { Question } from './types';
+import { branchingPredicateToRule } from './bank/behaviors';
+import type { BranchingRule, Question } from './types';
 import { HouseholdProfile } from './personalization';
+
+/** Rebuild branching when `showIf` was stripped by JSON serialization (API / React Query). */
+export function resolveBranchingRule(question: Question): BranchingRule | undefined {
+  if (typeof question.branchingRule?.showIf === 'function') {
+    return question.branchingRule;
+  }
+
+  const dependsOn =
+    question.branchingDependsOn ?? question.branchingRule?.dependsOn;
+  if (!dependsOn) return undefined;
+
+  return branchingPredicateToRule(dependsOn, question.branchingPredicate);
+}
 
 /**
  * Determine if a question should be shown based on current answers and optional profile
@@ -24,9 +38,9 @@ export function shouldShowQuestion(
   answers: Record<string, unknown>,
   profile?: HouseholdProfile | null
 ): boolean {
-  // Existing answer-based branching (unchanged)
-  if (question.branchingRule) {
-    const { dependsOn, showIf } = question.branchingRule;
+  const branchingRule = resolveBranchingRule(question);
+  if (branchingRule) {
+    const { dependsOn, showIf } = branchingRule;
     const dependencyAnswer = answers[dependsOn];
     if (dependencyAnswer === undefined || dependencyAnswer === null) {
       return false;

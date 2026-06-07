@@ -11,8 +11,15 @@
 
 import { describe, it, expect } from "vitest";
 import { PillarCategoryKind } from "@prisma/client";
-import { pillarQuestionRowToWire } from "./pillar-question-wire";
+import {
+  applySubQuestionBranching,
+  parentQuestionNumberForSub,
+  pillarQuestionRowToWire,
+  sortPillarQuestionRows,
+} from "./pillar-question-wire";
 import type { PillarQuestionWithHierarchy } from "./pillar-question-wire";
+import { wireQuestionToQuestion } from "./behaviors";
+import { getVisibleQuestions } from "@/lib/assessment/branching";
 
 function makeRow(
   answerType: string,
@@ -100,5 +107,48 @@ describe("pillarQuestionRowToWire — likert_5 (F1 / BRD §4.1)", () => {
   it("falls back to scored_0_3 for unknown answerType", () => {
     const wire = pillarQuestionRowToWire(makeRow("unknown_type"));
     expect(wire.type).toBe("maturity-scale");
+  });
+});
+
+describe("sub-question branching (A1 / A1a)", () => {
+  it("resolves parent question numbers from sub ids", () => {
+    expect(parentQuestionNumberForSub("A1a")).toBe("A1");
+    expect(parentQuestionNumberForSub("A3c")).toBe("A3");
+    expect(parentQuestionNumberForSub("A1")).toBeNull();
+  });
+
+  it("hides A1a until A1 is answered at documented maturity (>= 2)", () => {
+    const parent = makeRow("scored_0_3", {
+      id: "parent-a1",
+      questionNumber: "A1",
+      questionText: "How have you documented your family mission?",
+      isSubQuestion: false,
+      displayOrder: 2,
+    });
+    const sub = makeRow("fillable", {
+      id: "sub-a1a",
+      questionNumber: "A1a",
+      questionText: "Obtain copies of documentation",
+      isSubQuestion: true,
+      displayOrder: 1,
+    });
+    const rows = [sub, parent] as PillarQuestionWithHierarchy[];
+    const sorted = sortPillarQuestionRows(rows);
+    const wired = applySubQuestionBranching(
+      sorted,
+      sorted.map(pillarQuestionRowToWire)
+    );
+    const questions = wired.map(wireQuestionToQuestion);
+
+    const beforeParent = getVisibleQuestions({}, questions);
+    expect(beforeParent.map((q) => q.text)).toEqual([
+      "How have you documented your family mission?",
+    ]);
+
+    const afterDocumented = getVisibleQuestions({ [parent.id]: 2 }, questions);
+    expect(afterDocumented.map((q) => q.text)).toEqual([
+      "How have you documented your family mission?",
+      "Obtain copies of documentation",
+    ]);
   });
 });

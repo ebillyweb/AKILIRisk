@@ -1,6 +1,6 @@
 import type { PillarCategory, PillarQuestion, PillarSection } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
-import type { GovernanceQuestionWire } from "./behaviors";
+import type { BranchingPredicateWire, GovernanceQuestionWire } from "./behaviors";
 import { riskAreaIdForPillarCategory } from "./pillar-category-risk-area";
 
 export type PillarQuestionWithHierarchy = PillarQuestion & {
@@ -24,7 +24,6 @@ function wireForScored03(row: PillarQuestionWithHierarchy): GovernanceQuestionWi
   const options = [0, 1, 2, 3].map((value) => ({
     value,
     label: [a0, a1, a2, a3][value] ?? `Level ${value}`,
-    description: [a0, a1, a2, a3][value] ?? "",
   }));
   return {
     questionId: row.id,
@@ -223,9 +222,87 @@ export function assignSortOrderGlobals(wires: GovernanceQuestionWire[]): Governa
   return wires.map((w, i) => ({ ...w, sortOrderGlobal: i }));
 }
 
+/** Belvedere sub-question ids: `A1a` → parent `A1`, `A3b` → `A3`. */
+export function parentQuestionNumberForSub(questionNumber: string): string | null {
+  const match = questionNumber.match(/^([A-Za-z]*\d+)([a-z]+)$/);
+  return match?.[1] ?? null;
+}
+
+function subQuestionBranchingPredicate(
+  parent: PillarQuestionWithHierarchy
+): BranchingPredicateWire {
+  if (parent.answerType === "scored_0_3" || parent.answerType === "scale_1_5") {
+    return { op: "gte", value: 2 };
+  }
+  if (parent.answerType === "yes_no") {
+    return { op: "equals", value: "yes" };
+  }
+  return { op: "answered" };
+}
+
+/**
+ * Sub-questions (e.g. A1a) must not appear before their parent (A1), even when
+ * admin reorder or seed drift swaps `display_order`.
+ */
+export function applySubQuestionBranching(
+  rows: PillarQuestionWithHierarchy[],
+  wires: GovernanceQuestionWire[]
+): GovernanceQuestionWire[] {
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+  const idBySectionAndNumber = new Map<string, string>();
+  for (const row of rows) {
+    if (row.questionNumber) {
+      idBySectionAndNumber.set(`${row.sectionId}:${row.questionNumber}`, row.id);
+    }
+  }
+
+  return wires.map((wire) => {
+    const row = rowById.get(wire.questionId);
+    if (!row?.isSubQuestion || !row.questionNumber) return wire;
+
+    const parentNumber = parentQuestionNumberForSub(row.questionNumber);
+    if (!parentNumber) return wire;
+
+    const parentId = idBySectionAndNumber.get(`${row.sectionId}:${parentNumber}`);
+    if (!parentId) return wire;
+
+    const parentRow = rowById.get(parentId);
+    if (!parentRow) return wire;
+
+    return {
+      ...wire,
+      branchingDependsOn: parentId,
+      branchingPredicate: subQuestionBranchingPredicate(parentRow),
+    };
+  });
+}
+
+function pillarQuestionSortKey(
+  row: PillarQuestionWithHierarchy,
+  parentOrderBySectionAndNumber: Map<string, number>
+): number {
+  if (!row.isSubQuestion || !row.questionNumber) return row.displayOrder;
+  const parentNumber = parentQuestionNumberForSub(row.questionNumber);
+  if (!parentNumber) return row.displayOrder;
+  const parentOrder = parentOrderBySectionAndNumber.get(`${row.sectionId}:${parentNumber}`);
+  if (parentOrder === undefined) return row.displayOrder;
+  // Sub-questions follow their parent even when admin reorder swaps display_order.
+  return parentOrder + 0.001;
+}
+
 export function sortPillarQuestionRows(
   rows: PillarQuestionWithHierarchy[]
 ): PillarQuestionWithHierarchy[] {
+  const parentOrderBySectionAndNumber = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.isSubQuestion && row.questionNumber) {
+      parentOrderBySectionAndNumber.set(
+        `${row.sectionId}:${row.questionNumber}`,
+        row.displayOrder
+      );
+    }
+  }
+
   return [...rows].sort((a, b) => {
     const ca = a.section.category.displayOrder - b.section.category.displayOrder;
     if (ca !== 0) return ca;
@@ -235,6 +312,9 @@ export function sortPillarQuestionRows(
     if (sa !== 0) return sa;
     const sc = a.section.code.localeCompare(b.section.code);
     if (sc !== 0) return sc;
+    const ka = pillarQuestionSortKey(a, parentOrderBySectionAndNumber);
+    const kb = pillarQuestionSortKey(b, parentOrderBySectionAndNumber);
+    if (ka !== kb) return ka - kb;
     return a.displayOrder - b.displayOrder;
   });
 }

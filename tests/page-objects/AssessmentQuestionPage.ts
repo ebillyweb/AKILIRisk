@@ -1,25 +1,14 @@
 import { expect, type Page } from "@playwright/test";
 
-/** Canonical maturity labels (US-13 / maturity-scale.ts). */
-export const MATURITY_LEVEL_LABELS = [
-  "Critical gap",
-  "Partial / informal",
-  "Formalized",
-  "Institutionalized",
-] as const;
-
 export type MaturityValue = 0 | 1 | 2 | 3;
 
 export class AssessmentQuestionPage {
   constructor(private readonly page: Page) {}
 
   async expectMaturityScaleVisible() {
-    for (const label of MATURITY_LEVEL_LABELS) {
-      await expect(this.page.getByText(label, { exact: true }).first()).toBeVisible();
+    for (const value of [0, 1, 2, 3] as const) {
+      await expect(this.page.getByTestId(`maturity-option-${value}`)).toBeVisible();
     }
-    await expect(
-      this.page.getByText(/Maturity scale \(0–3\)/i)
-    ).toBeVisible();
   }
 
   async selectMaturity(value: MaturityValue) {

@@ -1326,6 +1326,9 @@ model Report {
   /// publish so future edits to the live `AssessmentRecommendation`
   /// rows don't retroactively rewrite a published Report's notes.
   advisorNotes      Json?
+  /// Staff-queued recommended actions from question-bank review (draft
+  /// overlay; frozen into snapshot on publish).
+  queuedPillarActions Json?
 
   /// Frozen scoring/breakdown/recommendations data, shaped exactly the
   /// way `AssessmentReport`'s `data` prop expects it (interface in

@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Question } from "@/lib/assessment/types";
-import { InlineHelp } from "./InlineHelp";
 import {
   SingleChoiceCards,
   YesNoCards,
@@ -17,9 +16,6 @@ import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { QuestionTtsPlayButton } from "@/components/common/QuestionTtsPlayButton";
-import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
-import { MATURITY_LEVEL_LABELS } from "@/lib/assessment/governance-rubric";
-import { CYBER_MATURITY_LEVEL_LABELS } from "@/lib/cyber-risk/cyber-rubric";
 
 /**
  * QuestionCard Component
@@ -198,9 +194,11 @@ export function QuestionCard({
     <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
       <div className="space-y-4 sm:space-y-5">
         <div className="space-y-3">
-          <p className="editorial-kicker">
-            {question.required ? "Required Question" : "Optional Question"}
-          </p>
+          {question.type !== "maturity-scale" ? (
+            <p className="editorial-kicker">
+              {question.required ? "Required Question" : "Optional Question"}
+            </p>
+          ) : null}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <h2 className="text-2xl font-semibold leading-tight text-balance text-foreground sm:text-4xl">
               {personalizedText || question.text}
@@ -219,32 +217,17 @@ export function QuestionCard({
           </div>
         </div>
 
-        {question.subCategory ? (
+        {question.subCategory && question.type !== "maturity-scale" ? (
           <p className="text-sm uppercase tracking-[0.14em] text-muted-foreground">
             {question.subCategory.replace(/-/g, " ")}
           </p>
         ) : null}
 
-        <InlineHelp
-          helpText={question.helpText}
-          learnMore={question.learnMore}
-        />
       </div>
 
       <div className="mt-6 sm:mt-8">
         {renderAnswerComponent()}
       </div>
-
-      {question.type === "maturity-scale" ? (
-        <p className="mt-3 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
-          Maturity scale (0–{MATURITY_SCALE_MAX}):{" "}
-          {(question.subCategory === "cyber-digital"
-            ? CYBER_MATURITY_LEVEL_LABELS
-            : MATURITY_LEVEL_LABELS
-          ).map((label, i) => `${i} — ${label}`).join(" · ")}
-          .
-        </p>
-      ) : null}
 
       {errors.answer && (
         <Alert variant="destructive">

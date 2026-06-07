@@ -1,3 +1,4 @@
+import { resolveBranchingRule } from "@/lib/assessment/branching";
 import type { Question } from "@/lib/assessment/types";
 import type { BranchingPredicateWire } from "./behaviors";
 
@@ -34,7 +35,7 @@ export function inferBranchingPayload(
   question: Question,
   questionsById: Map<string, Question>
 ): { dependsOn: string; predicate: BranchingPredicateWire } | null {
-  const br = question.branchingRule;
+  const br = resolveBranchingRule(question);
   if (!br) return null;
 
   const dep = questionsById.get(br.dependsOn);

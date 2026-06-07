@@ -270,6 +270,7 @@ export async function publishReport(
       version: true,
       executiveSummary: true,
       advisorNotes: true,
+      queuedPillarActions: true,
       templateChoice: true,
     },
   });
@@ -414,6 +415,8 @@ export async function publishReport(
           templateChoice: draft.templateChoice,
           executiveSummary: draft.executiveSummary,
           advisorNotes: (draft.advisorNotes ??
+            Prisma.JsonNull) as Prisma.InputJsonValue | typeof Prisma.JsonNull,
+          queuedPillarActions: (draft.queuedPillarActions ??
             Prisma.JsonNull) as Prisma.InputJsonValue | typeof Prisma.JsonNull,
         },
       });

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnswerAdvisorNotePanel } from "@/components/advisor/AnswerAdvisorNotePanel";
+import { StaffQuestionContextPanels } from "@/components/staff/StaffQuestionContextPanels";
 import { formatAssessmentAnswerForDisplay } from "@/lib/admin/format-assessment-answer";
 import type { AdvisorAssessmentReviewPayload } from "@/lib/advisor/assessment-review-queries";
 import {
@@ -53,6 +54,15 @@ export function AdvisorAssessmentReviewView({ data }: Props) {
                 {formatAssessmentAnswerForDisplay(question, row.answer, row.skipped)}
               </p>
             </div>
+            <StaffQuestionContextPanels
+              whyThisMatters={question?.helpText}
+              recommendedActions={question?.learnMore}
+              questionId={row.questionId}
+              questionLabel={label}
+              clientUserId={assessment.user.id}
+              pillar={row.pillar}
+              source="assessment"
+            />
             <AnswerAdvisorNotePanel
               targetLabel={label.slice(0, 48)}
               initialNote={row.advisorNote}

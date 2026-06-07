@@ -131,6 +131,7 @@ export async function getIntakeReviewDataForAdvisorPage(
       questionText: q.questionText,
       context: q.context,
       whyThisMatters: q.whyThisMatters,
+      recommendedActions: q.recommendedActions,
       recordingTips: q.recordingTips,
     })),
     householdMembers,

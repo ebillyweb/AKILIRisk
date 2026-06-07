@@ -115,9 +115,24 @@ export default async function AdminQuestionBankAreaPage({
                     {formatQuestionTextForDisplay(q.text)}
                   </p>
                   {q.helpText ? (
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {formatQuestionTextForDisplay(q.helpText)}
-                    </p>
+                    <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Why this matters
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-foreground/90">
+                        {formatQuestionTextForDisplay(q.helpText)}
+                      </p>
+                    </div>
+                  ) : null}
+                  {q.learnMore ? (
+                    <div className="rounded-lg border-2 border-dashed border-brand/35 bg-brand/5 px-3 py-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                        Recommended actions
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                        {formatQuestionTextForDisplay(String(q.learnMore))}
+                      </p>
+                    </div>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">

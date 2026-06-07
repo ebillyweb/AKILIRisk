@@ -25,6 +25,12 @@ export interface QuestionOption {
   description?: string;
 }
 
+/** Serializable branching predicate (survives JSON API responses). */
+export type BranchingPredicate = {
+  op: "equals" | "notEquals" | "gte" | "answered";
+  value?: unknown;
+};
+
 // Branching Rule
 export interface BranchingRule {
   dependsOn: string; // questionId
@@ -54,6 +60,9 @@ export interface Question {
    */
   omitMaturityScoreWhenYes?: boolean;
   branchingRule?: BranchingRule;
+  /** Wire-format parent id — used to rebuild `branchingRule` after JSON fetch. */
+  branchingDependsOn?: string;
+  branchingPredicate?: BranchingPredicate;
   textTemplate?: (profile: HouseholdProfile | null) => string;
   profileCondition?: (profile: HouseholdProfile) => boolean;
 }

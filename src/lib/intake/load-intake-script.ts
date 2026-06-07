@@ -47,11 +47,13 @@ export async function loadIntakeScriptQuestions(): Promise<IntakeQuestion[]> {
     const sorted = sortPillarQuestionRows(rows);
     return sorted.map((row, i) => {
       const why = row.whyThisMatters?.trim();
+      const recommended = row.recommendedActions?.trim();
       return {
         id: row.id,
         questionNumber: i + 1,
         questionText: row.questionText,
         whyThisMatters: why || undefined,
+        recommendedActions: recommended || undefined,
         context:
           why ||
           "Take your time; speak naturally as if in conversation with your advisor.",

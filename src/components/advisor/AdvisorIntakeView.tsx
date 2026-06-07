@@ -1,13 +1,7 @@
 "use client";
 
-import { CircleHelp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { StaffQuestionContextPanels } from "@/components/staff/StaffQuestionContextPanels";
 import { AudioPlayer } from "./AudioPlayer";
 import { AnswerAdvisorNotePanel } from "./AnswerAdvisorNotePanel";
 import {
@@ -20,6 +14,7 @@ interface AdvisorIntakeViewProps {
   responses: IntakeReviewData["interview"]["responses"];
   questions: IntakeReviewData["questions"];
   totalQuestions: number;
+  clientUserId: string;
 }
 
 /**
@@ -29,6 +24,7 @@ export function AdvisorIntakeView({
   responses,
   questions,
   totalQuestions,
+  clientUserId,
 }: AdvisorIntakeViewProps) {
   const responseByQuestionId = responses.reduce(
     (acc, r) => {
@@ -53,6 +49,14 @@ export function AdvisorIntakeView({
               totalQuestions={totalQuestions}
             />
             <ClientResponseBlock response={response} questionNumber={num} />
+            <StaffQuestionContextPanels
+              whyThisMatters={question.whyThisMatters}
+              recommendedActions={question.recommendedActions}
+              questionId={question.id}
+              questionLabel={question.questionText ?? question.text}
+              clientUserId={clientUserId}
+              source="intake"
+            />
             {response ? (
               <AnswerAdvisorNotePanel
                 targetLabel={`intake Q${num}`}
@@ -88,40 +92,13 @@ function QuestionBlock({
   totalQuestions: number;
 }) {
   const text = question.questionText ?? question.text;
-  const tooltipText = question.whyThisMatters?.trim();
 
   return (
     <div className="space-y-3">
       <div className="editorial-kicker text-sm text-muted-foreground uppercase tracking-wider">
         Question {questionNumber} of {totalQuestions}
       </div>
-      <div className="flex min-w-0 flex-1 items-start gap-2">
-        <h3 className="text-lg font-medium leading-7 text-foreground sm:text-xl">
-          {text}
-        </h3>
-        {tooltipText ? (
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="mt-0.5 shrink-0 rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Why we ask this"
-                >
-                  <CircleHelp className="size-5" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="bottom"
-                align="start"
-                className="max-h-48 max-w-xs overflow-y-auto text-left text-xs font-normal sm:max-w-md"
-              >
-                {tooltipText}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : null}
-      </div>
+      <h3 className="text-lg font-medium leading-7 text-foreground sm:text-xl">{text}</h3>
     </div>
   );
 }

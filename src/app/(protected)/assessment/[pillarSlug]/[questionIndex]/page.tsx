@@ -162,34 +162,11 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
-        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-          <SectionProgress
-            answeredCount={progress.answered}
-            totalCount={progress.total}
-            pillarName={currentPillar.name}
-          />
-
-          <Card className="hidden bg-background/60 sm:block">
-            <CardContent className="grid gap-3 pt-6 sm:grid-cols-3">
-              <div>
-                <p className="editorial-kicker">Question</p>
-                <p className="mt-2 text-xl font-semibold">
-                  {questionIndex + 1} / {visibleQuestions.length}
-                </p>
-              </div>
-              <div>
-                <p className="editorial-kicker">Status</p>
-                <p className="mt-2 text-xl font-semibold">
-                  {currentQuestion.required ? 'Required' : 'Optional'}
-                </p>
-              </div>
-              <div>
-                <p className="editorial-kicker">Autosave</p>
-                <p className="mt-2 text-xl font-semibold">{isSaving ? 'Saving' : 'Active'}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <SectionProgress
+          answeredCount={progress.answered}
+          totalCount={progress.total}
+          pillarName={currentPillar.name}
+        />
       </section>
 
       <Card className="overflow-hidden">

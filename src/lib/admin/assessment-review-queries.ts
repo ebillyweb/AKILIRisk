@@ -4,7 +4,10 @@ import type { UserRole } from "@prisma/client";
 
 import { requireAdminRole } from "@/lib/admin/auth";
 import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
-import type { Question } from "@/lib/assessment/types";
+import {
+  indexQuestionsForReview,
+  type QuestionReviewContext,
+} from "@/lib/assessment/question-review-context";
 import { decryptUserEmail } from "@/lib/auth/user-email-crypto";
 import { safeDecryptAnswer } from "@/lib/data/response-content";
 import { prisma } from "@/lib/db";
@@ -36,7 +39,7 @@ export type AdminAssessmentReviewPayload = {
     user: { id: string; name: string | null; email: string };
     responses: AdminAssessmentReviewRow[];
   };
-  questionsById: Record<string, Question>;
+  questionsById: Record<string, QuestionReviewContext>;
 };
 
 export async function getAssessmentForAdminReview(
@@ -84,7 +87,7 @@ export async function getAssessmentForAdminReview(
   });
 
   const allQuestions = await loadGovernanceQuestionsMerged({ onlyVisible: true });
-  const questionsById = Object.fromEntries(allQuestions.map((q) => [q.id, q]));
+  const questionsById = indexQuestionsForReview(allQuestions);
 
   return {
     assessment: {

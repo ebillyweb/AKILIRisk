@@ -125,6 +125,7 @@ export default async function AdvisorEditDraftPage({
           executiveSummary: data.draft.executiveSummary,
         }}
         recommendations={data.recommendations}
+        queuedPillarActions={data.queuedPillarActions}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { parseQueuedPillarActions, type QueuedPillarAction } from "@/lib/reports/pillar-action-queue";
 import {
   toReportTemplateUi,
   type ReportTemplateUi,
@@ -100,6 +101,7 @@ export async function getDraftWithRecommendations(
      *  advisorNotes` so first-time editing inherits any commit-1 notes. */
     notes: string;
   }>;
+  queuedPillarActions: QueuedPillarAction[];
 } | null> {
   const latestAssessment = await prisma.assessment.findFirst({
     where: { userId: clientUserId },
@@ -116,6 +118,7 @@ export async function getDraftWithRecommendations(
       templateChoice: true,
       executiveSummary: true,
       advisorNotes: true,
+      queuedPillarActions: true,
     },
   });
   if (!draft) return null;
@@ -144,6 +147,7 @@ export async function getDraftWithRecommendations(
       executiveSummary: draft.executiveSummary,
       advisorNotes: draftNotes,
     },
+    queuedPillarActions: parseQueuedPillarActions(draft.queuedPillarActions),
     recommendations: recs.map((r) => ({
       serviceRecommendationId: r.serviceRecommendationId,
       name: r.serviceRecommendation.name,

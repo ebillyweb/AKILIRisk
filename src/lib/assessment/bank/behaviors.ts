@@ -1,11 +1,8 @@
 import type { HouseholdProfile } from "@/lib/assessment/personalization";
 import { ageFromBirthYear, getMembersByRole, hasMultipleGenerations, hasSuccessors } from "@/lib/assessment/personalization";
-import type { BranchingRule, Question } from "@/lib/assessment/types";
+import type { BranchingPredicate, BranchingRule, Question } from "@/lib/assessment/types";
 
-export type BranchingPredicateWire = {
-  op: "equals" | "notEquals";
-  value: unknown;
-};
+export type BranchingPredicateWire = BranchingPredicate;
 
 export type GovernanceQuestionWire = {
   questionId: string;
@@ -37,6 +34,23 @@ export function branchingPredicateToRule(
     return {
       dependsOn,
       showIf: (answer: unknown) => answer === value,
+    };
+  }
+  if (op === "gte") {
+    const threshold = Number(value);
+    return {
+      dependsOn,
+      showIf: (answer: unknown) => {
+        const n = typeof answer === "number" ? answer : Number(answer);
+        return Number.isFinite(n) && n >= threshold;
+      },
+    };
+  }
+  if (op === "answered") {
+    return {
+      dependsOn,
+      showIf: (answer: unknown) =>
+        answer !== undefined && answer !== null && answer !== "",
     };
   }
   return {
@@ -140,6 +154,12 @@ export function wireQuestionToQuestion(wire: GovernanceQuestionWire): Question {
     scoreMap: normalizeScoreMap(wire.scoreMap),
     ...(wire.omitMaturityScoreWhenYes ? { omitMaturityScoreWhenYes: true } : {}),
     ...(branchingRule ? { branchingRule } : {}),
+    ...(wire.branchingDependsOn && wire.branchingPredicate
+      ? {
+          branchingDependsOn: wire.branchingDependsOn,
+          branchingPredicate: wire.branchingPredicate,
+        }
+      : {}),
     ...(profileCondition ? { profileCondition } : {}),
     ...(textTemplate ? { textTemplate } : {}),
   };

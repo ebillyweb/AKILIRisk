@@ -243,6 +243,26 @@ describe("shouldShowQuestion", () => {
   it("returns false when dependency answered but showIf does not match", () => {
     expect(shouldShowQuestion(questionWithBranch, { "has-trust": "no" })).toBe(false);
   });
+
+  it("rebuilds branching from serializable predicate after JSON fetch", () => {
+    const subQuestion: Question = {
+      id: "sub-a1a",
+      text: "Obtain copies of documentation",
+      type: "short-text",
+      required: true,
+      pillar: "governance",
+      subCategory: "governance",
+      weight: 1,
+      scoreMap: {},
+      branchingRule: { dependsOn: "parent-a1" } as Question["branchingRule"],
+      branchingDependsOn: "parent-a1",
+      branchingPredicate: { op: "gte", value: 2 },
+    };
+
+    expect(shouldShowQuestion(subQuestion, {})).toBe(false);
+    expect(shouldShowQuestion(subQuestion, { "parent-a1": 1 })).toBe(false);
+    expect(shouldShowQuestion(subQuestion, { "parent-a1": 2 })).toBe(true);
+  });
 });
 
 describe("getNextQuestion", () => {

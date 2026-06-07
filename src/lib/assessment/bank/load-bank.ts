@@ -7,6 +7,7 @@ import { wireQuestionsToQuestions } from "./behaviors";
 import type { Question } from "@/lib/assessment/types";
 import { riskAreaIdForPillarCategory } from "./pillar-category-risk-area";
 import {
+  applySubQuestionBranching,
   assignSortOrderGlobals,
   pillarQuestionInclude,
   pillarQuestionRowToWire,
@@ -41,7 +42,8 @@ export async function loadGovernanceQuestionWires(options: {
       (r) => riskAreaIdForPillarCategory(r.section.category) === options.riskAreaId
     );
   }
-  return assignSortOrderGlobals(sorted.map(pillarQuestionRowToWire));
+  const wires = sorted.map(pillarQuestionRowToWire);
+  return assignSortOrderGlobals(applySubQuestionBranching(sorted, wires));
 }
 
 export async function loadGovernanceQuestionsMerged(options: {

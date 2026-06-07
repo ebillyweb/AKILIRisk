@@ -28,56 +28,72 @@ test.describe("Epic 5.5 platform administration", () => {
 
     test("editing question text round-trips through the DB", async ({ page }) => {
       await new SignInPage(page).signInAs("admin");
-      await page.goto("/admin/assessment/questions/governance");
+      const probeText = `Playwright edit probe ${Date.now()}`;
 
-      const firstEdit = page
+      await page.goto("/admin/assessment/questions/governance/new");
+      await page.locator("#sectionId").selectOption({ index: 1 });
+      await page.locator("#text").fill(probeText);
+      await page.getByRole("button", { name: /create question/i }).click();
+      await page.waitForURL(/\/admin\/assessment\/questions\/governance(\?saved=1)?$/);
+
+      const probeRow = page.locator("div.flex.flex-col.gap-3.p-4", { hasText: probeText });
+      const editHref = await probeRow
         .locator('a[href*="/admin/assessment/questions/governance/"]', { hasText: "Edit" })
-        .first();
-      const editHref = await firstEdit.getAttribute("href");
+        .getAttribute("href");
       expect(editHref).not.toBeNull();
 
-      await firstEdit.click();
+      await probeRow.getByRole("link", { name: "Edit" }).click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance\/[^/]+$/);
 
       const textarea = page.locator("#text");
-      const originalText = await textarea.inputValue();
-      expect(originalText.length).toBeGreaterThan(0);
+      await expect(textarea).toHaveValue(probeText);
 
-      const suffix = ` Playwright probe ${Date.now()}`;
-      const probeText = `${originalText}${suffix}`;
-
-      await textarea.fill(probeText);
+      const updatedText = `${probeText} updated`;
+      await textarea.fill(updatedText);
       await page.getByRole("button", { name: /save changes/i }).click();
       await page.waitForURL(/saved=1/);
       await expect(page.getByText(/Question bank changes are live/i)).toBeVisible();
 
       await page.goto(editHref!);
-      await expect(textarea).toHaveValue(probeText);
+      await expect(textarea).toHaveValue(updatedText);
 
-      await textarea.fill(originalText);
-      await page.getByRole("button", { name: /save changes/i }).click();
-      await page.waitForURL(/saved=1/);
+      page.once("dialog", (dialog) => dialog.accept());
+      await page.goto("/admin/assessment/questions/governance");
+      const updatedRow = page.locator("div.flex.flex-col.gap-3.p-4", { hasText: updatedText });
+      await updatedRow.getByRole("button", { name: /^Delete$/ }).click();
+      await page.waitForURL(/\/admin\/assessment\/questions\/governance(\?|$)/);
+      await expect(updatedRow).toHaveCount(0);
     });
 
     test("visibility toggle round-trips through the DB", async ({ page }) => {
       await new SignInPage(page).signInAs("admin");
-      await page.goto("/admin/assessment/questions/governance");
+      const probeText = `Playwright visibility probe ${Date.now()}`;
 
-      const firstRow = page.locator("div.flex.flex-col.gap-3.p-4").first();
-      const hideButton = firstRow.getByRole("button", { name: /^Hide$/ });
+      await page.goto("/admin/assessment/questions/governance/new");
+      await page.locator("#sectionId").selectOption({ index: 1 });
+      await page.locator("#text").fill(probeText);
+      await page.getByRole("button", { name: /create question/i }).click();
+      await page.waitForURL(/\/admin\/assessment\/questions\/governance(\?saved=1)?$/);
+
+      const probeRow = page.locator("div.flex.flex-col.gap-3.p-4", { hasText: probeText });
+      const hideButton = probeRow.getByRole("button", { name: /^Hide$/ });
       await expect(hideButton).toBeVisible();
 
       await hideButton.click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance\?saved=1/);
       await expect(page.getByText(/Question bank changes are live/i)).toBeVisible();
 
-      const showButton = firstRow.getByRole("button", { name: /^Show$/ });
+      const showButton = probeRow.getByRole("button", { name: /^Show$/ });
       await expect(showButton).toBeVisible();
 
       await showButton.click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance\?saved=1/);
+      await expect(probeRow.getByRole("button", { name: /^Hide$/ })).toBeVisible();
 
-      await expect(firstRow.getByRole("button", { name: /^Hide$/ })).toBeVisible();
+      page.once("dialog", (dialog) => dialog.accept());
+      await probeRow.getByRole("button", { name: /^Delete$/ }).click();
+      await page.waitForURL(/\/admin\/assessment\/questions\/governance(\?|$)/);
+      await expect(probeRow).toHaveCount(0);
     });
 
     test("creating and deleting a question round-trips through the DB", async ({ page }) => {
@@ -103,7 +119,12 @@ test.describe("Epic 5.5 platform administration", () => {
       await new SignInPage(page).signInAs("admin");
       await page.goto("/admin/assessment/questions/governance");
 
-      const moveDown = page.getByRole("button", { name: "Move down", disabled: false }).first();
+      // Reorder a mid-list main question — not the first row (often a sub-question
+      // like A1a) — so we do not swap parent/sub display_order in shared dev DBs.
+      const a2Row = page.locator("div.flex.flex-col.gap-3.p-4", {
+        hasText: /family governance structure/i,
+      });
+      const moveDown = a2Row.getByRole("button", { name: "Move down" });
       await expect(moveDown).toBeEnabled();
       await moveDown.click();
       await page.waitForURL(/\/admin\/assessment\/questions\/governance\?saved=1/);

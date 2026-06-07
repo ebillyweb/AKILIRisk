@@ -1,9 +1,9 @@
-import type { Question } from "@/lib/assessment/types";
+import type { QuestionReviewContext } from "@/lib/assessment/question-review-context";
 import { MATURITY_LEVEL_LABELS } from "@/lib/assessment/governance-rubric";
 
 /** Read-only label for admin answer review (does not affect scoring). */
 export function formatAssessmentAnswerForDisplay(
-  question: Pick<Question, "type" | "options"> | undefined,
+  question: Pick<QuestionReviewContext, "type" | "options"> | undefined,
   answer: unknown,
   skipped: boolean
 ): string {

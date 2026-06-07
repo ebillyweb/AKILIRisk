@@ -165,6 +165,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                 responses={interview.responses}
                 questions={questions}
                 totalQuestions={questions.length}
+                clientUserId={interview.userId}
               />
             </div>
           </div>
