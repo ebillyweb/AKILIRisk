@@ -71,13 +71,13 @@ export default async function AdminClientsPage({
                         </Badge>
                       ) : null}
                     </div>
-                    <div className="flex items-center gap-2">
-                      {/* §4.5 commit 3: link to the per-version reports
-                          page (republish + audit history live there). The
-                          inline download remains as a quick latest-PUBLISHED
-                          shortcut. */}
-                      {c.latestScoredAssessmentId && (
-                        <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {c.latestScoredAssessmentId ? (
+                        <div className="flex items-center gap-2">
+                          {/* §4.5 commit 3: link to the per-version reports
+                              page (republish + audit history live there). The
+                              inline download remains as a quick latest-PUBLISHED
+                              shortcut. */}
                           <Button variant="ghost" size="sm" asChild>
                             <Link href={`/admin/clients/${c.id}/reports`}>
                               <Files className="w-4 h-4 mr-2" />
@@ -90,14 +90,16 @@ export default async function AdminClientsPage({
                             label="Download"
                             variant="ghost"
                           />
-                        </>
-                      )}
-                      {activeAssignments.length > 0 ? (
-                        <Badge variant="secondary">{activeAssignments.length} advisor(s)</Badge>
-                      ) : (
-                        <Badge variant="outline">Unassigned</Badge>
-                      )}
-                      <AdminClientAccountActions clientId={c.id} deactivated={isDeactivated} />
+                        </div>
+                      ) : null}
+                      <div className="ml-auto flex items-center gap-2">
+                        {activeAssignments.length > 0 ? (
+                          <Badge variant="secondary">{activeAssignments.length} advisor(s)</Badge>
+                        ) : (
+                          <Badge variant="outline">Unassigned</Badge>
+                        )}
+                        <AdminClientAccountActions clientId={c.id} deactivated={isDeactivated} />
+                      </div>
                     </div>
                   </li>
                 );
