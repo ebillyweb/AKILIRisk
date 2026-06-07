@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAssessmentStore } from "@/lib/assessment/store";
+import { useAssessmentPersistHydrated } from "@/lib/hooks/useAssessmentPersistHydrated";
 import { useHouseholdProfile } from "@/lib/hooks/useHouseholdProfile";
 import {
   useAllPillarQuestions,
@@ -30,6 +31,7 @@ import type { RiskLevel } from "@/lib/assessment/types";
 export default function AssessmentHubPage() {
   const router = useRouter();
   const store = useAssessmentStore();
+  const persistHydrated = useAssessmentPersistHydrated();
   const pillarDefinitions = useAssessmentPillarDefinitions();
   const [isInitializing, setIsInitializing] = useState(true);
   const { profile } = useHouseholdProfile();
@@ -84,6 +86,8 @@ export default function AssessmentHubPage() {
   });
 
   useEffect(() => {
+    if (!persistHydrated) return;
+
     if (assessmentData && !store.isHydrated) {
       store.loadFromServer(assessmentData);
       store.setHydrated(true);
@@ -99,7 +103,7 @@ export default function AssessmentHubPage() {
 
     const t = setTimeout(() => setIsInitializing(false), 0);
     return () => clearTimeout(t);
-  }, [assessmentData, assessmentFetchError, store]);
+  }, [assessmentData, assessmentFetchError, persistHydrated, store]);
 
   const LOADING_MAX_MS = 15_000;
   useEffect(() => {

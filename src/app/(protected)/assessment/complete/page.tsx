@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAssessmentStore } from '@/lib/assessment/store';
 import { resolveScoringPillar } from '@/lib/assessment/scoring-pillar';
+import { syncStoreAnswersToServer } from '@/lib/assessment/sync-store-responses';
+import { useAssessmentPersistHydrated } from '@/lib/hooks/useAssessmentPersistHydrated';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -19,6 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 export default function AssessmentCompletePage() {
   const router = useRouter();
   const { assessmentId, currentPillar } = useAssessmentStore();
+  const persistHydrated = useAssessmentPersistHydrated();
   const [isCalculating, setIsCalculating] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReadyForRedirects, setIsReadyForRedirects] = useState(false);
@@ -28,52 +31,56 @@ export default function AssessmentCompletePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (!isReadyForRedirects) {
-      return;
-    }
-
+  const runScoreCalculation = useCallback(async () => {
     if (!assessmentId) {
       router.push('/assessment');
       return;
     }
 
-    // Trigger score calculation
-    const calculateScore = async () => {
-      try {
-        setIsCalculating(true);
-        setError(null);
+    try {
+      setIsCalculating(true);
+      setError(null);
 
-        const pillar = await resolveScoringPillar(assessmentId, currentPillar);
+      const pillar = await resolveScoringPillar(assessmentId, currentPillar);
+      const store = useAssessmentStore.getState();
 
-        const response = await fetch(`/api/assessment/${assessmentId}/score`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pillar }),
-        });
+      await syncStoreAnswersToServer(assessmentId, {
+        answers: store.answers,
+        skippedQuestions: store.skippedQuestions,
+        questionBank: store.familyGovernanceQuestionBank ?? [],
+        currentPillar: store.currentPillar,
+      });
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || 'Failed to calculate score');
-        }
+      const response = await fetch(`/api/assessment/${assessmentId}/score`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pillar }),
+      });
 
-        // Score calculated successfully, wait 2 seconds for effect then redirect
-        setTimeout(() => {
-          router.push(`/assessment/results?pillar=${encodeURIComponent(pillar)}`);
-        }, 2000);
-      } catch (err) {
-        setIsCalculating(false);
-        setError(err instanceof Error ? err.message : 'An error occurred');
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to calculate score');
       }
-    };
 
-    calculateScore();
-  }, [assessmentId, currentPillar, router, isReadyForRedirects]);
+      setTimeout(() => {
+        router.push(`/assessment/results?pillar=${encodeURIComponent(pillar)}`);
+      }, 2000);
+    } catch (err) {
+      setIsCalculating(false);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  }, [assessmentId, currentPillar, router]);
+
+  useEffect(() => {
+    if (!isReadyForRedirects || !persistHydrated) {
+      return;
+    }
+
+    void runScoreCalculation();
+  }, [isReadyForRedirects, persistHydrated, runScoreCalculation]);
 
   const handleRetry = () => {
-    setError(null);
-    setIsCalculating(true);
-    window.location.reload();
+    void runScoreCalculation();
   };
 
   if (error) {
@@ -102,6 +109,11 @@ export default function AssessmentCompletePage() {
                   <p>
                     You need to complete at least 50% of the assessment questions to receive a score.
                     Please return to the assessment and answer more questions.
+                  </p>
+                ) : error.includes('No saved answers found') ? (
+                  <p>
+                    Your answers are not available in this browser session. Return to the assessment,
+                    re-answer the questions, then complete the section again.
                   </p>
                 ) : (
                   <p>
@@ -133,7 +145,7 @@ export default function AssessmentCompletePage() {
     );
   }
 
-  if (!isReadyForRedirects) {
+  if (!isReadyForRedirects || !persistHydrated) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="text-center space-y-4">

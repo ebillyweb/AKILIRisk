@@ -3,6 +3,8 @@ import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { redirectPathUnlessClientRole } from "@/lib/client/require-client-role";
 import { redirect } from "next/navigation";
 
+import { AssessmentQuestionBankLoader } from "@/components/assessment/AssessmentQuestionBankLoader";
+
 /**
  * Client assessment flow is USER-only. Staff use advisor/admin workspaces.
  * For clients: only allow access when intake is submitted and approved,
@@ -14,7 +16,14 @@ export default async function AssessmentLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  if (!session?.user?.id) return <>{children}</>;
+  if (!session?.user?.id) {
+    return (
+      <>
+        <AssessmentQuestionBankLoader />
+        {children}
+      </>
+    );
+  }
 
   const staffRedirect = redirectPathUnlessClientRole(session.user.role);
   if (staffRedirect) redirect(staffRedirect);
@@ -27,5 +36,10 @@ export default async function AssessmentLayout({
     redirect("/dashboard?assessment=awaiting-approval");
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <AssessmentQuestionBankLoader />
+      {children}
+    </>
+  );
 }

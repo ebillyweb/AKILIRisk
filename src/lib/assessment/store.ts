@@ -87,11 +87,15 @@ export const useAssessmentStore = create<AssessmentState>()(
       setAnswer: (questionId: string, answer: unknown) =>
         set((state) => {
           const newAnswers = { ...state.answers, [questionId]: answer };
-          const newOrphanedIds = getOrphanedAnswerIds(
-            newAnswers,
-            questionUniverseForOrphans(state),
-            state.householdProfile
-          );
+          const orphanUniverse = questionUniverseForOrphans(state);
+          const newOrphanedIds =
+            orphanUniverse.length === 0
+              ? []
+              : getOrphanedAnswerIds(
+                  newAnswers,
+                  orphanUniverse,
+                  state.householdProfile
+                );
 
           return {
             answers: newAnswers,
@@ -123,25 +127,40 @@ export const useAssessmentStore = create<AssessmentState>()(
         })),
 
       loadFromServer: (data: ServerAssessmentData) =>
-        set(() => {
-          // Build answers map from server responses
-          const answers: Record<string, unknown> = {};
-          const skipped: string[] = [];
+        set((state) => {
+          const serverAnswers: Record<string, unknown> = {};
+          const serverSkipped: string[] = [];
 
           data.responses.forEach((response) => {
             if (response.skipped) {
-              skipped.push(response.questionId);
+              serverSkipped.push(response.questionId);
             } else {
-              answers[response.questionId] = response.answer;
+              serverAnswers[response.questionId] = response.answer;
             }
           });
+
+          const mergedAnswers = { ...serverAnswers, ...state.answers };
+          const mergedSkipped = [
+            ...new Set([...serverSkipped, ...state.skippedQuestions]),
+          ].filter((id) => mergedAnswers[id] === undefined);
+
+          const orphanUniverse = questionUniverseForOrphans(state);
+          const orphanedAnswerIds =
+            orphanUniverse.length === 0
+              ? []
+              : getOrphanedAnswerIds(
+                  mergedAnswers,
+                  orphanUniverse,
+                  state.householdProfile
+                );
 
           return {
             assessmentId: data.id,
             currentPillar: data.currentPillar,
             currentQuestionIndex: data.currentQuestionIndex ?? 0,
-            answers,
-            skippedQuestions: skipped,
+            answers: mergedAnswers,
+            skippedQuestions: mergedSkipped,
+            orphanedAnswerIds,
             lastSaved: new Date().toISOString(),
           };
         }),
