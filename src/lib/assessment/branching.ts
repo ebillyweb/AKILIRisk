@@ -268,10 +268,14 @@ export function detectBranchingChanges(
     // Questions that were not visible before and are still not visible are ignored
   }
 
+  const questionOrder = new Map(allQuestions.map((q, i) => [q.id, i]));
+  const byQuestionOrder = (ids: string[]) =>
+    [...ids].sort((a, b) => (questionOrder.get(a) ?? 0) - (questionOrder.get(b) ?? 0));
+
   return {
-    newlyVisible: newlyVisible.sort(),
-    newlyHidden: newlyHidden.sort(),
-    unchanged: unchanged.sort(),
+    newlyVisible: byQuestionOrder(newlyVisible),
+    newlyHidden: byQuestionOrder(newlyHidden),
+    unchanged: byQuestionOrder(unchanged),
   };
 }
 

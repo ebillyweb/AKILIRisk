@@ -29,6 +29,8 @@
     "db:fix-enhanced-migration": "bash scripts/fix-failed-enhanced-migration.sh",
     "db:backfill-advisor-subscriptions": "node scripts/migrate-advisor-subscriptions.js",
     "db:migrate-intake-to-client": "node scripts/migrate-intake-to-client.js",
+    "db:cleanup-question-bank-probes": "node scripts/cleanup-question-bank-probes.js",
+    "db:governance-document-upload-subs": "PILLAR_DDL_SEED_PATH=scripts/sql/governance-document-upload-subs.sql npm run seed:pillar-ddl",
     "s3:copy-intake-audio-to-intake-bucket": "node scripts/copy-intake-audio-to-intake-bucket.js",
     "db:backfill-user-email-ciphertext": "npx tsx scripts/backfill-user-email-ciphertext.ts",
     "env:vercel:link": "npx vercel link",

@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { BranchingPredicateWire, GovernanceQuestionWire } from "./behaviors";
 import { riskAreaIdForPillarCategory } from "./pillar-category-risk-area";
 import { isDocumentUploadFillableQuestionText } from "@/lib/assessment/question-upload";
+import { GOVERNANCE_DOCUMENT_UPLOAD_MIN_SCORE } from "@/lib/assessment/governance-document-upload";
 import { isDateQuestionText } from "@/lib/assessment/question-date";
 
 export type PillarQuestionWithHierarchy = PillarQuestion & {
@@ -255,16 +256,37 @@ export function parentQuestionNumberForSub(questionNumber: string): string | nul
   return match?.[1] ?? null;
 }
 
+/** Minimum scored_0_3 value (0-based) for the 3rd maturity option. */
+export const MATURITY_DOCUMENT_UPLOAD_MIN_SCORE = GOVERNANCE_DOCUMENT_UPLOAD_MIN_SCORE;
+
 function subQuestionBranchingPredicate(
-  parent: PillarQuestionWithHierarchy
+  parent: PillarQuestionWithHierarchy,
+  sub: PillarQuestionWithHierarchy
 ): BranchingPredicateWire {
-  if (parent.answerType === "scored_0_3" || parent.answerType === "scale_1_5") {
+  const isDocumentUploadSub = isDocumentUploadFillableQuestionText(sub.questionText);
+
+  if (parent.answerType === "scored_0_3") {
+    if (isDocumentUploadSub) {
+      return { op: "gte", value: MATURITY_DOCUMENT_UPLOAD_MIN_SCORE };
+    }
+    return { op: "gte", value: MATURITY_DOCUMENT_UPLOAD_MIN_SCORE };
+  }
+  if (parent.answerType === "scale_1_5") {
     return { op: "gte", value: 2 };
   }
   if (parent.answerType === "yes_no") {
     return { op: "equals", value: "yes" };
   }
   return { op: "answered" };
+}
+
+/** Sub-questions with letter suffixes (A1a) or document-attachment fillables. */
+function shouldApplySubQuestionBranching(row: PillarQuestionWithHierarchy): boolean {
+  if (row.isSubQuestion) return true;
+  if (!row.questionNumber || !parentQuestionNumberForSub(row.questionNumber)) {
+    return false;
+  }
+  return isDocumentUploadFillableQuestionText(row.questionText);
 }
 
 /**
@@ -285,7 +307,7 @@ export function applySubQuestionBranching(
 
   return wires.map((wire) => {
     const row = rowById.get(wire.questionId);
-    if (!row?.isSubQuestion || !row.questionNumber) return wire;
+    if (!row || !shouldApplySubQuestionBranching(row) || !row.questionNumber) return wire;
 
     const parentNumber = parentQuestionNumberForSub(row.questionNumber);
     if (!parentNumber) return wire;
@@ -299,7 +321,7 @@ export function applySubQuestionBranching(
     return {
       ...wire,
       branchingDependsOn: parentId,
-      branchingPredicate: subQuestionBranchingPredicate(parentRow),
+      branchingPredicate: subQuestionBranchingPredicate(parentRow, row),
     };
   });
 }

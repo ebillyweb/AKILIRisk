@@ -221,8 +221,7 @@ const branchingGateFixture: Question[] = [
 function getDependentQuestionIds(gateId: string): string[] {
   return branchingGateFixture
     .filter((q) => q.branchingRule?.dependsOn === gateId)
-    .map((q) => q.id)
-    .sort();
+    .map((q) => q.id);
 }
 
 describe("shouldShowQuestion", () => {
@@ -366,7 +365,7 @@ describe("detectBranchingChanges", () => {
     const expectedNewlyVisible = [
       ...getDependentQuestionIds("sp-01"),
       ...getDependentQuestionIds("bi-01"),
-    ].sort();
+    ];
     const expectedNewlyHidden = getDependentQuestionIds("gate-trust");
 
     expect(changes.newlyVisible).toEqual(expectedNewlyVisible);

@@ -1,46 +1,54 @@
 import { useMutation } from '@tanstack/react-query';
-import { useDebounce } from 'use-debounce';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAssessmentStore } from '@/lib/assessment/store';
+import {
+  enqueuePendingAnswer,
+  pendingAnswerCount,
+  shiftPendingAnswer,
+  type PendingAnswerSave,
+} from '@/lib/assessment/pending-answer-queue';
 
 /**
  * Auto-Save Hook
  *
- * Implements debounced auto-save with TanStack Query mutations.
- * Guarantees FIFO execution and prevents race conditions.
- *
- * Flow:
- * 1. Update Zustand store immediately (optimistic update)
- * 2. Debounce API call (1000ms)
- * 3. POST to /api/assessment/[id]/responses
- * 4. Show toast on error and retry
+ * 1. Update Zustand immediately (optimistic)
+ * 2. Enqueue server save per question (latest wins for same questionId)
+ * 3. Debounce drain for in-progress edits (text / multi-file upload)
+ * 4. flushPendingSaves() before navigation — never drop prior questions
  */
 
-interface SaveAnswerParams {
-  questionId: string;
-  pillar: string;
-  subCategory: string;
-  answer: unknown;
-  skipped?: boolean;
-  currentQuestionIndex?: number;
-  orphanedQuestionIds?: string[];
-}
+export type SaveAnswerParams = PendingAnswerSave;
 
 interface UseAutoSaveReturn {
   saveAnswer: (params: SaveAnswerParams) => void;
+  flushPendingSaves: () => Promise<void>;
   isSaving: boolean;
   lastSaved: string | null;
 }
 
+const DRAIN_DEBOUNCE_MS = 400;
+
 export function useAutoSave(assessmentId: string | null): UseAutoSaveReturn {
-  const [pendingAnswer, setPendingAnswer] = useState<SaveAnswerParams | null>(null);
-  const [debouncedAnswer] = useDebounce(pendingAnswer, 1000);
+  const [isSaving, setIsSaving] = useState(false);
   const lastSaved = useAssessmentStore((state) => state.lastSaved);
 
-  // Mutation for saving answer — use `mutate` in effects, not the full `mutation` object:
-  // the object identity changes when isPending updates, which would retrigger the effect and loop POSTs.
-  const { mutate, isPending } = useMutation({
+  const queueRef = useRef(new Map<string, SaveAnswerParams>());
+  const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const drainChainRef = useRef<Promise<void>>(Promise.resolve());
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (drainTimerRef.current) {
+        clearTimeout(drainTimerRef.current);
+      }
+    };
+  }, []);
+
+  const { mutateAsync } = useMutation({
     mutationFn: async (params: SaveAnswerParams) => {
       if (!assessmentId) {
         throw new Error('No assessment ID');
@@ -61,45 +69,94 @@ export function useAutoSave(assessmentId: string | null): UseAutoSaveReturn {
 
       return response.json();
     },
-    onError: (error) => {
-      console.error('Auto-save error:', error);
-      toast.error('Failed to save, retrying...', {
-        duration: 3000,
-      });
-    },
     retry: 1,
   });
 
-  // Execute mutation when debounced answer changes
-  useEffect(() => {
-    if (debouncedAnswer) {
-      mutate(debouncedAnswer);
-    }
-  }, [debouncedAnswer, mutate]);
-
-  const saveAnswer = (params: SaveAnswerParams) => {
-    // Update Zustand store immediately for optimistic UI
-    const store = useAssessmentStore.getState();
-
-    if (params.skipped) {
-      store.skipQuestion(params.questionId);
-    } else {
-      store.setAnswer(params.questionId, params.answer);
+  const drainQueue = useCallback(async () => {
+    if (!assessmentId || pendingAnswerCount(queueRef.current) === 0) {
+      return;
     }
 
-    store.setCurrentPosition(params.pillar, params.currentQuestionIndex ?? 0);
+    setIsSaving(true);
+    try {
+      while (pendingAnswerCount(queueRef.current) > 0) {
+        const params = shiftPendingAnswer(queueRef.current);
+        if (!params) break;
 
-    const orphanedQuestionIds = store.orphanedAnswerIds;
-    setPendingAnswer({
-      ...params,
-      orphanedQuestionIds:
-        orphanedQuestionIds.length > 0 ? orphanedQuestionIds : undefined,
-    });
-  };
+        try {
+          await mutateAsync(params);
+        } catch (error) {
+          // Re-queue failed item at the front so a later flush can retry.
+          const retryQueue = new Map<string, SaveAnswerParams>();
+          retryQueue.set(params.questionId, params);
+          for (const [id, item] of queueRef.current) {
+            retryQueue.set(id, item);
+          }
+          queueRef.current = retryQueue;
+
+          console.error('Auto-save error:', error);
+          toast.error('Failed to save, retrying...', { duration: 3000 });
+          throw error;
+        }
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsSaving(false);
+      }
+    }
+  }, [assessmentId, mutateAsync]);
+
+  const scheduleDrain = useCallback(() => {
+    if (drainTimerRef.current) {
+      clearTimeout(drainTimerRef.current);
+    }
+    drainTimerRef.current = setTimeout(() => {
+      drainTimerRef.current = null;
+      drainChainRef.current = drainChainRef.current
+        .then(() => drainQueue())
+        .catch(() => undefined);
+    }, DRAIN_DEBOUNCE_MS);
+  }, [drainQueue]);
+
+  const flushPendingSaves = useCallback(async () => {
+    if (drainTimerRef.current) {
+      clearTimeout(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
+    drainChainRef.current = drainChainRef.current
+      .then(() => drainQueue())
+      .catch(() => undefined);
+    await drainChainRef.current;
+  }, [drainQueue]);
+
+  const saveAnswer = useCallback(
+    (params: SaveAnswerParams) => {
+      const store = useAssessmentStore.getState();
+
+      if (params.skipped) {
+        store.skipQuestion(params.questionId);
+      } else {
+        store.setAnswer(params.questionId, params.answer);
+      }
+
+      store.setCurrentPosition(params.pillar, params.currentQuestionIndex ?? 0);
+
+      const orphanedQuestionIds = store.orphanedAnswerIds;
+      enqueuePendingAnswer(queueRef.current, {
+        ...params,
+        orphanedQuestionIds:
+          orphanedQuestionIds.length > 0 ? orphanedQuestionIds : undefined,
+      });
+
+      scheduleDrain();
+    },
+    [scheduleDrain]
+  );
 
   return {
     saveAnswer,
-    isSaving: isPending,
+    flushPendingSaves,
+    isSaving,
     lastSaved,
   };
 }

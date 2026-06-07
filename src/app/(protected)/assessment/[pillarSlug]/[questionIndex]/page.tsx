@@ -70,7 +70,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
     setHouseholdProfile(profile);
   }, [profile, setHouseholdProfile]);
 
-  const { saveAnswer, isSaving } = useAutoSave(assessmentId);
+  const { saveAnswer, flushPendingSaves, isSaving } = useAutoSave(assessmentId);
 
   useEffect(() => {
     if (rawSlug !== pillarSlug && isAssessmentPillarId(pillarSlug)) {
@@ -98,15 +98,20 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   }, [questionIndex, visibleQuestions.length, pillarSlug, router, questionsLoading]);
 
   useEffect(() => {
-    if (branchingChange && branchingChange.newlyVisible.length > 0) {
-      const firstNewlyVisibleId = branchingChange.newlyVisible[0];
-      const newlyVisibleIndex = visibleQuestions.findIndex((q) => q.id === firstNewlyVisibleId);
+    if (!branchingChange || branchingChange.newlyVisible.length === 0) return;
+
+    void (async () => {
+      await flushPendingSaves();
+
+      const newlyVisibleIndex = visibleQuestions.findIndex((q) =>
+        branchingChange.newlyVisible.includes(q.id)
+      );
 
       if (newlyVisibleIndex !== -1) {
         router.push(`/assessment/${pillarSlug}/${newlyVisibleIndex}`);
       }
-    }
-  }, [branchingChange, visibleQuestions, pillarSlug, router]);
+    })();
+  }, [branchingChange, visibleQuestions, pillarSlug, router, flushPendingSaves]);
 
   if (questionsLoading) {
     return (
@@ -147,14 +152,27 @@ export default function QuestionPage({ params }: QuestionPageProps) {
       skipped: true,
       currentQuestionIndex: questionIndex,
     });
-    goNext();
+    void (async () => {
+      await flushPendingSaves();
+      goNext();
+    })();
   };
 
   const handleNext = () => {
     if (currentQuestion.required && (currentAnswer === null || currentAnswer === undefined)) {
       return;
     }
-    goNext();
+    void (async () => {
+      await flushPendingSaves();
+      goNext();
+    })();
+  };
+
+  const handleBack = () => {
+    void (async () => {
+      await flushPendingSaves();
+      goBack();
+    })();
   };
 
   const isValid =
@@ -180,7 +198,11 @@ export default function QuestionPage({ params }: QuestionPageProps) {
             personalizedText={personalizedText}
             currentAnswer={currentAnswer}
             onAnswer={handleAnswer}
-            onSkip={!currentQuestion.required ? handleSkip : undefined}
+            onSkip={
+              currentQuestion.type === "document-upload" || !currentQuestion.required
+                ? handleSkip
+                : undefined
+            }
             isSkipped={isQuestionSkipped}
             questionPosition={{
               index: questionIndex + 1,
@@ -191,7 +213,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
           />
 
           <NavigationButtons
-            onBack={goBack}
+            onBack={handleBack}
             onNext={handleNext}
             canGoBack={canGoBack}
             isLastQuestion={isLastQuestion}

@@ -12,7 +12,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
 interface NavigationButtonsProps {
   onBack: () => void;
-  onNext: () => void;
+  onNext: () => void | Promise<void>;
   canGoBack: boolean;
   isLastQuestion: boolean;
   isValid: boolean;
@@ -33,7 +33,7 @@ export function NavigationButtons({
         <Button
           variant="outline"
           onClick={onBack}
-          disabled={!canGoBack}
+          disabled={!canGoBack || isSaving}
           className="w-full sm:min-w-[140px]"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -53,6 +53,7 @@ export function NavigationButtons({
       <div className="order-3">
         <Button
           onClick={onNext}
+          disabled={isSaving}
           className="w-full sm:min-w-[160px]"
         >
           {isLastQuestion ? (

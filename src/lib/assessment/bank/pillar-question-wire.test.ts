@@ -207,4 +207,109 @@ describe("sub-question branching (A1 / A1a)", () => {
       "Please attach copies of any relevant supporting documentation, if available."
     );
   });
+
+  it("branches document-attachment subs even when isSubQuestion flag is missing in DB", () => {
+    const parent = makeRow("scored_0_3", {
+      id: "parent-a1",
+      questionNumber: "A1",
+      questionText: "How have you documented your family mission?",
+      isSubQuestion: false,
+      displayOrder: 2,
+    });
+    const sub = makeRow("fillable", {
+      id: "sub-a1a",
+      questionNumber: "A1a",
+      questionText:
+        "Please attach copies of any relevant supporting documentation, if available.",
+      isSubQuestion: false,
+      displayOrder: 1,
+    });
+    const rows = [sub, parent] as PillarQuestionWithHierarchy[];
+    const sorted = sortPillarQuestionRows(rows);
+    const wired = applySubQuestionBranching(
+      sorted,
+      sorted.map(pillarQuestionRowToWire)
+    );
+    const subWire = wired.find((w) => w.questionId === sub.id);
+    expect(subWire?.branchingDependsOn).toBe(parent.id);
+    expect(subWire?.branchingPredicate).toEqual({ op: "gte", value: 2 });
+
+    const questions = wired.map(wireQuestionToQuestion);
+    expect(
+      getVisibleQuestions({ [parent.id]: 2 }, questions).map((q) => q.id)
+    ).toContain(sub.id);
+    expect(
+      getVisibleQuestions({ [parent.id]: 0 }, questions).map((q) => q.id)
+    ).not.toContain(sub.id);
+  });
+
+  it("shows A6a after A6 is answered at documented maturity (>= 2)", () => {
+    const parent = makeRow("scored_0_3", {
+      id: "parent-a6",
+      questionNumber: "A6",
+      questionText:
+        "Has your family established agreed upon basic do's and don'ts for what is shared internally vs. externally?",
+      isSubQuestion: false,
+      displayOrder: 12,
+    });
+    const sub = makeRow("fillable", {
+      id: "sub-a6a",
+      questionNumber: "A6a",
+      questionText:
+        "Please attach copies of any relevant supporting documentation, if available.",
+      isSubQuestion: true,
+      displayOrder: 13,
+    });
+    const rows = [sub, parent] as PillarQuestionWithHierarchy[];
+    const sorted = sortPillarQuestionRows(rows);
+    const wired = applySubQuestionBranching(
+      sorted,
+      sorted.map(pillarQuestionRowToWire)
+    );
+    const questions = wired.map(wireQuestionToQuestion);
+
+    expect(
+      getVisibleQuestions({ [parent.id]: 2 }, questions).map((q) => q.text)
+    ).toContain(
+      "Please attach copies of any relevant supporting documentation, if available."
+    );
+    expect(
+      getVisibleQuestions({ [parent.id]: 1 }, questions).map((q) => q.text)
+    ).not.toContain(
+      "Please attach copies of any relevant supporting documentation, if available."
+    );
+  });
+
+  it("shows D4a after D4 is answered at documented maturity (>= 2)", () => {
+    const parent = makeRow("scored_0_3", {
+      id: "parent-d4",
+      questionNumber: "D4",
+      questionText:
+        "Are social media and digital conduct guidelines in place for family members and staff?",
+      isSubQuestion: false,
+      displayOrder: 4,
+    });
+    const sub = makeRow("fillable", {
+      id: "sub-d4a",
+      questionNumber: "D4a",
+      questionText:
+        "Please attach copies of any relevant supporting documentation, if available.",
+      isSubQuestion: true,
+      displayOrder: 5,
+    });
+    const rows = [sub, parent] as PillarQuestionWithHierarchy[];
+    const sorted = sortPillarQuestionRows(rows);
+    const wired = applySubQuestionBranching(
+      sorted,
+      sorted.map(pillarQuestionRowToWire)
+    );
+    const questions = wired.map(wireQuestionToQuestion);
+
+    expect(
+      getVisibleQuestions({ [parent.id]: 3 }, questions).map((q) => q.id)
+    ).toContain(sub.id);
+    expect(
+      getVisibleQuestions({ [parent.id]: 1 }, questions).map((q) => q.id)
+    ).not.toContain(sub.id);
+  });
 });
