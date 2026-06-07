@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { AdvisorHouseholdDirectory } from "@/components/advisor/AdvisorHouseholdDirectory";
 import { AdvisorIntakeView } from "@/components/advisor/AdvisorIntakeView";
 import { ReviewSidebar } from "@/components/advisor/ReviewSidebar";
-import { getIntakeReviewData } from "@/lib/actions/advisor-actions";
+import { getIntakeReviewDataForAdvisorPage } from "@/lib/advisor/intake-review-queries";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -13,14 +13,12 @@ interface ReviewPageProps {
 export default async function ReviewPage({ params }: ReviewPageProps) {
   const { id } = await params;
 
-  // Get interview data for advisor review
-  const result = await getIntakeReviewData(id);
-
-  if (!result.success || !result.data) {
+  const data = await getIntakeReviewDataForAdvisorPage(id);
+  if (!data) {
     notFound();
   }
 
-  const { interview, approval, questions, householdMembers } = result.data;
+  const { interview, approval, questions, householdMembers } = data;
 
   // Format submission date
   const submittedAt = interview.submittedAt
@@ -41,13 +39,28 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
     }
   };
 
-  const getStatusLabel = (status?: string) => {
+  const getApprovalStatusLabel = (status?: string) => {
     switch (status) {
       case 'APPROVED': return 'Approved';
       case 'REJECTED': return 'Rejected';
       case 'IN_REVIEW': return 'Under Review';
       case 'PENDING':
       default: return 'Pending Review';
+    }
+  };
+
+  /** Client intake row status — separate from advisor approval (IntakeApproval). */
+  const getIntakeCompletionLabel = (status: string) => {
+    switch (status) {
+      case 'SUBMITTED':
+      case 'COMPLETED':
+        return 'Complete';
+      case 'IN_PROGRESS':
+        return 'In progress';
+      case 'NOT_STARTED':
+        return 'Not started';
+      default:
+        return status;
     }
   };
 
@@ -65,9 +78,12 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
               <h1 className="text-xl font-semibold">View intake</h1>
             </div>
 
-            <Badge variant={getStatusVariant(approval?.status)}>
-              {getStatusLabel(approval?.status)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Advisor review</span>
+              <Badge variant={getStatusVariant(approval?.status)}>
+                {getApprovalStatusLabel(approval?.status)}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
@@ -113,14 +129,17 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                   </dd>
                 </div>
                 <div className="min-w-0 space-y-1">
-                  <dt className="text-muted-foreground">Status</dt>
+                  <dt className="text-muted-foreground">Client intake</dt>
                   <dd>
                     <Badge
                       variant={
-                        interview.status === "SUBMITTED" ? "success" : "outline"
+                        interview.status === "SUBMITTED" ||
+                        interview.status === "COMPLETED"
+                          ? "success"
+                          : "outline"
                       }
                     >
-                      {interview.status}
+                      {getIntakeCompletionLabel(interview.status)}
                     </Badge>
                   </dd>
                 </div>

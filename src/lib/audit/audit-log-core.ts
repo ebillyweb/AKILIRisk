@@ -180,6 +180,8 @@ export const AUDIT_ACTIONS = {
   // ── Advisor workflow actions (P4) ─────────────────────────────────────────
   INTAKE_REVIEW_STARTED: "intake.review_started",
   INTAKE_APPROVE: "intake.approve",
+  /** Advisor approved intake — client notified with a magic link to start assessment. */
+  INTAKE_APPROVED_CLIENT_MAGIC_LINK: "intake.approved_client_magic_link",
   INTAKE_REJECT: "intake.reject",
   INTAKE_WAIVER_SET: "intake.waiver_set",
   DOCUMENT_REQUIREMENT_CREATE: "document_requirement.create",

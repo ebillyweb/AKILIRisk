@@ -9,14 +9,37 @@ import { DownloadReportButton } from "@/components/reports/DownloadReportButton"
 import { AdminClientAccountActions } from "@/components/admin/AdminClientAccountActions";
 import { cn } from "@/lib/utils";
 
+const PAGE_SIZE = 20;
+
+function toPositiveInt(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function clientsPageHref(scope: ClientsAdminScope, page: number): string {
+  const sp = new URLSearchParams();
+  if (scope === "all") sp.set("filter", "all");
+  if (page > 1) sp.set("page", String(page));
+  const query = sp.toString();
+  return `/admin/clients${query ? `?${query}` : ""}`;
+}
+
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const scope: ClientsAdminScope = sp.filter === "all" ? "all" : "active";
-  const clients = await getClientsForAdmin({ scope });
+  const requestedPage = toPositiveInt(sp.page, 1);
+  const { clients, totalCount, page: currentPage, pageSize } = await getClientsForAdmin({
+    scope,
+    page: requestedPage,
+    pageSize: PAGE_SIZE,
+  });
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasNextPage = currentPage * pageSize < totalCount;
 
   return (
     <div className="space-y-6">
@@ -24,7 +47,7 @@ export default async function AdminClientsPage({
         <div className="space-y-2">
           <h1 className="text-lg font-semibold tracking-tight">
             Client accounts{" "}
-            <span className="font-normal text-muted-foreground">({clients.length})</span>
+            <span className="font-normal text-muted-foreground">({totalCount.toLocaleString()})</span>
           </h1>
           <div className="flex flex-wrap gap-2 text-sm">
             <Button variant={scope === "active" ? "default" : "outline"} size="sm" className="h-8" asChild>
@@ -117,6 +140,30 @@ export default async function AdminClientsPage({
           )}
         </CardContent>
       </Card>
+
+      {totalCount > 0 ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Page {currentPage.toLocaleString()} of {totalPages.toLocaleString()}
+            {" · "}
+            Showing {(currentPage - 1) * pageSize + 1}–
+            {Math.min(currentPage * pageSize, totalCount).toLocaleString()} of{" "}
+            {totalCount.toLocaleString()}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {currentPage > 1 ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={clientsPageHref(scope, currentPage - 1)}>← Previous page</Link>
+              </Button>
+            ) : null}
+            {hasNextPage ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={clientsPageHref(scope, currentPage + 1)}>Next page →</Link>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

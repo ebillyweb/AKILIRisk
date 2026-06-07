@@ -108,17 +108,29 @@ export async function getAdvisorForAdmin(userId: string) {
   return user ? withDecryptedEmail(user) : null;
 }
 
-export async function getClientsForAdmin(opts?: { scope?: ClientsAdminScope }) {
+const CLIENTS_ADMIN_PAGE_SIZE = 20;
+
+export async function getClientsForAdmin(opts?: {
+  scope?: ClientsAdminScope;
+  page?: number;
+  pageSize?: number;
+}) {
   const { userId, email, role } = await requireAdminRole();
   const scope = opts?.scope ?? "active";
+  const pageSize = opts?.pageSize ?? CLIENTS_ADMIN_PAGE_SIZE;
+  const requestedPage = opts?.page && opts.page > 0 ? opts.page : 1;
+  const where = {
+    role: "USER" as const,
+    ...(scope === "active" ? { deletedAt: null } : {}),
+  };
+  const totalCount = await prisma.user.count({ where });
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(requestedPage, totalPages);
   // Round-11 commit 2.4b: ciphertext on both the top-level User and
   // the joined advisor.user; decrypt at exit so the admin page sees
   // `.email` plaintext on every row.
   const usersRaw = await prisma.user.findMany({
-    where: {
-      role: "USER",
-      ...(scope === "active" ? { deletedAt: null } : {}),
-    },
+    where,
     select: {
       id: true,
       emailCiphertext: true,
@@ -158,6 +170,8 @@ export async function getClientsForAdmin(opts?: { scope?: ClientsAdminScope }) {
       },
     },
     orderBy: { createdAt: "asc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
   });
   const users = usersRaw.map((u) => {
     const latestAssessment = u.assessments[0];
@@ -193,10 +207,10 @@ export async function getClientsForAdmin(opts?: { scope?: ClientsAdminScope }) {
     action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_CLIENTS_LIST,
     entityType: "User",
     entityId: null,
-    metadata: { rowCount: users.length, filterParams: { scope } },
+    metadata: { rowCount: users.length, totalCount, filterParams: { scope, page } },
   });
 
-  return users;
+  return { clients: users, totalCount, page, pageSize };
 }
 
 export async function getIntakeForAdmin() {

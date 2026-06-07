@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  async redirects() {
+    return [
+      {
+        source: "/auth/signin",
+        destination: "/signin",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

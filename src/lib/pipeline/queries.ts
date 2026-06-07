@@ -201,10 +201,17 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
   const waivedByClientId = new Map(
     assignments.map((a) => [a.client.id, a.intakeWaivedAt != null]),
   );
+  const assessmentCompletedByClientId = new Map(
+    assignments.map((a) => [
+      a.client.id,
+      a.client.assessments[0]?.status === "COMPLETED",
+    ]),
+  );
   const intakeReviewByClient = indexAwaitingIntakeReviewByClient(
     intakeInterviews,
     intakeApprovals,
     waivedByClientId,
+    assessmentCompletedByClientId,
   );
 
   // Intake response counts (only for interviews that have at least one
@@ -589,6 +596,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     latestIntake,
     intakeApproval,
     intakeWaived,
+    { assessmentCompleted: latestAssessment?.status === "COMPLETED" },
   );
   const documentsNeededFlag = hasUnfulfilledMandatoryDocuments(docCounts);
 

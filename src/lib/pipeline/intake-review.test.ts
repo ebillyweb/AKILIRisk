@@ -34,4 +34,12 @@ describe("isIntakeAwaitingAdvisorReview", () => {
       isIntakeAwaitingAdvisorReview(submitted, { status: "REJECTED" }, false),
     ).toBe(false);
   });
+
+  it("is false when assessment is already completed", () => {
+    expect(
+      isIntakeAwaitingAdvisorReview(submitted, { status: "PENDING" }, false, {
+        assessmentCompleted: true,
+      }),
+    ).toBe(false);
+  });
 });

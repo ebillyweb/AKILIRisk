@@ -62,6 +62,7 @@ export default function RootLayout({
       </head>
       <body
         className={`${manrope.variable} ${geistMono.variable} ${cormorant.variable} bg-background text-foreground antialiased`}
+        suppressHydrationWarning
       >
         <Providers>
           <div className="relative isolate min-h-screen">{children}</div>

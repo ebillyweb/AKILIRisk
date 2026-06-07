@@ -117,15 +117,17 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
+      <CardHeader className="space-y-3">
+        <div className="space-y-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileText className="h-5 w-5 shrink-0" />
             Document Requirements
           </CardTitle>
-          <Badge variant="outline">
-            {fulfilled}/{total} required collected
-          </Badge>
+          {total > 0 && (
+            <Badge variant="outline" className="w-fit uppercase tracking-wide text-[11px]">
+              {fulfilled}/{total} required collected
+            </Badge>
+          )}
         </div>
 
         {total > 0 && (
@@ -164,12 +166,14 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
             {requirements.map((requirement) => (
               <div
                 key={requirement.id}
-                className="p-3 border rounded-lg space-y-3"
+                className="space-y-3 rounded-lg border p-4"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 space-y-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-medium">{requirement.name}</h4>
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <h4 className="font-medium leading-snug break-words">
+                      {requirement.name}
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
                       <Badge variant={requirement.fulfilled ? "default" : "secondary"}>
                         {requirement.fulfilled ? "Fulfilled" : "Pending"}
                       </Badge>
@@ -177,61 +181,68 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
                         <Badge variant="outline">Optional</Badge>
                       )}
                     </div>
-
-                    {requirement.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {requirement.description}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Added {format(requirement.createdAt, 'MMM d, yyyy')}
-                      </span>
-                      {requirement.fulfilledAt && (
-                        <span>
-                          Fulfilled {format(requirement.fulfilledAt, 'MMM d, yyyy')}
-                        </span>
-                      )}
-                    </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1">
-                    {requirement.fulfilled && (
-                      <DocumentDownloadButton requirementId={requirement.id} />
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      disabled={deletingId === requirement.id}
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to remove "${requirement.name}"? This action cannot be undone.`)) {
-                          handleDelete(requirement.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                    disabled={deletingId === requirement.id}
+                    aria-label={`Remove ${requirement.name}`}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Are you sure you want to remove "${requirement.name}"? This action cannot be undone.`
+                        )
+                      ) {
+                        handleDelete(requirement.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
 
-                {!requirement.fulfilled && (
+                {requirement.description && (
+                  <p className="text-sm leading-snug text-muted-foreground">
+                    {requirement.description}
+                  </p>
+                )}
+
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    Added {format(requirement.createdAt, "MMM d, yyyy")}
+                  </p>
+                  {requirement.fulfilledAt && (
+                    <p>Fulfilled {format(requirement.fulfilledAt, "MMM d, yyyy")}</p>
+                  )}
+                </div>
+
+                {requirement.fulfilled && requirement.fileName && (
+                  <div className="rounded-md bg-muted/40 px-3 py-2 text-sm">
+                    <p className="truncate font-medium text-foreground">
+                      {requirement.fileName}
+                    </p>
+                    {requirement.fileSize != null && requirement.fileSize > 0 && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {Math.round(requirement.fileSize / 1024)} KB
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {requirement.fulfilled ? (
+                  <DocumentDownloadButton
+                    requirementId={requirement.id}
+                    className="w-full justify-center"
+                  />
+                ) : (
                   <DocumentUpload
                     requirementId={requirement.id}
                     requirementName={requirement.name}
                     onUploadComplete={() => router.refresh()}
                   />
-                )}
-
-                {requirement.fulfilled && requirement.fileName && (
-                  <p className="text-sm text-muted-foreground truncate">
-                    File: <span className="font-medium text-foreground">{requirement.fileName}</span>
-                    {requirement.fileSize != null && requirement.fileSize > 0 && (
-                      <span className="ml-2">({Math.round(requirement.fileSize / 1024)} KB)</span>
-                    )}
-                  </p>
                 )}
               </div>
             ))}

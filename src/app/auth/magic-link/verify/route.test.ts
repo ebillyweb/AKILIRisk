@@ -66,6 +66,50 @@ describe("GET /auth/magic-link/verify", () => {
     expect(signIn).not.toHaveBeenCalled();
   });
 
+  it("honors redirectTo when it is a client workspace path", async () => {
+    validateMagicLinkToken.mockResolvedValue({
+      success: true,
+      tokenId: "mlt-1",
+      email: "client@test.com",
+      inviteCodeId: null,
+    });
+    signIn.mockRejectedValue(
+      Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT" })
+    );
+
+    const req = new NextRequest(
+      "http://localhost:3000/auth/magic-link/verify?token=valid&redirectTo=%2Fassessment"
+    );
+
+    await expect(GET(req)).rejects.toThrow("NEXT_REDIRECT");
+    expect(signIn).toHaveBeenCalledWith("magic-link", {
+      token: "valid",
+      redirectTo: "/assessment",
+    });
+  });
+
+  it("falls back to dashboard for non-client redirectTo", async () => {
+    validateMagicLinkToken.mockResolvedValue({
+      success: true,
+      tokenId: "mlt-1",
+      email: "client@test.com",
+      inviteCodeId: null,
+    });
+    signIn.mockRejectedValue(
+      Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT" })
+    );
+
+    const req = new NextRequest(
+      "http://localhost:3000/auth/magic-link/verify?token=valid&redirectTo=%2Fadvisor"
+    );
+
+    await expect(GET(req)).rejects.toThrow("NEXT_REDIRECT");
+    expect(signIn).toHaveBeenCalledWith("magic-link", {
+      token: "valid",
+      redirectTo: "/dashboard",
+    });
+  });
+
   it("calls signIn and redirects to dashboard on valid token", async () => {
     validateMagicLinkToken.mockResolvedValue({
       success: true,

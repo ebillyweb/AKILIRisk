@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { signIn } from "@/lib/auth";
 import { findUserByEmail } from "@/lib/auth/user-email";
 import { validateMagicLinkToken } from "@/lib/auth/magic-link";
+import { sanitizeMagicLinkRedirectTo } from "@/lib/auth/sign-in-routes";
 
 /**
  * Magic-link click handler (GET /auth/magic-link/verify?token=...).
@@ -37,10 +38,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(failureUrl(req, "staff_use_password"));
   }
 
+  const redirectTo = sanitizeMagicLinkRedirectTo(
+    req.nextUrl.searchParams.get("redirectTo"),
+    "/dashboard"
+  );
+
   try {
     await signIn("magic-link", {
       token,
-      redirectTo: "/dashboard",
+      redirectTo,
     });
   } catch (error) {
     if (isNextRedirectError(error)) {
@@ -56,7 +62,7 @@ export async function GET(req: NextRequest) {
     throw error;
   }
 
-  return NextResponse.redirect(new URL("/dashboard", req.url));
+  return NextResponse.redirect(new URL(redirectTo, req.url));
 }
 
 function isAuthProviderError(error: unknown): error is { type: string } {

@@ -2,8 +2,12 @@ import { Suspense } from "react";
 import Link from "next/link";
 
 import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
-import { parsePipelineFiltersFromSearchParams } from "@/lib/pipeline/parse-pipeline-filters";
+import {
+  parsePipelineFiltersFromSearchParams,
+  parsePipelinePageFromSearchParams,
+} from "@/lib/pipeline/parse-pipeline-filters";
 import type { PipelineFilters } from "@/lib/pipeline/types";
+import { MetricCard } from "@/components/advisor/workspace/MetricCard";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
 
@@ -38,26 +42,65 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   return null;
 }
 
-// Metrics summary component
 function MetricsSummary({ metrics }: { metrics: any }) {
   const metricCards = [
-    { label: 'Invited', count: metrics.byStage.INVITED, color: 'bg-blue-50' },
-    { label: 'Registered', count: metrics.byStage.REGISTERED, color: 'bg-indigo-50' },
-    { label: 'Intake', count: metrics.byStage.INTAKE_IN_PROGRESS, color: 'bg-amber-50' },
-    { label: 'Assessment', count: metrics.byStage.ASSESSMENT_IN_PROGRESS, color: 'bg-orange-50' },
-    { label: 'Documents', count: metrics.byStage.DOCUMENTS_REQUIRED, color: 'bg-yellow-50' },
-    { label: 'Complete', count: metrics.byStage.COMPLETE, color: 'bg-green-50' },
-    { label: 'Stalled', count: metrics.stalled, color: 'bg-red-50' },
-    { label: 'Total', count: metrics.total, color: 'bg-gray-50' },
+    {
+      label: "Invited",
+      count: metrics.byStage.INVITED,
+      className:
+        "border-blue-200/70 bg-blue-50/80 dark:border-blue-800/40 dark:bg-blue-950/25",
+    },
+    {
+      label: "Registered",
+      count: metrics.byStage.REGISTERED,
+      className:
+        "border-indigo-200/70 bg-indigo-50/80 dark:border-indigo-800/40 dark:bg-indigo-950/25",
+    },
+    {
+      label: "Intake",
+      count: metrics.byStage.INTAKE_IN_PROGRESS,
+      className:
+        "border-amber-200/70 bg-amber-50/80 dark:border-amber-800/40 dark:bg-amber-950/25",
+    },
+    {
+      label: "Assessment",
+      count: metrics.byStage.ASSESSMENT_IN_PROGRESS,
+      className:
+        "border-orange-200/70 bg-orange-50/80 dark:border-orange-800/40 dark:bg-orange-950/25",
+    },
+    {
+      label: "Documents",
+      count: metrics.byStage.DOCUMENTS_REQUIRED,
+      className:
+        "border-yellow-200/70 bg-yellow-50/80 dark:border-yellow-800/40 dark:bg-yellow-950/25",
+    },
+    {
+      label: "Complete",
+      count: metrics.byStage.COMPLETE,
+      className:
+        "border-emerald-200/70 bg-emerald-50/80 dark:border-emerald-800/40 dark:bg-emerald-950/25",
+    },
+    {
+      label: "Stalled",
+      count: metrics.stalled,
+      className: "border-red-200/70 bg-red-50/80 dark:border-red-800/40 dark:bg-red-950/25",
+    },
+    {
+      label: "Total",
+      count: metrics.total,
+      className: "border-border/70 bg-muted/40 dark:bg-muted/20",
+    },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
       {metricCards.map((metric) => (
-        <div key={metric.label} className={`rounded-md ${metric.color} px-3 py-2 text-center`}>
-          <p className="text-lg font-semibold">{metric.count}</p>
-          <p className="text-xs text-muted-foreground">{metric.label}</p>
-        </div>
+        <MetricCard
+          key={metric.label}
+          label={metric.label}
+          value={metric.count}
+          className={metric.className}
+        />
       ))}
     </div>
   );
@@ -66,8 +109,10 @@ function MetricsSummary({ metrics }: { metrics: any }) {
 // Async component for data-dependent content
 async function PipelineContent({
   initialFilters,
+  initialPage,
 }: {
   initialFilters: ReturnType<typeof parsePipelineFiltersFromSearchParams>;
+  initialPage: number;
 }) {
   const result = await getClientPipelineData();
 
@@ -100,6 +145,7 @@ async function PipelineContent({
         initialClients={clients}
         initialMetrics={metrics}
         initialFilters={initialFilters}
+        initialPage={initialPage}
       />
     </div>
   );
@@ -112,6 +158,7 @@ export default async function PipelinePage({
 }) {
   const resolvedSearchParams = await searchParams;
   const initialFilters = parsePipelineFiltersFromSearchParams(resolvedSearchParams);
+  const initialPage = parsePipelinePageFromSearchParams(resolvedSearchParams);
   const workflowHeading = pipelineWorkflowHeading(initialFilters);
 
   return (
@@ -148,7 +195,7 @@ export default async function PipelinePage({
 
       {/* Data-dependent content with Suspense streaming */}
       <Suspense fallback={<PipelineLoading />}>
-        <PipelineContent initialFilters={initialFilters} />
+        <PipelineContent initialFilters={initialFilters} initialPage={initialPage} />
       </Suspense>
     </div>
   );

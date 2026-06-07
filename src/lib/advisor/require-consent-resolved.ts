@@ -4,12 +4,33 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { hasPendingConsent } from "@/lib/advisor/pending-consent";
+import { sanitizeMagicLinkRedirectTo } from "@/lib/auth/sign-in-routes";
 
 /** Paths reachable while consent decisions are still outstanding. */
 export function isConsentPendingExemptPath(pathname: string): boolean {
   return (
     pathname === "/consent/pending" || pathname.startsWith("/consent/")
   );
+}
+
+/** Safe post-consent destination (magic-link / deep-link aware). */
+export function resolveConsentReturnPath(
+  raw: string | null | undefined,
+  fallback = "/dashboard"
+): string {
+  return sanitizeMagicLinkRedirectTo(raw, fallback);
+}
+
+/** Build `/consent/pending` preserving the client's intended next page. */
+export function consentPendingHref(intendedPath?: string | null): string {
+  if (!intendedPath || isConsentPendingExemptPath(intendedPath.split("?")[0] ?? "")) {
+    return "/consent/pending";
+  }
+  const safe = sanitizeMagicLinkRedirectTo(intendedPath, "");
+  if (!safe) {
+    return "/consent/pending";
+  }
+  return `/consent/pending?redirectTo=${encodeURIComponent(safe)}`;
 }
 
 /**
@@ -28,6 +49,6 @@ export async function redirectIfPendingConsent(
   }
 
   if (await hasPendingConsent(clientUserId)) {
-    redirect("/consent/pending");
+    redirect(consentPendingHref(pathname));
   }
 }

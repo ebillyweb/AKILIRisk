@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Mail, Calendar, ExternalLink, BarChart3, FileText, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "lucide-react";
 
 import { setClientIntakeWaiver } from "@/lib/actions/advisor-intake-waiver-actions";
+import { cn } from "@/lib/utils";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,8 +69,13 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
 export function ClientDetailView({ detail }: ClientDetailViewProps) {
   const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment } = detail;
   const displayName = client.name || 'Unnamed Client';
-  const intakeFinished =
-    isIntakeFinished(intakeDetails) || advisorAssignment.intakeWaivedAt != null;
+  const intakeWaived = advisorAssignment.intakeWaivedAt != null;
+  const intakeSubmitted = isIntakeFinished(intakeDetails);
+  const assessmentCompleted = assessmentDetails?.status === "COMPLETED";
+  const intakeNeedsAdvisorReview =
+    client.awaitingIntakeReview && !assessmentCompleted;
+  const intakeReviewId =
+    intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
   const router = useRouter();
   const [waiverPending, startWaiverTransition] = useTransition();
 
@@ -153,20 +159,24 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Governance intake requirement
+                Intake
               </CardTitle>
+              <p className="text-sm font-normal text-muted-foreground">
+                Clients complete governance intake before the assessment unlocks.
+                Waive only when you are intentionally skipping the interview for
+                this household.
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Clients normally complete intake before the assessment unlocks. Waive this only when
-                you are intentionally skipping the interview for this household.
-              </p>
-              {advisorAssignment.intakeWaivedAt ? (
+              {intakeWaived ? (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <Badge variant="secondary">Intake waived</Badge>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Waived {formatDistanceToNow(new Date(advisorAssignment.intakeWaivedAt), { addSuffix: true })}
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Waived{" "}
+                      {formatDistanceToNow(new Date(advisorAssignment.intakeWaivedAt!), {
+                        addSuffix: true,
+                      })}
                     </p>
                   </div>
                   <Button
@@ -178,24 +188,78 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     Require intake again
                   </Button>
                 </div>
-              ) : intakeFinished ? (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <Badge variant="success">Intake completed</Badge>
-                    {intakeDetails?.submittedAt && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Submitted {formatDistanceToNow(new Date(intakeDetails.submittedAt), { addSuffix: true })}
+              ) : intakeDetails ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Status</p>
+                      <Badge
+                        variant={
+                          intakeNeedsAdvisorReview
+                            ? "warning"
+                            : intakeSubmitted
+                              ? "success"
+                              : "secondary"
+                        }
+                        className="mt-1"
+                      >
+                        {intakeNeedsAdvisorReview
+                          ? "Awaiting your review"
+                          : intakeSubmitted && assessmentCompleted
+                            ? "Complete"
+                            : intakeSubmitted
+                              ? "Submitted"
+                              : "In progress"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Progress</p>
+                      <p className="mt-1 text-lg font-semibold leading-none">
+                        {intakeDetails.responseCount}/{intakeDetails.totalQuestions}
                       </p>
+                      <p className="mt-1 text-xs text-muted-foreground">responses on file</p>
+                    </div>
+                    {intakeDetails.submittedAt && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Submitted</p>
+                        <p className="mt-1 text-sm">
+                          {format(intakeDetails.submittedAt, "MMM d, yyyy")}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(intakeDetails.submittedAt), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </div>
                     )}
                   </div>
-                  {client.awaitingIntakeReview && client.intakeReviewInterviewId && (
-                    <Button asChild variant="outline">
-                      <Link href={`/advisor/review/${client.intakeReviewInterviewId}`}>
-                        Review intake
-                      </Link>
-                    </Button>
-                  )}
-                </div>
+
+                  <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap">
+                    {intakeReviewId && intakeSubmitted && intakeDetails.responseCount > 0 && (
+                      <Button
+                        asChild
+                        variant={intakeNeedsAdvisorReview ? "default" : "outline"}
+                        className="sm:w-auto"
+                      >
+                        <Link href={`/advisor/review/${intakeReviewId}`}>
+                          {intakeNeedsAdvisorReview
+                            ? "Review intake"
+                            : "View intake responses"}
+                        </Link>
+                      </Button>
+                    )}
+                    {!intakeSubmitted && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={waiverPending}
+                        onClick={() => runWaiver(true)}
+                      >
+                        Allow assessment without intake
+                      </Button>
+                    )}
+                  </div>
+                </>
               ) : (
                 <Button
                   type="button"
@@ -209,60 +273,6 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
             </CardContent>
           </Card>
 
-          {/* Intake Summary */}
-          {intakeDetails && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Intake Interview
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge variant={intakeFinished ? 'success' : 'secondary'}>
-                      {intakeFinished ? 'Complete' : 'In Progress'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Progress</p>
-                    {intakeFinished ? (
-                      <div>
-                        <p className="text-lg font-semibold">Submitted</p>
-                        <p className="text-xs text-muted-foreground">
-                          {intakeDetails.responseCount}/{intakeDetails.totalQuestions} responses on file
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-lg font-semibold">
-                        {intakeDetails.responseCount}/{intakeDetails.totalQuestions}
-                      </p>
-                    )}
-                  </div>
-                  {intakeDetails.submittedAt && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Submitted</p>
-                      <p className="text-sm">{format(intakeDetails.submittedAt, 'MMM d, yyyy')}</p>
-                    </div>
-                  )}
-                  {intakeFinished && intakeDetails.responseCount > 0 && (
-                    <div>
-                      <Link
-                        href={`/advisor/review/${intakeDetails.interviewId}`}
-                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        Review Responses
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Assessment Summary */}
           {assessmentDetails && (
             <Card>
@@ -272,73 +282,78 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   Risk Assessment
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-2 gap-4 rounded-xl border border-border/80 bg-muted/20 p-4 md:grid-cols-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Status</p>
+                    <Badge
+                      variant={assessmentDetails.status === "COMPLETED" ? "success" : "secondary"}
+                      className="mt-1"
+                    >
+                      {assessmentDetails.status === "COMPLETED" ? "Complete" : "In progress"}
+                    </Badge>
+                  </div>
+                  {assessmentDetails.score !== null && (
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Status</p>
-                      <Badge variant={assessmentDetails.status === 'COMPLETED' ? 'success' : 'secondary'}>
-                        {assessmentDetails.status === 'COMPLETED' ? 'Complete' : 'In Progress'}
+                      <p className="text-sm font-medium text-muted-foreground">Risk score</p>
+                      <p className="mt-1 text-2xl font-semibold leading-none tabular-nums">
+                        {assessmentDetails.score}
+                      </p>
+                    </div>
+                  )}
+                  {assessmentDetails.riskLevel && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Risk level</p>
+                      <Badge
+                        variant="outline"
+                        className={cn("mt-1 uppercase", getRiskLevelColor(assessmentDetails.riskLevel))}
+                      >
+                        {assessmentDetails.riskLevel}
                       </Badge>
                     </div>
-                    {assessmentDetails.score !== null && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Risk Score</p>
-                        <p className="text-lg font-semibold">{assessmentDetails.score}</p>
-                      </div>
-                    )}
-                    {assessmentDetails.riskLevel && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Risk Level</p>
-                        <span className={`text-sm px-2 py-1 rounded-full font-medium ${getRiskLevelColor(assessmentDetails.riskLevel)}`}>
-                          {assessmentDetails.riskLevel}
-                        </span>
-                      </div>
-                    )}
-                    {assessmentDetails.completedAt && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                        <p className="text-sm">{format(assessmentDetails.completedAt, 'MMM d, yyyy')}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Risk by domain (round-10 / B1 — BRD §4.3 heat map). */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Risk by domain</h4>
-                    <RiskHeatMap
-                      mode="single-client"
-                      pillarScores={assessmentDetails.pillarScores.map((p) => ({
-                        pillar: p.pillar,
-                        score: p.score,
-                        riskLevel: p.riskLevel,
-                      }))}
-                    />
-                  </div>
-
+                  )}
                   {assessmentDetails.completedAt && (
-                    <div className="flex flex-wrap items-center gap-4 pt-2">
-                      <Link
-                        href={`/advisor/analytics/${client.id}`}
-                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                      >
-                        <BarChart3 className="w-3 h-3" />
-                        View Full Analytics
-                      </Link>
-                      {assessmentDetails.id && (
-                        // US-46c: deep-link into the per-answer review surface
-                        // where advisors leave answer-level advisory notes.
-                        <Link
-                          href={`/advisor/pipeline/${client.id}/assessment/${assessmentDetails.id}`}
-                          className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                        >
-                          <FileText className="w-3 h-3" />
-                          Review answers
-                        </Link>
-                      )}
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                      <p className="mt-1 text-sm">
+                        {format(assessmentDetails.completedAt, "MMM d, yyyy")}
+                      </p>
                     </div>
                   )}
                 </div>
+
+                <div>
+                  <h4 className="mb-3 text-sm font-medium">Risk by domain</h4>
+                  <RiskHeatMap
+                    mode="single-client"
+                    pillarScores={assessmentDetails.pillarScores.map((p) => ({
+                      pillar: p.pillar,
+                      score: p.score,
+                      riskLevel: p.riskLevel,
+                    }))}
+                  />
+                </div>
+
+                {assessmentDetails.completedAt && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap">
+                    <Button variant="outline" className="justify-center sm:w-auto" asChild>
+                      <Link href={`/advisor/analytics/${client.id}`}>
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        View full analytics
+                      </Link>
+                    </Button>
+                    {assessmentDetails.id && (
+                      <Button variant="outline" className="justify-center sm:w-auto" asChild>
+                        <Link
+                          href={`/advisor/pipeline/${client.id}/assessment/${assessmentDetails.id}`}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Review answers
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -407,14 +422,6 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                 </Button>
               )}
 
-              {intakeDetails && intakeFinished && (
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href={`/advisor/review/${intakeDetails.interviewId}`}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Review Intake
-                  </Link>
-                </Button>
-              )}
             </CardContent>
           </Card>
         </div>

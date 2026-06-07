@@ -1,5 +1,7 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 import type { AdvisorDashboardClient } from "@/lib/advisor/types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
@@ -9,6 +11,7 @@ import {
 } from "@/lib/advisor/field-visibility";
 import { safeDecryptTranscription } from "@/lib/data/response-content";
 import { intakeResponsePlaybackUrl } from "@/lib/intake/playback-url";
+import { maybeReassignMisplacedIntakeToClient } from "@/lib/intake/reassign-misplaced-intake";
 
 export async function getAdvisorProfile(userId: string) {
   // Round-11 commit 2.4b: ciphertext + decrypt at exit so callers
@@ -110,61 +113,70 @@ export async function getAssignedClients(advisorProfileId: string): Promise<Advi
   });
 }
 
-export async function getClientIntakeForReview(
-  advisorProfileId: string,
+function isMissingIntakeResponseAdvisorNoteTable(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2021" &&
+    String(error.meta?.table ?? "").includes("IntakeResponseAdvisorNote")
+  );
+}
+
+async function findIntakeInterviewForReview(
   interviewId: string,
-  /**
-   * US-46c: User id of the calling advisor — used to scope the
-   * IntakeResponseAdvisorNote join to this advisor's own note. Optional
-   * (back-compat) so callers that don't yet pass it (e.g. older test
-   * fixtures) get a `null` advisorNote on every response rather than
-   * crashing. New advisor-facing call sites should always pass it.
-   */
   advisorUserId?: string,
 ) {
-  // First verify the advisor has access to this client's interview
-  const interview = await prisma.intakeInterview.findFirst({
-    where: {
-      id: interviewId,
-      user: {
-        clientAssignments: {
-          some: {
-            advisorId: advisorProfileId,
-            status: 'ACTIVE',
-          },
-        },
-      },
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          // Round-11 commit 2.4b: ciphertext, decrypt at exit.
-          emailCiphertext: true,
-        },
-      },
-      responses: {
-        orderBy: {
-          questionId: 'asc',
-        },
-        include: advisorUserId
-          ? {
-              advisorNotes: {
-                where: { advisorId: advisorUserId },
-                select: { id: true, body: true, updatedAt: true },
-                take: 1,
-              },
-            }
-          : undefined,
-      },
-    },
-  });
-
-  if (!interview) {
-    return null;
+  try {
+    return await prisma.intakeInterview.findUnique({
+      where: { id: interviewId },
+      include: intakeReviewInclude(advisorUserId),
+    });
+  } catch (error) {
+    if (advisorUserId && isMissingIntakeResponseAdvisorNoteTable(error)) {
+      console.warn(
+        "[getClientIntakeForReview] IntakeResponseAdvisorNote table missing; loading without advisor notes. Run: npx prisma migrate deploy",
+      );
+      return prisma.intakeInterview.findUnique({
+        where: { id: interviewId },
+        include: intakeReviewInclude(undefined),
+      });
+    }
+    throw error;
   }
+}
 
+const intakeReviewInclude = (advisorUserId?: string) => ({
+  user: {
+    select: {
+      id: true,
+      name: true,
+      emailCiphertext: true,
+    },
+  },
+  responses: {
+    orderBy: { questionId: "asc" as const },
+    include: advisorUserId
+      ? {
+          advisorNotes: {
+            where: { advisorId: advisorUserId },
+            select: { id: true, body: true, updatedAt: true },
+            take: 1,
+          },
+        }
+      : undefined,
+  },
+});
+
+async function mapIntakeInterviewForReview(
+  interview: {
+    id: string;
+    userId: string;
+    user: { id: string; name: string | null; emailCiphertext: string };
+    responses: Array<Record<string, unknown>>;
+  },
+  interviewId: string,
+  advisorProfileId: string,
+  advisorUserId?: string,
+) {
   const clientAdvisorAssignmentDelegate = (
     prisma as unknown as {
       clientAdvisorAssignment?: {
@@ -187,23 +199,17 @@ export async function getClientIntakeForReview(
       })
     : Promise.resolve(null);
 
-  const [assignment, advisorPolicy] = await Promise.all([
+  const [assignment, advisorPolicy, approval] = await Promise.all([
     assignmentPromise,
     loadAdvisorPiiPolicy(advisorProfileId),
+    prisma.intakeApproval.findUnique({ where: { interviewId } }),
   ]);
 
   const identity = resolveAdvisorClientIdentity(
     interview.user,
     assignment?.fieldVisibility ?? null,
-    advisorPolicy
+    advisorPolicy,
   );
-
-  // Get the approval if one exists
-  const approval = await prisma.intakeApproval.findUnique({
-    where: {
-      interviewId: interviewId,
-    },
-  });
 
   return {
     interview: {
@@ -213,22 +219,9 @@ export async function getClientIntakeForReview(
         name: identity.name,
         email: identity.email,
       },
-      // Round-11 bug-hunt fix (commit B / RISK 3): decrypt
-      // transcription at the query-layer exit. Without this the
-      // advisor review screen (AdvisorIntakeView.tsx ~line 256)
-      // displayed the iv:tag:ct hex string instead of the actual
-      // transcription text.
-      // Round-11 cleanup: tamper-resilient decrypt — corrupted rows
-      // surface as null instead of crashing the advisor review page.
       responses: interview.responses.map((r) => {
-        // US-46c: filtered include returns 0-or-1 row for this advisor.
-        // Reshape to a single `advisorNote` field for the UI.
-        const advisorNotes = (r as unknown as {
-          advisorNotes?: Array<{
-            id: string;
-            body: string;
-            updatedAt: Date;
-          }>;
+        const advisorNotes = (r as {
+          advisorNotes?: Array<{ id: string; body: string; updatedAt: Date }>;
         }).advisorNotes;
         const firstNote = advisorNotes && advisorNotes.length > 0 ? advisorNotes[0] : null;
         const advisorNote = firstNote
@@ -238,13 +231,20 @@ export async function getClientIntakeForReview(
               updatedAt: firstNote.updatedAt.toISOString(),
             }
           : null;
+        const row = r as {
+          id: string;
+          questionId: string;
+          audioUrl: string | null;
+          audioS3Key: string | null;
+          transcription: string | null;
+        };
         return {
           ...r,
-          audioUrl: r.audioS3Key
-            ? (r.audioUrl ?? intakeResponsePlaybackUrl(interviewId, r.questionId))
-            : r.audioUrl,
-          transcription: safeDecryptTranscription(r.transcription, {
-            rowId: r.id,
+          audioUrl: row.audioS3Key
+            ? (row.audioUrl ?? intakeResponsePlaybackUrl(interviewId, row.questionId))
+            : row.audioUrl,
+          transcription: safeDecryptTranscription(row.transcription, {
+            rowId: row.id,
             column: "IntakeResponse.transcription",
           }),
           advisorNote,
@@ -253,6 +253,86 @@ export async function getClientIntakeForReview(
     },
     approval,
   };
+}
+
+/** Platform admins may open any intake by id (read-only oversight). */
+export async function getIntakeInterviewForPlatformAdminReview(
+  interviewId: string,
+  adminUserId?: string,
+) {
+  const interview = await findIntakeInterviewForReview(interviewId, adminUserId);
+  if (!interview) return null;
+
+  const assignment = await prisma.clientAdvisorAssignment.findFirst({
+    where: { clientId: interview.userId, status: "ACTIVE" },
+    orderBy: { assignedAt: "desc" },
+    select: { advisorId: true },
+  });
+  if (!assignment) return null;
+
+  return mapIntakeInterviewForReview(
+    interview,
+    interviewId,
+    assignment.advisorId,
+    adminUserId,
+  );
+}
+
+async function advisorHasActiveAssignmentToClient(
+  advisorProfileId: string,
+  clientUserId: string,
+): Promise<boolean> {
+  const assignment = await prisma.clientAdvisorAssignment.findFirst({
+    where: {
+      advisorId: advisorProfileId,
+      clientId: clientUserId,
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  });
+  return assignment != null;
+}
+
+export async function getClientIntakeForReview(
+  advisorProfileId: string,
+  interviewId: string,
+  /**
+   * US-46c: User id of the calling advisor — used to scope the
+   * IntakeResponseAdvisorNote join to this advisor's own note. Optional
+   * (back-compat) so callers that don't yet pass it (e.g. older test
+   * fixtures) get a `null` advisorNote on every response rather than
+   * crashing. New advisor-facing call sites should always pass it.
+   */
+  advisorUserId?: string,
+) {
+  if (advisorUserId) {
+    await maybeReassignMisplacedIntakeToClient(
+      interviewId,
+      advisorProfileId,
+      advisorUserId,
+    );
+  }
+
+  const interview = await findIntakeInterviewForReview(interviewId, advisorUserId);
+
+  if (!interview) {
+    return null;
+  }
+
+  const hasAccess = await advisorHasActiveAssignmentToClient(
+    advisorProfileId,
+    interview.userId,
+  );
+  if (!hasAccess) {
+    return null;
+  }
+
+  return mapIntakeInterviewForReview(
+    interview,
+    interviewId,
+    advisorProfileId,
+    advisorUserId,
+  );
 }
 
 export async function createIntakeApproval(interviewId: string, advisorProfileId: string) {

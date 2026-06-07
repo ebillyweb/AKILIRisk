@@ -26,8 +26,10 @@ vi.mock("@/lib/advisor/pending-consent", () => ({
 }));
 
 import {
+  consentPendingHref,
   isConsentPendingExemptPath,
   redirectIfPendingConsent,
+  resolveConsentReturnPath,
 } from "./require-consent-resolved";
 
 beforeEach(() => {
@@ -48,11 +50,42 @@ describe("isConsentPendingExemptPath", () => {
   });
 });
 
+describe("consentPendingHref", () => {
+  it("preserves a client workspace return path", () => {
+    expect(consentPendingHref("/assessment")).toBe(
+      "/consent/pending?redirectTo=%2Fassessment"
+    );
+  });
+
+  it("drops consent routes and unsafe paths", () => {
+    expect(consentPendingHref("/consent/pending")).toBe("/consent/pending");
+    expect(consentPendingHref("/advisor")).toBe("/consent/pending");
+  });
+});
+
+describe("resolveConsentReturnPath", () => {
+  it("defaults to dashboard", () => {
+    expect(resolveConsentReturnPath(undefined)).toBe("/dashboard");
+  });
+
+  it("honors assessment deep links", () => {
+    expect(resolveConsentReturnPath("/assessment")).toBe("/assessment");
+  });
+});
+
 describe("redirectIfPendingConsent", () => {
   it("redirects to /consent/pending when assignments need consent", async () => {
     dbState.pending = true;
     await expect(redirectIfPendingConsent("c-1")).rejects.toThrow(
       "REDIRECT:/consent/pending"
+    );
+  });
+
+  it("preserves the requested path in the consent redirect", async () => {
+    dbState.pending = true;
+    dbState.pathname = "/assessment";
+    await expect(redirectIfPendingConsent("c-1")).rejects.toThrow(
+      "REDIRECT:/consent/pending?redirectTo=%2Fassessment"
     );
   });
 

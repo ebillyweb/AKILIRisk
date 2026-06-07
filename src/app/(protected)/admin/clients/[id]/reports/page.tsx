@@ -7,6 +7,7 @@ import { requireAdminRole } from "@/lib/admin/auth";
 import { prisma } from "@/lib/db";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import { getReportListForClient } from "@/lib/reports/queries";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export default async function AdminClientReportsPage({
 
   const list = await getReportListForClient(clientId);
   const clientLabel = client.name || decryptUserEmail(client.emailCiphertext);
+  const hasPublishedReport = list?.reports.some((r) => r.status === "PUBLISHED") ?? false;
 
   return (
     <div className="container mx-auto py-6">
@@ -65,22 +67,42 @@ export default async function AdminClientReportsPage({
         </p>
       </div>
 
-      {!list || list.reports.length === 0 ? (
+      {!list ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
             <FileText className="w-8 h-8 mx-auto mb-3 opacity-50" />
-            <p>No reports for this client.</p>
+            <p>No assessment found for this client yet.</p>
+          </CardContent>
+        </Card>
+      ) : list.reports.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            <FileText className="w-8 h-8 mx-auto mb-3 opacity-50" />
+            <p>
+              No report versions yet. Once the assessment is scored, a draft is
+              created automatically for the assigned advisor to publish.
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Versions ({list.reports.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-border">
+        <div className="space-y-4">
+          {!hasPublishedReport ? (
+            <Alert variant="info">
+              <AlertDescription>
+                No published report yet — only draft preview(s) below. The
+                assigned advisor must publish before clients receive a final PDF.
+                You can download a watermarked draft preview in the meantime.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Report versions ({list.reports.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y divide-border">
               {list.reports.map((r) => {
                 const variant: "secondary" | "success" | "outline" =
                   r.status === "PUBLISHED"
@@ -120,18 +142,16 @@ export default async function AdminClientReportsPage({
                             Audit history
                           </Link>
                         </Button>
-                        {r.status !== "DRAFT" ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <a
-                              href={`/api/reports/by-id/${r.id}/pdf`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <FileDown className="w-4 h-4 mr-2" />
-                              Download
-                            </a>
-                          </Button>
-                        ) : null}
+                        <Button variant="outline" size="sm" asChild>
+                          <a
+                            href={`/api/reports/by-id/${r.id}/pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <FileDown className="w-4 h-4 mr-2" />
+                            {r.status === "DRAFT" ? "Download draft" : "Download"}
+                          </a>
+                        </Button>
                       </div>
                     </div>
                     {r.status === "PUBLISHED" && list.assessmentId ? (
@@ -143,9 +163,10 @@ export default async function AdminClientReportsPage({
                   </li>
                 );
               })}
-            </ul>
-          </CardContent>
-        </Card>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

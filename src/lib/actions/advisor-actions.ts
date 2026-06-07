@@ -33,16 +33,12 @@ import { decryptUserEmail } from '@/lib/auth/user-email';
 import {
   loadAdvisorPiiPolicy,
   resolveAdvisorClientIdentity,
-  resolveEffectiveFieldVisibility,
 } from '@/lib/advisor/field-visibility';
-import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
-import { personalizeIntakeScript } from '@/lib/intake/personalize-intake-question';
-import { getAssignedAdvisorFirmNameForClient } from '@/lib/client/assigned-advisor-firm-name';
-import { toAdvisorHouseholdMemberViews } from '@/lib/profiles/advisor-household-view';
-import type { IntakeReviewData } from '@/lib/advisor/types';
+import { getIntakeReviewDataForAdvisorPage } from '@/lib/advisor/intake-review-queries';
 import { getAdvisorInvitations } from '@/lib/invitations/service';
 import { InvitationStatus } from '@prisma/client';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
+import { notifyClientOfIntakeApproval } from '@/lib/intake/notify-client-intake-approved';
 import type { UserRole } from '@prisma/client';
 
 export async function getAdvisorDashboardData() {
@@ -97,96 +93,17 @@ export async function getGovernanceDashboardData() {
   }
 }
 
+/** @deprecated Prefer `getIntakeReviewDataForAdvisorPage` from RSC pages. */
 export async function getIntakeReviewData(interviewId: string) {
   try {
-    const { userId } = await requireAdvisorRole();
-    const profile = await getAdvisorProfileOrThrow(userId);
-
-    const validatedFields = z.object({ interviewId: z.string().min(1) }).safeParse({ interviewId });
-    if (!validatedFields.success) {
-      return {
-        success: false,
-        error: 'Invalid interview ID',
-      };
-    }
-
-    const reviewData = await getClientIntakeForReview(profile.id, interviewId, userId);
-    if (!reviewData) {
+    const data = await getIntakeReviewDataForAdvisorPage(interviewId);
+    if (!data) {
       return {
         success: false,
         error: 'Interview not found or not assigned to you',
       };
     }
-
-    // US-11: opening a submitted intake moves approval to IN_REVIEW.
-    let approval = reviewData.approval;
-    if (
-      reviewData.interview.status === 'SUBMITTED' &&
-      (!approval || approval.status === 'PENDING')
-    ) {
-      const priorApproval = await createIntakeApproval(interviewId, profile.id);
-      if (priorApproval.status === 'PENDING') {
-        approval = await updateIntakeApproval(priorApproval.id, {
-          status: 'IN_REVIEW',
-          reviewedAt: new Date(),
-        });
-      } else {
-        approval = priorApproval;
-      }
-    }
-
-    const [script, firmName] = await Promise.all([
-      loadIntakeScriptQuestions(),
-      getAssignedAdvisorFirmNameForClient(reviewData.interview.userId),
-    ]);
-    const personalizedScript = personalizeIntakeScript(script, firmName);
-
-    const rawHouseholdMembers = profile.householdProfilesEnabled
-      ? await prisma.householdMember.findMany({
-          where: { userId: reviewData.interview.userId },
-          orderBy: { createdAt: 'asc' },
-        })
-      : [];
-
-    const assignment = await prisma.clientAdvisorAssignment.findFirst({
-      where: {
-        advisorId: profile.id,
-        clientId: reviewData.interview.userId,
-        status: 'ACTIVE',
-      },
-      select: { fieldVisibility: true },
-    });
-    const advisorPolicy = await loadAdvisorPiiPolicy(profile.id);
-    const effective = resolveEffectiveFieldVisibility(
-      advisorPolicy,
-      assignment?.fieldVisibility ?? null
-    );
-    const householdMembers = toAdvisorHouseholdMemberViews(
-      rawHouseholdMembers,
-      effective
-    );
-
-    const intakeReviewData: IntakeReviewData = {
-      interview: reviewData.interview,
-      approval,
-      questions: personalizedScript.map((q) => ({
-        id: q.id,
-        text: q.questionText,
-        helpText: q.context,
-        type: 'audio',
-        questionNumber: q.questionNumber,
-        questionText: q.questionText,
-        context: q.context,
-        whyThisMatters: q.whyThisMatters,
-        recordingTips: q.recordingTips,
-      })),
-      householdMembers,
-    };
-
-    return {
-      success: true,
-      data: intakeReviewData,
-    };
+    return { success: true, data };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get intake review data';
     return { success: false, error: message };
@@ -331,6 +248,12 @@ export async function approveClientIntake(data: unknown) {
       beforeData: { status: priorApproval.status, focusAreas: priorApproval.focusAreas, notes: priorApproval.notes },
       afterData: { status: approval.status, focusAreas: approval.focusAreas, notes: approval.notes, approvedAt: approval.approvedAt?.toISOString() ?? null },
       metadata: { interviewId, advisorId: profile.id },
+    });
+
+    void notifyClientOfIntakeApproval({
+      interviewId,
+      advisorProfileId: profile.id,
+      actor: { userId, role: role as UserRole, email },
     });
 
     revalidatePath('/advisor/review/[id]', 'page');

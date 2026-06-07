@@ -74,6 +74,70 @@ export function renderMagicLinkEmailHtml(magicLinkUrl: string): string {
   );
 }
 
+/**
+ * Intake-approved email: magic link that lands on /assessment after sign-in.
+ * `clientName` and `advisorFirmName` are user-controlled — escape both.
+ */
+export function renderIntakeApprovedMagicLinkEmailHtml(
+  clientName: string,
+  advisorFirmName: string,
+  magicLinkUrl: string
+): string {
+  const safeClientName = escapeHtml(clientName);
+  const safeAdvisorFirmName = escapeHtml(advisorFirmName);
+
+  return wrapPlatformEmailContent({
+    documentTitle: "Your assessment is ready",
+    appOrigin: appOriginFromUrl(magicLinkUrl),
+    bodyHtml: `
+      ${renderPlatformEmailHeadline("Your assessment is ready")}
+      <p style="margin:0 0 16px;">Hello ${safeClientName},</p>
+      <p style="margin:0 0 16px;">${safeAdvisorFirmName} has reviewed and approved your intake. Your household risk assessment is now unlocked.</p>
+      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">What to do next</strong></p>
+      <ol style="margin:0 0 16px;padding-left:20px;color:#334155;">
+        <li style="margin:0 0 8px;">Click the button below to sign in securely (no password needed).</li>
+        <li style="margin:0 0 8px;">You will be taken directly to your assessment.</li>
+        <li style="margin:0;">Work through each risk pillar at your own pace — your progress is saved automatically.</li>
+      </ol>
+      ${renderPlatformEmailCta({ label: "Start assessment", href: magicLinkUrl })}
+      ${renderPlatformEmailUrlFallback(magicLinkUrl)}
+      <p style="margin:24px 0 0;font-size:14px;color:#64748b;">This sign-in link expires in <strong>15 minutes</strong> and can only be used once. If you did not expect this email, you can ignore it.</p>`,
+  });
+}
+
+export async function sendIntakeApprovedMagicLinkEmail(
+  email: string,
+  clientName: string,
+  advisorFirmName: string,
+  magicLinkUrl: string
+): Promise<void> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error(
+        "RESEND_API_KEY not configured - intake-approved magic-link email will not be sent"
+      );
+      return;
+    }
+
+    const resend = new Resend(apiKey);
+    await resend.emails.send(
+      withPlatformLogoAttachment({
+        from: resolveFromEmail(),
+        to: email,
+        subject: `Your assessment is ready — ${sanitizeSubjectFragment(clientName)}`,
+        html: renderIntakeApprovedMagicLinkEmailHtml(
+          clientName,
+          advisorFirmName,
+          magicLinkUrl
+        ),
+      })
+    );
+  } catch (error) {
+    console.error("Failed to send intake-approved magic-link email:", error);
+  }
+}
+
 export async function sendMagicLinkEmail(
   email: string,
   magicLinkUrl: string

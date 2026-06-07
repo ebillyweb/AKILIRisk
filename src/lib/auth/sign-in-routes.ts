@@ -61,6 +61,24 @@ export function shouldRedirectCredentialsSignInToMagicLink(
   return isClientWorkspacePath(pathOnly);
 }
 
+/**
+ * Post-magic-link sign-in destination. Open-redirect safe: same-origin
+ * relative paths only, and must land in a client workspace.
+ */
+export function sanitizeMagicLinkRedirectTo(
+  raw: string | null | undefined,
+  fallback = "/dashboard"
+): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+    return fallback;
+  }
+  const pathOnly = raw.split("?")[0] ?? raw;
+  if (!isClientWorkspacePath(pathOnly)) {
+    return fallback;
+  }
+  return raw;
+}
+
 export function buildSignInHref(options: {
   callbackUrl?: string | null;
   /** Force staff credentials or client magic-link instead of inferring from callback. */

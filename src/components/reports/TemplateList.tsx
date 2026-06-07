@@ -96,28 +96,29 @@ export function TemplateList({
   const anyDownloading = downloading !== null || downloadingAll;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="@container space-y-5">
+      <div className="flex flex-col gap-3 @sm:flex-row @sm:items-center @sm:justify-between">
         <p className="editorial-kicker">
           {variant === "advisor"
             ? "Per-pillar policy documents"
             : "Governance Policy Templates"}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-2 @sm:flex-row @sm:flex-wrap">
           <Button
             onClick={() => downloadAllTemplates("docx")}
             disabled={anyDownloading}
             variant="outline"
             size="sm"
+            className="w-full @sm:w-auto"
           >
             {downloadingAll ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Downloading...
               </>
             ) : (
               <>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="mr-2 h-4 w-4" />
                 All Word
               </>
             )}
@@ -127,15 +128,16 @@ export function TemplateList({
             disabled={anyDownloading}
             variant="outline"
             size="sm"
+            className="w-full @sm:w-auto"
           >
             {downloadingAll ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Downloading...
               </>
             ) : (
               <>
-                <FileType className="w-4 h-4 mr-2" />
+                <FileType className="mr-2 h-4 w-4" />
                 All PDF
               </>
             )}
@@ -143,42 +145,43 @@ export function TemplateList({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
         {TEMPLATE_REGISTRY.map((template) => (
-          <Card key={template.id} className="bg-background/55">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <CardTitle className="text-lg leading-tight">
-                    {template.name}
-                  </CardTitle>
-                  <Badge variant="secondary" className="w-fit text-xs">
-                    {template.category.replace(/-/g, " ")}
-                  </Badge>
-                </div>
+          <Card
+            key={template.id}
+            className="gap-4 rounded-2xl bg-background/55 py-4"
+          >
+            <CardHeader className="gap-2 px-4 pb-0 sm:px-5">
+              <div className="min-w-0 space-y-2">
+                <CardTitle className="text-base leading-snug break-words">
+                  {template.name}
+                </CardTitle>
+                <Badge variant="secondary" className="w-fit text-[11px] uppercase tracking-wide">
+                  {template.category.replace(/-/g, " ")}
+                </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+            <CardContent className="space-y-4 px-4 sm:px-5">
+              <p className="text-sm leading-snug text-muted-foreground">
                 {template.description}
               </p>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-2">
                 <Button
                   onClick={() => downloadTemplate(template.id, "docx")}
                   disabled={anyDownloading}
                   variant="outline"
                   size="sm"
-                  className="flex-1"
+                  className="w-full justify-center"
                 >
                   {isBusy(template.id, "docx") ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Generating...
                     </>
                   ) : (
                     <>
-                      <FileText className="w-4 h-4 mr-2" />
+                      <FileText className="mr-2 h-4 w-4" />
                       Word (.docx)
                     </>
                   )}
@@ -188,16 +191,16 @@ export function TemplateList({
                   disabled={anyDownloading}
                   variant="outline"
                   size="sm"
-                  className="flex-1"
+                  className="w-full justify-center"
                 >
                   {isBusy(template.id, "pdf") ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Generating...
                     </>
                   ) : (
                     <>
-                      <FileType className="w-4 h-4 mr-2" />
+                      <FileType className="mr-2 h-4 w-4" />
                       PDF
                     </>
                   )}

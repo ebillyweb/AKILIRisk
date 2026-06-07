@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   renderAdvisorIntakeNotificationHtml,
+  renderIntakeApprovedMagicLinkEmailHtml,
   renderPasswordResetEmailHtml,
 } from "./email";
 
@@ -62,6 +63,31 @@ describe("renderAdvisorIntakeNotificationHtml", () => {
     );
     expect(html).toContain("Hello Advisor Name,");
     expect(html).toContain("Client Name</strong>");
+  });
+});
+
+describe("renderIntakeApprovedMagicLinkEmailHtml", () => {
+  const xss = `<script>alert(1)</script>`;
+
+  it("escapes client and advisor firm names containing HTML", () => {
+    const html = renderIntakeApprovedMagicLinkEmailHtml(
+      xss,
+      xss,
+      "https://app.example/auth/magic-link/verify?token=abc"
+    );
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+  });
+
+  it("includes assessment start instructions", () => {
+    const html = renderIntakeApprovedMagicLinkEmailHtml(
+      "Client Name",
+      "Advisor Firm",
+      "https://app.example/auth/magic-link/verify?token=abc&redirectTo=%2Fassessment"
+    );
+    expect(html).toContain("Start assessment");
+    expect(html).toContain("Advisor Firm");
+    expect(html).toContain("Hello Client Name,");
   });
 });
 

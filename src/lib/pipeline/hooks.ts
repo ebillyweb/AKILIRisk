@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import type { PipelineClient, PipelineFilters } from './types';
 import { getStageOrder } from './status';
 
@@ -93,6 +93,16 @@ export function usePipelineFilters(
     sortDir: "desc",
     ...initialFilters,
   });
+
+  const initialFiltersKey = JSON.stringify(initialFilters ?? {});
+
+  useEffect(() => {
+    setFilters({
+      sortBy: "lastActivity",
+      sortDir: "desc",
+      ...(initialFilters ?? {}),
+    });
+  }, [initialFiltersKey]);
 
   const filteredClients = useMemo(() => {
     let filtered = clients.slice();

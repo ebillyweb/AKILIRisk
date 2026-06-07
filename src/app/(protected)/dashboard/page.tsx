@@ -161,70 +161,77 @@ export default async function DashboardPage({
     <div className="space-y-6 sm:space-y-8">
       <UnauthorizedNotice error={sp.error} />
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
-        <div className="grid min-w-0 gap-6 sm:gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
-          <div className="flex min-w-0 flex-col justify-center space-y-2 sm:space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Welcome back,{" "}
+        <div className="space-y-5">
+          <p className="text-sm text-foreground/80">
+            Welcome back,{" "}
+            <span className="font-medium text-foreground">
               {session.user.firstName ?? session.user.name ?? "Guest"}
-            </p>
-          </div>
+            </span>
+          </p>
 
-          <div className="min-w-0">
-            <Card className="bg-background/60">
-              {/* §4.3 close-out: the hero now leads with Overall Risk
-                  (BRD §4.3 "single-screen summary dashboard"); the
-                  remaining tiles are kept and laid out 1×5 on lg, 2×3
-                  on smaller screens. MFA status duplicates the Account
-                  Settings card below — kept here for at-a-glance
-                  visibility. */}
-              <CardContent className="grid grid-cols-2 gap-x-6 gap-y-8 pt-5 sm:grid-cols-3 sm:gap-x-8 sm:px-6 sm:pt-6 lg:grid-cols-5">
-                <div className="min-w-0 max-w-full" data-testid="hero-overall-risk">
-                  <p className="editorial-kicker block">Overall Risk</p>
-                  {overallRisk ? (
-                    <div className="mt-2 space-y-1">
-                      <p className="break-words text-2xl font-semibold leading-tight tracking-tight tabular-nums sm:text-3xl">
-                        {overallRisk.score.toFixed(1)} / 10
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={`${overallRisk.palette.bg} ${overallRisk.palette.text} ${overallRisk.palette.border}`}
-                      >
-                        {overallRisk.palette.label}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm leading-snug text-muted-foreground">
-                      Complete your assessment to see your overall risk.
+          <Card className="border-border/80 bg-background/60 shadow-sm">
+            <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:grid-cols-3">
+              <div
+                className="rounded-xl border border-border/70 bg-card/40 p-4 sm:col-span-2 lg:col-span-1"
+                data-testid="hero-overall-risk"
+              >
+                <p className="editorial-kicker">Overall risk</p>
+                {overallRisk ? (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-2xl font-semibold tabular-nums leading-none tracking-tight sm:text-3xl">
+                      {overallRisk.score.toFixed(1)} / 10
                     </p>
-                  )}
-                </div>
-                <div className="min-w-0 max-w-full">
-                  <p className="editorial-kicker block">Intake</p>
-                  <p className="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
-                    {intakeHeroLabel}
+                    <Badge
+                      variant="outline"
+                      className={`${overallRisk.palette.bg} ${overallRisk.palette.text} ${overallRisk.palette.border}`}
+                    >
+                      {overallRisk.palette.label}
+                    </Badge>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    Complete your assessment to see your overall risk score.
                   </p>
-                </div>
-                <div className="min-w-0 max-w-full">
-                  <p className="editorial-kicker block">Assessment</p>
-                  <p className="mt-2 break-words text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
-                    {assessmentHeroLabel}
-                  </p>
-                </div>
-                <div className="min-w-0 max-w-full">
-                  <p className="editorial-kicker block">Assessments</p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums leading-tight sm:text-3xl">
-                    {assessments.length}
-                  </p>
-                </div>
-                <div className="min-w-0 max-w-full">
-                  <p className="editorial-kicker block">MFA</p>
-                  <p className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">
-                    {session?.user?.mfaEnabled ? "On" : "Off"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
+                <p className="editorial-kicker">Intake</p>
+                <Badge variant="secondary" className="mt-2 max-w-full whitespace-normal text-left">
+                  {intakeHeroLabel}
+                </Badge>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
+                <p className="editorial-kicker">Assessment</p>
+                <Badge
+                  variant={
+                    assessmentHeroLabel === "Complete" ? "success" : "secondary"
+                  }
+                  className="mt-2"
+                >
+                  {assessmentHeroLabel}
+                </Badge>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
+                <p className="editorial-kicker">Assessments</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums leading-none">
+                  {assessments.length}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
+                <p className="editorial-kicker">MFA</p>
+                <Badge
+                  variant={session?.user?.mfaEnabled ? "success" : "outline"}
+                  className="mt-2"
+                >
+                  {session?.user?.mfaEnabled ? "On" : "Off"}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

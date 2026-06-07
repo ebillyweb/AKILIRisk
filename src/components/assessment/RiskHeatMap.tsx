@@ -52,6 +52,19 @@ export function RiskHeatMap(props: RiskHeatMapProps) {
 
 // ── Single-client mode ──────────────────────────────────────────────────
 
+const SCORE_BAR_CLASS: Record<HeatMapCell["level"], string> = {
+  low: "bg-emerald-500",
+  medium: "bg-amber-500",
+  high: "bg-orange-500",
+  critical: "bg-red-500",
+  unassessed: "bg-muted-foreground/25",
+};
+
+function scoreBarPercent(score: number | null): number {
+  if (score == null) return 0;
+  return Math.min(100, Math.max(0, (score / 3) * 100));
+}
+
 function SingleClientHeatMap({
   pillarScores,
   showUnassessedBanner = true,
@@ -68,35 +81,61 @@ function SingleClientHeatMap({
           assessment is completed.
         </div>
       ) : null}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+      <ul className="divide-y divide-border rounded-xl border border-border/80 bg-card/40">
         {cells.map((cell) => (
           <SingleCell key={cell.pillarId} cell={cell} />
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
 
 function SingleCell({ cell }: { cell: HeatMapCell }) {
+  const barWidth = scoreBarPercent(cell.score);
+
   return (
-    <div
+    <li
       role="img"
       aria-label={ariaLabelForCell(cell)}
       data-risk-level={cell.level}
       data-pillar-id={cell.pillarId}
-      className={cn(
-        "flex flex-col gap-1 rounded-md border p-3 text-xs",
-        cell.palette.bg,
-        cell.palette.text,
-        cell.palette.border
-      )}
+      className="px-4 py-3 first:rounded-t-xl last:rounded-b-xl"
     >
-      <div className="font-medium leading-tight">{cell.pillarName}</div>
-      <div className="text-[11px] opacity-90">{cell.palette.label}</div>
-      <div className="font-mono text-[11px] opacity-80">
-        {formatHeatMapScore(cell.score)}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-sm font-medium leading-snug text-foreground">
+              {cell.pillarName}
+            </span>
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
+                cell.palette.bg,
+                cell.palette.text,
+                cell.palette.border
+              )}
+            >
+              {cell.palette.label}
+            </span>
+          </div>
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-muted/80"
+            aria-hidden
+          >
+            <div
+              className={cn(
+                "h-full rounded-full transition-[width]",
+                SCORE_BAR_CLASS[cell.level]
+              )}
+              style={{ width: `${barWidth}%` }}
+            />
+          </div>
+        </div>
+        <p className="shrink-0 font-mono text-sm tabular-nums text-foreground sm:text-right">
+          {formatHeatMapScore(cell.score)}
+        </p>
       </div>
-    </div>
+    </li>
   );
 }
 

@@ -3,6 +3,7 @@ import {
   buildSignInHref,
   CLIENT_MAGIC_LINK_SIGN_IN_PATH,
   getSignInPathForWorkspace,
+  sanitizeMagicLinkRedirectTo,
   shouldRedirectCredentialsSignInToMagicLink,
   STAFF_CREDENTIALS_SIGN_IN_PATH,
 } from "@/lib/auth/sign-in-routes";
@@ -39,5 +40,12 @@ describe("sign-in routes", () => {
   it("detects client callbacks that should leave /signin", () => {
     expect(shouldRedirectCredentialsSignInToMagicLink("/intake")).toBe(true);
     expect(shouldRedirectCredentialsSignInToMagicLink("/admin")).toBe(false);
+  });
+
+  it("sanitizes magic-link redirect targets to client workspaces", () => {
+    expect(sanitizeMagicLinkRedirectTo("/assessment")).toBe("/assessment");
+    expect(sanitizeMagicLinkRedirectTo("//evil.example")).toBe("/dashboard");
+    expect(sanitizeMagicLinkRedirectTo("/advisor")).toBe("/dashboard");
+    expect(sanitizeMagicLinkRedirectTo(null, "/assessment")).toBe("/assessment");
   });
 });

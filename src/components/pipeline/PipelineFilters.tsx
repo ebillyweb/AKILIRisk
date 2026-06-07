@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { useDebouncedCallback } from "use-debounce";
 
@@ -24,6 +24,8 @@ interface PipelineFiltersProps {
   metrics: PipelineMetrics;
   totalCount: number;
   filteredCount: number;
+  page?: number;
+  pageSize?: number;
 }
 
 const stages: ClientWorkflowStage[] = [
@@ -42,9 +44,17 @@ export function PipelineFilters({
   onFilterChange,
   metrics,
   totalCount,
-  filteredCount
+  filteredCount,
+  page = 1,
+  pageSize = 20,
 }: PipelineFiltersProps) {
-  const [searchValue, setSearchValue] = useState(filters.search || '');
+  const pageStart = filteredCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, filteredCount);
+  const [searchValue, setSearchValue] = useState(filters.search || "");
+
+  useEffect(() => {
+    setSearchValue(filters.search || "");
+  }, [filters.search]);
 
   // Debounce search input
   const debouncedSearchChange = useDebouncedCallback(
@@ -149,7 +159,11 @@ export function PipelineFilters({
 
       {/* Results Count */}
       <div className="text-sm text-muted-foreground">
-        Showing {filteredCount} of {totalCount} clients
+        {filteredCount === 0
+          ? `No clients match (${totalCount} assigned)`
+          : filteredCount <= pageSize
+            ? `Showing ${filteredCount} of ${totalCount} clients`
+            : `Showing ${pageStart}–${pageEnd} of ${filteredCount} matching (${totalCount} assigned)`}
         {filters.stage && (
           <span className="ml-2">
             • Filtered by: <span className="font-medium">{getStageLabel(filters.stage)}</span>

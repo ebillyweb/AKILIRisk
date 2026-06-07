@@ -1,43 +1,33 @@
 import { Text, View } from "@react-pdf/renderer";
 
 /**
- * §4.5 commit 3 (BRD §4.5): diagonal "DRAFT — NOT PUBLISHED" overlay
- * stamped on every page when a Report is rendered from live data
- * (DRAFT row OR the legacy route's no-PUBLISHED-yet preview path). The
- * watermark is rotated -30° to spread across most of an A4 page and
- * uses very light gray with low opacity so it doesn't obscure the
- * underlying content but makes it visually unmistakable that the PDF
- * isn't a published artifact.
- *
- * Render this AFTER all other page content so it sits on top in
- * @react-pdf/renderer's z-stack. Each Page that should be watermarked
- * needs its own <DraftWatermark /> sibling — the component does not
- * auto-apply across a Document.
+ * Diagonal "DRAFT" overlay on preview PDFs (no PUBLISHED report yet).
+ * Render after page content. One instance per Page — do not use `fixed`.
  */
 export function DraftWatermark() {
   return (
     <View
-      fixed
       style={{
         position: "absolute",
-        top: 250,
-        left: -50,
-        right: -50,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         alignItems: "center",
         justifyContent: "center",
-        transform: "rotate(-30deg)",
-        opacity: 0.12,
       }}
     >
       <Text
         style={{
-          fontSize: 90,
+          transform: "rotate(-35deg)",
+          opacity: 0.1,
+          fontSize: 72,
           fontWeight: "bold",
-          color: "#0f172a",
-          letterSpacing: 6,
+          color: "#64748b",
+          textAlign: "center",
         }}
       >
-        DRAFT — NOT PUBLISHED
+        DRAFT
       </Text>
     </View>
   );

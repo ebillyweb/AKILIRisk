@@ -36,3 +36,26 @@ export function parsePipelineFiltersFromSearchParams(
     sortDir: "desc",
   };
 }
+
+export function parsePipelinePageFromSearchParams(
+  searchParams: Record<string, string | string[] | undefined>,
+): number {
+  const raw = searchParams.page;
+  const value = typeof raw === "string" ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+export function buildPipelineHref(
+  filters: PipelineFilters,
+  page: number,
+): string {
+  const sp = new URLSearchParams();
+  if (filters.stage) sp.set("stage", filters.stage);
+  if (filters.stalled) sp.set("stalled", "1");
+  if (filters.awaitingIntakeReview) sp.set("awaitingReview", "1");
+  if (filters.documentsNeeded) sp.set("documentsNeeded", "1");
+  if (filters.search?.trim()) sp.set("search", filters.search.trim());
+  if (page > 1) sp.set("page", String(page));
+  const query = sp.toString();
+  return `/advisor/pipeline${query ? `?${query}` : ""}`;
+}

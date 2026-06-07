@@ -126,6 +126,22 @@ async function findMisplacedInterviewForClient(client) {
   });
 
   if (!interview) {
+    const existingClientSubmitted = client.intakeInterviews.filter(
+      (i) => i.status === "SUBMITTED" || i.submittedAt != null,
+    );
+    if (existingClientSubmitted.length > 0) {
+      const id = existingClientSubmitted[0].id;
+      console.log(
+        `Nothing to migrate: ${CLIENT_EMAIL} already owns submitted intake ${id}.`,
+      );
+      console.log(`Advisor review: /advisor/review/${id}`);
+      console.log(`Admin review: /admin/intake/${id}`);
+      console.log(
+        `Sign in as the assigned advisor (${assignment.advisor.firmName}) or a platform admin to open the review.`,
+      );
+      return null;
+    }
+
     throw new Error(
       `No submitted intake on advisor user ${advisorUserId} (${assignment.advisor.firmName}). ` +
         "Set INTERVIEW_ID explicitly or complete intake as the client.",
@@ -138,12 +154,18 @@ async function findMisplacedInterviewForClient(client) {
 async function main() {
   const client = await findClient();
 
-  const { interview, assignment } = INTERVIEW_ID
+  const resolved = INTERVIEW_ID
     ? {
         interview: await loadInterviewById(INTERVIEW_ID),
         assignment: client.clientAssignments[0] ?? null,
       }
     : await findMisplacedInterviewForClient(client);
+
+  if (!resolved) {
+    return;
+  }
+
+  const { interview, assignment } = resolved;
 
   if (interview.userId === client.id) {
     console.log(
