@@ -148,7 +148,7 @@ function wireForFillable(row: PillarQuestionWithHierarchy): GovernanceQuestionWi
     riskRelevance: row.whyThisMatters,
     type: isDocumentUpload ? "document-upload" : "short-text",
     options: null,
-    required: true,
+    required: !isDocumentUpload,
     weight: row.section.weightPct ?? 1,
     scoreMap: {},
     branchingDependsOn: null,

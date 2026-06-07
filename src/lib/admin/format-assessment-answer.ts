@@ -1,6 +1,8 @@
 import type { QuestionReviewContext } from "@/lib/assessment/question-review-context";
 import { MATURITY_LEVEL_LABELS } from "@/lib/assessment/governance-rubric";
-import { isAssessmentDocumentUploadAnswer } from "@/lib/assessment/question-upload";
+import {
+  normalizeAssessmentDocumentUploadAnswer,
+} from "@/lib/assessment/question-upload";
 
 /** Read-only label for admin answer review (does not affect scoring). */
 export function formatAssessmentAnswerForDisplay(
@@ -8,11 +10,20 @@ export function formatAssessmentAnswerForDisplay(
   answer: unknown,
   skipped: boolean
 ): string {
-  if (skipped) return "Skipped";
+  if (skipped) {
+    if (question?.type === "document-upload") {
+      return "No documents attached — client continued without upload";
+    }
+    return "Skipped";
+  }
   if (answer === null || answer === undefined) return "No answer recorded";
 
-  if (isAssessmentDocumentUploadAnswer(answer)) {
-    return `Uploaded: ${answer.fileName}`;
+  const uploadedFiles = normalizeAssessmentDocumentUploadAnswer(answer);
+  if (uploadedFiles.length > 0) {
+    if (uploadedFiles.length === 1) {
+      return `Uploaded: ${uploadedFiles[0]!.fileName}`;
+    }
+    return `Uploaded ${uploadedFiles.length} documents: ${uploadedFiles.map((f) => f.fileName).join(", ")}`;
   }
 
   if (question?.type === "maturity-scale" && typeof answer === "number") {

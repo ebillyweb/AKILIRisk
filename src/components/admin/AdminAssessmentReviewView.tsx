@@ -3,6 +3,7 @@
 import { AnswerAdminNotePanel } from "@/components/admin/AnswerAdminNotePanel";
 import { StaffQuestionContextPanels } from "@/components/staff/StaffQuestionContextPanels";
 import { formatAssessmentAnswerForDisplay } from "@/lib/admin/format-assessment-answer";
+import { DocumentUploadReviewerFlag } from "@/components/assessment/DocumentUploadReviewerFlag";
 import type { AdminAssessmentReviewPayload } from "@/lib/admin/assessment-review-queries";
 import {
   deleteAssessmentResponseAdminNote,
@@ -36,7 +37,14 @@ export function AdminAssessmentReviewView({ data }: Props) {
                 Response {index + 1} · {row.pillar}
                 {row.subCategory ? ` · ${row.subCategory.replace(/-/g, " ")}` : ""}
               </p>
-              <h3 className="text-lg font-semibold leading-snug">{label}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-semibold leading-snug">{label}</h3>
+                <DocumentUploadReviewerFlag
+                  questionType={question?.type}
+                  answer={row.answer}
+                  skipped={row.skipped}
+                />
+              </div>
             </div>
             <div className="rounded-lg bg-muted/50 p-4 border-t pt-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">

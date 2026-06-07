@@ -119,6 +119,7 @@ describe("pillarQuestionRowToWire — fillable document upload", () => {
       })
     );
     expect(wire.type).toBe("document-upload");
+    expect(wire.required).toBe(false);
   });
 
   it("wires other fillables as short-text", () => {

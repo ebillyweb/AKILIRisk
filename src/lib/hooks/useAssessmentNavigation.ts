@@ -2,6 +2,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useEffect, useMemo } from 'react';
 import { useAssessmentStore } from '@/lib/assessment/store';
 import { getVisibleQuestions, detectBranchingChanges } from '@/lib/assessment/branching';
+import { hasDocumentUploadFiles } from '@/lib/assessment/question-upload';
 import { Question } from '@/lib/assessment/types';
 
 /**
@@ -46,7 +47,7 @@ export function useAssessmentNavigation(
   options?: UseAssessmentNavigationOptions
 ): UseAssessmentNavigationReturn {
   const router = useRouter();
-  const { answers, setCurrentPosition, householdProfile, familyGovernanceQuestionBank } =
+  const { answers, setCurrentPosition, householdProfile, familyGovernanceQuestionBank, skippedQuestions } =
     useAssessmentStore();
 
   const questionSet = options?.questions ?? familyGovernanceQuestionBank ?? [];
@@ -94,8 +95,13 @@ export function useAssessmentNavigation(
 
   // Calculate progress
   const answeredCount = visibleQuestions.filter((q) => {
+    if (skippedQuestions.includes(q.id)) return true;
     const answer = answers[q.id];
-    return answer !== undefined && answer !== null;
+    if (answer === undefined || answer === null) return false;
+    if (q.type === "document-upload") {
+      return hasDocumentUploadFiles(answer);
+    }
+    return true;
   }).length;
 
   const progress: NavigationProgress = {

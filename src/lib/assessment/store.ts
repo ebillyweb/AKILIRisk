@@ -102,10 +102,14 @@ export const useAssessmentStore = create<AssessmentState>()(
         }),
 
       skipQuestion: (questionId: string) =>
-        set((state) => ({
-          skippedQuestions: [...new Set([...state.skippedQuestions, questionId])],
-          lastSaved: new Date().toISOString(),
-        })),
+        set((state) => {
+          const { [questionId]: _removed, ...restAnswers } = state.answers;
+          return {
+            answers: restAnswers,
+            skippedQuestions: [...new Set([...state.skippedQuestions, questionId])],
+            lastSaved: new Date().toISOString(),
+          };
+        }),
 
       setCurrentPosition: (pillar: string, questionIndex: number) =>
         set({

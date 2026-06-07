@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
-  isAssessmentDocumentUploadAnswer,
+  isAssessmentDocumentUploadFile,
   keyMatchesAssessmentQuestionUpload,
 } from "@/lib/assessment/question-upload";
 import { headDocumentObject } from "@/lib/documents/s3";
@@ -75,7 +75,7 @@ export async function POST(
       fileMimeType: mimeCheck.mimeType,
     };
 
-    if (!isAssessmentDocumentUploadAnswer(answer)) {
+    if (!isAssessmentDocumentUploadFile(answer)) {
       return NextResponse.json({ error: "Invalid upload metadata" }, { status: 400 });
     }
 

@@ -8,6 +8,7 @@ import { useAutoSave } from '@/lib/hooks/useAutoSave';
 import { useHouseholdProfile } from '@/lib/hooks/useHouseholdProfile';
 import { usePillarQuestions } from '@/lib/hooks/useAssessmentPillars';
 import { getPersonalizedText } from '@/lib/assessment/personalization';
+import { hasDocumentUploadFiles } from '@/lib/assessment/question-upload';
 import { QuestionCard } from '@/components/assessment/QuestionCard';
 import { NavigationButtons } from '@/components/assessment/NavigationButtons';
 import { SectionProgress } from '@/components/assessment/ProgressBar';
@@ -34,7 +35,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   const pillarSlug = normalizePillarSlug(rawSlug);
   const questionIndex = parseInt(resolvedParams.questionIndex, 10);
 
-  const { assessmentId, answers, setHouseholdProfile } = useAssessmentStore();
+  const { assessmentId, answers, setHouseholdProfile, skippedQuestions } = useAssessmentStore();
   const { profile } = useHouseholdProfile();
   const { data: pillarQuestionData, isLoading: questionsLoading } =
     usePillarQuestions(pillarSlug);
@@ -124,6 +125,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   }
 
   const currentAnswer = answers[currentQuestion.id];
+  const isQuestionSkipped = skippedQuestions.includes(currentQuestion.id);
   const personalizedText = getPersonalizedText(currentQuestion, profile);
 
   const handleAnswer = (answer: unknown) => {
@@ -156,8 +158,10 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   };
 
   const isValid =
-    !currentQuestion.required ||
-    (currentAnswer !== null && currentAnswer !== undefined);
+    currentQuestion.type === "document-upload"
+      ? hasDocumentUploadFiles(currentAnswer) || isQuestionSkipped
+      : !currentQuestion.required ||
+        (currentAnswer !== null && currentAnswer !== undefined);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -177,6 +181,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
             currentAnswer={currentAnswer}
             onAnswer={handleAnswer}
             onSkip={!currentQuestion.required ? handleSkip : undefined}
+            isSkipped={isQuestionSkipped}
             questionPosition={{
               index: questionIndex + 1,
               total: visibleQuestions.length,

@@ -19,6 +19,8 @@ import { QuestionTtsPlayButton } from "@/components/common/QuestionTtsPlayButton
 import { AssessmentQuestionDocumentUpload } from "@/components/assessment/AssessmentQuestionDocumentUpload";
 import {
   isAssessmentDocumentUploadAnswer,
+  hasDocumentUploadFiles,
+  MAX_ASSESSMENT_QUESTION_UPLOADS,
   type AssessmentDocumentUploadAnswer,
 } from "@/lib/assessment/question-upload";
 
@@ -36,6 +38,8 @@ interface QuestionCardProps {
   currentAnswer: unknown;
   onAnswer: (answer: unknown) => void;
   onSkip?: () => void;
+  /** When true, client chose to continue without uploading documents. */
+  isSkipped?: boolean;
   /** 1-based index and total for TTS (“Question 3 of 12”). */
   questionPosition: { index: number; total: number };
   /** Pillar / module label read before the question (e.g. “Cyber Risk”). */
@@ -50,6 +54,7 @@ export function QuestionCard({
   currentAnswer,
   onAnswer,
   onSkip,
+  isSkipped = false,
   questionPosition,
   moduleName,
   assessmentId,
@@ -100,16 +105,41 @@ export function QuestionCard({
           answer: z.string().min(1, "Please enter an answer to continue"),
         });
       case 'document-upload':
+        if (!question.required) {
+          return z.object({
+            answer: z
+              .array(
+                z.object({
+                  fileKey: z.string().min(1),
+                  fileName: z.string().min(1),
+                  fileSize: z.number().positive(),
+                  fileMimeType: z.string().min(1),
+                })
+              )
+              .max(
+                MAX_ASSESSMENT_QUESTION_UPLOADS,
+                `You can upload up to ${MAX_ASSESSMENT_QUESTION_UPLOADS} documents`
+              )
+              .optional(),
+          });
+        }
         return z.object({
           answer: z
-            .object({
-              fileKey: z.string().min(1),
-              fileName: z.string().min(1),
-              fileSize: z.number().positive(),
-              fileMimeType: z.string().min(1),
-            })
+            .array(
+              z.object({
+                fileKey: z.string().min(1),
+                fileName: z.string().min(1),
+                fileSize: z.number().positive(),
+                fileMimeType: z.string().min(1),
+              })
+            )
+            .min(1, "Please upload at least one document to continue")
+            .max(
+              MAX_ASSESSMENT_QUESTION_UPLOADS,
+              `You can upload up to ${MAX_ASSESSMENT_QUESTION_UPLOADS} documents`
+            )
             .refine(isAssessmentDocumentUploadAnswer, {
-              message: "Please upload a document to continue",
+              message: "Please upload at least one document to continue",
             }),
         });
       default:
@@ -214,11 +244,7 @@ export function QuestionCard({
           <AssessmentQuestionDocumentUpload
             assessmentId={assessmentId}
             questionId={question.id}
-            value={
-              isAssessmentDocumentUploadAnswer(currentAnswer)
-                ? currentAnswer
-                : null
-            }
+            value={currentAnswer}
             onChange={(answer: AssessmentDocumentUploadAnswer) => handleAnswerChange(answer)}
           />
         );
@@ -238,7 +264,11 @@ export function QuestionCard({
         <div className="space-y-3">
           {question.type !== "maturity-scale" ? (
             <p className="editorial-kicker">
-              {question.required ? "Required Question" : "Optional Question"}
+              {question.type === "document-upload"
+                ? "Optional — attach documents if available"
+                : question.required
+                  ? "Required Question"
+                  : "Optional Question"}
             </p>
           ) : null}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -277,7 +307,7 @@ export function QuestionCard({
         </Alert>
       )}
 
-      {!question.required && onSkip && (
+      {!question.required && onSkip && question.type !== "document-upload" ? (
         <div className="text-center pt-2">
           <Button
             variant="ghost"
@@ -290,7 +320,29 @@ export function QuestionCard({
             </span>
           </Button>
         </div>
-      )}
+      ) : null}
+
+      {question.type === "document-upload" && onSkip && !isSkipped ? (
+        <div className="border-t border-border/60 pt-4 text-center">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onSkip}
+            disabled={hasDocumentUploadFiles(currentAnswer)}
+          >
+            No documents to attach — continue without upload
+          </Button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Your advisor will see that supporting documents were not provided.
+          </p>
+        </div>
+      ) : null}
+
+      {question.type === "document-upload" && isSkipped ? (
+        <p className="text-center text-sm text-muted-foreground">
+          Continuing without documents. Upload files above if you change your mind.
+        </p>
+      ) : null}
     </div>
   );
 }
