@@ -16,6 +16,11 @@ import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { QuestionTtsPlayButton } from "@/components/common/QuestionTtsPlayButton";
+import { AssessmentQuestionDocumentUpload } from "@/components/assessment/AssessmentQuestionDocumentUpload";
+import {
+  isAssessmentDocumentUploadAnswer,
+  type AssessmentDocumentUploadAnswer,
+} from "@/lib/assessment/question-upload";
 
 /**
  * QuestionCard Component
@@ -35,6 +40,8 @@ interface QuestionCardProps {
   questionPosition: { index: number; total: number };
   /** Pillar / module label read before the question (e.g. “Cyber Risk”). */
   moduleName?: string;
+  /** Required for document-upload questions. */
+  assessmentId?: string;
 }
 
 export function QuestionCard({
@@ -45,6 +52,7 @@ export function QuestionCard({
   onSkip,
   questionPosition,
   moduleName,
+  assessmentId,
 }: QuestionCardProps) {
   // Create dynamic validation schema based on question
   const createSchema = () => {
@@ -90,6 +98,19 @@ export function QuestionCard({
       case 'short-text':
         return z.object({
           answer: z.string().min(1, "Please enter an answer to continue"),
+        });
+      case 'document-upload':
+        return z.object({
+          answer: z
+            .object({
+              fileKey: z.string().min(1),
+              fileName: z.string().min(1),
+              fileSize: z.number().positive(),
+              fileMimeType: z.string().min(1),
+            })
+            .refine(isAssessmentDocumentUploadAnswer, {
+              message: "Please upload a document to continue",
+            }),
         });
       default:
         return z.object({
@@ -178,6 +199,27 @@ export function QuestionCard({
           <ShortTextInput
             {...base}
             value={currentAnswer != null ? String(currentAnswer) : ''}
+          />
+        );
+
+      case 'document-upload':
+        if (!assessmentId) {
+          return (
+            <div className="text-muted-foreground">
+              Document upload is unavailable for this session.
+            </div>
+          );
+        }
+        return (
+          <AssessmentQuestionDocumentUpload
+            assessmentId={assessmentId}
+            questionId={question.id}
+            value={
+              isAssessmentDocumentUploadAnswer(currentAnswer)
+                ? currentAnswer
+                : null
+            }
+            onChange={(answer: AssessmentDocumentUploadAnswer) => handleAnswerChange(answer)}
           />
         );
 

@@ -247,7 +247,7 @@ describe("shouldShowQuestion", () => {
   it("rebuilds branching from serializable predicate after JSON fetch", () => {
     const subQuestion: Question = {
       id: "sub-a1a",
-      text: "Obtain copies of documentation",
+      text: "Please attach copies of any relevant supporting documentation, if available.",
       type: "short-text",
       required: true,
       pillar: "governance",

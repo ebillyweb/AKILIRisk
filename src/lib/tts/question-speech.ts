@@ -15,34 +15,9 @@ export const questionTtsBodySchema = z.object({
 
 export type QuestionTtsBody = z.infer<typeof questionTtsBodySchema>;
 
-export function buildQuestionNarrationText(
-  input: QuestionTtsBody,
-  variant: "intake" | "assessment"
-): string {
-  const parts: string[] = [];
-  const mod = input.moduleName?.trim();
-  if (mod) {
-    parts.push(mod.endsWith(".") ? mod : `${mod}.`);
-  }
-  parts.push(`Question ${input.questionNumber} of ${input.totalQuestions}.`);
-  parts.push(input.questionText);
-
-  if (variant === "intake") {
-    return parts.join(" ");
-  }
-
-  const ctx = input.context?.trim();
-  if (ctx) {
-    parts.push(ctx);
-  }
-  const more = input.learnMore?.trim();
-  if (more) {
-    parts.push(`Additional detail: ${more}`);
-  }
-  if (input.recordingTips.length > 0) {
-    parts.push(`Tips. ${input.recordingTips.join(". ")}.`);
-  }
-  return parts.join(" ");
+/** Play Question reads only the question prompt — not module, progress, or guidance. */
+export function buildQuestionNarrationText(input: QuestionTtsBody): string {
+  return input.questionText.trim();
 }
 
 const INTAKE_INSTRUCTIONS =
@@ -101,7 +76,7 @@ export async function handleQuestionTtsRequest(
       );
     }
 
-    const narrationText = buildQuestionNarrationText(parsed.data, variant);
+    const narrationText = buildQuestionNarrationText(parsed.data);
     const audioBuffer = await synthesizeQuestionSpeech(narrationText, variant);
 
     return new NextResponse(new Uint8Array(audioBuffer), {

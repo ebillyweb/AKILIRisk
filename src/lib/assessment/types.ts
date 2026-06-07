@@ -14,7 +14,8 @@ export type QuestionType =
   | 'maturity-scale'
   | 'likert'
   | 'numeric'
-  | 'short-text';
+  | 'short-text'
+  | 'document-upload';
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 

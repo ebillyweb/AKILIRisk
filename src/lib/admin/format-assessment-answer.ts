@@ -1,5 +1,6 @@
 import type { QuestionReviewContext } from "@/lib/assessment/question-review-context";
 import { MATURITY_LEVEL_LABELS } from "@/lib/assessment/governance-rubric";
+import { isAssessmentDocumentUploadAnswer } from "@/lib/assessment/question-upload";
 
 /** Read-only label for admin answer review (does not affect scoring). */
 export function formatAssessmentAnswerForDisplay(
@@ -9,6 +10,10 @@ export function formatAssessmentAnswerForDisplay(
 ): string {
   if (skipped) return "Skipped";
   if (answer === null || answer === undefined) return "No answer recorded";
+
+  if (isAssessmentDocumentUploadAnswer(answer)) {
+    return `Uploaded: ${answer.fileName}`;
+  }
 
   if (question?.type === "maturity-scale" && typeof answer === "number") {
     const label = MATURITY_LEVEL_LABELS[answer];

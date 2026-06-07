@@ -71,6 +71,37 @@ export async function generateUploadUrl(
   return { signedUrl, key };
 }
 
+export async function generateAssessmentQuestionUploadUrl(
+  userId: string,
+  assessmentId: string,
+  questionId: string,
+  fileName: string,
+  fileType: string
+): Promise<DocumentUploadResponse> {
+  const client = createS3Client();
+  if (!client) {
+    throw new Error("S3 client not configured - check AWS environment variables");
+  }
+
+  const bucketName = process.env.S3_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error("S3_BUCKET_NAME environment variable not configured");
+  }
+
+  const safeSegment = sanitizeDocumentKeyFileName(fileName);
+  const key = `assessment-uploads/${userId}/${assessmentId}/${questionId}/${Date.now()}-${safeSegment}`;
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    ContentType: fileType,
+  });
+
+  const signedUrl = await getSignedUrl(client, command, { expiresIn: 3600 });
+
+  return { signedUrl, key };
+}
+
 /**
  * Read S3 object metadata for a documents key. Used by the confirm route
  * to re-derive `Content-Type` and `Content-Length` from the actual S3

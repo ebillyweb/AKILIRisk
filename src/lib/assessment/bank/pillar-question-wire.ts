@@ -2,6 +2,7 @@ import type { PillarCategory, PillarQuestion, PillarSection } from "@prisma/clie
 import type { Prisma } from "@prisma/client";
 import type { BranchingPredicateWire, GovernanceQuestionWire } from "./behaviors";
 import { riskAreaIdForPillarCategory } from "./pillar-category-risk-area";
+import { isDocumentUploadFillableQuestionText } from "@/lib/assessment/question-upload";
 
 export type PillarQuestionWithHierarchy = PillarQuestion & {
   section: PillarSection & { category: PillarCategory };
@@ -136,6 +137,7 @@ function wireForYesNo(row: PillarQuestionWithHierarchy): GovernanceQuestionWire 
 }
 
 function wireForFillable(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
+  const isDocumentUpload = isDocumentUploadFillableQuestionText(row.questionText);
   return {
     questionId: row.id,
     riskAreaId: riskAreaIdForPillarCategory(row.section.category),
@@ -144,7 +146,7 @@ function wireForFillable(row: PillarQuestionWithHierarchy): GovernanceQuestionWi
     helpText: row.whyThisMatters,
     learnMore: row.recommendedActions,
     riskRelevance: row.whyThisMatters,
-    type: "short-text",
+    type: isDocumentUpload ? "document-upload" : "short-text",
     options: null,
     required: true,
     weight: row.section.weightPct ?? 1,

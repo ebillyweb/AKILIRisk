@@ -110,6 +110,25 @@ describe("pillarQuestionRowToWire — likert_5 (F1 / BRD §4.1)", () => {
   });
 });
 
+describe("pillarQuestionRowToWire — fillable document upload", () => {
+  it("wires document-attachment fillables as document-upload", () => {
+    const wire = pillarQuestionRowToWire(
+      makeRow("fillable", {
+        questionText:
+          "Please attach copies of any relevant supporting documentation, if available.",
+      })
+    );
+    expect(wire.type).toBe("document-upload");
+  });
+
+  it("wires other fillables as short-text", () => {
+    const wire = pillarQuestionRowToWire(
+      makeRow("fillable", { questionText: "Describe these meetings" })
+    );
+    expect(wire.type).toBe("short-text");
+  });
+});
+
 describe("sub-question branching (A1 / A1a)", () => {
   it("resolves parent question numbers from sub ids", () => {
     expect(parentQuestionNumberForSub("A1a")).toBe("A1");
@@ -128,7 +147,8 @@ describe("sub-question branching (A1 / A1a)", () => {
     const sub = makeRow("fillable", {
       id: "sub-a1a",
       questionNumber: "A1a",
-      questionText: "Obtain copies of documentation",
+      questionText:
+        "Please attach copies of any relevant supporting documentation, if available.",
       isSubQuestion: true,
       displayOrder: 1,
     });
@@ -148,7 +168,18 @@ describe("sub-question branching (A1 / A1a)", () => {
     const afterDocumented = getVisibleQuestions({ [parent.id]: 2 }, questions);
     expect(afterDocumented.map((q) => q.text)).toEqual([
       "How have you documented your family mission?",
-      "Obtain copies of documentation",
+      "Please attach copies of any relevant supporting documentation, if available.",
     ]);
+    expect(afterDocumented[1]?.type).toBe("document-upload");
+
+    const afterScore3 = getVisibleQuestions({ [parent.id]: 3 }, questions);
+    expect(afterScore3.map((q) => q.text)).toContain(
+      "Please attach copies of any relevant supporting documentation, if available."
+    );
+
+    const afterScore1 = getVisibleQuestions({ [parent.id]: 1 }, questions);
+    expect(afterScore1.map((q) => q.text)).not.toContain(
+      "Please attach copies of any relevant supporting documentation, if available."
+    );
   });
 });

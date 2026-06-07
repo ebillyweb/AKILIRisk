@@ -182,6 +182,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
               total: visibleQuestions.length,
             }}
             moduleName={currentPillar.name}
+            assessmentId={assessmentId ?? undefined}
           />
 
           <NavigationButtons
