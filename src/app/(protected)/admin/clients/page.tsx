@@ -53,14 +53,14 @@ export default async function AdminClientsPage({
                   <li
                     key={c.id}
                     className={cn(
-                      "flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0",
+                      "space-y-3 py-3 first:pt-0 last:pb-0",
                       isDeactivated && "opacity-80",
                     )}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium">{c.name ?? c.email}</p>
-                      <p className="text-sm text-muted-foreground">{c.email}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="truncate text-sm text-muted-foreground">{c.email}</p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
                         {c._count.intakeInterviews} intake(s) · {c._count.assessments} assessment(s)
                         {activeAssignments.length > 0 &&
                           ` · ${activeAssignments.map((a) => a.advisor.user.email).join(", ")}`}
@@ -73,7 +73,7 @@ export default async function AdminClientsPage({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {c.latestScoredAssessmentId ? (
-                        <div className="flex items-center gap-2">
+                        <>
                           {/* §4.5 commit 3: link to the per-version reports
                               page (republish + audit history live there). The
                               inline download remains as a quick latest-PUBLISHED
@@ -89,14 +89,23 @@ export default async function AdminClientsPage({
                             clientLabel={c.name || c.email}
                             label="Download"
                             variant="ghost"
+                            size="sm"
                           />
-                        </div>
+                        </>
                       ) : null}
-                      <div className="ml-auto flex items-center gap-2">
+                      <div className="ml-auto flex shrink-0 items-center gap-2">
                         {activeAssignments.length > 0 ? (
-                          <Badge variant="secondary">{activeAssignments.length} advisor(s)</Badge>
+                          <Badge
+                            variant="secondary"
+                            className="whitespace-nowrap normal-case tracking-normal"
+                          >
+                            {activeAssignments.length} advisor
+                            {activeAssignments.length === 1 ? "" : "s"}
+                          </Badge>
                         ) : (
-                          <Badge variant="outline">Unassigned</Badge>
+                          <Badge variant="outline" className="whitespace-nowrap normal-case tracking-normal">
+                            Unassigned
+                          </Badge>
                         )}
                         <AdminClientAccountActions clientId={c.id} deactivated={isDeactivated} />
                       </div>

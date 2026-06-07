@@ -31,6 +31,8 @@ interface DownloadReportButtonProps {
   label?: string;
   /** Optional shadcn-button variant override. */
   variant?: "default" | "outline" | "secondary" | "ghost" | "link";
+  /** Optional shadcn-button size override. */
+  size?: "default" | "xs" | "sm" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg";
   /** When true, button stretches to its container width. */
   fullWidth?: boolean;
 }
@@ -40,6 +42,7 @@ export function DownloadReportButton({
   clientLabel,
   label = "Download client report",
   variant = "outline",
+  size = "default",
   fullWidth = false,
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -92,6 +95,7 @@ export function DownloadReportButton({
       onClick={downloadPDFReport}
       disabled={isGenerating}
       variant={variant}
+      size={size}
       className={fullWidth ? "w-full justify-start" : undefined}
     >
       {isGenerating ? (
