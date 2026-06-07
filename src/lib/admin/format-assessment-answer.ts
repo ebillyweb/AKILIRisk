@@ -3,6 +3,12 @@ import { MATURITY_LEVEL_LABELS } from "@/lib/assessment/governance-rubric";
 import {
   normalizeAssessmentDocumentUploadAnswer,
 } from "@/lib/assessment/question-upload";
+import {
+  formatDateAnswerForDisplay,
+  formatMonthYearAnswerForDisplay,
+  isIsoDateAnswer,
+  isIsoMonthYearAnswer,
+} from "@/lib/assessment/question-date";
 
 /** Read-only label for admin answer review (does not affect scoring). */
 export function formatAssessmentAnswerForDisplay(
@@ -24,6 +30,14 @@ export function formatAssessmentAnswerForDisplay(
       return `Uploaded: ${uploadedFiles[0]!.fileName}`;
     }
     return `Uploaded ${uploadedFiles.length} documents: ${uploadedFiles.map((f) => f.fileName).join(", ")}`;
+  }
+
+  if (question?.type === "date" && isIsoDateAnswer(answer)) {
+    return formatDateAnswerForDisplay(answer);
+  }
+
+  if (question?.type === "month-year" && isIsoMonthYearAnswer(answer)) {
+    return formatMonthYearAnswerForDisplay(answer);
   }
 
   if (question?.type === "maturity-scale" && typeof answer === "number") {

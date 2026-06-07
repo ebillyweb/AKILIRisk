@@ -21,4 +21,17 @@ describe("formatAssessmentAnswerForDisplay", () => {
       formatAssessmentAnswerForDisplay({ type: "maturity-scale", options: [] }, 2, false)
     ).toContain("2");
   });
+
+  it("formats calendar date answers", () => {
+    expect(
+      formatAssessmentAnswerForDisplay({ type: "date", options: [] }, "2024-03-01", false)
+    ).toBe("March 1, 2024");
+    expect(
+      formatAssessmentAnswerForDisplay(
+        { type: "month-year", options: [] },
+        "2024-03",
+        false
+      )
+    ).toBe("March 2024");
+  });
 });

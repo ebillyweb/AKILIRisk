@@ -4,6 +4,7 @@ import { AnswerAdvisorNotePanel } from "@/components/advisor/AnswerAdvisorNotePa
 import { StaffQuestionContextPanels } from "@/components/staff/StaffQuestionContextPanels";
 import { formatAssessmentAnswerForDisplay } from "@/lib/admin/format-assessment-answer";
 import { DocumentUploadReviewerFlag } from "@/components/assessment/DocumentUploadReviewerFlag";
+import { StaleDateReviewerFlag } from "@/components/assessment/StaleDateReviewerFlag";
 import type { AdvisorAssessmentReviewPayload } from "@/lib/advisor/assessment-review-queries";
 import {
   deleteAssessmentResponseAdvisorNote,
@@ -51,6 +52,10 @@ export function AdvisorAssessmentReviewView({ data }: Props) {
                   questionType={question?.type}
                   answer={row.answer}
                   skipped={row.skipped}
+                />
+                <StaleDateReviewerFlag
+                  questionType={question?.type}
+                  answer={row.answer}
                 />
               </div>
             </div>

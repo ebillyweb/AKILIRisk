@@ -26,6 +26,7 @@ const PILLAR_ANSWER_TYPES = [
   "scale_1_5",
   "fillable",
   "number",
+  "date",
   "date_mm_yyyy",
 ] as const;
 

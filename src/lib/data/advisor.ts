@@ -1,9 +1,9 @@
 import "server-only";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, type IntakeInterview, type IntakeResponse } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
-import type { AdvisorDashboardClient } from "@/lib/advisor/types";
+import type { AdvisorDashboardClient, IntakeInterviewReviewBundle } from "@/lib/advisor/types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import {
   loadAdvisorPiiPolicy,
@@ -166,17 +166,17 @@ const intakeReviewInclude = (advisorUserId?: string) => ({
   },
 });
 
+type IntakeInterviewReviewRow = IntakeInterview & {
+  user: { id: string; name: string | null; emailCiphertext: string };
+  responses: Array<Record<string, unknown>>;
+};
+
 async function mapIntakeInterviewForReview(
-  interview: {
-    id: string;
-    userId: string;
-    user: { id: string; name: string | null; emailCiphertext: string };
-    responses: Array<Record<string, unknown>>;
-  },
+  interview: IntakeInterviewReviewRow,
   interviewId: string,
   advisorProfileId: string,
   advisorUserId?: string,
-) {
+): Promise<IntakeInterviewReviewBundle> {
   const clientAdvisorAssignmentDelegate = (
     prisma as unknown as {
       clientAdvisorAssignment?: {
@@ -220,10 +220,11 @@ async function mapIntakeInterviewForReview(
         email: identity.email,
       },
       responses: interview.responses.map((r) => {
-        const advisorNotes = (r as {
+        const row = r as IntakeResponse & {
           advisorNotes?: Array<{ id: string; body: string; updatedAt: Date }>;
-        }).advisorNotes;
-        const firstNote = advisorNotes && advisorNotes.length > 0 ? advisorNotes[0] : null;
+        };
+        const firstNote =
+          row.advisorNotes && row.advisorNotes.length > 0 ? row.advisorNotes[0] : null;
         const advisorNote = firstNote
           ? {
               id: firstNote.id,
@@ -231,15 +232,8 @@ async function mapIntakeInterviewForReview(
               updatedAt: firstNote.updatedAt.toISOString(),
             }
           : null;
-        const row = r as {
-          id: string;
-          questionId: string;
-          audioUrl: string | null;
-          audioS3Key: string | null;
-          transcription: string | null;
-        };
         return {
-          ...r,
+          ...row,
           audioUrl: row.audioS3Key
             ? (row.audioUrl ?? intakeResponsePlaybackUrl(interviewId, row.questionId))
             : row.audioUrl,

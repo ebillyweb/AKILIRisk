@@ -359,3 +359,47 @@ export function ShortTextInput({
     </div>
   );
 }
+
+// Calendar date (ISO YYYY-MM-DD)
+interface DatePickerInputProps {
+  value: string | null;
+  onChange: (value: string) => void;
+}
+
+export function DatePickerInput({ value, onChange }: DatePickerInputProps) {
+  return (
+    <div className="space-y-2 max-w-sm">
+      <Input
+        type="date"
+        value={value ?? ""}
+        onChange={(e) => {
+          if (e.target.value) onChange(e.target.value);
+        }}
+        className="text-lg"
+      />
+      <p className="text-sm text-muted-foreground">Choose a date from the calendar.</p>
+    </div>
+  );
+}
+
+// Month and year (ISO YYYY-MM)
+interface MonthYearPickerInputProps {
+  value: string | null;
+  onChange: (value: string) => void;
+}
+
+export function MonthYearPickerInput({ value, onChange }: MonthYearPickerInputProps) {
+  return (
+    <div className="space-y-2 max-w-sm">
+      <Input
+        type="month"
+        value={value ?? ""}
+        onChange={(e) => {
+          if (e.target.value) onChange(e.target.value);
+        }}
+        className="text-lg"
+      />
+      <p className="text-sm text-muted-foreground">Select the month and year.</p>
+    </div>
+  );
+}

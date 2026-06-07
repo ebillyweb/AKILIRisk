@@ -11,6 +11,8 @@ import {
   LikertScale,
   NumericInput,
   ShortTextInput,
+  DatePickerInput,
+  MonthYearPickerInput,
 } from "./AnswerOptions";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
@@ -103,6 +105,18 @@ export function QuestionCard({
       case 'short-text':
         return z.object({
           answer: z.string().min(1, "Please enter an answer to continue"),
+        });
+      case 'date':
+        return z.object({
+          answer: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, "Please select a date to continue"),
+        });
+      case 'month-year':
+        return z.object({
+          answer: z
+            .string()
+            .regex(/^\d{4}-\d{2}$/, "Please select a month and year to continue"),
         });
       case 'document-upload':
         if (!question.required) {
@@ -229,6 +243,22 @@ export function QuestionCard({
           <ShortTextInput
             {...base}
             value={currentAnswer != null ? String(currentAnswer) : ''}
+          />
+        );
+
+      case 'date':
+        return (
+          <DatePickerInput
+            {...base}
+            value={currentAnswer != null ? String(currentAnswer) : null}
+          />
+        );
+
+      case 'month-year':
+        return (
+          <MonthYearPickerInput
+            {...base}
+            value={currentAnswer != null ? String(currentAnswer) : null}
           />
         );
 

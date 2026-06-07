@@ -85,7 +85,10 @@ export async function notifyClientOfIntakeApproval(params: {
     }
 
     const clientEmail = decryptUserEmail(interview.user.emailCiphertext);
-    const clientName = safeDecryptUserName(interview.user.name) || "there";
+    const clientName =
+      safeDecryptUserName(interview.user.name, {
+        rowId: interview.user.id,
+      }) || "there";
 
     await invalidatePriorMagicLinkTokens(clientEmail);
     const issued = await issueMagicLinkToken(clientEmail);

@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { BranchingPredicateWire, GovernanceQuestionWire } from "./behaviors";
 import { riskAreaIdForPillarCategory } from "./pillar-category-risk-area";
 import { isDocumentUploadFillableQuestionText } from "@/lib/assessment/question-upload";
+import { isDateQuestionText } from "@/lib/assessment/question-date";
 
 export type PillarQuestionWithHierarchy = PillarQuestion & {
   section: PillarSection & { category: PillarCategory };
@@ -138,6 +139,7 @@ function wireForYesNo(row: PillarQuestionWithHierarchy): GovernanceQuestionWire 
 
 function wireForFillable(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
   const isDocumentUpload = isDocumentUploadFillableQuestionText(row.questionText);
+  const isDate = !isDocumentUpload && isDateQuestionText(row.questionText);
   return {
     questionId: row.id,
     riskAreaId: riskAreaIdForPillarCategory(row.section.category),
@@ -146,7 +148,7 @@ function wireForFillable(row: PillarQuestionWithHierarchy): GovernanceQuestionWi
     helpText: row.whyThisMatters,
     learnMore: row.recommendedActions,
     riskRelevance: row.whyThisMatters,
-    type: isDocumentUpload ? "document-upload" : "short-text",
+    type: isDocumentUpload ? "document-upload" : isDate ? "date" : "short-text",
     options: null,
     required: !isDocumentUpload,
     weight: row.section.weightPct ?? 1,
@@ -185,10 +187,31 @@ function wireForDate(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
     riskAreaId: riskAreaIdForPillarCategory(row.section.category),
     sortOrderGlobal: 0,
     text: row.questionText,
-    helpText: row.whyThisMatters ?? "Use MM/YYYY format where possible.",
+    helpText: row.whyThisMatters ?? "Select the month and year.",
     learnMore: row.recommendedActions,
     riskRelevance: row.whyThisMatters,
-    type: "short-text",
+    type: "month-year",
+    options: null,
+    required: true,
+    weight: row.section.weightPct ?? 1,
+    scoreMap: {},
+    branchingDependsOn: null,
+    branchingPredicate: null,
+    profileConditionKey: null,
+    omitMaturityScoreWhenYes: false,
+  };
+}
+
+function wireForFullDate(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
+  return {
+    questionId: row.id,
+    riskAreaId: riskAreaIdForPillarCategory(row.section.category),
+    sortOrderGlobal: 0,
+    text: row.questionText,
+    helpText: row.whyThisMatters,
+    learnMore: row.recommendedActions,
+    riskRelevance: row.whyThisMatters,
+    type: "date",
     options: null,
     required: true,
     weight: row.section.weightPct ?? 1,
@@ -208,6 +231,8 @@ export function pillarQuestionRowToWire(row: PillarQuestionWithHierarchy): Gover
       return wireForFillable(row);
     case "number":
       return wireForNumber(row);
+    case "date":
+      return wireForFullDate(row);
     case "date_mm_yyyy":
       return wireForDate(row);
     case "scale_1_5":

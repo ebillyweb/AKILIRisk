@@ -128,6 +128,30 @@ describe("pillarQuestionRowToWire — fillable document upload", () => {
     );
     expect(wire.type).toBe("short-text");
   });
+
+  it("wires date-like fillables as date", () => {
+    const wire = pillarQuestionRowToWire(
+      makeRow("fillable", { questionText: "When was the last meeting?" })
+    );
+    expect(wire.type).toBe("date");
+  });
+
+  it("wires date_mm_yyyy as month-year", () => {
+    const wire = pillarQuestionRowToWire(
+      makeRow("date_mm_yyyy", {
+        questionText:
+          "When was the last time your personal insurance coverages were reviewed?",
+      })
+    );
+    expect(wire.type).toBe("month-year");
+  });
+
+  it("wires explicit date answer type as calendar date", () => {
+    const wire = pillarQuestionRowToWire(
+      makeRow("date", { questionText: "When was the last meeting?" })
+    );
+    expect(wire.type).toBe("date");
+  });
 });
 
 describe("sub-question branching (A1 / A1a)", () => {

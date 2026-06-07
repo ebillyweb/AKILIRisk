@@ -28,16 +28,24 @@ export type AdvisorIntakeResponseNoteView = {
   updatedAt: string;
 };
 
-// Complete data for reviewing a client's intake interview
-export type IntakeReviewData = {
+/** Payload returned by intake review data loaders before script personalization. */
+export type IntakeInterviewReviewBundle = {
   interview: IntakeInterview & {
     user: {
       id: string;
       name: string | null;
       email: string;
     };
-    responses: Array<IntakeResponse & { advisorNote: AdvisorIntakeResponseNoteView | null }>;
+    responses: Array<
+      IntakeResponse & { advisorNote: AdvisorIntakeResponseNoteView | null }
+    >;
   };
+  approval: IntakeApproval | null;
+};
+
+// Complete data for reviewing a client's intake interview
+export type IntakeReviewData = {
+  interview: IntakeInterviewReviewBundle["interview"];
   approval: IntakeApproval | null;
   questions: IntakeQuestion[];
   /** Household directory mapped for advisor visibility (name/contact redacted per client preference). */

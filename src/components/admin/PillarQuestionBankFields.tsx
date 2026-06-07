@@ -46,6 +46,7 @@ const ANSWER_TYPE_OPTIONS = [
   { value: "scale_1_5", label: "Scale 1–5 (single choice)" },
   { value: "fillable", label: "Short text" },
   { value: "number", label: "Numeric" },
+  { value: "date", label: "Date (calendar)" },
   { value: "date_mm_yyyy", label: "Date (MM/YYYY)" },
 ] as const;
 

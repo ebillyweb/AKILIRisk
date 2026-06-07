@@ -15,7 +15,9 @@ export type QuestionType =
   | 'likert'
   | 'numeric'
   | 'short-text'
-  | 'document-upload';
+  | 'document-upload'
+  | 'date'
+  | 'month-year';
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
