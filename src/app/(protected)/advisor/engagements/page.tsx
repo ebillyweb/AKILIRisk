@@ -4,7 +4,10 @@ import { format } from "date-fns";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { normalizeUserRoleString } from "@/lib/auth-roles";
+import {
+  isAdvisorHubNavRole,
+  normalizeUserRoleString,
+} from "@/lib/auth-roles";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -32,12 +35,12 @@ import {
 export default async function AdvisorEngagementsPage() {
   const session = await auth();
   const role = normalizeUserRoleString(session?.user?.role);
-  if (!session?.user?.id || role !== "ADVISOR") {
+  if (!session?.user?.id || !isAdvisorHubNavRole(role)) {
     redirect("/dashboard?error=unauthorized");
   }
 
   const engagements = await prisma.portfolioEngagement.findMany({
-    where: { advisorId: session.user.id },
+    where: role === "ADVISOR" ? { advisorId: session.user.id } : undefined,
     select: {
       id: true,
       status: true,

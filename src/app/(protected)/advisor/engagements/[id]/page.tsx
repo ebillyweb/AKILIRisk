@@ -4,7 +4,10 @@ import { format } from "date-fns";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { normalizeUserRoleString } from "@/lib/auth-roles";
+import {
+  isAdvisorHubNavRole,
+  normalizeUserRoleString,
+} from "@/lib/auth-roles";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -34,7 +37,7 @@ export default async function AdvisorEngagementDetailPage({
 }) {
   const session = await auth();
   const role = normalizeUserRoleString(session?.user?.role);
-  if (!session?.user?.id || role !== "ADVISOR") {
+  if (!session?.user?.id || !isAdvisorHubNavRole(role)) {
     redirect("/dashboard?error=unauthorized");
   }
 
@@ -51,7 +54,7 @@ export default async function AdvisorEngagementDetailPage({
     },
   });
   if (!engagement) notFound();
-  if (engagement.advisorId !== session.user.id) {
+  if (role === "ADVISOR" && engagement.advisorId !== session.user.id) {
     redirect("/advisor/engagements");
   }
 

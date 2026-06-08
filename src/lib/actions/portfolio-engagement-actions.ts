@@ -25,6 +25,7 @@
 
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { isAdvisorHubNavRole, normalizeUserRoleString } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
 import { enterPortfolio } from "@/lib/assessment/deliverable-phase";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
@@ -168,7 +169,8 @@ export async function updateEngagementStatus(
 ): Promise<UpdateEngagementStatusResult> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, code: "unauthenticated" };
-  if (session.user.role !== "ADVISOR" && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
+  const role = normalizeUserRoleString(session.user.role);
+  if (!isAdvisorHubNavRole(role)) {
     return { ok: false, code: "forbidden" };
   }
 
@@ -178,7 +180,7 @@ export async function updateEngagementStatus(
   });
   if (!engagement) return { ok: false, code: "not_found" };
 
-  if (session.user.role === "ADVISOR" && engagement.advisorId !== session.user.id) {
+  if (role === "ADVISOR" && engagement.advisorId !== session.user.id) {
     return { ok: false, code: "forbidden" };
   }
 
