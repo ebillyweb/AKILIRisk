@@ -65,6 +65,90 @@ type TemplateData =
   | StalledWorkflowTemplateData
   | AssessmentReminderTemplateData;
 
+export interface NotificationTemplateInput {
+  title: string;
+  message: string;
+  referenceId?: string;
+}
+
+function normalizeAppBase(appUrl: string): string {
+  return appUrl.replace(/\/$/, "");
+}
+
+/** Best-effort client name extraction from in-app notification message text. */
+function parseClientNameFromMessage(message: string): string | undefined {
+  const patterns = [
+    /^(.+?) has completed\b/i,
+    /^(.+?) uploaded\b/i,
+    /^(.+?) has been inactive\b/i,
+    /^(.+?) \([^)]+\) has registered\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Builds category-specific template data from notification title/message when
+ * callers do not supply pre-rendered emailHtml.
+ */
+export function buildNotificationTemplateData(
+  category: NotificationCategory,
+  input: NotificationTemplateInput,
+  appUrl: string
+): TemplateData {
+  const base = normalizeAppBase(appUrl);
+  const clientName = parseClientNameFromMessage(input.message) ?? "Client";
+  const pipelineUrl = `${base}/advisor/pipeline`;
+  const clientDetailUrl = input.referenceId
+    ? `${pipelineUrl}/${input.referenceId}`
+    : pipelineUrl;
+  const assessmentUrl = `${base}/assessment`;
+
+  switch (category) {
+    case "milestone":
+      return {
+        clientName,
+        milestoneName: input.title,
+        clientDetailUrl,
+      };
+    case "registration":
+      return {
+        clientName,
+        pipelineUrl,
+      };
+    case "stalled": {
+      const stalledMatch = input.message.match(
+        /^(.+?) has been inactive for (\d+) days at the (.+) stage$/i
+      );
+      return {
+        clientName: stalledMatch?.[1]?.trim() ?? clientName,
+        days: stalledMatch ? Number.parseInt(stalledMatch[2], 10) : 0,
+        stage: stalledMatch?.[3]?.trim() ?? input.title,
+        clientDetailUrl,
+      };
+    }
+    case "reminder":
+      return {
+        clientName: clientName !== "Client" ? clientName : undefined,
+        assessmentUrl,
+      };
+    case "system":
+      return {
+        clientName,
+        pipelineUrl,
+      };
+    default:
+      throw new Error(`Unknown notification category: ${category}`);
+  }
+}
+
 function appOriginFromUrl(url: string): string | null {
   try {
     return new URL(url).origin;

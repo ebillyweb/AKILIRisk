@@ -7,7 +7,7 @@ import { shouldSendNotification } from "./preferences";
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
-import { renderNotificationEmail } from "./templates";
+import { buildNotificationTemplateData, renderNotificationEmail } from "./templates";
 import { NotificationType } from "@prisma/client";
 
 /**
@@ -94,12 +94,14 @@ export async function sendNotification(params: SendNotificationParams): Promise<
 
         // Use provided HTML or render from template
         const htmlContent = emailHtml || (appUrl
-          ? renderNotificationEmail(category, {
-              clientName: "Client",
-              pipelineUrl: appUrl,
-              assessmentUrl: appUrl,
-              clientDetailUrl: appUrl,
-            } as Parameters<typeof renderNotificationEmail>[1])
+          ? renderNotificationEmail(
+              category,
+              buildNotificationTemplateData(
+                category,
+                { title, message, referenceId },
+                appUrl
+              )
+            )
           : null);
 
         if (!htmlContent) {
