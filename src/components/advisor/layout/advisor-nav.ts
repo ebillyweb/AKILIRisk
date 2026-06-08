@@ -6,7 +6,6 @@ import {
   ClipboardList,
   CreditCard,
   FileText,
-  GitBranch,
   Home,
   ListTodo,
   Mail,
@@ -45,7 +44,6 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Overview",
     items: [
       { href: "/advisor", label: "Today", icon: Home },
-      { href: "/advisor/pipeline", label: "Pipeline", icon: GitBranch },
       {
         href: "/advisor/dashboard",
         label: "Governance portfolio",
