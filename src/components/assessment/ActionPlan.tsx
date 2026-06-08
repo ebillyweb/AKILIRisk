@@ -11,8 +11,9 @@ import type { MissingControl, RiskLevel } from "@/lib/assessment/types";
 import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
 import { governanceTierCopyForRiskLevel } from "@/lib/assessment/governance-rubric";
 import { cyberTierCopyForRiskLevel } from "@/lib/cyber-risk/cyber-rubric";
-import { Target, Clock, Users } from "lucide-react";
+import { Target } from "lucide-react";
 import { PillarNarrativeSummary } from "@/components/assessment/PillarNarrativeSummary";
+import type { ActionPlanDepth } from "@/lib/assessment/plan-depth";
 
 interface ActionPlanProps {
   missingControls: MissingControl[];
@@ -22,55 +23,26 @@ interface ActionPlanProps {
   scoreRubric?: "governance" | "cyber";
   /** Canonical all-no / all-yes pillar narrative (empty for mixed maturity). */
   pillarNarratives?: string[];
+  /** PROFILE: what to address. PORTFOLIO: same summary; execution detail lives in FacilitatedRecommendations. */
+  planDepth?: ActionPlanDepth;
 }
 
-/**
- * Derive effort level from severity
- */
-function getEffortLevel(severity: "high" | "medium" | "low"): string {
-  if (severity === "high") return "Strategic";
-  if (severity === "medium") return "Standard";
-  return "Quick Win";
-}
-
-/**
- * Derive ownership from category
- */
-function getOwnership(category: string): string {
-  if (category.includes("decision") || category.includes("authority")) {
-    return "Family Council";
-  }
-  if (category.includes("access") || category.includes("distribution")) {
-    return "Financial Advisor";
-  }
-  if (category.includes("trust") || category.includes("legal")) {
-    return "Legal Advisor";
-  }
-  if (category.includes("documentation") || category.includes("record")) {
-    return "Family Office";
-  }
-  if (category.includes("behavior") || category.includes("standards")) {
-    return "Family Council";
-  }
-  if (category.includes("succession") || category.includes("transition")) {
-    return "Family Council & Advisors";
-  }
-  if (category.includes("business")) {
-    return "Board of Directors";
-  }
-  if (category === "cyber-digital" || category.includes("cyber")) {
-    return "IT / security lead";
-  }
-  return "Family Office";
+function formatCategoryLabel(category: string): string {
+  return category
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 export function ActionPlan({
   missingControls,
-  pillarName,
+  pillarName: _pillarName,
   riskLevel,
   scoreRubric = "governance",
   pillarNarratives = [],
+  planDepth = "profile",
 }: ActionPlanProps) {
+  const isPortfolio = planDepth === "portfolio";
   const narrativeVariant =
     riskLevel === "low"
       ? ("positive" as const)
@@ -116,11 +88,6 @@ export function ActionPlan({
     );
   }
 
-  const totalRemediationPriority = missingControls.reduce(
-    (sum, c) => sum + (c.remediationPriority ?? 0),
-    0
-  );
-
   const priorityConfig = {
     high: {
       badge: "outline" as const,
@@ -139,7 +106,7 @@ export function ActionPlan({
   return (
     <div className="space-y-4">
       <h3 className="text-2xl font-semibold text-foreground">
-        Recommended Actions
+        {isPortfolio ? "Assessment remediation priorities" : "Recommended actions"}
       </h3>
       {pillarNarratives.length > 0 ? (
         <PillarNarrativeSummary
@@ -150,34 +117,24 @@ export function ActionPlan({
       <p className="text-sm leading-6 text-muted-foreground">
         {scoreRubric === "cyber" ? (
           <>
-            Remediation steps for answers in the critical exposure or partial / inconsistent bands (0–1 on
-            the {MATURITY_SCALE_MAX}-point scale). Priority total sums weighted gaps across these items.
+            Priority gaps from answers in the critical exposure or partial / inconsistent bands (0–1 on
+            the {MATURITY_SCALE_MAX}-point scale).
           </>
         ) : (
           <>
-            Definitive remediation steps for responses in the low-maturity band (0–1 on the{" "}
-            {MATURITY_SCALE_MAX}-point scale). Priority total sums weighted gaps across these items.
+            Priority gaps from responses in the low-maturity band (0–1 on the{" "}
+            {MATURITY_SCALE_MAX}-point scale).
           </>
         )}
       </p>
 
-      <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-3 text-sm">
-        <span className="font-medium text-foreground">Remediation plan priority total: </span>
-        <span className="tabular-nums font-semibold text-foreground">
-          {totalRemediationPriority.toFixed(1)}
-        </span>
-        <span className="text-muted-foreground"> (higher = more weighted attention needed)</span>
-      </div>
-
       <div className="space-y-4">
         {missingControls.map((control, index) => {
           const priority = priorityConfig[control.severity];
-          const effort = getEffortLevel(control.severity);
-          const ownership = getOwnership(control.category);
 
           return (
             <Card key={control.questionId} className="bg-background/60">
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="font-semibold text-foreground flex items-center gap-2">
@@ -189,38 +146,8 @@ export function ActionPlan({
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground pl-6">
-                    Addresses:{" "}
-                    {control.category.split("-").map((word) =>
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                    ).join(" ")}
-                    {control.maturityScore !== undefined && (
-                      <>
-                        {" "}
-                        · Maturity score: {control.maturityScore.toFixed(2)} / {MATURITY_SCALE_MAX}
-                        {control.remediationPriority !== undefined && (
-                          <> · Priority contribution: {control.remediationPriority.toFixed(1)}</>
-                        )}
-                      </>
-                    )}
+                    Addresses: {formatCategoryLabel(control.category)}
                   </p>
-                </div>
-
-                <div className="flex items-center gap-6 pl-6 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      <span className="font-medium text-foreground">{effort}</span>
-                      {effort === "Quick Win" && " (days)"}
-                      {effort === "Standard" && " (weeks)"}
-                      {effort === "Strategic" && " (months)"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      <span className="font-medium text-foreground">{ownership}</span>
-                    </span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -238,8 +165,9 @@ export function ActionPlan({
           </p>
         </div>
         <p className="text-xs text-muted-foreground border-t border-border/60 pt-3">
-          These recommendations are based on your assessment responses. Consult with your advisors
-          for implementation guidance.
+          {isPortfolio
+            ? "These priorities reflect your assessment responses. Facilitated execution options for matched advisory services appear below."
+            : "These recommendations are based on your assessment responses. Your advisor will help prioritize next steps; detailed implementation planning unlocks in your Risk Portfolio."}
         </p>
       </div>
     </div>

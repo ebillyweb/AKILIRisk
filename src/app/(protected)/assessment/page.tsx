@@ -83,6 +83,7 @@ export default function AssessmentHubPage() {
         throw new Error("Failed to fetch summary access");
       }
       return response.json() as Promise<{
+        canViewRiskPreview: boolean;
         canViewSummary: boolean;
         allPillarsComplete: boolean;
         advisorPublishedProfile: boolean;
@@ -364,8 +365,9 @@ export default function AssessmentHubPage() {
                 <p className="editorial-kicker">Next step</p>
                 {allPillarsComplete ? (
                   <p className="text-base leading-7 text-muted-foreground">
-                    All six pillars are scored. Review your results and download your report once
-                    your advisor publishes it.
+                    {summaryAccess?.canViewSummary
+                      ? "All six pillars are scored. Review your results and download your report."
+                      : "All six pillars are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."}
                   </p>
                 ) : resumePillar ? (
                   <p className="text-base leading-7 text-muted-foreground">
@@ -386,13 +388,13 @@ export default function AssessmentHubPage() {
                       <Button size="lg" onClick={() => router.push("/assessment/results")}>
                         View results
                       </Button>
+                    ) : summaryAccess?.canViewRiskPreview ? (
+                      <Button size="lg" onClick={() => router.push("/assessment/risk-preview")}>
+                        View risk preview
+                      </Button>
                     ) : (
-                      <Button
-                        size="lg"
-                        disabled
-                        title="Available after your advisor publishes your Risk Profile"
-                      >
-                        View results
+                      <Button size="lg" disabled title="Complete all six pillars to continue">
+                        View risk preview
                       </Button>
                     )}
                     <Button variant="outline" size="lg" onClick={() => router.push("/dashboard")}>

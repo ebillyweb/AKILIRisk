@@ -14,6 +14,11 @@ import { resolveScoringPillar } from "@/lib/assessment/scoring-pillar";
 import { ScoreDisplay } from "@/components/assessment/ScoreDisplay";
 import { RiskDrivers } from "@/components/assessment/RiskDrivers";
 import { ActionPlan } from "@/components/assessment/ActionPlan";
+import { FacilitatedRecommendations } from "@/components/assessment/FacilitatedRecommendations";
+import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
+import { actionPlanDepthForPhase } from "@/lib/assessment/plan-depth";
+import type { ClientFacilitatedRecommendation } from "@/lib/client/assessment-recommendations";
+import type { DeliverablePhase, PortfolioEngagementStatus } from "@prisma/client";
 import { DownloadSection } from "@/components/reports/DownloadSection";
 import { TemplateList } from "@/components/reports/TemplateList";
 import { Button } from "@/components/ui/button";
@@ -65,6 +70,22 @@ export default function AssessmentResultsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReadyForRedirects, setIsReadyForRedirects] = useState(false);
+  const [deliverablePhase, setDeliverablePhase] = useState<DeliverablePhase | null>(
+    null,
+  );
+  const [facilitatedRecommendations, setFacilitatedRecommendations] = useState<
+    ClientFacilitatedRecommendation[]
+  >([]);
+  const [deliverableMeta, setDeliverableMeta] = useState<{
+    upsellTriggersFired: string[] | null;
+    previewEnteredAt: string | null;
+    profileEnteredAt: string | null;
+    engagement: {
+      status: PortfolioEngagementStatus;
+      meetingScheduledAt: Date | null;
+      meetingAt: Date | null;
+    } | null;
+  } | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsReadyForRedirects(true), 0);
@@ -113,6 +134,42 @@ export default function AssessmentResultsPage() {
         const data = await response.json();
         setResultsPillar(targetPillar);
         setScoreData(data);
+
+        const recResponse = await fetch(
+          `/api/assessment/${assessmentId}/recommendations`,
+        );
+        if (recResponse.ok) {
+          const recData = (await recResponse.json()) as {
+            deliverablePhase: DeliverablePhase;
+            recommendations: ClientFacilitatedRecommendation[];
+            upsellTriggersFired: string[] | null;
+            previewEnteredAt: string | null;
+            profileEnteredAt: string | null;
+            engagement: {
+              status: PortfolioEngagementStatus;
+              meetingScheduledAt: string | null;
+              meetingAt: string | null;
+            } | null;
+          };
+          setDeliverablePhase(recData.deliverablePhase);
+          setFacilitatedRecommendations(recData.recommendations);
+          setDeliverableMeta({
+            upsellTriggersFired: recData.upsellTriggersFired,
+            previewEnteredAt: recData.previewEnteredAt,
+            profileEnteredAt: recData.profileEnteredAt,
+            engagement: recData.engagement
+              ? {
+                  status: recData.engagement.status,
+                  meetingScheduledAt: recData.engagement.meetingScheduledAt
+                    ? new Date(recData.engagement.meetingScheduledAt)
+                    : null,
+                  meetingAt: recData.engagement.meetingAt
+                    ? new Date(recData.engagement.meetingAt)
+                    : null,
+                }
+              : null,
+          });
+        }
 
         // Mark pillar as complete in store
         markPillarComplete(targetPillar);
@@ -192,15 +249,43 @@ export default function AssessmentResultsPage() {
   const isCyberOnlyScore =
     scoreData.breakdown.length === 1 && scoreData.breakdown[0]?.categoryId === "cyber-digital";
   const scoreRubric = isCyberOnlyScore ? "cyber" : "governance";
+  const planDepth = deliverablePhase
+    ? actionPlanDepthForPhase(deliverablePhase)
+    : "profile";
+  const phaseLabel =
+    deliverablePhase === "PORTFOLIO"
+      ? "Risk Portfolio"
+      : deliverablePhase === "PROFILE"
+        ? "Risk Profile"
+        : "Results";
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
+      {deliverablePhase && deliverableMeta && assessmentId ? (
+        <DeliverablePhaseBanner
+          assessmentId={assessmentId}
+          phase={deliverablePhase}
+          upsellTriggersFired={deliverableMeta.upsellTriggersFired}
+          engagement={deliverableMeta.engagement}
+          previewEnteredAt={
+            deliverableMeta.previewEnteredAt
+              ? new Date(deliverableMeta.previewEnteredAt)
+              : null
+          }
+          profileEnteredAt={
+            deliverableMeta.profileEnteredAt
+              ? new Date(deliverableMeta.profileEnteredAt)
+              : null
+          }
+        />
+      ) : null}
+
       <section className="hero-surface rounded-[1.75rem] p-6 sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div className="space-y-3">
-            <p className="editorial-kicker">Assessment Complete</p>
+            <p className="editorial-kicker">{phaseLabel}</p>
             <h1 className="text-4xl font-semibold text-balance sm:text-5xl">
-              {pillarLabel} Assessment Results
+              {pillarLabel} assessment results
             </h1>
             <p className="text-sm leading-7 text-muted-foreground sm:text-base">
               Completed on {format(new Date(scoreData.completedAt), "MMMM d, yyyy 'at' h:mm a")}
@@ -262,10 +347,22 @@ export default function AssessmentResultsPage() {
               riskLevel={scoreData.riskLevel.toLowerCase() as RiskLevel}
               scoreRubric={scoreRubric}
               pillarNarratives={scoreData.pillarNarratives ?? []}
+              planDepth={planDepth}
             />
           </CardContent>
         </Card>
       </div>
+
+      {deliverablePhase && facilitatedRecommendations.length > 0 ? (
+        <Card>
+          <CardContent className="pt-8">
+            <FacilitatedRecommendations
+              recommendations={facilitatedRecommendations}
+              deliverablePhase={deliverablePhase}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {targetPillar === "family-governance" && (
         <div className="grid gap-6 xl:grid-cols-2">

@@ -1,5 +1,3 @@
-import "server-only";
-
 /**
  * BRD §6.3 / Epic 5.10 — Deliverable-phase status banner.
  *

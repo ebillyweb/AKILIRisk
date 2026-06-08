@@ -1,5 +1,3 @@
-import "server-only";
-
 /**
  * BRD §6.2 / Epic 5.10 — Upsell-trigger evaluator.
  *

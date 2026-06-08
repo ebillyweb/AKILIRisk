@@ -17,10 +17,11 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
     });
 
     expect(result.allPillarsComplete).toBe(false);
+    expect(result.canViewRiskPreview).toBe(false);
     expect(result.canViewSummary).toBe(false);
   });
 
-  it("denies summary when all pillars scored but still in PREVIEW", () => {
+  it("allows risk preview but not full summary when all pillars scored in PREVIEW", () => {
     const result = evaluateClientAssessmentSummaryAccess({
       pillarScores: allPillarScores(),
       deliverablePhase: "PREVIEW",
@@ -28,6 +29,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
 
     expect(result.allPillarsComplete).toBe(true);
     expect(result.advisorPublishedProfile).toBe(false);
+    expect(result.canViewRiskPreview).toBe(true);
     expect(result.canViewSummary).toBe(false);
   });
 

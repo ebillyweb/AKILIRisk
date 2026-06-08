@@ -8,6 +8,9 @@ import {
 } from "@/lib/assessment/pillar-registry";
 
 export type ClientAssessmentSummaryAccess = {
+  /** Heat-map Risk Preview once every pillar is scored (PREVIEW phase). */
+  canViewRiskPreview: boolean;
+  /** Full results with action plan after advisor publishes PROFILE/PORTFOLIO. */
   canViewSummary: boolean;
   allPillarsComplete: boolean;
   advisorPublishedProfile: boolean;
@@ -50,6 +53,7 @@ export function evaluateClientAssessmentSummaryAccess(input: {
     input.deliverablePhase === "PORTFOLIO";
 
   return {
+    canViewRiskPreview: allPillarsComplete,
     canViewSummary: allPillarsComplete && advisorPublishedProfile,
     allPillarsComplete,
     advisorPublishedProfile,
@@ -72,6 +76,7 @@ export async function getClientAssessmentSummaryAccess(
 
   if (!latest) {
     return {
+      canViewRiskPreview: false,
       canViewSummary: false,
       allPillarsComplete: false,
       advisorPublishedProfile: false,
@@ -103,6 +108,7 @@ export async function getAssessmentSummaryAccessForAssessment(
 
   if (!assessment) {
     return {
+      canViewRiskPreview: false,
       canViewSummary: false,
       allPillarsComplete: false,
       advisorPublishedProfile: false,
