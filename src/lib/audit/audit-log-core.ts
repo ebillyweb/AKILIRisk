@@ -184,6 +184,10 @@ export const AUDIT_ACTIONS = {
   INTAKE_APPROVED_CLIENT_MAGIC_LINK: "intake.approved_client_magic_link",
   INTAKE_REJECT: "intake.reject",
   INTAKE_WAIVER_SET: "intake.waiver_set",
+  /** Advisor ended an active client workflow (assignment → INACTIVE). */
+  CLIENT_ASSIGNMENT_DEACTIVATE: "client_assignment.deactivate",
+  /** Advisor restored an inactive client workflow (assignment → ACTIVE). */
+  CLIENT_ASSIGNMENT_REACTIVATE: "client_assignment.reactivate",
   DOCUMENT_REQUIREMENT_CREATE: "document_requirement.create",
   DOCUMENT_REQUIREMENT_DELETE: "document_requirement.delete",
   INVITE_SEND: "invite.send",

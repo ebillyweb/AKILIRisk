@@ -5,17 +5,28 @@ import { z } from 'zod';
 
 import type { UserRole } from '@prisma/client';
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
-import { getClientPipeline, getPipelineMetrics, getClientDetail } from '@/lib/pipeline/queries';
+import {
+  countInactiveClientAssignments,
+  getClientPipeline,
+  getPipelineMetrics,
+  getClientDetail,
+} from '@/lib/pipeline/queries';
 import { prisma } from '@/lib/db';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 
-export async function getClientPipelineData() {
+export async function getClientPipelineData(options?: { inactive?: boolean }) {
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
-    const clients = await getClientPipeline(profile.id);
-    const metrics = getPipelineMetrics(clients);
+    const showInactive = options?.inactive === true;
+    const [clients, inactiveCount] = await Promise.all([
+      getClientPipeline(profile.id, {
+        assignmentStatus: showInactive ? 'INACTIVE' : 'ACTIVE',
+      }),
+      countInactiveClientAssignments(profile.id),
+    ]);
+    const metrics = { ...getPipelineMetrics(clients), inactive: inactiveCount };
 
     return {
       success: true,

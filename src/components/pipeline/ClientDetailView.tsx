@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { WorkflowTimeline } from "./WorkflowTimeline";
 import { DocumentRequirements } from "./DocumentRequirements";
 import { ClientAuthControls } from "./ClientAuthControls";
+import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
@@ -71,6 +72,7 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
 export function ClientDetailView({ detail }: ClientDetailViewProps) {
   const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment } = detail;
   const displayName = client.name || 'Unnamed Client';
+  const assignmentActive = advisorAssignment.status === "ACTIVE";
   const intakeWaived = advisorAssignment.intakeWaivedAt != null;
   const intakeSubmitted = isIntakeFinished(intakeDetails);
   const assessmentCompleted = assessmentDetails?.status === "COMPLETED";
@@ -102,6 +104,16 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
           Back to Pipeline
         </Link>
       </div>
+
+      {!assignmentActive ? (
+        <Alert className="mb-6 border-muted-foreground/30 bg-muted/40">
+          <AlertTitle>Workflow inactive</AlertTitle>
+          <AlertDescription>
+            This client is not in your active pipeline. History is read-only until you restore
+            the workflow.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {/* Client Header */}
       <div className="mb-8">
@@ -184,7 +196,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={waiverPending}
+                    disabled={waiverPending || !assignmentActive}
                     onClick={() => runWaiver(false)}
                   >
                     Require intake again
@@ -254,7 +266,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                       <Button
                         type="button"
                         variant="secondary"
-                        disabled={waiverPending}
+                        disabled={waiverPending || !assignmentActive}
                         onClick={() => runWaiver(true)}
                       >
                         Allow assessment without intake
@@ -266,7 +278,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={waiverPending}
+                  disabled={waiverPending || !assignmentActive}
                   onClick={() => runWaiver(true)}
                 >
                   Allow assessment without intake
@@ -405,10 +417,14 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
           {/* Round-11 commit 4 (BRD §5.1.AUTH): client sign-in management
               — email reassignment + magic-link re-issue. Server actions
               ownership-gated through ClientAdvisorAssignment. */}
-          <ClientAuthControls clientId={client.id} currentEmail={client.email} />
+          {assignmentActive ? (
+            <ClientAuthControls clientId={client.id} currentEmail={client.email} />
+          ) : null}
 
           {/* Document Requirements */}
-          <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
+          {assignmentActive ? (
+            <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
+          ) : null}
 
           {/* Quick Actions */}
           <Card>
@@ -416,10 +432,15 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <ClientWorkflowStatusControls
+                clientId={client.id}
+                status={advisorAssignment.status}
+              />
+
               <Button variant="outline" className="w-full justify-start" asChild>
-                <Link href="/advisor/pipeline">
+                <Link href={assignmentActive ? "/advisor/pipeline" : "/advisor/pipeline?inactive=1"}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Pipeline
+                  {assignmentActive ? "Back to Pipeline" : "Back to inactive clients"}
                 </Link>
               </Button>
 

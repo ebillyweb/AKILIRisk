@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Archive,
   BarChart3,
   Bell,
   Briefcase,
@@ -57,6 +58,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Clients",
     items: [
       { href: "/advisor/pipeline", label: "All clients", icon: Users },
+      { href: "/advisor/pipeline?inactive=1", label: "Inactive workflows", icon: Archive },
       { href: "/advisor/invitations", label: "Invitations", icon: UserPlus },
     ],
   },

@@ -28,8 +28,13 @@ export function PipelineView({
 }: PipelineViewProps) {
   const router = useRouter();
 
-  // Real-time updates via SSE
-  const { clients, connected, lastUpdated } = usePipelineUpdates(initialClients);
+  const viewingInactive = initialFilters?.inactive === true;
+
+  // Real-time updates via SSE (active pipeline only)
+  const { clients: liveClients, connected, lastUpdated } = usePipelineUpdates(
+    viewingInactive ? [] : initialClients,
+  );
+  const clients = viewingInactive ? initialClients : liveClients;
 
   // Client-side filtering and sorting
   const { filters, filteredClients } = usePipelineFilters(
@@ -64,15 +69,17 @@ export function PipelineView({
   return (
     <div className="space-y-6">
       {/* Connection status indicator */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <div
-            className={`h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
-          />
-          <span>{connected ? "Live updates" : "Connection lost"}</span>
-          <span className="text-xs">Last updated: {lastUpdated.toLocaleTimeString()}</span>
+      {!viewingInactive ? (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div
+              className={`h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
+            />
+            <span>{connected ? "Live updates" : "Connection lost"}</span>
+            <span className="text-xs">Last updated: {lastUpdated.toLocaleTimeString()}</span>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Filters */}
       <PipelineFiltersBar

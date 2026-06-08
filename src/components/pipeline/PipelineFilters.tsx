@@ -75,9 +75,25 @@ export function PipelineFilters({
   };
 
   const toggleFlag = (
-    key: "stalled" | "awaitingIntakeReview" | "documentsNeeded" | "needsRescore",
+    key: "stalled" | "awaitingIntakeReview" | "documentsNeeded" | "needsRescore" | "inactive",
   ) => {
-    onFilterChange({ ...filters, [key]: filters[key] ? undefined : true });
+    if (key === "inactive") {
+      onFilterChange({
+        ...filters,
+        inactive: filters.inactive ? undefined : true,
+        stalled: undefined,
+        awaitingIntakeReview: undefined,
+        documentsNeeded: undefined,
+        needsRescore: undefined,
+        stage: undefined,
+      });
+      return;
+    }
+    onFilterChange({
+      ...filters,
+      [key]: filters[key] ? undefined : true,
+      inactive: undefined,
+    });
   };
 
   return (
@@ -137,6 +153,17 @@ export function PipelineFilters({
             Re-score needed
             <Badge variant="secondary" className="ml-2">
               {metrics.needsRescore}
+            </Badge>
+          </Button>
+          <Button
+            type="button"
+            variant={filters.inactive ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleFlag("inactive")}
+          >
+            Inactive
+            <Badge variant="secondary" className="ml-2">
+              {metrics.inactive}
             </Badge>
           </Button>
           <Select
@@ -205,6 +232,11 @@ export function PipelineFilters({
         {filters.needsRescore && (
           <span className="ml-2">
             • <span className="font-medium">Assessment re-score needed</span>
+          </span>
+        )}
+        {filters.inactive && (
+          <span className="ml-2">
+            • <span className="font-medium">Inactive workflows only</span>
           </span>
         )}
       </div>

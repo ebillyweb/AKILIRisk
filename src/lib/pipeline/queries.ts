@@ -51,12 +51,20 @@ function whereIntakeResponsesForInterviewsHaveAnswer(
 /**
  * Fetches complete pipeline data for an advisor's clients
  */
-export async function getClientPipeline(advisorProfileId: string): Promise<PipelineClient[]> {
+export type ClientPipelineOptions = {
+  assignmentStatus?: 'ACTIVE' | 'INACTIVE';
+};
+
+export async function getClientPipeline(
+  advisorProfileId: string,
+  options: ClientPipelineOptions = {},
+): Promise<PipelineClient[]> {
+  const assignmentStatus = options.assignmentStatus ?? 'ACTIVE';
   const [assignments, advisorPolicy] = await Promise.all([
     prisma.clientAdvisorAssignment.findMany({
     where: {
       advisorId: advisorProfileId,
-      status: 'ACTIVE',
+      status: assignmentStatus,
     },
     include: {
       client: {
@@ -396,7 +404,16 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
     needsRescore,
     stalled,
     intakesAwaitingReview,
+    inactive: 0,
   };
+}
+
+export async function countInactiveClientAssignments(
+  advisorProfileId: string,
+): Promise<number> {
+  return prisma.clientAdvisorAssignment.count({
+    where: { advisorId: advisorProfileId, status: 'INACTIVE' },
+  });
 }
 
 /**
@@ -408,7 +425,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     where: {
       advisorId: advisorProfileId,
       clientId,
-      status: 'ACTIVE',
+      status: { in: ['ACTIVE', 'INACTIVE'] },
     },
     include: {
       client: {
@@ -726,6 +743,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     client: pipelineClient,
     advisorAssignment: {
       id: assignment.id,
+      status: assignment.status,
       intakeWaivedAt: assignment.intakeWaivedAt,
     },
     timeline: events,

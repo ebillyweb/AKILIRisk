@@ -39,6 +39,14 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
       subtitle: "Assigned clients with no activity in the last 7 days.",
     };
   }
+  if (filters.inactive) {
+    return {
+      kicker: "Clients",
+      title: "Inactive workflows",
+      subtitle:
+        "Clients you ended. Their accounts and history are kept; restore any workflow to return them to your active pipeline.",
+    };
+  }
   return null;
 }
 
@@ -114,7 +122,9 @@ async function PipelineContent({
   initialFilters: ReturnType<typeof parsePipelineFiltersFromSearchParams>;
   initialPage: number;
 }) {
-  const result = await getClientPipelineData();
+  const result = await getClientPipelineData({
+    inactive: initialFilters.inactive === true,
+  });
 
   if (!result.success) {
     return (

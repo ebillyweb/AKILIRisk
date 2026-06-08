@@ -1,4 +1,9 @@
-import { ClientWorkflowStage, InvitationStatus, type DeliverablePhase } from '@prisma/client';
+import {
+  AssignmentStatus,
+  ClientWorkflowStage,
+  InvitationStatus,
+  type DeliverablePhase,
+} from '@prisma/client';
 
 // Re-export for convenience
 export { ClientWorkflowStage } from '@prisma/client';
@@ -59,6 +64,8 @@ export type PipelineMetrics = {
   needsRescore: number;     // completed assessments with post-completion answer edits
   stalled: number;          // clients with no activity in 7+ days
   intakesAwaitingReview: number; // submitted intake not yet approved/rejected
+  /** Ended workflows (INACTIVE assignments) for this advisor */
+  inactive: number;
 };
 
 // Filter options for pipeline table
@@ -72,6 +79,8 @@ export type PipelineFilters = {
   documentsNeeded?: boolean;
   /** When true, only clients whose completed assessment answers changed */
   needsRescore?: boolean;
+  /** When true, list inactive (ended) client workflows instead of active ones */
+  inactive?: boolean;
   search?: string;
   sortBy?: 'name' | 'stage' | 'progress' | 'lastActivity';
   sortDir?: 'asc' | 'desc';
@@ -101,6 +110,7 @@ export type ClientDetail = {
   } | null;
   advisorAssignment: {
     id: string;
+    status: AssignmentStatus;
     intakeWaivedAt: Date | null;
   };
   assessmentDetails: {
