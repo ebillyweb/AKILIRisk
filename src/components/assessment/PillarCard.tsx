@@ -108,7 +108,7 @@ export function PillarCard({
         <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
           <span>
             {status === "completed"
-              ? "Review results and recommendations"
+              ? "Review answers"
               : status === "in-progress"
                 ? "Continue from your last saved response"
                 : "Begin the assessment"}

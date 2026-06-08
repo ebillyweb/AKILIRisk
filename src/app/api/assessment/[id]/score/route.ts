@@ -26,6 +26,8 @@ import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
 import { emitAssessmentSignals } from "@/lib/signals/emit";
 import type { PillarScoreSnapshot } from "@/lib/signals/types";
+import { evaluateClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
+import { normalizeUserRoleString } from "@/lib/auth-roles";
 
 /**
  * Assessment Score API Routes
@@ -94,7 +96,11 @@ export async function GET(
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
       where: { id },
-      select: { userId: true },
+      select: {
+        userId: true,
+        deliverablePhase: true,
+        scores: { select: { pillar: true } },
+      },
     });
 
     if (!assessment) {
@@ -111,6 +117,25 @@ export async function GET(
         { error: "Assessment not found" },
         { status: 404 }
       );
+    }
+
+    const role = normalizeUserRoleString(session.user.role);
+    if (role === "USER") {
+      const summaryAccess = evaluateClientAssessmentSummaryAccess({
+        pillarScores: assessment.scores,
+        deliverablePhase: assessment.deliverablePhase,
+      });
+      if (!summaryAccess.canViewSummary) {
+        return NextResponse.json(
+          {
+            error: summaryAccess.allPillarsComplete
+              ? "Your assessment summary will be available after your advisor publishes your Risk Profile."
+              : "Complete all assessment pillars before viewing your summary.",
+            code: "SUMMARY_LOCKED",
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const score = await findPillarScore(id, pillar);
@@ -419,6 +444,20 @@ export async function POST(
       pillarConfig.questions
     );
 
+    const updatedAssessment = await prisma.assessment.findUnique({
+      where: { id },
+      select: {
+        deliverablePhase: true,
+        scores: { select: { pillar: true } },
+      },
+    });
+    const summaryAccess = updatedAssessment
+      ? evaluateClientAssessmentSummaryAccess({
+          pillarScores: updatedAssessment.scores,
+          deliverablePhase: updatedAssessment.deliverablePhase,
+        })
+      : { canViewSummary: false };
+
     const responseData: Record<string, unknown> = {
       score: pillarScore.saved.score,
       riskLevel: pillarScore.saved.riskLevel,
@@ -427,6 +466,7 @@ export async function POST(
       pillarNarratives,
       completedAt: pillarScore.saved.calculatedAt,
       allPillarsScored: pillarScore.allPillarsScored,
+      canViewSummary: summaryAccess.canViewSummary,
     };
 
     // Add customization metadata if applicable

@@ -75,6 +75,22 @@ export default function AssessmentHubPage() {
     retry: 1,
   });
 
+  const { data: summaryAccess } = useQuery({
+    queryKey: ["assessment-summary-access"],
+    queryFn: async () => {
+      const response = await fetch("/api/assessment/summary-access");
+      if (!response.ok) {
+        throw new Error("Failed to fetch summary access");
+      }
+      return response.json() as Promise<{
+        canViewSummary: boolean;
+        allPillarsComplete: boolean;
+        advisorPublishedProfile: boolean;
+      }>;
+    },
+    staleTime: 30_000,
+  });
+
   const { data: customizationConfig } = useQuery<CustomizationConfig>({
     queryKey: ["assessment-customization"],
     queryFn: async () => {
@@ -358,9 +374,15 @@ export default function AssessmentHubPage() {
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             {completedPillarSlugs.length === ASSESSMENT_PILLAR_IDS.length ? (
               <>
-                <Button size="lg" onClick={() => router.push("/assessment/results")}>
-                  View results
-                </Button>
+                {summaryAccess?.canViewSummary ? (
+                  <Button size="lg" onClick={() => router.push("/assessment/results")}>
+                    View results
+                  </Button>
+                ) : (
+                  <Button size="lg" disabled title="Available after your advisor publishes your Risk Profile">
+                    View results
+                  </Button>
+                )}
                 <Button variant="outline" size="lg" onClick={() => router.push("/dashboard")}>
                   Dashboard
                 </Button>

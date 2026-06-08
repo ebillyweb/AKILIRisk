@@ -25,6 +25,10 @@ import {
 } from "@/lib/dashboard/client-summary";
 import { ChevronRight } from "lucide-react";
 import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
+import {
+  evaluateClientAssessmentSummaryAccess,
+  isAssessmentSummaryUnlockedFromStatus,
+} from "@/lib/client/assessment-summary-gate";
 
 export default async function DashboardPage({
   searchParams,
@@ -156,6 +160,13 @@ export default async function DashboardPage({
   });
   const topRisks = resolveTopRisks(allPillarScores);
   const showHeatMap = assessmentUnlocked && allPillarScores.length > 0;
+  const summaryAccess = latestAssessmentForHeatMap
+    ? evaluateClientAssessmentSummaryAccess({
+        pillarScores: allPillarScores,
+        deliverablePhase: latestAssessmentForHeatMap.deliverablePhase,
+      })
+    : null;
+  const summaryUnlocked = summaryAccess?.canViewSummary ?? false;
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -325,19 +336,25 @@ export default async function DashboardPage({
                           {risk.summary}
                         </p>
                       </div>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0"
-                      >
-                        <Link
-                          href={`/assessment/results?pillar=${encodeURIComponent(risk.pillarId)}`}
+                      {summaryUnlocked ? (
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0"
                         >
-                          Review
-                          <ChevronRight className="ml-1 h-4 w-4" />
-                        </Link>
-                      </Button>
+                          <Link
+                            href={`/assessment/results?pillar=${encodeURIComponent(risk.pillarId)}`}
+                          >
+                            Review
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Link>
+                        </Button>
+                      ) : (
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          Summary pending
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -379,6 +396,9 @@ export default async function DashboardPage({
               <div className="space-y-4">
                 {assessments.map((assessment) => {
                   const isCompleted = assessment.status === "COMPLETED";
+                  const cardSummaryUnlocked = isAssessmentSummaryUnlockedFromStatus(
+                    assessment,
+                  );
                   const responseCount = assessment._count.responses;
                   const progressPercentage =
                     (responseCount / totalQuestions) * 100;
@@ -505,7 +525,11 @@ export default async function DashboardPage({
                                 </div>
 
                                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                  {assessmentUnlocked ? (
+                                  {!assessmentUnlocked ? (
+                                    <p className="col-span-full text-sm text-muted-foreground">
+                                      Assessment actions unlock after your advisor approves your intake.
+                                    </p>
+                                  ) : cardSummaryUnlocked ? (
                                     <>
                                       <Button asChild size="lg">
                                         <Link href="/assessment/results">
@@ -531,7 +555,9 @@ export default async function DashboardPage({
                                     </>
                                   ) : (
                                     <p className="col-span-full text-sm text-muted-foreground">
-                                      Assessment actions unlock after your advisor approves your intake.
+                                      Your assessment summary, report download, and templates
+                                      will be available after your advisor publishes your Risk
+                                      Profile.
                                     </p>
                                   )}
                                 </div>

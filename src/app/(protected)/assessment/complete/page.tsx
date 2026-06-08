@@ -57,13 +57,21 @@ export default function AssessmentCompletePage() {
         body: JSON.stringify({ pillar }),
       });
 
+      const data = (await response.json()) as {
+        error?: string;
+        canViewSummary?: boolean;
+      };
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Failed to calculate score');
       }
 
       setTimeout(() => {
-        router.push(`/assessment/results?pillar=${encodeURIComponent(pillar)}`);
+        if (data.canViewSummary) {
+          router.push(`/assessment/results?pillar=${encodeURIComponent(pillar)}`);
+          return;
+        }
+        router.push('/assessment');
       }, 2000);
     } catch (err) {
       setIsCalculating(false);
@@ -176,8 +184,8 @@ export default function AssessmentCompletePage() {
             </h1>
             <p className="text-muted-foreground">
               {isCalculating
-                ? 'Analyzing your governance structure and generating recommendations...'
-                : 'Your results are ready.'}
+                ? 'Saving your responses and calculating your pillar score...'
+                : 'This section is complete. Return to the assessment hub to continue other pillars.'}
             </p>
           </div>
 
