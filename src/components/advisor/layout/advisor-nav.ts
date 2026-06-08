@@ -58,10 +58,8 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     id: "clients",
     title: "Clients",
     items: [
-      { href: "/advisor/pipeline", label: "Active clients", icon: Users },
+      { href: "/advisor/pipeline", label: "All clients", icon: Users },
       { href: "/advisor/invitations", label: "Invitations", icon: UserPlus },
-      { href: "/advisor/pipeline", label: "Assessments", icon: ClipboardList },
-      { href: "/advisor/pipeline", label: "Reviews needed", icon: FileText },
     ],
   },
   {
