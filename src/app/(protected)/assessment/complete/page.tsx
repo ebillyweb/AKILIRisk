@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAssessmentStore } from '@/lib/assessment/store';
+import { pillarDefinitionFor } from '@/lib/assessment/pillar-registry';
 import { resolveScoringPillar } from '@/lib/assessment/scoring-pillar';
 import { syncStoreAnswersToServer } from '@/lib/assessment/sync-store-responses';
 import { useAssessmentPersistHydrated } from '@/lib/hooks/useAssessmentPersistHydrated';
@@ -164,6 +165,10 @@ export default function AssessmentCompletePage() {
     );
   }
 
+  const pillarLabel = currentPillar
+    ? pillarDefinitionFor(currentPillar).name
+    : 'pillar';
+
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="max-w-2xl mx-auto w-full">
@@ -193,7 +198,7 @@ export default function AssessmentCompletePage() {
             <div className="space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center justify-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
-                <span>Calculating overall governance score</span>
+                <span>Calculating {pillarLabel.toLowerCase()} score</span>
               </div>
               <div className="flex items-center justify-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" style={{ animationDelay: '150ms' }} />
@@ -201,7 +206,7 @@ export default function AssessmentCompletePage() {
               </div>
               <div className="flex items-center justify-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" style={{ animationDelay: '300ms' }} />
-                <span>Generating action plan</span>
+                <span>Preparing summary for advisor review</span>
               </div>
             </div>
           )}
