@@ -333,6 +333,55 @@ export async function emitAssessmentSignals(params: {
   );
 }
 
+export async function emitAssessmentAnswersChangedSignal(params: {
+  clientId: string;
+  assessmentId: string;
+  version: number;
+  changedAt: Date;
+}): Promise<void> {
+  const advisorIds = await getActiveAdvisorIdsForClient(params.clientId);
+  if (advisorIds.length === 0) return;
+
+  const clientName = await resolveClientDisplayName(params.clientId);
+  const dedupeKey = `${params.assessmentId}:answers_changed`;
+  const message = `${clientName} updated assessment answers after completion. Re-score when ready (currently v${params.version}).`;
+
+  await Promise.all(
+    advisorIds.map((advisorId) =>
+      prisma.advisorSignal.upsert({
+        where: {
+          advisorId_dedupeKey: { advisorId, dedupeKey },
+        },
+        create: {
+          advisorId,
+          clientId: params.clientId,
+          type: "ASSESSMENT_ANSWERS_CHANGED",
+          severity: "moderate",
+          title: "Assessment answers changed",
+          message,
+          dedupeKey,
+          payload: {
+            assessmentId: params.assessmentId,
+            assessmentVersion: params.version,
+            href: pipelineHref(params.clientId),
+          },
+        },
+        update: {
+          message,
+          severity: "moderate",
+          readAt: null,
+          createdAt: params.changedAt,
+          payload: {
+            assessmentId: params.assessmentId,
+            assessmentVersion: params.version,
+            href: pipelineHref(params.clientId),
+          },
+        },
+      }),
+    ),
+  );
+}
+
 export async function emitReportPublishedSignal(params: {
   clientId: string;
   assessmentId: string;

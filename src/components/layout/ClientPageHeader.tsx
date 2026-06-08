@@ -12,84 +12,25 @@ import {
   Settings,
   type LucideIcon,
 } from "lucide-react";
+import {
+  getClientPageHeaderConfig,
+  type ClientPageHeaderConfig,
+  type ClientPageHeaderIconName,
+} from "@/components/layout/client-page-header-config";
 
-export interface ClientPageHeaderConfig {
-  icon: LucideIcon;
-  kicker: string;
-  title: string;
-  subtitle?: string;
-}
-
-const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] = [
-  {
-    path: "/dashboard",
-    config: {
-      icon: LayoutDashboard,
-      kicker: "Client Portal",
-      title: "Dashboard",
-      subtitle:
-        "Assessment progress, results, and secure account management",
-    },
-  },
-  {
-    path: "/intake",
-    config: {
-      icon: FileText,
-      kicker: "Family Assessment",
-      title: "Family Governance Intake",
-      subtitle:
-        "Confidential family governance intake interview",
-    },
-  },
-  {
-    path: "/assessment",
-    config: {
-      icon: ClipboardCheck,
-      kicker: "Family Assessment",
-      title: "Governance Assessment",
-      subtitle:
-        "Comprehensive evaluation of governance structure and family decision-making practices",
-    },
-  },
-  {
-    path: "/profiles",
-    config: {
-      icon: Users,
-      kicker: "Family Structure",
-      title: "Household Profiles",
-      subtitle:
-        "Family member profiles and governance participation roles",
-    },
-  },
-  {
-    path: "/settings",
-    config: {
-      icon: Settings,
-      kicker: "Account Security",
-      title: "Security & Access",
-      subtitle:
-        "Account identity verification and multi-factor authentication",
-    },
-  },
-];
-
-function getHeaderConfig(pathname: string): ClientPageHeaderConfig | null {
-  const match = CLIENT_HEADER_CONFIG.find(
-    ({ path }) => pathname === path || pathname.startsWith(`${path}/`)
-  );
-  return match?.config ?? null;
-}
-
-export function getClientPageHeaderConfig(
-  pathname: string
-): ClientPageHeaderConfig | null {
-  return getHeaderConfig(pathname);
-}
+const CLIENT_HEADER_ICONS: Record<ClientPageHeaderIconName, LucideIcon> = {
+  "layout-dashboard": LayoutDashboard,
+  "file-text": FileText,
+  "clipboard-check": ClipboardCheck,
+  users: Users,
+  settings: Settings,
+};
 
 export function ClientPageHeader(
   props: ClientPageHeaderConfig & { brandHex?: PreviewBrandHex | null },
 ) {
-  const { icon: Icon, kicker, title, subtitle, brandHex } = props;
+  const { icon, kicker, title, subtitle, brandHex } = props;
+  const Icon = CLIENT_HEADER_ICONS[icon];
   return (
     <header
       role="banner"
@@ -149,7 +90,7 @@ export function ClientPageHeader(
  */
 export function ClientPageHeaderFromPath() {
   const pathname = usePathname();
-  const config = getHeaderConfig(pathname);
+  const config = getClientPageHeaderConfig(pathname);
   const branding = useBrandingOptional()?.branding ?? null;
   const brandHex = branding ? getPreviewBrandHex(branding) : null;
   if (!config) return null;

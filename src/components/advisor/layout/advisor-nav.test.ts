@@ -53,6 +53,7 @@ describe("getActiveAdvisorNavHref", () => {
     const workflows = ADVISOR_NAV_SECTIONS.find((s) => s.id === "workflows");
     expect(workflows?.items[0]?.href).toBe("/advisor/pipeline?awaitingReview=1");
     expect(workflows?.items[1]?.href).toBe("/advisor/pipeline?documentsNeeded=1");
-    expect(workflows?.items[2]?.href).toBe("/advisor/engagements");
+    expect(workflows?.items[2]?.href).toBe("/advisor/pipeline?needsRescore=1");
+    expect(workflows?.items[3]?.href).toBe("/advisor/engagements");
   });
 });

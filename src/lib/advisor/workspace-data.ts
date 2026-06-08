@@ -61,6 +61,17 @@ export function deriveAdvisorPriorities(
     });
   }
 
+  if (metrics.needsRescore > 0) {
+    priorities.push({
+      id: "rescore",
+      kind: "in_progress",
+      title: "Assessment re-score needed",
+      description: `${metrics.needsRescore} client${metrics.needsRescore === 1 ? "" : "s"} changed answers after completing the assessment.`,
+      href: "/advisor/pipeline?needsRescore=1",
+      count: metrics.needsRescore,
+    });
+  }
+
   if (metrics.stalled > 0) {
     priorities.push({
       id: "stalled",

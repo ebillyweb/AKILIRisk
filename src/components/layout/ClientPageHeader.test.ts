@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getClientPageHeaderConfig } from "@/components/layout/ClientPageHeader";
+import { getClientPageHeaderConfig } from "@/components/layout/client-page-header-config";
 
 describe("getClientPageHeaderConfig", () => {
   it("matches intake and assessment sub-routes", () => {
@@ -22,5 +22,15 @@ describe("getClientPageHeaderConfig", () => {
 
   it("does not match unrelated routes", () => {
     expect(getClientPageHeaderConfig("/advisor/clients")).toBeNull();
+  });
+
+  it("uses waived intake copy on the landing page when flagged", () => {
+    expect(
+      getClientPageHeaderConfig("/intake", { intakeWaivedOnLanding: true })?.title
+    ).toBe("Intake not required");
+    expect(
+      getClientPageHeaderConfig("/intake/interview", { intakeWaivedOnLanding: true })
+        ?.title
+    ).toBe("Family Governance Intake");
   });
 });

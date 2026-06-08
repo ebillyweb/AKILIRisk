@@ -39,11 +39,15 @@ describe("signals MVP rules", () => {
 });
 
 const createSignal = vi.fn();
+const upsertSignal = vi.fn();
 const findAssignments = vi.fn();
 const findUser = vi.fn();
 vi.mock("@/lib/db", () => ({
   prisma: {
-    advisorSignal: { create: (...args: unknown[]) => createSignal(...args) },
+    advisorSignal: {
+      create: (...args: unknown[]) => createSignal(...args),
+      upsert: (...args: unknown[]) => upsertSignal(...args),
+    },
     clientAdvisorAssignment: {
       findMany: (...args: unknown[]) => findAssignments(...args),
     },
@@ -65,6 +69,7 @@ vi.mock("@/lib/analytics/formatters", () => ({
 }));
 
 import {
+  emitAssessmentAnswersChangedSignal,
   emitAssessmentSignals,
   emitReportPublishedSignal,
 } from "./emit";
@@ -78,6 +83,7 @@ const clientUser = {
 
 beforeEach(() => {
   createSignal.mockReset();
+  upsertSignal.mockReset();
   findAssignments.mockReset();
   findUser.mockReset();
   // Default: one active assignment to advisor "adv-1".
@@ -340,6 +346,30 @@ describe("emitAssessmentSignals — persistence", () => {
     });
     const advisors = createSignal.mock.calls.map((c) => c[0].data.advisorId);
     expect(advisors).toEqual(expect.arrayContaining(["adv-1", "adv-2"]));
+  });
+});
+
+describe("emitAssessmentAnswersChangedSignal", () => {
+  it("upserts a coalesced signal per assigned advisor", async () => {
+    findAssignments.mockResolvedValue([
+      { advisorId: "adv-1" },
+      { advisorId: "adv-2" },
+    ]);
+    const changedAt = new Date("2026-06-08T12:00:00.000Z");
+
+    await emitAssessmentAnswersChangedSignal({
+      clientId: "client-1",
+      assessmentId: "asmt-1",
+      version: 2,
+      changedAt,
+    });
+
+    expect(upsertSignal).toHaveBeenCalledTimes(2);
+    expect(upsertSignal.mock.calls[0][0].where).toEqual({
+      advisorId_dedupeKey: { advisorId: "adv-1", dedupeKey: "asmt-1:answers_changed" },
+    });
+    expect(upsertSignal.mock.calls[0][0].create.type).toBe("ASSESSMENT_ANSWERS_CHANGED");
+    expect(upsertSignal.mock.calls[0][0].update.readAt).toBeNull();
   });
 });
 

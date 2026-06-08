@@ -104,6 +104,11 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         label: "Document requests",
         icon: Mail,
       },
+      {
+        href: "/advisor/pipeline?needsRescore=1",
+        label: "Re-score needed",
+        icon: BarChart3,
+      },
       { href: "/advisor/engagements", label: "Engagements", icon: Briefcase },
       {
         label: "Tasks",

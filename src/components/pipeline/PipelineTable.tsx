@@ -80,6 +80,11 @@ export function PipelineTable({ clients }: PipelineTableProps) {
               <span className="truncate font-medium text-primary hover:underline">
                 {displayName}
               </span>
+              {client.needsRescore ? (
+                <Badge variant="warning" className="shrink-0 text-[0.65rem]">
+                  Re-score
+                </Badge>
+              ) : null}
               {client.stalled ? (
                 <Badge variant="warning" className="shrink-0 text-[0.65rem]">
                   Stalled

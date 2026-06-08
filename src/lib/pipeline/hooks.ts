@@ -123,6 +123,10 @@ export function usePipelineFilters(
       filtered = filtered.filter((client) => client.documentsNeeded);
     }
 
+    if (filters.needsRescore) {
+      filtered = filtered.filter((client) => client.needsRescore);
+    }
+
     // Filter by search (name or email)
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();

@@ -3,6 +3,11 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encryptAnswer, safeDecryptAnswer } from "@/lib/data/response-content";
+import {
+  assessmentStoredAnswerChanged,
+  loadPriorAssessmentAnswer,
+  markAssessmentAnswersChangedAfterComplete,
+} from "@/lib/assessment/answers-changed-after-complete";
 
 /**
  * Assessment Responses API Routes
@@ -123,7 +128,7 @@ export async function POST(
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
       where: { id },
-      select: { userId: true },
+      select: { userId: true, status: true },
     });
 
     if (!assessment) {
@@ -162,6 +167,19 @@ export async function POST(
       );
     }
     const answerCiphertext = isSkipped ? null : encryptAnswer(answer);
+
+    const priorAnswer =
+      assessment.status === "COMPLETED"
+        ? await loadPriorAssessmentAnswer(id, questionId)
+        : null;
+    const answerChangedAfterComplete =
+      assessment.status === "COMPLETED" &&
+      assessmentStoredAnswerChanged({
+        priorSkipped: priorAnswer?.skipped ?? false,
+        priorAnswer: priorAnswer?.answer,
+        nextSkipped: isSkipped,
+        nextAnswer: isSkipped ? null : answer,
+      });
 
     // Upsert response and update assessment position in a transaction
     const [response] = await prisma.$transaction(async (tx) => {
@@ -207,6 +225,10 @@ export async function POST(
 
       return [saved];
     });
+
+    if (answerChangedAfterComplete) {
+      void markAssessmentAnswersChangedAfterComplete(id);
+    }
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {

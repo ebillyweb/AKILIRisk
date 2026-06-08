@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { PipelineClient, PipelineMetrics, ClientWorkflowStage, ClientDetail, WorkflowEvent } from "./types";
 import { aggregateMandatoryDocumentCounts, hasUnfulfilledMandatoryDocuments } from "./documents";
+import { assessmentNeedsRescore } from "@/lib/assessment/answers-changed-after-complete";
 import { indexAwaitingIntakeReviewByClient, isIntakeAwaitingAdvisorReview } from "./intake-review";
 import { pickIntakeForPipeline } from "./pick-intake-for-pipeline";
 import { computeClientStage, computeProgress, isStalled } from "./status";
@@ -297,6 +298,9 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
       interviewId: null,
     };
     const documentsNeeded = hasUnfulfilledMandatoryDocuments(docCounts);
+    const needsRescore = latestAssessment
+      ? assessmentNeedsRescore(latestAssessment)
+      : false;
 
     const pipelineClient: PipelineClient = {
       id: client.id,
@@ -310,6 +314,7 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
       awaitingIntakeReview: intakeReview.awaiting,
       intakeReviewInterviewId: intakeReview.interviewId,
       documentsNeeded,
+      needsRescore,
       invitation: invitation ? {
         status: invitation.status,
         sentAt: invitation.createdAt,
@@ -334,6 +339,8 @@ export async function getClientPipeline(advisorProfileId: string): Promise<Pipel
         status: latestAssessment.status,
         completedAt: latestAssessment.completedAt,
         score: latestAssessment.scores[0]?.score || null,
+        version: latestAssessment.version,
+        answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
       } : null,
       documents: {
         required: docCounts.required,
@@ -374,6 +381,8 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
 
   const documentsNeeded = clients.filter((client) => client.documentsNeeded).length;
 
+  const needsRescore = clients.filter((client) => client.needsRescore).length;
+
   const stalled = clients.filter((client) => client.stalled).length;
 
   const intakesAwaitingReview = clients.filter(
@@ -384,6 +393,7 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
     total,
     byStage: allStages,
     documentsNeeded,
+    needsRescore,
     stalled,
     intakesAwaitingReview,
   };
@@ -599,6 +609,9 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     { assessmentCompleted: latestAssessment?.status === "COMPLETED" },
   );
   const documentsNeededFlag = hasUnfulfilledMandatoryDocuments(docCounts);
+  const needsRescoreFlag = latestAssessment
+    ? assessmentNeedsRescore(latestAssessment)
+    : false;
 
   const pipelineClient: PipelineClient = {
     id: client.id,
@@ -612,6 +625,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     awaitingIntakeReview,
     intakeReviewInterviewId: awaitingIntakeReview ? latestIntake?.id ?? null : null,
     documentsNeeded: documentsNeededFlag,
+    needsRescore: needsRescoreFlag,
     invitation: invitation ? {
       status: invitation.status,
       sentAt: invitation.createdAt,
@@ -638,6 +652,8 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
       status: latestAssessment.status,
       completedAt: latestAssessment.completedAt,
       score: latestAssessment.scores[0]?.score || null,
+      version: latestAssessment.version,
+      answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
     } : null,
     documents: {
       required: docCounts.required,
@@ -683,6 +699,8 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
       score: score.score,
       riskLevel: score.riskLevel,
       completedAt: latestAssessment.completedAt,
+      version: latestAssessment.version,
+      answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
       pillarScores: pillarScores.map((pillar) => ({
         pillar: pillar.pillar,
         score: pillar.score,
@@ -696,6 +714,8 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
       score: null,
       riskLevel: null,
       completedAt: latestAssessment.completedAt,
+      version: latestAssessment.version,
+      answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
       pillarScores: [],
     };
   }

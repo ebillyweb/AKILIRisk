@@ -74,7 +74,9 @@ export function PipelineFilters({
     onFilterChange({ ...filters, stage });
   };
 
-  const toggleFlag = (key: "stalled" | "awaitingIntakeReview" | "documentsNeeded") => {
+  const toggleFlag = (
+    key: "stalled" | "awaitingIntakeReview" | "documentsNeeded" | "needsRescore",
+  ) => {
     onFilterChange({ ...filters, [key]: filters[key] ? undefined : true });
   };
 
@@ -124,6 +126,17 @@ export function PipelineFilters({
             Docs needed
             <Badge variant="secondary" className="ml-2">
               {metrics.documentsNeeded}
+            </Badge>
+          </Button>
+          <Button
+            type="button"
+            variant={filters.needsRescore ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleFlag("needsRescore")}
+          >
+            Re-score needed
+            <Badge variant="secondary" className="ml-2">
+              {metrics.needsRescore}
             </Badge>
           </Button>
           <Select
@@ -187,6 +200,11 @@ export function PipelineFilters({
         {filters.documentsNeeded && (
           <span className="ml-2">
             • <span className="font-medium">Required documents outstanding</span>
+          </span>
+        )}
+        {filters.needsRescore && (
+          <span className="ml-2">
+            • <span className="font-medium">Assessment re-score needed</span>
           </span>
         )}
       </div>

@@ -20,6 +20,8 @@ export type PipelineClient = {
   intakeReviewInterviewId: string | null;
   /** Mandatory document requirements still open */
   documentsNeeded: boolean;
+  /** Completed assessment answers changed since last re-score */
+  needsRescore: boolean;
   // Invitation data (if exists)
   invitation: {
     status: InvitationStatus;
@@ -39,6 +41,8 @@ export type PipelineClient = {
     status: string;
     completedAt: Date | null;
     score: number | null;
+    version: number | null;
+    answersChangedAfterCompleteAt: Date | null;
   } | null;
   // Document tracking
   documents: {
@@ -52,6 +56,7 @@ export type PipelineMetrics = {
   total: number;
   byStage: Record<ClientWorkflowStage, number>;
   documentsNeeded: number;  // clients with unfulfilled mandatory document requirements
+  needsRescore: number;     // completed assessments with post-completion answer edits
   stalled: number;          // clients with no activity in 7+ days
   intakesAwaitingReview: number; // submitted intake not yet approved/rejected
 };
@@ -65,6 +70,8 @@ export type PipelineFilters = {
   awaitingIntakeReview?: boolean;
   /** When true, only clients with unfulfilled mandatory documents */
   documentsNeeded?: boolean;
+  /** When true, only clients whose completed assessment answers changed */
+  needsRescore?: boolean;
   search?: string;
   sortBy?: 'name' | 'stage' | 'progress' | 'lastActivity';
   sortDir?: 'asc' | 'desc';
@@ -106,6 +113,8 @@ export type ClientDetail = {
     score: number | null;
     riskLevel: string | null;
     completedAt: Date | null;
+    version: number;
+    answersChangedAfterCompleteAt: Date | null;
     pillarScores: { pillar: string; score: number; riskLevel: string }[];
   } | null;
 };

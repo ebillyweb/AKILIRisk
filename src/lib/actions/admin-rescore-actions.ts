@@ -330,6 +330,7 @@ export async function rescoreAssessment(
         data: ({
           version: newVersion,
           lastRescoredAt: rescoredAt,
+          answersChangedAfterCompleteAt: null,
         } as unknown) as Prisma.AssessmentUpdateInput,
       });
     });

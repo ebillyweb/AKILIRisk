@@ -299,6 +299,9 @@ model Assessment {
   /// the per-client view + PDF cover can render "Last re-scored Mar 4, 2026".
   /// NULL = never re-scored (true of every pre-C2 row).
   lastRescoredAt DateTime?
+  /// Set when a client changes stored answers after status COMPLETED.
+  /// Cleared when an admin re-score runs. Drives advisor re-score cues.
+  answersChangedAfterCompleteAt DateTime?
   updatedAt     DateTime         @updatedAt
   approvalId    String?          // Links to IntakeApproval for customized assessments
 
@@ -775,6 +778,7 @@ enum SignalType {
   UPSELL_TRIGGER
   ASSESSMENT_COMPLETED
   ASSESSMENT_RESCORED
+  ASSESSMENT_ANSWERS_CHANGED
   REPORT_PUBLISHED
 }
 

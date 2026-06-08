@@ -9,6 +9,7 @@ import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "luc
 import { setClientIntakeWaiver } from "@/lib/actions/advisor-intake-waiver-actions";
 import { cn } from "@/lib/utils";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -283,6 +284,24 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
+                {client.needsRescore && assessmentDetails.answersChangedAfterCompleteAt ? (
+                  <Alert variant="warning">
+                    <AlertTitle>Re-score needed</AlertTitle>
+                    <AlertDescription>
+                      This client changed assessment answers after completion
+                      {assessmentDetails.version
+                        ? ` (currently scored as v${assessmentDetails.version})`
+                        : ""}
+                      . Answers were updated{" "}
+                      {formatDistanceToNow(
+                        new Date(assessmentDetails.answersChangedAfterCompleteAt),
+                        { addSuffix: true },
+                      )}
+                      . Request a platform re-score so scores, recommendations, and
+                      published reports reflect the latest responses.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
                 <div className="grid grid-cols-2 gap-4 rounded-xl border border-border/80 bg-muted/20 p-4 md:grid-cols-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Status</p>

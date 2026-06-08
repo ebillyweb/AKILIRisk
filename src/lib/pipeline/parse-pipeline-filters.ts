@@ -31,6 +31,7 @@ export function parsePipelineFiltersFromSearchParams(
     stalled: single("stalled") === "1" ? true : undefined,
     awaitingIntakeReview: single("awaitingReview") === "1" ? true : undefined,
     documentsNeeded: single("documentsNeeded") === "1" ? true : undefined,
+    needsRescore: single("needsRescore") === "1" ? true : undefined,
     search: single("search"),
     sortBy: "lastActivity",
     sortDir: "desc",
@@ -54,6 +55,7 @@ export function buildPipelineHref(
   if (filters.stalled) sp.set("stalled", "1");
   if (filters.awaitingIntakeReview) sp.set("awaitingReview", "1");
   if (filters.documentsNeeded) sp.set("documentsNeeded", "1");
+  if (filters.needsRescore) sp.set("needsRescore", "1");
   if (filters.search?.trim()) sp.set("search", filters.search.trim());
   if (page > 1) sp.set("page", String(page));
   const query = sp.toString();

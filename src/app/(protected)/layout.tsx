@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ProtectedNav } from "@/components/layout/ProtectedNav";
-import { ClientPageHeaderFromPath } from "@/components/layout/ClientPageHeader";
+import { ClientPageHeaderSlot } from "@/components/layout/ClientPageHeaderSlot";
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
 import { RedirectIncompleteIntake } from "@/components/layout/RedirectIncompleteIntake";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
@@ -72,6 +72,7 @@ export default async function ProtectedLayout({
 
   let restrictNavToIntake = false;
   let assessmentUnlockedForClient = false;
+  let clientIntakeWaived = false;
   let hideProfilesNav = false;
   let clientAdvisorBranding: Awaited<
     ReturnType<typeof resolveClientPortalBrandingForUser>
@@ -99,6 +100,7 @@ export default async function ProtectedLayout({
     clientPortalSubdomain = tenantSubdomain;
     restrictNavToIntake = gate.restrictNavToIntake;
     assessmentUnlockedForClient = gate.assessmentUnlocked;
+    clientIntakeWaived = gate.intakeWaived;
     hideProfilesNav = !householdProfilesEnabled;
   }
 
@@ -316,7 +318,13 @@ export default async function ProtectedLayout({
             tabIndex={-1}
           >
             <div className={cn(!isWorkspaceSlimHeaderRoute && "space-y-6 sm:space-y-8")}>
-              {!isWorkspaceSlimHeaderRoute && <ClientPageHeaderFromPath />}
+              {!isWorkspaceSlimHeaderRoute && (
+                <ClientPageHeaderSlot
+                  pathname={pathname}
+                  intakeWaived={clientIntakeWaived}
+                  branding={clientAdvisorBranding}
+                />
+              )}
               {children}
             </div>
           </main>
