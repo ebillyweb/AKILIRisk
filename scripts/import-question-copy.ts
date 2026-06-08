@@ -27,7 +27,7 @@ import {
 import { disconnectPrismaScript, prisma } from "./lib/prisma-for-scripts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const DEFAULT_IN = resolve(repoRoot, "scripts/copy/question-bank-copy.csv");
+const DEFAULT_IN = resolve(repoRoot, "scripts/copy/question-bank-import.csv");
 const DEFAULT_SEED = resolve(repoRoot, "scripts/sql/belvedere-pillar-ddl-seed.sql");
 
 function parseArgs(argv: string[]) {

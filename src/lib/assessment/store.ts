@@ -36,6 +36,8 @@ interface AssessmentState {
   lastSaved: string | null;
   isLoading: boolean;
   isHydrated: boolean;
+  /** True after zustand persist finishes rehydrating from localStorage (client only). */
+  persistRehydrated: boolean;
   orphanedAnswerIds: string[];
   householdProfile: HouseholdProfile | null;
   /** DB-backed family-governance questions (visible only). Loaded before assessment UI renders. */
@@ -66,6 +68,7 @@ const initialState = {
   lastSaved: null,
   isLoading: false,
   isHydrated: false,
+  persistRehydrated: false,
   orphanedAnswerIds: [],
   householdProfile: null,
   familyGovernanceQuestionBank: null,
@@ -76,9 +79,14 @@ function questionUniverseForOrphans(state: AssessmentState): Question[] {
   return [...gov, ...allIdentityQuestions];
 }
 
+let markPersistRehydrated: (() => void) | null = null;
+
 export const useAssessmentStore = create<AssessmentState>()(
   persist(
-    (set) => ({
+    (set) => {
+      markPersistRehydrated = () => set({ persistRehydrated: true });
+
+      return {
       ...initialState,
 
       setAssessmentId: (id: string) =>
@@ -166,7 +174,7 @@ export const useAssessmentStore = create<AssessmentState>()(
         }),
 
       resetAssessment: () =>
-        set(initialState),
+        set({ ...initialState, persistRehydrated: true }),
 
       setHydrated: (hydrated: boolean) =>
         set({ isHydrated: hydrated }),
@@ -188,7 +196,8 @@ export const useAssessmentStore = create<AssessmentState>()(
 
       setFamilyGovernanceQuestionBank: (questions: Question[] | null) =>
         set({ familyGovernanceQuestionBank: questions }),
-    }),
+      };
+    },
     {
       name: 'akili-assessment',
       partialize: (state) => ({
@@ -201,6 +210,11 @@ export const useAssessmentStore = create<AssessmentState>()(
         lastSaved: state.lastSaved,
         orphanedAnswerIds: state.orphanedAnswerIds,
       }),
+      onRehydrateStorage: () => (_state, error) => {
+        if (!error) {
+          markPersistRehydrated?.();
+        }
+      },
     }
   )
 );

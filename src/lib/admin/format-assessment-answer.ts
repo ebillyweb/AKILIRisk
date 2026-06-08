@@ -40,6 +40,13 @@ export function formatAssessmentAnswerForDisplay(
     return formatMonthYearAnswerForDisplay(answer);
   }
 
+  if (question?.options?.length) {
+    const match = question.options.find(
+      (o) => o.value === answer || String(o.value) === String(answer)
+    );
+    if (match?.label) return match.label;
+  }
+
   if (question?.type === "maturity-scale" && typeof answer === "number") {
     const label = MATURITY_LEVEL_LABELS[answer];
     return label ? `${answer} — ${label}` : String(answer);
@@ -47,13 +54,6 @@ export function formatAssessmentAnswerForDisplay(
 
   if (question?.type === "likert" && (typeof answer === "number" || typeof answer === "string")) {
     return String(answer);
-  }
-
-  if (question?.options?.length) {
-    const match = question.options.find(
-      (o) => o.value === answer || String(o.value) === String(answer)
-    );
-    if (match?.label) return match.label;
   }
 
   if (typeof answer === "boolean") return answer ? "Yes" : "No";

@@ -16,7 +16,20 @@ describe("formatAssessmentAnswerForDisplay", () => {
     ).toBe("No documents attached — client continued without upload");
   });
 
-  it("formats maturity-scale with rubric label", () => {
+  it("prefers question-specific maturity labels over generic rubric", () => {
+    expect(
+      formatAssessmentAnswerForDisplay(
+        {
+          type: "maturity-scale",
+          options: [{ value: 0, label: "Filed independently, no broker" }],
+        },
+        0,
+        false
+      )
+    ).toBe("Filed independently, no broker");
+  });
+
+  it("falls back to rubric label when options are missing", () => {
     expect(
       formatAssessmentAnswerForDisplay({ type: "maturity-scale", options: [] }, 2, false)
     ).toContain("2");

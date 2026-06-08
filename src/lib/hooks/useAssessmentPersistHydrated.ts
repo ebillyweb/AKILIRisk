@@ -3,22 +3,19 @@
 import { useEffect, useState } from "react";
 import { useAssessmentStore } from "@/lib/assessment/store";
 
-/** True once zustand persist has rehydrated answers from localStorage. */
+/**
+ * True once zustand persist has rehydrated answers from localStorage (client only).
+ */
 export function useAssessmentPersistHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(() =>
-    useAssessmentStore.persist.hasHydrated()
-  );
+  const persistRehydrated = useAssessmentStore((state) => state.persistRehydrated);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (useAssessmentStore.persist.hasHydrated()) {
-      setHydrated(true);
-      return;
+    setIsClient(true);
+    if (!useAssessmentStore.getState().persistRehydrated) {
+      useAssessmentStore.setState({ persistRehydrated: true });
     }
-
-    return useAssessmentStore.persist.onFinishHydration(() => {
-      setHydrated(true);
-    });
   }, []);
 
-  return hydrated;
+  return isClient && persistRehydrated;
 }
