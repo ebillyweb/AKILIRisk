@@ -136,12 +136,16 @@ export default async function ProtectedLayout({
       )}
       <div className="page-shell">
         <div
-          className="hero-surface overflow-x-hidden rounded-[2rem]"
+          className={cn(
+            "hero-surface overflow-x-hidden rounded-[2rem]",
+            previewHex && "branded-portal-shell",
+          )}
           style={
             previewHex
-              ? {
-                  background: "#f9fafb",
-                }
+              ? ({
+                  "--branded-portal-shell-bg": previewHex.secondary,
+                  "--client-brand-primary": previewHex.primary,
+                } as React.CSSProperties)
               : undefined
           }
         >
@@ -149,16 +153,8 @@ export default async function ProtectedLayout({
             className={cn(
               "border-b section-divider overflow-visible",
               !previewHex && "bg-background/55",
+              previewHex && "branded-portal-nav-header",
             )}
-            style={
-              previewHex
-                ? {
-                    backgroundColor: previewHex.secondary,
-                    borderBottomColor: `${previewHex.primary}33`,
-                    color: previewHex.primary,
-                  }
-                : undefined
-            }
           >
             <div
               className={cn(

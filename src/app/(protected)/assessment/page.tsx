@@ -244,6 +244,11 @@ export default function AssessmentHubPage() {
 
   const focusAreaCount = customizationConfig?.emphasisAreas.length ?? 0;
 
+  const resumePillar = pillarStats.find((p) => p.status === "in-progress");
+  const nextPillar = pillarStats.find((p) => p.status === "not-started");
+  const allPillarsComplete =
+    completedPillarSlugs.length === ASSESSMENT_PILLAR_IDS.length;
+
   if (
     isInitializing ||
     questionsLoading ||
@@ -325,7 +330,9 @@ export default function AssessmentHubPage() {
       <section className="space-y-4">
         <div className="space-y-2">
           <p className="editorial-kicker">Assessment pillars</p>
-          <h2 className="text-3xl font-semibold">Household risk domains</h2>
+          <h2 className="text-3xl font-semibold text-foreground">
+            Household risk domains
+          </h2>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2" data-testid="assessment-pillar-grid">
@@ -347,54 +354,52 @@ export default function AssessmentHubPage() {
               />
             )
           )}
-        </div>
-      </section>
 
-      <section className="hero-surface rounded-[1.75rem] border-t section-divider p-6 sm:p-8">
-        <div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl space-y-2">
-            <p className="editorial-kicker">Next step</p>
-            {completedPillarSlugs.length === ASSESSMENT_PILLAR_IDS.length ? (
-              <p className="text-base leading-7 text-muted-foreground">
-                All six pillars are scored. Review your results and download your report once
-                your advisor publishes it.
-              </p>
-            ) : pillarStats.some((p) => p.status === "in-progress") ? (
-              <p className="text-base leading-7 text-muted-foreground">
-                Continue your assessment to receive tailored recommendations for each domain.
-              </p>
-            ) : (
-              <p className="text-base leading-7 text-muted-foreground">
-                Begin with any pillar. Each domain saves progress independently; complete all
-                six to finish the assessment.
-              </p>
-            )}
-          </div>
-
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            {completedPillarSlugs.length === ASSESSMENT_PILLAR_IDS.length ? (
-              <>
-                {summaryAccess?.canViewSummary ? (
-                  <Button size="lg" onClick={() => router.push("/assessment/results")}>
-                    View results
-                  </Button>
+          <Card
+            className="md:col-span-2 bg-background/55"
+            data-testid="assessment-next-step"
+          >
+            <CardContent className="flex w-full flex-col items-start gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-2xl space-y-2">
+                <p className="editorial-kicker">Next step</p>
+                {allPillarsComplete ? (
+                  <p className="text-base leading-7 text-muted-foreground">
+                    All six pillars are scored. Review your results and download your report once
+                    your advisor publishes it.
+                  </p>
+                ) : resumePillar ? (
+                  <p className="text-base leading-7 text-muted-foreground">
+                    Continue your assessment to receive tailored recommendations for each domain.
+                  </p>
                 ) : (
-                  <Button size="lg" disabled title="Available after your advisor publishes your Risk Profile">
-                    View results
-                  </Button>
+                  <p className="text-base leading-7 text-muted-foreground">
+                    Begin with any pillar. Each domain saves progress independently; complete all
+                    six to finish the assessment.
+                  </p>
                 )}
-                <Button variant="outline" size="lg" onClick={() => router.push("/dashboard")}>
-                  Dashboard
-                </Button>
-              </>
-            ) : (() => {
-              const resumePillar =
-                (serverResumePillar &&
-                  pillarStats.find((p) => p.pillar.slug === serverResumePillar)) ||
-                pillarStats.find((p) => p.status === "in-progress");
+              </div>
 
-              if (resumePillar) {
-                return (
+              <div className="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row">
+                {allPillarsComplete ? (
+                  <>
+                    {summaryAccess?.canViewSummary ? (
+                      <Button size="lg" onClick={() => router.push("/assessment/results")}>
+                        View results
+                      </Button>
+                    ) : (
+                      <Button
+                        size="lg"
+                        disabled
+                        title="Available after your advisor publishes your Risk Profile"
+                      >
+                        View results
+                      </Button>
+                    )}
+                    <Button variant="outline" size="lg" onClick={() => router.push("/dashboard")}>
+                      Dashboard
+                    </Button>
+                  </>
+                ) : resumePillar ? (
                   <Button
                     size="lg"
                     onClick={() => handleContinueAssessment(resumePillar.pillar.slug)}
@@ -409,27 +414,25 @@ export default function AssessmentHubPage() {
                       `Continue ${resumePillar.pillar.name}`
                     )}
                   </Button>
-                );
-              }
-
-              return (
-                <Button
-                  size="lg"
-                  onClick={() => handleStartAssessment("governance")}
-                  disabled={createAssessmentMutation.isPending}
-                >
-                  {createAssessmentMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Starting...
-                    </>
-                  ) : (
-                    "Begin with Governance"
-                  )}
-                </Button>
-              );
-            })()}
-          </div>
+                ) : nextPillar ? (
+                  <Button
+                    size="lg"
+                    onClick={() => handleStartAssessment(nextPillar.pillar.slug)}
+                    disabled={createAssessmentMutation.isPending}
+                  >
+                    {createAssessmentMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Starting...
+                      </>
+                    ) : (
+                      `Begin with ${nextPillar.pillar.name}`
+                    )}
+                  </Button>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
     </div>

@@ -278,6 +278,66 @@
       0 28px 70px -48px rgba(0, 0, 0, 0.55);
   }
 
+  /* Branded client portal — tint surfaces instead of flooding with secondary. */
+  .branded-portal-shell {
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--branded-portal-shell-bg, #f5f5f5) 9%, var(--card)),
+      color-mix(in srgb, var(--branded-portal-shell-bg, #f5f5f5) 4%, var(--background))
+    );
+  }
+
+  .dark .branded-portal-shell {
+    background: linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--card) 92%, var(--foreground) 8%),
+      color-mix(in oklab, var(--surface) 85%, var(--background) 15%)
+    );
+  }
+
+  .branded-portal-nav-header {
+    background: color-mix(
+      in srgb,
+      var(--client-brand-primary, var(--primary)) 6%,
+      var(--card)
+    ) !important;
+    border-bottom-color: color-mix(
+      in srgb,
+      var(--client-brand-primary, var(--primary)) 14%,
+      var(--border)
+    ) !important;
+    color: var(--foreground) !important;
+  }
+
+  .client-header-branded {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--client-brand-primary) 8%, var(--card)),
+      color-mix(in srgb, var(--client-brand-primary) 3%, var(--background))
+    );
+    border: 1px solid
+      color-mix(in srgb, var(--client-brand-primary) 16%, var(--border));
+    box-shadow: inset 3px 0 0 var(--client-brand-primary);
+  }
+
+  .client-header-branded .professional-kicker {
+    color: var(--client-brand-primary);
+  }
+
+  .client-header-branded .professional-title {
+    color: var(--foreground);
+  }
+
+  .client-header-branded .professional-subtitle {
+    color: var(--muted-foreground);
+  }
+
+  .client-header-branded .professional-icon {
+    color: var(--client-brand-primary);
+    background: color-mix(in srgb, var(--client-brand-primary) 12%, var(--card));
+    border-color: color-mix(in srgb, var(--client-brand-primary) 22%, var(--border));
+  }
+
   /* Professional header typography */
   .professional-kicker {
     color: color-mix(in oklab, var(--foreground) 70%, transparent 30%);
@@ -644,11 +704,15 @@
 
   /* Legacy support */
   .editorial-kicker {
-    color: color-mix(in oklab, var(--foreground) 80%, transparent 20%);
+    color: var(--muted-foreground);
     letter-spacing: 0.16em;
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
+  }
+
+  .dark .editorial-kicker {
+    color: color-mix(in oklab, var(--foreground) 90%, transparent 10%);
   }
 
   .section-divider {

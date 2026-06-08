@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useBrandingOptional } from "@/components/providers/BrandingProvider";
 import { getPreviewBrandHex, type PreviewBrandHex } from "@/lib/branding/preview-hex";
+import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   FileText,
@@ -89,32 +90,26 @@ export function ClientPageHeader(
   props: ClientPageHeaderConfig & { brandHex?: PreviewBrandHex | null },
 ) {
   const { icon: Icon, kicker, title, subtitle, brandHex } = props;
-  const iconSurfaceStyle = brandHex
-    ? {
-        color: brandHex.primary,
-        background: `color-mix(in srgb, ${brandHex.primary} 10%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${brandHex.primary} 18%, transparent)`,
-      }
-    : undefined;
   return (
     <header
       role="banner"
-      className="client-header professional-header"
+      className={cn(
+        "client-header professional-header",
+        brandHex && "client-header-branded",
+      )}
       style={
         brandHex
-          ? {
-              background: brandHex.secondary,
-              borderColor: `color-mix(in srgb, ${brandHex.primary} 20%, transparent)`,
-            }
+          ? ({
+              "--client-brand-primary": brandHex.primary,
+            } as React.CSSProperties)
           : undefined
-    }
+      }
     >
       <div className="flex items-start gap-3 sm:gap-4 header-section-spacing">
-      <div
+        <div
           className="professional-icon shrink-0"
           role="img"
           aria-label={`${title} section icon`}
-          style={iconSurfaceStyle}
         >
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
@@ -123,18 +118,12 @@ export function ClientPageHeader(
             className="professional-kicker"
             id="client-section-context"
             role="doc-subtitle"
-            style={
-              brandHex
-                ? { color: brandHex.primary, opacity: 0.85 }
-                : undefined
-            }
           >
             {kicker}
           </p>
           <h1
             className="professional-title text-balance"
             aria-describedby="client-section-context client-subtitle"
-            style={brandHex ? { color: brandHex.primary } : undefined}
           >
             {title}
           </h1>
@@ -144,11 +133,6 @@ export function ClientPageHeader(
               id="client-subtitle"
               role="doc-subtitle"
               aria-label={`Page description: ${subtitle}`}
-              style={
-                brandHex
-                  ? { color: brandHex.primary, opacity: 0.78 }
-                  : undefined
-              }
             >
               {subtitle}
             </p>

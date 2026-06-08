@@ -1,6 +1,8 @@
 'use client';
 
 import { Progress } from "@/components/ui/progress";
+import { RISK_AREAS } from "@/lib/advisor/types";
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { cn } from "@/lib/utils";
 
 /**
@@ -50,9 +52,14 @@ export function OverallProgress({
   totalPillars,
   currentPillar,
 }: OverallProgressProps) {
-  const pillars = [
-    { id: 'family-governance', label: 'Family Governance' },
-  ];
+  const pillars = RISK_AREAS.map((area) => ({
+    id: area.id,
+    label: area.name,
+  }));
+  const completedSet = new Set(completedPillars.map(normalizePillarSlug));
+  const normalizedCurrent = currentPillar
+    ? normalizePillarSlug(currentPillar)
+    : undefined;
 
   return (
     <div className="space-y-4">
@@ -66,12 +73,13 @@ export function OverallProgress({
       </div>
       <div className="flex gap-2">
         {pillars.map((pillar) => {
-          const isCompleted = completedPillars.includes(pillar.id);
-          const isCurrent = currentPillar === pillar.id;
+          const isCompleted = completedSet.has(pillar.id);
+          const isCurrent = normalizedCurrent === pillar.id;
 
           return (
             <div
               key={pillar.id}
+              title={pillar.label}
               className={cn(
                 "flex-1 h-2.5 rounded-full transition-colors",
                 isCompleted && "bg-emerald-500",
@@ -82,10 +90,26 @@ export function OverallProgress({
           );
         })}
       </div>
-      <div className="flex justify-between text-xs text-muted-foreground">
-        {pillars.map((pillar, idx) => (
-          <span key={pillar.id}>{idx + 1}. {pillar.label}</span>
-        ))}
+      <div className="grid grid-cols-6 gap-1.5 text-center text-[10px] text-muted-foreground sm:text-xs">
+        {pillars.map((pillar, idx) => {
+          const isCompleted = completedSet.has(pillar.id);
+          const isCurrent = normalizedCurrent === pillar.id;
+
+          return (
+            <span
+              key={pillar.id}
+              title={pillar.label}
+              className={cn(
+                "truncate",
+                isCurrent && !isCompleted && "font-medium text-foreground",
+                isCompleted && "text-emerald-600 dark:text-emerald-400"
+              )}
+            >
+              <span className="sm:hidden">{idx + 1}</span>
+              <span className="hidden sm:inline">{pillar.label}</span>
+            </span>
+          );
+        })}
       </div>
     </div>
   );

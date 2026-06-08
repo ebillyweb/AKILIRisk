@@ -158,7 +158,9 @@ describe("sub-question branching (A1 / A1a)", () => {
   it("resolves parent question numbers from sub ids", () => {
     expect(parentQuestionNumberForSub("A1a")).toBe("A1");
     expect(parentQuestionNumberForSub("A3c")).toBe("A3");
+    expect(parentQuestionNumberForSub("6.3a")).toBe("6.3");
     expect(parentQuestionNumberForSub("A1")).toBeNull();
+    expect(parentQuestionNumberForSub("6.3")).toBeNull();
   });
 
   it("hides A1a until A1 is answered at documented maturity (>= 2)", () => {

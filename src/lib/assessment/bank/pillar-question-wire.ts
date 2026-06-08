@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { BranchingPredicateWire, GovernanceQuestionWire } from "./behaviors";
 import { riskAreaIdForPillarCategory } from "./pillar-category-risk-area";
 import { isDocumentUploadFillableQuestionText } from "@/lib/assessment/question-upload";
-import { GOVERNANCE_DOCUMENT_UPLOAD_MIN_SCORE } from "@/lib/assessment/governance-document-upload";
+import { DOCUMENT_UPLOAD_MIN_SCORE } from "@/lib/assessment/document-upload-sub";
 import { isDateQuestionText } from "@/lib/assessment/question-date";
 
 export type PillarQuestionWithHierarchy = PillarQuestion & {
@@ -250,14 +250,14 @@ export function assignSortOrderGlobals(wires: GovernanceQuestionWire[]): Governa
   return wires.map((w, i) => ({ ...w, sortOrderGlobal: i }));
 }
 
-/** Belvedere sub-question ids: `A1a` → parent `A1`, `A3b` → `A3`. */
+/** Belvedere sub-question ids: `A1a` → `A1`, `6.3a` → `6.3`. */
 export function parentQuestionNumberForSub(questionNumber: string): string | null {
-  const match = questionNumber.match(/^([A-Za-z]*\d+)([a-z]+)$/);
+  const match = questionNumber.match(/^(.+\d)([a-z]+)$/);
   return match?.[1] ?? null;
 }
 
 /** Minimum scored_0_3 value (0-based) for the 3rd maturity option. */
-export const MATURITY_DOCUMENT_UPLOAD_MIN_SCORE = GOVERNANCE_DOCUMENT_UPLOAD_MIN_SCORE;
+export const MATURITY_DOCUMENT_UPLOAD_MIN_SCORE = DOCUMENT_UPLOAD_MIN_SCORE;
 
 function subQuestionBranchingPredicate(
   parent: PillarQuestionWithHierarchy,
