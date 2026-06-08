@@ -2,6 +2,7 @@ import "server-only";
 
 import { auth } from "@/lib/auth";
 import { isPlatformAdminRole } from "@/lib/auth-roles";
+import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
 import { prisma } from "@/lib/db";
 
 export type PolicyDocumentAccess =
@@ -29,11 +30,15 @@ export async function resolvePolicyDocumentAccess(
 
   const assessment = await prisma.assessment.findUnique({
     where: { id: assessmentId },
-    select: { userId: true },
+    select: { userId: true, deliverablePhase: true },
   });
   if (!assessment) {
     return { ok: false, status: 404 };
   }
+
+  const profilePublished = isDeliverableProfilePublished(
+    assessment.deliverablePhase,
+  );
 
   const sessionUserId = session.user.id;
   const sessionRole = session.user.role?.toString().toUpperCase();
@@ -41,6 +46,9 @@ export async function resolvePolicyDocumentAccess(
   const isAdmin = isPlatformAdminRole(sessionRole);
 
   if (isOwner) {
+    if (!profilePublished) {
+      return { ok: false, status: 404 };
+    }
     return {
       ok: true,
       clientUserId: assessment.userId,
@@ -77,6 +85,10 @@ export async function resolvePolicyDocumentAccess(
     });
 
     if (!assignment) {
+      return { ok: false, status: 404 };
+    }
+
+    if (!profilePublished) {
       return { ok: false, status: 404 };
     }
 

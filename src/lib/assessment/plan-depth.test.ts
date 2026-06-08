@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   actionPlanDepthForPhase,
   implementationTypeLabel,
+  isDeliverableProfilePublished,
 } from "@/lib/assessment/plan-depth";
 
 describe("actionPlanDepthForPhase", () => {
@@ -12,6 +13,14 @@ describe("actionPlanDepthForPhase", () => {
 
   it("uses portfolio depth for PORTFOLIO", () => {
     expect(actionPlanDepthForPhase("PORTFOLIO")).toBe("portfolio");
+  });
+});
+
+describe("isDeliverableProfilePublished", () => {
+  it("is false in PREVIEW and true after profile publish", () => {
+    expect(isDeliverableProfilePublished("PREVIEW")).toBe(false);
+    expect(isDeliverableProfilePublished("PROFILE")).toBe(true);
+    expect(isDeliverableProfilePublished("PORTFOLIO")).toBe(true);
   });
 });
 

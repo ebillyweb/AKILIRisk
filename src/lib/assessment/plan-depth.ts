@@ -2,6 +2,13 @@ import type { DeliverablePhase } from "@prisma/client";
 
 export type ActionPlanDepth = "profile" | "portfolio";
 
+/** True after the advisor publishes the risk profile (Phase 2+). */
+export function isDeliverableProfilePublished(
+  phase: DeliverablePhase,
+): boolean {
+  return phase === "PROFILE" || phase === "PORTFOLIO";
+}
+
 /** PROFILE shows what to address; PORTFOLIO adds facilitated execution detail. */
 export function actionPlanDepthForPhase(
   phase: DeliverablePhase,

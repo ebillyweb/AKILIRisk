@@ -1,4 +1,4 @@
-import { ClientWorkflowStage, InvitationStatus } from '@prisma/client';
+import { ClientWorkflowStage, InvitationStatus, type DeliverablePhase } from '@prisma/client';
 
 // Re-export for convenience
 export { ClientWorkflowStage } from '@prisma/client';
@@ -115,6 +115,7 @@ export type ClientDetail = {
     completedAt: Date | null;
     version: number;
     answersChangedAfterCompleteAt: Date | null;
+    deliverablePhase: DeliverablePhase;
     pillarScores: { pillar: string; score: number; riskLevel: string }[];
   } | null;
 };

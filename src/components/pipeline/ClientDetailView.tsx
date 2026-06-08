@@ -19,6 +19,7 @@ import { DocumentRequirements } from "./DocumentRequirements";
 import { ClientAuthControls } from "./ClientAuthControls";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
+import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { TemplateList } from "@/components/reports/TemplateList";
@@ -377,7 +378,9 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
             </Card>
           )}
 
-          {assessmentDetails?.id && assessmentDetails.pillarScores.length > 0 && (
+          {assessmentDetails?.id &&
+            assessmentDetails.pillarScores.length > 0 &&
+            isDeliverableProfilePublished(assessmentDetails.deliverablePhase) && (
             <Card>
               <CardHeader>
                 <CardTitle>Policy documents</CardTitle>

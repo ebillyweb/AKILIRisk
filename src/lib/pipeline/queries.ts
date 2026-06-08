@@ -701,6 +701,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
       completedAt: latestAssessment.completedAt,
       version: latestAssessment.version,
       answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
+      deliverablePhase: latestAssessment.deliverablePhase,
       pillarScores: pillarScores.map((pillar) => ({
         pillar: pillar.pillar,
         score: pillar.score,
@@ -716,6 +717,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
       completedAt: latestAssessment.completedAt,
       version: latestAssessment.version,
       answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
+      deliverablePhase: latestAssessment.deliverablePhase,
       pillarScores: [],
     };
   }
