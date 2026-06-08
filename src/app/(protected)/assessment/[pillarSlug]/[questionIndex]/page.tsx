@@ -6,7 +6,7 @@ import { useAssessmentStore } from '@/lib/assessment/store';
 import { useAssessmentNavigation } from '@/lib/hooks/useAssessmentNavigation';
 import { useAutoSave } from '@/lib/hooks/useAutoSave';
 import { useHouseholdProfile } from '@/lib/hooks/useHouseholdProfile';
-import { usePillarQuestions } from '@/lib/hooks/useAssessmentPillars';
+import { usePillarQuestions, useAssessmentPillarScores } from '@/lib/hooks/useAssessmentPillars';
 import { getPersonalizedText } from '@/lib/assessment/personalization';
 import { hasDocumentUploadFiles } from '@/lib/assessment/question-upload';
 import { QuestionCard } from '@/components/assessment/QuestionCard';
@@ -55,6 +55,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
 
   const {
     currentQuestion,
+    currentIndex,
     goNext,
     goBack,
     canGoBack,
@@ -65,6 +66,14 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   } = useAssessmentNavigation(pillarSlug, questionIndex, {
     questions: pillarQuestions,
   });
+
+  const { data: pillarScores = [] } = useAssessmentPillarScores(assessmentId);
+  const pillarHasScore = pillarScores.some(
+    (score) => normalizePillarSlug(score.pillar) === pillarSlug,
+  );
+  const allVisibleAnswered =
+    progress.total > 0 && progress.answered >= progress.total;
+  const isReviewingPillar = pillarHasScore || allVisibleAnswered;
 
   useEffect(() => {
     setHouseholdProfile(profile);
@@ -188,6 +197,14 @@ export default function QuestionPage({ params }: QuestionPageProps) {
           answeredCount={progress.answered}
           totalCount={progress.total}
           pillarName={currentPillar.name}
+          reviewingQuestion={
+            isReviewingPillar
+              ? {
+                  index: currentIndex + 1,
+                  total: visibleQuestions.length,
+                }
+              : undefined
+          }
         />
       </section>
 
@@ -205,7 +222,7 @@ export default function QuestionPage({ params }: QuestionPageProps) {
             }
             isSkipped={isQuestionSkipped}
             questionPosition={{
-              index: questionIndex + 1,
+              index: currentIndex + 1,
               total: visibleQuestions.length,
             }}
             moduleName={currentPillar.name}

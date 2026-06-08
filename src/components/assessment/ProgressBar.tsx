@@ -16,24 +16,52 @@ interface SectionProgressProps {
   answeredCount: number;
   totalCount: number;
   pillarName: string;
+  /** When set, header shows which question the client is reviewing. */
+  reviewingQuestion?: {
+    index: number;
+    total: number;
+  };
 }
 
 export function SectionProgress({
   answeredCount,
   totalCount,
   pillarName,
+  reviewingQuestion,
 }: SectionProgressProps) {
-  const percentage = totalCount > 0 ? (answeredCount / totalCount) * 100 : 0;
+  const isReviewing = reviewingQuestion != null && reviewingQuestion.total > 0;
+  const reviewIndex = reviewingQuestion?.index ?? 0;
+  const reviewTotal = reviewingQuestion?.total ?? 0;
+
+  const percentage = isReviewing
+    ? (reviewIndex / reviewTotal) * 100
+    : totalCount > 0
+      ? (answeredCount / totalCount) * 100
+      : 0;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="editorial-kicker">Current Section</p>
-          <span className="text-lg font-semibold text-foreground">{pillarName}</span>
+          {isReviewing ? (
+            <>
+              <p className="editorial-kicker">Reviewing answer</p>
+              <span className="text-lg font-semibold text-foreground">
+                Question {reviewIndex} of {reviewTotal}
+              </span>
+              <p className="text-sm text-muted-foreground">{pillarName}</p>
+            </>
+          ) : (
+            <>
+              <p className="editorial-kicker">Current Section</p>
+              <span className="text-lg font-semibold text-foreground">{pillarName}</span>
+            </>
+          )}
         </div>
         <span className="text-sm text-muted-foreground">
-          {answeredCount} of {totalCount} questions
+          {isReviewing
+            ? `${reviewIndex} of ${reviewTotal} questions`
+            : `${answeredCount} of ${totalCount} questions`}
         </span>
       </div>
       <Progress value={percentage} className="h-2.5" />
