@@ -108,7 +108,7 @@ export function EnterpriseTeamPanel({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={overage ? "destructive" : "secondary"}>
+          <Badge variant={overage ? "warning" : "secondary"}>
             {seatUsage.activeSeats} / {seatUsage.seatLimit} seats
           </Badge>
           {overage ? (
@@ -183,7 +183,7 @@ export function EnterpriseTeamPanel({
                         ? "default"
                         : member.status === "INVITED"
                           ? "secondary"
-                          : "destructive"
+                          : "warning"
                     }
                   >
                     {member.status}
