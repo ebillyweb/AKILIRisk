@@ -33,6 +33,8 @@ export type AdvisorNavItem = {
   requiresFlag?: keyof AdvisorPlatformFeatureFlags;
   /** When true, item is shown only for enterprise OWNER/ADMIN team managers. */
   requiresEnterpriseTeam?: boolean;
+  /** When true, item is shown only when the advisor can access billing (solo or enterprise OWNER/ADMIN). */
+  requiresBillingAccess?: boolean;
 };
 
 export type AdvisorNavSection = {
@@ -133,7 +135,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Account",
     items: [
       { href: "/advisor/notifications", label: "Notifications", icon: Bell },
-      { href: "/advisor/billing", label: "Billing", icon: CreditCard },
+      { href: "/advisor/billing", label: "Billing", icon: CreditCard, requiresBillingAccess: true },
       {
         href: "/advisor/settings/team",
         label: "Team",
@@ -147,13 +149,15 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
 
 export function getVisibleAdvisorNavSections(
   flags: AdvisorPlatformFeatureFlags,
-  options?: { enterpriseTeamEnabled?: boolean }
+  options?: { enterpriseTeamEnabled?: boolean; billingNavEnabled?: boolean }
 ): AdvisorNavSection[] {
   const enterpriseTeamEnabled = options?.enterpriseTeamEnabled === true;
+  const billingNavEnabled = options?.billingNavEnabled !== false;
   return ADVISOR_NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (item.requiresEnterpriseTeam && !enterpriseTeamEnabled) return false;
+      if (item.requiresBillingAccess && !billingNavEnabled) return false;
       if (!item.requiresFlag) return true;
       return flags[item.requiresFlag];
     }),

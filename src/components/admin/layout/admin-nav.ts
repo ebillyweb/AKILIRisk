@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BarChart3,
   BookOpen,
+  Building2,
   ClipboardList,
   Database,
   FileText,
@@ -75,6 +76,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     title: "People",
     items: [
       { href: "/admin/advisors", label: "Advisors", icon: Users },
+      { href: "/admin/enterprises", label: "Enterprises", icon: Building2 },
       { href: "/admin/clients", label: "Clients", icon: UserRound },
       { href: "/admin/staff/admin-users", label: "Admin Users", icon: UserPlus, superAdminOnly: true },
     ],

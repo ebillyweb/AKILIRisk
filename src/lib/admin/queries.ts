@@ -347,3 +347,92 @@ export async function getAdvisorProfilesForLeadAssignment() {
   }));
 }
 
+export type AdminEnterpriseListRow = {
+  id: string;
+  name: string;
+  slug: string;
+  seatLimit: number;
+  clientLimit: number;
+  paymentMethod: string;
+  createdAt: Date;
+  activeSeats: number;
+  seatOverage: number;
+  subscriptionStatus: string | null;
+  ownerName: string | null;
+  ownerEmail: string | null;
+};
+
+export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]> {
+  await requireAdminRole();
+  const enterprises = await prisma.advisorEnterprise.findMany({
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      seatLimit: true,
+      clientLimit: true,
+      paymentMethod: true,
+      createdAt: true,
+      subscription: { select: { status: true } },
+      memberships: {
+        where: { role: "OWNER", status: "ACTIVE" },
+        take: 1,
+        select: {
+          user: { select: { name: true, emailCiphertext: true } },
+        },
+      },
+      _count: {
+        select: {
+          memberships: { where: { status: "ACTIVE" } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return enterprises.map((enterprise) => {
+    const owner = enterprise.memberships[0]?.user;
+    return {
+      id: enterprise.id,
+      name: enterprise.name,
+      slug: enterprise.slug,
+      seatLimit: enterprise.seatLimit,
+      clientLimit: enterprise.clientLimit,
+      paymentMethod: enterprise.paymentMethod,
+      createdAt: enterprise.createdAt,
+      activeSeats: enterprise._count.memberships,
+      seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
+      subscriptionStatus: enterprise.subscription?.status ?? null,
+      ownerName: owner?.name ?? null,
+      ownerEmail: owner ? decryptUserEmail(owner.emailCiphertext) : null,
+    };
+  });
+}
+
+export async function getAdvisorsEligibleForEnterpriseOwner() {
+  await requireAdminRole();
+  const advisors = await prisma.user.findMany({
+    where: {
+      role: "ADVISOR",
+      deletedAt: null,
+      enterpriseMembership: null,
+      advisorProfile: { isNot: null, enterpriseId: null },
+    },
+    select: {
+      id: true,
+      name: true,
+      emailCiphertext: true,
+      advisorProfile: { select: { firmName: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  return advisors.map((advisor) => {
+    const { emailCiphertext, advisorProfile, ...rest } = advisor;
+    return {
+      ...rest,
+      email: decryptUserEmail(emailCiphertext),
+      advisorProfile,
+    };
+  });
+}
+

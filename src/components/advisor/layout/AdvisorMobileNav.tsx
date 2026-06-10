@@ -12,12 +12,14 @@ interface AdvisorMobileNavProps {
   featureFlags: AdvisorPlatformFeatureFlags;
   unreadNotificationCount: number;
   enterpriseTeamEnabled?: boolean;
+  billingNavEnabled?: boolean;
 }
 
 export function AdvisorMobileNav({
   featureFlags,
   unreadNotificationCount,
   enterpriseTeamEnabled = false,
+  billingNavEnabled = true,
 }: AdvisorMobileNavProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -121,6 +123,7 @@ export function AdvisorMobileNav({
             <AdvisorSidebarNav
               featureFlags={featureFlags}
               enterpriseTeamEnabled={enterpriseTeamEnabled}
+              billingNavEnabled={billingNavEnabled}
               collapsibleSections
               onNavigate={close}
               className="overflow-y-auto"

@@ -28,6 +28,7 @@ import {
 interface AdvisorSidebarNavProps {
   featureFlags: AdvisorPlatformFeatureFlags;
   enterpriseTeamEnabled?: boolean;
+  billingNavEnabled?: boolean;
   collapsibleSections?: boolean;
   onNavigate?: () => void;
   className?: string;
@@ -109,6 +110,7 @@ function NavLinks({
 export function AdvisorSidebarNav({
   featureFlags,
   enterpriseTeamEnabled = false,
+  billingNavEnabled = true,
   collapsibleSections = false,
   onNavigate,
   className,
@@ -117,6 +119,7 @@ export function AdvisorSidebarNav({
   const searchParams = useSearchParams();
   const visibleSections = getVisibleAdvisorNavSections(featureFlags, {
     enterpriseTeamEnabled,
+    billingNavEnabled,
   });
   const activeHref = getActiveAdvisorNavHref(pathname, visibleSections, searchParams);
   const activeSectionId = getAdvisorNavSectionForHref(visibleSections, activeHref);

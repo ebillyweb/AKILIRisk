@@ -1,8 +1,13 @@
-import { BillingDashboard } from "@/components/advisor/billing/BillingDashboard";
-import { getBillingHistory, getSubscriptionDetails } from "@/lib/actions/billing";
+import { redirect } from "next/navigation";
+
+import {
+  BillingDashboard,
+  EnterpriseBillingDashboard,
+} from "@/components/advisor/billing/BillingDashboard";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { fetchPlanPricesForUi } from "@/lib/billing/plan-price-display";
 import { emptyPlanPricesForUi } from "@/lib/billing/plan-prices-ui";
+import { getBillingPageData } from "@/lib/actions/billing";
 
 export default async function AdvisorBillingPage({
   searchParams,
@@ -15,22 +20,33 @@ export default async function AdvisorBillingPage({
 
   const billingEnabled = process.env.ENABLE_BILLING_FEATURES !== "false";
 
-  const subRes = await getSubscriptionDetails();
-  const [invRes, planPrices] = await Promise.all([
-    getBillingHistory(),
-    billingEnabled ? fetchPlanPricesForUi() : Promise.resolve(emptyPlanPricesForUi()),
-  ]);
-
-  if (!subRes.success) {
+  const pageRes = await getBillingPageData();
+  if (!pageRes.success) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
-        {subRes.error}
+        {pageRes.error}
       </div>
     );
   }
 
-  const invoices = invRes.success ? invRes.data : [];
-  const sub = subRes.data;
+  if (pageRes.data.mode === "unavailable") {
+    redirect("/advisor");
+  }
+
+  if (pageRes.data.mode === "enterprise") {
+    return (
+      <EnterpriseBillingDashboard
+        enterprise={pageRes.data.enterprise}
+        initialInvoices={pageRes.data.invoices}
+        billingEnabled={billingEnabled}
+      />
+    );
+  }
+
+  const planPrices = billingEnabled
+    ? await fetchPlanPricesForUi()
+    : emptyPlanPricesForUi();
+  const sub = pageRes.data.subscription;
 
   if (isAdvisorBillingDebugEnabled()) {
     console.debug("[advisor-billing] server AdvisorBillingPage subscription payload", {
@@ -62,7 +78,7 @@ export default async function AdvisorBillingPage({
         sub?.status,
       ].join(":")}
       initialSubscription={sub}
-      initialInvoices={invoices}
+      initialInvoices={pageRes.data.invoices}
       checkoutNotice={checkout}
       billingEnabled={billingEnabled}
       planPrices={planPrices}

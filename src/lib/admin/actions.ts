@@ -912,6 +912,7 @@ export async function createEnterpriseByAdmin(input: unknown) {
     });
 
     revalidatePath("/admin/advisors");
+    revalidatePath("/admin/enterprises");
     revalidatePath("/admin");
 
     return {

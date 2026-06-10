@@ -13,6 +13,7 @@ interface AdvisorControlCenterLayoutProps {
   featureFlags: AdvisorPlatformFeatureFlags;
   unreadNotificationCount: number;
   enterpriseTeamEnabled?: boolean;
+  billingNavEnabled?: boolean;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ export function AdvisorControlCenterLayout({
   featureFlags,
   unreadNotificationCount,
   enterpriseTeamEnabled = false,
+  billingNavEnabled = true,
   className,
 }: AdvisorControlCenterLayoutProps) {
   return (
@@ -35,6 +37,7 @@ export function AdvisorControlCenterLayout({
           featureFlags={featureFlags}
           unreadNotificationCount={unreadNotificationCount}
           enterpriseTeamEnabled={enterpriseTeamEnabled}
+          billingNavEnabled={billingNavEnabled}
           className="hidden w-64 shrink-0 lg:flex"
         />
 
@@ -43,6 +46,7 @@ export function AdvisorControlCenterLayout({
             featureFlags={featureFlags}
             unreadNotificationCount={unreadNotificationCount}
             enterpriseTeamEnabled={enterpriseTeamEnabled}
+            billingNavEnabled={billingNavEnabled}
           />
 
           <main className="min-h-0 flex-1 overflow-y-auto">

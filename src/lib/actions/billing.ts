@@ -13,6 +13,12 @@ import {
   upsertSubscriptionFromStripe,
   validateCheckoutPrice,
 } from "@/lib/billing/subscription-service";
+import { resolveBillingContext } from "@/lib/enterprise/billing-context";
+import {
+  canAccessAdvisorBilling,
+  getEnterpriseBillingSummary,
+  type EnterpriseBillingSummary,
+} from "@/lib/enterprise/billing-details";
 import { prisma } from "@/lib/db";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
 import { getStripe } from "@/lib/stripe";
@@ -192,11 +198,39 @@ export async function createPortalSession(): Promise<BillingPortalResult> {
     const { userId } = await requireAdvisorSession();
     await getAdvisorProfileOrThrow(userId);
 
-    const sub = await prisma.subscription.findUnique({
-      where: { userId },
-      select: { stripeCustomerId: true },
-    });
-    if (!sub?.stripeCustomerId) {
+    const billingCtx = await resolveBillingContext(userId);
+    let stripeCustomerId: string | null = null;
+
+    if (billingCtx?.kind === "enterprise") {
+      if (billingCtx.role !== "OWNER") {
+        return {
+          success: false,
+          error: "Only the firm owner can open the Stripe billing portal.",
+        };
+      }
+      const enterprise = await prisma.advisorEnterprise.findUnique({
+        where: { id: billingCtx.enterpriseId },
+        select: {
+          paymentMethod: true,
+          subscription: { select: { stripeCustomerId: true } },
+        },
+      });
+      if (enterprise?.paymentMethod !== "CARD") {
+        return {
+          success: false,
+          error: "This firm is billed by wire transfer. Contact your account manager for billing changes.",
+        };
+      }
+      stripeCustomerId = enterprise.subscription?.stripeCustomerId ?? null;
+    } else {
+      const sub = await prisma.subscription.findUnique({
+        where: { userId },
+        select: { stripeCustomerId: true },
+      });
+      stripeCustomerId = sub?.stripeCustomerId ?? null;
+    }
+
+    if (!stripeCustomerId) {
       return {
         success: false,
         error: "No Stripe customer on file. Subscribe first to manage billing.",
@@ -217,7 +251,7 @@ export async function createPortalSession(): Promise<BillingPortalResult> {
 
     const stripe = getStripe();
     const session = await stripe.billingPortal.sessions.create({
-      customer: sub.stripeCustomerId,
+      customer: stripeCustomerId,
       return_url: returnUrl,
     });
 
@@ -248,6 +282,64 @@ export type SubscriptionDetailsDTO = {
   currentClientCount: number;
   canAddClient: boolean;
 };
+
+export type BillingPageData =
+  | {
+      mode: "solo";
+      subscription: SubscriptionDetailsDTO | null;
+      invoices: BillingInvoiceDTO[];
+    }
+  | {
+      mode: "enterprise";
+      enterprise: EnterpriseBillingSummary;
+      invoices: BillingInvoiceDTO[];
+    }
+  | { mode: "unavailable" };
+
+export async function getBillingPageData(): Promise<
+  { success: true; data: BillingPageData } | BillingActionError
+> {
+  try {
+    const { userId } = await requireAdvisorSession();
+    if (!(await canAccessAdvisorBilling(userId))) {
+      return { success: true, data: { mode: "unavailable" } };
+    }
+
+    const billingCtx = await resolveBillingContext(userId);
+    if (billingCtx?.kind === "enterprise") {
+      const enterprise = await getEnterpriseBillingSummary(userId);
+      if (!enterprise) {
+        return { success: false, error: "Enterprise billing details unavailable." };
+      }
+      const invRes = await getBillingHistory();
+      return {
+        success: true,
+        data: {
+          mode: "enterprise",
+          enterprise,
+          invoices: invRes.success ? invRes.data : [],
+        },
+      };
+    }
+
+    const [subRes, invRes] = await Promise.all([
+      getSubscriptionDetails(),
+      getBillingHistory(),
+    ]);
+    if (!subRes.success) return subRes;
+    return {
+      success: true,
+      data: {
+        mode: "solo",
+        subscription: subRes.data,
+        invoices: invRes.success ? invRes.data : [],
+      },
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to load billing";
+    return { success: false, error: message };
+  }
+}
 
 export async function getSubscriptionDetails(): Promise<
   | { success: true; data: SubscriptionDetailsDTO | null }
@@ -328,6 +420,40 @@ export async function getBillingHistory(): Promise<
     }
     const { userId } = await requireAdvisorSession();
     await getAdvisorProfileOrThrow(userId);
+
+    const billingCtx = await resolveBillingContext(userId);
+    if (billingCtx?.kind === "enterprise") {
+      let stripeCustomerId: string | null = null;
+      if (billingCtx.role === "OWNER" || billingCtx.role === "ADMIN") {
+        const sub = await prisma.subscription.findUnique({
+          where: { enterpriseId: billingCtx.enterpriseId },
+          select: { stripeCustomerId: true },
+        });
+        stripeCustomerId = sub?.stripeCustomerId ?? null;
+      }
+      if (!stripeCustomerId) {
+        return { success: true, data: [] };
+      }
+
+      const stripe = getStripe();
+      const invoices = await stripe.invoices.list({
+        customer: stripeCustomerId,
+        limit: 24,
+      });
+
+      const data: BillingInvoiceDTO[] = invoices.data.map((inv) => ({
+        id: inv.id,
+        number: inv.number,
+        status: inv.status,
+        amountPaid: inv.amount_paid,
+        currency: inv.currency,
+        created: new Date((inv.created ?? 0) * 1000).toISOString(),
+        pdfUrl: inv.invoice_pdf ?? null,
+        hostedUrl: inv.hosted_invoice_url ?? null,
+      }));
+
+      return { success: true, data };
+    }
 
     const sub = await prisma.subscription.findUnique({
       where: { userId },

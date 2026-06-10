@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Download, ExternalLink } from "lucide-react";
+import { CreditCard, Download, ExternalLink, Mail } from "lucide-react";
 
 import {
   createCheckoutSession,
@@ -13,7 +13,12 @@ import {
 } from "@/lib/actions/billing";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { TIER_LIMITS } from "@/lib/billing/constants";
+import {
+  getEnterpriseSalesContactEmail,
+  getEnterpriseSalesMailtoHref,
+} from "@/lib/billing/enterprise-sales-contact";
 import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
+import type { EnterpriseBillingSummary } from "@/lib/enterprise/billing-details";
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -121,26 +126,33 @@ function SubscriptionOverview({
   );
 }
 
-function UsageMonitor({ data }: { data: SubscriptionDetailsDTO }) {
-  const pct = Math.min(
-    100,
-    data.clientLimit > 0 ? (data.currentClientCount / data.clientLimit) * 100 : 0
-  );
+function UsageBar({
+  label,
+  current,
+  limit,
+  description,
+  atLimit,
+}: {
+  label: string;
+  current: number;
+  limit: number;
+  description?: string;
+  atLimit?: boolean;
+}) {
+  const pct = Math.min(100, limit > 0 ? (current / limit) * 100 : 0);
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Client usage</CardTitle>
-        <CardDescription>
-          Active clients linked to your practice versus your plan limit.
-        </CardDescription>
+        <CardTitle className="text-lg">{label}</CardTitle>
+        {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex justify-between text-sm">
           <span>
-            <span className="font-semibold">{data.currentClientCount}</span>
-            <span className="text-muted-foreground"> / {data.clientLimit} clients</span>
+            <span className="font-semibold">{current}</span>
+            <span className="text-muted-foreground"> / {limit}</span>
           </span>
-          {!data.canAddClient ? (
+          {atLimit ? (
             <span className="text-destructive font-medium">At limit</span>
           ) : (
             <span className="text-muted-foreground">Room available</span>
@@ -149,23 +161,57 @@ function UsageMonitor({ data }: { data: SubscriptionDetailsDTO }) {
         <div
           className="h-2 w-full overflow-hidden rounded-full bg-muted"
           role="progressbar"
-          aria-valuenow={data.currentClientCount}
+          aria-valuenow={current}
           aria-valuemin={0}
-          aria-valuemax={data.clientLimit}
-          aria-label="Client usage"
+          aria-valuemax={limit}
+          aria-label={label}
         >
-          <div
-            className="h-full bg-primary transition-all"
-            style={{ width: `${pct}%` }}
-          />
+          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
         </div>
-        {!data.canAddClient ? (
-          <p className="text-sm text-muted-foreground">
-            Upgrade your plan to invite more clients, or wait until a slot opens.
-          </p>
-        ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+function UsageMonitor({ data }: { data: SubscriptionDetailsDTO }) {
+  return (
+    <UsageBar
+      label="Client usage"
+      current={data.currentClientCount}
+      limit={data.clientLimit}
+      description="Active clients linked to your practice versus your plan limit."
+      atLimit={!data.canAddClient}
+    />
+  );
+}
+
+function EnterpriseContactSalesCard() {
+  const salesEmail = getEnterpriseSalesContactEmail();
+  return (
+    <div className="flex flex-col rounded-lg border border-dashed bg-card/50 p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-semibold">{TIER_LABEL.ENTERPRISE}</h3>
+        <Badge
+          variant="outline"
+          className="shrink-0 text-[0.65rem] font-semibold normal-case tracking-normal"
+        >
+          Sales only
+        </Badge>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Multi-advisor firms with shared branding, firm-wide caps, and custom contracts.
+      </p>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Up to {TIER_LIMITS.ENTERPRISE} firm clients · custom seat packages
+      </p>
+      <Button className="mt-4" type="button" variant="outline" asChild>
+        <a href={getEnterpriseSalesMailtoHref()} className="inline-flex items-center gap-2">
+          <Mail className="h-4 w-4" aria-hidden />
+          Contact sales
+        </a>
+      </Button>
+      <p className="mt-2 text-xs text-muted-foreground">{salesEmail}</p>
+    </div>
   );
 }
 
@@ -231,7 +277,7 @@ function PlanSelector({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-3">
+      <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {TIER_ORDER.map((tier) => {
           const hasCommitted = committedPlan !== null;
           const isSameTier = hasCommitted && tier === committedPlan!.tier;
@@ -377,6 +423,7 @@ function PlanSelector({
             </div>
           );
         })}
+        <EnterpriseContactSalesCard />
       </CardContent>
       {error ? (
         <CardFooter>
@@ -472,6 +519,177 @@ function BillingHistory({
         </table>
       </CardContent>
     </Card>
+  );
+}
+
+function humanizePaymentMethod(method: EnterpriseBillingSummary["paymentMethod"]) {
+  return method === "CARD" ? "Credit card (Stripe)" : "Wire transfer";
+}
+
+export function EnterpriseBillingDashboard({
+  enterprise,
+  initialInvoices,
+  billingEnabled,
+}: {
+  enterprise: EnterpriseBillingSummary;
+  initialInvoices: BillingInvoiceDTO[];
+  billingEnabled: boolean;
+}) {
+  const [portalError, setPortalError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const periodEnd = new Date(enterprise.currentPeriodEnd);
+  const seatOverage = enterprise.seatOverage > 0;
+  const isOwner = enterprise.role === "OWNER";
+
+  const onPortal = useCallback(() => {
+    setPortalError(null);
+    startTransition(async () => {
+      const res = await createPortalSession();
+      if (!res.success) {
+        setPortalError(res.error);
+        return;
+      }
+      if (!res.url?.trim()) {
+        setPortalError("Portal did not return a valid link.");
+        return;
+      }
+      window.location.href = res.url;
+    });
+  }, []);
+
+  if (!billingEnabled) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Billing</CardTitle>
+          <CardDescription>
+            Billing features are turned off for this environment.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            {enterprise.enterpriseName} · Enterprise plan (sales-assisted)
+          </p>
+          <p className="max-w-prose text-sm text-muted-foreground">
+            Plan changes require contacting your account manager. Usage below reflects firm-wide
+            limits and your assigned clients.
+          </p>
+        </div>
+        {enterprise.canManageStripePortal ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={onPortal}
+            className="shrink-0"
+          >
+            Manage billing & receipts
+          </Button>
+        ) : null}
+      </div>
+
+      {portalError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {portalError}
+        </p>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <CreditCard className="h-5 w-5" aria-hidden />
+            Firm subscription
+          </CardTitle>
+          <CardDescription>
+            {isOwner
+              ? "Your firm’s Enterprise contract and payment method."
+              : "Read-only summary — only the firm owner can open the Stripe billing portal."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex flex-wrap justify-between gap-2">
+            <span className="text-muted-foreground">Plan</span>
+            <span className="font-medium">Enterprise</span>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <span className="text-muted-foreground">Status</span>
+            <span className="font-medium">{enterprise.status.replace(/_/g, " ")}</span>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <span className="text-muted-foreground">Billing</span>
+            <span className="font-medium">
+              {enterprise.billingCycle === "ANNUAL" ? "Annual" : "Monthly"}
+            </span>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <span className="text-muted-foreground">Payment method</span>
+            <span className="font-medium">{humanizePaymentMethod(enterprise.paymentMethod)}</span>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <span className="text-muted-foreground">Current period ends</span>
+            <span className="font-medium">{periodEnd.toLocaleDateString()}</span>
+          </div>
+          {enterprise.paymentMethod === "WIRE" ? (
+            <p className="pt-2 text-muted-foreground">
+              This firm is billed by wire transfer. Contact your account manager for invoices or
+              contract changes.
+            </p>
+          ) : null}
+          {enterprise.cancelAtPeriodEnd ? (
+            <p className="text-amber-600 dark:text-amber-500 pt-2">
+              Your subscription is set to cancel at the end of this billing period.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <UsageBar
+          label="Firm client usage"
+          current={enterprise.firmClientCount}
+          limit={enterprise.firmClientLimit}
+          description="Distinct clients with active assignments across your firm."
+          atLimit={enterprise.firmClientCount >= enterprise.firmClientLimit}
+        />
+        <UsageBar
+          label="Your assigned clients"
+          current={enterprise.advisorClientCount}
+          limit={enterprise.perAdvisorClientLimit}
+          description={`Each advisor may have up to ${enterprise.perAdvisorClientLimit} assigned clients.`}
+          atLimit={!enterprise.canAddClient}
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Advisor seats</CardTitle>
+          <CardDescription>
+            Active team logins versus your contracted seat package. Overage is reported but not
+            blocked in v1.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          <Badge variant={seatOverage ? "warning" : "secondary"}>
+            {enterprise.activeSeats} / {enterprise.seatLimit} seats
+          </Badge>
+          {seatOverage ? (
+            <Badge variant="outline">Over limit by {enterprise.seatOverage}</Badge>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <BillingHistory
+        invoices={initialInvoices}
+        canUseBillingPortal={enterprise.canManageStripePortal}
+      />
+    </div>
   );
 }
 

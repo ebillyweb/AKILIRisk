@@ -68,4 +68,16 @@ describe("getActiveAdvisorNavHref", () => {
       visible.flatMap((section) => section.items).some((item) => item.href === "/advisor/settings/team")
     ).toBe(true);
   });
+
+  it("hides Billing nav when billing access is disabled for enterprise advisors", () => {
+    const withBilling = getVisibleAdvisorNavSections(flags);
+    expect(
+      withBilling.flatMap((section) => section.items).some((item) => item.href === "/advisor/billing")
+    ).toBe(true);
+
+    const withoutBilling = getVisibleAdvisorNavSections(flags, { billingNavEnabled: false });
+    expect(
+      withoutBilling.flatMap((section) => section.items).some((item) => item.href === "/advisor/billing")
+    ).toBe(false);
+  });
 });

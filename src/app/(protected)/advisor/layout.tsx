@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
 import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
+import { canAccessAdvisorBilling } from "@/lib/enterprise/billing-details";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
 import { headers } from "next/headers";
@@ -45,10 +46,11 @@ export default async function AdvisorLayout({
     }
   }
 
-  const [featureFlags, dash, enterpriseTeamEnabled] = await Promise.all([
+  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled] = await Promise.all([
     getPlatformFeatureFlags(),
     getAdvisorDashboardData(),
     userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
+    userId ? canAccessAdvisorBilling(userId) : Promise.resolve(true),
   ]);
 
   const unreadNotificationCount = dash.success
@@ -60,6 +62,7 @@ export default async function AdvisorLayout({
       featureFlags={featureFlags}
       unreadNotificationCount={unreadNotificationCount}
       enterpriseTeamEnabled={enterpriseTeamEnabled}
+      billingNavEnabled={billingNavEnabled}
     >
       <AdvisorSrOnlyHeading />
       {children}
