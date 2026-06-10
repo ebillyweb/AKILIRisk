@@ -1,6 +1,10 @@
 import "server-only";
 
-import { getAdvisorProfileOrThrow, requireAdvisorRole } from "@/lib/advisor/auth";
+import { requireAdvisorRole } from "@/lib/advisor/auth";
+import {
+  listAdvisorProfileIdsForScope,
+  resolvePortfolioScope,
+} from "@/lib/enterprise/portfolio-access";
 import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
 import {
   indexQuestionsForReview,
@@ -53,18 +57,21 @@ export async function getAssessmentForAdvisorReview(
   assessmentId: string,
 ): Promise<AdvisorAssessmentReviewPayload | null> {
   const { userId } = await requireAdvisorRole();
-  const profile = await getAdvisorProfileOrThrow(userId);
+  const scope = await resolvePortfolioScope(userId);
+  if (!scope) return null;
 
-  // Tenant gate: the assessment's owner must have an ACTIVE assignment to
-  // this advisor. Anything else returns null so non-assigned advisors
-  // can't probe assessment existence.
+  const advisorProfileIds = await listAdvisorProfileIdsForScope(scope);
+
+  // Tenant gate: the assessment's owner must have an ACTIVE assignment within
+  // the caller's portfolio scope. Anything else returns null so non-assigned
+  // advisors can't probe assessment existence.
   const assessment = await prisma.assessment.findFirst({
     where: {
       id: assessmentId,
       user: {
         clientAssignments: {
           some: {
-            advisorId: profile.id,
+            advisorId: { in: advisorProfileIds },
             status: "ACTIVE",
           },
         },

@@ -27,6 +27,12 @@ const prismaSpies = vi.hoisted(() => ({
       return row;
     }),
   },
+  advisorProfile: {
+    findUnique: vi.fn(async () => ({ enterpriseId: null })),
+  },
+  clientAdvisorAssignment: {
+    findFirst: vi.fn(async () => null),
+  },
   $transaction: vi.fn(
     async (fn: (tx: typeof prismaSpies) => Promise<unknown>) => fn(prismaSpies)
   ),
@@ -35,6 +41,7 @@ const prismaSpies = vi.hoisted(() => ({
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
 vi.mock("@/lib/auth/user-email", () => ({
   decryptUserEmail: (ciphertext: string) => ciphertext.replace(/^cipher:/, ""),
+  findUserByEmail: vi.fn(async () => null),
 }));
 vi.mock("@/lib/invite", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/invite")>();

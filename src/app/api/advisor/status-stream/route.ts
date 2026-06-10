@@ -1,12 +1,11 @@
 import { NextRequest } from 'next/server';
-import { requireAdvisorRole, getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
-import { getClientPipeline } from '@/lib/pipeline/queries';
+import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { getClientPipelineForAdvisorUser } from '@/lib/pipeline/queries';
 
 export async function GET(request: NextRequest) {
   try {
     // Authenticate the advisor
     const { userId } = await requireAdvisorRole();
-    const profile = await getAdvisorProfileOrThrow(userId);
 
     const encoder = new TextEncoder();
     const pollMs =
@@ -26,7 +25,7 @@ data: {"timestamp": "${new Date().toISOString()}"}
 
         intervalId = setInterval(async () => {
           try {
-            const clients = await getClientPipeline(profile.id);
+            const clients = await getClientPipelineForAdvisorUser(userId);
             const updateEvent = `event: pipeline_update
 data: ${JSON.stringify({ clients, timestamp: new Date().toISOString() })}
 

@@ -123,13 +123,10 @@ export async function getIntakeReviewData(interviewId: string) {
  */
 async function assertAdvisorMayMutateApproval(
   advisorProfileId: string,
-  interviewId: string
+  interviewId: string,
+  advisorUserId: string,
 ) {
-  // getClientIntakeForReview already filters on
-  //   user.clientAssignments.some({ advisorId, status: ACTIVE })
-  // so a null return means "this interview belongs to a client you're
-  // not actively assigned to."
-  return getClientIntakeForReview(advisorProfileId, interviewId);
+  return getClientIntakeForReview(advisorProfileId, interviewId, advisorUserId);
 }
 
 export async function markIntakeInReview(interviewId: string) {
@@ -151,7 +148,8 @@ export async function markIntakeInReview(interviewId: string) {
     // "exists but not yours."
     const reviewData = await assertAdvisorMayMutateApproval(
       profile.id,
-      interviewId
+      interviewId,
+      userId,
     );
     if (!reviewData) {
       return {
@@ -160,8 +158,14 @@ export async function markIntakeInReview(interviewId: string) {
       };
     }
 
+    const assignmentAdvisorProfileId =
+      reviewData.assignmentAdvisorProfileId ?? profile.id;
+
     // Create approval if it doesn't exist (no-op when one is present)
-    const priorApproval = await createIntakeApproval(interviewId, profile.id);
+    const priorApproval = await createIntakeApproval(
+      interviewId,
+      assignmentAdvisorProfileId,
+    );
     let approval = priorApproval;
 
     // Update to IN_REVIEW status if it's currently PENDING
@@ -219,7 +223,8 @@ export async function approveClientIntake(data: unknown) {
     // Multi-tenant boundary check (see assertAdvisorMayMutateApproval).
     const reviewData = await assertAdvisorMayMutateApproval(
       profile.id,
-      interviewId
+      interviewId,
+      userId,
     );
     if (!reviewData) {
       return {
@@ -228,8 +233,14 @@ export async function approveClientIntake(data: unknown) {
       };
     }
 
+    const assignmentAdvisorProfileId =
+      reviewData.assignmentAdvisorProfileId ?? profile.id;
+
     // First ensure an approval exists
-    const priorApproval = await createIntakeApproval(interviewId, profile.id);
+    const priorApproval = await createIntakeApproval(
+      interviewId,
+      assignmentAdvisorProfileId,
+    );
     let approval = priorApproval;
 
     // Update to APPROVED status with focus areas and notes
@@ -310,7 +321,8 @@ export async function rejectClientIntake(approvalId: string, notes?: string) {
 
     const reviewData = await assertAdvisorMayMutateApproval(
       profile.id,
-      existing.interviewId
+      existing.interviewId,
+      userId,
     );
     if (!reviewData) {
       return {
@@ -319,7 +331,10 @@ export async function rejectClientIntake(approvalId: string, notes?: string) {
       };
     }
 
-    if (existing.advisorId !== profile.id) {
+    const assignmentAdvisorProfileId =
+      reviewData.assignmentAdvisorProfileId ?? profile.id;
+
+    if (existing.advisorId !== assignmentAdvisorProfileId) {
       // Generic "not found" shape so we don't reveal which advisor owns
       // the row.
       return {

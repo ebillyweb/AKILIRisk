@@ -41,6 +41,8 @@ export type IntakeInterviewReviewBundle = {
     >;
   };
   approval: IntakeApproval | null;
+  /** Assigning advisor profile — used for approvals and PII policy under firm-wide access. */
+  assignmentAdvisorProfileId?: string;
 };
 
 // Complete data for reviewing a client's intake interview

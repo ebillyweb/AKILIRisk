@@ -3,6 +3,10 @@ import "server-only";
 import { Prisma, type IntakeInterview, type IntakeResponse } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
+import {
+  findPortfolioAssignmentForClient,
+  resolvePortfolioScope,
+} from "@/lib/enterprise/portfolio-access";
 import type { AdvisorDashboardClient, IntakeInterviewReviewBundle } from "@/lib/advisor/types";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import {
@@ -313,20 +317,37 @@ export async function getClientIntakeForReview(
     return null;
   }
 
-  const hasAccess = await advisorHasActiveAssignmentToClient(
-    advisorProfileId,
-    interview.userId,
-  );
-  if (!hasAccess) {
-    return null;
+  let assignmentAdvisorProfileId = advisorProfileId;
+
+  if (advisorUserId) {
+    const scope = await resolvePortfolioScope(advisorUserId);
+    if (!scope) return null;
+
+    const access = await findPortfolioAssignmentForClient(scope, interview.userId);
+    if (!access) return null;
+
+    assignmentAdvisorProfileId = access.assignmentAdvisorProfileId;
+  } else {
+    const hasAccess = await advisorHasActiveAssignmentToClient(
+      advisorProfileId,
+      interview.userId,
+    );
+    if (!hasAccess) {
+      return null;
+    }
   }
 
-  return mapIntakeInterviewForReview(
+  const bundle = await mapIntakeInterviewForReview(
     interview,
     interviewId,
-    advisorProfileId,
+    assignmentAdvisorProfileId,
     advisorUserId,
   );
+
+  return {
+    ...bundle,
+    assignmentAdvisorProfileId,
+  };
 }
 
 export async function createIntakeApproval(interviewId: string, advisorProfileId: string) {

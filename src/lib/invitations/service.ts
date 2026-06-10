@@ -16,6 +16,7 @@ import {
   InvitationStatus
 } from "./types";
 import { reconcileAdvisorInvitationStatuses } from "./redeem-invitation";
+import { assertEnterpriseClientNotAlreadyInFirm } from "@/lib/enterprise/firm-client-invite";
 
 export function invitationCanResend(invitation: {
   status: InvitationStatus;
@@ -152,8 +153,11 @@ export async function createAdvisorInvitation(
 ): Promise<InvitationWithDetails & { url: string }> {
   const normalizedEmail = input.clientEmail.trim().toLowerCase();
 
+  await assertEnterpriseClientNotAlreadyInFirm(advisorId, normalizedEmail);
+
   const invitation = await prisma.$transaction(async (tx) => {
     await assertNoBlockingInvitationForEmail(advisorId, normalizedEmail, tx);
+    await assertEnterpriseClientNotAlreadyInFirm(advisorId, normalizedEmail, tx);
 
     const code = generateInviteCode();
     const expiresAt = new Date(Date.now() + INVITATION_TTL_SEC * 1000);

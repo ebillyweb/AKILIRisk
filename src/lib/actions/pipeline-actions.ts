@@ -6,31 +6,31 @@ import { z } from 'zod';
 import type { UserRole } from '@prisma/client';
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
 import {
-  countInactiveClientAssignments,
-  getClientPipeline,
+  countInactiveClientAssignmentsForAdvisorUser,
+  getClientDetailForAdvisorUser,
+  getClientPipelineForAdvisorUser,
   getPipelineMetrics,
-  getClientDetail,
 } from '@/lib/pipeline/queries';
+import { findPortfolioAssignmentForClient, listAdvisorProfileIdsForScope, resolvePortfolioScope } from '@/lib/enterprise/portfolio-access';
 import { prisma } from '@/lib/db';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 
 export async function getClientPipelineData(options?: { inactive?: boolean }) {
   try {
     const { userId } = await requireAdvisorRole();
-    const profile = await getAdvisorProfileOrThrow(userId);
 
     const showInactive = options?.inactive === true;
     const [clients, inactiveCount] = await Promise.all([
-      getClientPipeline(profile.id, {
+      getClientPipelineForAdvisorUser(userId, {
         assignmentStatus: showInactive ? 'INACTIVE' : 'ACTIVE',
       }),
-      countInactiveClientAssignments(profile.id),
+      countInactiveClientAssignmentsForAdvisorUser(userId),
     ]);
     const metrics = { ...getPipelineMetrics(clients), inactive: inactiveCount };
 
     return {
       success: true,
-      data: { clients, metrics, profile },
+      data: { clients, metrics, profile: await getAdvisorProfileOrThrow(userId) },
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get client pipeline data';
@@ -60,26 +60,21 @@ export async function addDocumentRequirement(data: unknown) {
 
     const { clientId, name, description, required } = validatedFields.data;
 
-    // Verify advisor owns the client assignment
-    const assignment = await prisma.clientAdvisorAssignment.findFirst({
-      where: {
-        advisorId: profile.id,
-        clientId,
-        status: 'ACTIVE',
-      },
-    });
-
-    if (!assignment) {
+    const scope = await resolvePortfolioScope(userId);
+    if (!scope) {
+      return { success: false, error: 'Client not found or not assigned to you' };
+    }
+    const access = await findPortfolioAssignmentForClient(scope, clientId);
+    if (!access) {
       return {
         success: false,
         error: 'Client not found or not assigned to you',
       };
     }
 
-    // Create document requirement
     const requirement = await prisma.documentRequirement.create({
       data: {
-        advisorId: profile.id,
+        advisorId: access.assignmentAdvisorProfileId,
         clientId,
         name,
         description,
@@ -99,7 +94,7 @@ export async function addDocumentRequirement(data: unknown) {
         description: requirement.description,
         fulfilled: requirement.fulfilled,
       },
-      metadata: { clientId, advisorId: profile.id },
+      metadata: { clientId, advisorId: access.assignmentAdvisorProfileId },
     });
 
     revalidatePath('/advisor/pipeline');
@@ -130,10 +125,17 @@ export async function removeDocumentRequirement(requirementId: string) {
     }
 
     // Verify advisor owns the requirement
+    const scope = await resolvePortfolioScope(userId);
+    if (!scope) {
+      return { success: false, error: 'Document requirement not found or not owned by you' };
+    }
+
+    const advisorProfileIds = await listAdvisorProfileIdsForScope(scope);
+
     const requirement = await prisma.documentRequirement.findFirst({
       where: {
         id: requirementId,
-        advisorId: profile.id,
+        advisorId: { in: advisorProfileIds },
       },
     });
 
@@ -144,7 +146,14 @@ export async function removeDocumentRequirement(requirementId: string) {
       };
     }
 
-    // Delete the requirement
+    const clientAccess = await findPortfolioAssignmentForClient(scope, requirement.clientId);
+    if (!clientAccess) {
+      return {
+        success: false,
+        error: 'Document requirement not found or not owned by you',
+      };
+    }
+
     await prisma.documentRequirement.delete({
       where: { id: requirementId },
     });
@@ -177,9 +186,8 @@ export async function removeDocumentRequirement(requirementId: string) {
 export async function getClientDetailData(clientId: string) {
   try {
     const { userId } = await requireAdvisorRole();
-    const profile = await getAdvisorProfileOrThrow(userId);
 
-    const clientDetail = await getClientDetail(profile.id, clientId);
+    const clientDetail = await getClientDetailForAdvisorUser(userId, clientId);
 
     return {
       success: true,

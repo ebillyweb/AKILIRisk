@@ -13,6 +13,12 @@ import {
   loadAdvisorPiiPolicy,
   resolveAdvisorClientIdentity,
 } from "@/lib/advisor/field-visibility";
+import type { PortfolioScope } from "@/lib/enterprise/portfolio-access";
+import {
+  listAdvisorProfileIdsForScope,
+  findPortfolioAssignmentForClient,
+  resolvePortfolioScope,
+} from "@/lib/enterprise/portfolio-access";
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -55,24 +61,51 @@ export type ClientPipelineOptions = {
   assignmentStatus?: 'ACTIVE' | 'INACTIVE';
 };
 
+export async function getClientPipelineForAdvisorUser(
+  userId: string,
+  options: ClientPipelineOptions = {},
+): Promise<PipelineClient[]> {
+  const scope = await resolvePortfolioScope(userId);
+  if (!scope) return [];
+  return getClientPipeline(scope, options);
+}
+
 export async function getClientPipeline(
-  advisorProfileId: string,
+  scope: PortfolioScope,
   options: ClientPipelineOptions = {},
 ): Promise<PipelineClient[]> {
   const assignmentStatus = options.assignmentStatus ?? 'ACTIVE';
-  const [assignments, advisorPolicy] = await Promise.all([
+  const advisorProfileIds = await listAdvisorProfileIdsForScope(scope);
+  if (advisorProfileIds.length === 0) return [];
+
+  const assignmentWhere =
+    scope.mode === "firm"
+      ? {
+          advisor: { enterpriseId: scope.enterpriseId },
+          status: assignmentStatus,
+        }
+      : {
+          advisorId: scope.advisorProfileId,
+          status: assignmentStatus,
+        };
+
+  const policyEntries = await Promise.all(
+    advisorProfileIds.map(async (id) => [id, await loadAdvisorPiiPolicy(id)] as const)
+  );
+  const policyByAdvisorId = new Map<
+    string,
+    Awaited<ReturnType<typeof loadAdvisorPiiPolicy>>
+  >(policyEntries);
+  const defaultPolicy =
+    policyByAdvisorId.get(scope.advisorProfileId) ??
+    policyEntries[0]?.[1];
+
+  const [assignments] = await Promise.all([
     prisma.clientAdvisorAssignment.findMany({
-    where: {
-      advisorId: advisorProfileId,
-      status: assignmentStatus,
-    },
+    where: assignmentWhere,
     include: {
       client: {
         include: {
-          // Round-11 commit 2.1: clientProfile no longer carries
-          // contact/address/DOB columns; the include was unused after
-          // those drops, so remove it entirely.
-          // Latest assessment by activity (includes IN_PROGRESS)
           assessments: {
             orderBy: {
               updatedAt: 'desc',
@@ -91,7 +124,6 @@ export async function getClientPipeline(
       }
     }
   }),
-    loadAdvisorPiiPolicy(advisorProfileId),
   ]);
 
   // ── Batched lookups ──────────────────────────────────────────────────────
@@ -123,7 +155,7 @@ export async function getClientPipeline(
     clientEmails.length > 0
       ? prisma.inviteCode.findMany({
           where: {
-            createdBy: advisorProfileId,
+            createdBy: { in: advisorProfileIds },
             prefillEmail: { in: clientEmails },
           },
           orderBy: { createdAt: 'desc' },
@@ -132,7 +164,7 @@ export async function getClientPipeline(
     clientIds.length > 0
       ? prisma.documentRequirement.findMany({
           where: {
-            advisorId: advisorProfileId,
+            advisorId: { in: advisorProfileIds },
             clientId: { in: clientIds },
           },
           select: {
@@ -156,7 +188,7 @@ export async function getClientPipeline(
         })
       : Promise.resolve([]),
     prisma.intakeApproval.findMany({
-      where: { advisorId: advisorProfileId },
+      where: { advisorId: { in: advisorProfileIds } },
       select: { interviewId: true, status: true },
     }),
   ]);
@@ -234,7 +266,8 @@ export async function getClientPipeline(
   // ── Per-client transform — synchronous now ──────────────────────────────
   const clients: PipelineClient[] = assignments.map((assignment) => {
     const client = assignment.client;
-    // Round-11 commit 2.4b: decrypt once per row.
+    const advisorPolicy =
+      policyByAdvisorId.get(assignment.advisorId) ?? defaultPolicy;
     const clientIdentity = resolveAdvisorClientIdentity(
       client,
       assignment.fieldVisibility,
@@ -408,22 +441,59 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
   };
 }
 
-export async function countInactiveClientAssignments(
-  advisorProfileId: string,
+export async function countInactiveClientAssignmentsForAdvisorUser(
+  userId: string,
 ): Promise<number> {
+  const scope = await resolvePortfolioScope(userId);
+  if (!scope) return 0;
+  return countInactiveClientAssignments(scope);
+}
+
+export async function countInactiveClientAssignments(
+  scope: PortfolioScope,
+): Promise<number> {
+  if (scope.mode === "firm") {
+    return prisma.clientAdvisorAssignment.count({
+      where: {
+        status: "INACTIVE",
+        advisor: { enterpriseId: scope.enterpriseId },
+      },
+    });
+  }
   return prisma.clientAdvisorAssignment.count({
-    where: { advisorId: advisorProfileId, status: 'INACTIVE' },
+    where: { advisorId: scope.advisorProfileId, status: "INACTIVE" },
   });
+}
+
+export async function getClientDetailForAdvisorUser(
+  userId: string,
+  clientId: string,
+): Promise<ClientDetail> {
+  const scope = await resolvePortfolioScope(userId);
+  if (!scope) {
+    throw new Error("Client not found or not assigned to you");
+  }
+  return getClientDetail(scope, clientId);
 }
 
 /**
  * Fetches detailed data for a single client including timeline and requirements
  */
-export async function getClientDetail(advisorProfileId: string, clientId: string): Promise<ClientDetail> {
-  // Verify advisor-client assignment exists (multi-tenant isolation)
+export async function getClientDetail(
+  scope: PortfolioScope,
+  clientId: string,
+): Promise<ClientDetail> {
+  const access = await findPortfolioAssignmentForClient(scope, clientId, {
+    includeInactive: true,
+  });
+  if (!access) {
+    throw new Error("Client not found or not assigned to you");
+  }
+  const assignmentAdvisorProfileId = access.assignmentAdvisorProfileId;
+
   const assignment = await prisma.clientAdvisorAssignment.findFirst({
     where: {
-      advisorId: advisorProfileId,
+      advisorId: assignmentAdvisorProfileId,
       clientId,
       status: { in: ['ACTIVE', 'INACTIVE'] },
     },
@@ -453,7 +523,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
     throw new Error('Client not found or not assigned to you');
   }
 
-  const advisorPolicy = await loadAdvisorPiiPolicy(advisorProfileId);
+  const advisorPolicy = await loadAdvisorPiiPolicy(assignmentAdvisorProfileId);
   const client = assignment.client;
   const clientIdentity = resolveAdvisorClientIdentity(
     client,
@@ -466,7 +536,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
   // Fetch invitation data
   const invitation = await prisma.inviteCode.findFirst({
     where: {
-      createdBy: advisorProfileId,
+      createdBy: assignmentAdvisorProfileId,
       prefillEmail: clientEmail,
     },
     orderBy: { createdAt: 'desc' }
@@ -475,7 +545,7 @@ export async function getClientDetail(advisorProfileId: string, clientId: string
   // Fetch document requirements
   const documentRequirements = await prisma.documentRequirement.findMany({
     where: {
-      advisorId: advisorProfileId,
+      advisorId: assignmentAdvisorProfileId,
       clientId,
     },
     orderBy: { createdAt: 'asc' }

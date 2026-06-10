@@ -72,12 +72,25 @@ export async function getIntakeReviewDataForAdvisorPage(
 
   // US-11: opening a submitted intake moves approval to IN_REVIEW.
   let approval = reviewData.approval;
+  const assignmentAdvisorProfileId =
+    reviewData.assignmentAdvisorProfileId ?? profile.id;
+  const assignmentProfile =
+    assignmentAdvisorProfileId === profile.id
+      ? profile
+      : await prisma.advisorProfile.findUnique({
+          where: { id: assignmentAdvisorProfileId },
+        });
+  if (!assignmentProfile) return null;
+
   if (
     !isPlatformAdmin &&
     reviewData.interview.status === "SUBMITTED" &&
     (!approval || approval.status === "PENDING")
   ) {
-    const priorApproval = await createIntakeApproval(trimmedId, profile.id);
+    const priorApproval = await createIntakeApproval(
+      trimmedId,
+      assignmentAdvisorProfileId,
+    );
     if (priorApproval.status === "PENDING") {
       approval = await updateIntakeApproval(priorApproval.id, {
         status: "IN_REVIEW",
@@ -94,7 +107,7 @@ export async function getIntakeReviewDataForAdvisorPage(
   ]);
   const personalizedScript = personalizeIntakeScript(script, firmName);
 
-  const rawHouseholdMembers = profile.householdProfilesEnabled
+  const rawHouseholdMembers = assignmentProfile.householdProfilesEnabled
     ? await prisma.householdMember.findMany({
         where: { userId: reviewData.interview.userId },
         orderBy: { createdAt: "asc" },
@@ -103,13 +116,13 @@ export async function getIntakeReviewDataForAdvisorPage(
 
   const assignment = await prisma.clientAdvisorAssignment.findFirst({
     where: {
-      advisorId: profile.id,
+      advisorId: assignmentAdvisorProfileId,
       clientId: reviewData.interview.userId,
       status: "ACTIVE",
     },
     select: { fieldVisibility: true },
   });
-  const advisorPolicy = await loadAdvisorPiiPolicy(profile.id);
+  const advisorPolicy = await loadAdvisorPiiPolicy(assignmentAdvisorProfileId);
   const effective = resolveEffectiveFieldVisibility(
     advisorPolicy,
     assignment?.fieldVisibility ?? null,

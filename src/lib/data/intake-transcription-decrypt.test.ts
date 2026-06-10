@@ -21,17 +21,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const TEST_KEY = "test-key-do-not-use-in-prod-0123456789ABCDEF";
 
-const { prismaSpies } = vi.hoisted(() => ({
+const { prismaSpies, portfolioSpies } = vi.hoisted(() => ({
   prismaSpies: {
     intakeInterview: { findFirst: vi.fn(), findUnique: vi.fn() },
     clientAdvisorAssignment: { findMany: vi.fn(), findFirst: vi.fn() },
     intakeApproval: { findUnique: vi.fn() },
     advisorProfile: { findUnique: vi.fn() },
   },
+  portfolioSpies: {
+    resolvePortfolioScope: vi.fn(),
+    findPortfolioAssignmentForClient: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/db", () => ({
   prisma: prismaSpies,
+}));
+
+vi.mock("@/lib/enterprise/portfolio-access", () => portfolioSpies);
+vi.mock("@/lib/intake/reassign-misplaced-intake", () => ({
+  maybeReassignMisplacedIntakeToClient: vi.fn(async () => {}),
 }));
 
 import { getIntakeInterview } from "./intake";
@@ -62,6 +71,17 @@ beforeEach(() => {
         "HouseholdMember.notes": true,
       },
     },
+  });
+  portfolioSpies.resolvePortfolioScope.mockReset();
+  portfolioSpies.resolvePortfolioScope.mockResolvedValue({
+    mode: "assigned",
+    advisorProfileId: "adv-1",
+    enterpriseId: null,
+    role: null,
+  });
+  portfolioSpies.findPortfolioAssignmentForClient.mockReset();
+  portfolioSpies.findPortfolioAssignmentForClient.mockResolvedValue({
+    assignmentAdvisorProfileId: "adv-1",
   });
 });
 
@@ -283,6 +303,7 @@ describe("getClientIntakeForReview advisor-note scoping (US-46c)", () => {
       responses: [],
     });
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue(null);
+    portfolioSpies.findPortfolioAssignmentForClient.mockResolvedValue(null);
 
     const out = await getClientIntakeForReview(
       "adv-1",

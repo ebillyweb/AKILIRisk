@@ -4,6 +4,32 @@ import { InvitationStatus, type UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
 
+type TxLike = Pick<
+  typeof prisma,
+  "advisorProfile" | "clientAdvisorAssignment" | "clientProfile" | "inviteCode" | "user"
+>;
+
+async function findActiveEnterpriseAssignmentForClient(
+  tx: TxLike,
+  clientId: string,
+  invitingAdvisorId: string,
+) {
+  const profile = await tx.advisorProfile.findUnique({
+    where: { id: invitingAdvisorId },
+    select: { enterpriseId: true },
+  });
+  if (!profile?.enterpriseId) return null;
+
+  return tx.clientAdvisorAssignment.findFirst({
+    where: {
+      clientId,
+      status: "ACTIVE",
+      advisor: { enterpriseId: profile.enterpriseId },
+    },
+    select: { id: true, advisorId: true },
+  });
+}
+
 export type ProvisionClientResult =
   | { ok: true; userId: string; created: boolean }
   | { ok: false; error: string; code: "not_found" | "expired" | "exhausted" | "blocked" };
@@ -81,14 +107,24 @@ export async function provisionClientFromInviteCode(
           update: {},
         });
 
-        const assignment = await tx.clientAdvisorAssignment.findFirst({
-          where: { clientId: existing.id, advisorId: invite.createdBy! },
-          select: { id: true },
-        });
-        if (!assignment) {
-          await tx.clientAdvisorAssignment.create({
-            data: { clientId: existing.id, advisorId: invite.createdBy! },
+        const enterpriseAssignment = invite.createdBy
+          ? await findActiveEnterpriseAssignmentForClient(
+              tx,
+              existing.id,
+              invite.createdBy,
+            )
+          : null;
+
+        if (!enterpriseAssignment) {
+          const assignment = await tx.clientAdvisorAssignment.findFirst({
+            where: { clientId: existing.id, advisorId: invite.createdBy! },
+            select: { id: true },
           });
+          if (!assignment) {
+            await tx.clientAdvisorAssignment.create({
+              data: { clientId: existing.id, advisorId: invite.createdBy! },
+            });
+          }
         }
 
         if (invite.status !== InvitationStatus.REGISTERED) {
@@ -125,9 +161,16 @@ export async function provisionClientFromInviteCode(
         data: { userId: created.id },
       });
 
-      await tx.clientAdvisorAssignment.create({
-        data: { clientId: created.id, advisorId: invite.createdBy },
-      });
+      const enterpriseAssignment = await findActiveEnterpriseAssignmentForClient(
+        tx,
+        created.id,
+        invite.createdBy,
+      );
+      if (!enterpriseAssignment) {
+        await tx.clientAdvisorAssignment.create({
+          data: { clientId: created.id, advisorId: invite.createdBy },
+        });
+      }
 
       await tx.inviteCode.update({
         where: { id: inviteCodeId },
