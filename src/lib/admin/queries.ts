@@ -416,7 +416,11 @@ export async function getAdvisorsEligibleForEnterpriseOwner() {
       role: "ADVISOR",
       deletedAt: null,
       enterpriseMembership: null,
-      advisorProfile: { isNot: null, enterpriseId: null },
+      advisorProfile: {
+        is: {
+          enterpriseId: { equals: null },
+        },
+      },
     },
     select: {
       id: true,
