@@ -81,7 +81,7 @@ export async function checkClientLimitForAdvisorProfile(
 }> {
   const profile = await db.advisorProfile.findUnique({
     where: { id: advisorProfileId },
-    select: { userId: true },
+    select: { userId: true, enterpriseId: true },
   });
 
   if (!profile) {
@@ -102,6 +102,44 @@ export async function checkClientLimitForAdvisorProfile(
       canAddClient: true,
       currentCount,
       limit: Number.MAX_SAFE_INTEGER,
+    };
+  }
+
+  if (profile.enterpriseId) {
+    const { checkEnterpriseInviteLimits } = await import(
+      "@/lib/enterprise/client-limits"
+    );
+    const enterpriseCheck = await checkEnterpriseInviteLimits(
+      profile.enterpriseId,
+      advisorProfileId,
+      db
+    );
+    const enterprise = await db.advisorEnterprise.findUnique({
+      where: { id: profile.enterpriseId },
+      select: {
+        subscription: {
+          select: {
+            status: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+          },
+        },
+      },
+    });
+    const subscription = enterprise?.subscription;
+    const allowed = subscription
+      ? subscriptionAllowsNewClients(
+          subscription.status,
+          subscription.currentPeriodEnd,
+          subscription.cancelAtPeriodEnd
+        )
+      : false;
+
+    return {
+      canAddClient: allowed && enterpriseCheck.canAddClient,
+      currentCount: enterpriseCheck.advisorCount,
+      limit: enterpriseCheck.advisorLimit,
+      status: subscription?.status,
     };
   }
 
@@ -145,8 +183,51 @@ export async function assertCanAddClientForAdvisorProfile(
 
   const profile = await db.advisorProfile.findUnique({
     where: { id: advisorProfileId },
-    include: { user: { select: { id: true } } },
+    select: { userId: true, enterpriseId: true },
   });
+
+  if (profile?.enterpriseId) {
+    const enterprise = await db.advisorEnterprise.findUnique({
+      where: { id: profile.enterpriseId },
+      select: {
+        subscription: {
+          select: {
+            status: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+          },
+        },
+      },
+    });
+    const subscription = enterprise?.subscription;
+    const allowed = subscription
+      ? subscriptionAllowsNewClients(
+          subscription.status,
+          subscription.currentPeriodEnd,
+          subscription.cancelAtPeriodEnd
+        )
+      : false;
+    if (!allowed) {
+      throw new ClientLimitError(
+        "Your firm's subscription is not active. Contact your account manager.",
+        {
+          currentCount: check.currentCount,
+          limit: check.limit,
+          upgradePath: "/advisor/billing",
+        }
+      );
+    }
+    const { assertCanAddClientForEnterpriseInvite } = await import(
+      "@/lib/enterprise/client-limits"
+    );
+    await assertCanAddClientForEnterpriseInvite(
+      profile.enterpriseId,
+      advisorProfileId,
+      db
+    );
+    return;
+  }
+
   const sub = profile
     ? await db.subscription.findUnique({ where: { userId: profile.userId } })
     : null;
@@ -183,7 +264,10 @@ function tierFromStripeSubscription(
   if (
     metaTier &&
     metaCycle &&
-    (metaTier === "STARTER" || metaTier === "GROWTH" || metaTier === "PROFESSIONAL") &&
+    (metaTier === "STARTER" ||
+      metaTier === "GROWTH" ||
+      metaTier === "PROFESSIONAL" ||
+      metaTier === "ENTERPRISE") &&
     (metaCycle === "MONTHLY" || metaCycle === "ANNUAL")
   ) {
     return { tier: metaTier, billingCycle: metaCycle, priceId };
@@ -391,6 +475,138 @@ export async function upsertSubscriptionFromStripe(
           previousStatus: current.status,
           newStatus: status,
           stripeSubscriptionId: sub.id,
+        },
+      });
+    }
+
+    return { row: updated, applied: true };
+  }
+}
+
+export async function upsertEnterpriseSubscriptionFromStripe(
+  enterpriseId: string,
+  sub: Stripe.Subscription,
+  stripeCustomerId: string,
+  db: DbLike = prisma,
+  eventCreatedAt?: Date
+): Promise<UpsertSubscriptionResult> {
+  const enterprise = await db.advisorEnterprise.findUnique({
+    where: { id: enterpriseId },
+    select: { clientLimit: true },
+  });
+  if (!enterprise) {
+    throw new Error(`AdvisorEnterprise not found: ${enterpriseId}`);
+  }
+
+  const existing = await db.subscription.findUnique({ where: { enterpriseId } });
+  const { billingCycle, priceId } = tierFromStripeSubscription(
+    sub,
+    existing?.tier ?? "ENTERPRISE"
+  );
+  const tier: SubscriptionTier = "ENTERPRISE";
+  const clientLimit = enterprise.clientLimit;
+  const status = mapStripeSubscriptionStatus(sub.status);
+  const currentPeriodEnd = currentPeriodEndFromStripeSubscription(sub);
+  const cancelAtPeriodEnd = sub.cancel_at_period_end === true;
+
+  if (!existing) {
+    try {
+      const created = await db.subscription.create({
+        data: {
+          enterpriseId,
+          stripeCustomerId,
+          stripeSubscriptionId: sub.id,
+          stripePriceId: priceId,
+          tier,
+          status,
+          clientLimit,
+          billingCycle,
+          currentPeriodEnd,
+          cancelAtPeriodEnd,
+          lastStripeEventAt: eventCreatedAt ?? null,
+        },
+      });
+
+      await appendSubscriptionAuditLog(db, created.id, "created", {
+        newTier: tier,
+        metadata: {
+          source: "stripe_webhook",
+          stripeSubscriptionId: sub.id,
+          enterpriseId,
+        },
+      });
+
+      return { row: created, applied: true };
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        const reread = await db.subscription.findUnique({ where: { enterpriseId } });
+        if (!reread) throw err;
+        return updateExistingEnterprise(reread);
+      }
+      throw err;
+    }
+  }
+
+  return updateExistingEnterprise(existing);
+
+  async function updateExistingEnterprise(
+    current: SubscriptionRow
+  ): Promise<UpsertSubscriptionResult> {
+    const updateData: Prisma.SubscriptionUpdateManyMutationInput = {
+      stripeCustomerId,
+      stripeSubscriptionId: sub.id,
+      stripePriceId: priceId ?? undefined,
+      tier,
+      status,
+      clientLimit,
+      billingCycle,
+      currentPeriodEnd,
+      cancelAtPeriodEnd,
+      ...(eventCreatedAt ? { lastStripeEventAt: eventCreatedAt } : {}),
+    };
+
+    if (eventCreatedAt) {
+      const result = await db.subscription.updateMany({
+        where: {
+          enterpriseId,
+          OR: [
+            { lastStripeEventAt: null },
+            { lastStripeEventAt: { lt: eventCreatedAt } },
+          ],
+        },
+        data: updateData,
+      });
+      if (result.count === 0) {
+        return { row: current, applied: false };
+      }
+    } else {
+      await db.subscription.updateMany({
+        where: { enterpriseId },
+        data: updateData,
+      });
+    }
+
+    const updated = await db.subscription.findUnique({ where: { enterpriseId } });
+    if (!updated) {
+      throw new Error(
+        `Subscription disappeared after update for enterpriseId ${enterpriseId}`
+      );
+    }
+
+    const tierChanged = current.tier !== tier;
+    const statusChanged = current.status !== status;
+    if (tierChanged || statusChanged) {
+      await appendSubscriptionAuditLog(db, updated.id, "stripe_sync", {
+        previousTier: current.tier,
+        newTier: tier,
+        metadata: {
+          previousStatus: current.status,
+          newStatus: status,
+          stripeSubscriptionId: sub.id,
+          enterpriseId,
         },
       });
     }

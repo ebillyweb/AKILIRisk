@@ -83,6 +83,10 @@ model User {
   /// so engagements aren't orphaned by accidental advisor deletion).
   portfolioEngagementsAsClient  PortfolioEngagement[] @relation("PortfolioEngagementClient")
   portfolioEngagementsAsAdvisor PortfolioEngagement[] @relation("PortfolioEngagementAdvisor")
+  /// Enterprise advisor plan: at most one firm membership per user.
+  enterpriseMembership          EnterpriseMembership?
+  /// Firms where this user is the billing contact (typically the OWNER).
+  billingContactEnterprises     AdvisorEnterprise[]   @relation("EnterpriseBillingContact")
 
   /// Round-11 commit 2.4a: @@index([email]) + the phase-A
   /// User_emailCiphertext_idx are dropped at the SQL level by
@@ -96,6 +100,7 @@ enum SubscriptionTier {
   STARTER
   GROWTH
   PROFESSIONAL
+  ENTERPRISE
 }
 
 enum SubscriptionStatus {
@@ -111,9 +116,70 @@ enum BillingCycle {
   ANNUAL
 }
 
+enum EnterpriseRole {
+  OWNER
+  ADMIN
+  ADVISOR
+}
+
+enum EnterpriseMembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum EnterprisePaymentMethod {
+  WIRE
+  CARD
+}
+
+model AdvisorEnterprise {
+  id                    String                  @id @default(cuid())
+  name                  String
+  slug                  String                  @unique
+  seatLimit             Int
+  clientLimit           Int
+  perAdvisorClientLimit Int
+  paymentMethod         EnterprisePaymentMethod @default(WIRE)
+  billingContactUserId  String?
+  billingContact        User?                   @relation("EnterpriseBillingContact", fields: [billingContactUserId], references: [id], onDelete: SetNull)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  subscription   Subscription?
+  memberships    EnterpriseMembership[]
+  advisorProfiles AdvisorProfile[]
+
+  @@index([billingContactUserId])
+}
+
+model EnterpriseMembership {
+  id               String                     @id @default(cuid())
+  enterpriseId     String
+  userId           String                     @unique
+  advisorProfileId String?                    @unique
+  role             EnterpriseRole
+  status           EnterpriseMembershipStatus @default(INVITED)
+  invitedEmail     String?
+  invitedAt        DateTime?
+  acceptedAt       DateTime?
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  enterprise     AdvisorEnterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  advisorProfile AdvisorProfile?   @relation(fields: [advisorProfileId], references: [id], onDelete: SetNull)
+
+  @@unique([enterpriseId, userId])
+  @@index([enterpriseId])
+  @@index([advisorProfileId])
+  @@index([status])
+}
+
 model Subscription {
   id                   String             @id @default(cuid())
-  userId               String             @unique
+  userId               String?            @unique
+  enterpriseId         String?            @unique
   stripeCustomerId     String?            @unique
   stripePriceId        String?
   stripeSubscriptionId String?            @unique
@@ -138,11 +204,13 @@ model Subscription {
    *  `updatedAt`, which would falsely "win" against legitimate webhook events. */
   lastStripeEventAt    DateTime?
 
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  auditLogs SubscriptionAuditLog[]
+  user       User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enterprise AdvisorEnterprise? @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  auditLogs  SubscriptionAuditLog[]
 
   @@index([stripeCustomerId])
   @@index([stripeSubscriptionId])
+  @@index([enterpriseId])
 }
 
 /** Per-Stripe-event idempotency + observability log.
@@ -837,6 +905,9 @@ model AdvisorProfile {
   id               String                     @id @default(cuid())
   userId           String                     @unique
   user             User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enterpriseId     String?
+  enterprise       AdvisorEnterprise?         @relation(fields: [enterpriseId], references: [id], onDelete: SetNull)
+  enterpriseMembership EnterpriseMembership?
   specializations  String[]
   licenseNumber    String?
   firmName         String?
@@ -907,6 +978,7 @@ model AdvisorProfile {
   auditLogs        AdvisorBrandingAuditLog[]
 
   @@index([userId])
+  @@index([enterpriseId])
   @@index([brandingEnabled])
 }
 

@@ -33,12 +33,14 @@ const TIER_RANK: Record<SubscriptionTier, number> = {
   STARTER: 0,
   GROWTH: 1,
   PROFESSIONAL: 2,
+  ENTERPRISE: 3,
 };
 
 const TIER_LABEL: Record<SubscriptionTier, string> = {
   STARTER: "Starter",
   GROWTH: "Growth",
   PROFESSIONAL: "Professional",
+  ENTERPRISE: "Enterprise",
 };
 
 function formatMoney(amount: number, currency: string) {

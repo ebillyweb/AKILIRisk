@@ -11,5 +11,6 @@ export function emptyPlanPricesForUi(): PlanPricesForUi {
     STARTER: { monthly: null, annual: null },
     GROWTH: { monthly: null, annual: null },
     PROFESSIONAL: { monthly: null, annual: null },
+    ENTERPRISE: { monthly: null, annual: null },
   };
 }

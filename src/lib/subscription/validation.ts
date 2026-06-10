@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { resolveBillingContext } from '@/lib/enterprise/billing-context';
 import { LOGO_MAX_BYTES, SubscriptionFeatures } from '@/lib/validation/branding';
 
 /**
@@ -19,6 +20,12 @@ const TIER_FEATURES = {
     whiteLabel: true,
   },
   PROFESSIONAL: {
+    basicBrandingEnabled: true,
+    advancedBrandingEnabled: true,
+    customSubdomainEnabled: true,
+    whiteLabel: true,
+  },
+  ENTERPRISE: {
     basicBrandingEnabled: true,
     advancedBrandingEnabled: true,
     customSubdomainEnabled: true,
@@ -81,12 +88,8 @@ export function subscriptionFeaturesFromRow(
  */
 export async function getSubscriptionFeatures(userId: string): Promise<SubscriptionFeatures | null> {
   try {
-    const subscription = await prisma.subscription.findUnique({
-      where: { userId },
-      select: {
-        tier: true,
-      },
-    });
+    const billingCtx = await resolveBillingContext(userId);
+    const subscription = billingCtx?.subscription;
 
     if (!subscription) {
       return null;

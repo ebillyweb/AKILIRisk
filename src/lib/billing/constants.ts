@@ -1,5 +1,7 @@
 import type { SubscriptionTier } from "@prisma/client";
 
+import { ENTERPRISE_DEFAULT_CLIENT_LIMIT } from "@/lib/enterprise/constants";
+
 /**
  * Per-tier client limit. Single source of truth at write time — populates
  * Subscription.clientLimit on row create/update. Read enforcement uses the
@@ -14,4 +16,5 @@ export const TIER_LIMITS: Record<SubscriptionTier, number> = {
   STARTER: 25,
   GROWTH: 50,
   PROFESSIONAL: 100,
+  ENTERPRISE: ENTERPRISE_DEFAULT_CLIENT_LIMIT,
 };

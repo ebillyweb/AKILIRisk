@@ -5,6 +5,10 @@ import type { SubscriptionStatus } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { subscriptionQualifiesForPortalEnablement } from "@/lib/billing/advisor-portal-subscription";
 import { isBillingEnabled } from "@/lib/billing/config";
+import {
+  resolveBillingContext,
+  subscriptionForPortalFromContext,
+} from "@/lib/enterprise/billing-context";
 import { prisma } from "@/lib/db";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { assertMfaVerified } from "@/lib/auth/require-mfa-verified";
@@ -61,15 +65,6 @@ export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
       role: true,
       deletedAt: true,
       advisorPortalAccessEnabled: true,
-      subscription: {
-        select: {
-          status: true,
-          currentPeriodEnd: true,
-          cancelAtPeriodEnd: true,
-          stripeSubscriptionId: true,
-          createdAt: true,
-        },
-      },
     },
   });
   if (!row || row.role !== "ADVISOR") {
@@ -81,7 +76,13 @@ export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
   if (row.advisorPortalAccessEnabled === false) {
     return { allowed: false, blockReason: "disabled" };
   }
-  if (advisorHubAccessFromRow(row.advisorPortalAccessEnabled, row.subscription)) {
+
+  const billingCtx = await resolveBillingContext(userId);
+  const subscription = billingCtx
+    ? subscriptionForPortalFromContext(billingCtx)
+    : null;
+
+  if (advisorHubAccessFromRow(row.advisorPortalAccessEnabled, subscription)) {
     return { allowed: true, blockReason: null };
   }
   return { allowed: false, blockReason: "subscription" };

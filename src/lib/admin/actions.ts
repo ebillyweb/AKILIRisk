@@ -21,6 +21,13 @@ import { getAdvisorForAdmin } from "@/lib/admin/queries";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
+import {
+  ENTERPRISE_DEFAULT_CLIENT_LIMIT,
+  ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT,
+  ENTERPRISE_DEFAULT_SEAT_LIMIT,
+} from "@/lib/enterprise/constants";
+import { userHasBlockingSoloSubscription } from "@/lib/enterprise/solo-subscription-block";
+import { isSubdomainReserved, validateSubdomainFormat } from "@/lib/advisor/subdomain";
 
 // Round-11 bug-hunt fix: normalize email casing — both schemas
 // trim+lowercase so userEmailWriteData (deterministic ciphertext,
@@ -207,16 +214,24 @@ export async function setAdvisorPortalAccessByAdmin(input: unknown) {
     }
 
     if (parsed.data.enabled) {
-      const sub = await prisma.subscription.findUnique({
-        where: { userId: target.id },
-        select: {
-          status: true,
-          currentPeriodEnd: true,
-          cancelAtPeriodEnd: true,
-          stripeSubscriptionId: true,
-          createdAt: true,
-        },
-      });
+      const { resolveBillingContext, subscriptionForPortalFromContext } =
+        await import("@/lib/enterprise/billing-context");
+      const billingCtx = await resolveBillingContext(target.id);
+      const subSnapshot = billingCtx
+        ? subscriptionForPortalFromContext(billingCtx)
+        : null;
+      const sub =
+        subSnapshot ??
+        (await prisma.subscription.findUnique({
+          where: { userId: target.id },
+          select: {
+            status: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+            stripeSubscriptionId: true,
+            createdAt: true,
+          },
+        }));
       const billingOn = isBillingEnabled();
       if (!subscriptionQualifiesForPortalEnablement(sub, billingOn)) {
         return {
@@ -698,5 +713,184 @@ export async function restoreClientByAdmin(input: unknown) {
   } catch (e) {
     logSafeError("admin/restoreClient", e);
     return { success: false, error: safeErrorMessage(e, "Failed to restore client") };
+  }
+}
+
+const createEnterpriseSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  slug: z
+    .string()
+    .min(3)
+    .max(20)
+    .transform((s) => s.trim().toLowerCase()),
+  ownerUserId: z.string().cuid(),
+  seatLimit: z.number().int().positive().optional(),
+  clientLimit: z.number().int().positive().optional(),
+  perAdvisorClientLimit: z.number().int().positive().optional(),
+  paymentMethod: z.enum(["WIRE", "CARD"]),
+  stripeSubscriptionId: z.string().min(1).optional(),
+  stripeCustomerId: z.string().min(1).optional(),
+  billingCycle: z.enum(["MONTHLY", "ANNUAL"]).optional(),
+});
+
+export type CreateEnterpriseInput = z.infer<typeof createEnterpriseSchema>;
+
+export async function createEnterpriseByAdmin(input: unknown) {
+  try {
+    const { userId: actorUserId, email: actorEmail, role: actorRole } =
+      await requireAdminRole();
+    const parsed = createEnterpriseSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    const slugCheck = validateSubdomainFormat(parsed.data.slug);
+    if (!slugCheck.valid) {
+      return { success: false, error: slugCheck.error ?? "Invalid slug" };
+    }
+
+    const reserved = await isSubdomainReserved(parsed.data.slug);
+    if (reserved.reserved) {
+      return {
+        success: false,
+        error: reserved.reason ?? "This subdomain is reserved",
+      };
+    }
+
+    const owner = await prisma.user.findFirst({
+      where: { id: parsed.data.ownerUserId, role: "ADVISOR", deletedAt: null },
+      select: {
+        id: true,
+        advisorProfile: { select: { id: true, enterpriseId: true } },
+        enterpriseMembership: { select: { id: true } },
+      },
+    });
+
+    if (!owner?.advisorProfile) {
+      return { success: false, error: "Owner must be an active advisor with a profile" };
+    }
+    if (owner.enterpriseMembership) {
+      return { success: false, error: "Owner already belongs to an enterprise" };
+    }
+    if (owner.advisorProfile.enterpriseId) {
+      return { success: false, error: "Owner profile is already linked to an enterprise" };
+    }
+    if (await userHasBlockingSoloSubscription(owner.id)) {
+      return {
+        success: false,
+        error:
+          "Owner must cancel their personal subscription before becoming an enterprise owner.",
+      };
+    }
+
+    const existingSlug = await prisma.advisorEnterprise.findUnique({
+      where: { slug: parsed.data.slug },
+      select: { id: true },
+    });
+    if (existingSlug) {
+      return { success: false, error: "An enterprise with this slug already exists" };
+    }
+
+    const seatLimit = parsed.data.seatLimit ?? ENTERPRISE_DEFAULT_SEAT_LIMIT;
+    const clientLimit = parsed.data.clientLimit ?? ENTERPRISE_DEFAULT_CLIENT_LIMIT;
+    const perAdvisorClientLimit =
+      parsed.data.perAdvisorClientLimit ?? ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT;
+    const billingCycle = parsed.data.billingCycle ?? "ANNUAL";
+    const periodEnd = new Date();
+    periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const enterprise = await tx.advisorEnterprise.create({
+        data: {
+          name: parsed.data.name.trim(),
+          slug: parsed.data.slug,
+          seatLimit,
+          clientLimit,
+          perAdvisorClientLimit,
+          paymentMethod: parsed.data.paymentMethod,
+          billingContactUserId: owner.id,
+        },
+      });
+
+      await tx.advisorProfile.update({
+        where: { id: owner.advisorProfile!.id },
+        data: { enterpriseId: enterprise.id },
+      });
+
+      const membership = await tx.enterpriseMembership.create({
+        data: {
+          enterpriseId: enterprise.id,
+          userId: owner.id,
+          advisorProfileId: owner.advisorProfile!.id,
+          role: "OWNER",
+          status: "ACTIVE",
+          acceptedAt: new Date(),
+        },
+      });
+
+      const subscription = await tx.subscription.create({
+        data: {
+          enterpriseId: enterprise.id,
+          tier: "ENTERPRISE",
+          status: "ACTIVE",
+          clientLimit,
+          billingCycle,
+          currentPeriodEnd: periodEnd,
+          stripeCustomerId: parsed.data.stripeCustomerId ?? null,
+          stripeSubscriptionId: parsed.data.stripeSubscriptionId ?? null,
+        },
+      });
+
+      await tx.subscriptionAuditLog.create({
+        data: {
+          subscriptionId: subscription.id,
+          action: "admin_enterprise_provision",
+          newTier: "ENTERPRISE",
+          metadata: {
+            enterpriseId: enterprise.id,
+            paymentMethod: parsed.data.paymentMethod,
+            seatLimit,
+            clientLimit,
+            perAdvisorClientLimit,
+          },
+        },
+      });
+
+      return { enterprise, membership, subscription };
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.USER_UPDATE,
+      entityType: "AdvisorEnterprise",
+      entityId: result.enterprise.id,
+      afterData: {
+        name: result.enterprise.name,
+        slug: result.enterprise.slug,
+        ownerUserId: owner.id,
+        seatLimit,
+        clientLimit,
+        perAdvisorClientLimit,
+        paymentMethod: parsed.data.paymentMethod,
+      },
+    });
+
+    revalidatePath("/admin/advisors");
+    revalidatePath("/admin");
+
+    return {
+      success: true,
+      enterpriseId: result.enterprise.id,
+      subscriptionId: result.subscription.id,
+      ownerMembershipId: result.membership.id,
+    };
+  } catch (e) {
+    logSafeError("admin/createEnterprise", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to create enterprise") };
   }
 }

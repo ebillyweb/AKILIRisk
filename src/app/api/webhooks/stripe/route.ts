@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { getInvoiceSubscriptionId } from "@/lib/billing/stripe-invoice";
 import {
   appendSubscriptionAuditLog,
+  upsertEnterpriseSubscriptionFromStripe,
   upsertSubscriptionFromStripe,
 } from "@/lib/billing/subscription-service";
 import { prisma } from "@/lib/db";
@@ -12,17 +13,59 @@ import { getStripe } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
-async function resolveUserIdForSubscription(
+async function resolveSubscriptionUpsertTarget(
   sub: Stripe.Subscription
-): Promise<string | null> {
+): Promise<
+  | { kind: "solo"; userId: string }
+  | { kind: "enterprise"; enterpriseId: string }
+  | null
+> {
+  if (
+    typeof sub.metadata?.enterpriseId === "string" &&
+    sub.metadata.enterpriseId.length > 0
+  ) {
+    return { kind: "enterprise", enterpriseId: sub.metadata.enterpriseId };
+  }
   if (typeof sub.metadata?.userId === "string" && sub.metadata.userId.length > 0) {
-    return sub.metadata.userId;
+    return { kind: "solo", userId: sub.metadata.userId };
   }
   const row = await prisma.subscription.findFirst({
     where: { stripeSubscriptionId: sub.id },
-    select: { userId: true },
+    select: { userId: true, enterpriseId: true },
   });
-  return row?.userId ?? null;
+  if (row?.enterpriseId) {
+    return { kind: "enterprise", enterpriseId: row.enterpriseId };
+  }
+  if (row?.userId) {
+    return { kind: "solo", userId: row.userId };
+  }
+  return null;
+}
+
+async function applyStripeSubscriptionSnapshot(
+  target:
+    | { kind: "solo"; userId: string }
+    | { kind: "enterprise"; enterpriseId: string },
+  sub: Stripe.Subscription,
+  customerId: string,
+  eventCreatedAt: Date
+) {
+  if (target.kind === "enterprise") {
+    return upsertEnterpriseSubscriptionFromStripe(
+      target.enterpriseId,
+      sub,
+      customerId,
+      prisma,
+      eventCreatedAt
+    );
+  }
+  return upsertSubscriptionFromStripe(
+    target.userId,
+    sub,
+    customerId,
+    prisma,
+    eventCreatedAt
+  );
 }
 
 /**
@@ -202,17 +245,16 @@ export async function POST(request: Request) {
           break;
         }
 
-        const userId = await resolveUserIdForSubscription(sub);
-        if (!userId) {
+        const target = await resolveSubscriptionUpsertTarget(sub);
+        if (!target) {
           outcome = "IGNORED";
           break;
         }
 
-        const result = await upsertSubscriptionFromStripe(
-          userId,
+        const result = await applyStripeSubscriptionSnapshot(
+          target,
           sub,
           customerId,
-          prisma,
           eventCreatedAt
         );
         if (!result.applied) {
@@ -244,17 +286,16 @@ export async function POST(request: Request) {
           break;
         }
 
-        const userId = await resolveUserIdForSubscription(sub);
-        if (!userId) {
+        const target = await resolveSubscriptionUpsertTarget(sub);
+        if (!target) {
           outcome = "IGNORED";
           break;
         }
 
-        const result = await upsertSubscriptionFromStripe(
-          userId,
+        const result = await applyStripeSubscriptionSnapshot(
+          target,
           sub,
           customerId,
-          prisma,
           eventCreatedAt
         );
         if (!result.applied) {
@@ -296,17 +337,16 @@ export async function POST(request: Request) {
           break;
         }
 
-        const userId = await resolveUserIdForSubscription(sub);
-        if (!userId) {
+        const target = await resolveSubscriptionUpsertTarget(sub);
+        if (!target) {
           outcome = "IGNORED";
           break;
         }
 
-        const result = await upsertSubscriptionFromStripe(
-          userId,
+        const result = await applyStripeSubscriptionSnapshot(
+          target,
           sub,
           customerId,
-          prisma,
           eventCreatedAt
         );
         if (!result.applied) {
