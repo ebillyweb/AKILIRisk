@@ -3,7 +3,10 @@ import "server-only";
 import type { SubscriptionStatus } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
-import { subscriptionQualifiesForPortalEnablement } from "@/lib/billing/advisor-portal-subscription";
+import {
+  subscriptionEntitlesAdvisorPortal,
+  subscriptionQualifiesForPortalEnablement,
+} from "@/lib/billing/advisor-portal-subscription";
 import { isBillingEnabled } from "@/lib/billing/config";
 import {
   resolveBillingContext,
@@ -93,6 +96,14 @@ export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
   const subscription = billingCtx
     ? subscriptionForPortalFromContext(billingCtx)
     : null;
+
+  if (
+    billingCtx?.kind === "enterprise" &&
+    subscription &&
+    subscriptionEntitlesAdvisorPortal(subscription)
+  ) {
+    return { allowed: true, blockReason: null };
+  }
 
   if (advisorHubAccessFromRow(row.advisorPortalAccessEnabled, subscription)) {
     return { allowed: true, blockReason: null };
