@@ -9,7 +9,10 @@ export type MetricTrendDirection = "up" | "down" | "flat";
 interface MetricCardProps {
   title: string;
   value: string | number;
+  /** Secondary line under the trend (e.g. timezone note). */
   subtitle?: string;
+  /** Explains what the trend delta measures (e.g. "vs yesterday"). */
+  trendLabel?: string;
   icon: LucideIcon;
   status?: MetricStatus;
   trend?: {
@@ -49,6 +52,12 @@ const statusBadgeStyles: Record<MetricStatus, string> = {
     "border-border/60 bg-muted/40 text-muted-foreground",
 };
 
+const statusLabels: Record<Exclude<MetricStatus, "neutral">, string> = {
+  healthy: "Healthy",
+  warning: "Attention",
+  critical: "Critical",
+};
+
 /**
  * Treat the value as a status label (renders as a badge) when it is a
  * non-numeric string that isn't a percentage / count token like "80%" or
@@ -66,6 +75,7 @@ export function MetricCard({
   title,
   value,
   subtitle,
+  trendLabel,
   icon: Icon,
   status = "neutral",
   trend,
@@ -73,29 +83,35 @@ export function MetricCard({
 }: MetricCardProps) {
   const renderAsStatusBadge = isStatusStringValue(value);
   const TrendIcon = trend ? trendIcons[trend.direction] : null;
-  const showStatusDot = !renderAsStatusBadge && status !== "neutral";
+  const showHeaderStatusPill =
+    !renderAsStatusBadge && (status === "warning" || status === "critical");
 
   return (
     <article
       className={cn(
-        "hero-surface group relative flex h-full flex-col gap-3 rounded-2xl border border-border/80 bg-card p-4 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-border hover:shadow-md",
+        "hero-surface group relative flex min-h-[9.5rem] flex-col rounded-2xl border border-border/80 bg-card p-4 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-border hover:shadow-md",
         className
       )}
     >
-      <div className="flex flex-col items-start gap-2">
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground transition-colors",
-            "border-border/60 bg-muted/40 group-hover:border-primary/25 group-hover:bg-primary/5 group-hover:text-primary"
-          )}
-        >
-          <Icon className="size-4" aria-hidden />
-        </span>
-
-        {showStatusDot && (
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2.5">
           <span
             className={cn(
-              "inline-flex w-fit items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+              "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border text-muted-foreground transition-colors",
+              "border-border/60 bg-muted/40 group-hover:border-primary/25 group-hover:bg-primary/5 group-hover:text-primary"
+            )}
+          >
+            <Icon className="size-4" aria-hidden />
+          </span>
+          <p className="min-w-0 text-sm font-medium leading-snug text-foreground">
+            {title}
+          </p>
+        </div>
+
+        {showHeaderStatusPill && (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
             )}
             aria-label={`Status: ${status}`}
           >
@@ -106,52 +122,49 @@ export function MetricCard({
               )}
               aria-hidden
             />
-            {status}
+            {statusLabels[status]}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2">
-        <p className="whitespace-normal text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </p>
-
+      <div className="mt-3 flex flex-1 flex-col justify-end gap-2">
         {renderAsStatusBadge ? (
           <span
             className={cn(
-              "inline-flex w-fit max-w-full items-center whitespace-normal break-words rounded-md border px-2 py-1 text-sm font-semibold leading-tight",
+              "inline-flex w-fit max-w-full items-center rounded-md border px-2.5 py-1 text-sm font-semibold leading-tight",
               statusBadgeStyles[status]
             )}
           >
             {value}
           </span>
         ) : (
-          <p className="text-3xl font-semibold leading-none tracking-tight text-foreground">
+          <p className="text-3xl font-semibold tabular-nums leading-none tracking-tight text-foreground">
             {value}
           </p>
         )}
-      </div>
 
-      {(trend || subtitle) && (
-        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          {trend && TrendIcon && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 font-medium",
-                trendStyles[trend.direction]
-              )}
-            >
-              <TrendIcon className="size-3" aria-hidden />
-              {trend.value}
-            </span>
-          )}
-          {subtitle && (
-            <span className="whitespace-normal text-muted-foreground">
-              {subtitle}
-            </span>
-          )}
-        </div>
-      )}
+        {(trend || subtitle) && (
+          <div className="space-y-0.5 text-xs text-muted-foreground">
+            {trend && TrendIcon && (
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 font-medium",
+                    trendStyles[trend.direction]
+                  )}
+                >
+                  <TrendIcon className="size-3 shrink-0" aria-hidden />
+                  {trend.value}
+                </span>
+                {trendLabel ? (
+                  <span className="text-muted-foreground">{trendLabel}</span>
+                ) : null}
+              </p>
+            )}
+            {subtitle ? <p>{subtitle}</p> : null}
+          </div>
+        )}
+      </div>
     </article>
   );
 }

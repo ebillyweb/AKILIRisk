@@ -58,16 +58,17 @@ export function ControlCenterLiveDashboard({
 
   return (
     <>
-      <ControlCenterLiveStatus
-        generatedAt={snapshot.generatedAt}
-        status={status}
-        lastError={lastError}
-        pollMs={pollMs}
-        onRefresh={refresh}
-      />
-
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Platform Status</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <h2 className="text-lg font-semibold text-foreground">At a glance</h2>
+          <ControlCenterLiveStatus
+            generatedAt={snapshot.generatedAt}
+            status={status}
+            lastError={lastError}
+            pollMs={pollMs}
+            onRefresh={refresh}
+          />
+        </div>
         <ErrorBoundary
           fallback={
             <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg bg-muted/30">
@@ -76,59 +77,59 @@ export function ControlCenterLiveDashboard({
           }
           resetKeys={[snapshot.generatedAt]}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
-              title="Active Advisors"
+              title="Active advisors"
               value={metrics?.activeAdvisors?.value ?? "—"}
               icon={Users}
               trend={metrics?.activeAdvisors?.trend}
-              status="healthy"
+              trendLabel="new in last 30 days"
             />
             <MetricCard
-              title="Daily Logins"
+              title="Daily logins"
               value={metrics?.dailyLogins?.value ?? "—"}
               icon={LogIn}
               trend={metrics?.dailyLogins?.trend}
-              status="neutral"
-              subtitle="Unique users today (US Central)"
+              trendLabel="vs yesterday"
+              subtitle="Unique users · US Central day"
             />
             <MetricCard
-              title="Assessments in Progress"
+              title="Assessments in progress"
               value={metrics?.assessmentsInProgress?.value ?? "—"}
               icon={ClipboardList}
               trend={metrics?.assessmentsInProgress?.trend}
-              status="neutral"
+              trendLabel="started in last 30 days"
             />
             <MetricCard
-              title="Intake Completion"
+              title="Intake completion"
               value={metrics?.intakeCompletionRate?.value ?? "—"}
               icon={CheckCircle}
               trend={metrics?.intakeCompletionRate?.trend}
-              status="healthy"
+              trendLabel="vs prior 30 days"
             />
             <MetricCard
-              title="Platform Status"
+              title="System health"
               value={metrics?.platformStatus?.value ?? "—"}
               icon={Server}
               status={metrics?.platformStatus?.status ?? "neutral"}
             />
             <MetricCard
-              title="Failed Integrations"
+              title="Failed integrations"
               value={metrics?.failedIntegrations?.value ?? "—"}
               icon={Puzzle}
               status={metrics?.failedIntegrations?.status ?? "neutral"}
               subtitle={
                 metrics?.failedIntegrations?.value && metrics.failedIntegrations.value > 0
                   ? "Requires attention"
-                  : undefined
+                  : "All integrations healthy"
               }
             />
             <MetricCard
-              title="Pending Reviews"
+              title="Pending reviews"
               value={metrics?.pendingReviews?.value ?? "—"}
               icon={Eye}
               trend={metrics?.pendingReviews?.trend}
-              status="neutral"
+              trendLabel="vs reviews open 30+ days"
             />
           </div>
         </ErrorBoundary>
