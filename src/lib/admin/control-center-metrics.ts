@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { getOperationsHealthSnapshot } from "@/lib/admin/operations-health";
 import type { HealthStatus } from "@/lib/admin/operations-health";
 import type { MetricStatus } from "@/components/admin/dashboard/MetricCard";
@@ -15,6 +16,30 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * DAY_MS);
+}
+
+function startOfDayUTC(d: Date): Date {
+  const x = new Date(d);
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+
+const LOGIN_AUDIT_ACTIONS = [
+  AUDIT_ACTIONS.AUTH_SIGNIN_SUCCESS,
+  AUDIT_ACTIONS.AUTH_MAGIC_LINK_SUCCESS,
+] as const;
+
+async function countUniqueLoginsBetween(start: Date, end: Date): Promise<number> {
+  const rows = await prisma.auditLog.groupBy({
+    by: ["actorUserId"],
+    where: {
+      action: { in: [...LOGIN_AUDIT_ACTIONS] },
+      actorUserId: { not: null },
+      createdAt: { gte: start, lt: end },
+      NOT: { metadata: { path: ["testOrigin"], equals: true } },
+    },
+  });
+  return rows.length;
 }
 
 function formatCountDelta(current: number, previous: number): MetricTrend {
@@ -76,11 +101,15 @@ function mapFailedCountToStatus(count: number): MetricStatus {
 export async function getControlCenterMetrics(): Promise<ControlCenterMetrics> {
   const thirtyDaysAgo = daysAgo(30);
   const sixtyDaysAgo = daysAgo(60);
+  const startOfToday = startOfDayUTC(new Date());
+  const startOfYesterday = new Date(startOfToday.getTime() - DAY_MS);
 
   const [
     activeAdvisors,
     newAdvisorsLast30d,
     newAdvisorsPrior30d,
+    dailyLoginsToday,
+    dailyLoginsYesterday,
     assessmentsInProgress,
     assessmentsStartedLast30d,
     assessmentsStartedPrior30d,
@@ -113,6 +142,8 @@ export async function getControlCenterMetrics(): Promise<ControlCenterMetrics> {
         createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
       },
     }),
+    countUniqueLoginsBetween(startOfToday, new Date()),
+    countUniqueLoginsBetween(startOfYesterday, startOfToday),
     prisma.assessment.count({ where: { status: "IN_PROGRESS" } }),
     prisma.assessment.count({ where: { startedAt: { gte: thirtyDaysAgo } } }),
     prisma.assessment.count({
@@ -176,6 +207,10 @@ export async function getControlCenterMetrics(): Promise<ControlCenterMetrics> {
     activeAdvisors: {
       value: activeAdvisors,
       trend: formatCountDelta(newAdvisorsLast30d, newAdvisorsPrior30d),
+    },
+    dailyLogins: {
+      value: dailyLoginsToday,
+      trend: formatCountDelta(dailyLoginsToday, dailyLoginsYesterday),
     },
     assessmentsInProgress: {
       value: assessmentsInProgress,

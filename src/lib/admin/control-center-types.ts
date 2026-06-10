@@ -9,6 +9,7 @@ export type MetricTrend = {
 
 export interface ControlCenterMetrics {
   activeAdvisors: { value: number; trend: MetricTrend };
+  dailyLogins: { value: number; trend: MetricTrend };
   assessmentsInProgress: { value: number; trend: MetricTrend };
   intakeCompletionRate: { value: string; trend: MetricTrend };
   platformStatus: { value: string; status: MetricStatus };

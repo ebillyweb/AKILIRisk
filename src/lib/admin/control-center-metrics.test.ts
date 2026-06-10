@@ -5,6 +5,7 @@ vi.mock("@/lib/db", () => ({
     user: { count: vi.fn() },
     assessment: { count: vi.fn() },
     intakeApproval: { count: vi.fn() },
+    auditLog: { groupBy: vi.fn() },
   },
 }));
 
@@ -19,6 +20,7 @@ import { getControlCenterMetrics } from "./control-center-metrics";
 const mockUserCount = vi.mocked(prisma.user.count);
 const mockAssessmentCount = vi.mocked(prisma.assessment.count);
 const mockIntakeApprovalCount = vi.mocked(prisma.intakeApproval.count);
+const mockAuditLogGroupBy = vi.mocked(prisma.auditLog.groupBy);
 const mockHealthSnapshot = vi.mocked(getOperationsHealthSnapshot);
 
 describe("getControlCenterMetrics", () => {
@@ -27,6 +29,7 @@ describe("getControlCenterMetrics", () => {
     mockUserCount.mockResolvedValue(0);
     mockAssessmentCount.mockResolvedValue(0);
     mockIntakeApprovalCount.mockResolvedValue(0);
+    mockAuditLogGroupBy.mockResolvedValue([]);
     mockHealthSnapshot.mockResolvedValue({
       overall: "healthy",
       failedIntegrations: [],
@@ -34,6 +37,15 @@ describe("getControlCenterMetrics", () => {
   });
 
   it("maps platform health and failed integration counts", async () => {
+    mockAuditLogGroupBy
+      .mockResolvedValueOnce([
+        { actorUserId: "u1" },
+        { actorUserId: "u2" },
+        { actorUserId: "u3" },
+      ] as Awaited<ReturnType<typeof prisma.auditLog.groupBy>>)
+      .mockResolvedValueOnce([{ actorUserId: "u1" }] as Awaited<
+        ReturnType<typeof prisma.auditLog.groupBy>
+      >);
     mockUserCount
       .mockResolvedValueOnce(5) // activeAdvisors
       .mockResolvedValueOnce(1) // newAdvisorsLast30d
@@ -57,6 +69,10 @@ describe("getControlCenterMetrics", () => {
     const metrics = await getControlCenterMetrics();
 
     expect(metrics.activeAdvisors.value).toBe(5);
+    expect(metrics.dailyLogins).toEqual({
+      value: 3,
+      trend: { value: "+2", direction: "up" },
+    });
     expect(metrics.assessmentsInProgress.value).toBe(3);
     expect(metrics.intakeCompletionRate.value).toBe("80%");
     expect(metrics.platformStatus).toEqual({

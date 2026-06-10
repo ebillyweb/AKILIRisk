@@ -8,6 +8,7 @@ import {
   Clock,
   Eye,
   FileText,
+  LogIn,
   Puzzle,
   Server,
   UserPlus,
@@ -75,13 +76,21 @@ export function ControlCenterLiveDashboard({
           }
           resetKeys={[snapshot.generatedAt]}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
             <MetricCard
               title="Active Advisors"
               value={metrics?.activeAdvisors?.value ?? "—"}
               icon={Users}
               trend={metrics?.activeAdvisors?.trend}
               status="healthy"
+            />
+            <MetricCard
+              title="Daily Logins"
+              value={metrics?.dailyLogins?.value ?? "—"}
+              icon={LogIn}
+              trend={metrics?.dailyLogins?.trend}
+              status="neutral"
+              subtitle="Unique users today (UTC)"
             />
             <MetricCard
               title="Assessments in Progress"

@@ -19,6 +19,7 @@ export const MetricValueSchema = z.object({
 // Control center metrics schema
 export const ControlCenterMetricsSchema = z.object({
   activeAdvisors: MetricValueSchema,
+  dailyLogins: MetricValueSchema,
   assessmentsInProgress: MetricValueSchema,
   intakeCompletionRate: MetricValueSchema,
   platformStatus: MetricValueSchema,
