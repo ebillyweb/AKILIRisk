@@ -90,7 +90,7 @@ export function ControlCenterLiveDashboard({
               icon={LogIn}
               trend={metrics?.dailyLogins?.trend}
               status="neutral"
-              subtitle="Unique users today (UTC)"
+              subtitle="Unique users today (US Central)"
             />
             <MetricCard
               title="Assessments in Progress"

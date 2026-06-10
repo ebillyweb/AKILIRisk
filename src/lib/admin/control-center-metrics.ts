@@ -2,6 +2,11 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import {
+  startOfDayInTimeZone,
+  startOfPriorDayInTimeZone,
+  US_CENTRAL_TIMEZONE,
+} from "@/lib/datetime/timezone-day-boundary";
 import { getOperationsHealthSnapshot } from "@/lib/admin/operations-health";
 import type { HealthStatus } from "@/lib/admin/operations-health";
 import type { MetricStatus } from "@/components/admin/dashboard/MetricCard";
@@ -16,12 +21,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * DAY_MS);
-}
-
-function startOfDayUTC(d: Date): Date {
-  const x = new Date(d);
-  x.setUTCHours(0, 0, 0, 0);
-  return x;
 }
 
 const LOGIN_AUDIT_ACTIONS = [
@@ -101,8 +100,9 @@ function mapFailedCountToStatus(count: number): MetricStatus {
 export async function getControlCenterMetrics(): Promise<ControlCenterMetrics> {
   const thirtyDaysAgo = daysAgo(30);
   const sixtyDaysAgo = daysAgo(60);
-  const startOfToday = startOfDayUTC(new Date());
-  const startOfYesterday = new Date(startOfToday.getTime() - DAY_MS);
+  const now = new Date();
+  const startOfToday = startOfDayInTimeZone(now, US_CENTRAL_TIMEZONE);
+  const startOfYesterday = startOfPriorDayInTimeZone(now, US_CENTRAL_TIMEZONE);
 
   const [
     activeAdvisors,
