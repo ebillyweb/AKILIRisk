@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
+import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function MFAVerifyForm({ callbackUrl }: MFAVerifyFormProps) {
         throw new Error(data.error || "Verification failed");
       }
 
+      broadcastAuthSessionChange();
       window.location.assign(safeAfterSignInPath(callbackUrl));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
@@ -76,6 +78,7 @@ export function MFAVerifyForm({ callbackUrl }: MFAVerifyFormProps) {
         );
       }
 
+      broadcastAuthSessionChange();
       window.location.assign(safeAfterSignInPath(callbackUrl));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");

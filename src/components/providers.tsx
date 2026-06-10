@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SessionProvider } from 'next-auth/react';
 import { Toaster } from 'react-hot-toast';
 import { useState } from 'react';
 
@@ -26,9 +27,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        {children}
+    <SessionProvider refetchOnWindowFocus>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
         <Toaster
           position="bottom-right"
           toastOptions={{
@@ -55,7 +57,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
             },
           }}
         />
-      </QueryClientProvider>
-    </ThemeProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </SessionProvider>
   );
 }

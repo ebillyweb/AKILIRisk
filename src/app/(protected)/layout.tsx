@@ -29,6 +29,7 @@ import { WorkspaceSlimHeader } from "@/components/layout/WorkspaceSlimHeader";
 import { redirectIfMfaChallengePending } from "@/lib/auth/require-mfa-verified";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { redirectIfPendingConsent } from "@/lib/advisor/require-consent-resolved";
+import { SessionSync } from "@/components/auth/SessionSync";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
 const BRANDED_CLIENT_HEADER_KICKER = "Brought to you by AKILI Risk Intelligence";
@@ -132,7 +133,9 @@ export default async function ProtectedLayout({
   const advisorFeatureFlags = showAdvisor ? await getPlatformFeatureFlags() : null;
 
   const shell = (
-    <div className="min-h-screen py-3 sm:py-6">
+    <>
+      {session.user.id ? <SessionSync userId={session.user.id} /> : null}
+      <div className="min-h-screen py-3 sm:py-6">
       {restrictNavToIntake && (
         <RedirectIncompleteIntake restrictNavToIntake={restrictNavToIntake} />
       )}
@@ -170,6 +173,7 @@ export default async function ProtectedLayout({
                   homeAriaLabel={
                     isAdminWorkspaceRoute ? "Admin workspace home" : "Advisor workspace home"
                   }
+                  userEmail={session.user.email ?? undefined}
                 />
               ) : (
                 <div className="flex flex-col gap-6">
@@ -331,6 +335,7 @@ export default async function ProtectedLayout({
         </div>
       </div>
     </div>
+    </>
   );
 
   if (clientAdvisorBranding) {

@@ -18,6 +18,7 @@ import {
   isPlatformAdminRole,
   normalizeUserRoleString,
 } from "@/lib/auth-roles";
+import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 
 function resolvePostSignInPath(
   callbackUrl: string | null,
@@ -70,6 +71,7 @@ function SignInForm() {
       }
 
       const session = await getSession();
+      broadcastAuthSessionChange();
       const redirectTo = resolvePostSignInPath(
         callbackUrl,
         session?.user?.role
