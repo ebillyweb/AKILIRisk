@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { ADVISOR_BRANDING_PROFILE_SELECT } from '@/lib/client/advisor-branding-profile';
+import { resolveAdvisorBrandingForProfile } from '@/lib/enterprise/branding';
+import type { AdvisorBrandingData } from '@/lib/validation/branding';
 import {
   getTenantSubdomainSuffix,
   isPlatformSubdomainLabel,
@@ -66,17 +67,26 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
           select: {
             id: true,
             brandingEnabled: true,
-            userId: true
+            userId: true,
+            enterpriseId: true,
           }
-        }
+        },
+        enterprise: {
+          select: {
+            id: true,
+            slug: true,
+            brandingEnabled: true,
+          },
+        },
       }
     });
 
-    // Return the row whenever it exists and the advisor has branding enabled.
-    // The caller (proxy.ts) decides whether to rewrite (isActive && dnsVerified)
-    // or render the "Subdomain Not Available" page (anything else). Filtering
-    // on isActive here would short-circuit the proxy's not-available branch.
-    const result = advisorSubdomain && advisorSubdomain.advisor.brandingEnabled
+    const brandingEnabled =
+      advisorSubdomain?.enterprise?.brandingEnabled ??
+      advisorSubdomain?.advisor.brandingEnabled ??
+      false;
+
+    const result = advisorSubdomain && brandingEnabled
       ? {
           advisorId: advisorSubdomain.advisorId,
           subdomain: advisorSubdomain.subdomain,
@@ -105,7 +115,9 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
  * rows surface as null so callers don't accidentally render a portal for
  * a subdomain that the proxy would otherwise 404.
  */
-export async function getAdvisorBrandingBySubdomain(subdomain: string) {
+export async function getAdvisorBrandingBySubdomain(
+  subdomain: string
+): Promise<AdvisorBrandingData | null> {
   const advisorData = await getAdvisorBySubdomain(subdomain);
 
   if (!advisorData) {
@@ -117,24 +129,7 @@ export async function getAdvisorBrandingBySubdomain(subdomain: string) {
   }
 
   try {
-    const advisor = await prisma.advisorProfile.findUnique({
-      where: { id: advisorData.advisorId },
-      select: {
-        ...ADVISOR_BRANDING_PROFILE_SELECT,
-        user: {
-          select: {
-            subscription: {
-              select: {
-                tier: true,
-                status: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return advisor;
+    return await resolveAdvisorBrandingForProfile(advisorData.advisorId);
   } catch (error) {
     console.error('Error fetching advisor branding:', error);
     return null;

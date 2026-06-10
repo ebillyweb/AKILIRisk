@@ -11,11 +11,13 @@ import { AdvisorSidebarNav } from "./AdvisorSidebarNav";
 interface AdvisorMobileNavProps {
   featureFlags: AdvisorPlatformFeatureFlags;
   unreadNotificationCount: number;
+  enterpriseTeamEnabled?: boolean;
 }
 
 export function AdvisorMobileNav({
   featureFlags,
   unreadNotificationCount,
+  enterpriseTeamEnabled = false,
 }: AdvisorMobileNavProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -118,6 +120,7 @@ export function AdvisorMobileNav({
 
             <AdvisorSidebarNav
               featureFlags={featureFlags}
+              enterpriseTeamEnabled={enterpriseTeamEnabled}
               collapsibleSections
               onNavigate={close}
               className="overflow-y-auto"

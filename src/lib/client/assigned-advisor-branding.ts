@@ -3,9 +3,8 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 import {
-  ADVISOR_BRANDING_PROFILE_SELECT,
-  mapAdvisorProfileToBrandingData,
-} from "@/lib/client/advisor-branding-profile";
+  resolveAdvisorBrandingForProfile,
+} from "@/lib/enterprise/branding";
 
 /**
  * Branding for the client's currently active advisor assignment (main app /dashboard, not subdomain "branded" routes).
@@ -16,17 +15,10 @@ export async function getAssignedAdvisorBrandingForClient(
   const assignment = await prisma.clientAdvisorAssignment.findFirst({
     where: { clientId: clientUserId, status: "ACTIVE" },
     orderBy: { assignedAt: "desc" },
-    select: {
-      advisor: {
-        select: ADVISOR_BRANDING_PROFILE_SELECT,
-      },
-    },
+    select: { advisorId: true },
   });
 
-  const advisor = assignment?.advisor;
-  if (!advisor?.brandingEnabled) {
-    return null;
-  }
+  if (!assignment) return null;
 
-  return mapAdvisorProfileToBrandingData(advisor);
+  return resolveAdvisorBrandingForProfile(assignment.advisorId);
 }

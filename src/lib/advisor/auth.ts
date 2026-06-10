@@ -53,7 +53,11 @@ function advisorHubAccessFromRow(
   return subscriptionQualifiesForPortalEnablement(subscription, billingOn);
 }
 
-export type AdvisorHubBlockReason = "deactivated" | "disabled" | "subscription";
+/** Thrown when an enterprise membership is suspended. */
+export const ADVISOR_ENTERPRISE_SUSPENDED_MESSAGE =
+  "Your firm access has been suspended. Contact your firm administrator.";
+
+export type AdvisorHubBlockReason = "deactivated" | "disabled" | "subscription" | "suspended";
 
 export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
   allowed: boolean;
@@ -75,6 +79,14 @@ export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
   }
   if (row.advisorPortalAccessEnabled === false) {
     return { allowed: false, blockReason: "disabled" };
+  }
+
+  const membership = await prisma.enterpriseMembership.findUnique({
+    where: { userId },
+    select: { status: true },
+  });
+  if (membership?.status === "SUSPENDED") {
+    return { allowed: false, blockReason: "suspended" };
   }
 
   const billingCtx = await resolveBillingContext(userId);
@@ -102,7 +114,9 @@ async function assertAdvisorPortalAccessForAdvisorRole(userId: string): Promise<
         ? ADVISOR_ACCOUNT_DEACTIVATED_MESSAGE
         : blockReason === "disabled"
           ? ADVISOR_PORTAL_DISABLED_MESSAGE
-          : ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE
+          : blockReason === "suspended"
+            ? ADVISOR_ENTERPRISE_SUSPENDED_MESSAGE
+            : ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE
     );
   }
 }
@@ -180,6 +194,7 @@ export function isAdvisorAuthError(e: unknown): boolean {
   if (m === ADVISOR_PORTAL_DISABLED_MESSAGE) return true;
   if (m === ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE) return true;
   if (m === ADVISOR_ACCOUNT_DEACTIVATED_MESSAGE) return true;
+  if (m === ADVISOR_ENTERPRISE_SUSPENDED_MESSAGE) return true;
   return false;
 }
 

@@ -861,6 +861,37 @@ export async function createEnterpriseByAdmin(input: unknown) {
         },
       });
 
+      const { getSubdomainActivationData } = await import("@/lib/advisor/platform-subdomain");
+      const activation = getSubdomainActivationData();
+      const existingSubdomain = await tx.advisorSubdomain.findUnique({
+        where: { advisorId: owner.advisorProfile!.id },
+      });
+      if (existingSubdomain) {
+        await tx.advisorSubdomain.update({
+          where: { advisorId: owner.advisorProfile!.id },
+          data: {
+            enterpriseId: enterprise.id,
+            subdomain: parsed.data.slug,
+            isActive: activation.isActive,
+            dnsVerified: activation.dnsVerified,
+            sslProvisioned: activation.sslProvisioned,
+            verifiedAt: activation.verifiedAt,
+          },
+        });
+      } else {
+        await tx.advisorSubdomain.create({
+          data: {
+            advisorId: owner.advisorProfile!.id,
+            enterpriseId: enterprise.id,
+            subdomain: parsed.data.slug,
+            isActive: activation.isActive,
+            dnsVerified: activation.dnsVerified,
+            sslProvisioned: activation.sslProvisioned,
+            verifiedAt: activation.verifiedAt,
+          },
+        });
+      }
+
       return { enterprise, membership, subscription };
     });
 

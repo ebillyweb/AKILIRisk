@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
+import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
 import { headers } from "next/headers";
@@ -36,15 +37,18 @@ export default async function AdvisorLayout({
         redirect(
           hub.blockReason === "disabled"
             ? "/settings?notice=advisor_portal_disabled"
-            : "/advisor/billing"
+            : hub.blockReason === "suspended"
+              ? "/signin?notice=enterprise_suspended"
+              : "/advisor/billing"
         );
       }
     }
   }
 
-  const [featureFlags, dash] = await Promise.all([
+  const [featureFlags, dash, enterpriseTeamEnabled] = await Promise.all([
     getPlatformFeatureFlags(),
     getAdvisorDashboardData(),
+    userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
   ]);
 
   const unreadNotificationCount = dash.success
@@ -55,6 +59,7 @@ export default async function AdvisorLayout({
     <AdvisorControlCenterLayout
       featureFlags={featureFlags}
       unreadNotificationCount={unreadNotificationCount}
+      enterpriseTeamEnabled={enterpriseTeamEnabled}
     >
       <AdvisorSrOnlyHeading />
       {children}

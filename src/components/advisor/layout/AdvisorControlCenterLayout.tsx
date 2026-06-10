@@ -12,6 +12,7 @@ interface AdvisorControlCenterLayoutProps {
   children: ReactNode;
   featureFlags: AdvisorPlatformFeatureFlags;
   unreadNotificationCount: number;
+  enterpriseTeamEnabled?: boolean;
   className?: string;
 }
 
@@ -19,6 +20,7 @@ export function AdvisorControlCenterLayout({
   children,
   featureFlags,
   unreadNotificationCount,
+  enterpriseTeamEnabled = false,
   className,
 }: AdvisorControlCenterLayoutProps) {
   return (
@@ -32,6 +34,7 @@ export function AdvisorControlCenterLayout({
         <AdvisorSidebar
           featureFlags={featureFlags}
           unreadNotificationCount={unreadNotificationCount}
+          enterpriseTeamEnabled={enterpriseTeamEnabled}
           className="hidden w-64 shrink-0 lg:flex"
         />
 
@@ -39,6 +42,7 @@ export function AdvisorControlCenterLayout({
           <AdvisorMobileNav
             featureFlags={featureFlags}
             unreadNotificationCount={unreadNotificationCount}
+            enterpriseTeamEnabled={enterpriseTeamEnabled}
           />
 
           <main className="min-h-0 flex-1 overflow-y-auto">

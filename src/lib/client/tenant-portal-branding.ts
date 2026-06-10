@@ -2,7 +2,6 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { getAdvisorBrandingBySubdomain } from "@/lib/advisor/subdomain";
-import { mapAdvisorProfileToBrandingData } from "@/lib/client/advisor-branding-profile";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 /**
@@ -21,11 +20,10 @@ export async function getTenantBrandingFromRequestHeaders(): Promise<AdvisorBran
     return null;
   }
 
-  const row = await getAdvisorBrandingBySubdomain(subdomain);
-  if (!row?.brandingEnabled) {
+  const branding = await getAdvisorBrandingBySubdomain(subdomain);
+  if (!branding?.brandingEnabled) {
     return null;
   }
 
-  const { user: _user, ...profile } = row;
-  return mapAdvisorProfileToBrandingData(profile);
+  return branding;
 }

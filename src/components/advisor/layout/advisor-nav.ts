@@ -31,6 +31,8 @@ export type AdvisorNavItem = {
   comingSoonTooltip?: string;
   /** When set, item is omitted unless the flag is true. */
   requiresFlag?: keyof AdvisorPlatformFeatureFlags;
+  /** When true, item is shown only for enterprise OWNER/ADMIN team managers. */
+  requiresEnterpriseTeam?: boolean;
 };
 
 export type AdvisorNavSection = {
@@ -132,17 +134,26 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     items: [
       { href: "/advisor/notifications", label: "Notifications", icon: Bell },
       { href: "/advisor/billing", label: "Billing", icon: CreditCard },
+      {
+        href: "/advisor/settings/team",
+        label: "Team",
+        icon: Users,
+        requiresEnterpriseTeam: true,
+      },
       { href: "/advisor/settings", label: "Settings", icon: Settings },
     ],
   },
 ];
 
 export function getVisibleAdvisorNavSections(
-  flags: AdvisorPlatformFeatureFlags
+  flags: AdvisorPlatformFeatureFlags,
+  options?: { enterpriseTeamEnabled?: boolean }
 ): AdvisorNavSection[] {
+  const enterpriseTeamEnabled = options?.enterpriseTeamEnabled === true;
   return ADVISOR_NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
+      if (item.requiresEnterpriseTeam && !enterpriseTeamEnabled) return false;
       if (!item.requiresFlag) return true;
       return flags[item.requiresFlag];
     }),

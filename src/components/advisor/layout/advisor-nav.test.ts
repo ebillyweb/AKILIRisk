@@ -56,4 +56,16 @@ describe("getActiveAdvisorNavHref", () => {
     expect(workflows?.items[2]?.href).toBe("/advisor/pipeline?needsRescore=1");
     expect(workflows?.items[3]?.href).toBe("/advisor/engagements");
   });
+
+  it("shows Team nav only when enterprise team management is enabled", () => {
+    const hidden = getVisibleAdvisorNavSections(flags);
+    expect(
+      hidden.flatMap((section) => section.items).some((item) => item.label === "Team")
+    ).toBe(false);
+
+    const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
+    expect(
+      visible.flatMap((section) => section.items).some((item) => item.href === "/advisor/settings/team")
+    ).toBe(true);
+  });
 });

@@ -7,12 +7,14 @@ import { AdvisorSidebarNav } from "./AdvisorSidebarNav";
 interface AdvisorSidebarProps {
   featureFlags: AdvisorPlatformFeatureFlags;
   unreadNotificationCount: number;
+  enterpriseTeamEnabled?: boolean;
   className?: string;
 }
 
 export function AdvisorSidebar({
   featureFlags,
   unreadNotificationCount,
+  enterpriseTeamEnabled = false,
   className,
 }: AdvisorSidebarProps) {
   return (
@@ -33,7 +35,7 @@ export function AdvisorSidebar({
         </div>
       </div>
 
-      <AdvisorSidebarNav featureFlags={featureFlags} />
+      <AdvisorSidebarNav featureFlags={featureFlags} enterpriseTeamEnabled={enterpriseTeamEnabled} />
 
       <div className="mt-auto border-t border-border/60 p-4">
         <div className="flex items-center justify-between gap-2">

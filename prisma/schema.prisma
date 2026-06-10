@@ -143,12 +143,31 @@ model AdvisorEnterprise {
   paymentMethod         EnterprisePaymentMethod @default(WIRE)
   billingContactUserId  String?
   billingContact        User?                   @relation("EnterpriseBillingContact", fields: [billingContactUserId], references: [id], onDelete: SetNull)
+  /// Canonical firm branding (Phase 3). Client-facing surfaces resolve here when
+  /// member profiles carry `enterpriseId`.
+  brandName             String?
+  tagline               String?
+  primaryColor          String?
+  secondaryColor        String?
+  accentColor           String?
+  websiteUrl            String?
+  emailFooterText       String?
+  supportEmail          String?
+  supportPhone          String?
+  logoUrl               String?
+  logoS3Key             String?
+  logoContentType       String?
+  logoFileSize          Int?
+  logoUploadedAt        DateTime?
+  brandingEnabled       Boolean                 @default(true)
+  customDomainEnabled   Boolean                 @default(false)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 
-  subscription   Subscription?
-  memberships    EnterpriseMembership[]
+  subscription    Subscription?
+  memberships     EnterpriseMembership[]
   advisorProfiles AdvisorProfile[]
+  subdomain       AdvisorSubdomain?
 
   @@index([billingContactUserId])
 }
@@ -1145,6 +1164,7 @@ model NotificationPreference {
 model AdvisorSubdomain {
   id             String    @id @default(cuid())
   advisorId      String    @unique
+  enterpriseId   String?   @unique
   subdomain      String    @unique
   isActive       Boolean   @default(false)
   dnsVerified    Boolean   @default(false)
@@ -1154,9 +1174,11 @@ model AdvisorSubdomain {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  advisor AdvisorProfile @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  advisor    AdvisorProfile     @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  enterprise AdvisorEnterprise? @relation(fields: [enterpriseId], references: [id], onDelete: SetNull)
 
   @@index([advisorId])
+  @@index([enterpriseId])
   @@index([isActive])
 }
 
