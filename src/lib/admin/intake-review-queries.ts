@@ -7,6 +7,7 @@ import { decryptUserEmail } from "@/lib/auth/user-email-crypto";
 import { safeDecryptTranscription } from "@/lib/data/response-content";
 import { prisma } from "@/lib/db";
 import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
+import { intakeResponsePlaybackUrl } from "@/lib/intake/playback-url";
 import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
 import { getAssignedAdvisorFirmNameForClient } from "@/lib/client/assigned-advisor-firm-name";
 import type { IntakeQuestion } from "@/lib/intake/types";
@@ -57,6 +58,7 @@ export async function getIntakeInterviewForAdminReview(
           id: true,
           questionId: true,
           audioUrl: true,
+          audioS3Key: true,
           audioDuration: true,
           transcription: true,
           transcriptionStatus: true,
@@ -99,7 +101,9 @@ export async function getIntakeInterviewForAdminReview(
       responses: interview.responses.map((r) => ({
         id: r.id,
         questionId: r.questionId,
-        audioUrl: r.audioUrl,
+        audioUrl: r.audioS3Key
+          ? (r.audioUrl ?? intakeResponsePlaybackUrl(interviewId, r.questionId))
+          : r.audioUrl,
         audioDuration: r.audioDuration,
         transcription: safeDecryptTranscription(r.transcription, {
           rowId: r.id,

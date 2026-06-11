@@ -11,6 +11,7 @@ import { USERS } from "../fixtures/users";
  * Coverage:
  *  - Owner (client) gets 200 with the right Content-Type
  *  - Assigned advisor (ACTIVE ClientAdvisorAssignment) gets 200
+ *  - Platform admin (no assignment required) gets 200
  *  - Unassigned advisor (no assignment) gets 404, NOT 200 — regression
  *    against the original "everything in public/" architecture
  *  - Unauthenticated request gets 401
@@ -173,6 +174,25 @@ test.describe("intake audio streaming endpoint", () => {
 
     const resp = await request.get(audioPath, {
       headers: { cookie: advisorCookies },
+    });
+    expect(resp.status()).toBe(200);
+    expect(resp.headers()["content-type"] ?? "").toMatch(/^audio\//);
+  });
+
+  test("platform admin receives the audio bytes (200)", async ({
+    page,
+    request,
+  }) => {
+    await new SignInPage(page).signInAs("client");
+    const ownerCookies = await cookieHeaderFromPage(page);
+    await uploadOwnerAudio(request, ownerCookies, interviewId, questionId);
+
+    await page.context().clearCookies();
+    await new SignInPage(page).signInAs("admin");
+    const adminCookies = await cookieHeaderFromPage(page);
+
+    const resp = await request.get(audioPath, {
+      headers: { cookie: adminCookies },
     });
     expect(resp.status()).toBe(200);
     expect(resp.headers()["content-type"] ?? "").toMatch(/^audio\//);

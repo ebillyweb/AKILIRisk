@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { UserRole } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
+import { resolveIntakeAudioStreamAccess } from "@/lib/intake/audio-stream-access";
 import { getIntakeAudioObjectBytes } from "@/lib/s3/intake-audio-uploads";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { shouldAuditAudioStream } from "@/lib/audit/audio-stream-dedupe";
@@ -21,7 +21,9 @@ const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
  *
  * Authorized callers:
  *   - The intake's own client (interview.userId === session.user.id), OR
- *   - An ADVISOR/ADMIN with an ACTIVE ClientAdvisorAssignment to that client.
+ *   - An advisor with portfolio access to that client (solo assignment or
+ *     enterprise firm scope), OR
+ *   - Platform ADMIN / SUPER_ADMIN staff reviewing intake in `/admin`.
  *
  * Returns 404 (not 403) on auth failure so we don't leak which interview
  * IDs / question IDs exist — same posture as the admin advisor-logo route.
@@ -65,31 +67,13 @@ export async function GET(
   }
 
   const ownerUserId = response.interview.userId;
-  const isOwner = ownerUserId === session.user.id;
+  const accessRole = await resolveIntakeAudioStreamAccess({
+    sessionUserId: session.user.id,
+    sessionRole: session.user.role,
+    ownerUserId,
+  });
 
-  let isAssignedAdvisor = false;
-  if (!isOwner) {
-    const role = session.user.role?.toString().toUpperCase();
-    if (isAdvisorHubNavRole(role)) {
-      const advisor = await prisma.advisorProfile.findUnique({
-        where: { userId: session.user.id },
-        select: { id: true },
-      });
-      if (advisor) {
-        const assignment = await prisma.clientAdvisorAssignment.findFirst({
-          where: {
-            advisorId: advisor.id,
-            clientId: ownerUserId,
-            status: "ACTIVE",
-          },
-          select: { id: true },
-        });
-        isAssignedAdvisor = Boolean(assignment);
-      }
-    }
-  }
-
-  if (!isOwner && !isAssignedAdvisor) {
+  if (!accessRole) {
     return new NextResponse(null, { status: 404 });
   }
 
@@ -124,7 +108,7 @@ export async function GET(
       metadata: {
         interviewId,
         questionId,
-        accessRole: isOwner ? "owner" : "assigned_advisor",
+        accessRole,
       },
     });
   }
