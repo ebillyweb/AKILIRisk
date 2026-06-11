@@ -27,6 +27,7 @@ import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-en
 import { emitAssessmentSignals } from "@/lib/signals/emit";
 import type { PillarScoreSnapshot } from "@/lib/signals/types";
 import { evaluateClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
+import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
 import { normalizeUserRoleString } from "@/lib/auth-roles";
 
 /**
@@ -99,6 +100,7 @@ export async function GET(
       select: {
         userId: true,
         deliverablePhase: true,
+        includedPillars: true,
         scores: { select: { pillar: true } },
       },
     });
@@ -124,6 +126,7 @@ export async function GET(
       const summaryAccess = evaluateClientAssessmentSummaryAccess({
         pillarScores: assessment.scores,
         deliverablePhase: assessment.deliverablePhase,
+        includedPillars: assessment.includedPillars,
       });
       if (!summaryAccess.canViewSummary) {
         return NextResponse.json(
@@ -230,6 +233,7 @@ export async function POST(
         approvalId: true,
         status: true,
         version: true,
+        includedPillars: true,
         scores: { select: { pillar: true, score: true, riskLevel: true } },
       },
     });
@@ -247,6 +251,16 @@ export async function POST(
       return NextResponse.json(
         { error: "Assessment not found" },
         { status: 404 }
+      );
+    }
+
+    if (!isPillarInAssessmentScope(pillar, assessment.includedPillars)) {
+      return NextResponse.json(
+        {
+          error: "This pillar is not included in your assessment scope.",
+          code: "PILLAR_OUT_OF_SCOPE",
+        },
+        { status: 400 },
       );
     }
 
@@ -448,6 +462,7 @@ export async function POST(
       where: { id },
       select: {
         deliverablePhase: true,
+        includedPillars: true,
         scores: { select: { pillar: true } },
       },
     });
@@ -455,8 +470,9 @@ export async function POST(
       ? evaluateClientAssessmentSummaryAccess({
           pillarScores: updatedAssessment.scores,
           deliverablePhase: updatedAssessment.deliverablePhase,
+          includedPillars: updatedAssessment.includedPillars,
         })
-      : { canViewSummary: false };
+      : { canViewSummary: false, allPillarsComplete: false };
 
     const responseData: Record<string, unknown> = {
       score: pillarScore.saved.score,

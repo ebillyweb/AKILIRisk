@@ -6,6 +6,7 @@ import { z } from "zod";
 import { PillarCategoryKind, type UserRole } from "@prisma/client";
 
 import { requireAdminRole } from "@/lib/admin/auth";
+import { normalizeIncludedPillarIds } from "@/lib/assessment/included-pillars";
 import { prisma } from "@/lib/db";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
@@ -91,6 +92,9 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
     const recommendedActions = optionalTrimmed(formData.get("recordingTips"));
     const displayOrder = z.coerce.number().int().min(0).parse(formData.get("displayOrder"));
     const isVisible = formData.has("isVisible");
+    const relatedPillarIds = normalizeIncludedPillarIds(
+      formData.getAll("relatedPillarIds").map((v) => String(v)),
+    );
 
     const existing = await findIntakePillarQuestionOrThrow(questionId);
 
@@ -102,6 +106,7 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
         recommendedActions,
         displayOrder,
         isVisible,
+        relatedPillarIds,
       },
     });
 
@@ -116,6 +121,7 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
         recommendedActions: existing.recommendedActions,
         displayOrder: existing.displayOrder,
         isVisible: existing.isVisible,
+        relatedPillarIds: existing.relatedPillarIds,
       },
       afterData: {
         questionText,
@@ -123,6 +129,7 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
         recommendedActions,
         displayOrder,
         isVisible,
+        relatedPillarIds,
       },
       metadata: { categoryKind: "INTAKE" },
     });

@@ -398,6 +398,9 @@ model Assessment {
   answersChangedAfterCompleteAt DateTime?
   updatedAt     DateTime         @updatedAt
   approvalId    String?          // Links to IntakeApproval for customized assessments
+  /// Epic 5.11: advisor-selected pillar scope (1–6 canonical ids). Empty array
+  /// means all six pillars (legacy / pre-approval backfill).
+  includedPillars String[]       @default([]) @map("included_pillars")
 
   /// BRD §6.3 / Epic 5.10: which deliverable phase this assessment is in.
   /// Set to PREVIEW on scoring completion, PROFILE on report publish, and
@@ -583,6 +586,9 @@ model PillarQuestion {
   /// failing maturity level (≤ 1), regardless of the pillar's overall
   /// score. Managed in the question-bank admin (US-37 extension).
   isKeyRiskIndicator   Boolean  @default(false) @map("is_key_risk_indicator")
+  /// Epic 5.11 / US-77: intake questions linked to assessment pillars for
+  /// advisor recommendations at approval time.
+  relatedPillarIds     String[] @default([]) @map("related_pillar_ids")
 
   section PillarSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
@@ -1066,7 +1072,12 @@ model IntakeApproval {
   interviewId  String          @unique
   advisorId    String
   status       ApprovalStatus  @default(PENDING)
+  /// Epic 5.11: advisor-selected assessment scope (1–6 canonical pillar ids).
+  includedPillars String[]     @default([]) @map("included_pillars")
+  /// Scoring emphasis within included pillars; defaults to all included at approve.
   focusAreas   String[]
+  /// Snapshot of intake-based pillar recommendations at approval time (audit).
+  pillarRecommendations Json?   @map("pillar_recommendations")
   notes        String?
   reviewedAt   DateTime?
   approvedAt   DateTime?

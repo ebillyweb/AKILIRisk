@@ -1,31 +1,40 @@
 import type { Prisma } from "@prisma/client";
-import {
-  ASSESSMENT_PILLAR_IDS,
-  normalizePillarScoreId,
-} from "@/lib/assessment/pillar-registry";
+import { normalizePillarScoreId } from "@/lib/assessment/pillar-registry";
+import { isAssessmentScopeComplete } from "@/lib/assessment/included-pillars";
 import { enterPreview } from "@/lib/assessment/deliverable-phase";
 
 type Tx = Prisma.TransactionClient;
 
 /**
- * Mark the assessment COMPLETED only when every canonical pillar has a
+ * Mark the assessment COMPLETED only when every **included** pillar has a
  * PillarScore row. Otherwise keep (or reset to) IN_PROGRESS.
  *
- * BRD §6.3 / Epic 5.10: when all pillars are scored, also stamp the
- * deliverable phase as PREVIEW so the client can view the heat-map
- * overview and the 48-hour advisory-outreach clock starts.
+ * Epic 5.11: scope comes from `Assessment.includedPillars` (empty = all six).
+ * BRD §6.3 / Epic 5.10: when scope is complete, stamp PREVIEW for the heat-map
+ * overview and the 48-hour advisory-outreach clock.
  */
 export async function syncAssessmentCompletionStatus(
   tx: Tx,
   assessmentId: string
 ): Promise<{ allPillarsScored: boolean }> {
+  const assessment = await tx.assessment.findUnique({
+    where: { id: assessmentId },
+    select: { includedPillars: true },
+  });
+  if (!assessment) {
+    return { allPillarsScored: false };
+  }
+
   const scored = await tx.pillarScore.findMany({
     where: { assessmentId },
     select: { pillar: true },
   });
 
-  const scoredIds = new Set(scored.map((s) => normalizePillarScoreId(s.pillar)));
-  const allPillarsScored = ASSESSMENT_PILLAR_IDS.every((id) => scoredIds.has(id));
+  const scoredIds = scored.map((s) => normalizePillarScoreId(s.pillar));
+  const allPillarsScored = isAssessmentScopeComplete(
+    scoredIds,
+    assessment.includedPillars,
+  );
 
   const now = new Date();
   await tx.assessment.update({

@@ -12,7 +12,7 @@
 
 | Story | Title | Status | Tests |
 |-------|--------|--------|--------|
-| US-67 | Scope assessment to included pillars (system) | **Planned** | Unit: `included-pillars`, `syncAssessmentCompletionStatus` |
+| US-67 | Scope assessment to included pillars (system) | **In progress** (Phase 1) | Unit: `included-pillars`, `syncAssessmentCompletionStatus` |
 | US-68 | Lock assessment until advisor approves with pillars | **Planned** | `epic-5.11-assessment-gate.spec.ts` |
 | US-69 | Select assessment domains at intake approval | **Planned** | `epic-5.11-pillar-selection-approval.spec.ts` |
 | US-70 | View intake-based pillar recommendations | **Planned** | Unit: `computePillarRecommendations` |
@@ -22,7 +22,7 @@
 | US-74 | Conduct facilitated intake | **Planned** | `epic-5.11-facilitated-intake.spec.ts` |
 | US-75 | Conduct facilitated assessment through risk preview | **Planned** | `epic-5.11-facilitated-assessment.spec.ts` |
 | US-76 | Review completed sessions in advisor queue | **Planned** | `epic-5.11-session-review-queue.spec.ts` |
-| US-77 | Tag intake questions with related pillars (admin) | **Planned** | Admin intake question edit + unit tests |
+| US-77 | Tag intake questions with related pillars (admin) | **In progress** (Phase 1 admin UI) | Admin intake question edit + unit tests |
 
 ## Supersedes / amends (Epic 5.2)
 

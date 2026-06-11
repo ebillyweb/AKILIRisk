@@ -31,6 +31,19 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
     expect(result.advisorPublishedProfile).toBe(false);
     expect(result.canViewRiskPreview).toBe(true);
     expect(result.canViewSummary).toBe(false);
+    expect(result.includedPillars).toHaveLength(6);
+  });
+
+  it("completes scoped assessment when only included pillars are scored", () => {
+    const result = evaluateClientAssessmentSummaryAccess({
+      pillarScores: [{ pillar: "governance" }, { pillar: "cyber-digital" }],
+      deliverablePhase: "PREVIEW",
+      includedPillars: ["governance", "cyber-digital"],
+    });
+
+    expect(result.allPillarsComplete).toBe(true);
+    expect(result.canViewRiskPreview).toBe(true);
+    expect(result.includedPillars).toEqual(["governance", "cyber-digital"]);
   });
 
   it("allows summary when all pillars scored and profile published", () => {

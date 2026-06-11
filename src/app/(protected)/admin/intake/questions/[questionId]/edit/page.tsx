@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getIntakeQuestionForAdmin } from "@/lib/admin/intake-questions-queries";
 import { updateIntakePillarQuestionContent } from "@/lib/actions/admin-intake-questions-actions";
 import { FormHasCheckbox } from "@/components/admin/form-submission-checkbox";
+import { IntakeRelatedPillarsField } from "@/components/admin/IntakeRelatedPillarsField";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +95,10 @@ export default async function AdminIntakeQuestionEditPage({
                 Shown to the client before they record; one tip per line.
               </p>
             </div>
+
+            <IntakeRelatedPillarsField
+              defaultSelected={question.relatedPillarIds ?? []}
+            />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

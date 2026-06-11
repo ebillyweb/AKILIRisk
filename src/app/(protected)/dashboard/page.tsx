@@ -164,6 +164,7 @@ export default async function DashboardPage({
     ? evaluateClientAssessmentSummaryAccess({
         pillarScores: allPillarScores,
         deliverablePhase: latestAssessmentForHeatMap.deliverablePhase,
+        includedPillars: latestAssessmentForHeatMap.includedPillars,
       })
     : null;
   const summaryUnlocked = summaryAccess?.canViewSummary ?? false;

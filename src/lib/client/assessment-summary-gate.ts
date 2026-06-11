@@ -2,20 +2,24 @@ import "server-only";
 
 import type { DeliverablePhase } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { normalizePillarScoreId } from "@/lib/assessment/pillar-registry";
 import {
-  ASSESSMENT_PILLAR_IDS,
-  normalizePillarScoreId,
-} from "@/lib/assessment/pillar-registry";
+  isAssessmentScopeComplete,
+  resolveIncludedPillars,
+} from "@/lib/assessment/included-pillars";
 
 export type ClientAssessmentSummaryAccess = {
-  /** Heat-map Risk Preview once every pillar is scored (PREVIEW phase). */
+  /** Heat-map Risk Preview once every included pillar is scored (PREVIEW phase). */
   canViewRiskPreview: boolean;
   /** Full results with action plan after advisor publishes PROFILE/PORTFOLIO. */
   canViewSummary: boolean;
+  /** True when every pillar in assessment scope has a PillarScore row. */
   allPillarsComplete: boolean;
   advisorPublishedProfile: boolean;
   deliverablePhase: DeliverablePhase;
   assessmentId: string | null;
+  /** Resolved scope (always 1–6 canonical ids). */
+  includedPillars: string[];
 };
 
 /**
@@ -35,18 +39,20 @@ export function isAssessmentSummaryUnlockedFromStatus(input: {
 
 /**
  * Clients may view the Assessment Summary (/assessment/results) only when
- * every pillar is scored and the advisor has published the Risk Profile
+ * every included pillar is scored and the advisor has published the Risk Profile
  * (deliverablePhase PROFILE or PORTFOLIO).
  */
 export function evaluateClientAssessmentSummaryAccess(input: {
   pillarScores: Array<{ pillar: string }>;
   deliverablePhase: DeliverablePhase;
+  includedPillars?: string[] | null;
 }): Omit<ClientAssessmentSummaryAccess, "assessmentId"> {
-  const scoredIds = new Set(
-    input.pillarScores.map((row) => normalizePillarScoreId(row.pillar)),
+  const scoredIds = input.pillarScores.map((row) =>
+    normalizePillarScoreId(row.pillar),
   );
-  const allPillarsComplete = ASSESSMENT_PILLAR_IDS.every((id) =>
-    scoredIds.has(id),
+  const allPillarsComplete = isAssessmentScopeComplete(
+    scoredIds,
+    input.includedPillars,
   );
   const advisorPublishedProfile =
     input.deliverablePhase === "PROFILE" ||
@@ -58,6 +64,7 @@ export function evaluateClientAssessmentSummaryAccess(input: {
     allPillarsComplete,
     advisorPublishedProfile,
     deliverablePhase: input.deliverablePhase,
+    includedPillars: resolveIncludedPillars(input.includedPillars),
   };
 }
 
@@ -70,6 +77,7 @@ export async function getClientAssessmentSummaryAccess(
     select: {
       id: true,
       deliverablePhase: true,
+      includedPillars: true,
       scores: { select: { pillar: true } },
     },
   });
@@ -82,12 +90,14 @@ export async function getClientAssessmentSummaryAccess(
       advisorPublishedProfile: false,
       deliverablePhase: "PREVIEW",
       assessmentId: null,
+      includedPillars: [...resolveIncludedPillars([])],
     };
   }
 
   const evaluated = evaluateClientAssessmentSummaryAccess({
     pillarScores: latest.scores,
     deliverablePhase: latest.deliverablePhase,
+    includedPillars: latest.includedPillars,
   });
 
   return { ...evaluated, assessmentId: latest.id };
@@ -102,6 +112,7 @@ export async function getAssessmentSummaryAccessForAssessment(
     select: {
       id: true,
       deliverablePhase: true,
+      includedPillars: true,
       scores: { select: { pillar: true } },
     },
   });
@@ -114,12 +125,14 @@ export async function getAssessmentSummaryAccessForAssessment(
       advisorPublishedProfile: false,
       deliverablePhase: "PREVIEW",
       assessmentId: null,
+      includedPillars: [...resolveIncludedPillars([])],
     };
   }
 
   const evaluated = evaluateClientAssessmentSummaryAccess({
     pillarScores: assessment.scores,
     deliverablePhase: assessment.deliverablePhase,
+    includedPillars: assessment.includedPillars,
   });
 
   return { ...evaluated, assessmentId: assessment.id };

@@ -13,6 +13,8 @@ export interface IntakeQuestion {
   whyThisMatters?: string;
   /** Pillar recommended actions — staff review / report queue; not shown to clients. */
   recommendedActions?: string;
+  /** Epic 5.11: canonical pillar ids for advisor recommendations at approval. */
+  relatedPillarIds?: string[];
   /** Guidance for TTS (includes tone fallback when pillar has no rubric text). */
   context: string;
   recordingTips: string[];
