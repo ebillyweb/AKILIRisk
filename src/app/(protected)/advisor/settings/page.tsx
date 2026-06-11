@@ -11,12 +11,18 @@ import {
 } from "@/lib/subscription/validation";
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
+import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+const ADVISOR_SETTINGS_CALLBACK = "/advisor/settings";
+
 export default async function AdvisorSettingsPage() {
-  const result = await getAdvisorDashboardData();
+  const [result, session] = await Promise.all([
+    getAdvisorDashboardData(),
+    auth(),
+  ]);
 
   if (!result.success) {
     return (
@@ -45,6 +51,9 @@ export default async function AdvisorSettingsPage() {
     profile.user.firstName && profile.user.lastName
       ? `${profile.user.firstName} ${profile.user.lastName}`
       : profile.user.name || "—";
+
+  const passwordChangeRequired = Boolean(session?.user?.passwordChangeRequired);
+  const changePasswordHref = `/change-password?callbackUrl=${encodeURIComponent(ADVISOR_SETTINGS_CALLBACK)}`;
 
   return (
     <div className="space-y-8">
@@ -124,6 +133,26 @@ export default async function AdvisorSettingsPage() {
           <p className="mt-5 border-t pt-4 text-xs text-muted-foreground">
             To change this information, contact your administrator.
           </p>
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold tracking-tight">Account security</h2>
+                {passwordChangeRequired ? (
+                  <Badge variant="warning">Password update required</Badge>
+                ) : null}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                You sign in with your email and password. Update your password here
+                to match the current platform security policy.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm" className="shrink-0">
+              <Link href={changePasswordHref}>Change password</Link>
+            </Button>
+          </div>
         </div>
 
         {/* Option D session 1: PII policy navigation card. Links to the

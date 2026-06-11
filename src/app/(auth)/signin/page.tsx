@@ -37,6 +37,7 @@ function SignInForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
   const accountDeactivatedNotice = searchParams.get("notice") === "account_deactivated";
+  const passwordUpdatedNotice = searchParams.get("notice") === "password_updated";
   const isAdvisorPortal = searchParams.get("portal") === "advisor";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -112,6 +113,13 @@ function SignInForm() {
           <AlertDescription>
             This account has been deactivated. Contact your administrator if you need access
             restored.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {passwordUpdatedNotice ? (
+        <Alert className="mb-5" variant="success">
+          <AlertDescription>
+            Your password was updated. Sign in with your new password to continue.
           </AlertDescription>
         </Alert>
       ) : null}

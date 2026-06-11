@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { safeAfterSignInPath } from "@/lib/auth-callback-path";
 import {
   buildPasswordRequirementsMessage,
   validatePasswordComplexity,
@@ -22,7 +23,13 @@ type PolicyResponse = {
   passwordChangeRequired: boolean;
 };
 
-export function ChangePasswordForm({ required = false }: { required?: boolean }) {
+export function ChangePasswordForm({
+  required = false,
+  callbackUrl,
+}: {
+  required?: boolean;
+  callbackUrl?: string;
+}) {
   const [policy, setPolicy] = useState<PasswordPolicy | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -86,7 +93,12 @@ export function ChangePasswordForm({ required = false }: { required?: boolean })
         return;
       }
 
-      await signOut({ callbackUrl: "/signin?notice=password_updated" });
+      const afterSignIn = safeAfterSignInPath(callbackUrl, "/advisor/settings");
+      const signInParams = new URLSearchParams({
+        notice: "password_updated",
+        callbackUrl: afterSignIn,
+      });
+      await signOut({ callbackUrl: `/signin?${signInParams.toString()}` });
     } catch (err) {
       console.error(err);
       setError("An unexpected error occurred");
