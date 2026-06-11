@@ -4,12 +4,10 @@ const {
   authSpy,
   enrollSpy,
   findUniqueSpy,
-  mfaPolicySpy,
 } = vi.hoisted(() => ({
   authSpy: vi.fn(),
   enrollSpy: vi.fn(),
   findUniqueSpy: vi.fn(),
-  mfaPolicySpy: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -18,10 +16,6 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/mfa", () => ({
   enrollMFA: (...args: unknown[]) => enrollSpy(...args),
-}));
-
-vi.mock("@/lib/platform/mfa-policy", () => ({
-  getMfaRequiredForAllRoles: () => mfaPolicySpy(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -38,7 +32,6 @@ beforeEach(() => {
   authSpy.mockReset();
   enrollSpy.mockReset();
   findUniqueSpy.mockReset();
-  mfaPolicySpy.mockResolvedValue(false);
 });
 
 describe("POST /api/auth/mfa/enroll", () => {
@@ -53,9 +46,14 @@ describe("POST /api/auth/mfa/enroll", () => {
     expect(enrollSpy).not.toHaveBeenCalled();
   });
 
-  it("returns 403 for client (USER) role when platform policy is off", async () => {
+  it("returns 403 for client (USER) role when enrollment is not required", async () => {
     authSpy.mockResolvedValue({
-      user: { id: "client-1", role: "USER", mfaEnabled: false },
+      user: {
+        id: "client-1",
+        role: "USER",
+        mfaEnabled: false,
+        mfaEnrollmentRequired: false,
+      },
     });
 
     const res = await POST(new Request("http://localhost/api/auth/mfa/enroll", {
@@ -67,10 +65,14 @@ describe("POST /api/auth/mfa/enroll", () => {
     expect(findUniqueSpy).not.toHaveBeenCalled();
   });
 
-  it("allows client enrollment when platform requires MFA for all roles", async () => {
-    mfaPolicySpy.mockResolvedValue(true);
+  it("allows client enrollment when session marks enrollment required", async () => {
     authSpy.mockResolvedValue({
-      user: { id: "client-1", role: "USER", mfaEnabled: false },
+      user: {
+        id: "client-1",
+        role: "USER",
+        mfaEnabled: false,
+        mfaEnrollmentRequired: true,
+      },
     });
     findUniqueSpy.mockResolvedValue({ mfaEnabled: false });
     enrollSpy.mockResolvedValue({

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
+import { getMfaUserState } from "@/lib/auth/mfa-setup-routing";
 import { MFAVerifyForm } from "./MFAVerifyForm";
 
 /**
@@ -19,16 +20,23 @@ export default async function MFAVerifyPage({
     redirect("/signin?callbackUrl=/mfa/verify");
   }
 
-  if (!session.user.mfaEnabled) {
-    const params = await searchParams;
-    const callbackUrl =
-      typeof params.callbackUrl === "string" ? params.callbackUrl : "/dashboard";
-    redirect(callbackUrl);
-  }
-
   const params = await searchParams;
   const callbackUrl =
     typeof params.callbackUrl === "string" ? params.callbackUrl : "/dashboard";
+
+  const mfaState = await getMfaUserState(session.user.id);
+
+  if (!mfaState?.mfaEnabled) {
+    const setup = new URL("/mfa/setup", "http://local");
+    if (callbackUrl.startsWith("/")) {
+      setup.searchParams.set("callbackUrl", callbackUrl);
+    }
+    redirect(`${setup.pathname}${setup.search}`);
+  }
+
+  if (session.user.mfaVerified) {
+    redirect(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
+  }
 
   return (
     <Suspense

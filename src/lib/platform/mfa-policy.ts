@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { isPrismaSchemaDriftError } from "@/lib/db/schema-drift";
 
 const PLATFORM_SETTINGS_ID = "default";
 
@@ -16,10 +17,19 @@ export async function getMfaRequiredForAllRoles(): Promise<boolean> {
     return false;
   }
 
-  const row = await delegate.findUnique({
-    where: { id: PLATFORM_SETTINGS_ID },
-    select: { mfaRequiredForAllRoles: true },
-  });
-
-  return row?.mfaRequiredForAllRoles ?? false;
+  try {
+    const row = await delegate.findUnique({
+      where: { id: PLATFORM_SETTINGS_ID },
+      select: { mfaRequiredForAllRoles: true },
+    });
+    return row?.mfaRequiredForAllRoles ?? false;
+  } catch (error) {
+    if (isPrismaSchemaDriftError(error)) {
+      console.warn(
+        "[mfa-policy] mfaRequiredForAllRoles column missing — run `npx prisma migrate deploy`. Defaulting to false."
+      );
+      return false;
+    }
+    throw error;
+  }
 }

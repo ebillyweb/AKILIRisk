@@ -21,10 +21,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // MFA is for credential-based advisor/admin accounts only.
-    if (!isAdvisorHubNavRole(session.user.role)) {
+    const mayUseMfa =
+      isAdvisorHubNavRole(session.user.role) ||
+      Boolean(session.user.mfaEnrollmentRequired);
+
+    if (!mayUseMfa) {
       return NextResponse.json(
-        { error: "MFA is not available for client accounts" },
+        { error: "MFA is not available for this account" },
         { status: 403 }
       );
     }

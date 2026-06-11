@@ -1,38 +1,52 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
-import { isMfaEnrollmentRequiredForUser } from "@/lib/auth/mfa-enforcement";
-import { getMfaRequiredForAllRoles } from "@/lib/platform/mfa-policy";
+import {
+  getMfaUserState,
+  resolvePostMfaSetupRedirect,
+} from "@/lib/auth/mfa-setup-routing";
 import { MFASetupForm } from "./MFASetupForm";
+
+type PageProps = {
+  searchParams: Promise<{ callbackUrl?: string }>;
+};
 
 /**
  * MFA setup: generates a TOTP secret (QR + manual key) but does not
  * activate MFA until the user verifies a code on this page.
- * Required for staff accounts; optional for clients when platform policy demands it.
  */
-export default async function MFASetupPage() {
+export default async function MFASetupPage({ searchParams }: PageProps) {
   const session = await auth();
+  const { callbackUrl } = await searchParams;
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect("/signin?callbackUrl=/mfa/setup");
   }
 
-  if (session.user.mfaEnabled) {
-    redirect("/settings");
+  const mfaState = await getMfaUserState(session.user.id);
+
+  if (mfaState?.mfaEnabled) {
+    redirect(
+      resolvePostMfaSetupRedirect({
+        role: session.user.role,
+        mfaVerified: session.user.mfaVerified,
+        callbackUrl,
+      })
+    );
   }
 
-  const mfaRequiredForAllRoles = await getMfaRequiredForAllRoles();
   const mayEnroll =
     isAdvisorHubNavRole(session.user.role) ||
-    isMfaEnrollmentRequiredForUser({
-      role: session.user.role,
-      mfaEnabled: false,
-      mfaRequiredForAllRoles,
-    });
+    Boolean(session.user.mfaEnrollmentRequired);
 
   if (!mayEnroll) {
-    redirect("/settings");
+    redirect("/signin?error=mfa_not_available");
   }
 
-  return <MFASetupForm required={Boolean(session.user.mfaEnrollmentRequired)} />;
+  return (
+    <MFASetupForm
+      required={Boolean(session.user.mfaEnrollmentRequired)}
+      callbackUrl={callbackUrl}
+    />
+  );
 }

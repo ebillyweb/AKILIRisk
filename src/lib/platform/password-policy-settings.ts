@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { isPrismaSchemaDriftError } from "@/lib/db/schema-drift";
 import {
   DEFAULT_PASSWORD_POLICY,
   type PasswordPolicy,
@@ -43,12 +44,21 @@ export async function getPasswordPolicy(): Promise<PasswordPolicy> {
     return DEFAULT_PASSWORD_POLICY;
   }
 
-  const row = await delegate.findUnique({
-    where: { id: PLATFORM_SETTINGS_ID },
-    select: passwordPolicySelect,
-  });
-
-  return rowToPolicy(row);
+  try {
+    const row = await delegate.findUnique({
+      where: { id: PLATFORM_SETTINGS_ID },
+      select: passwordPolicySelect,
+    });
+    return rowToPolicy(row);
+  } catch (error) {
+    if (isPrismaSchemaDriftError(error)) {
+      console.warn(
+        "[password-policy] PlatformSettings password columns missing — run `npx prisma migrate deploy`. Using defaults."
+      );
+      return DEFAULT_PASSWORD_POLICY;
+    }
+    throw error;
+  }
 }
 
 export type PasswordPolicyAdminData = PasswordPolicy;
@@ -69,13 +79,23 @@ export function policyRulesChanged(
 }
 
 export async function markStaffPasswordsOutOfCompliance(): Promise<number> {
-  const result = await prisma.user.updateMany({
-    where: {
-      password: { not: null },
-      deletedAt: null,
-      role: { in: ["ADVISOR", "ADMIN", "SUPER_ADMIN"] },
-    },
-    data: { passwordChangeRequired: true },
-  });
-  return result.count;
+  try {
+    const result = await prisma.user.updateMany({
+      where: {
+        password: { not: null },
+        deletedAt: null,
+        role: { in: ["ADVISOR", "ADMIN", "SUPER_ADMIN"] },
+      },
+      data: { passwordChangeRequired: true },
+    });
+    return result.count;
+  } catch (error) {
+    if (isPrismaSchemaDriftError(error)) {
+      console.warn(
+        "[password-policy] passwordChangeRequired column missing — run migrations before pushing compliance notices."
+      );
+      return 0;
+    }
+    throw error;
+  }
 }

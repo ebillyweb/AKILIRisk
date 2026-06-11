@@ -8,6 +8,9 @@ import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
 import { userNeedsPasswordChange } from "@/lib/auth/password-policy";
 import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
+import {
+  syncPasswordChangeRequired,
+} from "@/lib/auth/user-auth-snapshot";
 
 // Round-11 bug-hunt fix: normalize email casing so `findUserByEmail`
 // (deterministic ciphertext, case-sensitive) hits the same row no
@@ -68,7 +71,17 @@ export default {
         const hashedEmail = emailHash(email);
 
         // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-read.
-        const user = await findUserByEmail(email);
+        const user = await findUserByEmail(email, {
+          select: {
+            id: true,
+            password: true,
+            role: true,
+            deletedAt: true,
+            emailCiphertext: true,
+            name: true,
+            image: true,
+          },
+        });
 
         // Always run a real bcrypt.compare so the response time for
         // "no such email" looks identical to "wrong password for that email".
@@ -169,17 +182,12 @@ export default {
         const policy = await getPasswordPolicy();
         const needsPasswordChange = userNeedsPasswordChange({
           password,
-          passwordChangeRequired: Boolean(user.passwordChangeRequired),
-          passwordPolicyRevision: user.passwordPolicyRevision,
+          passwordChangeRequired: false,
+          passwordPolicyRevision: 0,
           policy,
         });
 
-        if (needsPasswordChange !== Boolean(user.passwordChangeRequired)) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { passwordChangeRequired: needsPasswordChange },
-          });
-        }
+        await syncPasswordChangeRequired(user.id, needsPasswordChange);
 
         return {
           id: user.id,

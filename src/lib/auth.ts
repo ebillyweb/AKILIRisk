@@ -6,6 +6,7 @@ import authConfig from "@/lib/auth.config";
 import { normalizeUserRoleString } from "@/lib/auth-roles";
 import { verifyAdminEmailOnFirstSignIn } from "@/lib/auth/verify-admin-on-sign-in";
 import { isMfaEnrollmentRequiredForUser } from "@/lib/auth/mfa-enforcement";
+import { getUserAuthSnapshot } from "@/lib/auth/user-auth-snapshot";
 import { getMfaRequiredForAllRoles } from "@/lib/platform/mfa-policy";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
@@ -107,20 +108,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const userId = token.id as string;
       if (userId) {
         const [dbUser, mfaRequiredForAllRoles] = await Promise.all([
-          prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-              mfaEnabled: true,
-              role: true,
-              firstName: true,
-              deletedAt: true,
-              passwordChangeRequired: true,
-            },
-          }),
+          getUserAuthSnapshot(userId),
           getMfaRequiredForAllRoles(),
         ]);
         token.mfaEnabled = dbUser?.mfaEnabled ?? false;
-        token.role = (dbUser?.role ?? "USER").toString().toUpperCase();
+        token.role = dbUser?.role ?? "USER";
         token.firstName = dbUser?.firstName ?? undefined;
         token.accountDeactivated = Boolean(dbUser?.deletedAt);
         token.mfaEnrollmentRequired = isMfaEnrollmentRequiredForUser({

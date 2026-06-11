@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { AuthPanel } from "@/components/auth/AuthPanel";
@@ -9,9 +10,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolvePostMfaSetupRedirect } from "@/lib/auth/mfa-setup-routing";
 
-export function MFASetupForm({ required = false }: { required?: boolean }) {
+export function MFASetupForm({
+  required = false,
+  callbackUrl,
+}: {
+  required?: boolean;
+  callbackUrl?: string;
+}) {
   const router = useRouter();
+  const { data: session, update: updateSession } = useSession();
   const [loading, setLoading] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -36,7 +45,14 @@ export function MFASetupForm({ required = false }: { required?: boolean }) {
         };
 
         if (res.status === 409) {
-          router.replace("/settings");
+          await updateSession();
+          router.replace(
+            resolvePostMfaSetupRedirect({
+              role: session?.user?.role,
+              mfaVerified: session?.user?.mfaVerified,
+              callbackUrl,
+            })
+          );
           return;
         }
 
@@ -54,7 +70,7 @@ export function MFASetupForm({ required = false }: { required?: boolean }) {
     }
 
     void enroll();
-  }, [router]);
+  }, [router, updateSession, session?.user?.role, session?.user?.mfaVerified, callbackUrl]);
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
@@ -82,6 +98,7 @@ export function MFASetupForm({ required = false }: { required?: boolean }) {
 
       setRecoveryCodes(data.recoveryCodes ?? []);
       setShowingCodes(true);
+      await updateSession();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -90,7 +107,12 @@ export function MFASetupForm({ required = false }: { required?: boolean }) {
   }
 
   function handleConfirm() {
-    router.push("/settings");
+    const destination = resolvePostMfaSetupRedirect({
+      role: session?.user?.role,
+      mfaVerified: true,
+      callbackUrl,
+    });
+    router.push(destination);
     router.refresh();
   }
 
@@ -162,8 +184,8 @@ export function MFASetupForm({ required = false }: { required?: boolean }) {
       }
       footer={
         required ? undefined : (
-        <Link href="/settings" className="font-semibold text-foreground hover:underline">
-          Cancel and return to settings
+        <Link href="/dashboard" className="font-semibold text-foreground hover:underline">
+          Cancel and return to dashboard
         </Link>
         )
       }

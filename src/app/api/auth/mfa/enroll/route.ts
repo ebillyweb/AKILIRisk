@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
-import { isMfaEnrollmentRequiredForUser } from "@/lib/auth/mfa-enforcement";
-import { getMfaRequiredForAllRoles } from "@/lib/platform/mfa-policy";
 import { prisma } from "@/lib/db";
 import { enrollMFA } from "@/lib/mfa";
 
@@ -17,14 +15,9 @@ export async function POST(_req: NextRequest) {
       );
     }
 
-    const mfaRequiredForAllRoles = await getMfaRequiredForAllRoles();
     const mayEnroll =
       isAdvisorHubNavRole(session.user.role) ||
-      isMfaEnrollmentRequiredForUser({
-        role: session.user.role,
-        mfaEnabled: Boolean(session.user.mfaEnabled),
-        mfaRequiredForAllRoles,
-      });
+      Boolean(session.user.mfaEnrollmentRequired);
 
     if (!mayEnroll) {
       return NextResponse.json(
