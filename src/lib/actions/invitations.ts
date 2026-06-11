@@ -23,7 +23,7 @@ import {
   createInvitationSchema,
   DEFAULT_INVITATION_PERSONAL_MESSAGE,
 } from "@/lib/schemas/invitation";
-import { InvitationListFilters, InvitationWithDetails } from "@/lib/invitations/types";
+import { InvitationListFilters, InvitationListResult, InvitationWithDetails } from "@/lib/invitations/types";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 type ActionResult<T> =
@@ -303,18 +303,15 @@ export async function expireInvitationAction(invitationId: string): Promise<Acti
 /**
  * Server action to get advisor's invitations
  */
-export async function getInvitationsAction(filters?: InvitationListFilters): Promise<ActionResult<InvitationWithDetails[]>> {
+export async function getInvitationsAction(
+  filters?: InvitationListFilters,
+  pagination?: { page: number; pageSize: number }
+): Promise<ActionResult<InvitationListResult>> {
   try {
-    // Authenticate and get advisor role
     const { userId } = await requireAdvisorRole();
-
-    // Get advisor profile
     const profile = await getAdvisorProfileOrThrow(userId);
-
-    // Get invitations for this advisor
-    const invitations = await getAdvisorInvitations(profile.id, filters);
-
-    return { success: true, data: invitations };
+    const result = await getAdvisorInvitations(profile.id, filters, pagination);
+    return { success: true, data: result };
   } catch (error) {
     if (error instanceof Error) {
       return { success: false, error: error.message };

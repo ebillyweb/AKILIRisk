@@ -13,6 +13,7 @@ import {
   CreateInvitationInput,
   InvitationWithDetails,
   InvitationListFilters,
+  InvitationListResult,
   InvitationStatus
 } from "./types";
 import { reconcileAdvisorInvitationStatuses } from "./redeem-invitation";
@@ -216,16 +217,31 @@ export async function createAdvisorInvitation(
 
 export async function getAdvisorInvitations(
   advisorId: string,
-  filters?: InvitationListFilters
-): Promise<InvitationWithDetails[]> {
+  filters?: InvitationListFilters,
+  pagination?: { page: number; pageSize: number }
+): Promise<InvitationListResult> {
   await reconcileAdvisorInvitationStatuses(advisorId);
 
-  const where: any = {
+  const where: {
+    createdBy: string;
+    status?: InvitationStatus;
+    createdAt?: { gte: Date };
+    OR?: Array<{
+      prefillEmail?: { contains: string; mode: "insensitive" };
+      clientName?: { contains: string; mode: "insensitive" };
+    }>;
+  } = {
     createdBy: advisorId,
   };
 
   if (filters?.status) {
     where.status = filters.status;
+  }
+
+  if (filters?.sentWithinDays) {
+    const since = new Date();
+    since.setDate(since.getDate() - filters.sentWithinDays);
+    where.createdAt = { gte: since };
   }
 
   if (filters?.search) {
@@ -235,31 +251,45 @@ export async function getAdvisorInvitations(
     ];
   }
 
-  const invitations = await prisma.inviteCode.findMany({
-    where,
-    include: {
-      advisor: {
-        select: {
-          id: true,
-          firmName: true,
-          user: {
-            select: {
-              name: true,
-              // Round-11 commit 2.4b: ciphertext, callers decrypt at usage.
-              emailCiphertext: true,
+  const page = pagination?.page ?? 1;
+  const pageSize = pagination?.pageSize ?? Number.MAX_SAFE_INTEGER;
+  const skip = pagination ? (page - 1) * pageSize : undefined;
+  const take = pagination?.pageSize;
+
+  const [totalCount, invitations] = await prisma.$transaction([
+    prisma.inviteCode.count({ where }),
+    prisma.inviteCode.findMany({
+      where,
+      include: {
+        advisor: {
+          select: {
+            id: true,
+            firmName: true,
+            user: {
+              select: {
+                name: true,
+                emailCiphertext: true,
+              },
             },
           },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+  ]);
 
-  return invitations.map((invitation) => ({
-    ...withDecryptedAdvisorEmail(invitation),
-    isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
-    canResend: invitationCanResend(invitation),
-  }));
+  return {
+    items: invitations.map((invitation) => ({
+      ...withDecryptedAdvisorEmail(invitation),
+      isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
+      canResend: invitationCanResend(invitation),
+    })),
+    totalCount,
+    page,
+    pageSize: pagination?.pageSize ?? totalCount,
+  };
 }
 
 export async function resendInvitation(

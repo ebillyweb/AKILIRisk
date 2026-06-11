@@ -1,47 +1,26 @@
 import { Suspense } from "react";
-import { InvitationStatus } from "@prisma/client";
+
 import { InviteClientForm } from "@/components/advisor/invitations/InviteClientForm";
 import { InvitationTable } from "@/components/advisor/invitations/InvitationTable";
 import { InvitationListFilters } from "@/components/advisor/invitations/InvitationListFilters";
+import { InvitationListPagination } from "@/components/advisor/invitations/InvitationListPagination";
 import { getInvitationsAction } from "@/lib/actions/invitations";
-import type { InvitationListFilters as InvitationFilters } from "@/lib/invitations/types";
-
-const INVITATION_STATUSES = new Set<string>(Object.values(InvitationStatus));
-
-function parseInvitationFilters(searchParams: {
-  status?: string;
-  search?: string;
-}): InvitationFilters | undefined {
-  const filters: InvitationFilters = {};
-  let hasFilter = false;
-
-  if (
-    searchParams.status &&
-    INVITATION_STATUSES.has(searchParams.status)
-  ) {
-    filters.status = searchParams.status as InvitationStatus;
-    hasFilter = true;
-  }
-
-  const search = searchParams.search?.trim();
-  if (search) {
-    filters.search = search;
-    hasFilter = true;
-  }
-
-  return hasFilter ? filters : undefined;
-}
+import { parseInvitationListParams } from "@/lib/invitations/parse-invitation-list-params";
 
 export default async function InvitationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; search?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    search?: string;
+    sentWithin?: string;
+    page?: string;
+  }>;
 }) {
   const sp = await searchParams;
-  const filters = parseInvitationFilters(sp);
-  const hasActiveFilters = Boolean(filters);
+  const { filters, page, pageSize, hasActiveFilters } = parseInvitationListParams(sp);
 
-  const result = await getInvitationsAction(filters);
+  const result = await getInvitationsAction(filters, { page, pageSize });
 
   if (!result.success) {
     return (
@@ -55,7 +34,7 @@ export default async function InvitationsPage({
     );
   }
 
-  const invitations = result.data!;
+  const { items: invitations, totalCount } = result.data!;
 
   return (
     <div className="space-y-8">
@@ -71,6 +50,12 @@ export default async function InvitationsPage({
         <InvitationTable
           invitations={invitations}
           hasActiveFilters={hasActiveFilters}
+        />
+        <InvitationListPagination
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          filters={filters}
         />
       </div>
     </div>

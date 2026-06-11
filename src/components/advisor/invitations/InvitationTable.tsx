@@ -117,10 +117,6 @@ export function InvitationTable({
     );
   }
 
-  const sortedInvitations = [...invitations].sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-
   return (
     <div className="space-y-4">
       {resendLinkFallback && (
@@ -149,7 +145,7 @@ export function InvitationTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {sortedInvitations.map((invitation) => (
+              {invitations.map((invitation) => (
                 <tr key={invitation.id} className="hover:bg-muted/30">
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-foreground">

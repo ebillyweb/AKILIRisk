@@ -39,4 +39,13 @@ export interface InvitationWithDetails {
 export interface InvitationListFilters {
   status?: InvitationStatus;
   search?: string;
+  /** Limit to invitations created within the last N days. */
+  sentWithinDays?: 7 | 30 | 90;
+}
+
+export interface InvitationListResult {
+  items: InvitationWithDetails[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
 }

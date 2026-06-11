@@ -1,0 +1,1 @@
+export const INVITATIONS_PAGE_SIZE = 20;

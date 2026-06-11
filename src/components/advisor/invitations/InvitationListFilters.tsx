@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { buildInvitationsListHref } from "@/lib/invitations/parse-invitation-list-params";
 import { Loader2, Search } from "lucide-react";
 
 const STATUS_OPTIONS: { value: InvitationStatus | "all"; label: string }[] = [
@@ -22,33 +23,50 @@ const STATUS_OPTIONS: { value: InvitationStatus | "all"; label: string }[] = [
   { value: InvitationStatus.EXPIRED, label: "Expired" },
 ];
 
+const SENT_WITHIN_OPTIONS: { value: "all" | "7" | "30" | "90"; label: string }[] = [
+  { value: "all", label: "Any time" },
+  { value: "7", label: "Last 7 days" },
+  { value: "30", label: "Last 30 days" },
+  { value: "90", label: "Last 90 days" },
+];
+
 export function InvitationListFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const [status, setStatus] = useState(
-    searchParams.get("status") ?? "all"
-  );
+  const [status, setStatus] = useState(searchParams.get("status") ?? "all");
+  const [sentWithin, setSentWithin] = useState(searchParams.get("sentWithin") ?? "all");
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
 
   const applyFilters = useCallback(() => {
-    const next = new URLSearchParams();
+    const filters: {
+      status?: InvitationStatus;
+      search?: string;
+      sentWithinDays?: 7 | 30 | 90;
+    } = {};
+
     if (status && status !== "all") {
-      next.set("status", status);
+      filters.status = status as InvitationStatus;
     }
+
     const q = search.trim();
     if (q) {
-      next.set("search", q);
+      filters.search = q;
     }
-    const qs = next.toString();
+
+    if (sentWithin === "7" || sentWithin === "30" || sentWithin === "90") {
+      filters.sentWithinDays = Number(sentWithin) as 7 | 30 | 90;
+    }
+
     startTransition(() => {
-      router.push(qs ? `/advisor/invitations?${qs}` : "/advisor/invitations");
+      router.push(buildInvitationsListHref(filters, 1));
     });
-  }, [router, search, status]);
+  }, [router, search, sentWithin, status]);
 
   const clearFilters = useCallback(() => {
     setStatus("all");
+    setSentWithin("all");
     setSearch("");
     startTransition(() => {
       router.push("/advisor/invitations");
@@ -57,10 +75,11 @@ export function InvitationListFilters() {
 
   const hasActiveFilters =
     (searchParams.get("status") ?? "") !== "" ||
-    (searchParams.get("search") ?? "").trim() !== "";
+    (searchParams.get("search") ?? "").trim() !== "" ||
+    (searchParams.get("sentWithin") ?? "") !== "";
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
       <div className="space-y-1.5 min-w-[10rem]">
         <label htmlFor="invitation-status-filter" className="text-sm font-medium">
           Status
@@ -71,6 +90,24 @@ export function InvitationListFilters() {
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5 min-w-[10rem]">
+        <label htmlFor="invitation-sent-filter" className="text-sm font-medium">
+          Sent
+        </label>
+        <Select value={sentWithin} onValueChange={setSentWithin}>
+          <SelectTrigger id="invitation-sent-filter" className="h-10 w-full sm:w-[11rem]">
+            <SelectValue placeholder="Any time" />
+          </SelectTrigger>
+          <SelectContent>
+            {SENT_WITHIN_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
@@ -108,11 +145,11 @@ export function InvitationListFilters() {
           )}
           <span className="ml-2">Apply</span>
         </Button>
-        {hasActiveFilters && (
+        {hasActiveFilters ? (
           <Button type="button" variant="outline" onClick={clearFilters} disabled={isPending}>
             Clear
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   );

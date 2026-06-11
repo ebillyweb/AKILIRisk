@@ -51,7 +51,7 @@ export async function getAdvisorDashboardData() {
     const unreadNotificationCount = notifications.filter(n => !n.read).length;
 
     // Get pending invitations count (SENT or OPENED status)
-    const invitations = await getAdvisorInvitations(profile.id);
+    const { items: invitations } = await getAdvisorInvitations(profile.id);
     const pendingInvitationsCount = invitations.filter(
       inv => inv.status === InvitationStatus.SENT || inv.status === InvitationStatus.OPENED
     ).length;
