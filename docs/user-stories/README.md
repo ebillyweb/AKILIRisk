@@ -15,8 +15,9 @@ This directory maps **BRD functional requirements** to **user stories**, **imple
 | **5.7** | Billing, branding & white-label | US-39 – US-42 | [EPIC-5.7](./EPIC-5.7-billing-branding-whitelabel.md) |
 | **5.8** | Policy templates (Word/PDF per pillar); FR-6 policies | US-43 – US-44, **US-62 – US-63** | [EPIC-5.8](./EPIC-5.8-policy-templates-deliverables.md) |
 | **5.9** | Extended / legacy risk **modules** (advisor dashboards, enhanced API) | US-45 – US-47 | [EPIC-5.9](./EPIC-5.9-extended-risk-modules.md) |
+| **5.11** | Advisor-guided sessions & scoped assessments (1–6 pillars) | US-67 – US-77 | [EPIC-5.11](./EPIC-5.11-advisor-guided-sessions-scoped-assessments.md) |
 
-Epics **5.3 – 5.9** were added to document functionality that exists in code but was outside US-1–US-20. Story numbers US-21+ are **proposed** until promoted into the BRD.
+Epics **5.3 – 5.9** were added to document functionality that exists in code but was outside US-1–US-20. **Epic 5.11** is planned work that amends Epic 5.2 approval and completion rules. Story numbers US-21+ are **proposed** until promoted into the BRD.
 
 ### BRD epic numbers that differ from this index
 
