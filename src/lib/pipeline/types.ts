@@ -112,6 +112,8 @@ export type ClientDetail = {
     id: string;
     status: AssignmentStatus;
     intakeWaivedAt: Date | null;
+    includedPillars: string[];
+    focusAreas: string[];
   };
   assessmentDetails: {
     /** §4.5 commit 2: needed by the per-client view to build a

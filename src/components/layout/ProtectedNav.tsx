@@ -53,7 +53,7 @@ interface ProtectedNavProps {
   showAdvisor?: boolean;
   showAdmin?: boolean;
   restrictNavToIntake?: boolean;
-  /** When false for clients, Assessment link is disabled until advisor approves intake or waives it */
+  /** When false for clients, Assessment link is disabled until advisor sets assessment scope */
   assessmentUnlockedForClient?: boolean;
   /** Hide client-only Profiles & Roles link when feature is unavailable. */
   hideProfilesNav?: boolean;

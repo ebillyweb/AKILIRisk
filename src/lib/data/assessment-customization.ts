@@ -7,6 +7,7 @@
 
 import 'server-only';
 import { prisma } from '@/lib/db';
+import { getClientAssessmentScope } from '@/lib/client/assessment-scope';
 import { getClientIntakeGateState } from '@/lib/client/intake-gate';
 import { getCustomizationConfig, type CustomizationConfig } from '@/lib/assessment/customization';
 
@@ -41,7 +42,8 @@ export async function getCustomizationForUser(userId: string): Promise<Customiza
   const gate = await getClientIntakeGateState(userId);
 
   if (gate.intakeWaived && !gate.intakeApproved) {
-    const config = getCustomizationConfig([]);
+    const scope = await getClientAssessmentScope(userId);
+    const config = getCustomizationConfig(scope.focusAreas);
     return {
       ...config,
       advisorName: undefined,

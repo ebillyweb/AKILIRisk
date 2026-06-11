@@ -6,14 +6,16 @@ export type ClientIntakeGateState = {
   hasSubmittedInterview: boolean;
   intakeApproved: boolean;
   intakeWaived: boolean;
+  /** Waived intake but advisor has not selected assessment domains yet. */
+  assessmentScopePending: boolean;
   restrictNavToIntake: boolean;
   assessmentUnlocked: boolean;
 };
 
 /**
  * Single source for client (USER) intake vs assessment access.
- * Epic 5.11: assessment unlocks only after advisor approval with explicit
- * included pillars (1–6). Intake waiver alone does not unlock assessment.
+ * Epic 5.11: assessment unlocks after advisor sets pillar scope via intake
+ * approval (1–6 domains) or via intake waiver + domains on the assignment.
  */
 export async function getClientIntakeGateState(
   clientUserId: string,
@@ -21,10 +23,14 @@ export async function getClientIntakeGateState(
   const assignment = await prisma.clientAdvisorAssignment.findFirst({
     where: { clientId: clientUserId, status: "ACTIVE" },
     orderBy: { assignedAt: "desc" },
-    select: { intakeWaivedAt: true },
+    select: {
+      intakeWaivedAt: true,
+      includedPillars: true,
+    },
   });
 
   const intakeWaived = assignment?.intakeWaivedAt != null;
+  const waiverScopeSet = (assignment?.includedPillars?.length ?? 0) > 0;
 
   const submittedInterview = await prisma.intakeInterview.findFirst({
     where: { userId: clientUserId, status: "SUBMITTED" },
@@ -42,8 +48,11 @@ export async function getClientIntakeGateState(
   });
 
   const intakeApproved = latestApproval?.status === "APPROVED";
-  const assessmentUnlocked =
+  const approvedWithScope =
     intakeApproved && (latestApproval?.includedPillars?.length ?? 0) > 0;
+  const waivedWithScope = intakeWaived && waiverScopeSet;
+  const assessmentUnlocked = approvedWithScope || waivedWithScope;
+  const assessmentScopePending = intakeWaived && !waiverScopeSet;
 
   const restrictNavToIntake = !hasSubmittedInterview && !intakeWaived;
 
@@ -51,6 +60,7 @@ export async function getClientIntakeGateState(
     hasSubmittedInterview,
     intakeApproved,
     intakeWaived,
+    assessmentScopePending,
     restrictNavToIntake,
     assessmentUnlocked,
   };

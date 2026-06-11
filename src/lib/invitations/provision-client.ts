@@ -9,6 +9,17 @@ type TxLike = Pick<
   "advisorProfile" | "clientAdvisorAssignment" | "clientProfile" | "inviteCode" | "user"
 >;
 
+function waiverAssignmentData(invite: {
+  intakeWaived: boolean;
+  createdBy: string | null;
+}) {
+  if (!invite.intakeWaived || !invite.createdBy) return {};
+  return {
+    intakeWaivedAt: new Date(),
+    intakeWaivedByAdvisorId: invite.createdBy,
+  };
+}
+
 async function findActiveEnterpriseAssignmentForClient(
   tx: TxLike,
   clientId: string,
@@ -58,6 +69,7 @@ export async function provisionClientFromInviteCode(
       createdBy: true,
       clientName: true,
       status: true,
+      intakeWaived: true,
     },
   });
 
@@ -118,11 +130,20 @@ export async function provisionClientFromInviteCode(
         if (!enterpriseAssignment) {
           const assignment = await tx.clientAdvisorAssignment.findFirst({
             where: { clientId: existing.id, advisorId: invite.createdBy! },
-            select: { id: true },
+            select: { id: true, intakeWaivedAt: true },
           });
           if (!assignment) {
             await tx.clientAdvisorAssignment.create({
-              data: { clientId: existing.id, advisorId: invite.createdBy! },
+              data: {
+                clientId: existing.id,
+                advisorId: invite.createdBy!,
+                ...waiverAssignmentData(invite),
+              },
+            });
+          } else if (invite.intakeWaived && !assignment.intakeWaivedAt) {
+            await tx.clientAdvisorAssignment.update({
+              where: { id: assignment.id },
+              data: waiverAssignmentData(invite),
             });
           }
         }
@@ -168,7 +189,11 @@ export async function provisionClientFromInviteCode(
       );
       if (!enterpriseAssignment) {
         await tx.clientAdvisorAssignment.create({
-          data: { clientId: created.id, advisorId: invite.createdBy },
+          data: {
+            clientId: created.id,
+            advisorId: invite.createdBy,
+            ...waiverAssignmentData(invite),
+          },
         });
       }
 

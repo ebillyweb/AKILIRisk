@@ -815,6 +815,8 @@ export async function getClientDetail(
       id: assignment.id,
       status: assignment.status,
       intakeWaivedAt: assignment.intakeWaivedAt,
+      includedPillars: assignment.includedPillars,
+      focusAreas: assignment.focusAreas,
     },
     timeline: events,
     documentRequirements: documentRequirements.map(req => ({

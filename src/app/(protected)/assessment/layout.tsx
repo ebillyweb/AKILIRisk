@@ -8,7 +8,7 @@ import { AssessmentQuestionBankLoader } from "@/components/assessment/Assessment
 /**
  * Client assessment flow is USER-only. Staff use advisor/admin workspaces.
  * For clients: only allow access when an advisor has approved intake with at
- * least one assessment domain selected (Epic 5.11). Intake waiver alone does not unlock.
+ * least one assessment domain selected (Epic 5.11), including intake-waived clients.
  */
 export default async function AssessmentLayout({
   children,
@@ -30,7 +30,10 @@ export default async function AssessmentLayout({
 
   const gate = await getClientIntakeGateState(session.user.id);
   if (!gate.assessmentUnlocked) {
-    if (!gate.hasSubmittedInterview) {
+    if (gate.assessmentScopePending) {
+      redirect("/dashboard?assessment=awaiting-scope");
+    }
+    if (!gate.hasSubmittedInterview && !gate.intakeWaived) {
       redirect("/dashboard?assessment=complete-intake");
     }
     redirect("/dashboard?assessment=awaiting-approval");

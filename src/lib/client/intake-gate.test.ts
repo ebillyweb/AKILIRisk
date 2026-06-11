@@ -22,7 +22,10 @@ vi.mock("@/lib/db", () => ({
 describe("getClientIntakeGateState", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFindAssignment.mockResolvedValue({ intakeWaivedAt: null });
+    mockFindAssignment.mockResolvedValue({
+      intakeWaivedAt: null,
+      includedPillars: [],
+    });
     mockFindInterview.mockResolvedValue({ id: "iv-1" });
   });
 
@@ -45,13 +48,30 @@ describe("getClientIntakeGateState", () => {
     expect(gate.intakeApproved).toBe(true);
   });
 
-  it("does not unlock on waiver alone without scoped approval", async () => {
-    mockFindAssignment.mockResolvedValue({ intakeWaivedAt: new Date() });
+  it("does not unlock on waiver alone without assessment domains", async () => {
+    mockFindAssignment.mockResolvedValue({
+      intakeWaivedAt: new Date(),
+      includedPillars: [],
+    });
     mockFindApproval.mockResolvedValue(null);
 
     const gate = await getClientIntakeGateState("client-1");
     expect(gate.intakeWaived).toBe(true);
+    expect(gate.assessmentScopePending).toBe(true);
     expect(gate.assessmentUnlocked).toBe(false);
+  });
+
+  it("unlocks when intake waived with assignment pillar scope", async () => {
+    mockFindAssignment.mockResolvedValue({
+      intakeWaivedAt: new Date(),
+      includedPillars: ["governance", "cyber-digital"],
+    });
+    mockFindApproval.mockResolvedValue(null);
+
+    const gate = await getClientIntakeGateState("client-1");
+    expect(gate.intakeWaived).toBe(true);
+    expect(gate.assessmentUnlocked).toBe(true);
+    expect(gate.assessmentScopePending).toBe(false);
   });
 
   it("does not unlock when approved but included pillars empty", async () => {

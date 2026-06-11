@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "lucide-react";
 
-import { setClientIntakeWaiver } from "@/lib/actions/advisor-intake-waiver-actions";
 import { cn } from "@/lib/utils";
+import { IntakeWaiverScopePanel } from "@/components/pipeline/IntakeWaiverScopePanel";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,18 +78,6 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
     client.awaitingIntakeReview && !assessmentCompleted;
   const intakeReviewId =
     intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
-  const router = useRouter();
-  const [waiverPending, startWaiverTransition] = useTransition();
-
-  function runWaiver(waive: boolean) {
-    startWaiverTransition(async () => {
-      const result = await setClientIntakeWaiver(client.id, waive);
-      if (result.success) {
-        router.refresh();
-      }
-    });
-  }
-
   return (
     <div className="container mx-auto py-6">
       {/* Breadcrumb */}
@@ -183,25 +169,15 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               {intakeWaived ? (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <Badge variant="secondary">Intake waived</Badge>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Waived{" "}
-                      {formatDistanceToNow(new Date(advisorAssignment.intakeWaivedAt!), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={waiverPending || !assignmentActive}
-                    onClick={() => runWaiver(false)}
-                  >
-                    Require intake again
-                  </Button>
-                </div>
+                <IntakeWaiverScopePanel
+                  clientId={client.id}
+                  assignmentActive={assignmentActive}
+                  intakeWaived
+                  intakeWaivedAt={advisorAssignment.intakeWaivedAt}
+                  includedPillars={advisorAssignment.includedPillars}
+                  focusAreas={advisorAssignment.focusAreas}
+                  showWaiverAction={false}
+                />
               ) : intakeDetails ? (
                 <>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -262,27 +238,29 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         </Link>
                       </Button>
                     )}
-                    {!intakeSubmitted && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={waiverPending || !assignmentActive}
-                        onClick={() => runWaiver(true)}
-                      >
-                        Allow assessment without intake
-                      </Button>
-                    )}
+                    {!intakeSubmitted ? (
+                      <IntakeWaiverScopePanel
+                        clientId={client.id}
+                        assignmentActive={assignmentActive}
+                        intakeWaived={false}
+                        intakeWaivedAt={null}
+                        includedPillars={advisorAssignment.includedPillars}
+                        focusAreas={advisorAssignment.focusAreas}
+                        showWaiverAction
+                      />
+                    ) : null}
                   </div>
                 </>
               ) : (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={waiverPending || !assignmentActive}
-                  onClick={() => runWaiver(true)}
-                >
-                  Allow assessment without intake
-                </Button>
+                <IntakeWaiverScopePanel
+                  clientId={client.id}
+                  assignmentActive={assignmentActive}
+                  intakeWaived={false}
+                  intakeWaivedAt={null}
+                  includedPillars={advisorAssignment.includedPillars}
+                  focusAreas={advisorAssignment.focusAreas}
+                  showWaiverAction
+                />
               )}
             </CardContent>
           </Card>

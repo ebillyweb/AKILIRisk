@@ -1046,6 +1046,10 @@ model ClientAdvisorAssignment {
   /// When set, client may skip submitted/approved intake for nav and /assessment access.
   intakeWaivedAt             DateTime?
   intakeWaivedByAdvisorId    String?
+  /// Epic 5.11: assessment scope when intake is waived (1–6 pillar ids). Required to unlock assessment.
+  includedPillars            String[]         @default([]) @map("included_pillars")
+  /// Scoring emphasis within included pillars; empty means all included at waiver scope save.
+  focusAreas                 String[]         @default([]) @map("focus_areas")
   /// Option D session 1: per-assignment snapshot of which PII fields
   /// THIS advisor can see for THIS client. Two advisors assigned to
   /// the same client can therefore have different visibility (e.g. a
