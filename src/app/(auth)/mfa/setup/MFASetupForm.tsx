@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function MFASetupForm() {
+export function MFASetupForm({ required = false }: { required?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
@@ -155,11 +155,17 @@ export function MFASetupForm() {
     <AuthPanel
       eyebrow="Security Setup"
       title="Set up two-factor authentication"
-      description="Scan the QR code with your authenticator app, then enter the six-digit code to enable MFA for your account."
+      description={
+        required
+          ? "Your account must enable two-factor authentication before you can access the workspace. Scan the QR code with your authenticator app, then enter the six-digit code."
+          : "Scan the QR code with your authenticator app, then enter the six-digit code to enable MFA for your account."
+      }
       footer={
+        required ? undefined : (
         <Link href="/settings" className="font-semibold text-foreground hover:underline">
           Cancel and return to settings
         </Link>
+        )
       }
     >
       <div className="space-y-6">

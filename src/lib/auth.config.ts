@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
+import { userNeedsPasswordChange } from "@/lib/auth/password-policy";
+import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
 
 // Round-11 bug-hunt fix: normalize email casing so `findUserByEmail`
 // (deterministic ciphertext, case-sensitive) hits the same row no
@@ -164,16 +166,27 @@ export default {
           emailHash: hashedEmail,
         });
 
-        // Round-11 commit 2.4a: NextAuth's JWT email field comes
-        // from form-input plaintext rather than User.email — the
-        // plaintext column is no longer authoritative and may be null
-        // for users created post-2.4a. Form input is the most
-        // recent ground-truth plaintext.
+        const policy = await getPasswordPolicy();
+        const needsPasswordChange = userNeedsPasswordChange({
+          password,
+          passwordChangeRequired: Boolean(user.passwordChangeRequired),
+          passwordPolicyRevision: user.passwordPolicyRevision,
+          policy,
+        });
+
+        if (needsPasswordChange !== Boolean(user.passwordChangeRequired)) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { passwordChangeRequired: needsPasswordChange },
+          });
+        }
+
         return {
           id: user.id,
           email,
           name: user.name,
           image: user.image,
+          passwordChangeRequired: needsPasswordChange,
         };
       },
     }),

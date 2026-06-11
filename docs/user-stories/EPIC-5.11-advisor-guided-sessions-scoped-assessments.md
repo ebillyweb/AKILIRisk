@@ -18,9 +18,9 @@
 | US-70 | View intake-based pillar recommendations | **Done** (Phase 2) | Unit: `computePillarRecommendations` |
 | US-71 | Set scoring emphasis within included pillars | **Done** (Phase 2) | Approve schema + emphasis UI |
 | US-72 | Client sees scoped assessment hub | **Done** (Phase 3) | Unit: scope helpers, heat-map filter; smoke TBD |
-| US-73 | Start a facilitated client session | **Planned** | `epic-5.11-facilitated-session-start.spec.ts` |
-| US-74 | Conduct facilitated intake | **Planned** | `epic-5.11-facilitated-intake.spec.ts` |
-| US-75 | Conduct facilitated assessment through risk preview | **Planned** | `epic-5.11-facilitated-assessment.spec.ts` |
+| US-73 | Start a facilitated client session | **Done** | `epic-5.11-facilitated-session-start.spec.ts` |
+| US-74 | Conduct facilitated intake | **Done** | `epic-5.11-facilitated-intake.spec.ts` |
+| US-75 | Conduct facilitated assessment through risk preview | **Done** | `epic-5.11-facilitated-assessment.spec.ts` |
 | US-76 | Review completed sessions in advisor queue | **Planned** | `epic-5.11-session-review-queue.spec.ts` |
 | US-77 | Tag intake questions with related pillars (admin) | **In progress** (Phase 1 admin UI) | Admin intake question edit + unit tests |
 

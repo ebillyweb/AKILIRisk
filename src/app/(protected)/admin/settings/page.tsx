@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { isSuperAdmin, requireAdminRole } from "@/lib/admin/auth";
-import { getPlatformAdvisorFeatureFlagsForAdmin } from "@/lib/admin/platform-settings-actions";
+import { getPlatformAdvisorFeatureFlagsForAdmin, getPasswordPolicyForSuperAdmin } from "@/lib/admin/platform-settings-actions";
 import { AdminAdvisorFeatureFlagsForm } from "@/components/admin/AdminAdvisorFeatureFlagsForm";
+import { AdminMfaPolicyForm } from "@/components/admin/AdminMfaPolicyForm";
+import { AdminPasswordPolicyForm } from "@/components/admin/AdminPasswordPolicyForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +17,7 @@ export default async function AdminSettingsPage() {
   const flagsRes = superAdmin
     ? await getPlatformAdvisorFeatureFlagsForAdmin()
     : null;
+  const passwordPolicyRes = superAdmin ? await getPasswordPolicyForSuperAdmin() : null;
 
   return (
     <div className="space-y-6">
@@ -29,6 +32,49 @@ export default async function AdminSettingsPage() {
           <Button asChild variant="outline" size="sm">
             <Link href="/settings">Open app Settings</Link>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Password policy</CardTitle>
+          <CardDescription>
+            Rules for advisor and admin credentials. When requirements change, affected
+            staff are prompted to update their password before accessing the workspace.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!superAdmin ? (
+            <p className="text-sm text-muted-foreground">
+              Only super admins can view or change the platform password policy.
+            </p>
+          ) : passwordPolicyRes ? (
+            <AdminPasswordPolicyForm initialPolicy={passwordPolicyRes} />
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Multi-factor authentication</CardTitle>
+          <CardDescription>
+            Staff accounts (advisor, admin, super-admin) must enroll in MFA before
+            accessing protected routes. Super admins can optionally extend that
+            requirement to client accounts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!superAdmin ? (
+            <p className="text-sm text-muted-foreground">
+              Only super admins can change platform MFA policy.
+            </p>
+          ) : !flagsRes?.success ? (
+            <p className="text-sm text-destructive">{flagsRes?.error ?? "Failed to load settings."}</p>
+          ) : (
+            <AdminMfaPolicyForm
+              initialMfaRequiredForAllRoles={flagsRes.data.mfaRequiredForAllRoles}
+            />
+          )}
         </CardContent>
       </Card>
 

@@ -70,7 +70,10 @@ FROM (
     ('00000000-0000-0000-0006-000000000004', 'D3a', 95001),
     ('00000000-0000-0000-0007-000000000006', '6.3a', 95001)
 ) AS v(section_id, question_number, temp_order)
-WHERE NOT EXISTS (
+WHERE EXISTS (
+  SELECT 1 FROM sections s WHERE s.id = v.section_id::uuid
+)
+AND NOT EXISTS (
   SELECT 1 FROM questions q
   WHERE q.section_id = v.section_id::uuid
     AND q.question_number = v.question_number

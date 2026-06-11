@@ -8,11 +8,7 @@ import {
   isSuperAdminRole,
   normalizeUserRoleString,
 } from "@/lib/auth-roles";
-import { DESIGNATED_ADMIN_EMAIL } from "@/lib/auth-shared";
 import { assertMfaVerified } from "@/lib/auth/require-mfa-verified";
-
-/** Re-export for back-compat with existing imports. */
-export const ADMIN_ALLOWED_EMAIL = DESIGNATED_ADMIN_EMAIL;
 
 export type PlatformAdminContext = {
   userId: string;

@@ -34,6 +34,14 @@ import {
   suspendEnterpriseFirmByAdmin,
 } from "@/lib/enterprise/firm-lifecycle";
 import { isSubdomainReserved, validateSubdomainFormat } from "@/lib/advisor/subdomain";
+import {
+  passwordComplexitySchema,
+  validatePasswordForSet,
+} from "@/lib/auth/password-policy";
+import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
+import {
+  hashPasswordForStorage,
+} from "@/lib/auth/password-update";
 
 // Round-11 bug-hunt fix: normalize email casing — both schemas
 // trim+lowercase so userEmailWriteData (deterministic ciphertext,
@@ -170,7 +178,7 @@ const createAdvisorSchema = z.object({
     .email("Invalid email")
     .max(255)
     .transform((s) => s.trim().toLowerCase()),
-  password: z.string().min(8, "Password must be at least 8 characters").max(100),
+  password: passwordComplexitySchema.max(100),
   name: z.string().min(1, "Name is required").max(200).optional(),
   firstName: z.string().max(100).optional(),
   lastName: z.string().max(100).optional(),
@@ -302,7 +310,16 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
       return { success: false, error: "An account with this email already exists" };
     }
 
-    const hashedPassword = await bcrypt.hash(parsed.data.password, 12);
+    const policy = await getPasswordPolicy();
+    const passwordPolicy = await validatePasswordForSet(
+      parsed.data.password,
+      policy
+    );
+    if (!passwordPolicy.ok) {
+      return { success: false, error: passwordPolicy.error };
+    }
+
+    const hashedPassword = await hashPasswordForStorage(parsed.data.password);
     const createdAt = new Date();
     const gracePeriodEnd = newAdvisorGracePeriodEndsAt(createdAt);
     const paidSignupDeadline = newAdvisorPaidSignupDeadline(createdAt);
@@ -319,6 +336,8 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
         data: {
           ...userEmailWriteData(parsed.data.email),
           password: hashedPassword,
+          passwordChangeRequired: false,
+          passwordPolicyRevision: policy.revision,
           role: "ADVISOR",
           name: parsed.data.name ?? undefined,
           firstName: parsed.data.firstName ?? undefined,

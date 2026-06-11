@@ -103,7 +103,10 @@ describe("reconcileAdvisorInvitationStatuses", () => {
     prismaSpies.inviteCode.findMany.mockResolvedValue([
       { id: "invite-1", prefillEmail: "client@test.com" },
     ]);
-    vi.mocked(findUserByEmail).mockResolvedValue({ id: "user-1", role: "USER" });
+    vi.mocked(findUserByEmail).mockResolvedValue({
+      id: "user-1",
+      role: "USER",
+    } as Awaited<ReturnType<typeof findUserByEmail>>);
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue({ id: "assign-1" });
 
     await reconcileAdvisorInvitationStatuses("advisor-1");
@@ -121,7 +124,10 @@ describe("reconcileAdvisorInvitationStatuses", () => {
     prismaSpies.inviteCode.findMany.mockResolvedValue([
       { id: "invite-1", prefillEmail: "client@test.com" },
     ]);
-    vi.mocked(findUserByEmail).mockResolvedValue({ id: "user-1", role: "USER" });
+    vi.mocked(findUserByEmail).mockResolvedValue({
+      id: "user-1",
+      role: "USER",
+    } as Awaited<ReturnType<typeof findUserByEmail>>);
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue(null);
     vi.mocked(provisionClientFromInviteCode).mockResolvedValue({
       ok: true,

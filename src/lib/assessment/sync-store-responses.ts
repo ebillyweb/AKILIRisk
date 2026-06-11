@@ -41,7 +41,8 @@ async function resolveQuestionBank(
 /** Persist in-memory assessment answers before scoring (server reads DB only). */
 export async function syncStoreAnswersToServer(
   assessmentId: string,
-  input: SyncInput
+  input: SyncInput,
+  options?: { facilitatedSessionId?: string },
 ): Promise<{ syncedCount: number }> {
   const { answers, skippedQuestions, currentPillar } = input;
   const questionBank = await resolveQuestionBank(
@@ -100,6 +101,9 @@ export async function syncStoreAnswersToServer(
       body: JSON.stringify({
         ...payload,
         currentPillar: currentPillar ?? payload.pillar,
+        ...(options?.facilitatedSessionId
+          ? { facilitatedSessionId: options.facilitatedSessionId }
+          : {}),
       }),
     });
     if (!response.ok) {

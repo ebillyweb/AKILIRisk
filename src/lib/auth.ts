@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import authConfig from "@/lib/auth.config";
 import { normalizeUserRoleString } from "@/lib/auth-roles";
 import { verifyAdminEmailOnFirstSignIn } from "@/lib/auth/verify-admin-on-sign-in";
+import { isMfaEnrollmentRequiredForUser } from "@/lib/auth/mfa-enforcement";
+import { getMfaRequiredForAllRoles } from "@/lib/platform/mfa-policy";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 /** Short, non-reversible identifier for an email so log lines stay
@@ -104,14 +106,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Store MFA fields in JWT so middleware (Edge) can read them without Prisma
       const userId = token.id as string;
       if (userId) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { mfaEnabled: true, role: true, firstName: true, deletedAt: true },
-        });
+        const [dbUser, mfaRequiredForAllRoles] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              mfaEnabled: true,
+              role: true,
+              firstName: true,
+              deletedAt: true,
+              passwordChangeRequired: true,
+            },
+          }),
+          getMfaRequiredForAllRoles(),
+        ]);
         token.mfaEnabled = dbUser?.mfaEnabled ?? false;
         token.role = (dbUser?.role ?? "USER").toString().toUpperCase();
         token.firstName = dbUser?.firstName ?? undefined;
         token.accountDeactivated = Boolean(dbUser?.deletedAt);
+        token.mfaEnrollmentRequired = isMfaEnrollmentRequiredForUser({
+          role: token.role as string,
+          mfaEnabled: Boolean(token.mfaEnabled),
+          mfaRequiredForAllRoles,
+        });
+        token.passwordChangeRequired = Boolean(dbUser?.passwordChangeRequired);
         if (token.mfaEnabled) {
           const [session] = await prisma.session.findMany({
             where: {
@@ -137,6 +154,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
         session.user.mfaEnabled = Boolean(token.mfaEnabled);
         session.user.mfaVerified = Boolean(token.mfaVerified);
+        session.user.mfaEnrollmentRequired = Boolean(
+          (token as { mfaEnrollmentRequired?: boolean }).mfaEnrollmentRequired
+        );
+        session.user.passwordChangeRequired = Boolean(
+          (token as { passwordChangeRequired?: boolean }).passwordChangeRequired
+        );
         session.user.firstName = (token.firstName as string) ?? undefined;
         session.user.accountDeactivated = Boolean(
           (token as { accountDeactivated?: boolean }).accountDeactivated

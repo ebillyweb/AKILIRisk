@@ -11,6 +11,7 @@ import {
   ListTodo,
   Mail,
   MessageSquare,
+  PlayCircle,
   Radio,
   Settings,
   Shield,
@@ -62,6 +63,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Clients",
     items: [
       { href: "/advisor/pipeline", label: "All clients", icon: Users },
+      { href: "/advisor/facilitate", label: "Live sessions", icon: PlayCircle },
       { href: "/advisor/pipeline?inactive=1", label: "Inactive workflows", icon: Archive },
       { href: "/advisor/invitations", label: "Invitations", icon: UserPlus },
     ],

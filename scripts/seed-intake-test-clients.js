@@ -14,6 +14,7 @@ const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 const bcryptjs = require('bcryptjs');
+const { TEST_PASSWORD } = require('./lib/test-password');
 const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
 
 if (!process.env.ENCRYPTION_KEY) {
@@ -33,7 +34,7 @@ const INTAKE_QUESTION_IDS = [
 ];
 
 async function createTestAdvisor() {
-  const hashedPassword = await bcryptjs.hash('testpassword123', 12);
+  const hashedPassword = await bcryptjs.hash(TEST_PASSWORD, 12);
   const advisorEmail = 'advisor@test.com';
   const advisorCt = userEmailCiphertext(advisorEmail);
 
@@ -319,9 +320,9 @@ async function main() {
 
   console.log('\n🎉 Intake test clients created successfully!');
   console.log('\n📋 Test credentials:');
-  console.log('   Advisor: advisor@test.com / testpassword123');
-  console.log('   Client (Intake Pending): client+intake@test.com / testpassword123');
-  console.log('   Client (Assessment Ready): client+assessment@test.com / testpassword123');
+  console.log(`   Advisor: advisor@test.com / ${TEST_PASSWORD}`);
+  console.log(`   Client (Intake Pending): client+intake@test.com / ${TEST_PASSWORD}`);
+  console.log(`   Client (Assessment Ready): client+assessment@test.com / ${TEST_PASSWORD}`);
   console.log('\n🔄 Client statuses:');
   console.log('   client+intake@test.com: IN_PROGRESS (3/10 questions)');
   console.log('   client+assessment@test.com: SUBMITTED (10/10 questions, eligible for assessment)');

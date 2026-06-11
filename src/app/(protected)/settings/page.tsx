@@ -259,13 +259,25 @@ export default async function SettingsPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-4">
-            <p className="editorial-kicker">Planned Control</p>
-            <p className="mt-2 text-sm font-semibold">Change Password</p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Password management flows are planned but not yet implemented in this workspace.
-            </p>
-          </div>
+          {showMfaSettings ? (
+            <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-4">
+              <p className="editorial-kicker">Password</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Update your sign-in password to match the current platform policy.
+              </p>
+              <Button asChild variant="outline" size="sm" className="mt-4">
+                <Link href="/change-password">Change password</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-4">
+              <p className="editorial-kicker">Planned Control</p>
+              <p className="mt-2 text-sm font-semibold">Change Password</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Client accounts sign in with email links and do not use passwords.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

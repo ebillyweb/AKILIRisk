@@ -5,29 +5,23 @@ import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
-import bcrypt from "bcryptjs";
+import {
+  validatePasswordForSet,
+  passwordComplexitySchema,
+} from "@/lib/auth/password-policy";
+import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
+import {
+  hashPasswordForStorage,
+} from "@/lib/auth/password-update";
 import crypto from "crypto";
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, "Token is required"),
-  // Round-11 bug-hunt fix: normalize email casing — see commit A.
-  // Both findUserByEmail (deterministic ciphertext, case-sensitive)
-  // and the verificationToken `identifier` lookup at line ~127
-  // require byte-equal input to match the request-time write.
   email: z
     .string()
     .email("Invalid email address")
     .transform((s) => s.trim().toLowerCase()),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(
-      /[^A-Za-z0-9]/,
-      "Password must contain at least one special character"
-    ),
+  password: passwordComplexitySchema,
 });
 
 export async function POST(req: NextRequest) {
@@ -64,6 +58,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { token: rawToken, email, password } = validation.data;
+
+    const policy = await getPasswordPolicy();
+    const passwordPolicy = await validatePasswordForSet(password, policy);
+    if (!passwordPolicy.ok) {
+      return NextResponse.json({ error: passwordPolicy.error }, { status: 400 });
+    }
 
     // Hash the provided token to match database storage
     const hashedToken = crypto
@@ -118,15 +118,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash new password with bcrypt (same cost factor as registration)
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await hashPasswordForStorage(password);
 
-    // Update password and delete token in a transaction
     await prisma.$transaction([
-      // Update user password
       prisma.user.update({
         where: { id: user.id },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          passwordChangeRequired: false,
+          passwordPolicyRevision: policy.revision,
+        },
       }),
       // Delete used token
       prisma.verificationToken.delete({

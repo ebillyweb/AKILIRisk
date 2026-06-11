@@ -28,7 +28,10 @@ import { emitAssessmentSignals } from "@/lib/signals/emit";
 import type { PillarScoreSnapshot } from "@/lib/signals/types";
 import { evaluateClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
-import { normalizeUserRoleString } from "@/lib/auth-roles";
+import {
+  authorizeAssessmentApiAccess,
+  markFacilitatedSessionPreviewIfComplete,
+} from "@/lib/facilitated/assessment-access";
 
 /**
  * Assessment Score API Routes
@@ -93,8 +96,8 @@ export async function GET(
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const pillar = normalizePillarSlug(searchParams.get("pillar") || "governance");
+    const facilitatedSessionId = searchParams.get("facilitatedSessionId") ?? undefined;
 
-    // Verify ownership
     const assessment = await prisma.assessment.findUnique({
       where: { id },
       select: {
@@ -112,17 +115,20 @@ export async function GET(
       );
     }
 
-    // 404 (not 403) on ownership mismatch so the response doesn't tell
-    // the caller whether a given assessment id exists.
-    if (assessment.userId !== session.user.id) {
+    const access = await authorizeAssessmentApiAccess({
+      assessmentId: id,
+      userId: session.user.id,
+      userRole: session.user.role,
+      facilitatedSessionId,
+    });
+    if (!access) {
       return NextResponse.json(
         { error: "Assessment not found" },
         { status: 404 }
       );
     }
 
-    const role = normalizeUserRoleString(session.user.role);
-    if (role === "USER") {
+    if (!access.isFacilitated) {
       const summaryAccess = evaluateClientAssessmentSummaryAccess({
         pillarScores: assessment.scores,
         deliverablePhase: assessment.deliverablePhase,
@@ -224,8 +230,11 @@ export async function POST(
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const pillar = normalizePillarSlug(body.pillar || "governance");
+    const facilitatedSessionId =
+      typeof body.facilitatedSessionId === "string"
+        ? body.facilitatedSessionId
+        : undefined;
 
-    // Verify ownership
     const assessment = await prisma.assessment.findUnique({
       where: { id },
       select: {
@@ -245,14 +254,20 @@ export async function POST(
       );
     }
 
-    // 404 (not 403) on ownership mismatch so the response doesn't tell
-    // the caller whether a given assessment id exists.
-    if (assessment.userId !== session.user.id) {
+    const access = await authorizeAssessmentApiAccess({
+      assessmentId: id,
+      userId: session.user.id,
+      userRole: session.user.role,
+      facilitatedSessionId,
+    });
+    if (!access) {
       return NextResponse.json(
         { error: "Assessment not found" },
         { status: 404 }
       );
     }
+
+    const clientId = access.clientId;
 
     if (!isPillarInAssessmentScope(pillar, assessment.includedPillars)) {
       return NextResponse.json(
@@ -392,7 +407,7 @@ export async function POST(
       const matchedRecommendations =
         await recommendationEngine.matchAndDedupeRecommendations({
           assessmentId: id,
-          userId: session.user.id,
+          userId: clientId,
           pillarScores: pillarScoresMap,
           answers,
           householdProfile: null,
@@ -420,9 +435,11 @@ export async function POST(
     });
 
     if (pillarScore.allPillarsScored) {
-      void triggerMilestoneNotification(assessment.userId, "Assessment Complete");
-      // BRD §6.3 / Epic 5.10 US-71: Phase 1 entry notification.
+      void triggerMilestoneNotification(clientId, "Assessment Complete");
       void triggerPreviewAvailable(id);
+      if (facilitatedSessionId) {
+        void markFacilitatedSessionPreviewIfComplete(facilitatedSessionId);
+      }
     }
 
     const beforeSnapshots: PillarScoreSnapshot[] = (assessment.scores ?? []).map((s) => ({
@@ -441,7 +458,7 @@ export async function POST(
     }));
     const wasCompleted = assessment.status === "COMPLETED";
     void emitAssessmentSignals({
-      clientId: assessment.userId,
+      clientId,
       assessmentId: id,
       version: assessment.version ?? 1,
       event:

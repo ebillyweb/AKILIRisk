@@ -3,9 +3,11 @@ import { describe, it, expect } from "vitest";
 import {
   isApiMfaExempt,
   isMfaChallengePending,
+  isMfaSetupPending,
   isPageMfaExempt,
   isWorkspacePath,
   shouldBlockApiForMfaPending,
+  shouldBlockApiForMfaSetupPending,
 } from "./mfa-gate";
 
 describe("isMfaChallengePending", () => {
@@ -46,6 +48,29 @@ describe("isPageMfaExempt", () => {
   it("allows MFA verify and setup during the challenge", () => {
     expect(isPageMfaExempt("/mfa/verify")).toBe(true);
     expect(isPageMfaExempt("/mfa/setup")).toBe(true);
+  });
+});
+
+describe("isMfaSetupPending", () => {
+  it("returns true when enrollment is required and MFA is not enabled", () => {
+    expect(
+      isMfaSetupPending({
+        mfaEnrollmentRequired: true,
+        mfaEnabled: false,
+      })
+    ).toBe(true);
+  });
+});
+
+describe("API MFA setup exemptions", () => {
+  it("allows MFA enroll routes during setup pending", () => {
+    expect(shouldBlockApiForMfaSetupPending("/api/auth/mfa/enroll")).toBe(false);
+    expect(shouldBlockApiForMfaSetupPending("/api/auth/mfa/verify")).toBe(false);
+  });
+
+  it("blocks workspace APIs until MFA is enrolled", () => {
+    expect(shouldBlockApiForMfaSetupPending("/api/advisor/branding")).toBe(true);
+    expect(shouldBlockApiForMfaSetupPending("/api/auth/signout")).toBe(false);
   });
 });
 

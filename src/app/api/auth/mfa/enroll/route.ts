@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { isMfaEnrollmentRequiredForUser } from "@/lib/auth/mfa-enforcement";
+import { getMfaRequiredForAllRoles } from "@/lib/platform/mfa-policy";
 import { prisma } from "@/lib/db";
 import { enrollMFA } from "@/lib/mfa";
 
 export async function POST(_req: NextRequest) {
   try {
-    // Require authenticated session
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -16,11 +17,18 @@ export async function POST(_req: NextRequest) {
       );
     }
 
-    // MFA is for credential-based advisor/admin accounts only. Clients
-    // (role=USER) authenticate via magic link per BRD §5.1 / Epic 5.1.
-    if (!isAdvisorHubNavRole(session.user.role)) {
+    const mfaRequiredForAllRoles = await getMfaRequiredForAllRoles();
+    const mayEnroll =
+      isAdvisorHubNavRole(session.user.role) ||
+      isMfaEnrollmentRequiredForUser({
+        role: session.user.role,
+        mfaEnabled: Boolean(session.user.mfaEnabled),
+        mfaRequiredForAllRoles,
+      });
+
+    if (!mayEnroll) {
       return NextResponse.json(
-        { error: "MFA is not available for client accounts" },
+        { error: "MFA is not available for this account" },
         { status: 403 }
       );
     }

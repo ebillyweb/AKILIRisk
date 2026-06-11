@@ -8,10 +8,30 @@ import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSuperAdminRole } from "@/lib/admin/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import {
+  getPasswordPolicyForAdmin,
+  markStaffPasswordsOutOfCompliance,
+  policyRulesChanged,
+} from "@/lib/platform/password-policy-settings";
+
+const updatePasswordPolicySchema = z
+  .object({
+    minLength: z.number().int().min(8).max(128),
+    requireUppercase: z.boolean(),
+    requireNumber: z.boolean(),
+    complianceNotice: z.string().max(2000).nullable(),
+  })
+  .refine((d) => d.requireUppercase || d.requireNumber || d.minLength >= 8, {
+    message: "At least one password rule must be enabled",
+  });
 
 const updateFlagsSchema = z.object({
   advisorGovernanceDashboardEnabled: z.boolean(),
   advisorRiskIntelligenceEnabled: z.boolean(),
+});
+
+const updateMfaPolicySchema = z.object({
+  mfaRequiredForAllRoles: z.boolean(),
 });
 
 export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
@@ -89,6 +109,7 @@ export async function getPlatformAdvisorFeatureFlagsForAdmin() {
         data: {
           advisorGovernanceDashboardEnabled: true,
           advisorRiskIntelligenceEnabled: true,
+          mfaRequiredForAllRoles: false,
         },
       };
     }
@@ -97,10 +118,58 @@ export async function getPlatformAdvisorFeatureFlagsForAdmin() {
       data: {
         advisorGovernanceDashboardEnabled: row.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: row.advisorRiskIntelligenceEnabled,
+        mfaRequiredForAllRoles: row.mfaRequiredForAllRoles,
       },
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to load settings";
+    return { success: false as const, error: message };
+  }
+}
+
+export async function updatePlatformMfaPolicy(input: unknown) {
+  try {
+    const { userId: actorUserId, email: actorEmail, role: actorRole } =
+      await requireSuperAdminRole();
+    const parsed = updateMfaPolicySchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false as const,
+        error: "Invalid MFA policy payload",
+      };
+    }
+
+    const prior = await prisma.platformSettings.findUnique({
+      where: { id: "default" },
+      select: { mfaRequiredForAllRoles: true },
+    });
+
+    await prisma.platformSettings.upsert({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        mfaRequiredForAllRoles: parsed.data.mfaRequiredForAllRoles,
+      },
+      update: {
+        mfaRequiredForAllRoles: parsed.data.mfaRequiredForAllRoles,
+      },
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.PLATFORM_SETTINGS_UPDATE,
+      entityType: "PlatformSettings",
+      entityId: "default",
+      beforeData: prior ?? { mfaRequiredForAllRoles: false },
+      afterData: parsed.data,
+      metadata: { section: "mfa_policy" },
+    });
+
+    revalidatePath("/admin/settings");
+
+    return { success: true as const };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to update MFA policy";
     return { success: false as const, error: message };
   }
 }
@@ -230,6 +299,83 @@ export async function getRiskThresholdsForAdmin() {
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to load risk thresholds";
+    return { success: false as const, error: message };
+  }
+}
+
+export async function getPasswordPolicyForSuperAdmin() {
+  await requireSuperAdminRole();
+  return getPasswordPolicyForAdmin();
+}
+
+export async function updatePasswordPolicy(input: unknown) {
+  try {
+    const { userId: actorUserId, email: actorEmail, role: actorRole } =
+      await requireSuperAdminRole();
+    const parsed = updatePasswordPolicySchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false as const,
+        error: parsed.error.issues[0]?.message ?? "Invalid password policy",
+      };
+    }
+
+    const prior = await getPasswordPolicyForAdmin();
+    const rulesChanged = policyRulesChanged(prior, parsed.data);
+    const nextRevision = rulesChanged
+      ? prior.revision + 1
+      : prior.revision;
+
+    await prisma.platformSettings.upsert({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        passwordMinLength: parsed.data.minLength,
+        passwordRequireUppercase: parsed.data.requireUppercase,
+        passwordRequireNumber: parsed.data.requireNumber,
+        passwordPolicyRevision: nextRevision,
+        passwordComplianceNotice: parsed.data.complianceNotice,
+      },
+      update: {
+        passwordMinLength: parsed.data.minLength,
+        passwordRequireUppercase: parsed.data.requireUppercase,
+        passwordRequireNumber: parsed.data.requireNumber,
+        passwordPolicyRevision: nextRevision,
+        passwordComplianceNotice: parsed.data.complianceNotice,
+      },
+    });
+
+    let affectedUsers = 0;
+    if (rulesChanged || parsed.data.complianceNotice !== prior.complianceNotice) {
+      affectedUsers = await markStaffPasswordsOutOfCompliance();
+    }
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.PLATFORM_SETTINGS_UPDATE,
+      entityType: "PlatformSettings",
+      entityId: "default",
+      beforeData: prior,
+      afterData: {
+        ...parsed.data,
+        revision: nextRevision,
+      },
+      metadata: {
+        section: "password_policy",
+        rulesChanged,
+        affectedUsers,
+      },
+    });
+
+    revalidatePath("/admin/settings");
+
+    return {
+      success: true as const,
+      affectedUsers,
+      revision: nextRevision,
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to update password policy";
     return { success: false as const, error: message };
   }
 }

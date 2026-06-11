@@ -33,6 +33,10 @@ model User {
   /// still set a real bcrypt hash. The credentials provider in
   /// auth.config.ts has a TIMING_FALLBACK_HASH defensive guard for null.
   password      String?
+  /// Set when the user's password no longer meets platform policy; gates workspace until updated.
+  passwordChangeRequired Boolean @default(false)
+  /// PlatformSettings.passwordPolicyRevision satisfied when this password was last set.
+  passwordPolicyRevision Int @default(0)
   name          String?
   firstName     String?
   lastName      String?
@@ -83,6 +87,8 @@ model User {
   /// so engagements aren't orphaned by accidental advisor deletion).
   portfolioEngagementsAsClient  PortfolioEngagement[] @relation("PortfolioEngagementClient")
   portfolioEngagementsAsAdvisor PortfolioEngagement[] @relation("PortfolioEngagementAdvisor")
+  /// Epic 5.11: advisor-led live sessions for this client.
+  facilitatedSessions           FacilitatedSession[]  @relation("FacilitatedSessionClient")
   /// Enterprise advisor plan: at most one firm membership per user.
   enterpriseMembership          EnterpriseMembership?
   /// Firms where this user is the billing contact (typically the OWNER).
@@ -304,6 +310,14 @@ model PlatformSettings {
   riskThresholdLow    Int @default(80)
   riskThresholdMedium Int @default(60)
   riskThresholdHigh   Int @default(40)
+  /** When true, client (USER) accounts must enroll in MFA in addition to staff roles. */
+  mfaRequiredForAllRoles Boolean @default(false)
+  /** Super-admin password rules for credential-based accounts. */
+  passwordMinLength Int @default(8)
+  passwordRequireUppercase Boolean @default(true)
+  passwordRequireNumber Boolean @default(true)
+  passwordPolicyRevision Int @default(1)
+  passwordComplianceNotice String?
   updatedAt DateTime @updatedAt
 }
 
@@ -681,6 +695,15 @@ enum IntakeStatus {
   SUBMITTED
 }
 
+/// Epic 5.11: advisor-led live session workflow.
+enum FacilitatedSessionStatus {
+  INTAKE
+  PILLAR_SELECT
+  ASSESSMENT
+  PREVIEW
+  COMPLETE
+}
+
 enum TranscriptionStatus {
   PENDING
   PROCESSING
@@ -1009,6 +1032,7 @@ model AdvisorProfile {
   signals            AdvisorSignal[]
   invitations      InviteCode[]
   documentRequirements DocumentRequirement[]
+  facilitatedSessions FacilitatedSession[]
   assignedGovernanceLeads GovernanceReviewLead[] @relation("GovernanceLeadAssignment")
   subdomain        AdvisorSubdomain?
   auditLogs        AdvisorBrandingAuditLog[]
@@ -1096,6 +1120,26 @@ model IntakeApproval {
 
   @@index([advisorId])
   @@index([interviewId])
+}
+
+/// Epic 5.11 US-73–75: advisor-led intake + assessment through preview.
+model FacilitatedSession {
+  id               String                   @id @default(cuid())
+  clientId         String                   @map("client_id")
+  advisorProfileId String                   @map("advisor_profile_id")
+  status           FacilitatedSessionStatus @default(INTAKE)
+  interviewId      String?                  @map("interview_id")
+  assessmentId     String?                  @map("assessment_id")
+  startedAt        DateTime                 @default(now()) @map("started_at")
+  completedAt      DateTime?                @map("completed_at")
+  updatedAt        DateTime                 @updatedAt @map("updated_at")
+
+  client           User                     @relation("FacilitatedSessionClient", fields: [clientId], references: [id], onDelete: Cascade)
+  advisor          AdvisorProfile           @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, advisorProfileId, status])
+  @@index([advisorProfileId, status])
+  @@map("facilitated_sessions")
 }
 
 model AdvisorNotification {

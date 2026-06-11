@@ -1,9 +1,42 @@
 -- Cybersecurity A2: document-upload sub when client selects Documented tier (score >= 2).
+-- No-op when pillar DDL seed data is absent (e.g. Prisma shadow DB).
 
-UPDATE questions q
-SET display_order = q.display_order + 1000
-WHERE q.section_id = '00000000-0000-0000-0003-000000000001'::uuid;
-
+WITH to_insert AS (
+  SELECT
+    p.section_id,
+    v.sub_number,
+    p.display_order AS parent_order
+  FROM questions p
+  JOIN (
+    VALUES
+      ('00000000-0000-0000-0003-000000000001', 'A2', 'A2a')
+  ) AS v(section_id, parent_number, sub_number)
+    ON p.section_id = v.section_id::uuid AND p.question_number = v.parent_number
+  WHERE p.answer_type = 'scored_0_3'
+    AND (
+      COALESCE(p.answer_2, '') ILIKE '%document%'
+      OR COALESCE(p.answer_3, '') ILIKE '%document%'
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM questions existing
+      WHERE existing.section_id = p.section_id
+        AND existing.question_number = v.sub_number
+    )
+),
+ranked AS (
+  SELECT
+    section_id,
+    sub_number,
+    ROW_NUMBER() OVER (
+      PARTITION BY section_id ORDER BY parent_order, sub_number
+    ) AS insert_seq
+  FROM to_insert
+),
+section_max AS (
+  SELECT section_id, COALESCE(MAX(display_order), 0) AS max_order
+  FROM questions
+  GROUP BY section_id
+)
 INSERT INTO questions (
   section_id,
   question_number,
@@ -20,8 +53,8 @@ INSERT INTO questions (
   display_order
 )
 SELECT
-  '00000000-0000-0000-0003-000000000001'::uuid,
-  'A2a',
+  r.section_id,
+  r.sub_number,
   'Please attach copies of any relevant supporting documentation, if available.',
   'fillable',
   NULL,
@@ -32,18 +65,19 @@ SELECT
   'Review for gaps, inconsistencies, and legal alignment; update and centralize documents securely.',
   TRUE,
   NULL,
-  1099
-WHERE NOT EXISTS (
-  SELECT 1 FROM questions
-  WHERE section_id = '00000000-0000-0000-0003-000000000001'::uuid
-    AND question_number = 'A2a'
-)
+  sm.max_order + r.insert_seq
+FROM ranked r
+JOIN section_max sm ON sm.section_id = r.section_id
 ON CONFLICT (section_id, question_number) DO UPDATE SET
   question_text = EXCLUDED.question_text,
   answer_type = EXCLUDED.answer_type,
   is_sub_question = EXCLUDED.is_sub_question,
   why_this_matters = EXCLUDED.why_this_matters,
   recommended_actions = EXCLUDED.recommended_actions;
+
+UPDATE questions q
+SET display_order = q.display_order + 1000
+WHERE q.section_id = '00000000-0000-0000-0003-000000000001'::uuid;
 
 UPDATE questions q
 SET display_order = v.new_order

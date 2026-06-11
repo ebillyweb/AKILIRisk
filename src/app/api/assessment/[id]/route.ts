@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { authorizeAssessmentApiAccess } from "@/lib/facilitated/assessment-access";
 
 /**
  * Single Assessment API Route
@@ -23,6 +24,8 @@ export async function GET(
     }
 
     const { id } = await params;
+    const facilitatedSessionId =
+      request.nextUrl.searchParams.get("facilitatedSessionId") ?? undefined;
 
     const assessment = await prisma.assessment.findUnique({
       where: {
@@ -46,11 +49,13 @@ export async function GET(
       );
     }
 
-    // Verify ownership. Return 404 (not 403) so a probing client can't
-    // tell "no such assessment" from "exists but not yours" — assessment
-    // ids are CUIDs, but defense-in-depth on the ownership boundary is
-    // free here.
-    if (assessment.userId !== session.user.id) {
+    const access = await authorizeAssessmentApiAccess({
+      assessmentId: id,
+      userId: session.user.id,
+      userRole: session.user.role,
+      facilitatedSessionId,
+    });
+    if (!access) {
       return NextResponse.json(
         { error: "Assessment not found" },
         { status: 404 }

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { normalizePillarScoreId } from "@/lib/assessment/pillar-registry";
+import { authorizeAssessmentApiAccess } from "@/lib/facilitated/assessment-access";
 
 /**
  * GET /api/assessment/[id]/pillar-scores
  * All PillarScore rows for an assessment (canonical pillar ids).
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -18,13 +19,16 @@ export async function GET(
     }
 
     const { id } = await params;
+    const facilitatedSessionId =
+      request.nextUrl.searchParams.get("facilitatedSessionId") ?? undefined;
 
-    const assessment = await prisma.assessment.findUnique({
-      where: { id },
-      select: { userId: true },
+    const access = await authorizeAssessmentApiAccess({
+      assessmentId: id,
+      userId: session.user.id,
+      userRole: session.user.role,
+      facilitatedSessionId,
     });
-
-    if (!assessment || assessment.userId !== session.user.id) {
+    if (!access) {
       return NextResponse.json({ error: "Assessment not found" }, { status: 404 });
     }
 

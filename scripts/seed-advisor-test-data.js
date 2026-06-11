@@ -14,6 +14,7 @@ const { PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { Pool } = require('pg');
 const bcryptjs = require('bcryptjs');
+const { TEST_PASSWORD } = require('./lib/test-password');
 const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
 
 if (!process.env.ENCRYPTION_KEY) {
@@ -31,7 +32,7 @@ async function main() {
   console.log('🌱 Seeding advisor portal test data...');
 
   // Hash password for test users
-  const hashedPassword = await bcryptjs.hash('testpassword123', 12);
+  const hashedPassword = await bcryptjs.hash(TEST_PASSWORD, 12);
 
   // Create advisor user
   const advisorEmail = 'advisor@test.com';
@@ -81,7 +82,7 @@ async function main() {
   // Create client user with submitted intake.
   // Round-11 commit 3 (BRD §5.1.AUTH): clients sign in via magic link;
   // password column is null. Existing Playwright fixtures that try to
-  // sign in with `testpassword123` against this account will fail until
+  // sign in with `${TEST_PASSWORD}` against this account will fail until
   // they're migrated to the magic-link flow.
   const clientEmail = 'client@test.com';
   const clientCt = userEmailCiphertext(clientEmail);
@@ -750,12 +751,12 @@ async function main() {
 
   console.log('\n🎉 Test data seeded successfully!');
   console.log('\n📋 Verification credentials:');
-  console.log(`   Advisor: advisor@test.com / testpassword123`);
-  console.log(`   Advisor (no clients, isolation tests): advisor2@test.com / testpassword123`);
-  console.log(`   Client: client@test.com / testpassword123`);
-  console.log(`   Client (MFA testing): client-mfa@test.com / testpassword123`);
-  console.log(`   Client (fresh intake): client-fresh@test.com / testpassword123`);
-  console.log(`   Platform admin (ADMIN role): platform-admin@test.com / testpassword123`);
+  console.log(`   Advisor: advisor@test.com / ${TEST_PASSWORD}`);
+  console.log(`   Advisor (no clients, isolation tests): advisor2@test.com / ${TEST_PASSWORD}`);
+  console.log(`   Client: client@test.com / ${TEST_PASSWORD}`);
+  console.log(`   Client (MFA testing): client-mfa@test.com / ${TEST_PASSWORD}`);
+  console.log(`   Client (fresh intake): client-fresh@test.com / ${TEST_PASSWORD}`);
+  console.log(`   Platform admin (ADMIN role): platform-admin@test.com / ${TEST_PASSWORD}`);
   console.log(`   Intake ID: ${intakeInterview.id}`);
   console.log('\n🚀 Application should be running at http://localhost:3000');
 }

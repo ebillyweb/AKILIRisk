@@ -29,7 +29,15 @@ interface UseAutoSaveReturn {
 
 const DRAIN_DEBOUNCE_MS = 400;
 
-export function useAutoSave(assessmentId: string | null): UseAutoSaveReturn {
+export type UseAutoSaveOptions = {
+  facilitatedSessionId?: string;
+};
+
+export function useAutoSave(
+  assessmentId: string | null,
+  options?: UseAutoSaveOptions,
+): UseAutoSaveReturn {
+  const facilitatedSessionId = options?.facilitatedSessionId;
   const [isSaving, setIsSaving] = useState(false);
   const lastSaved = useAssessmentStore((state) => state.lastSaved);
 
@@ -59,7 +67,10 @@ export function useAutoSave(assessmentId: string | null): UseAutoSaveReturn {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(params),
+        body: JSON.stringify({
+          ...params,
+          ...(facilitatedSessionId ? { facilitatedSessionId } : {}),
+        }),
       });
 
       if (!response.ok) {

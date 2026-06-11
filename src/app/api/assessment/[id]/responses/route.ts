@@ -9,6 +9,10 @@ import {
   markAssessmentAnswersChangedAfterComplete,
 } from "@/lib/assessment/answers-changed-after-complete";
 import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
+import {
+  authorizeAssessmentApiAccess,
+  markFacilitatedSessionPreviewIfComplete,
+} from "@/lib/facilitated/assessment-access";
 
 /**
  * Assessment Responses API Routes
@@ -42,23 +46,16 @@ export async function GET(
     }
 
     const { id } = await params;
+    const facilitatedSessionId =
+      request.nextUrl.searchParams.get("facilitatedSessionId") ?? undefined;
 
-    // Verify ownership
-    const assessment = await prisma.assessment.findUnique({
-      where: { id },
-      select: { userId: true },
+    const access = await authorizeAssessmentApiAccess({
+      assessmentId: id,
+      userId: session.user.id,
+      userRole: session.user.role,
+      facilitatedSessionId,
     });
-
-    if (!assessment) {
-      return NextResponse.json(
-        { error: "Assessment not found" },
-        { status: 404 }
-      );
-    }
-
-    // Return 404 (not 403) so the response shape doesn't distinguish
-    // "no such assessment" from "exists but not yours."
-    if (assessment.userId !== session.user.id) {
+    if (!access) {
       return NextResponse.json(
         { error: "Assessment not found" },
         { status: 404 }
@@ -111,7 +108,11 @@ export async function POST(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const facilitatedSessionId =
+      typeof body.facilitatedSessionId === "string"
+        ? body.facilitatedSessionId
+        : undefined;
 
     const validation = saveResponseSchema.safeParse(body);
 
@@ -123,8 +124,15 @@ export async function POST(
       );
     }
 
-    const { questionId, pillar, subCategory, answer, skipped, currentQuestionIndex, orphanedQuestionIds } =
-      validation.data;
+    const {
+      questionId,
+      pillar,
+      subCategory,
+      answer,
+      skipped,
+      currentQuestionIndex,
+      orphanedQuestionIds,
+    } = validation.data;
 
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
@@ -139,9 +147,13 @@ export async function POST(
       );
     }
 
-    // Return 404 (not 403) so the response shape doesn't distinguish
-    // "no such assessment" from "exists but not yours."
-    if (assessment.userId !== session.user.id) {
+    const access = await authorizeAssessmentApiAccess({
+      assessmentId: id,
+      userId: session.user.id,
+      userRole: session.user.role,
+      facilitatedSessionId,
+    });
+    if (!access) {
       return NextResponse.json(
         { error: "Assessment not found" },
         { status: 404 }
@@ -239,6 +251,10 @@ export async function POST(
 
     if (answerChangedAfterComplete) {
       void markAssessmentAnswersChangedAfterComplete(id);
+    }
+
+    if (facilitatedSessionId) {
+      void markFacilitatedSessionPreviewIfComplete(facilitatedSessionId);
     }
 
     return NextResponse.json(response, { status: 201 });

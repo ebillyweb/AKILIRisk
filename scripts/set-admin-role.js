@@ -39,12 +39,16 @@ async function main() {
       emailCiphertext: adminCt,
       role: "SUPER_ADMIN",
       password: hashedPassword,
+      passwordChangeRequired: false,
+      passwordPolicyRevision: 1,
     },
     create: {
       emailCiphertext: adminCt,
       password: hashedPassword,
       name: "Admin",
       role: "SUPER_ADMIN",
+      passwordChangeRequired: false,
+      passwordPolicyRevision: 1,
     },
   });
 

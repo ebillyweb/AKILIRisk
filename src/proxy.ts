@@ -10,8 +10,15 @@ import { isTenantPassThroughPath } from "@/lib/advisor/tenant-pass-through-paths
 import {
   isPageMfaExempt,
   isWorkspacePath,
+  isMfaSetupPending,
   shouldBlockApiForMfaPending,
+  shouldBlockApiForMfaSetupPending,
 } from "@/lib/auth/mfa-gate";
+import {
+  isPasswordChangePending,
+  isPagePasswordChangeExempt,
+  shouldBlockApiForPasswordChangePending,
+} from "@/lib/auth/password-change-gate";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { isMfaChallengePendingForUser } from "@/lib/auth/mfa-session-status";
 
@@ -131,7 +138,32 @@ export default async function proxy(req: NextRequest) {
     id?: string;
     mfaEnabled?: boolean;
     mfaVerified?: boolean;
+    mfaEnrollmentRequired?: boolean;
+    passwordChangeRequired?: boolean;
   };
+
+  if (
+    isAuthenticated &&
+    isPasswordChangePending(mfaClaims) &&
+    shouldBlockApiForPasswordChangePending(pathname)
+  ) {
+    return NextResponse.json(
+      { error: "Password update required" },
+      { status: 403 }
+    );
+  }
+
+  if (
+    isAuthenticated &&
+    isMfaSetupPending(mfaClaims) &&
+    shouldBlockApiForMfaSetupPending(pathname)
+  ) {
+    return NextResponse.json(
+      { error: "MFA enrollment required" },
+      { status: 403 }
+    );
+  }
+
   if (
     isAuthenticated &&
     (await isMfaChallengePendingForUser(mfaClaims)) &&
@@ -152,9 +184,27 @@ export default async function proxy(req: NextRequest) {
 
   if (
     isAuthenticated &&
+    !isPagePasswordChangeExempt(pathname) &&
+    isWorkspace
+  ) {
+    if (isPasswordChangePending(mfaClaims)) {
+      const changePasswordUrl = new URL("/change-password", req.url);
+      changePasswordUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(changePasswordUrl);
+    }
+  }
+
+  if (
+    isAuthenticated &&
     !isPageMfaExempt(pathname) &&
     isWorkspace
   ) {
+    if (isMfaSetupPending(mfaClaims)) {
+      const mfaSetupUrl = new URL("/mfa/setup", req.url);
+      mfaSetupUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(mfaSetupUrl);
+    }
+
     if (await isMfaChallengePendingForUser(mfaClaims)) {
       const mfaVerifyUrl = new URL("/mfa/verify", req.url);
       mfaVerifyUrl.searchParams.set("callbackUrl", pathname);

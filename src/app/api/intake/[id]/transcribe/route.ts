@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { assertClientRoleForMutationApi } from '@/lib/client/require-client-role';
+import { isAdvisorHubNavRole } from '@/lib/auth-roles';
 import { getIntakeInterview, saveIntakeResponse } from '@/lib/data/intake';
+import { getFacilitatedSessionForAdvisor } from '@/lib/facilitated/session-access';
 import { getIntakeAudioObjectBytes } from '@/lib/s3/intake-audio-uploads';
 
 export async function POST(
@@ -19,13 +21,35 @@ export async function POST(
     }
 
     const roleDenied = assertClientRoleForMutationApi(session);
-    if (roleDenied) return roleDenied;
+    const isAdvisor = isAdvisorHubNavRole(session.user.role);
 
-    const userId = session.user.id;
     const { id: interviewId } = await params;
+    const body = await request.json();
+    const facilitatedSessionId =
+      typeof body.facilitatedSessionId === "string" ? body.facilitatedSessionId : null;
 
-    // Verify interview ownership
-    const interview = await getIntakeInterview(userId, interviewId);
+    let ownerUserId = session.user.id;
+    if (roleDenied && isAdvisor && facilitatedSessionId) {
+      const facilitated = await getFacilitatedSessionForAdvisor(
+        facilitatedSessionId,
+        session.user.id,
+      );
+      if (
+        !facilitated ||
+        facilitated.interviewId !== interviewId ||
+        facilitated.status !== "INTAKE"
+      ) {
+        return NextResponse.json(
+          { success: false, error: "Interview not found" },
+          { status: 404 },
+        );
+      }
+      ownerUserId = facilitated.clientId;
+    } else if (roleDenied) {
+      return roleDenied;
+    }
+
+    const interview = await getIntakeInterview(ownerUserId, interviewId);
     if (!interview) {
       return NextResponse.json(
         { success: false, error: 'Interview not found' },
@@ -34,7 +58,6 @@ export async function POST(
     }
 
     // Parse request body
-    const body = await request.json();
     const { questionId } = body;
 
     if (!questionId) {

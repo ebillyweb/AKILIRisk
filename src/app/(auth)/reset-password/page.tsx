@@ -8,6 +8,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import {
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  validatePasswordComplexity,
+} from "@/lib/auth/password-policy";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -48,8 +52,9 @@ function ResetPasswordForm() {
     setError("");
 
     // Client-side validation
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    const complexity = validatePasswordComplexity(password);
+    if (!complexity.ok) {
+      setError(complexity.error);
       return;
     }
 
@@ -120,8 +125,7 @@ function ResetPasswordForm() {
             placeholder="Enter a new password"
           />
           <p className="text-sm text-muted-foreground">
-            Must be at least 8 characters with uppercase, lowercase, number,
-            and special character.
+            {PASSWORD_REQUIREMENTS_MESSAGE}
           </p>
         </div>
 

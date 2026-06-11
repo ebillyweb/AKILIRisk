@@ -33,7 +33,7 @@ import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
 describe("getAdvisorHubAccessForUserId — enterprise suspended", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
   });
 
   it("denies hub access when membership is SUSPENDED", async () => {

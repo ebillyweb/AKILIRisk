@@ -6,6 +6,8 @@ declare module "next-auth" {
       id: string;
       mfaEnabled?: boolean;
       mfaVerified?: boolean;
+      mfaEnrollmentRequired?: boolean;
+      passwordChangeRequired?: boolean;
       role?: "USER" | "ADVISOR" | "ADMIN" | "SUPER_ADMIN" | string;
       firstName?: string | null;
       accountDeactivated?: boolean;
@@ -15,6 +17,8 @@ declare module "next-auth" {
   interface User {
     mfaEnabled?: boolean;
     mfaVerified?: boolean;
+    mfaEnrollmentRequired?: boolean;
+    passwordChangeRequired?: boolean;
     role?: "USER" | "ADVISOR" | "ADMIN" | "SUPER_ADMIN" | string;
     firstName?: string | null;
   }
@@ -26,6 +30,8 @@ declare module "next-auth/jwt" {
     email?: string;
     mfaEnabled?: boolean;
     mfaVerified?: boolean;
+    mfaEnrollmentRequired?: boolean;
+    passwordChangeRequired?: boolean;
     role?: "USER" | "ADVISOR" | "ADMIN" | "SUPER_ADMIN" | string;
     firstName?: string | null;
     accountDeactivated?: boolean;

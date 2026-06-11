@@ -61,11 +61,20 @@ export interface PillarScoreSummary {
   riskLevel: string;
 }
 
-export function useAssessmentPillarScores(assessmentId: string | null) {
+export function useAssessmentPillarScores(
+  assessmentId: string | null,
+  options?: { facilitatedSessionId?: string },
+) {
+  const facilitatedSessionId = options?.facilitatedSessionId;
   return useQuery<PillarScoreSummary[]>({
-    queryKey: ["assessment-pillar-scores", assessmentId],
+    queryKey: ["assessment-pillar-scores", assessmentId, facilitatedSessionId],
     queryFn: async () => {
-      const res = await fetch(`/api/assessment/${assessmentId}/pillar-scores`);
+      const params = facilitatedSessionId
+        ? `?facilitatedSessionId=${encodeURIComponent(facilitatedSessionId)}`
+        : "";
+      const res = await fetch(
+        `/api/assessment/${assessmentId}/pillar-scores${params}`,
+      );
       if (!res.ok) throw new Error("Failed to load pillar scores");
       return res.json();
     },

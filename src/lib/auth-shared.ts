@@ -7,10 +7,10 @@
  * lives.
  */
 
-/** Primary dev / ops account email (see seed scripts and local docs). */
+/** Primary dev / ops account email for seeds and contact-form default — not used for authorization. */
 export const DESIGNATED_ADMIN_EMAIL = "buddy@ebilly.com";
 
-/** True iff the email exactly matches the designated admin account. */
+/** @deprecated Not used for admin authorization; retained for contact-form default only. */
 export function isDesignatedAdminEmail(
   email: string | null | undefined
 ): boolean {

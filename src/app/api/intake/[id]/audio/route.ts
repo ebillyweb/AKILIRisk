@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { UserRole } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { assertClientRoleForMutationApi } from '@/lib/client/require-client-role';
+import { isAdvisorHubNavRole } from '@/lib/auth-roles';
 import { getIntakeInterview, saveIntakeResponse } from '@/lib/data/intake';
+import { getFacilitatedSessionForAdvisor } from '@/lib/facilitated/session-access';
 import {
   uploadIntakeAudioFromBuffer,
   deleteIntakeAudioObject,
@@ -39,12 +41,35 @@ export async function POST(
     }
 
     const roleDenied = assertClientRoleForMutationApi(session);
-    if (roleDenied) return roleDenied;
+    const isAdvisor = isAdvisorHubNavRole(session.user.role);
 
-    // Reject oversized uploads before reading the body. We can't reliably
-    // bail mid-read inside the Next.js formData parser, so the
-    // Content-Length precheck is our primary cap; the post-decode size
-    // check below catches a chunked-encoding bypass.
+    const { id: interviewId } = await params;
+
+    // Parse form data early — advisors pass facilitatedSessionId for Epic 5.11.
+    const formData = await request.formData();
+    const facilitatedSessionId = formData.get('facilitatedSessionId') as string | null;
+
+    let ownerUserId = session.user.id;
+    if (roleDenied && isAdvisor && facilitatedSessionId) {
+      const facilitated = await getFacilitatedSessionForAdvisor(
+        facilitatedSessionId,
+        session.user.id,
+      );
+      if (
+        !facilitated ||
+        facilitated.interviewId !== interviewId ||
+        facilitated.status !== 'INTAKE'
+      ) {
+        return NextResponse.json(
+          { success: false, error: 'Interview not found' },
+          { status: 404 },
+        );
+      }
+      ownerUserId = facilitated.clientId;
+    } else if (roleDenied) {
+      return roleDenied;
+    }
+
     const contentLength = Number.parseInt(
       request.headers.get('content-length') ?? '',
       10
@@ -56,11 +81,6 @@ export async function POST(
       );
     }
 
-    const userId = session.user.id;
-    const { id: interviewId } = await params;
-
-    // Defense in depth: even though `interviewId` is checked for ownership
-    // below, reject malformed values before they touch any filesystem path.
     if (!QUESTION_ID_PATTERN.test(interviewId)) {
       return NextResponse.json(
         { success: false, error: 'Invalid interview id' },
@@ -69,7 +89,7 @@ export async function POST(
     }
 
     // Verify interview ownership
-    const interview = await getIntakeInterview(userId, interviewId);
+    const interview = await getIntakeInterview(ownerUserId, interviewId);
     if (!interview) {
       return NextResponse.json(
         { success: false, error: 'Interview not found' },
@@ -78,7 +98,6 @@ export async function POST(
     }
 
     // Parse form data
-    const formData = await request.formData();
     const audioBlob = formData.get('audio') as Blob;
     const questionId = formData.get('questionId') as string;
 
@@ -187,7 +206,7 @@ export async function POST(
     // path), NOT the audio URL (same reasoning).
     await writeAudit({
       actor: {
-        userId,
+        userId: session.user.id,
         role: session.user.role as UserRole | undefined,
         email: session.user.email,
       },
@@ -200,6 +219,9 @@ export async function POST(
         contentType: upload.contentType,
         sizeBytes: upload.size,
         replacedPriorRecording: Boolean(priorResponse?.audioS3Key),
+        ...(facilitatedSessionId
+          ? { facilitatedSessionId, clientId: ownerUserId }
+          : {}),
       },
       request,
     });

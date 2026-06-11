@@ -6,9 +6,12 @@
  * not fully authorized until `mfaVerified` is true.
  */
 
+import { isMfaEnrollmentPending } from "@/lib/auth/mfa-enforcement";
+
 export type MfaJwtClaims = {
   mfaEnabled?: boolean;
   mfaVerified?: boolean;
+  mfaEnrollmentRequired?: boolean;
 };
 
 export function isMfaChallengePending(
@@ -16,6 +19,12 @@ export function isMfaChallengePending(
 ): boolean {
   if (!claims) return false;
   return Boolean(claims.mfaEnabled) && !Boolean(claims.mfaVerified);
+}
+
+export function isMfaSetupPending(
+  claims: MfaJwtClaims | null | undefined
+): boolean {
+  return isMfaEnrollmentPending(claims);
 }
 
 /**
@@ -58,6 +67,7 @@ export const PAGE_MFA_EXEMPT_PREFIXES = [
   "/auth/",
   "/forgot-password",
   "/reset-password",
+  "/change-password",
   "/api/auth/signout",
 ] as const;
 
@@ -91,4 +101,11 @@ export function isApiMfaExempt(pathname: string): boolean {
 export function shouldBlockApiForMfaPending(pathname: string): boolean {
   if (!pathname.startsWith("/api/")) return false;
   return !isApiMfaExempt(pathname);
+}
+
+export function shouldBlockApiForMfaSetupPending(pathname: string): boolean {
+  if (!pathname.startsWith("/api/")) return false;
+  if (isApiMfaExempt(pathname)) return false;
+  if (pathname.startsWith("/api/auth/mfa/")) return false;
+  return true;
 }

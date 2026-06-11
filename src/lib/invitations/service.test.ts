@@ -5,9 +5,13 @@ import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from "@/lib/schemas/invitation";
 
 const createdRows: Record<string, unknown>[] = [];
 
+type BlockingInviteRow = { status: InvitationStatus; resendCount: number };
+
 const prismaSpies = vi.hoisted(() => ({
   inviteCode: {
-    findFirst: vi.fn(async () => null),
+    findFirst: vi.fn(
+      async (): Promise<BlockingInviteRow | null> => null
+    ),
     create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
       const row = {
         id: "invite-1",

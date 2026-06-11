@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ResendEmailPayload } from "@/lib/email/resend-payload";
 import {
   ADVISOR_EMAIL_LOGO_CID,
   appendAdvisorLogoAttachment,
@@ -90,7 +91,7 @@ describe("advisor email logo", () => {
       {
         html: `<img src="cid:${ADVISOR_EMAIL_LOGO_CID}" />`,
         to: "a@b.com",
-      },
+      } as ResendEmailPayload,
       {
         content: "abc",
         filename: "advisor-logo.png",

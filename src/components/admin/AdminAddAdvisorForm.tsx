@@ -14,11 +14,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createAdvisorByAdmin, type CreateAdvisorInput } from "@/lib/admin/actions";
+import {
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  passwordComplexitySchema,
+} from "@/lib/auth/password-policy";
 
 const formSchema = z
   .object({
     email: z.string().email("Invalid email").max(255),
-    password: z.string().min(8, "Password must be at least 8 characters").max(100),
+    password: passwordComplexitySchema.max(100),
     confirmPassword: z.string(),
     name: z.string().min(1, "Name is required").max(200).optional(),
     firstName: z.string().max(100).optional(),
@@ -131,6 +135,9 @@ export function AdminAddAdvisorForm() {
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
+              <p className="text-sm text-muted-foreground">
+                {PASSWORD_REQUIREMENTS_MESSAGE}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm password *</Label>

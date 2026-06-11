@@ -189,6 +189,12 @@ export const AUDIT_ACTIONS = {
   INTAKE_APPROVED_CLIENT_MAGIC_LINK: "intake.approved_client_magic_link",
   INTAKE_REJECT: "intake.reject",
   INTAKE_WAIVER_SET: "intake.waiver_set",
+  /** Epic 5.11: advisor-led live session lifecycle. */
+  FACILITATED_SESSION_START: "facilitated_session.start",
+  FACILITATED_SESSION_RESUME: "facilitated_session.resume",
+  FACILITATED_SESSION_INTAKE_SUBMIT: "facilitated_session.intake_submit",
+  FACILITATED_SESSION_SCOPE_SET: "facilitated_session.scope_set",
+  FACILITATED_SESSION_COMPLETE: "facilitated_session.complete",
   /** Advisor ended an active client workflow (assignment → INACTIVE). */
   CLIENT_ASSIGNMENT_DEACTIVATE: "client_assignment.deactivate",
   /** Advisor restored an inactive client workflow (assignment → ACTIVE). */

@@ -36,9 +36,16 @@ export interface UseAssessmentNavigationReturn {
   branchingChange: BranchingChange | null;
 }
 
+export interface AssessmentNavigationPaths {
+  hub: string;
+  pillarQuestion: (pillarSlug: string, questionIndex: number) => string;
+  pillarComplete: string;
+}
+
 export interface UseAssessmentNavigationOptions {
   visibleSubCategories?: string[];
   questions?: Question[];
+  paths?: AssessmentNavigationPaths;
 }
 
 export function useAssessmentNavigation(
@@ -47,6 +54,7 @@ export function useAssessmentNavigation(
   options?: UseAssessmentNavigationOptions
 ): UseAssessmentNavigationReturn {
   const router = useRouter();
+  const paths = options?.paths;
   const { answers, setCurrentPosition, householdProfile, familyGovernanceQuestionBank, skippedQuestions } =
     useAssessmentStore();
 
@@ -124,12 +132,13 @@ export function useAssessmentNavigation(
     setCurrentPosition(pillarSlug, adjustedIndex + 1);
 
     if (isLastQuestion) {
-      // Last question in pillar - navigate to completion page
-      router.push('/assessment/complete');
+      router.push(paths?.pillarComplete ?? "/assessment/complete");
     } else {
-      // Navigate to next visible question
       const nextIndex = adjustedIndex + 1;
-      router.push(`/assessment/${pillarSlug}/${nextIndex}`);
+      router.push(
+        paths?.pillarQuestion(pillarSlug, nextIndex) ??
+          `/assessment/${pillarSlug}/${nextIndex}`,
+      );
     }
   };
 
@@ -141,8 +150,10 @@ export function useAssessmentNavigation(
     // Update store position
     setCurrentPosition(pillarSlug, prevIndex);
 
-    // Navigate to previous question
-    router.push(`/assessment/${pillarSlug}/${prevIndex}`);
+    router.push(
+      paths?.pillarQuestion(pillarSlug, prevIndex) ??
+        `/assessment/${pillarSlug}/${prevIndex}`,
+    );
   };
 
   return {

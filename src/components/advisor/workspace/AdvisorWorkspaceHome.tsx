@@ -6,6 +6,7 @@ import {
   ClipboardList,
   GitBranch,
   Mail,
+  PlayCircle,
   Send,
   Settings,
   Radio,
@@ -176,6 +177,12 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
               Invite client
             </Link>
           </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
+              <PlayCircle className="size-4" />
+              Start client session
+            </Link>
+          </Button>
         </div>
       </header>
 
@@ -283,6 +290,12 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
           <CardTitle className="text-base">Quick actions</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <QuickActionButton
+            href="/advisor/facilitate"
+            label="Start client session"
+            description="Live intake and assessment without client login"
+            icon={PlayCircle}
+          />
           <QuickActionButton
             href="/advisor/pipeline?awaitingReview=1"
             label="Intake queue"

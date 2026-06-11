@@ -11,6 +11,7 @@
  * request, reads the token from the test mail inbox, and follows the
  * verify URL. Tracked separately from this commit.
  */
+import { TEST_PASSWORD } from "@/lib/auth/password-policy";
 export type Role =
   | "advisor"
   | "advisor2"
@@ -37,7 +38,7 @@ export const USERS: Record<Role, TestUser> = {
   advisor: {
     role: "advisor",
     email: env("ADVISOR_EMAIL", "advisor@test.com"),
-    password: env("ADVISOR_PASSWORD", "testpassword123"),
+    password: env("ADVISOR_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/advisor",
   },
   /**
@@ -48,7 +49,7 @@ export const USERS: Record<Role, TestUser> = {
   advisor2: {
     role: "advisor2",
     email: env("ADVISOR2_EMAIL", "advisor2@test.com"),
-    password: env("ADVISOR2_PASSWORD", "testpassword123"),
+    password: env("ADVISOR2_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/advisor",
   },
   /**
@@ -58,7 +59,7 @@ export const USERS: Record<Role, TestUser> = {
   advisor3: {
     role: "advisor3",
     email: env("ADVISOR3_EMAIL", "advisor3@test.com"),
-    password: env("ADVISOR3_PASSWORD", "testpassword123"),
+    password: env("ADVISOR3_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/advisor/billing",
   },
   /**
@@ -72,7 +73,7 @@ export const USERS: Record<Role, TestUser> = {
   advisor4: {
     role: "advisor4",
     email: env("ADVISOR4_EMAIL", "advisor4@test.com"),
-    password: env("ADVISOR4_PASSWORD", "testpassword123"),
+    password: env("ADVISOR4_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/advisor",
   },
   /**
@@ -84,7 +85,7 @@ export const USERS: Record<Role, TestUser> = {
   advisorUnbranded: {
     role: "advisorUnbranded",
     email: env("ADVISOR_UNBRANDED_EMAIL", "advisor-unbranded@test.com"),
-    password: env("ADVISOR_UNBRANDED_PASSWORD", "testpassword123"),
+    password: env("ADVISOR_UNBRANDED_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/advisor",
   },
   /**
@@ -94,13 +95,13 @@ export const USERS: Record<Role, TestUser> = {
   clientUnbranded: {
     role: "clientUnbranded",
     email: env("CLIENT_UNBRANDED_EMAIL", "client-unbranded@test.com"),
-    password: env("CLIENT_UNBRANDED_PASSWORD", "testpassword123"),
+    password: env("CLIENT_UNBRANDED_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/dashboard",
   },
   client: {
     role: "client",
     email: env("CLIENT_EMAIL", "client@test.com"),
-    password: env("CLIENT_PASSWORD", "testpassword123"),
+    password: env("CLIENT_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/dashboard",
   },
   /**
@@ -110,7 +111,7 @@ export const USERS: Record<Role, TestUser> = {
   clientMfa: {
     role: "clientMfa",
     email: env("CLIENT_MFA_EMAIL", "client-mfa@test.com"),
-    password: env("CLIENT_MFA_PASSWORD", "testpassword123"),
+    password: env("CLIENT_MFA_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/dashboard",
   },
   admin: {
@@ -126,7 +127,7 @@ export const USERS: Record<Role, TestUser> = {
   platformAdmin: {
     role: "platformAdmin",
     email: env("PLATFORM_ADMIN_EMAIL", "platform-admin@test.com"),
-    password: env("PLATFORM_ADMIN_PASSWORD", "testpassword123"),
+    password: env("PLATFORM_ADMIN_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/admin",
   },
   /**
@@ -137,7 +138,7 @@ export const USERS: Record<Role, TestUser> = {
   clientFresh: {
     role: "clientFresh",
     email: env("CLIENT_FRESH_EMAIL", "client-fresh@test.com"),
-    password: env("CLIENT_FRESH_PASSWORD", "testpassword123"),
+    password: env("CLIENT_FRESH_PASSWORD", TEST_PASSWORD),
     expectedLandingPath: "/dashboard",
   },
 };
