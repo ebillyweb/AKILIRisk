@@ -68,6 +68,7 @@ export async function resolveBillingContext(
       enterprise: {
         select: {
           id: true,
+          status: true,
           subscription: { select: subscriptionSelect },
         },
       },
@@ -75,6 +76,16 @@ export async function resolveBillingContext(
   });
 
   if (membership) {
+    if (membership.enterprise.status === "SUSPENDED") {
+      return {
+        kind: "enterprise",
+        enterpriseId: membership.enterprise.id,
+        role: membership.role,
+        advisorProfileId: profile.id,
+        subscription: null,
+      };
+    }
+
     return {
       kind: "enterprise",
       enterpriseId: membership.enterprise.id,

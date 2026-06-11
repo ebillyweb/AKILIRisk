@@ -27,6 +27,12 @@ import {
   ENTERPRISE_DEFAULT_SEAT_LIMIT,
 } from "@/lib/enterprise/constants";
 import { userHasBlockingSoloSubscription } from "@/lib/enterprise/solo-subscription-block";
+import {
+  deleteEnterpriseFirmByAdmin,
+  EnterpriseLifecycleError,
+  reactivateEnterpriseFirmByAdmin,
+  suspendEnterpriseFirmByAdmin,
+} from "@/lib/enterprise/firm-lifecycle";
 import { isSubdomainReserved, validateSubdomainFormat } from "@/lib/advisor/subdomain";
 
 // Round-11 bug-hunt fix: normalize email casing — both schemas
@@ -924,5 +930,105 @@ export async function createEnterpriseByAdmin(input: unknown) {
   } catch (e) {
     logSafeError("admin/createEnterprise", e);
     return { success: false, error: safeErrorMessage(e, "Failed to create enterprise") };
+  }
+}
+
+const enterpriseIdSchema = z.object({
+  enterpriseId: z.string().cuid(),
+});
+
+const deleteEnterpriseSchema = enterpriseIdSchema.extend({
+  confirmSlug: z.string().min(1).max(40),
+});
+
+function revalidateEnterpriseAdminPaths(enterpriseId: string) {
+  revalidatePath("/admin/enterprises");
+  revalidatePath(`/admin/enterprises/${enterpriseId}`);
+  revalidatePath("/admin/advisors");
+  revalidatePath("/admin");
+}
+
+export async function suspendEnterpriseByAdmin(input: unknown) {
+  try {
+    const { userId, email, role } = await requireAdminRole();
+    const parsed = enterpriseIdSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    await suspendEnterpriseFirmByAdmin({
+      enterpriseId: parsed.data.enterpriseId,
+      actor: { userId, email, role },
+    });
+    revalidateEnterpriseAdminPaths(parsed.data.enterpriseId);
+    return { success: true as const };
+  } catch (e) {
+    if (e instanceof EnterpriseLifecycleError) {
+      return { success: false, error: e.message };
+    }
+    logSafeError("admin/suspendEnterprise", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to suspend firm") };
+  }
+}
+
+export async function reactivateEnterpriseByAdmin(input: unknown) {
+  try {
+    const { userId, email, role } = await requireAdminRole();
+    const parsed = enterpriseIdSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    await reactivateEnterpriseFirmByAdmin({
+      enterpriseId: parsed.data.enterpriseId,
+      actor: { userId, email, role },
+    });
+    revalidateEnterpriseAdminPaths(parsed.data.enterpriseId);
+    return { success: true as const };
+  } catch (e) {
+    if (e instanceof EnterpriseLifecycleError) {
+      return { success: false, error: e.message };
+    }
+    logSafeError("admin/reactivateEnterprise", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to reactivate firm") };
+  }
+}
+
+export async function deleteEnterpriseByAdmin(input: unknown) {
+  try {
+    const { userId, email, role } = await requireAdminRole();
+    const parsed = deleteEnterpriseSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    await deleteEnterpriseFirmByAdmin({
+      enterpriseId: parsed.data.enterpriseId,
+      confirmSlug: parsed.data.confirmSlug,
+      actor: { userId, email, role },
+    });
+    revalidateEnterpriseAdminPaths(parsed.data.enterpriseId);
+    return { success: true as const };
+  } catch (e) {
+    if (e instanceof EnterpriseLifecycleError) {
+      return { success: false, error: e.message };
+    }
+    logSafeError("admin/deleteEnterprise", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to delete firm") };
   }
 }

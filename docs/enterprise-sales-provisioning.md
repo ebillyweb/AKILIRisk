@@ -74,8 +74,35 @@ There is no automatic migration of solo clients or Stripe customers to the firm.
 ## Admin paths
 
 - List firms: `/admin/enterprises`
+- Manage firm (suspend / reactivate / delete): `/admin/enterprises/{enterpriseId}`
 - Provision: `/admin/enterprises/new`
-- Server action: `createEnterpriseByAdmin` in `src/lib/admin/actions.ts`
+- Server actions: `createEnterpriseByAdmin`, `suspendEnterpriseByAdmin`, `reactivateEnterpriseByAdmin`, `deleteEnterpriseByAdmin` in `src/lib/admin/actions.ts`
+
+## Suspend firm (reversible)
+
+Use when a contract pauses or billing stops — **does not delete data**.
+
+1. Admin → **Enterprises** → **Manage** on the firm.
+2. Click **Suspend firm** and confirm.
+3. Effects:
+   - Firm `status` → `SUSPENDED`
+   - Firm subscription → `CANCELLED` (Stripe sub cancelled when present)
+   - Tenant subdomain deactivated
+   - All member sessions cleared — hub access blocked until reactivation
+4. To restore: **Reactivate firm** on the same page (subscription set back to `ACTIVE` with a renewed period end).
+
+## Delete firm (permanent)
+
+Use when deprovisioning a firm entirely.
+
+1. Admin → **Enterprises** → **Manage**.
+2. Type the firm **slug** exactly and click **Delete firm permanently**.
+3. Effects:
+   - Enterprise row, memberships, and firm subscription removed (DB cascade)
+   - Advisor profiles unlinked (`enterpriseId` cleared) — users remain `ADVISOR` accounts
+   - Slug becomes available for a new firm
+   - Stripe subscription cancelled when present
+4. **Does not** delete clients, intake, or advisor user accounts.
 
 ## Troubleshooting
 

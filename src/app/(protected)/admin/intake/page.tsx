@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mic } from "lucide-react";
 import { getIntakeForAdmin } from "@/lib/admin/queries";
+import { formatIntakeApprovalStatus } from "@/lib/intake/approval-status-label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +52,8 @@ export default async function AdminIntakePage() {
                     <p className="text-sm text-muted-foreground">{i.user.email}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {i._count.responses} responses
-                      {i.approval && ` · Approval: ${i.approval.status}`}
+                      {i.approval &&
+                        ` · Approval: ${formatIntakeApprovalStatus(i.approval.status)}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

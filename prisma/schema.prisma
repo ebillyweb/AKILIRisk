@@ -133,10 +133,16 @@ enum EnterprisePaymentMethod {
   CARD
 }
 
+enum AdvisorEnterpriseStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 model AdvisorEnterprise {
   id                    String                  @id @default(cuid())
   name                  String
   slug                  String                  @unique
+  status                AdvisorEnterpriseStatus @default(ACTIVE)
   seatLimit             Int
   clientLimit           Int
   perAdvisorClientLimit Int
@@ -170,6 +176,7 @@ model AdvisorEnterprise {
   subdomain       AdvisorSubdomain?
 
   @@index([billingContactUserId])
+  @@index([status])
 }
 
 model EnterpriseMembership {

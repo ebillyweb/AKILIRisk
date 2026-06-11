@@ -26,7 +26,10 @@ describe("getAdvisorHubAccessForUserId — enterprise subscription", () => {
       deletedAt: null,
       advisorPortalAccessEnabled: true,
     });
-    prismaSpies.enterpriseMembership.findUnique.mockResolvedValue({ status: "ACTIVE" });
+    prismaSpies.enterpriseMembership.findUnique.mockResolvedValue({
+      status: "ACTIVE",
+      enterprise: { status: "ACTIVE" },
+    });
   });
 
   it("allows enterprise ADMIN without Stripe when firm subscription is ACTIVE", async () => {

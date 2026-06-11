@@ -5,6 +5,7 @@ import { AdvisorHouseholdDirectory } from "@/components/advisor/AdvisorHousehold
 import { AdvisorIntakeView } from "@/components/advisor/AdvisorIntakeView";
 import { ReviewSidebar } from "@/components/advisor/ReviewSidebar";
 import { getIntakeReviewDataForAdvisorPage } from "@/lib/advisor/intake-review-queries";
+import { formatIntakeApprovalStatus } from "@/lib/intake/approval-status-label";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -39,15 +40,8 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
     }
   };
 
-  const getApprovalStatusLabel = (status?: string) => {
-    switch (status) {
-      case 'APPROVED': return 'Approved';
-      case 'REJECTED': return 'Rejected';
-      case 'IN_REVIEW': return 'Under Review';
-      case 'PENDING':
-      default: return 'Pending Review';
-    }
-  };
+  const getApprovalStatusLabel = (status?: string) =>
+    formatIntakeApprovalStatus(status);
 
   /** Client intake row status — separate from advisor approval (IntakeApproval). */
   const getIntakeCompletionLabel = (status: string) => {

@@ -57,13 +57,15 @@ export default async function AdminEnterprisesPage() {
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="pb-2 pr-4 font-medium">Firm</th>
+                  <th className="pb-2 pr-4 font-medium">Status</th>
                   <th className="pb-2 pr-4 font-medium">Owner</th>
                   <th className="pb-2 pr-4 font-medium">Slug</th>
                   <th className="pb-2 pr-4 font-medium">Seats</th>
                   <th className="pb-2 pr-4 font-medium">Seat overage</th>
                   <th className="pb-2 pr-4 font-medium">Clients cap</th>
                   <th className="pb-2 pr-4 font-medium">Payment</th>
-                  <th className="pb-2 font-medium">Subscription</th>
+                  <th className="pb-2 pr-4 font-medium">Subscription</th>
+                  <th className="pb-2 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -71,9 +73,18 @@ export default async function AdminEnterprisesPage() {
                   <tr key={enterprise.id} className="border-b border-border/60">
                     <td className="py-3 pr-4 font-medium">{enterprise.name}</td>
                     <td className="py-3 pr-4">
+                      <Badge
+                        variant={enterprise.status === "SUSPENDED" ? "warning" : "success"}
+                      >
+                        {enterprise.status === "SUSPENDED" ? "Suspended" : "Active"}
+                      </Badge>
+                    </td>
+                    <td className="py-3 pr-4">
                       <div>{enterprise.ownerName ?? "—"}</div>
                       {enterprise.ownerEmail ? (
-                        <div className="text-xs text-muted-foreground">{enterprise.ownerEmail}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {enterprise.ownerEmail}
+                        </div>
                       ) : null}
                     </td>
                     <td className="py-3 pr-4 font-mono text-xs">{enterprise.slug}</td>
@@ -89,10 +100,15 @@ export default async function AdminEnterprisesPage() {
                     </td>
                     <td className="py-3 pr-4">{enterprise.clientLimit}</td>
                     <td className="py-3 pr-4">{humanizeToken(enterprise.paymentMethod)}</td>
-                    <td className="py-3">
+                    <td className="py-3 pr-4">
                       {enterprise.subscriptionStatus
                         ? humanizeToken(enterprise.subscriptionStatus)
                         : "None"}
+                    </td>
+                    <td className="py-3">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/admin/enterprises/${enterprise.id}`}>Manage</Link>
+                      </Button>
                     </td>
                   </tr>
                 ))}

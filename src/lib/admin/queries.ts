@@ -351,6 +351,7 @@ export type AdminEnterpriseListRow = {
   id: string;
   name: string;
   slug: string;
+  status: string;
   seatLimit: number;
   clientLimit: number;
   paymentMethod: string;
@@ -369,6 +370,7 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       id: true,
       name: true,
       slug: true,
+      status: true,
       seatLimit: true,
       clientLimit: true,
       paymentMethod: true,
@@ -396,6 +398,7 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       id: enterprise.id,
       name: enterprise.name,
       slug: enterprise.slug,
+      status: enterprise.status,
       seatLimit: enterprise.seatLimit,
       clientLimit: enterprise.clientLimit,
       paymentMethod: enterprise.paymentMethod,
@@ -407,6 +410,78 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       ownerEmail: owner ? decryptUserEmail(owner.emailCiphertext) : null,
     };
   });
+}
+
+export type AdminEnterpriseDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  seatLimit: number;
+  clientLimit: number;
+  perAdvisorClientLimit: number;
+  paymentMethod: string;
+  createdAt: Date;
+  activeSeats: number;
+  seatOverage: number;
+  subscriptionStatus: string | null;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  ownerUserId: string | null;
+};
+
+export async function getEnterpriseDetailForAdmin(
+  enterpriseId: string
+): Promise<AdminEnterpriseDetail | null> {
+  await requireAdminRole();
+  const enterprise = await prisma.advisorEnterprise.findUnique({
+    where: { id: enterpriseId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      status: true,
+      seatLimit: true,
+      clientLimit: true,
+      perAdvisorClientLimit: true,
+      paymentMethod: true,
+      createdAt: true,
+      subscription: { select: { status: true } },
+      memberships: {
+        where: { role: "OWNER", status: "ACTIVE" },
+        take: 1,
+        select: {
+          user: { select: { id: true, name: true, emailCiphertext: true } },
+        },
+      },
+      _count: {
+        select: {
+          memberships: { where: { status: "ACTIVE" } },
+        },
+      },
+    },
+  });
+
+  if (!enterprise) return null;
+
+  const owner = enterprise.memberships[0]?.user;
+  return {
+    id: enterprise.id,
+    name: enterprise.name,
+    slug: enterprise.slug,
+    status: enterprise.status,
+    seatLimit: enterprise.seatLimit,
+    clientLimit: enterprise.clientLimit,
+    perAdvisorClientLimit: enterprise.perAdvisorClientLimit,
+    paymentMethod: enterprise.paymentMethod,
+    createdAt: enterprise.createdAt,
+    activeSeats: enterprise._count.memberships,
+    seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
+    subscriptionStatus: enterprise.subscription?.status ?? null,
+    ownerName: owner?.name ?? null,
+    ownerEmail: owner ? decryptUserEmail(owner.emailCiphertext) : null,
+    ownerUserId: owner?.id ?? null,
+  };
 }
 
 export async function getAdvisorsEligibleForEnterpriseOwner() {

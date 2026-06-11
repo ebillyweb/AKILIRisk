@@ -51,6 +51,11 @@ export const AUDIT_ACTIONS = {
   USER_RESTORE: "user.restore",
   USER_PORTAL_ACCESS_TOGGLE: "user.portal_access_toggle",
 
+  // ── Admin enterprise firm lifecycle ───────────────────────────────────────
+  ENTERPRISE_SUSPEND: "enterprise.suspend",
+  ENTERPRISE_REACTIVATE: "enterprise.reactivate",
+  ENTERPRISE_DELETE: "enterprise.delete",
+
   // ── Admin user provisioning actions (super admin only) ────────────────────
   /** Super admin creates a new admin user account. */
   ADMIN_USER_CREATED: "admin_user.created",

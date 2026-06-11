@@ -86,9 +86,15 @@ export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
 
   const membership = await prisma.enterpriseMembership.findUnique({
     where: { userId },
-    select: { status: true },
+    select: {
+      status: true,
+      enterprise: { select: { status: true } },
+    },
   });
   if (membership?.status === "SUSPENDED") {
+    return { allowed: false, blockReason: "suspended" };
+  }
+  if (membership?.enterprise.status === "SUSPENDED") {
     return { allowed: false, blockReason: "suspended" };
   }
 
