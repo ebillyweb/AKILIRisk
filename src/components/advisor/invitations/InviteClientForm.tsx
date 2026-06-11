@@ -2,31 +2,47 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { AssessmentDomainsSelector } from '@/components/advisor/AssessmentDomainsSelector';
+import { EmphasisAreasSelector } from '@/components/advisor/EmphasisAreasSelector';
 import { sendInvitation } from '@/lib/actions/invitations';
 import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from '@/lib/schemas/invitation';
 import { Loader2 } from 'lucide-react';
 import { ShareableInvitationLinkAlert } from './ShareableInvitationLinkAlert';
 
-// Form-specific schema for client-side validation
-const formSchema = z.object({
-  clientEmail: z.string().email("Valid email required"),
-  clientName: z.string().optional(),
-  personalMessage: z.string().max(2000, "Message too long").optional(),
-  intakeWaived: z.boolean().optional(),
-});
+const formSchema = z
+  .object({
+    clientEmail: z.string().email('Valid email required'),
+    clientName: z.string().optional(),
+    personalMessage: z.string().max(2000, 'Message too long').optional(),
+    intakeWaived: z.boolean().optional(),
+    includedPillars: z.array(z.string()).optional(),
+    focusAreas: z.array(z.string()).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.intakeWaived) return;
+    if (!data.includedPillars?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Select at least one assessment domain',
+        path: ['includedPillars'],
+      });
+    }
+  });
 
 type FormData = z.infer<typeof formSchema>;
 
 export function InviteClientForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string; emailSent: boolean; reason?: string } | null>(null);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>([]);
   const router = useRouter();
 
   const {
@@ -35,6 +51,7 @@ export function InviteClientForm() {
     formState: { errors },
     reset,
     watch,
+    setValue,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -42,11 +59,44 @@ export function InviteClientForm() {
       clientName: '',
       personalMessage: '',
       intakeWaived: false,
+      includedPillars: [],
+      focusAreas: [],
     },
   });
 
   const personalMessage = watch('personalMessage');
+  const intakeWaived = watch('intakeWaived');
   const messageLength = personalMessage?.length || 0;
+
+  useEffect(() => {
+    if (!intakeWaived) {
+      setSelectedDomains([]);
+      setSelectedEmphasis([]);
+      setValue('includedPillars', []);
+      setValue('focusAreas', []);
+    }
+  }, [intakeWaived, setValue]);
+
+  const handleDomainsChange = (domains: string[]) => {
+    setSelectedDomains(domains);
+    setValue('includedPillars', domains, { shouldValidate: true });
+    if (selectedEmphasis.some((id) => !domains.includes(id))) {
+      const next = selectedEmphasis.filter((id) => domains.includes(id));
+      setSelectedEmphasis(next);
+      setValue('focusAreas', next, { shouldValidate: true });
+    }
+  };
+
+  const handleEmphasisChange = (areas: string[]) => {
+    setSelectedEmphasis(areas);
+    setValue('focusAreas', areas, { shouldValidate: true });
+  };
+
+  const resetForm = () => {
+    reset();
+    setSelectedDomains([]);
+    setSelectedEmphasis([]);
+  };
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
@@ -58,7 +108,13 @@ export function InviteClientForm() {
       if (data.personalMessage?.trim()) {
         formData.append('personalMessage', data.personalMessage.trim());
       }
-  if (data.intakeWaived) formData.append('intakeWaived', 'true');
+      if (data.intakeWaived) {
+        formData.append('intakeWaived', 'true');
+        formData.append('includedPillars', JSON.stringify(data.includedPillars ?? []));
+        if (data.focusAreas?.length) {
+          formData.append('focusAreas', JSON.stringify(data.focusAreas));
+        }
+      }
 
       const result = await sendInvitation(formData);
 
@@ -66,12 +122,12 @@ export function InviteClientForm() {
         const { emailSent, emailNotSentReason, url } = result.data as typeof result.data & { emailSent?: boolean; emailNotSentReason?: string };
         if (emailSent !== false) {
           toast.success(`Invitation sent to ${data.clientEmail}`);
-          reset();
+          resetForm();
           router.refresh();
         } else {
           setCreatedLink({ url, emailSent: false, reason: emailNotSentReason });
-          reset();
-          toast.error("Invitation created but email was not sent. Copy the link below to share with your client.", { duration: 6000 });
+          resetForm();
+          toast.error('Invitation created but email was not sent. Copy the link below to share with your client.', { duration: 6000 });
         }
       } else {
         toast.error(result.error);
@@ -169,7 +225,7 @@ export function InviteClientForm() {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-4">
           <div className="flex items-center gap-3">
             <input
               id="intakeWaived"
@@ -182,10 +238,37 @@ export function InviteClientForm() {
               Skip intake — allow the client to go straight to the assessment after signing up
             </label>
           </div>
+
+          {intakeWaived ? (
+            <div className="space-y-4 rounded-lg border border-border/80 bg-muted/20 p-4">
+              <p className="text-sm text-muted-foreground">
+                Choose which assessment domains to include. The client can start only after
+                these are set.
+              </p>
+              <AssessmentDomainsSelector
+                selectedDomains={selectedDomains}
+                onChange={handleDomainsChange}
+                disabled={isSubmitting}
+              />
+              <EmphasisAreasSelector
+                includedDomains={selectedDomains}
+                selectedEmphasis={selectedEmphasis}
+                onChange={handleEmphasisChange}
+                disabled={isSubmitting}
+              />
+              {errors.includedPillars ? (
+                <p className={errorClassName}>{errors.includedPillars.message}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting} size="lg">
+          <Button
+            type="submit"
+            disabled={isSubmitting || (intakeWaived && selectedDomains.length < 1)}
+            size="lg"
+          >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSubmitting ? 'Sending...' : 'Send Invitation'}
           </Button>

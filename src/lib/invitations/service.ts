@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
+import { normalizeWaiverScopeInput } from "@/lib/client/assessment-scope";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import { createInvitationToken, INVITATION_TTL_SEC } from "@/lib/invite";
 import {
@@ -163,6 +164,14 @@ export async function createAdvisorInvitation(
     const code = generateInviteCode();
     const expiresAt = new Date(Date.now() + INVITATION_TTL_SEC * 1000);
 
+    const waiverScope =
+      input.intakeWaived && input.includedPillars?.length
+        ? normalizeWaiverScopeInput({
+            includedPillars: input.includedPillars,
+            focusAreas: input.focusAreas,
+          })
+        : null;
+
     return tx.inviteCode.create({
       data: {
         code,
@@ -173,6 +182,8 @@ export async function createAdvisorInvitation(
         status: InvitationStatus.SENT,
         personalMessage: input.personalMessage,
         intakeWaived: input.intakeWaived ?? false,
+        includedPillars: waiverScope?.includedPillars ?? [],
+        focusAreas: waiverScope?.focusAreas ?? [],
         clientName: input.clientName,
       },
       include: {

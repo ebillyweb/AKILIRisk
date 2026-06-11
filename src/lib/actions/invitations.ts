@@ -30,6 +30,19 @@ type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string };
 
+function parseStringArrayField(raw: FormDataEntryValue | null): string[] | undefined {
+  if (raw == null) return undefined;
+  const text = String(raw).trim();
+  if (!text) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!Array.isArray(parsed)) return undefined;
+    return parsed.filter((v): v is string => typeof v === "string");
+  } catch {
+    return undefined;
+  }
+}
+
 function invitationEmailThemeForProfile(
   profile: {
     brandingEnabled: boolean;
@@ -76,6 +89,8 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
         const s = String(v).toLowerCase();
         return s === "true" || s === "on" || s === "1";
       })(),
+      includedPillars: parseStringArrayField(formData.get("includedPillars")),
+      focusAreas: parseStringArrayField(formData.get("focusAreas")),
     };
 
     const validatedInput = createInvitationSchema.parse(rawData);
@@ -140,6 +155,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
         code: invitation.code,
         prefillEmail: validatedInput.clientEmail,
         intakeWaived: validatedInput.intakeWaived,
+        includedPillars: validatedInput.includedPillars,
       },
       metadata: {
         advisorId: profile.id,

@@ -12,12 +12,29 @@ type TxLike = Pick<
 function waiverAssignmentData(invite: {
   intakeWaived: boolean;
   createdBy: string | null;
+  includedPillars: string[];
+  focusAreas: string[];
 }) {
   if (!invite.intakeWaived || !invite.createdBy) return {};
+  const focusAreas =
+    invite.focusAreas.length > 0 ? invite.focusAreas : invite.includedPillars;
   return {
     intakeWaivedAt: new Date(),
     intakeWaivedByAdvisorId: invite.createdBy,
+    includedPillars: invite.includedPillars,
+    focusAreas,
   };
+}
+
+function assignmentNeedsWaiverScopeUpdate(
+  assignment: { intakeWaivedAt: Date | null; includedPillars: string[] },
+  invite: { intakeWaived: boolean; includedPillars: string[] },
+): boolean {
+  if (!invite.intakeWaived) return false;
+  if (!assignment.intakeWaivedAt) return true;
+  return (
+    invite.includedPillars.length > 0 && assignment.includedPillars.length === 0
+  );
 }
 
 async function findActiveEnterpriseAssignmentForClient(
@@ -130,7 +147,7 @@ export async function provisionClientFromInviteCode(
         if (!enterpriseAssignment) {
           const assignment = await tx.clientAdvisorAssignment.findFirst({
             where: { clientId: existing.id, advisorId: invite.createdBy! },
-            select: { id: true, intakeWaivedAt: true },
+            select: { id: true, intakeWaivedAt: true, includedPillars: true },
           });
           if (!assignment) {
             await tx.clientAdvisorAssignment.create({
@@ -140,7 +157,7 @@ export async function provisionClientFromInviteCode(
                 ...waiverAssignmentData(invite),
               },
             });
-          } else if (invite.intakeWaived && !assignment.intakeWaivedAt) {
+          } else if (assignmentNeedsWaiverScopeUpdate(assignment, invite)) {
             await tx.clientAdvisorAssignment.update({
               where: { id: assignment.id },
               data: waiverAssignmentData(invite),

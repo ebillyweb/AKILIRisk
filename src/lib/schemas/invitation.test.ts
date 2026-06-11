@@ -52,12 +52,22 @@ describe("createInvitationSchema (US-1)", () => {
     expect(result.intakeWaived).toBe(false);
   });
 
-  it("accepts intakeWaived true", () => {
+  it("accepts intakeWaived true with assessment domains", () => {
     const result = createInvitationSchema.parse({
       clientEmail: "client@example.com",
       intakeWaived: true,
+      includedPillars: ["governance", "cyber-digital"],
     });
     expect(result.intakeWaived).toBe(true);
+    expect(result.includedPillars).toEqual(["governance", "cyber-digital"]);
+  });
+
+  it("requires assessment domains when intakeWaived is true", () => {
+    const result = createInvitationSchema.safeParse({
+      clientEmail: "client@example.com",
+      intakeWaived: true,
+    });
+    expect(result.success).toBe(false);
   });
 
   it("trims optional client name and drops empty values", () => {

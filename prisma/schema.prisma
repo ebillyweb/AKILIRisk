@@ -920,6 +920,10 @@ model InviteCode {
   personalMessage String?
   /** When true, advisor requested that the client may skip intake (waived). */
   intakeWaived  Boolean  @default(false)
+  /// Epic 5.11: assessment scope when intake is waived at invite time (1–6 pillar ids).
+  includedPillars String[] @default([]) @map("included_pillars")
+  /// Scoring emphasis within included pillars; empty means all included at provision.
+  focusAreas      String[] @default([]) @map("focus_areas")
   clientName  String?
   resendCount Int       @default(0)
 

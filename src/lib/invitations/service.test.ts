@@ -124,9 +124,14 @@ describe("createAdvisorInvitation (US-1)", () => {
     const result = await createAdvisorInvitation("advisor-profile-1", {
       clientEmail: "client@example.com",
       intakeWaived: true,
+      includedPillars: ["governance", "cyber-digital"],
     });
 
-    expect(createdRows[0]).toMatchObject({ intakeWaived: true });
+    expect(createdRows[0]).toMatchObject({
+      intakeWaived: true,
+      includedPillars: ["governance", "cyber-digital"],
+      focusAreas: ["governance", "cyber-digital"],
+    });
     expect(result.url).toContain(encodeURIComponent("/assessment"));
     expect(result.url).not.toContain(encodeURIComponent("/intake"));
   });

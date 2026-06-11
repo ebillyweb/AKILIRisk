@@ -7,6 +7,8 @@ export interface CreateInvitationInput {
   clientName?: string;
   personalMessage?: string;
   intakeWaived?: boolean;
+  includedPillars?: string[];
+  focusAreas?: string[];
 }
 
 export interface InvitationWithDetails {
@@ -24,6 +26,8 @@ export interface InvitationWithDetails {
   clientName: string | null;
   resendCount: number;
   intakeWaived?: boolean;
+  includedPillars?: string[];
+  focusAreas?: string[];
   advisor: {
     id: string;
     firmName: string | null;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { waiverAssessmentScopeSchema } from "@/lib/schemas/advisor";
 
 /** US-1: standard copy when the advisor leaves the personal message blank. */
 export const DEFAULT_INVITATION_PERSONAL_MESSAGE =
@@ -34,6 +35,25 @@ export const createInvitationSchema = z.object({
       .default(DEFAULT_INVITATION_PERSONAL_MESSAGE)
   ),
   intakeWaived: z.boolean().optional().default(false),
+  includedPillars: z.array(z.string()).max(6).optional(),
+  focusAreas: z.array(z.string()).max(6).optional(),
+}).superRefine((data, ctx) => {
+  if (!data.intakeWaived) return;
+
+  const scope = waiverAssessmentScopeSchema.safeParse({
+    includedPillars: data.includedPillars ?? [],
+    focusAreas: data.focusAreas,
+  });
+
+  if (!scope.success) {
+    for (const issue of scope.error.issues) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: issue.message,
+        path: issue.path,
+      });
+    }
+  }
 });
 
 export type CreateInvitationData = z.infer<typeof createInvitationSchema>;
