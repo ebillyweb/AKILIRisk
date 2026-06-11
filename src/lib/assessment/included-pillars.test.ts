@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_INCLUDED_PILLARS,
+  formatIncludedPillarNames,
+  formatNarrowScopePreviewCopy,
   isAssessmentScopeComplete,
+  isNarrowAssessmentScope,
   isPillarInAssessmentScope,
   normalizeIncludedPillarIds,
   resolveIncludedPillars,
@@ -90,6 +93,22 @@ describe("isPillarInAssessmentScope", () => {
     expect(isPillarInAssessmentScope("governance", ["governance"])).toBe(true);
     expect(isPillarInAssessmentScope("cyber-digital", ["governance"])).toBe(
       false,
+    );
+  });
+});
+
+describe("scope display helpers", () => {
+  it("detects narrow scope when fewer than six pillars", () => {
+    expect(isNarrowAssessmentScope(["governance", "cyber-digital"])).toBe(true);
+    expect(isNarrowAssessmentScope([...DEFAULT_INCLUDED_PILLARS])).toBe(false);
+  });
+
+  it("formats pillar names and preview copy", () => {
+    expect(formatIncludedPillarNames(["governance", "cyber-digital"])).toBe(
+      "Governance, Cyber security",
+    );
+    expect(formatNarrowScopePreviewCopy(["governance", "cyber-digital"])).toMatch(
+      /2 of 6 household risk domains/,
     );
   });
 });

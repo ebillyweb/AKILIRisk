@@ -6,6 +6,11 @@ import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summar
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
 import { resolveTopRisks } from "@/lib/dashboard/client-summary";
+import {
+  formatNarrowScopePreviewCopy,
+  isNarrowAssessmentScope,
+} from "@/lib/assessment/included-pillars";
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -57,7 +62,13 @@ export default async function AssessmentPreviewPage() {
     orderBy: { pillar: "asc" },
   });
 
-  const topRisks = resolveTopRisks(pillarScores);
+  const includedPillars = access.includedPillars;
+  const narrowScope = isNarrowAssessmentScope(includedPillars);
+  const includedSet = new Set(includedPillars.map(normalizePillarSlug));
+  const scopedScores = pillarScores.filter((row) =>
+    includedSet.has(normalizePillarSlug(row.pillar)),
+  );
+  const topRisks = resolveTopRisks(scopedScores);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
@@ -79,12 +90,17 @@ export default async function AssessmentPreviewPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Risk by domain</CardTitle>
             <CardDescription>
-              High-level view of your six risk domains. Each cell shows the
-              maturity score and risk level from your completed assessment.
+              {narrowScope
+                ? formatNarrowScopePreviewCopy(includedPillars)
+                : "High-level view of your six risk domains. Each cell shows the maturity score and risk level from your completed assessment."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RiskHeatMap mode="single-client" pillarScores={pillarScores} />
+            <RiskHeatMap
+              mode="single-client"
+              pillarScores={scopedScores}
+              includedPillarIds={narrowScope ? includedPillars : undefined}
+            />
           </CardContent>
         </Card>
 

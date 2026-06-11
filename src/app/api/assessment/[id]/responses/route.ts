@@ -8,6 +8,7 @@ import {
   loadPriorAssessmentAnswer,
   markAssessmentAnswersChangedAfterComplete,
 } from "@/lib/assessment/answers-changed-after-complete";
+import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
 
 /**
  * Assessment Responses API Routes
@@ -128,7 +129,7 @@ export async function POST(
     // Verify ownership
     const assessment = await prisma.assessment.findUnique({
       where: { id },
-      select: { userId: true, status: true },
+      select: { userId: true, status: true, includedPillars: true },
     });
 
     if (!assessment) {
@@ -144,6 +145,16 @@ export async function POST(
       return NextResponse.json(
         { error: "Assessment not found" },
         { status: 404 }
+      );
+    }
+
+    if (!isPillarInAssessmentScope(pillar, assessment.includedPillars)) {
+      return NextResponse.json(
+        {
+          error: "This pillar is not included in your assessment scope.",
+          code: "PILLAR_OUT_OF_SCOPE",
+        },
+        { status: 400 },
       );
     }
 

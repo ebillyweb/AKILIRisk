@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAssessmentStore } from "@/lib/assessment/store";
 import { useAssessmentPersistHydrated } from "@/lib/hooks/useAssessmentPersistHydrated";
@@ -14,6 +14,7 @@ import {
 import { PillarCard } from "@/components/assessment/PillarCard";
 import { OverallProgress } from "@/components/assessment/ProgressBar";
 import { CustomizationBanner } from "@/components/assessment/CustomizationBanner";
+import { AssessmentScopeBanner } from "@/components/assessment/AssessmentScopeBanner";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Clock } from "lucide-react";
@@ -22,14 +23,20 @@ import { getVisibleQuestions } from "@/lib/assessment/branching";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CustomizationConfig } from "@/lib/assessment/customization";
-import { ASSESSMENT_PILLAR_IDS, normalizePillarSlug } from "@/lib/assessment/pillar-registry";
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
+import {
+  DEFAULT_INCLUDED_PILLARS,
+  isNarrowAssessmentScope,
+} from "@/lib/assessment/included-pillars";
 import type { RiskLevel } from "@/lib/assessment/types";
 
 /**
- * Assessment Hub — six-pillar entry point with server-authoritative resume.
+ * Assessment Hub — entry point for advisor-scoped pillar domains.
  */
-export default function AssessmentHubPage() {
+function AssessmentHubPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const scopeExcluded = searchParams.get("scope") === "excluded";
   const store = useAssessmentStore();
   const persistHydrated = useAssessmentPersistHydrated();
   const pillarDefinitions = useAssessmentPillarDefinitions();
@@ -87,6 +94,7 @@ export default function AssessmentHubPage() {
         canViewSummary: boolean;
         allPillarsComplete: boolean;
         advisorPublishedProfile: boolean;
+        includedPillars: string[];
       }>;
     },
     staleTime: 30_000,
@@ -193,13 +201,28 @@ export default function AssessmentHubPage() {
     ensureAssessmentAndGo(pillarSlug, resolveResumeIndex(pillarSlug));
   };
 
+  const includedPillars = useMemo(
+    () => summaryAccess?.includedPillars ?? [...DEFAULT_INCLUDED_PILLARS],
+    [summaryAccess?.includedPillars],
+  );
+  const includedPillarSet = useMemo(
+    () => new Set(includedPillars.map(normalizePillarSlug)),
+    [includedPillars],
+  );
+  const narrowScope = isNarrowAssessmentScope(includedPillars);
+  const scopedDomainLabel = narrowScope
+    ? `${includedPillars.length} risk domain${includedPillars.length === 1 ? "" : "s"}`
+    : "Six risk pillars";
+
   const assessmentPillars = useMemo(
     () =>
-      pillarDefinitions.map((pillar) => ({
-        pillar,
-        questions: questionsByPillarId.get(pillar.slug) ?? [],
-      })),
-    [pillarDefinitions, questionsByPillarId]
+      pillarDefinitions
+        .filter((pillar) => includedPillarSet.has(pillar.slug))
+        .map((pillar) => ({
+          pillar,
+          questions: questionsByPillarId.get(pillar.slug) ?? [],
+        })),
+    [pillarDefinitions, questionsByPillarId, includedPillarSet],
   );
 
   const pillarStats = assessmentPillars.map(({ pillar, questions }) => {
@@ -248,7 +271,11 @@ export default function AssessmentHubPage() {
   const resumePillar = pillarStats.find((p) => p.status === "in-progress");
   const nextPillar = pillarStats.find((p) => p.status === "not-started");
   const allPillarsComplete =
-    completedPillarSlugs.length === ASSESSMENT_PILLAR_IDS.length;
+    summaryAccess?.allPillarsComplete ??
+    (completedPillarSlugs.length === includedPillars.length &&
+      includedPillars.every((id) =>
+        completedPillarSlugs.includes(normalizePillarSlug(id)),
+      ));
 
   if (
     isInitializing ||
@@ -276,7 +303,7 @@ export default function AssessmentHubPage() {
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
-            Six risk pillars
+            {scopedDomainLabel}
           </div>
           <div className="rounded-full border section-divider bg-background/65 px-3 py-1.5">
             Autosave enabled
@@ -286,6 +313,20 @@ export default function AssessmentHubPage() {
           </div>
         </div>
       </section>
+
+      {scopeExcluded ? (
+        <Alert variant="warning">
+          <AlertTitle className="text-lg font-semibold">
+            Domain not in your scope
+          </AlertTitle>
+          <AlertDescription>
+            That risk domain is not part of your advisor&apos;s selected
+            assessment scope. Choose one of the domains below to continue.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <AssessmentScopeBanner includedPillars={includedPillars} />
 
       {store.assessmentId && pillarStats.some((p) => p.status === "in-progress") && (
         <Alert variant="info">
@@ -313,8 +354,9 @@ export default function AssessmentHubPage() {
           <CardContent className="pt-6">
             <OverallProgress
               completedPillars={completedPillarSlugs}
-              totalPillars={ASSESSMENT_PILLAR_IDS.length}
+              totalPillars={includedPillars.length}
               currentPillar={store.currentPillar || serverResumePillar || undefined}
+              scopedPillarIds={includedPillars}
             />
           </CardContent>
         </Card>
@@ -324,7 +366,7 @@ export default function AssessmentHubPage() {
         <CustomizationBanner
           advisorName={customizationConfig.advisorName}
           focusAreaCount={focusAreaCount}
-          estimatedMinutes={ASSESSMENT_PILLAR_IDS.length * 12}
+          estimatedMinutes={includedPillars.length * 12}
         />
       )}
 
@@ -366,8 +408,12 @@ export default function AssessmentHubPage() {
                 {allPillarsComplete ? (
                   <p className="text-base leading-7 text-muted-foreground">
                     {summaryAccess?.canViewSummary
-                      ? "All six pillars are scored. Review your results and download your report."
-                      : "All six pillars are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."}
+                      ? narrowScope
+                        ? `All ${includedPillars.length} selected domains are scored. Review your results and download your report.`
+                        : "All six pillars are scored. Review your results and download your report."
+                      : narrowScope
+                        ? `All ${includedPillars.length} selected domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it.`
+                        : "All six pillars are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."}
                   </p>
                 ) : resumePillar ? (
                   <p className="text-base leading-7 text-muted-foreground">
@@ -375,8 +421,9 @@ export default function AssessmentHubPage() {
                   </p>
                 ) : (
                   <p className="text-base leading-7 text-muted-foreground">
-                    Begin with any pillar. Each domain saves progress independently; complete all
-                    six to finish the assessment.
+                    {narrowScope
+                      ? `Begin with any selected domain. Each saves progress independently; complete all ${includedPillars.length} to finish the assessment.`
+                      : "Begin with any pillar. Each domain saves progress independently; complete all six to finish the assessment."}
                   </p>
                 )}
               </div>
@@ -393,7 +440,15 @@ export default function AssessmentHubPage() {
                         View risk preview
                       </Button>
                     ) : (
-                      <Button size="lg" disabled title="Complete all six pillars to continue">
+                      <Button
+                        size="lg"
+                        disabled
+                        title={
+                          narrowScope
+                            ? `Complete all ${includedPillars.length} selected domains to continue`
+                            : "Complete all six pillars to continue"
+                        }
+                      >
                         View risk preview
                       </Button>
                     )}
@@ -438,5 +493,20 @@ export default function AssessmentHubPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function AssessmentHubPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl space-y-8">
+          <div className="h-8 w-64 rounded bg-secondary animate-pulse" />
+          <div className="h-64 rounded-[1.5rem] bg-secondary animate-pulse" />
+        </div>
+      }
+    >
+      <AssessmentHubPageContent />
+    </Suspense>
   );
 }

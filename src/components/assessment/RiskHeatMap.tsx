@@ -23,6 +23,8 @@ import {
 interface SingleClientProps {
   mode: "single-client";
   pillarScores: ReadonlyArray<PillarScoreInput>;
+  /** When set, show only pillars in this scope (Epic 5.11 US-72). */
+  includedPillarIds?: readonly string[];
   /** When true and ALL pillars are unassessed, render the "no scored
    *  assessment" banner above the cells. Default true. */
   showUnassessedBanner?: boolean;
@@ -67,10 +69,11 @@ function scoreBarPercent(score: number | null): number {
 
 function SingleClientHeatMap({
   pillarScores,
+  includedPillarIds,
   showUnassessedBanner = true,
   className,
 }: SingleClientProps) {
-  const cells = buildHeatMapCells(pillarScores);
+  const cells = buildHeatMapCells(pillarScores, { includedPillarIds });
   const allUnassessed = cells.every((c) => c.level === "unassessed");
 
   return (

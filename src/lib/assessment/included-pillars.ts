@@ -1,3 +1,4 @@
+import { RISK_AREAS } from "@/lib/advisor/types";
 import {
   ASSESSMENT_PILLAR_IDS,
   isAssessmentPillarId,
@@ -6,6 +7,8 @@ import {
 
 /** Full six-pillar scope used for legacy rows and default backfill. */
 export const DEFAULT_INCLUDED_PILLARS: readonly string[] = ASSESSMENT_PILLAR_IDS;
+
+export const TOTAL_ASSESSMENT_PILLAR_COUNT = DEFAULT_INCLUDED_PILLARS.length;
 
 /**
  * Resolve assessment pillar scope. Empty or missing `includedPillars` means all
@@ -59,4 +62,27 @@ export function isPillarInAssessmentScope(
 ): boolean {
   const normalized = normalizePillarSlug(pillarSlug);
   return resolveIncludedPillars(includedPillars).includes(normalized);
+}
+
+/** True when the resolved scope is fewer than all six canonical pillars. */
+export function isNarrowAssessmentScope(includedPillars: string[]): boolean {
+  return includedPillars.length < TOTAL_ASSESSMENT_PILLAR_COUNT;
+}
+
+/** Display name for a canonical pillar id. */
+export function pillarDisplayName(pillarId: string): string {
+  const normalized = normalizePillarSlug(pillarId);
+  return RISK_AREAS.find((area) => area.id === normalized)?.name ?? pillarId;
+}
+
+/** Comma-separated pillar names in scope order. */
+export function formatIncludedPillarNames(includedPillars: string[]): string {
+  return includedPillars.map((id) => pillarDisplayName(id)).join(", ");
+}
+
+/** Client-facing risk preview scope summary (US-72). */
+export function formatNarrowScopePreviewCopy(includedPillars: string[]): string {
+  const count = includedPillars.length;
+  const names = formatIncludedPillarNames(includedPillars);
+  return `Based on ${count} of ${TOTAL_ASSESSMENT_PILLAR_COUNT} household risk domains selected by your advisor: ${names}.`;
 }

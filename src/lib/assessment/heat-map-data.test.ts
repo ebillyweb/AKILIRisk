@@ -59,6 +59,18 @@ describe("buildHeatMapCells", () => {
     ]);
     expect(cells[0].level).toBe("unassessed");
   });
+
+  it("filters to included pillars when scoped", () => {
+    const cells = buildHeatMapCells(
+      [
+        { pillar: "governance", score: 2.4, riskLevel: "MEDIUM" },
+        { pillar: "cyber-digital", score: 0.8, riskLevel: "CRITICAL" },
+      ],
+      { includedPillarIds: ["governance"] },
+    );
+    expect(cells).toHaveLength(1);
+    expect(cells[0]?.pillarId).toBe("governance");
+  });
 });
 
 describe("formatHeatMapScore", () => {

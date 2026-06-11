@@ -73,14 +73,22 @@ interface OverallProgressProps {
   completedPillars: string[];
   totalPillars: number;
   currentPillar?: string;
+  /** When set, progress bar shows only these pillars (Epic 5.11 scoped hub). */
+  scopedPillarIds?: string[];
 }
 
 export function OverallProgress({
   completedPillars,
   totalPillars,
   currentPillar,
+  scopedPillarIds,
 }: OverallProgressProps) {
-  const pillars = RISK_AREAS.map((area) => ({
+  const scopedSet = scopedPillarIds?.length
+    ? new Set(scopedPillarIds.map(normalizePillarSlug))
+    : null;
+  const pillars = RISK_AREAS.filter(
+    (area) => !scopedSet || scopedSet.has(area.id),
+  ).map((area) => ({
     id: area.id,
     label: area.name,
   }));
@@ -118,7 +126,17 @@ export function OverallProgress({
           );
         })}
       </div>
-      <div className="grid grid-cols-6 gap-1.5 text-center text-[10px] text-muted-foreground sm:text-xs">
+      <div
+        className={cn(
+          "grid gap-1.5 text-center text-[10px] text-muted-foreground sm:text-xs",
+          pillars.length === 1 && "grid-cols-1",
+          pillars.length === 2 && "grid-cols-2",
+          pillars.length === 3 && "grid-cols-3",
+          pillars.length === 4 && "grid-cols-4",
+          pillars.length === 5 && "grid-cols-5",
+          pillars.length >= 6 && "grid-cols-6",
+        )}
+      >
         {pillars.map((pillar, idx) => {
           const isCompleted = completedSet.has(pillar.id);
           const isCurrent = normalizedCurrent === pillar.id;

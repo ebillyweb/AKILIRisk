@@ -4,6 +4,7 @@ import {
   type HeatMapLevel,
   type RiskLevelPalette,
 } from "@/lib/assessment/risk-color-palette";
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 
 /**
  * Per-pillar input shape for the heat map. Both the per-client and
@@ -45,13 +46,21 @@ export interface HeatMapCell {
  *   `paletteForRiskLevel`.
  */
 export function buildHeatMapCells(
-  inputs: ReadonlyArray<PillarScoreInput>
+  inputs: ReadonlyArray<PillarScoreInput>,
+  options?: { includedPillarIds?: readonly string[] },
 ): HeatMapCell[] {
   const byPillar = new Map<string, PillarScoreInput>();
   for (const item of inputs) {
-    byPillar.set(item.pillar, item);
+    byPillar.set(normalizePillarSlug(item.pillar), item);
   }
-  return RISK_AREAS.map((area) => {
+  const areas = options?.includedPillarIds?.length
+    ? RISK_AREAS.filter((area) =>
+        options.includedPillarIds!.some(
+          (id) => normalizePillarSlug(id) === area.id,
+        ),
+      )
+    : RISK_AREAS;
+  return areas.map((area) => {
     const input = byPillar.get(area.id);
     if (!input || input.riskLevel == null) {
       return {

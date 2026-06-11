@@ -20,6 +20,7 @@ import {
   normalizePillarSlug,
   pillarDefinitionFor,
 } from '@/lib/assessment/pillar-registry';
+import { isPillarInAssessmentScope } from '@/lib/assessment/included-pillars';
 
 interface QuestionPageProps {
   params: Promise<{
@@ -51,6 +52,16 @@ export default function QuestionPage({ params }: QuestionPageProps) {
       return response.json();
     },
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: summaryAccess } = useQuery({
+    queryKey: ['assessment-summary-access'],
+    queryFn: async () => {
+      const response = await fetch('/api/assessment/summary-access');
+      if (!response.ok) throw new Error('Failed to fetch summary access');
+      return response.json() as Promise<{ includedPillars: string[] }>;
+    },
+    staleTime: 30_000,
   });
 
   const {
@@ -98,6 +109,13 @@ export default function QuestionPage({ params }: QuestionPageProps) {
       router.push('/assessment');
     }
   }, [assessmentId, router]);
+
+  useEffect(() => {
+    if (!summaryAccess?.includedPillars?.length) return;
+    if (!isPillarInAssessmentScope(pillarSlug, summaryAccess.includedPillars)) {
+      router.replace('/assessment?scope=excluded');
+    }
+  }, [summaryAccess, pillarSlug, router]);
 
   useEffect(() => {
     if (questionsLoading || visibleQuestions.length === 0) return;
