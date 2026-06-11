@@ -12,7 +12,8 @@ export type ClientIntakeGateState = {
 
 /**
  * Single source for client (USER) intake vs assessment access.
- * Uses active `ClientAdvisorAssignment` intake waiver when present.
+ * Epic 5.11: assessment unlocks only after advisor approval with explicit
+ * included pillars (1–6). Intake waiver alone does not unlock assessment.
  */
 export async function getClientIntakeGateState(
   clientUserId: string,
@@ -31,17 +32,20 @@ export async function getClientIntakeGateState(
   });
   const hasSubmittedInterview = !!submittedInterview;
 
-  let intakeApproved = false;
-  if (submittedInterview) {
-    const approval = await prisma.intakeApproval.findUnique({
-      where: { interviewId: submittedInterview.id },
-      select: { status: true },
-    });
-    intakeApproved = approval?.status === "APPROVED";
-  }
+  const latestApproval = await prisma.intakeApproval.findFirst({
+    where: {
+      status: "APPROVED",
+      interview: { userId: clientUserId },
+    },
+    orderBy: { approvedAt: "desc" },
+    select: { status: true, includedPillars: true },
+  });
+
+  const intakeApproved = latestApproval?.status === "APPROVED";
+  const assessmentUnlocked =
+    intakeApproved && (latestApproval?.includedPillars?.length ?? 0) > 0;
 
   const restrictNavToIntake = !hasSubmittedInterview && !intakeWaived;
-  const assessmentUnlocked = intakeApproved || intakeWaived;
 
   return {
     hasSubmittedInterview,

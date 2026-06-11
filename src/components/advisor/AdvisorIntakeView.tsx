@@ -42,7 +42,11 @@ export function AdvisorIntakeView({
           question.questionNumber ??
           (parseInt(question.id.replace("intake-q", ""), 10) || 0);
         return (
-          <section key={question.id} className="space-y-4 rounded-lg border bg-card p-6">
+          <section
+            key={question.id}
+            id={`intake-question-${question.id}`}
+            className="space-y-4 rounded-lg border bg-card p-6"
+          >
             <QuestionBlock
               question={question}
               questionNumber={num}

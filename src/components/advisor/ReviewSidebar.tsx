@@ -1,33 +1,88 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Users } from "lucide-react";
-import { RiskAreaSelector } from "./RiskAreaSelector";
+import { AssessmentDomainsSelector } from "./AssessmentDomainsSelector";
+import { EmphasisAreasSelector } from "./EmphasisAreasSelector";
+import { PillarRecommendationsPanel } from "./PillarRecommendationsPanel";
 import { ApprovalActions } from "./ApprovalActions";
 import type { IntakeReviewData } from "@/lib/advisor/types";
+import type { PillarRecommendation } from "@/lib/intake/pillar-recommendations";
+import {
+  strongRecommendationPillarIds,
+} from "@/lib/intake/pillar-recommendations";
 
 interface ReviewSidebarProps {
   interviewId: string;
   approval: IntakeReviewData["approval"];
   householdProfileCount: number;
+  pillarRecommendations: PillarRecommendation[];
 }
 
 export function ReviewSidebar({
   interviewId,
   approval,
   householdProfileCount,
+  pillarRecommendations,
 }: ReviewSidebarProps) {
-  const [selectedAreas, setSelectedAreas] = useState<string[]>(
-    approval?.focusAreas || []
+  const locked =
+    approval?.status === "APPROVED" || approval?.status === "REJECTED";
+
+  const suggestedIds = useMemo(
+    () => strongRecommendationPillarIds(pillarRecommendations),
+    [pillarRecommendations],
+  );
+
+  const initialIncluded = useMemo(() => {
+    if (approval?.includedPillars?.length) return approval.includedPillars;
+    if (suggestedIds.length > 0) return suggestedIds;
+    return approval?.focusAreas?.length ? approval.focusAreas : [];
+  }, [approval, suggestedIds]);
+
+  const [selectedDomains, setSelectedDomains] = useState<string[]>(initialIncluded);
+  const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>(
+    approval?.focusAreas?.length &&
+      approval.includedPillars?.length &&
+      approval.focusAreas.length < approval.includedPillars.length
+      ? approval.focusAreas
+      : [],
   );
   const [notes, setNotes] = useState(approval?.notes || "");
 
   useEffect(() => {
     queueMicrotask(() => {
-      setSelectedAreas(approval?.focusAreas || []);
+      setSelectedDomains(initialIncluded);
       setNotes(approval?.notes || "");
+      if (approval?.includedPillars?.length && approval.focusAreas?.length) {
+        const emphasisSubset =
+          approval.focusAreas.length < approval.includedPillars.length
+            ? approval.focusAreas
+            : [];
+        setSelectedEmphasis(emphasisSubset);
+      }
     });
-  }, [approval]);
+  }, [approval, initialIncluded]);
+
+  const handleSelectRecommended = useCallback(() => {
+    const strong = strongRecommendationPillarIds(pillarRecommendations);
+    const moderate = pillarRecommendations
+      .filter((r) => r.strength === "moderate")
+      .map((r) => r.pillarId);
+    setSelectedDomains([...new Set([...strong, ...moderate])]);
+  }, [pillarRecommendations]);
+
+  const handleScrollToQuestion = useCallback((questionId: string) => {
+    const el = document.getElementById(`intake-question-${questionId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const recommendedForDomains = useMemo(
+    () =>
+      pillarRecommendations
+        .filter((r) => r.strength === "strong")
+        .map((r) => r.pillarId),
+    [pillarRecommendations],
+  );
 
   return (
     <div className="space-y-8">
@@ -51,21 +106,29 @@ export function ReviewSidebar({
               No household profiles on file yet.
             </p>
           )}
-          {householdProfileCount > 0 ? (
-            <p className="text-xs text-muted-foreground lg:hidden">
-              On mobile, open &quot;Household directory&quot; in the main column
-              to expand.
-            </p>
-          ) : null}
         </div>
       </div>
 
-      <RiskAreaSelector
-        selectedAreas={selectedAreas}
-        onChange={setSelectedAreas}
-        disabled={
-          approval?.status === "APPROVED" || approval?.status === "REJECTED"
-        }
+      {!locked ? (
+        <PillarRecommendationsPanel
+          recommendations={pillarRecommendations}
+          onSelectRecommended={handleSelectRecommended}
+          onScrollToQuestion={handleScrollToQuestion}
+        />
+      ) : null}
+
+      <AssessmentDomainsSelector
+        selectedDomains={selectedDomains}
+        onChange={setSelectedDomains}
+        disabled={locked}
+        recommendedIds={recommendedForDomains}
+      />
+
+      <EmphasisAreasSelector
+        includedDomains={selectedDomains}
+        selectedEmphasis={selectedEmphasis}
+        onChange={setSelectedEmphasis}
+        disabled={locked}
       />
 
       <div className="border-t border-border/80 pt-6">
@@ -73,7 +136,8 @@ export function ReviewSidebar({
           interviewId={interviewId}
           approvalId={approval?.id}
           currentStatus={approval?.status}
-          selectedFocusAreas={selectedAreas}
+          selectedIncludedPillars={selectedDomains}
+          selectedEmphasisAreas={selectedEmphasis}
           notes={notes}
           onNotesChange={setNotes}
           disabled={false}

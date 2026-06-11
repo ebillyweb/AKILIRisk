@@ -29,6 +29,10 @@ import type { PortfolioRecommendationsFilters } from '@/lib/recommendations/type
 import { getPortfolioReports } from '@/lib/reports/portfolio-queries';
 import type { PortfolioReportsFilters } from '@/lib/reports/portfolio-types';
 import { approveClientSchema } from '@/lib/schemas/advisor';
+import { normalizeIncludedPillarIds } from '@/lib/assessment/included-pillars';
+import { syncAssessmentScopeFromApproval } from '@/lib/assessment/sync-scope-from-approval';
+import { computePillarRecommendations } from '@/lib/intake/pillar-recommendations';
+import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
 import { decryptUserEmail } from '@/lib/auth/user-email';
 import {
   loadAdvisorPiiPolicy,
@@ -218,7 +222,7 @@ export async function approveClientIntake(data: unknown) {
       };
     }
 
-    const { interviewId, focusAreas, notes } = validatedFields.data;
+    const { interviewId, includedPillars, focusAreas, notes } = validatedFields.data;
 
     // Multi-tenant boundary check (see assertAdvisorMayMutateApproval).
     const reviewData = await assertAdvisorMayMutateApproval(
@@ -236,6 +240,25 @@ export async function approveClientIntake(data: unknown) {
     const assignmentAdvisorProfileId =
       reviewData.assignmentAdvisorProfileId ?? profile.id;
 
+    const normalizedIncluded = normalizeIncludedPillarIds(includedPillars);
+    const normalizedFocus = focusAreas?.length
+      ? normalizeIncludedPillarIds(focusAreas)
+      : normalizedIncluded;
+
+    const script = await loadIntakeScriptQuestions();
+    const pillarRecommendations = computePillarRecommendations({
+      questions: script.map((q) => ({
+        id: q.id,
+        questionText: q.questionText,
+        relatedPillarIds: q.relatedPillarIds,
+        recommendedActions: q.recommendedActions,
+      })),
+      responses: reviewData.interview.responses.map((r) => ({
+        questionId: r.questionId,
+        transcription: r.transcription,
+      })),
+    });
+
     // First ensure an approval exists
     const priorApproval = await createIntakeApproval(
       interviewId,
@@ -243,21 +266,39 @@ export async function approveClientIntake(data: unknown) {
     );
     let approval = priorApproval;
 
-    // Update to APPROVED status with focus areas and notes
     approval = await updateIntakeApproval(approval.id, {
       status: 'APPROVED',
-      focusAreas,
+      includedPillars: normalizedIncluded,
+      focusAreas: normalizedFocus,
+      pillarRecommendations,
       notes,
       approvedAt: new Date(),
     });
+
+    await syncAssessmentScopeFromApproval(
+      reviewData.interview.userId,
+      approval.id,
+      normalizedIncluded,
+    );
 
     await writeAudit({
       actor: { userId, role: role as UserRole, email },
       action: AUDIT_ACTIONS.INTAKE_APPROVE,
       entityType: 'IntakeApproval',
       entityId: approval.id,
-      beforeData: { status: priorApproval.status, focusAreas: priorApproval.focusAreas, notes: priorApproval.notes },
-      afterData: { status: approval.status, focusAreas: approval.focusAreas, notes: approval.notes, approvedAt: approval.approvedAt?.toISOString() ?? null },
+      beforeData: {
+        status: priorApproval.status,
+        includedPillars: priorApproval.includedPillars,
+        focusAreas: priorApproval.focusAreas,
+        notes: priorApproval.notes,
+      },
+      afterData: {
+        status: approval.status,
+        includedPillars: approval.includedPillars,
+        focusAreas: approval.focusAreas,
+        notes: approval.notes,
+        approvedAt: approval.approvedAt?.toISOString() ?? null,
+      },
       metadata: { interviewId, advisorId: profile.id },
     });
 
@@ -269,6 +310,8 @@ export async function approveClientIntake(data: unknown) {
 
     revalidatePath('/advisor/review/[id]', 'page');
     revalidatePath('/advisor');
+    revalidatePath('/assessment', 'layout');
+    revalidatePath('/dashboard');
     return {
       success: true,
       data: approval,

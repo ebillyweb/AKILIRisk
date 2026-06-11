@@ -19,7 +19,8 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
     notFound();
   }
 
-  const { interview, approval, questions, householdMembers } = data;
+  const { interview, approval, questions, householdMembers, pillarRecommendations } =
+    data;
 
   // Format submission date
   const submittedAt = interview.submittedAt
@@ -172,6 +173,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                   interviewId={interview.id}
                   approval={approval}
                   householdProfileCount={householdMembers.length}
+                  pillarRecommendations={pillarRecommendations}
                 />
               </div>
             </div>

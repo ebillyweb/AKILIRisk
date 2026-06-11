@@ -18,6 +18,7 @@ import { prisma } from "@/lib/db";
 import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
 import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
 import { toAdvisorHouseholdMemberViews } from "@/lib/profiles/advisor-household-view";
+import { computePillarRecommendations } from "@/lib/intake/pillar-recommendations";
 
 /**
  * Advisor intake review page loader. Mirrors `getAssessmentForAdvisorReview`:
@@ -132,9 +133,23 @@ export async function getIntakeReviewDataForAdvisorPage(
     effective,
   );
 
+  const pillarRecommendations = computePillarRecommendations({
+    questions: personalizedScript.map((q) => ({
+      id: q.id,
+      questionText: q.questionText,
+      relatedPillarIds: q.relatedPillarIds,
+      recommendedActions: q.recommendedActions,
+    })),
+    responses: reviewData.interview.responses.map((r) => ({
+      questionId: r.questionId,
+      transcription: r.transcription,
+    })),
+  });
+
   return {
     interview: reviewData.interview,
     approval,
+    pillarRecommendations,
     questions: personalizedScript.map((q) => ({
       id: q.id,
       text: q.questionText,

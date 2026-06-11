@@ -67,6 +67,7 @@ export async function POST(_request: NextRequest) {
         version: 1,
         status: "IN_PROGRESS",
         approvalId: approval?.id || null,
+        includedPillars: approval?.includedPillars ?? [],
       },
     });
 

@@ -370,7 +370,9 @@ export async function updateIntakeApproval(
   approvalId: string,
   data: {
     status?: 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
+    includedPillars?: string[];
     focusAreas?: string[];
+    pillarRecommendations?: unknown;
     notes?: string;
     reviewedAt?: Date;
     approvedAt?: Date;

@@ -16,7 +16,8 @@ interface ApprovalActionsProps {
   interviewId: string;
   approvalId?: string;
   currentStatus?: string;
-  selectedFocusAreas: string[];
+  selectedIncludedPillars: string[];
+  selectedEmphasisAreas: string[];
   notes: string;
   onNotesChange: (notes: string) => void;
   disabled?: boolean;
@@ -26,7 +27,8 @@ export function ApprovalActions({
   interviewId,
   approvalId,
   currentStatus,
-  selectedFocusAreas,
+  selectedIncludedPillars,
+  selectedEmphasisAreas,
   notes,
   onNotesChange,
   disabled = false
@@ -50,8 +52,8 @@ export function ApprovalActions({
   };
 
   const handleApprove = async () => {
-    if (selectedFocusAreas.length === 0) {
-      toast.error("Please select at least one focus area before approving");
+    if (selectedIncludedPillars.length === 0) {
+      toast.error("Please select at least one assessment domain before approving");
       return;
     }
 
@@ -59,7 +61,9 @@ export function ApprovalActions({
       try {
         const result = await approveClientIntake({
           interviewId,
-          focusAreas: selectedFocusAreas,
+          includedPillars: selectedIncludedPillars,
+          focusAreas:
+            selectedEmphasisAreas.length > 0 ? selectedEmphasisAreas : undefined,
           notes: notes.trim() || undefined,
         });
 
@@ -156,7 +160,7 @@ export function ApprovalActions({
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {isApprove
-              ? `Approve this client for a customized assessment across ${selectedFocusAreas.length} selected ${selectedFocusAreas.length === 1 ? "area" : "areas"}. They can begin once you confirm.`
+              ? `Approve this client for an assessment across ${selectedIncludedPillars.length} selected ${selectedIncludedPillars.length === 1 ? "domain" : "domains"}. They can begin once you confirm.`
               : "Reject this intake. The client will need to resubmit before you can review again."}
           </p>
         </div>
@@ -195,7 +199,7 @@ export function ApprovalActions({
             Start review
           </h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Open the intake for review to select focus areas and approve or
+            Open the intake for review to select assessment domains and approve or
             reject.
           </p>
           <Button
@@ -221,7 +225,7 @@ export function ApprovalActions({
           <div className="flex flex-col gap-2">
             <Button
               onClick={() => setShowConfirmation("approve")}
-              disabled={isPending || disabled || selectedFocusAreas.length === 0}
+              disabled={isPending || disabled || selectedIncludedPillars.length === 0}
               className="h-auto w-full whitespace-normal py-2.5"
             >
               <CheckCircle2 className="mr-2 h-4 w-4 shrink-0" />
@@ -238,13 +242,13 @@ export function ApprovalActions({
             </Button>
           </div>
 
-          {selectedFocusAreas.length === 0 ? (
+          {selectedIncludedPillars.length === 0 ? (
             <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
               <AlertCircle
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600"
                 aria-hidden
               />
-              Select at least one focus area above to enable approval.
+              Select at least one assessment domain above to enable approval.
             </p>
           ) : null}
         </section>
@@ -264,9 +268,9 @@ export function ApprovalActions({
               Assessment unlocked
             </Badge>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Client can begin their customized assessment (
-              {selectedFocusAreas.length}{" "}
-              {selectedFocusAreas.length === 1 ? "focus area" : "focus areas"}).
+              Client can begin their assessment (
+              {selectedIncludedPillars.length}{" "}
+              {selectedIncludedPillars.length === 1 ? "domain" : "domains"} selected).
             </p>
           </div>
           <Button

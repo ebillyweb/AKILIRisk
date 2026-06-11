@@ -12,11 +12,11 @@
 
 | Story | Title | Status | Tests |
 |-------|--------|--------|--------|
-| US-67 | Scope assessment to included pillars (system) | **In progress** (Phase 1) | Unit: `included-pillars`, `syncAssessmentCompletionStatus` |
-| US-68 | Lock assessment until advisor approves with pillars | **Planned** | `epic-5.11-assessment-gate.spec.ts` |
-| US-69 | Select assessment domains at intake approval | **Planned** | `epic-5.11-pillar-selection-approval.spec.ts` |
-| US-70 | View intake-based pillar recommendations | **Planned** | Unit: `computePillarRecommendations` |
-| US-71 | Set scoring emphasis within included pillars | **Planned** | Unit: `getCustomizationConfig` + approval schema |
+| US-67 | Scope assessment to included pillars (system) | **Done** (Phase 1) | Unit: `included-pillars`, `syncAssessmentCompletionStatus` |
+| US-68 | Lock assessment until advisor approves with pillars | **Done** (Phase 2) | `intake-gate.test.ts` |
+| US-69 | Select assessment domains at intake approval | **Done** (Phase 2) | `epic-5.11-pillar-selection-approval.spec.ts` (smoke TBD) |
+| US-70 | View intake-based pillar recommendations | **Done** (Phase 2) | Unit: `computePillarRecommendations` |
+| US-71 | Set scoring emphasis within included pillars | **Done** (Phase 2) | Approve schema + emphasis UI |
 | US-72 | Client sees scoped assessment hub | **Planned** | `epic-5.11-scoped-assessment-hub.spec.ts` |
 | US-73 | Start a facilitated client session | **Planned** | `epic-5.11-facilitated-session-start.spec.ts` |
 | US-74 | Conduct facilitated intake | **Planned** | `epic-5.11-facilitated-intake.spec.ts` |

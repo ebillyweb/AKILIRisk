@@ -1,4 +1,5 @@
 import type { IntakeApproval, IntakeInterview, IntakeResponse } from '@prisma/client';
+import type { PillarRecommendation } from '@/lib/intake/pillar-recommendations';
 import type { AdvisorHouseholdMemberView } from '@/lib/profiles/advisor-household-view';
 
 // Dashboard client data for advisor's client list.
@@ -50,6 +51,8 @@ export type IntakeReviewData = {
   interview: IntakeInterviewReviewBundle["interview"];
   approval: IntakeApproval | null;
   questions: IntakeQuestion[];
+  /** Intake-driven pillar suggestions for the approval sidebar (US-70). */
+  pillarRecommendations: PillarRecommendation[];
   /** Household directory mapped for advisor visibility (name/contact redacted per client preference). */
   householdMembers: AdvisorHouseholdMemberView[];
 };

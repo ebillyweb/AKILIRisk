@@ -7,8 +7,8 @@ import { AssessmentQuestionBankLoader } from "@/components/assessment/Assessment
 
 /**
  * Client assessment flow is USER-only. Staff use advisor/admin workspaces.
- * For clients: only allow access when intake is submitted and approved,
- * or the assigned advisor has waived the intake requirement.
+ * For clients: only allow access when an advisor has approved intake with at
+ * least one assessment domain selected (Epic 5.11). Intake waiver alone does not unlock.
  */
 export default async function AssessmentLayout({
   children,
