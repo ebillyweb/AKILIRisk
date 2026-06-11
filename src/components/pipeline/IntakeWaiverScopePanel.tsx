@@ -27,7 +27,7 @@ type IntakeWaiverScopePanelProps = {
 };
 
 function pillarLabel(id: string): string {
-  return RISK_AREAS.find((a) => a.id === id)?.label ?? id;
+  return RISK_AREAS.find((a) => a.id === id)?.name ?? id;
 }
 
 export function IntakeWaiverScopePanel({
