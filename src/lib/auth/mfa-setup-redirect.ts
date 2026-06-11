@@ -1,27 +1,5 @@
-import "server-only";
-
-import { prisma } from "@/lib/db";
-
-export type MfaUserState = {
-  mfaEnabled: boolean;
-  mfaSecret: boolean;
-};
-
-/** Authoritative MFA flags from the database (not the JWT cookie). */
-export async function getMfaUserState(userId: string): Promise<MfaUserState | null> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { mfaEnabled: true, mfaSecret: true },
-  });
-  if (!user) return null;
-  return {
-    mfaEnabled: user.mfaEnabled,
-    mfaSecret: Boolean(user.mfaSecret),
-  };
-}
-
 /**
- * Where to send a user who no longer belongs on `/mfa/setup`.
+ * Client-safe post-MFA-setup redirect helper.
  * Never `/settings` — that route is workspace-gated and loops with the proxy
  * when the JWT cookie is stale.
  */

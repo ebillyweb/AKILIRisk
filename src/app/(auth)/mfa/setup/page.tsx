@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
-import {
-  getMfaUserState,
-  resolvePostMfaSetupRedirect,
-} from "@/lib/auth/mfa-setup-routing";
+import { resolvePostMfaSetupRedirect } from "@/lib/auth/mfa-setup-redirect";
+import { getMfaUserState } from "@/lib/auth/mfa-user-state";
 import { MFASetupForm } from "./MFASetupForm";
 
 type PageProps = {

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
-import { getMfaUserState } from "@/lib/auth/mfa-setup-routing";
+import { getMfaUserState } from "@/lib/auth/mfa-user-state";
 import { MFAVerifyForm } from "./MFAVerifyForm";
 
 /**

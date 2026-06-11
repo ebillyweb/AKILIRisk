@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePostMfaSetupRedirect } from "@/lib/auth/mfa-setup-routing";
+import { resolvePostMfaSetupRedirect } from "@/lib/auth/mfa-setup-redirect";
 
 describe("resolvePostMfaSetupRedirect", () => {
   it("sends unverified users to MFA verify with callback", () => {
