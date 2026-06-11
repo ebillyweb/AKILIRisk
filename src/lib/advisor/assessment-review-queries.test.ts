@@ -28,6 +28,11 @@ const {
 } = vi.hoisted(() => ({
   prismaSpies: {
     assessment: { findFirst: vi.fn() },
+    advisorProfile: {
+      findUnique: vi.fn().mockResolvedValue({ id: "advisor-profile-1" }),
+    },
+    enterpriseMembership: { findFirst: vi.fn().mockResolvedValue(null) },
+    subscription: { findUnique: vi.fn().mockResolvedValue(null) },
   },
   requireAdvisorRoleSpy: vi.fn().mockResolvedValue({
     userId: "advisor-user-1",
@@ -173,7 +178,7 @@ describe("getAssessmentForAdvisorReview — tenant + note scoping (US-46c)", () 
       };
     };
     expect(args.where.user.clientAssignments.some).toEqual({
-      advisorId: "advisor-profile-1",
+      advisorId: { in: ["advisor-profile-1"] },
       status: "ACTIVE",
     });
   });

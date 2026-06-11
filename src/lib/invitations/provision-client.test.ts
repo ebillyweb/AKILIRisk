@@ -18,6 +18,10 @@ const { prismaSpies } = vi.hoisted(() => ({
     clientAdvisorAssignment: {
       findFirst: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
+    },
+    advisorProfile: {
+      findUnique: vi.fn().mockResolvedValue({ enterpriseId: null }),
     },
     $transaction: vi.fn(),
   },
@@ -52,6 +56,9 @@ describe("provisionClientFromInviteCode", () => {
       createdBy: "adv-1",
       clientName: "Pat Client",
       status: InvitationStatus.SENT,
+      intakeWaived: false,
+      includedPillars: [],
+      focusAreas: [],
     });
 
     const result = await provisionClientFromInviteCode("ic-1", "client@example.com");
@@ -72,6 +79,9 @@ describe("provisionClientFromInviteCode", () => {
       createdBy: "adv-1",
       clientName: "Pat Client",
       status: InvitationStatus.OPENED,
+      intakeWaived: false,
+      includedPillars: [],
+      focusAreas: [],
     });
     vi.mocked(findUserByEmail).mockResolvedValue(null);
     prismaSpies.user.create.mockResolvedValue({ id: "user-1" });
@@ -101,6 +111,9 @@ describe("provisionClientFromInviteCode", () => {
       createdBy: "adv-1",
       clientName: null,
       status: InvitationStatus.REGISTERED,
+      intakeWaived: false,
+      includedPillars: [],
+      focusAreas: [],
     });
     vi.mocked(findUserByEmail).mockResolvedValue({
       id: "user-1",

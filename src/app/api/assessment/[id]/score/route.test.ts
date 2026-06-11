@@ -42,10 +42,20 @@ vi.mock("@/lib/db", () => ({
     assessment: {
       findUnique: vi.fn(async ({ where }: { where: { id: string } }) => {
         if (where.id === "asmt-1") {
-          return { userId: "user-owner" };
+          return {
+            userId: "user-owner",
+            deliverablePhase: "PROFILE",
+            includedPillars: ["governance"],
+            scores: [{ pillar: "governance" }],
+          };
         }
         if (where.id === "asmt-other") {
-          return { userId: "user-other" };
+          return {
+            userId: "user-other",
+            deliverablePhase: "PROFILE",
+            includedPillars: ["governance"],
+            scores: [{ pillar: "governance" }],
+          };
         }
         return null;
       }),

@@ -87,6 +87,8 @@ export async function provisionClientFromInviteCode(
       clientName: true,
       status: true,
       intakeWaived: true,
+      includedPillars: true,
+      focusAreas: true,
     },
   });
 

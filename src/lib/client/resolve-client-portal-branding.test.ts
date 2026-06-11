@@ -5,6 +5,9 @@ const prismaSpies = vi.hoisted(() => ({
   clientAdvisorAssignment: {
     findFirst: vi.fn(),
   },
+  advisorProfile: {
+    findUnique: vi.fn(),
+  },
   inviteCode: {
     findFirst: vi.fn(),
   },
@@ -88,8 +91,9 @@ describe("resolveClientPortalBrandingForUser", () => {
 
   it("prefers assignment branding and resolves the logo URL", async () => {
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValueOnce({
-      advisor: brandedAdvisor,
+      advisorId: "adv-1",
     });
+    prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
 
     const branding = await resolveClientPortalBrandingForUser({
       userId: "client-1",
@@ -113,8 +117,9 @@ describe("resolveClientPortalBrandingForUser", () => {
       mapAdvisorProfileToBrandingData(tenantAdvisor)
     );
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValueOnce({
-      advisor: brandedAdvisor,
+      advisorId: "adv-1",
     });
+    prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
     prismaSpies.inviteCode.findFirst.mockResolvedValueOnce(null);
 
     const branding = await resolveClientPortalBrandingForUser({
