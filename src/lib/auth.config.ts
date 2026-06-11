@@ -6,10 +6,12 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail } from "@/lib/auth/user-email";
-import { userNeedsPasswordChange } from "@/lib/auth/password-policy";
+import { userNeedsPasswordChange, validatePasswordComplexity } from "@/lib/auth/password-policy";
 import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
 import {
+  getUserAuthSnapshot,
   syncPasswordChangeRequired,
+  syncPasswordPolicyRevision,
 } from "@/lib/auth/user-auth-snapshot";
 
 // Round-11 bug-hunt fix: normalize email casing so `findUserByEmail`
@@ -180,14 +182,30 @@ export default {
         });
 
         const policy = await getPasswordPolicy();
-        const needsPasswordChange = userNeedsPasswordChange({
+        const compliance = await getUserAuthSnapshot(user.id);
+        const storedFlag = compliance?.passwordChangeRequired ?? false;
+        const storedRevision = compliance?.passwordPolicyRevision ?? 0;
+
+        let needsPasswordChange = userNeedsPasswordChange({
           password,
-          passwordChangeRequired: false,
-          passwordPolicyRevision: 0,
+          passwordChangeRequired: storedFlag,
+          passwordPolicyRevision: storedRevision,
           policy,
         });
 
-        await syncPasswordChangeRequired(user.id, needsPasswordChange);
+        // Password already meets policy; only the stored revision is behind.
+        // Acknowledge the revision without forcing another rotation (e.g. seeded accounts).
+        if (
+          needsPasswordChange &&
+          !storedFlag &&
+          validatePasswordComplexity(password, policy).ok &&
+          storedRevision < policy.revision
+        ) {
+          await syncPasswordPolicyRevision(user.id, policy.revision);
+          needsPasswordChange = false;
+        } else if (needsPasswordChange !== storedFlag) {
+          await syncPasswordChangeRequired(user.id, needsPasswordChange);
+        }
 
         return {
           id: user.id,

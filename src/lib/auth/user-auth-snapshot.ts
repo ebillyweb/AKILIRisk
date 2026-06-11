@@ -88,3 +88,20 @@ export async function syncPasswordChangeRequired(
     throw error;
   }
 }
+
+export async function syncPasswordPolicyRevision(
+  userId: string,
+  revision: number
+): Promise<void> {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordPolicyRevision: revision },
+    });
+  } catch (error) {
+    if (isPrismaSchemaDriftError(error)) {
+      return;
+    }
+    throw error;
+  }
+}
