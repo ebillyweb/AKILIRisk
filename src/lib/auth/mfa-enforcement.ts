@@ -5,26 +5,23 @@ export type MfaEnrollmentClaims = {
   mfaEnrollmentRequired?: boolean;
 };
 
-/** Staff roles that must enroll in MFA before accessing protected routes. */
+/**
+ * @deprecated MFA enrollment is optional for all roles. Kept for callers/tests.
+ */
 export function isStaffRoleRequiringMfa(role: string | null | undefined): boolean {
-  const r = normalizeUserRoleString(role);
-  return r === "ADVISOR" || r === "ADMIN" || r === "SUPER_ADMIN";
+  void normalizeUserRoleString(role);
+  return false;
 }
 
 /**
- * Whether MFA enrollment is mandatory for this user given platform policy.
- * Pure function — safe for Edge middleware when claims are precomputed in JWT.
+ * Whether MFA enrollment is mandatory for this user.
+ * MFA is optional for every role; users who enable MFA must still verify per session.
  */
-export function isMfaEnrollmentRequiredForUser(params: {
+export function isMfaEnrollmentRequiredForUser(_params: {
   role: string | null | undefined;
   mfaEnabled: boolean;
   mfaRequiredForAllRoles?: boolean;
 }): boolean {
-  if (params.mfaEnabled) return false;
-
-  const role = normalizeUserRoleString(params.role);
-  if (isStaffRoleRequiringMfa(role)) return true;
-  if (params.mfaRequiredForAllRoles && role === "USER") return true;
   return false;
 }
 

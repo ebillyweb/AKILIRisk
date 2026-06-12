@@ -6,8 +6,8 @@ import { isPrismaSchemaDriftError } from "@/lib/db/schema-drift";
 const PLATFORM_SETTINGS_ID = "default";
 
 /**
- * Platform-wide toggle: when true, client (USER) accounts must also enroll in MFA.
- * Staff roles (ADVISOR, ADMIN, SUPER_ADMIN) always require MFA regardless.
+ * Platform-wide toggle (legacy): MFA enrollment is optional for all roles.
+ * This setting is no longer enforced; kept for schema compatibility.
  */
 export async function getMfaRequiredForAllRoles(): Promise<boolean> {
   const delegate = prisma.platformSettings as

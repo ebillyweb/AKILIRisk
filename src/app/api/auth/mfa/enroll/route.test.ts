@@ -46,7 +46,7 @@ describe("POST /api/auth/mfa/enroll", () => {
     expect(enrollSpy).not.toHaveBeenCalled();
   });
 
-  it("returns 403 for client (USER) role when enrollment is not required", async () => {
+  it("allows client (USER) role to enroll optionally", async () => {
     authSpy.mockResolvedValue({
       user: {
         id: "client-1",
@@ -55,14 +55,18 @@ describe("POST /api/auth/mfa/enroll", () => {
         mfaEnrollmentRequired: false,
       },
     });
+    findUniqueSpy.mockResolvedValue({ mfaEnabled: false });
+    enrollSpy.mockResolvedValue({
+      qrCodeUrl: "data:image/png;base64,xyz",
+      secret: "SECRETKEY123",
+    });
 
     const res = await POST(new Request("http://localhost/api/auth/mfa/enroll", {
       method: "POST",
     }) as never);
 
-    expect(res.status).toBe(403);
-    expect(enrollSpy).not.toHaveBeenCalled();
-    expect(findUniqueSpy).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(enrollSpy).toHaveBeenCalled();
   });
 
   it("allows client enrollment when session marks enrollment required", async () => {

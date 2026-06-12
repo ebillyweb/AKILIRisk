@@ -48,8 +48,8 @@ export async function assertMfaVerified(session: Session): Promise<void> {
 }
 
 /**
- * Redirect staff (and optionally all roles) to `/mfa/setup` when MFA is
- * required but not yet enrolled.
+ * Redirect to `/mfa/setup` when MFA enrollment is required but not yet enrolled.
+ * Enrollment is optional for all roles; this redirect should not occur in normal operation.
  */
 export async function redirectIfMfaEnrollmentRequired(
   session: Session

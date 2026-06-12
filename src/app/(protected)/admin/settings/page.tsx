@@ -3,7 +3,6 @@ import { auth } from "@/lib/auth";
 import { isSuperAdmin, requireAdminRole } from "@/lib/admin/auth";
 import { getPlatformAdvisorFeatureFlagsForAdmin, getPasswordPolicyForSuperAdmin } from "@/lib/admin/platform-settings-actions";
 import { AdminAdvisorFeatureFlagsForm } from "@/components/admin/AdminAdvisorFeatureFlagsForm";
-import { AdminMfaPolicyForm } from "@/components/admin/AdminMfaPolicyForm";
 import { AdminPasswordPolicyForm } from "@/components/admin/AdminPasswordPolicyForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,23 +57,18 @@ export default async function AdminSettingsPage() {
         <CardHeader>
           <CardTitle className="text-base">Multi-factor authentication</CardTitle>
           <CardDescription>
-            Staff accounts (advisor, admin, super-admin) must enroll in MFA before
-            accessing protected routes. Super admins can optionally extend that
-            requirement to client accounts.
+            MFA is optional for all account types. Users who enable MFA must
+            complete a verification challenge each session; others sign in with
+            their usual method only.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!superAdmin ? (
-            <p className="text-sm text-muted-foreground">
-              Only super admins can change platform MFA policy.
-            </p>
-          ) : !flagsRes?.success ? (
-            <p className="text-sm text-destructive">{flagsRes?.error ?? "Failed to load settings."}</p>
-          ) : (
-            <AdminMfaPolicyForm
-              initialMfaRequiredForAllRoles={flagsRes.data.mfaRequiredForAllRoles}
-            />
-          )}
+          <p className="text-sm text-muted-foreground">
+            There is no platform-wide MFA requirement. Advisors, admins, and
+            clients can enable two-factor authentication from{" "}
+            <span className="font-medium text-foreground">Settings</span> when
+            they choose to.
+          </p>
         </CardContent>
       </Card>
 

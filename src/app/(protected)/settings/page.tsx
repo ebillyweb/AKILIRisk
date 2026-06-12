@@ -80,7 +80,7 @@ export default async function SettingsPage({
     ? (user.mfaRecoveryCodes as string[]).length
     : 0;
 
-  const showMfaSettings = isAdvisorHubNavRole(role);
+  const showMfaSettings = true;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8">

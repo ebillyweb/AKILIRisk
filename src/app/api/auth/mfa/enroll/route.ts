@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
 import { enrollMFA } from "@/lib/mfa";
 
@@ -12,17 +11,6 @@ export async function POST(_req: NextRequest) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
-      );
-    }
-
-    const mayEnroll =
-      isAdvisorHubNavRole(session.user.role) ||
-      Boolean(session.user.mfaEnrollmentRequired);
-
-    if (!mayEnroll) {
-      return NextResponse.json(
-        { error: "MFA is not available for this account" },
-        { status: 403 }
       );
     }
 

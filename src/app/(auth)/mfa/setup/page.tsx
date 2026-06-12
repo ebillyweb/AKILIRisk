@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { resolvePostMfaSetupRedirect } from "@/lib/auth/mfa-setup-redirect";
 import { getMfaUserState } from "@/lib/auth/mfa-user-state";
 import { MFASetupForm } from "./MFASetupForm";
@@ -33,18 +32,5 @@ export default async function MFASetupPage({ searchParams }: PageProps) {
     );
   }
 
-  const mayEnroll =
-    isAdvisorHubNavRole(session.user.role) ||
-    Boolean(session.user.mfaEnrollmentRequired);
-
-  if (!mayEnroll) {
-    redirect("/signin?error=mfa_not_available");
-  }
-
-  return (
-    <MFASetupForm
-      required={Boolean(session.user.mfaEnrollmentRequired)}
-      callbackUrl={callbackUrl}
-    />
-  );
+  return <MFASetupForm required={false} callbackUrl={callbackUrl} />;
 }

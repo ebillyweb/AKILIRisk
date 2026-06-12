@@ -310,7 +310,7 @@ model PlatformSettings {
   riskThresholdLow    Int @default(80)
   riskThresholdMedium Int @default(60)
   riskThresholdHigh   Int @default(40)
-  /** When true, client (USER) accounts must enroll in MFA in addition to staff roles. */
+  /** Legacy platform toggle; MFA enrollment is optional for all roles. */
   mfaRequiredForAllRoles Boolean @default(false)
   /** Super-admin password rules for credential-based accounts. */
   passwordMinLength Int @default(8)

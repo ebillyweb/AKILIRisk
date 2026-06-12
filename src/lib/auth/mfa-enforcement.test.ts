@@ -7,44 +7,30 @@ import {
 } from "./mfa-enforcement";
 
 describe("isStaffRoleRequiringMfa", () => {
-  it("requires MFA for advisor and admin roles", () => {
-    expect(isStaffRoleRequiringMfa("ADVISOR")).toBe(true);
-    expect(isStaffRoleRequiringMfa("ADMIN")).toBe(true);
-    expect(isStaffRoleRequiringMfa("SUPER_ADMIN")).toBe(true);
-  });
-
-  it("does not require MFA for client users by default", () => {
+  it("does not require MFA for any role", () => {
+    expect(isStaffRoleRequiringMfa("ADVISOR")).toBe(false);
+    expect(isStaffRoleRequiringMfa("ADMIN")).toBe(false);
+    expect(isStaffRoleRequiringMfa("SUPER_ADMIN")).toBe(false);
     expect(isStaffRoleRequiringMfa("USER")).toBe(false);
   });
 });
 
 describe("isMfaEnrollmentRequiredForUser", () => {
-  it("requires enrollment for staff without MFA enabled", () => {
+  it("never requires enrollment (MFA is optional for all roles)", () => {
     expect(
       isMfaEnrollmentRequiredForUser({
         role: "ADVISOR",
         mfaEnabled: false,
       })
-    ).toBe(true);
-  });
-
-  it("does not require enrollment once MFA is enabled", () => {
-    expect(
-      isMfaEnrollmentRequiredForUser({
-        role: "ADMIN",
-        mfaEnabled: true,
-      })
     ).toBe(false);
-  });
 
-  it("requires enrollment for clients when platform toggle is on", () => {
     expect(
       isMfaEnrollmentRequiredForUser({
         role: "USER",
         mfaEnabled: false,
         mfaRequiredForAllRoles: true,
       })
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -63,6 +49,15 @@ describe("isMfaEnrollmentPending", () => {
       isMfaEnrollmentPending({
         mfaEnrollmentRequired: true,
         mfaEnabled: true,
+      })
+    ).toBe(false);
+  });
+
+  it("returns false when enrollment is not required", () => {
+    expect(
+      isMfaEnrollmentPending({
+        mfaEnrollmentRequired: false,
+        mfaEnabled: false,
       })
     ).toBe(false);
   });

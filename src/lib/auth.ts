@@ -5,9 +5,7 @@ import { prisma } from "@/lib/db";
 import authConfig from "@/lib/auth.config";
 import { normalizeUserRoleString } from "@/lib/auth-roles";
 import { verifyAdminEmailOnFirstSignIn } from "@/lib/auth/verify-admin-on-sign-in";
-import { isMfaEnrollmentRequiredForUser } from "@/lib/auth/mfa-enforcement";
 import { getUserAuthSnapshot } from "@/lib/auth/user-auth-snapshot";
-import { getMfaRequiredForAllRoles } from "@/lib/platform/mfa-policy";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 /** Short, non-reversible identifier for an email so log lines stay
@@ -107,19 +105,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Store MFA fields in JWT so middleware (Edge) can read them without Prisma
       const userId = token.id as string;
       if (userId) {
-        const [dbUser, mfaRequiredForAllRoles] = await Promise.all([
-          getUserAuthSnapshot(userId),
-          getMfaRequiredForAllRoles(),
-        ]);
+        const dbUser = await getUserAuthSnapshot(userId);
         token.mfaEnabled = dbUser?.mfaEnabled ?? false;
         token.role = dbUser?.role ?? "USER";
         token.firstName = dbUser?.firstName ?? undefined;
         token.accountDeactivated = Boolean(dbUser?.deletedAt);
-        token.mfaEnrollmentRequired = isMfaEnrollmentRequiredForUser({
-          role: token.role as string,
-          mfaEnabled: Boolean(token.mfaEnabled),
-          mfaRequiredForAllRoles,
-        });
+        token.mfaEnrollmentRequired = false;
         token.passwordChangeRequired = Boolean(dbUser?.passwordChangeRequired);
         if (token.mfaEnabled) {
           const [session] = await prisma.session.findMany({
