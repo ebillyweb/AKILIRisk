@@ -12,10 +12,13 @@ import {
   updateInterviewProgress,
 } from "@/lib/data/intake";
 import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
+import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
+import type { IntakeQuestion } from "@/lib/intake/types";
 import { prisma } from "@/lib/db";
 import { saveResponseSchema } from "@/lib/schemas/intake";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { requireFacilitatedSessionForAdvisor } from "@/lib/facilitated/session-access";
+import { getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 
 async function getFacilitatorActor() {
   const session = await auth();
@@ -182,6 +185,33 @@ export async function facilitatedSubmitIntake(facilitatedSessionId: string) {
     return {
       success: false as const,
       error: error instanceof Error ? error.message : "Failed to submit intake",
+    };
+  }
+}
+
+export async function facilitatedGetIntakeScriptQuestions(
+  facilitatedSessionId: string,
+) {
+  try {
+    const actor = await getFacilitatorActor();
+    await requireFacilitatedSessionForAdvisor(facilitatedSessionId);
+
+    const profile = await getAdvisorProfileOrThrow(actor.userId);
+    const [questions, firmName] = await Promise.all([
+      loadIntakeScriptQuestions(),
+      Promise.resolve(profile.firmName?.trim() || profile.brandName?.trim() || null),
+    ]);
+
+    return {
+      success: true as const,
+      questions: personalizeIntakeScript(questions, firmName),
+    };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error ? error.message : "Failed to load intake questions",
+      questions: [] as IntakeQuestion[],
     };
   }
 }

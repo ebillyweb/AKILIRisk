@@ -10,15 +10,16 @@ import { QuestionDisplay } from "@/components/intake/QuestionDisplay";
 import { StepIndicator } from "@/components/intake/StepIndicator";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   facilitatedGetIntakeInterview,
+  facilitatedGetIntakeScriptQuestions,
   facilitatedSaveIntakeResponse,
   facilitatedSubmitIntake,
   facilitatedUpdateIntakeProgress,
 } from "@/lib/actions/facilitated-intake-actions";
-import { getIntakeScriptQuestionsAction } from "@/lib/actions/intake-actions";
 import { useIntakeInterview } from "@/lib/hooks/useIntakeInterview";
 import { isInterviewResponseComplete } from "@/lib/intake/is-response-complete";
 import { useIntakeStore, type InterviewResponse } from "@/lib/intake/store";
@@ -37,6 +38,7 @@ export function FacilitatedIntakeWizard({
   const router = useRouter();
   const [scriptQuestions, setScriptQuestions] = useState<IntakeQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [typedSaving, setTypedSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -57,20 +59,36 @@ export function FacilitatedIntakeWizard({
 
   const { setResponse, setCurrentQuestion, replaceResponses, responses } = useIntakeStore();
 
-  useEffect(() => {
-    async function load() {
+  const loadIntakeData = useCallback(
+    async (isRetry = false) => {
+      setLoadError(null);
+      if (isRetry) {
+        setScriptQuestions([]);
+        replaceResponses({});
+        setCurrentQuestion(0);
+      }
+      setLoading(true);
       try {
         const [scriptResult, interviewResult] = await Promise.all([
-          getIntakeScriptQuestionsAction(),
+          facilitatedGetIntakeScriptQuestions(sessionId),
           facilitatedGetIntakeInterview(sessionId),
         ]);
 
         if (!scriptResult.success) {
-          toast.error(scriptResult.error ?? "Could not load intake questions");
+          const message = scriptResult.error ?? "Could not load intake questions";
+          setLoadError(message);
+          toast.error(message);
           return;
         }
 
         const script = [...scriptResult.questions];
+        if (script.length === 0) {
+          const message = "No intake questions are configured for this environment.";
+          setLoadError(message);
+          toast.error(message);
+          return;
+        }
+
         setScriptQuestions(script);
 
         if (interviewResult.success && interviewResult.interview) {
@@ -102,14 +120,19 @@ export function FacilitatedIntakeWizard({
         }
       } catch (error) {
         console.error(error);
-        toast.error("Failed to load intake");
+        const message = "Failed to load intake";
+        setLoadError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
-    }
+    },
+    [sessionId, replaceResponses, setCurrentQuestion],
+  );
 
-    void load();
-  }, [sessionId, replaceResponses, setCurrentQuestion]);
+  useEffect(() => {
+    void loadIntakeData();
+  }, [loadIntakeData]);
 
   const currentResponse = currentQuestion
     ? getResponseForQuestion(currentQuestion.id)
@@ -259,10 +282,24 @@ export function FacilitatedIntakeWizard({
     return completed;
   }, [scriptQuestions, getResponseForQuestion, responses]);
 
-  if (loading || !currentQuestion) {
+  if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (loadError || !currentQuestion) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-12">
+        <Alert variant="destructive">
+          <AlertTitle>Could not load intake</AlertTitle>
+          <AlertDescription>{loadError ?? "Intake questions are unavailable."}</AlertDescription>
+        </Alert>
+        <Button type="button" className="mt-4" onClick={() => void loadIntakeData(true)}>
+          Try again
+        </Button>
       </div>
     );
   }
