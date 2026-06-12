@@ -388,7 +388,65 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-_None outstanding. See "Fixed" below._
+### Minor: `/api/assessment/enhanced/[id]/results` returns recommendations + actionPlan regardless of `deliverablePhase` / report publish status
+
+- **Where:** `src/app/api/assessment/enhanced/[id]/results/route.ts` — the
+  GET handler scopes by `userId: session.user.id` (owner-only ✓) and then
+  unconditionally returns `assessment.recommendations.map(...)` and the
+  derived `actionPlan`. No check on `assessment.deliverablePhase` or on
+  whether a PUBLISHED `Report` exists for the assessment.
+- **Expected:** Per BRD §6.3 (Phase 1 = "PREVIEW: heat-map view, no plan"),
+  the recommendations and action plan should be suppressed until the
+  advisor publishes the report (deliverablePhase advances to PROFILE).
+- **Actual:** A client whose assessment is in PREVIEW (scored but no
+  PUBLISHED report yet) can read the full recommendation set + action
+  plan via this API. Empirically zero recs come back in the current
+  fixture data because the recommendation rules don't fire for the
+  default maturity-2 seed, but `completeAssessmentForE2E` does invoke
+  `RecommendationEngine` and the rows are written to
+  `AssessmentRecommendation`. Different rules/data → leak manifests.
+- **Severity:** Minor (latent). No PII; the leak surfaces an
+  advisor's pre-publish service catalog to the client earlier than
+  intended. Becomes Major if the recommendation content gets
+  customized per-client and the customizations leak pre-publish.
+- **Fix sketch:** Gate `body.recommendations` and `body.actionPlan` on
+  `assessment.deliverablePhase !== "PREVIEW"` OR on `assessment.reports`
+  containing a row with `status: "PUBLISHED"`. Heat-map score data
+  (`pillarScores`, `overallScore`, `missingControls`) stays visible —
+  that's the explicit PREVIEW affordance.
+- **Test:** `tests/smoke/scoring-deliverable-hunt.spec.ts` — `PREVIEW:
+  /api/assessment/enhanced returns no recommendations until publish`
+  (test.fixme).
+
+### Cosmetic: client dashboard contradicts itself in the regressed intake-approval state
+
+- **Where:** `src/app/(protected)/dashboard/page.tsx` — the hero hub
+  sources `OVERALL RISK` from `PillarScore` rows and `ASSESSMENT` from
+  the assessment row's `status`; the "Your Assessments" body card and
+  the `RiskHeatMap` / `DeliverablePhaseBanner` are gated on
+  `assessmentUnlocked` (`getClientIntakeGateState`).
+- **Expected:** When `intakeApproved=false` but the assessment is
+  `COMPLETED` (scored, PREVIEW phase), both blocks should agree —
+  either show a unified "intake approval was revoked" notice, or
+  surface the existing heat-map + a single, accurate copy line.
+- **Actual:** Hero pill shows `ASSESSMENT: Complete` + `OVERALL RISK
+  1.9/10 MEDIUM RISK`; the body card simultaneously shows "Assessment
+  unlocks after your advisor reviews and approves your intake.
+  Complete your intake and wait for your advisor to approve it." No
+  heat map, no phase banner. Confirmed reproducible with
+  `client@test.com` after `POST /api/test/assessment/prepare`. The
+  state is also reachable in normal flow when an advisor revokes a
+  prior approval (e.g. resets approval status to `IN_REVIEW`).
+- **Severity:** Cosmetic. Confusing UX in a niche flow.
+- **Fix sketch:** Either (a) include the hero's
+  `latestAssessmentForHeatMap` score sources behind the same
+  `assessmentUnlocked` gate so the page presents one unified state,
+  or (b) keep showing the score and replace the "wait for advisor"
+  copy with a focused "your advisor has paused this assessment"
+  notice when scores exist but `intakeApproved=false`.
+- **Test:** `tests/smoke/scoring-deliverable-hunt.spec.ts` — `dashboard
+  does NOT contradict itself when intake is un-approved but assessment
+  is COMPLETED` (test.fixme).
 
 ## Fixed
 
