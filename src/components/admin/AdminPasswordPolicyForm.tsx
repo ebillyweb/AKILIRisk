@@ -14,12 +14,39 @@ type Props = {
   initialPolicy: PasswordPolicy;
 };
 
+type RuleToggleProps = {
+  id: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+};
+
+function RuleToggle({ id, label, checked, onCheckedChange }: RuleToggleProps) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card/40 p-4 transition-colors hover:bg-muted/30"
+    >
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+        className="mt-0.5"
+      />
+      <span className="text-sm font-medium leading-snug">{label}</span>
+    </label>
+  );
+}
+
 export function AdminPasswordPolicyForm({ initialPolicy }: Props) {
   const [minLength, setMinLength] = useState(String(initialPolicy.minLength));
   const [requireUppercase, setRequireUppercase] = useState(
     initialPolicy.requireUppercase
   );
   const [requireNumber, setRequireNumber] = useState(initialPolicy.requireNumber);
+  const [requireSpecialCharacter, setRequireSpecialCharacter] = useState(
+    initialPolicy.requireSpecialCharacter
+  );
   const [complianceNotice, setComplianceNotice] = useState(
     initialPolicy.complianceNotice ?? ""
   );
@@ -38,6 +65,7 @@ export function AdminPasswordPolicyForm({ initialPolicy }: Props) {
         minLength: parsedLength,
         requireUppercase,
         requireNumber,
+        requireSpecialCharacter,
         complianceNotice: complianceNotice.trim() || null,
       });
 
@@ -61,14 +89,15 @@ export function AdminPasswordPolicyForm({ initialPolicy }: Props) {
     minLength: Number.parseInt(minLength, 10) || initialPolicy.minLength,
     requireUppercase,
     requireNumber,
+    requireSpecialCharacter,
     revision: initialPolicy.revision,
     complianceNotice: complianceNotice.trim() || null,
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
+    <div className="space-y-6">
+      <div className="space-y-4 rounded-lg border bg-muted/20 p-4 sm:p-5">
+        <div className="space-y-2 max-w-xs">
           <Label htmlFor="password-min-length">Minimum length</Label>
           <Input
             id="password-min-length"
@@ -78,27 +107,39 @@ export function AdminPasswordPolicyForm({ initialPolicy }: Props) {
             value={minLength}
             onChange={(e) => setMinLength(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground">Between 8 and 128 characters.</p>
         </div>
-        <div className="flex items-end gap-3 rounded-lg border p-4 sm:col-span-2">
-          <Checkbox
-            id="password-uppercase"
-            checked={requireUppercase}
-            onCheckedChange={(value) => setRequireUppercase(value === true)}
-          />
-          <Label htmlFor="password-uppercase">Require uppercase letter</Label>
-        </div>
-      </div>
 
-      <div className="flex items-start gap-3 rounded-lg border p-4">
-        <Checkbox
-          id="password-number"
-          checked={requireNumber}
-          onCheckedChange={(value) => setRequireNumber(value === true)}
-        />
-        <div className="space-y-1">
-          <Label htmlFor="password-number">Require number</Label>
-          <p className="text-sm text-muted-foreground">
-            Preview: {buildPasswordRequirementsMessage(previewPolicy)}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Character requirements</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <RuleToggle
+              id="password-uppercase"
+              label="Require uppercase letter"
+              checked={requireUppercase}
+              onCheckedChange={setRequireUppercase}
+            />
+            <RuleToggle
+              id="password-number"
+              label="Require number"
+              checked={requireNumber}
+              onCheckedChange={setRequireNumber}
+            />
+            <RuleToggle
+              id="password-special"
+              label="Require special character"
+              checked={requireSpecialCharacter}
+              onCheckedChange={setRequireSpecialCharacter}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-md border border-dashed bg-background/60 px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Preview
+          </p>
+          <p className="mt-1 text-sm text-foreground">
+            {buildPasswordRequirementsMessage(previewPolicy)}
           </p>
         </div>
       </div>

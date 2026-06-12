@@ -106,6 +106,7 @@ export async function GET() {
       minLength: policy.minLength,
       requireUppercase: policy.requireUppercase,
       requireNumber: policy.requireNumber,
+      requireSpecialCharacter: policy.requireSpecialCharacter,
     },
     complianceNotice: policy.complianceNotice,
     passwordChangeRequired: Boolean(session.user.passwordChangeRequired),

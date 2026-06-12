@@ -17,7 +17,7 @@ import {
 type PolicyResponse = {
   requirements: Pick<
     PasswordPolicy,
-    "minLength" | "requireUppercase" | "requireNumber"
+    "minLength" | "requireUppercase" | "requireNumber" | "requireSpecialCharacter"
   >;
   complianceNotice: string | null;
   passwordChangeRequired: boolean;

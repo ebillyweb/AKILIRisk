@@ -316,6 +316,7 @@ model PlatformSettings {
   passwordMinLength Int @default(8)
   passwordRequireUppercase Boolean @default(true)
   passwordRequireNumber Boolean @default(true)
+  passwordRequireSpecialCharacter Boolean @default(false)
   passwordPolicyRevision Int @default(1)
   passwordComplianceNotice String?
   updatedAt DateTime @updatedAt

@@ -39,6 +39,26 @@ describe("validatePasswordComplexity", () => {
     }
   });
 
+  it("rejects passwords missing a special character when required", () => {
+    const result = validatePasswordComplexity("Testpass1", {
+      ...DEFAULT_PASSWORD_POLICY,
+      requireSpecialCharacter: true,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/special character/i);
+    }
+  });
+
+  it("accepts passwords with a special character when required", () => {
+    expect(
+      validatePasswordComplexity("Testpass1!", {
+        ...DEFAULT_PASSWORD_POLICY,
+        requireSpecialCharacter: true,
+      })
+    ).toEqual({ ok: true });
+  });
+
   it("does not require lowercase or special characters by default", () => {
     expect(validatePasswordComplexity("TESTPASS1")).toEqual({ ok: true });
   });

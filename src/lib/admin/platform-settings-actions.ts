@@ -19,11 +19,17 @@ const updatePasswordPolicySchema = z
     minLength: z.number().int().min(8).max(128),
     requireUppercase: z.boolean(),
     requireNumber: z.boolean(),
+    requireSpecialCharacter: z.boolean(),
     complianceNotice: z.string().max(2000).nullable(),
   })
-  .refine((d) => d.requireUppercase || d.requireNumber || d.minLength >= 8, {
-    message: "At least one password rule must be enabled",
-  });
+  .refine(
+    (d) =>
+      d.requireUppercase ||
+      d.requireNumber ||
+      d.requireSpecialCharacter ||
+      d.minLength >= 8,
+    { message: "At least one password rule must be enabled" }
+  );
 
 const updateFlagsSchema = z.object({
   advisorGovernanceDashboardEnabled: z.boolean(),
@@ -333,6 +339,7 @@ export async function updatePasswordPolicy(input: unknown) {
         passwordMinLength: parsed.data.minLength,
         passwordRequireUppercase: parsed.data.requireUppercase,
         passwordRequireNumber: parsed.data.requireNumber,
+        passwordRequireSpecialCharacter: parsed.data.requireSpecialCharacter,
         passwordPolicyRevision: nextRevision,
         passwordComplianceNotice: parsed.data.complianceNotice,
       },
@@ -340,6 +347,7 @@ export async function updatePasswordPolicy(input: unknown) {
         passwordMinLength: parsed.data.minLength,
         passwordRequireUppercase: parsed.data.requireUppercase,
         passwordRequireNumber: parsed.data.requireNumber,
+        passwordRequireSpecialCharacter: parsed.data.requireSpecialCharacter,
         passwordPolicyRevision: nextRevision,
         passwordComplianceNotice: parsed.data.complianceNotice,
       },

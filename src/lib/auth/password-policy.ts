@@ -4,6 +4,7 @@ export type PasswordPolicy = {
   minLength: number;
   requireUppercase: boolean;
   requireNumber: boolean;
+  requireSpecialCharacter: boolean;
   revision: number;
   complianceNotice: string | null;
 };
@@ -12,9 +13,13 @@ export const DEFAULT_PASSWORD_POLICY: PasswordPolicy = {
   minLength: 8,
   requireUppercase: true,
   requireNumber: true,
+  requireSpecialCharacter: false,
   revision: 1,
   complianceNotice: null,
 };
+
+/** Non-alphanumeric counts as a special character for password policy. */
+export const PASSWORD_SPECIAL_CHAR_PATTERN = /[^A-Za-z0-9]/;
 
 /** Shared compliant password for seeds, fixtures, and docs. */
 export const TEST_PASSWORD = "Testpass1";
@@ -29,6 +34,7 @@ export function buildPasswordRequirementsMessage(
   const parts: string[] = [`at least ${policy.minLength} characters`];
   if (policy.requireUppercase) parts.push("one uppercase letter");
   if (policy.requireNumber) parts.push("one number");
+  if (policy.requireSpecialCharacter) parts.push("one special character");
   return `Password must include ${parts.join(", ")}.`;
 }
 
@@ -57,6 +63,15 @@ export function validatePasswordComplexity(
     return {
       ok: false,
       error: "Password must contain at least one number",
+    };
+  }
+  if (
+    policy.requireSpecialCharacter &&
+    !PASSWORD_SPECIAL_CHAR_PATTERN.test(password)
+  ) {
+    return {
+      ok: false,
+      error: "Password must contain at least one special character",
     };
   }
   return { ok: true };
@@ -104,6 +119,12 @@ export function passwordComplexitySchemaForPolicy(policy: PasswordPolicy) {
   }
   if (policy.requireNumber) {
     schema = schema.regex(/[0-9]/, "Password must contain at least one number");
+  }
+  if (policy.requireSpecialCharacter) {
+    schema = schema.regex(
+      PASSWORD_SPECIAL_CHAR_PATTERN,
+      "Password must contain at least one special character"
+    );
   }
   return schema;
 }

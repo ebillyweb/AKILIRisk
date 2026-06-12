@@ -13,6 +13,7 @@ type PlatformPasswordRow = {
   passwordMinLength: number;
   passwordRequireUppercase: boolean;
   passwordRequireNumber: boolean;
+  passwordRequireSpecialCharacter: boolean;
   passwordPolicyRevision: number;
   passwordComplianceNotice: string | null;
 };
@@ -23,6 +24,7 @@ function rowToPolicy(row: PlatformPasswordRow | null | undefined): PasswordPolic
     minLength: row.passwordMinLength,
     requireUppercase: row.passwordRequireUppercase,
     requireNumber: row.passwordRequireNumber,
+    requireSpecialCharacter: row.passwordRequireSpecialCharacter,
     revision: row.passwordPolicyRevision,
     complianceNotice: row.passwordComplianceNotice,
   };
@@ -32,6 +34,7 @@ const passwordPolicySelect = {
   passwordMinLength: true,
   passwordRequireUppercase: true,
   passwordRequireNumber: true,
+  passwordRequireSpecialCharacter: true,
   passwordPolicyRevision: true,
   passwordComplianceNotice: true,
 } as const;
@@ -69,12 +72,16 @@ export async function getPasswordPolicyForAdmin(): Promise<PasswordPolicyAdminDa
 
 export function policyRulesChanged(
   prior: PasswordPolicy,
-  next: Pick<PasswordPolicy, "minLength" | "requireUppercase" | "requireNumber">
+  next: Pick<
+    PasswordPolicy,
+    "minLength" | "requireUppercase" | "requireNumber" | "requireSpecialCharacter"
+  >
 ): boolean {
   return (
     prior.minLength !== next.minLength ||
     prior.requireUppercase !== next.requireUppercase ||
-    prior.requireNumber !== next.requireNumber
+    prior.requireNumber !== next.requireNumber ||
+    prior.requireSpecialCharacter !== next.requireSpecialCharacter
   );
 }
 
