@@ -153,7 +153,9 @@ export default async function SettingsPage({
             </CardHeader>
             <CardContent>
               {advisorDetails !== null && (
-                <AdvisorPersonalDetailsForm initialData={advisorDetails} />
+                <AdvisorPersonalDetailsForm
+                  initialData={{ ...advisorDetails, email: user.email }}
+                />
               )}
               {clientDetails !== null && (
                 <ClientPersonalDetailsForm initialData={clientDetails} />

@@ -24,6 +24,8 @@ export async function getAdvisorPersonalDetails() {
         lastName: user?.lastName ?? '',
         phone: profile.phone ?? '',
         jobTitle: profile.jobTitle ?? '',
+        firmName: profile.firmName ?? '',
+        licenseNumber: profile.licenseNumber ?? '',
       } as AdvisorPersonalDetailsFormData,
       error: null,
     };
@@ -41,13 +43,18 @@ export async function updateAdvisorPersonalDetails(data: unknown) {
   }
   try {
     const profile = await getAdvisorProfileOrThrow(session.user.id);
-    const { firstName, lastName, phone, jobTitle } = parsed.data;
+    const { firstName, lastName, phone, jobTitle, firmName, licenseNumber } = parsed.data;
+    const displayName = [firstName, lastName]
+      .map((part) => part?.trim())
+      .filter(Boolean)
+      .join(' ');
     await prisma.$transaction([
       prisma.user.update({
         where: { id: session.user.id },
         data: {
           firstName: firstName?.trim() || null,
           lastName: lastName?.trim() || null,
+          ...(displayName ? { name: displayName } : {}),
         },
       }),
       prisma.advisorProfile.update({
@@ -55,10 +62,13 @@ export async function updateAdvisorPersonalDetails(data: unknown) {
         data: {
           phone: phone?.trim() || null,
           jobTitle: jobTitle?.trim() || null,
+          firmName: firmName?.trim() || null,
+          licenseNumber: licenseNumber?.trim() || null,
         },
       }),
     ]);
     revalidatePath('/settings');
+    revalidatePath('/advisor/settings');
     revalidatePath('/advisor');
     return { success: true, error: null };
   } catch (e) {

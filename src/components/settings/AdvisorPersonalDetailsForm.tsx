@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateAdvisorPersonalDetails } from '@/lib/actions/personal-profile';
-import type { AdvisorPersonalDetailsFormData } from '@/lib/schemas/profile';
+import type { AdvisorPersonalDetailsInitialData } from '@/lib/schemas/profile';
 
 interface AdvisorPersonalDetailsFormProps {
-  initialData: AdvisorPersonalDetailsFormData;
+  initialData: AdvisorPersonalDetailsInitialData;
 }
 
 export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetailsFormProps) {
@@ -19,15 +19,24 @@ export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetai
   const [lastName, setLastName] = useState(initialData.lastName ?? '');
   const [phone, setPhone] = useState(initialData.phone ?? '');
   const [jobTitle, setJobTitle] = useState(initialData.jobTitle ?? '');
+  const [firmName, setFirmName] = useState(initialData.firmName ?? '');
+  const [licenseNumber, setLicenseNumber] = useState(initialData.licenseNumber ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const result = await updateAdvisorPersonalDetails({ firstName, lastName, phone, jobTitle });
+      const result = await updateAdvisorPersonalDetails({
+        firstName,
+        lastName,
+        phone,
+        jobTitle,
+        firmName,
+        licenseNumber,
+      });
       if (result.success) {
-        toast.success('Personal details updated');
+        toast.success('Profile updated');
         router.refresh();
       } else {
         toast.error(result.error ?? 'Failed to update');
@@ -41,6 +50,23 @@ export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetai
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {initialData.email ? (
+        <div className="space-y-2">
+          <Label htmlFor="advisor-email">Email</Label>
+          <Input
+            id="advisor-email"
+            type="email"
+            value={initialData.email}
+            readOnly
+            disabled
+            className="bg-muted/50"
+          />
+          <p className="text-xs text-muted-foreground">
+            Contact your administrator to change your sign-in email.
+          </p>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="advisor-firstName">First name</Label>
@@ -88,9 +114,31 @@ export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetai
             disabled={isSubmitting}
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="advisor-firmName">Firm</Label>
+          <Input
+            id="advisor-firmName"
+            type="text"
+            value={firmName}
+            onChange={(e) => setFirmName(e.target.value)}
+            placeholder="Firm name"
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="advisor-licenseNumber">License number</Label>
+          <Input
+            id="advisor-licenseNumber"
+            type="text"
+            value={licenseNumber}
+            onChange={(e) => setLicenseNumber(e.target.value)}
+            placeholder="License number"
+            disabled={isSubmitting}
+          />
+        </div>
       </div>
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Saving…' : 'Save personal details'}
+        {isSubmitting ? 'Saving…' : 'Save profile'}
       </Button>
     </form>
   );

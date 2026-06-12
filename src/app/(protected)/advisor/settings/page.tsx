@@ -11,6 +11,7 @@ import {
 } from "@/lib/subscription/validation";
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
+import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,18 @@ export default async function AdvisorSettingsPage() {
   const features =
     (await getSubscriptionFeatures(profile.userId)) ?? STARTER_SUBSCRIPTION_FEATURES;
 
-  const displayName =
-    profile.user.firstName && profile.user.lastName
-      ? `${profile.user.firstName} ${profile.user.lastName}`
-      : profile.user.name || "—";
-
   const passwordChangeRequired = Boolean(session?.user?.passwordChangeRequired);
   const changePasswordHref = `/change-password?callbackUrl=${encodeURIComponent(ADVISOR_SETTINGS_CALLBACK)}`;
+
+  const profileInitialData = {
+    firstName: profile.user.firstName ?? "",
+    lastName: profile.user.lastName ?? "",
+    phone: profile.phone ?? "",
+    jobTitle: profile.jobTitle ?? "",
+    firmName: profile.firmName ?? "",
+    licenseNumber: profile.licenseNumber ?? "",
+    email: profile.user.email,
+  };
 
   return (
     <div className="space-y-8">
@@ -95,44 +101,18 @@ export default async function AdvisorSettingsPage() {
           platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
         />
 
-        {/* Advisor profile (admin-managed; distinct from client-facing support contacts in branding) */}
+        {/* Advisor profile — self-service except email */}
         <div className="rounded-xl border border-border/70 bg-card p-6 shadow-sm">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold tracking-tight">Your profile</h2>
             <p className="text-sm text-muted-foreground">
-              Your name and firm as shown in client invitation emails. Updated by your
-              administrator.
+              Your name and firm as shown in client invitation emails. Email changes
+              require your administrator.
             </p>
           </div>
-          <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Name</dt>
-              <dd className="mt-1 text-sm">{displayName}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</dt>
-              <dd className="mt-1 text-sm">{profile.user.email}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</dt>
-              <dd className="mt-1 text-sm">{profile.phone || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Firm</dt>
-              <dd className="mt-1 text-sm">{profile.firmName || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Job title</dt>
-              <dd className="mt-1 text-sm">{profile.jobTitle || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">License</dt>
-              <dd className="mt-1 text-sm">{profile.licenseNumber || "—"}</dd>
-            </div>
-          </dl>
-          <p className="mt-5 border-t pt-4 text-xs text-muted-foreground">
-            To change this information, contact your administrator.
-          </p>
+          <div className="mt-6">
+            <AdvisorPersonalDetailsForm initialData={profileInitialData} />
+          </div>
         </div>
 
         <div className="rounded-xl border bg-card p-6 shadow-sm">

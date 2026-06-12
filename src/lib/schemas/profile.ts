@@ -61,14 +61,19 @@ export const GOVERNANCE_ROLE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
-// Advisor profile personal details (name, phone, job title)
+// Advisor profile personal details (name, phone, job title, firm, license)
 export const advisorPersonalDetailsSchema = z.object({
   firstName: z.string().max(80, 'First name must be 80 characters or less').optional().or(z.literal('')),
   lastName: z.string().max(80, 'Last name must be 80 characters or less').optional().or(z.literal('')),
   phone: z.string().max(30, 'Phone must be 30 characters or less').optional().or(z.literal('')),
   jobTitle: z.string().max(100, 'Job title must be 100 characters or less').optional().or(z.literal('')),
+  firmName: z.string().max(200, 'Firm name must be 200 characters or less').optional().or(z.literal('')),
+  licenseNumber: z.string().max(100, 'License number must be 100 characters or less').optional().or(z.literal('')),
 });
 export type AdvisorPersonalDetailsFormData = z.infer<typeof advisorPersonalDetailsSchema>;
+export type AdvisorPersonalDetailsInitialData = AdvisorPersonalDetailsFormData & {
+  email?: string;
+};
 
 // Client profile personal details.
 // Round-11 commit 2.1 (BRD §5.1 amendment): contact + address + DOB
