@@ -104,8 +104,9 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
     config: {
       icon: Settings,
       kicker: "Configuration",
-      title: "Risk-tier thresholds",
-      subtitle: "Low, medium, and high cutoffs for resilience scores (super-admin only)",
+      title: "Score cutoffs for risk labels",
+      subtitle:
+        "Decide when assessment results are labeled low, medium, high, or urgent (super-admin only)",
     },
   },
   {

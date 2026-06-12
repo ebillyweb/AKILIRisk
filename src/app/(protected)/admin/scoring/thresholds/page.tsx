@@ -11,12 +11,11 @@ export default async function AdminRiskThresholdsPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Risk-tier thresholds</CardTitle>
+          <CardTitle className="text-base">When is a client in good shape?</CardTitle>
           <CardDescription>
-            BRD §4.2 + §7.1: configurable Low / Medium / High cutoffs against the 0–100
-            resilience score. Defaults are 80 / 60 / 40 (the original hardcoded values).
-            Audit row written on every save (filter the audit log by{" "}
-            <code className="text-xs">risk_thresholds.update</code> to see history).
+            Set platform-wide score lines that decide whether an assessment result is
+            labeled low, medium, high, or urgent. Advisors and clients see these labels
+            on dashboards and in reports.
           </CardDescription>
         </CardHeader>
         <CardContent>

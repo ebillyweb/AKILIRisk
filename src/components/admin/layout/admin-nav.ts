@@ -65,7 +65,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       },
       {
         href: "/admin/scoring/thresholds",
-        label: "Risk-tier thresholds",
+        label: "Score cutoffs",
         icon: Shield,
         superAdminOnly: true,
       },

@@ -93,8 +93,8 @@ export default async function AdminControlCenterPage() {
               {superUser && (
                 <WorkspaceCard
                   href="/admin/scoring/thresholds"
-                  title="Risk-tier thresholds"
-                  description="Low, medium, and high resilience cutoffs"
+                  title="Score cutoffs for risk labels"
+                  description="When results count as low, medium, high, or urgent"
                   icon={Shield}
                   badge={{ text: "Super Admin", variant: "outline" }}
                 />
