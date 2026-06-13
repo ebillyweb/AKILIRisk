@@ -27,9 +27,10 @@ export default async function AdvisorLayout({
     redirect("/dashboard?error=unauthorized");
   }
 
+  const pathname = (await headers()).get("x-akili-pathname") ?? "";
+  const onBillingPage = pathname === "/advisor/billing";
+
   if (role === "ADVISOR" && userId) {
-    const pathname = (await headers()).get("x-akili-pathname") ?? "";
-    const onBillingPage = pathname === "/advisor/billing";
     if (!onBillingPage) {
       const hub = await getAdvisorHubAccessForUserId(userId);
       if (!hub.allowed) {
@@ -51,7 +52,12 @@ export default async function AdvisorLayout({
 
   const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled] = await Promise.all([
     getPlatformFeatureFlags(),
-    getAdvisorDashboardData(),
+    onBillingPage
+      ? Promise.resolve({
+          success: true as const,
+          data: { unreadNotificationCount: 0 },
+        })
+      : getAdvisorDashboardData(),
     userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
     userId ? canAccessAdvisorBilling(userId) : Promise.resolve(true),
   ]);
