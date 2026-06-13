@@ -77,12 +77,25 @@ export async function GET(
           },
           orderBy: { priority: 'asc' }
         },
+        // BRD §6.3 Phase 1 PREVIEW: heat-map view, no plan. The
+        // recommendation engine writes AssessmentRecommendation rows as
+        // soon as scoring completes — those rows must NOT surface to the
+        // client until the advisor publishes a Report. We surface the
+        // plan only when the assessment has at least one PUBLISHED Report
+        // (i.e. deliverablePhase has advanced past PREVIEW).
+        reports: {
+          where: { status: "PUBLISHED" },
+          select: { id: true },
+          take: 1,
+        },
       }
     });
 
     if (!assessment) {
       return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
     }
+
+    const hasPublishedReport = assessment.reports.length > 0;
 
     // Calculate overall score from pillar scores
     const overallScore = calculateOverallScore(assessment.scores);
@@ -103,8 +116,10 @@ export async function GET(
       Array.isArray(score.missingControls) ? score.missingControls : []
     );
 
-    // Generate action plan from missing controls and recommendations
-    const actionPlan = generateActionPlan(assessment.scores, assessment.recommendations);
+    // Action plan is recommendation-derived UI copy; same publish gate.
+    const actionPlan = hasPublishedReport
+      ? generateActionPlan(assessment.scores, assessment.recommendations)
+      : [];
 
     const result: AssessmentResult = {
       assessment: {
@@ -121,17 +136,19 @@ export async function GET(
         missingControls: Array.isArray(score.missingControls) ? score.missingControls : [],
       })),
       overallScore,
-      recommendations: assessment.recommendations.map((rec) => ({
-        id: rec.serviceRecommendation.id,
-        name: rec.serviceRecommendation.name,
-        description: rec.serviceRecommendation.description,
-        category: rec.serviceRecommendation.category,
-        priority: rec.priority,
-        estimatedCost: rec.serviceRecommendation.estimatedCost ?? undefined,
-        timeframe: rec.serviceRecommendation.timeframe ?? undefined,
-        status: rec.status,
-        triggerReason: rec.triggerReason,
-      })),
+      recommendations: hasPublishedReport
+        ? assessment.recommendations.map((rec) => ({
+            id: rec.serviceRecommendation.id,
+            name: rec.serviceRecommendation.name,
+            description: rec.serviceRecommendation.description,
+            category: rec.serviceRecommendation.category,
+            priority: rec.priority,
+            estimatedCost: rec.serviceRecommendation.estimatedCost ?? undefined,
+            timeframe: rec.serviceRecommendation.timeframe ?? undefined,
+            status: rec.status,
+            triggerReason: rec.triggerReason,
+          }))
+        : [],
       answers,
       missingControls: allMissingControls,
       actionPlan,

@@ -48,6 +48,7 @@ interface AdminUser {
   isVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
+  lastLoginAt: Date | null;
 }
 
 interface AdminUserManagementListProps {
@@ -249,6 +250,7 @@ export function AdminUserManagementList({
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead>Last Login</TableHead>
               <TableHead className="w-[70px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -296,6 +298,14 @@ export function AdminUserManagementList({
 
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
+                  </TableCell>
+
+                  <TableCell className="text-sm text-muted-foreground">
+                    {user.lastLoginAt
+                      ? formatDistanceToNow(new Date(user.lastLoginAt), {
+                          addSuffix: true,
+                        })
+                      : "Never"}
                   </TableCell>
 
                   <TableCell>

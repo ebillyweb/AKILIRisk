@@ -4,10 +4,12 @@ const {
   findManySpy,
   updateSpy,
   createSpy,
+  userUpdateSpy,
 } = vi.hoisted(() => ({
   findManySpy: vi.fn(),
   updateSpy: vi.fn(),
   createSpy: vi.fn(),
+  userUpdateSpy: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -16,6 +18,9 @@ vi.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => findManySpy(...args),
       update: (...args: unknown[]) => updateSpy(...args),
       create: (...args: unknown[]) => createSpy(...args),
+    },
+    user: {
+      update: (...args: unknown[]) => userUpdateSpy(...args),
     },
   },
 }));
@@ -26,6 +31,8 @@ beforeEach(() => {
   findManySpy.mockReset();
   updateSpy.mockReset();
   createSpy.mockReset();
+  userUpdateSpy.mockReset();
+  userUpdateSpy.mockResolvedValue({});
 });
 
 describe("markSessionMfaVerified", () => {
@@ -38,6 +45,10 @@ describe("markSessionMfaVerified", () => {
     expect(updateSpy).toHaveBeenCalledWith({
       where: { id: "sess-1" },
       data: { mfaVerified: true },
+    });
+    expect(userUpdateSpy).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { lastLoginAt: expect.any(Date) },
     });
     expect(createSpy).not.toHaveBeenCalled();
   });
@@ -54,5 +65,9 @@ describe("markSessionMfaVerified", () => {
     expect(data.mfaVerified).toBe(true);
     expect(typeof data.sessionToken).toBe("string");
     expect(data.sessionToken.length).toBeGreaterThan(0);
+    expect(userUpdateSpy).toHaveBeenCalledWith({
+      where: { id: "user-2" },
+      data: { lastLoginAt: expect.any(Date) },
+    });
   });
 });

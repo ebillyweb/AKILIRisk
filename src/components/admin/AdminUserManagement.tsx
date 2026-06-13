@@ -15,6 +15,7 @@ interface AdminUser {
   isVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
+  lastLoginAt: Date | null;
 }
 
 interface AdminUserManagementProps {

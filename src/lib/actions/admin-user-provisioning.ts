@@ -547,6 +547,7 @@ export async function getAdminUsers() {
         emailVerified: true,
         createdAt: true,
         updatedAt: true,
+        lastLoginAt: true,
       },
       orderBy: [
         { role: "desc" }, // Super admins first

@@ -410,6 +410,7 @@ describe("Admin User Provisioning", () => {
           emailVerified: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
+          lastLoginAt: new Date("2026-06-10"),
         },
         {
           id: "admin-2",
@@ -419,6 +420,7 @@ describe("Admin User Provisioning", () => {
           emailVerified: null, // Unverified
           createdAt: new Date(),
           updatedAt: new Date(),
+          lastLoginAt: null,
         },
       ];
 
@@ -439,6 +441,9 @@ describe("Admin User Provisioning", () => {
       // Check email decryption
       expect(result.data[0].email).toBe("test@example.com");
       expect(result.data[1].email).toBe("test@example.com");
+
+      expect(result.data[0].lastLoginAt).toEqual(new Date("2026-06-10"));
+      expect(result.data[1].lastLoginAt).toBeNull();
     });
 
     it("should only return active admin users", async () => {
@@ -459,6 +464,7 @@ describe("Admin User Provisioning", () => {
           emailVerified: true,
           createdAt: true,
           updatedAt: true,
+          lastLoginAt: true,
         }),
         orderBy: [
           { role: "desc" }, // Super admins first

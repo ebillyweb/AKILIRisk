@@ -4,6 +4,7 @@ import { ScureBase32Plugin } from "@otplib/plugin-base32-scure";
 import { toDataURL } from "qrcode";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
+import { recordUserLogin } from "@/lib/auth/record-login";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { userEmailForDisplay } from "@/lib/auth/user-email";
 
@@ -218,6 +219,7 @@ export async function markSessionMfaVerified(userId: string): Promise<void> {
       where: { id: activeSession.id },
       data: { mfaVerified: true },
     });
+    await recordUserLogin(userId);
     return;
   }
 
@@ -230,6 +232,7 @@ export async function markSessionMfaVerified(userId: string): Promise<void> {
       mfaVerified: true,
     },
   });
+  await recordUserLogin(userId);
 }
 
 /**

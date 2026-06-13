@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import authConfig from "@/lib/auth.config";
 import { normalizeUserRoleString } from "@/lib/auth-roles";
 import { verifyAdminEmailOnFirstSignIn } from "@/lib/auth/verify-admin-on-sign-in";
+import { recordUserLogin } from "@/lib/auth/record-login";
 import { getUserAuthSnapshot } from "@/lib/auth/user-auth-snapshot";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
@@ -90,6 +91,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           entityId: user.id,
           metadata: { mfaEnabled: Boolean(dbUser?.mfaEnabled) },
         });
+
+        if (!dbUser?.mfaEnabled) {
+          await recordUserLogin(user.id);
+        }
 
         await verifyAdminEmailOnFirstSignIn(user.id);
       }
