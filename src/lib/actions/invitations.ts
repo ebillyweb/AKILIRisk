@@ -1,7 +1,7 @@
 "use server";
 
 import type { UserRole } from "@prisma/client";
-import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { requireAdvisorRole, getAdvisorProfileOrThrow, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
 import {
   assertCanAddClientForAdvisorProfile,
   ClientLimitError,

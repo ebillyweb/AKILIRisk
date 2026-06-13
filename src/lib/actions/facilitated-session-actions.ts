@@ -2,10 +2,7 @@
 
 import type { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import {
-  requireAdvisorRole,
-  getAdvisorProfileOrThrow,
-} from "@/lib/advisor/auth";
+import { requireAdvisorRole, getAdvisorProfileOrThrow, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
 import { assertCanAddClientForAdvisorProfile } from "@/lib/billing/subscription-service";
 import {
   createIntakeInterview,

@@ -17,6 +17,9 @@ test.describe("advisor billing gate", () => {
 
     await page.waitForURL(/\/advisor\/billing(\?|$)/, { timeout: 30_000 });
     expect(new URL(page.url()).pathname).toBe("/advisor/billing");
+    expect(new URL(page.url()).searchParams.get("notice")).toBe(
+      "subscription_required",
+    );
 
     await expect(page.getByRole("heading", { name: /^Billing$/ })).toBeVisible();
   });

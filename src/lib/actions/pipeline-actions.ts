@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import type { UserRole } from '@prisma/client';
-import { requireAdvisorRole, getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
+import { requireAdvisorRole, getAdvisorProfileOrThrow, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
 import {
   countInactiveClientAssignmentsForAdvisorUser,
   getClientDetailForAdvisorUser,
@@ -33,8 +33,7 @@ export async function getClientPipelineData(options?: { inactive?: boolean }) {
       data: { clients, metrics, profile: await getAdvisorProfileOrThrow(userId) },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get client pipeline data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get client pipeline data') };
   }
 }
 
@@ -103,8 +102,7 @@ export async function addDocumentRequirement(data: unknown) {
       data: requirement,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to add document requirement';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to add document requirement') };
   }
 }
 
@@ -178,8 +176,7 @@ export async function removeDocumentRequirement(requirementId: string) {
       success: true,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to remove document requirement';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to remove document requirement') };
   }
 }
 
@@ -194,7 +191,6 @@ export async function getClientDetailData(clientId: string) {
       data: clientDetail,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get client detail data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get client detail data') };
   }
 }

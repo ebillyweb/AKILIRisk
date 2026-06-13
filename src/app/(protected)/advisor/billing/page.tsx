@@ -12,11 +12,12 @@ import { getBillingPageData } from "@/lib/actions/billing";
 export default async function AdvisorBillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string }>;
+  searchParams: Promise<{ checkout?: string; notice?: string }>;
 }) {
   const sp = await searchParams;
   const checkout =
     sp.checkout === "success" ? "success" : sp.checkout === "cancel" ? "cancel" : null;
+  const subscriptionRequiredNotice = sp.notice === "subscription_required";
 
   const billingEnabled = process.env.ENABLE_BILLING_FEATURES !== "false";
 
@@ -80,6 +81,7 @@ export default async function AdvisorBillingPage({
       initialSubscription={sub}
       initialInvoices={pageRes.data.invoices}
       checkoutNotice={checkout}
+      subscriptionRequiredNotice={subscriptionRequiredNotice}
       billingEnabled={billingEnabled}
       planPrices={planPrices}
       debugBilling={isAdvisorBillingDebugEnabled()}

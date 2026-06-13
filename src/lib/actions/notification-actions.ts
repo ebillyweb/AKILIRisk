@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { requireAdvisorRole } from '@/lib/advisor/auth';
+import { requireAdvisorRole, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
 import { getUserPreferences, updatePreferences } from '@/lib/notifications/preferences';
 
 // Zod schema for notification preferences
@@ -34,8 +34,7 @@ export async function getNotificationPreferencesAction() {
       data: preferences,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get notification preferences';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get notification preferences') };
   }
 }
 
@@ -78,7 +77,6 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
       data: updatedPreferences,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update notification preferences';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to update notification preferences') };
   }
 }

@@ -1,27 +1,20 @@
 import type { CSSProperties } from "react";
-import type { SubscriptionStatus } from "@prisma/client";
 import Link from "next/link";
-import { CreditCard, Package, Pencil, UserPlus } from "lucide-react";
+import { AlertTriangle, CreditCard, Package, Pencil, UserPlus } from "lucide-react";
 import {
   advisorBrandInitials,
   pickAdvisorBrandPrimary,
   pickAdvisorBrandSecondary,
 } from "@/components/admin/admin-advisor-list-styles";
-import { subscriptionEntitlesAdvisorPortal } from "@/lib/billing/advisor-portal-subscription";
+import { getAdminAdvisorHubDisplay } from "@/lib/admin/advisor-hub-display";
+import { isBillingEnabled } from "@/lib/billing/config";
 import { getAdvisorsForAdmin, type AdvisorsAdminScope } from "@/lib/admin/queries";
 import { looksLikeAdvisorBrandingS3Url } from "@/lib/branding/advisor-logo-display";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge, badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { VariantProps } from "class-variance-authority";
-
-function humanizeSubscriptionStatus(status: string) {
-  return status
-    .split("_")
-    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(" ");
-}
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function humanizeEnumToken(value: string) {
   return value
@@ -30,40 +23,7 @@ function humanizeEnumToken(value: string) {
     .join(" ");
 }
 
-function subscriptionStatusBadgeVariant(
-  status: string | undefined,
-  subscription: {
-    status: string;
-    currentPeriodEnd: Date | string;
-    cancelAtPeriodEnd: boolean;
-  } | null | undefined
-): VariantProps<typeof badgeVariants>["variant"] {
-  if (!status || !subscription) return "outline";
-  const row = {
-    status: subscription.status as SubscriptionStatus,
-    currentPeriodEnd:
-      typeof subscription.currentPeriodEnd === "string"
-        ? new Date(subscription.currentPeriodEnd)
-        : subscription.currentPeriodEnd,
-    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-  };
-  if (!subscriptionEntitlesAdvisorPortal(row)) {
-    return "secondary";
-  }
-  switch (status) {
-    case "ACTIVE":
-      return "success";
-    case "GRACE_PERIOD":
-    case "PAST_DUE":
-      return "warning";
-    case "UNPAID":
-      return "warning";
-    case "CANCELLED":
-      return "secondary";
-    default:
-      return "outline";
-  }
-}
+export type AdvisorsAdminFilter = AdvisorsAdminScope | "attention";
 
 export default async function AdminAdvisorsPage({
   searchParams,
@@ -71,8 +31,33 @@ export default async function AdminAdvisorsPage({
   searchParams: Promise<{ filter?: string }>;
 }) {
   const sp = await searchParams;
-  const scope: AdvisorsAdminScope = sp.filter === "all" ? "all" : "active";
-  const advisors = await getAdvisorsForAdmin({ scope });
+  const filter: AdvisorsAdminFilter =
+    sp.filter === "all"
+      ? "all"
+      : sp.filter === "attention"
+        ? "attention"
+        : "active";
+  const billingEnabled = isBillingEnabled();
+  const allAdvisors = await getAdvisorsForAdmin({
+    scope: filter === "all" ? "all" : "active",
+  });
+
+  const advisorsWithStatus = allAdvisors.map((a) => ({
+    advisor: a,
+    hub: getAdminAdvisorHubDisplay({
+      deletedAt: a.deletedAt,
+      advisorPortalAccessEnabled: a.advisorPortalAccessEnabled,
+      billingEnabled,
+      subscription: a.subscription,
+    }),
+  }));
+
+  const advisors =
+    filter === "attention"
+      ? advisorsWithStatus.filter(({ hub }) => hub.needsAttention)
+      : advisorsWithStatus;
+
+  const attentionCount = advisorsWithStatus.filter(({ hub }) => hub.needsAttention).length;
 
   return (
     <div className="space-y-6">
@@ -84,7 +69,7 @@ export default async function AdminAdvisorsPage({
           </h1>
           <div className="flex flex-wrap gap-2 text-sm">
             <Button
-              variant={scope === "active" ? "default" : "outline"}
+              variant={filter === "active" ? "default" : "outline"}
               size="sm"
               className="h-8"
               asChild
@@ -92,7 +77,18 @@ export default async function AdminAdvisorsPage({
               <Link href="/admin/advisors">Active</Link>
             </Button>
             <Button
-              variant={scope === "all" ? "default" : "outline"}
+              variant={filter === "attention" ? "default" : "outline"}
+              size="sm"
+              className="h-8"
+              asChild
+            >
+              <Link href="/admin/advisors?filter=attention">
+                Needs attention
+                {attentionCount > 0 ? ` (${attentionCount})` : ""}
+              </Link>
+            </Button>
+            <Button
+              variant={filter === "all" ? "default" : "outline"}
               size="sm"
               className="h-8"
               asChild
@@ -109,15 +105,38 @@ export default async function AdminAdvisorsPage({
         </Button>
       </div>
 
+      {filter !== "attention" && attentionCount > 0 ? (
+        <Alert variant="warning">
+          <AlertTriangle className="size-4" />
+          <AlertTitle>
+            {attentionCount} advisor{attentionCount === 1 ? "" : "s"} need attention
+          </AlertTitle>
+          <AlertDescription>
+            These accounts cannot use the advisor hub (expired grace, no subscription, portal
+            off, or deactivated).{" "}
+            <Link href="/admin/advisors?filter=attention" className="font-medium underline">
+              View needs attention
+            </Link>
+            <Link href="/admin/advisors?filter=attention" className="font-medium underline">
+              View needs attention
+            </Link>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {advisors.length === 0 ? (
         <Card>
           <CardContent className="py-8">
-            <p className="text-center text-sm text-muted-foreground">No advisors found.</p>
+            <p className="text-center text-sm text-muted-foreground">
+              {filter === "attention"
+                ? "No advisors need attention right now."
+                : "No advisors found."}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
-          {advisors.map((a) => {
+          {advisors.map(({ advisor: a, hub }) => {
             const isDeactivated = Boolean(a.deletedAt);
             const isWhiteLabel = Boolean(a.subscription?.whiteLabel);
             const profile = a.advisorProfile;
@@ -164,9 +183,11 @@ export default async function AdminAdvisorsPage({
                   "overflow-hidden transition-shadow",
                   isDeactivated
                     ? "border border-dashed border-muted-foreground/35 bg-muted/30 shadow-none"
-                    : hasBrandColors
-                      ? "border-2 shadow-sm"
-                      : "border shadow-sm",
+                    : !hub.hubAllowed
+                      ? "border-2 border-amber-500/45 bg-amber-500/[0.03] shadow-sm"
+                      : hasBrandColors
+                        ? "border-2 shadow-sm"
+                        : "border shadow-sm",
                   !isDeactivated && isWhiteLabel && "shadow-md"
                 )}
                 style={cardSurfaceStyle}
@@ -175,6 +196,11 @@ export default async function AdminAdvisorsPage({
                 {isDeactivated ? (
                   <div
                     className="h-1.5 w-full shrink-0 bg-muted-foreground/25"
+                    aria-hidden
+                  />
+                ) : !hub.hubAllowed ? (
+                  <div
+                    className="h-1.5 w-full shrink-0 bg-amber-500/80"
                     aria-hidden
                   />
                 ) : topBarBackground ? (
@@ -277,6 +303,20 @@ export default async function AdminAdvisorsPage({
                         isDeactivated && "opacity-70"
                       )}
                     >
+                      <Badge
+                        variant={hub.hubBadgeVariant}
+                        className="inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
+                        title={hub.hubDetail ?? "Advisor hub access"}
+                      >
+                        <AlertTriangle
+                          className={cn(
+                            "size-3 shrink-0 opacity-80",
+                            hub.hubAllowed && "hidden"
+                          )}
+                          aria-hidden
+                        />
+                        <span className="truncate">{hub.hubLabel}</span>
+                      </Badge>
                       {a.subscription ? (
                         <Badge
                           variant="outline"
@@ -293,31 +333,14 @@ export default async function AdminAdvisorsPage({
                         </Badge>
                       ) : null}
                       <Badge
-                        variant={subscriptionStatusBadgeVariant(
-                          a.subscription?.status,
-                          a.subscription ?? undefined
-                        )}
+                        variant={hub.subscriptionStatusVariant}
                         className="inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
-                        title="Subscription status"
+                        title={hub.hubDetail ?? "Subscription status"}
                       >
                         <CreditCard className="size-3 shrink-0 opacity-80" aria-hidden />
-                        <span className="truncate">
-                          {a.subscription
-                            ? humanizeSubscriptionStatus(a.subscription.status)
-                            : "No subscription"}
-                        </span>
+                        <span className="truncate">{hub.subscriptionStatusLabel}</span>
                       </Badge>
                     </div>
-                    {a.deletedAt ? (
-                      <Badge variant="secondary" className="text-xs normal-case tracking-normal">
-                        Deactivated
-                      </Badge>
-                    ) : null}
-                    {a.advisorPortalAccessEnabled === false ? (
-                      <Badge variant="warning" className="text-xs normal-case tracking-normal">
-                        Access off
-                      </Badge>
-                    ) : null}
                     <Button variant="outline" size="icon" className="h-9 w-9" asChild>
                       <Link href={`/admin/advisors/${a.id}/edit`} aria-label={`Edit ${a.name ?? a.email}`}>
                         <Pencil className="h-4 w-4" />

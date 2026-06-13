@@ -41,6 +41,8 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
           whiteLabel: true,
           currentPeriodEnd: true,
           cancelAtPeriodEnd: true,
+          stripeSubscriptionId: true,
+          createdAt: true,
         },
       },
       advisorProfile: {

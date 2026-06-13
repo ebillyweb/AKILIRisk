@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Download, ExternalLink, Mail } from "lucide-react";
+import { CreditCard, Download, ExternalLink, Mail, AlertCircle } from "lucide-react";
 
 import {
   createCheckoutSession,
@@ -23,6 +23,7 @@ import type { BillingCycle, SubscriptionTier } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -697,6 +698,7 @@ export function BillingDashboard({
   initialSubscription,
   initialInvoices,
   checkoutNotice,
+  subscriptionRequiredNotice = false,
   billingEnabled,
   planPrices,
   debugBilling = isAdvisorBillingDebugEnabled(),
@@ -704,6 +706,7 @@ export function BillingDashboard({
   initialSubscription: SubscriptionDetailsDTO | null;
   initialInvoices: BillingInvoiceDTO[];
   checkoutNotice: "success" | "cancel" | null;
+  subscriptionRequiredNotice?: boolean;
   billingEnabled: boolean;
   planPrices: PlanPricesForUi;
   /** Prefer pass-through from server page; falls back to env gate when omitted (e.g. Storybook). */
@@ -894,6 +897,17 @@ export function BillingDashboard({
 
   return (
     <div className="space-y-8">
+      {subscriptionRequiredNotice ? (
+        <Alert variant="warning">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Subscription required</AlertTitle>
+          <AlertDescription>
+            Your trial or grace period has ended, so advisor hub pages are paused until you
+            subscribe. Choose a plan below to complete checkout and restore access to your
+            pipeline, clients, and reports.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {checkoutNotice === "success" ? (
         <div
           className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"

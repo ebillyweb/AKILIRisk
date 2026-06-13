@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { RiskLevel } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-import { requireAdvisorRole, getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
+import { requireAdvisorRole, getAdvisorProfileOrThrow, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
 import {
   getAssignedClients,
   getClientIntakeForReview,
@@ -70,8 +70,7 @@ export async function getAdvisorDashboardData() {
       },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get advisor dashboard data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get advisor dashboard data') };
   }
 }
 
@@ -92,8 +91,7 @@ export async function getGovernanceDashboardData() {
       },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get governance dashboard data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get governance dashboard data') };
   }
 }
 
@@ -109,8 +107,7 @@ export async function getIntakeReviewData(interviewId: string) {
     }
     return { success: true, data };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get intake review data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get intake review data') };
   }
 }
 
@@ -204,8 +201,7 @@ export async function markIntakeInReview(interviewId: string) {
       data: approval,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to mark intake in review';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to mark intake in review') };
   }
 }
 
@@ -317,8 +313,7 @@ export async function approveClientIntake(data: unknown) {
       data: approval,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to approve client intake';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to approve client intake') };
   }
 }
 
@@ -408,8 +403,7 @@ export async function rejectClientIntake(approvalId: string, notes?: string) {
       data: approval,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to reject client intake';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to reject client intake') };
   }
 }
 
@@ -425,8 +419,7 @@ export async function getAdvisorNotificationsAction() {
       data: notifications,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get advisor notifications';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get advisor notifications') };
   }
 }
 
@@ -451,8 +444,7 @@ export async function markNotificationReadAction(notificationId: string) {
       success: true,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to mark notification as read';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to mark notification as read') };
   }
 }
 
@@ -469,8 +461,7 @@ export async function markAllNotificationsReadAction() {
       success: true,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to mark all notifications as read';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to mark all notifications as read') };
   }
 }
 
@@ -486,8 +477,7 @@ export async function getFamilyAnalyticsData(clientId: string) {
       data,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get family analytics data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get family analytics data') };
   }
 }
 
@@ -503,8 +493,7 @@ export async function getPortfolioIntelligenceData() {
       data,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get portfolio intelligence data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get portfolio intelligence data') };
   }
 }
 
@@ -537,8 +526,7 @@ export async function getFamilyRiskData(clientId: string) {
       data,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get family risk data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get family risk data') };
   }
 }
 
@@ -554,8 +542,7 @@ export async function getFamilyRiskDetailData(familyId: string) {
       data,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get family risk detail data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get family risk detail data') };
   }
 }
 
@@ -711,8 +698,7 @@ export async function getCyberRiskDashboardData() {
       },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get cyber risk dashboard data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get cyber risk dashboard data') };
   }
 }
 
@@ -818,8 +804,7 @@ export async function getIdentityRiskDashboardData() {
       },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to get identity risk dashboard data';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get identity risk dashboard data') };
   }
 }
 
@@ -871,8 +856,7 @@ export async function updateAdvisorBranding(formData: FormData) {
       await prisma.$disconnect();
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update branding';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to update branding') };
   }
 }
 
@@ -911,8 +895,7 @@ export async function getAdvisorSignalsAction(filters?: SignalFeedFilters) {
     const feed = await getAdvisorSignalFeed(profile.id, filters);
     return { success: true, data: feed };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load signals';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to load signals') };
   }
 }
 
@@ -932,8 +915,7 @@ export async function markSignalReadAction(signalId: string) {
     revalidatePath('/advisor');
     return { success: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to mark signal as read';
-    return { success: false, error: message };
+    return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to mark signal as read') };
   }
 }
 

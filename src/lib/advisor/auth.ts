@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SubscriptionStatus } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import {
@@ -24,6 +25,33 @@ export const ADVISOR_PORTAL_DISABLED_MESSAGE =
 /** Thrown when billing is on and there is no qualifying Stripe-linked subscription. */
 export const ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE =
   "Advisor portal requires an active subscription. Complete checkout in Billing or contact your administrator.";
+
+/** Billing page with a notice banner when hub access is blocked for subscription. */
+export const ADVISOR_SUBSCRIPTION_BILLING_HREF =
+  "/advisor/billing?notice=subscription_required";
+
+export function isAdvisorSubscriptionRequiredError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message === ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE
+  );
+}
+
+/** Send lapsed advisors to subscribe instead of showing inline hub errors. */
+export function redirectIfAdvisorSubscriptionRequired(error: unknown): void {
+  if (isAdvisorSubscriptionRequiredError(error)) {
+    redirect(ADVISOR_SUBSCRIPTION_BILLING_HREF);
+  }
+}
+
+/** Server-action catch helper: redirect on subscription lapse, else return message. */
+export function advisorHubActionErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  redirectIfAdvisorSubscriptionRequired(error);
+  return error instanceof Error ? error.message : fallback;
+}
 
 /** Thrown when the advisor account has been deactivated by an administrator. */
 export const ADVISOR_ACCOUNT_DEACTIVATED_MESSAGE =
