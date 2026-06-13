@@ -46,24 +46,30 @@ export function useIntakeAutoSave(
 
   const drainQueue = useCallback(async () => {
     if (!interviewId || pendingIntakeSaveCount(queueRef.current) === 0) {
-      if (isMountedRef.current) setIsSaving(false);
       return;
     }
 
     if (isMountedRef.current) setIsSaving(true);
+    try {
+      while (pendingIntakeSaveCount(queueRef.current) > 0) {
+        const params = shiftPendingIntakeSave(queueRef.current);
+        if (!params) break;
 
-    while (pendingIntakeSaveCount(queueRef.current) > 0) {
-      const params = shiftPendingIntakeSave(queueRef.current);
-      if (!params) break;
-
-      const result = await saveFn(params);
-      if (!result.success) {
-        toast.error(result.error ?? "Failed to save response");
-        break;
+        const result = await saveFn(params);
+        if (!result.success) {
+          const retryQueue = new Map<string, IntakeSaveParams>();
+          retryQueue.set(params.questionId, params);
+          for (const [id, item] of queueRef.current) {
+            retryQueue.set(id, item);
+          }
+          queueRef.current = retryQueue;
+          toast.error(result.error ?? "Failed to save response");
+          throw new Error(result.error ?? "Failed to save response");
+        }
       }
+    } finally {
+      if (isMountedRef.current) setIsSaving(false);
     }
-
-    if (isMountedRef.current) setIsSaving(false);
   }, [interviewId, saveFn]);
 
   const scheduleDrain = useCallback(() => {
@@ -71,7 +77,10 @@ export function useIntakeAutoSave(
       clearTimeout(drainTimerRef.current);
     }
     drainTimerRef.current = setTimeout(() => {
-      drainChainRef.current = drainChainRef.current.then(() => drainQueue());
+      drainTimerRef.current = null;
+      drainChainRef.current = drainChainRef.current
+        .then(() => drainQueue())
+        .catch(() => undefined);
     }, DRAIN_DEBOUNCE_MS);
   }, [drainQueue]);
 
@@ -80,8 +89,10 @@ export function useIntakeAutoSave(
       clearTimeout(drainTimerRef.current);
       drainTimerRef.current = null;
     }
+    drainChainRef.current = drainChainRef.current
+      .then(() => drainQueue())
+      .catch(() => undefined);
     await drainChainRef.current;
-    await drainQueue();
   }, [drainQueue]);
 
   const saveResponse = useCallback(

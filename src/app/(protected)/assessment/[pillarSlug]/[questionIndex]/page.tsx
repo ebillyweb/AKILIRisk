@@ -171,13 +171,14 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   };
 
   const handleSkip = () => {
+    const nextIndex = currentIndex + 1;
     saveAnswer({
       questionId: currentQuestion.id,
       pillar: pillarSlug,
       subCategory: currentQuestion.subCategory,
       answer: null,
       skipped: true,
-      currentQuestionIndex: questionIndex,
+      currentQuestionIndex: nextIndex,
     });
     void (async () => {
       await flushPendingSaves();
@@ -186,7 +187,11 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   };
 
   const handleNext = () => {
-    if (currentQuestion.required && (currentAnswer === null || currentAnswer === undefined)) {
+    if (
+      currentQuestion.required &&
+      !isQuestionSkipped &&
+      (currentAnswer === null || currentAnswer === undefined)
+    ) {
       return;
     }
     void (async () => {

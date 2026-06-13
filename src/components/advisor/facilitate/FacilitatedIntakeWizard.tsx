@@ -278,10 +278,22 @@ export function FacilitatedIntakeWizard({
     }
   };
 
-  const handleSkip = () => {
-    if (!currentQuestion) return;
+  const handleSkip = async () => {
+    if (!currentQuestion || responseBusy) return;
     skipQuestion(currentQuestion.id);
-    toast.success("Question skipped");
+    await flushPendingSaves();
+
+    if (isLastQuestion) {
+      await submitIntake();
+      return;
+    }
+
+    goToNext();
+    try {
+      await facilitatedUpdateIntakeProgress(sessionId, currentIndex + 1);
+    } catch {
+      // non-blocking
+    }
   };
 
   const handleNext = async () => {
@@ -397,7 +409,7 @@ export function FacilitatedIntakeWizard({
             variant="ghost"
             className="text-muted-foreground hover:text-foreground"
             disabled={responseBusy}
-            onClick={handleSkip}
+            onClick={() => void handleSkip()}
           >
             Skip this question
           </Button>

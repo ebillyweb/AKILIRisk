@@ -153,13 +153,14 @@ export function FacilitatedQuestionView({
   };
 
   const handleSkip = () => {
+    const nextIndex = currentIndex + 1;
     saveAnswer({
       questionId: currentQuestion.id,
       pillar: pillarSlug,
       subCategory: currentQuestion.subCategory,
       answer: null,
       skipped: true,
-      currentQuestionIndex: questionIndex,
+      currentQuestionIndex: nextIndex,
     });
     void (async () => {
       await flushPendingSaves();

@@ -340,6 +340,7 @@ export function QuestionCard({
       {onSkip && question.type !== "document-upload" ? (
         <div className="text-center pt-2">
           <Button
+            type="button"
             variant="ghost"
             onClick={onSkip}
             className="text-muted-foreground hover:text-foreground"

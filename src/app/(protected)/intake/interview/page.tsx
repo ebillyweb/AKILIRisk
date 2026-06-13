@@ -64,6 +64,7 @@ export default function InterviewPage() {
       transcription?: string;
       audioUrl?: string;
       audioDuration?: number;
+      skipped?: boolean;
     }) => {
       if (!interviewId) {
         return { success: false, error: "Interview not loaded" };
@@ -75,6 +76,7 @@ export default function InterviewPage() {
         transcription: params.transcription,
         audioUrl: params.audioUrl,
         audioDuration: params.audioDuration,
+        skipped: params.skipped,
       });
 
       if (!result.success) {
@@ -94,7 +96,7 @@ export default function InterviewPage() {
     [interviewId],
   );
 
-  const { saveTypedDraft, flushPendingSaves, isSaving } = useIntakeAutoSave(
+  const { saveTypedDraft, skipQuestion, flushPendingSaves, isSaving } = useIntakeAutoSave(
     interviewId,
     saveFn,
   );
@@ -136,8 +138,10 @@ export default function InterviewPage() {
                 audioUrl: response.audioUrl || undefined,
                 audioDuration: response.audioDuration || 0,
                 transcription: response.transcription || undefined,
+                skipped: response.skipped,
                 transcriptionEditedAt: undefined,
                 status:
+                  response.skipped ||
                   response.transcriptionStatus === "COMPLETED" ||
                   (!response.audioUrl && Boolean(response.transcription?.trim()))
                     ? "completed"
@@ -181,14 +185,19 @@ export default function InterviewPage() {
     if (!currentQuestion) return;
     const r = getResponseForQuestion(currentQuestion.id);
     setResponseTab(
-      r?.transcription?.trim() ? "type" : r?.audioUrl ? "record" : "type",
+      r?.skipped || r?.transcription?.trim()
+        ? "type"
+        : r?.audioUrl
+          ? "record"
+          : "type",
     );
-    setTypedDraft(r?.transcription ?? "");
+    setTypedDraft(r?.skipped ? "" : (r?.transcription ?? ""));
   }, [
     currentQuestion,
     getResponseForQuestion,
     currentResponse?.audioUrl,
     currentResponse?.transcription,
+    currentResponse?.skipped,
   ]);
 
   useEffect(() => {
@@ -299,6 +308,26 @@ export default function InterviewPage() {
       toast.error("Failed to save response. Please try again.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSkip = async () => {
+    if (!currentQuestion || uploading || submitting || isSaving) return;
+    skipQuestion(currentQuestion.id);
+    await flushPendingSaves();
+
+    if (isLastQuestion) {
+      await submitInterviewIfLast();
+      return;
+    }
+
+    goToNext();
+    if (interviewId) {
+      try {
+        await updateProgress(interviewId, currentIndex + 1);
+      } catch (error) {
+        console.error("Failed to update progress:", error);
+      }
     }
   };
 
@@ -430,7 +459,7 @@ export default function InterviewPage() {
               onChange={(e) => setTypedDraft(e.target.value)}
               placeholder="Write your answer here…"
               rows={8}
-              disabled={responseBusy}
+              disabled={responseBusy || currentResponse?.skipped}
               className="min-h-[180px] resize-y text-base"
             />
             {isSaving ? (
@@ -451,6 +480,18 @@ export default function InterviewPage() {
             />
           </TabsContent>
         </Tabs>
+
+        <div className="mt-4 text-center">
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-muted-foreground hover:text-foreground"
+            disabled={responseBusy}
+            onClick={() => void handleSkip()}
+          >
+            Skip this question
+          </Button>
+        </div>
 
         {uploading && (
           <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
