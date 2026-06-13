@@ -25,7 +25,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { CustomizationConfig } from "@/lib/assessment/customization";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import {
-  DEFAULT_INCLUDED_PILLARS,
   isNarrowAssessmentScope,
 } from "@/lib/assessment/included-pillars";
 import type { RiskLevel } from "@/lib/assessment/types";
@@ -202,7 +201,7 @@ function AssessmentHubPageContent() {
   };
 
   const includedPillars = useMemo(
-    () => summaryAccess?.includedPillars ?? [...DEFAULT_INCLUDED_PILLARS],
+    () => summaryAccess?.includedPillars ?? [],
     [summaryAccess?.includedPillars],
   );
   const includedPillarSet = useMemo(

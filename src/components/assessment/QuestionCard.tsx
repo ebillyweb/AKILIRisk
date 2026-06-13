@@ -337,7 +337,7 @@ export function QuestionCard({
         </Alert>
       )}
 
-      {!question.required && onSkip && question.type !== "document-upload" ? (
+      {onSkip && question.type !== "document-upload" ? (
         <div className="text-center pt-2">
           <Button
             variant="ghost"
@@ -345,9 +345,11 @@ export function QuestionCard({
             className="text-muted-foreground hover:text-foreground"
           >
             Skip this question
-            <span className="text-xs ml-2 text-muted-foreground">
-              (answering improves accuracy)
-            </span>
+            {!question.required ? (
+              <span className="text-xs ml-2 text-muted-foreground">
+                (answering improves accuracy)
+              </span>
+            ) : null}
           </Button>
         </div>
       ) : null}

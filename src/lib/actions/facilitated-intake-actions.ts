@@ -19,6 +19,7 @@ import { saveResponseSchema } from "@/lib/schemas/intake";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { requireFacilitatedSessionForAdvisor } from "@/lib/facilitated/session-access";
 import { getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { tryBootstrapFacilitatedFromExistingApproval } from "@/lib/facilitated/bootstrap-assessment-from-approval";
 
 async function getFacilitatorActor() {
   const session = await auth();
@@ -68,6 +69,7 @@ export async function facilitatedSaveIntakeResponse(
         audioUrl: parsed.data.audioUrl,
         audioDuration: parsed.data.audioDuration,
         transcription: parsed.data.transcription,
+        skipped: parsed.data.skipped,
       },
     );
 
@@ -146,6 +148,7 @@ export async function facilitatedSubmitIntake(facilitatedSessionId: string) {
     const byQuestionId = new Map(responses.map((r) => [r.questionId, r]));
     const missing = expectedIds.filter((id) => {
       const r = byQuestionId.get(id);
+      if (r?.skipped) return false;
       return !(r?.audioUrl || r?.transcription?.trim());
     });
     if (missing.length > 0) {
@@ -158,6 +161,32 @@ export async function facilitatedSubmitIntake(facilitatedSessionId: string) {
     const submitted = await submitIntakeInterview(facilitated.interviewId);
     if (!submitted) {
       return { success: false as const, error: "Failed to submit interview" };
+    }
+
+    const bootstrapPath = await tryBootstrapFacilitatedFromExistingApproval(
+      facilitatedSessionId,
+      facilitated.clientId,
+    );
+    if (bootstrapPath) {
+      await writeAudit({
+        actor,
+        action: AUDIT_ACTIONS.FACILITATED_SESSION_INTAKE_SUBMIT,
+        entityType: "FacilitatedSession",
+        entityId: facilitatedSessionId,
+        beforeData: { status: facilitated.status },
+        afterData: {
+          status: "ASSESSMENT",
+          interviewStatus: submitted.status,
+          skippedPillarSelect: true,
+        },
+        metadata: {
+          clientId: facilitated.clientId,
+          facilitatedSessionId,
+          interviewId: facilitated.interviewId,
+        },
+      });
+      revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/intake`);
+      return { success: true as const, redirectTo: bootstrapPath };
     }
 
     await prisma.facilitatedSession.update({

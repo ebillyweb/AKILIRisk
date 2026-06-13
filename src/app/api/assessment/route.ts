@@ -60,6 +60,32 @@ export async function POST(_request: NextRequest) {
 
     const scope = await getClientAssessmentScope(session.user.id);
 
+    if (scope.includedPillars.length === 0) {
+      return NextResponse.json(
+        { error: "Assessment is not unlocked yet. Your advisor must approve intake and select domains first." },
+        { status: 403 },
+      );
+    }
+
+    const existing = await prisma.assessment.findFirst({
+      where: { userId: session.user.id, status: "IN_PROGRESS" },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (existing) {
+      if (existing.includedPillars.length === 0) {
+        const updated = await prisma.assessment.update({
+          where: { id: existing.id },
+          data: {
+            approvalId: scope.approvalId,
+            includedPillars: scope.includedPillars,
+          },
+        });
+        return NextResponse.json(updated);
+      }
+      return NextResponse.json(existing);
+    }
+
     const assessment = await prisma.assessment.create({
       data: {
         userId: session.user.id,

@@ -190,10 +190,11 @@ export function FacilitatedQuestionView({
 
   const isQuestionSkipped = skippedQuestions.includes(currentQuestion.id);
   const isValid =
-    currentQuestion.type === "document-upload"
-      ? hasDocumentUploadFiles(currentAnswer) || isQuestionSkipped
+    isQuestionSkipped ||
+    (currentQuestion.type === "document-upload"
+      ? hasDocumentUploadFiles(currentAnswer)
       : !currentQuestion.required ||
-        (currentAnswer !== null && currentAnswer !== undefined);
+        (currentAnswer !== null && currentAnswer !== undefined));
 
   const handleBack = () => {
     void (async () => {
@@ -224,11 +225,7 @@ export function FacilitatedQuestionView({
             personalizedText={personalizedText}
             currentAnswer={currentAnswer}
             onAnswer={handleAnswer}
-            onSkip={
-              currentQuestion.type === "document-upload" || !currentQuestion.required
-                ? handleSkip
-                : undefined
-            }
+            onSkip={handleSkip}
             isSkipped={isQuestionSkipped}
             questionPosition={{
               index: currentIndex + 1,

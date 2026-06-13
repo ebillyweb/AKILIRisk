@@ -16,6 +16,9 @@ import { prisma } from "@/lib/db";
 import { approveClientSchema } from "@/lib/schemas/advisor";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { requireFacilitatedSessionForAdvisor } from "@/lib/facilitated/session-access";
+import {
+  ensureScopedAssessmentForClient,
+} from "@/lib/facilitated/bootstrap-assessment-from-approval";
 
 export async function facilitatedApproveScope(
   facilitatedSessionId: string,
@@ -89,26 +92,12 @@ export async function facilitatedApproveScope(
       normalizedIncluded,
     );
 
-    const assessment = await prisma.assessment.findFirst({
-      where: { userId: facilitated.clientId, approvalId: approval.id },
-      orderBy: { startedAt: "desc" },
-      select: { id: true },
+    const assessmentId = await ensureScopedAssessmentForClient(facilitated.clientId, {
+      includedPillars: normalizedIncluded,
+      focusAreas: normalizedFocus,
+      source: "approval",
+      approvalId: approval.id,
     });
-
-    let assessmentId = assessment?.id ?? null;
-    if (!assessmentId) {
-      const created = await prisma.assessment.create({
-        data: {
-          userId: facilitated.clientId,
-          version: 1,
-          status: "IN_PROGRESS",
-          approvalId: approval.id,
-          includedPillars: normalizedIncluded,
-        },
-        select: { id: true },
-      });
-      assessmentId = created.id;
-    }
 
     await prisma.facilitatedSession.update({
       where: { id: facilitatedSessionId },

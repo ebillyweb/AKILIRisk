@@ -44,6 +44,7 @@ export type ComputePillarRecommendationsInput = {
   responses: Array<{
     questionId: string;
     transcription?: string | null;
+    skipped?: boolean;
   }>;
 };
 
@@ -54,7 +55,9 @@ export function computePillarRecommendations(
   input: ComputePillarRecommendationsInput,
 ): PillarRecommendation[] {
   const responseByQuestion = new Map(
-    input.responses.map((r) => [r.questionId, r.transcription?.trim() ?? ""]),
+    input.responses
+      .filter((r) => !r.skipped)
+      .map((r) => [r.questionId, r.transcription?.trim() ?? ""]),
   );
 
   const aggregates = new Map<

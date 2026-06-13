@@ -13,6 +13,7 @@ import { QuestionDisplay } from "@/components/intake/QuestionDisplay";
 import { AudioRecorder } from "@/components/intake/AudioRecorder";
 import { StepIndicator } from "@/components/intake/StepIndicator";
 import { useIntakeInterview } from "@/lib/hooks/useIntakeInterview";
+import { useIntakeAutoSave } from "@/lib/hooks/useIntakeAutoSave";
 import { useIntakeStore, type InterviewResponse } from "@/lib/intake/store";
 import { isInterviewResponseComplete } from "@/lib/intake/is-response-complete";
 import type { IntakeQuestion } from "@/lib/intake/types";
@@ -23,7 +24,7 @@ import {
   submitIntakeInterviewAction,
   getActiveIntakeInterviewAction,
   getLatestIntakeInterviewAction,
-  saveResponse
+  saveResponse,
 } from "@/lib/actions/intake-actions";
 
 /**
@@ -39,9 +40,8 @@ export default function InterviewPage() {
   const [scriptQuestions, setScriptQuestions] = useState<IntakeQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [typedSaving, setTypedSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [responseTab, setResponseTab] = useState<"record" | "type">("record");
+  const [responseTab, setResponseTab] = useState<"record" | "type">("type");
   const [typedDraft, setTypedDraft] = useState("");
 
   const {
@@ -53,16 +53,55 @@ export default function InterviewPage() {
     goToNext,
     goToPrev,
     isLastQuestion,
-    getResponseForQuestion
+    getResponseForQuestion,
   } = useIntakeInterview(interviewId || "", scriptQuestions);
 
   const { responses, setResponse, setCurrentQuestion, replaceResponses } = useIntakeStore();
 
-  // Load interview on mount
+  const saveFn = useCallback(
+    async (params: {
+      questionId: string;
+      transcription?: string;
+      audioUrl?: string;
+      audioDuration?: number;
+    }) => {
+      if (!interviewId) {
+        return { success: false, error: "Interview not loaded" };
+      }
+
+      const result = await saveResponse(interviewId, {
+        interviewId,
+        questionId: params.questionId,
+        transcription: params.transcription,
+        audioUrl: params.audioUrl,
+        audioDuration: params.audioDuration,
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          error:
+            ("error" in result && result.error) ||
+            ("errors" in result && result.errors
+              ? Object.values(result.errors).flat().find(Boolean)
+              : undefined) ||
+            "Failed to save response",
+        };
+      }
+
+      return { success: true };
+    },
+    [interviewId],
+  );
+
+  const { saveTypedDraft, flushPendingSaves, isSaving } = useIntakeAutoSave(
+    interviewId,
+    saveFn,
+  );
+
   useEffect(() => {
     async function loadInterview() {
       try {
-        // Get the active interview
         const activeInterviewResult = await getActiveIntakeInterviewAction();
 
         if (activeInterviewResult.success && activeInterviewResult.interview) {
@@ -141,7 +180,9 @@ export default function InterviewPage() {
   useEffect(() => {
     if (!currentQuestion) return;
     const r = getResponseForQuestion(currentQuestion.id);
-    setResponseTab(r?.audioUrl ? "record" : r?.transcription?.trim() ? "type" : "record");
+    setResponseTab(
+      r?.transcription?.trim() ? "type" : r?.audioUrl ? "record" : "type",
+    );
     setTypedDraft(r?.transcription ?? "");
   }, [
     currentQuestion,
@@ -150,10 +191,16 @@ export default function InterviewPage() {
     currentResponse?.transcription,
   ]);
 
+  useEffect(() => {
+    if (!currentQuestion || !typedDraft.trim()) return;
+    saveTypedDraft(currentQuestion.id, typedDraft);
+  }, [typedDraft, currentQuestion, saveTypedDraft]);
+
   const submitInterviewIfLast = useCallback(async () => {
     if (!interviewId) return;
     setSubmitting(true);
     try {
+      await flushPendingSaves();
       const submitResult = await submitIntakeInterviewAction(interviewId);
       if (submitResult.success) {
         toast.success("Interview completed successfully!");
@@ -167,11 +214,10 @@ export default function InterviewPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [interviewId, router]);
+  }, [flushPendingSaves, interviewId, router]);
 
-  // Handle audio recording completion with auto-save
   const handleRecordingComplete = async (blob: Blob, duration: number) => {
-    if (!interviewId || !currentQuestion || uploading || submitting || typedSaving) return;
+    if (!interviewId || !currentQuestion || uploading || submitting || isSaving) return;
 
     const questionId = currentQuestion.id;
     const recordedOnLastQuestion = isLastQuestion;
@@ -179,7 +225,6 @@ export default function InterviewPage() {
     setUploading(true);
 
     try {
-      // Step 1: Upload audio file
       const formData = new FormData();
       formData.append("audio", blob);
       formData.append("questionId", questionId);
@@ -195,14 +240,12 @@ export default function InterviewPage() {
 
       const uploadData = await uploadResponse.json();
 
-      // Step 2: Update local store with upload result
       setResponse(questionId, {
         audioUrl: uploadData.audioUrl,
         audioDuration: duration,
-        status: 'pending'
+        status: "pending",
       });
 
-      // Step 3: Trigger transcription
       try {
         const transcribeResponse = await fetch(`/api/intake/${interviewId}/transcribe`, {
           method: "POST",
@@ -215,47 +258,42 @@ export default function InterviewPage() {
         if (transcribeResponse.ok) {
           const transcribeData = await transcribeResponse.json();
 
-          // Update store with transcription result
           setResponse(questionId, {
             audioUrl: uploadData.audioUrl,
             audioDuration: duration,
             transcription: transcribeData.transcription,
-            status: 'completed'
+            status: "completed",
           });
         } else {
-          // Handle transcription failure gracefully
           console.warn("Transcription failed, but audio was saved:", await transcribeResponse.text());
 
           setResponse(questionId, {
             audioUrl: uploadData.audioUrl,
             audioDuration: duration,
             transcription: undefined,
-            status: 'completed' // Mark as completed even without transcription
+            status: "completed",
           });
 
-          toast("Audio saved. Transcription will be processed later.", { icon: '⚠️' });
+          toast("Audio saved. Transcription will be processed later.", { icon: "⚠️" });
         }
       } catch (transcribeError) {
         console.warn("Transcription service error:", transcribeError);
 
-        // Audio is saved, just mark as completed without transcription
         setResponse(questionId, {
           audioUrl: uploadData.audioUrl,
           audioDuration: duration,
           transcription: undefined,
-          status: 'completed'
+          status: "completed",
         });
 
-        toast("Audio saved. Transcription will be processed later.", { icon: '⚠️' });
+        toast("Audio saved. Transcription will be processed later.", { icon: "⚠️" });
       }
 
-      // Step 4: If this is the last question, auto-submit
       if (recordedOnLastQuestion) {
         await submitInterviewIfLast();
       } else {
         toast.success("Response saved!");
       }
-
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to save response. Please try again.");
@@ -264,27 +302,26 @@ export default function InterviewPage() {
     }
   };
 
-  // Handle navigation with progress updates
   const handleNext = async () => {
-    if (!interviewId || !canGoNext) return;
+    if (!interviewId || !canGoNext || !hasResponseForNav()) return;
+
+    await flushPendingSaves();
 
     if (!isLastQuestion) {
       goToNext();
 
-      // Update progress on server
       try {
         await updateProgress(interviewId, currentIndex + 1);
       } catch (error) {
         console.error("Failed to update progress:", error);
-        // Don't block navigation for progress update failures
       }
     }
   };
 
-  const handlePrevious = () => {
-    if (canGoPrev) {
-      goToPrev();
-    }
+  const handlePrevious = async () => {
+    if (!canGoPrev) return;
+    await flushPendingSaves();
+    goToPrev();
   };
 
   const handleTranscriptionSave = async (transcription: string) => {
@@ -312,65 +349,14 @@ export default function InterviewPage() {
     setResponse(currentQuestion.id, {
       transcription,
       transcriptionEditedAt: new Date().toISOString(),
-      status: currentResponse?.status || 'completed',
+      status: currentResponse?.status || "completed",
     });
     toast.success("Transcript updated");
   };
 
-  const handleTypedSave = async () => {
-    if (!interviewId || !currentQuestion || typedSaving || submitting || uploading) return;
-
-    const trimmed = typedDraft.trim();
-    if (!trimmed) {
-      toast.error("Enter your answer before saving.");
-      return;
-    }
-
-    setTypedSaving(true);
-    try {
-      const result = await saveResponse(interviewId, {
-        interviewId,
-        questionId: currentQuestion.id,
-        transcription: trimmed,
-        ...(currentResponse?.audioUrl
-          ? {
-              audioUrl: currentResponse.audioUrl,
-              audioDuration: currentResponse.audioDuration,
-            }
-          : {}),
-      });
-
-      if (!result.success) {
-        const errorMessage =
-          ("error" in result && result.error) ||
-          ("errors" in result && result.errors
-            ? Object.values(result.errors).flat().find(Boolean)
-            : undefined) ||
-          "Failed to save response";
-        toast.error(errorMessage);
-        return;
-      }
-
-      setResponse(currentQuestion.id, {
-        transcription: trimmed,
-        status: "completed",
-        ...(currentResponse?.audioUrl
-          ? { transcriptionEditedAt: new Date().toISOString() }
-          : {}),
-      });
-
-      if (isLastQuestion) {
-        await submitInterviewIfLast();
-      } else {
-        toast.success(currentResponse?.audioUrl ? "Transcript updated" : "Response saved!");
-      }
-    } catch (error) {
-      console.error("Typed save error:", error);
-      toast.error("Failed to save response. Please try again.");
-    } finally {
-      setTypedSaving(false);
-    }
-  };
+  function hasResponseForNav() {
+    return isInterviewResponseComplete(currentResponse);
+  }
 
   if (loading) {
     return (
@@ -395,30 +381,27 @@ export default function InterviewPage() {
   }
 
   const hasResponse = isInterviewResponseComplete(currentResponse);
-  const responseBusy = uploading || typedSaving || submitting;
+  const responseBusy = uploading || isSaving || submitting;
 
   return (
     <div className="max-w-3xl mx-auto py-6 space-y-8">
-      {/* Step Indicator */}
       <StepIndicator
         currentIndex={currentIndex}
         totalSteps={totalQuestions}
-        completedSteps={new Set(
-          Object.entries(responses)
-            .filter(([, response]) => isInterviewResponseComplete(response))
-            .map(([questionId]) => {
-              const questionIndex = scriptQuestions.findIndex((q) => q.id === questionId);
-              return questionIndex >= 0 ? questionIndex : -1;
-            })
-            .filter(index => index >= 0)
-        )}
+        completedSteps={
+          new Set(
+            Object.entries(responses)
+              .filter(([, response]) => isInterviewResponseComplete(response))
+              .map(([questionId]) => {
+                const questionIndex = scriptQuestions.findIndex((q) => q.id === questionId);
+                return questionIndex >= 0 ? questionIndex : -1;
+              })
+              .filter((index) => index >= 0),
+          )
+        }
       />
 
-      {/* Question Display */}
-      <QuestionDisplay
-        question={currentQuestion}
-        totalQuestions={totalQuestions}
-      />
+      <QuestionDisplay question={currentQuestion} totalQuestions={totalQuestions} />
 
       <Card className="rounded-3xl p-6 shadow-sm">
         <Tabs
@@ -427,15 +410,33 @@ export default function InterviewPage() {
           className="gap-4"
         >
           <TabsList className="w-full max-w-md" variant="line">
-            <TabsTrigger value="record" className="gap-1.5">
-              <Mic className="size-4" />
-              Voice
-            </TabsTrigger>
             <TabsTrigger value="type" className="gap-1.5">
               <Keyboard className="size-4" />
               Type
             </TabsTrigger>
+            <TabsTrigger value="record" className="gap-1.5">
+              <Mic className="size-4" />
+              Voice
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="type" className="mt-4 space-y-4">
+            <h3 className="font-medium">Type your response</h3>
+            <p className="text-sm text-muted-foreground">
+              Your answer saves automatically as you type.
+            </p>
+            <Textarea
+              value={typedDraft}
+              onChange={(e) => setTypedDraft(e.target.value)}
+              placeholder="Write your answer here…"
+              rows={8}
+              disabled={responseBusy}
+              className="min-h-[180px] resize-y text-base"
+            />
+            {isSaving ? (
+              <p className="text-xs text-muted-foreground">Saving…</p>
+            ) : null}
+          </TabsContent>
 
           <TabsContent value="record" className="mt-4 space-y-4">
             <h3 className="font-medium">Record your response</h3>
@@ -448,35 +449,6 @@ export default function InterviewPage() {
               onTranscriptionSave={handleTranscriptionSave}
               disabled={responseBusy}
             />
-          </TabsContent>
-
-          <TabsContent value="type" className="mt-4 space-y-4">
-            <h3 className="font-medium">Type your response</h3>
-            <p className="text-sm text-muted-foreground">
-              Your answer is saved when you click the button below. You can edit it anytime before moving on.
-            </p>
-            <Textarea
-              value={typedDraft}
-              onChange={(e) => setTypedDraft(e.target.value)}
-              placeholder="Write your answer here…"
-              rows={8}
-              disabled={responseBusy}
-              className="min-h-[180px] resize-y text-base"
-            />
-            <Button
-              type="button"
-              onClick={() => void handleTypedSave()}
-              disabled={responseBusy || !typedDraft.trim()}
-            >
-              {typedSaving ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save typed response"
-              )}
-            </Button>
           </TabsContent>
         </Tabs>
 
@@ -495,11 +467,10 @@ export default function InterviewPage() {
         )}
       </Card>
 
-      {/* Navigation */}
       <div className="flex items-center justify-between pt-4">
         <Button
           variant="outline"
-          onClick={handlePrevious}
+          onClick={() => void handlePrevious()}
           disabled={!canGoPrev || responseBusy}
           className="flex items-center gap-2"
         >
@@ -513,7 +484,7 @@ export default function InterviewPage() {
 
         {!isLastQuestion ? (
           <Button
-            onClick={handleNext}
+            onClick={() => void handleNext()}
             disabled={!hasResponse || !canGoNext || responseBusy}
             className="flex items-center gap-2"
           >
@@ -521,13 +492,12 @@ export default function InterviewPage() {
             <ArrowRight className="w-4 h-4" />
           </Button>
         ) : (
-          <div className="text-sm text-muted-foreground">
-            {submitting
-              ? "Submitting…"
-              : hasResponse
-                ? "Interview ready to submit."
-                : "Save a voice or typed response to finish."}
-          </div>
+          <Button
+            onClick={() => void submitInterviewIfLast()}
+            disabled={!hasResponse || responseBusy}
+          >
+            {submitting ? "Submitting…" : "Submit interview"}
+          </Button>
         )}
       </div>
     </div>

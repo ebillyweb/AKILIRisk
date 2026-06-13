@@ -171,6 +171,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
               <div className="rounded-xl border bg-card p-6 shadow-sm lg:p-7">
                 <ReviewSidebar
                   interviewId={interview.id}
+                  clientId={interview.userId}
                   approval={approval}
                   householdProfileCount={householdMembers.length}
                   pillarRecommendations={pillarRecommendations}

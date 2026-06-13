@@ -14,6 +14,7 @@ export interface InterviewResponse {
   audioDuration?: number;
   transcription?: string;
   transcriptionEditedAt?: string;
+  skipped?: boolean;
   status: 'recording' | 'completed' | 'uploading' | 'failed' | 'pending';
 }
 

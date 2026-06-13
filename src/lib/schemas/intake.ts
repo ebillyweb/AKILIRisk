@@ -19,12 +19,15 @@ export const saveResponseSchema = z
       .optional(),
     audioDuration: z.number().min(0, 'Audio duration must be positive').optional(),
     transcription: z.string().optional(),
+    skipped: z.boolean().optional(),
   })
   .refine(
     (d) =>
-      Boolean(d.audioUrl?.trim()) || Boolean(d.transcription?.trim()),
+      d.skipped === true ||
+      Boolean(d.audioUrl?.trim()) ||
+      Boolean(d.transcription?.trim()),
     {
-      message: 'Provide a recording (audio URL) or a typed response',
+      message: 'Provide a recording (audio URL), a typed response, or skip the question',
       path: ['transcription'],
     }
   );

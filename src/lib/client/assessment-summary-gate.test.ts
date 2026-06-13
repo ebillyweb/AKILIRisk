@@ -14,6 +14,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
     const result = evaluateClientAssessmentSummaryAccess({
       pillarScores: [{ pillar: "governance" }],
       deliverablePhase: "PROFILE",
+      includedPillars: [...ASSESSMENT_PILLAR_IDS],
     });
 
     expect(result.allPillarsComplete).toBe(false);
@@ -25,6 +26,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
     const result = evaluateClientAssessmentSummaryAccess({
       pillarScores: allPillarScores(),
       deliverablePhase: "PREVIEW",
+      includedPillars: [...ASSESSMENT_PILLAR_IDS],
     });
 
     expect(result.allPillarsComplete).toBe(true);
@@ -50,6 +52,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
     const result = evaluateClientAssessmentSummaryAccess({
       pillarScores: allPillarScores(),
       deliverablePhase: "PROFILE",
+      includedPillars: [...ASSESSMENT_PILLAR_IDS],
     });
 
     expect(result.canViewSummary).toBe(true);
@@ -59,6 +62,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
     const result = evaluateClientAssessmentSummaryAccess({
       pillarScores: allPillarScores(),
       deliverablePhase: "PORTFOLIO",
+      includedPillars: [...ASSESSMENT_PILLAR_IDS],
     });
 
     expect(result.canViewSummary).toBe(true);

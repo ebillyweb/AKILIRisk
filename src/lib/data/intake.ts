@@ -23,6 +23,7 @@ type IntakeResponseInput = {
   audioDuration?: number;
   transcription?: string;
   transcriptionStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  skipped?: boolean;
 };
 
 export async function createIntakeInterview(userId: string): Promise<IntakeInterview> {
@@ -86,20 +87,23 @@ export async function getLatestIntakeInterview(userId: string): Promise<IntakeIn
 
 export async function saveIntakeResponse(interviewId: string, questionId: string, data: IntakeResponseInput): Promise<IntakeResponse> {
   const hasAudio = Boolean(data.audioUrl);
+  const isSkipped = data.skipped === true;
   const trimmedTranscription =
     data.transcription === undefined ? '' : data.transcription.trim();
-  const isTextOnlyAnswer = !hasAudio && trimmedTranscription.length > 0;
+  const isTextOnlyAnswer = !hasAudio && !isSkipped && trimmedTranscription.length > 0;
 
   const resolvedCreateStatus =
     data.transcriptionStatus ??
-    (isTextOnlyAnswer ? 'COMPLETED' : 'PENDING');
+    (isSkipped || isTextOnlyAnswer ? 'COMPLETED' : 'PENDING');
 
   const transcriptionForCreate =
-    data.transcription === undefined
+    isSkipped
       ? null
-      : trimmedTranscription.length > 0
-        ? trimmedTranscription
-        : null;
+      : data.transcription === undefined
+        ? null
+        : trimmedTranscription.length > 0
+          ? trimmedTranscription
+          : null;
 
   // Round-11 commit 2.5b (BRD §5.1): encrypt transcription before
   // writing. The `transcription` column now stores ciphertext; the
@@ -108,15 +112,19 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
   const transcriptionCiphertextForCreate =
     transcriptionForCreate === null ? null : encryptTranscription(transcriptionForCreate);
   const transcriptionForUpdate =
-    data.transcription === undefined
-      ? undefined
-      : trimmedTranscription.length > 0
-        ? encryptTranscription(trimmedTranscription)
-        : null;
+    isSkipped
+      ? null
+      : data.transcription === undefined
+        ? undefined
+        : trimmedTranscription.length > 0
+          ? encryptTranscription(trimmedTranscription)
+          : null;
   const hasTranscriptionForUpdate =
-    data.transcription === undefined
-      ? undefined
-      : trimmedTranscription.length > 0;
+    isSkipped
+      ? false
+      : data.transcription === undefined
+        ? undefined
+        : trimmedTranscription.length > 0;
 
   const created = await prisma.intakeResponse.upsert({
     where: {
@@ -135,7 +143,8 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
       transcription: transcriptionCiphertextForCreate,
       hasTranscription: transcriptionCiphertextForCreate !== null,
       transcriptionStatus: resolvedCreateStatus,
-      answeredAt: isTextOnlyAnswer ? new Date() : null,
+      skipped: isSkipped,
+      answeredAt: isSkipped || isTextOnlyAnswer ? new Date() : null,
     },
     update: {
       audioUrl: data.audioUrl ?? undefined,
@@ -144,10 +153,13 @@ export async function saveIntakeResponse(interviewId: string, questionId: string
       audioDuration: data.audioDuration ?? undefined,
       transcription: transcriptionForUpdate,
       hasTranscription: hasTranscriptionForUpdate,
-      transcriptionStatus: isTextOnlyAnswer
+      transcriptionStatus: isSkipped
         ? 'COMPLETED'
-        : (data.transcriptionStatus ?? undefined),
-      ...(isTextOnlyAnswer ? { answeredAt: new Date() } : {}),
+        : isTextOnlyAnswer
+          ? 'COMPLETED'
+          : (data.transcriptionStatus ?? undefined),
+      skipped: isSkipped,
+      ...(isSkipped || isTextOnlyAnswer ? { answeredAt: new Date() } : {}),
     },
   });
 

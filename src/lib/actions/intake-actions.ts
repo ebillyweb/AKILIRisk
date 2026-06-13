@@ -105,6 +105,7 @@ export async function saveResponse(interviewId: string, data: unknown) {
         audioUrl: validatedFields.data.audioUrl,
         audioDuration: validatedFields.data.audioDuration,
         transcription: validatedFields.data.transcription,
+        skipped: validatedFields.data.skipped,
       }
     );
 

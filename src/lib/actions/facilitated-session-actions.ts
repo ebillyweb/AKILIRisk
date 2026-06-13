@@ -28,6 +28,7 @@ import {
   type FacilitatedSessionSummary,
 } from "@/lib/facilitated/types";
 import { getClientPipelineForAdvisorUser } from "@/lib/pipeline/queries";
+import { tryBootstrapFacilitatedFromExistingApproval } from "@/lib/facilitated/bootstrap-assessment-from-approval";
 
 export type FacilitatedLauncherData = {
   clients: Array<{ id: string; name: string; email: string }>;
@@ -145,11 +146,17 @@ export async function startFacilitatedSessionForClient(data: unknown) {
       resume: parsed.data.resumeExisting !== false,
     });
 
+    const bootstrapPath = await tryBootstrapFacilitatedFromExistingApproval(
+      session.id,
+      parsed.data.clientId,
+    );
+
     revalidatePath("/advisor/facilitate");
     return {
       success: true as const,
       sessionId: session.id,
-      redirectTo: facilitatedSessionStepPath(session.id, session.status),
+      redirectTo:
+        bootstrapPath ?? facilitatedSessionStepPath(session.id, session.status),
     };
   } catch (error) {
     return {

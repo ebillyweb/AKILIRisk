@@ -14,6 +14,7 @@ import {
 
 interface ReviewSidebarProps {
   interviewId: string;
+  clientId: string;
   approval: IntakeReviewData["approval"];
   householdProfileCount: number;
   pillarRecommendations: PillarRecommendation[];
@@ -21,6 +22,7 @@ interface ReviewSidebarProps {
 
 export function ReviewSidebar({
   interviewId,
+  clientId,
   approval,
   householdProfileCount,
   pillarRecommendations,
@@ -134,6 +136,7 @@ export function ReviewSidebar({
       <div className="border-t border-border/80 pt-6">
         <ApprovalActions
           interviewId={interviewId}
+          clientId={clientId}
           approvalId={approval?.id}
           currentStatus={approval?.status}
           selectedIncludedPillars={selectedDomains}

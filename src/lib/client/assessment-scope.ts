@@ -1,7 +1,10 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import { normalizeIncludedPillarIds } from "@/lib/assessment/included-pillars";
+import {
+  normalizeIncludedPillarIds,
+  resolveIncludedPillars,
+} from "@/lib/assessment/included-pillars";
 
 export type ClientAssessmentScope = {
   includedPillars: string[];
@@ -64,6 +67,31 @@ export async function getClientAssessmentScope(
     source: null,
     approvalId: null,
   };
+}
+
+/**
+ * Resolve pillar scope for client-facing assessment UI.
+ * Prefers assessment row scope, then approval/waiver, then legacy all-six when
+ * an assessment exists with empty scope. Returns [] when locked (no scope yet).
+ */
+export function resolveClientAssessmentIncludedPillars(input: {
+  assessmentIncludedPillars?: string[] | null;
+  approvedScopeIncludedPillars?: string[] | null;
+  hasAssessmentRow: boolean;
+}): string[] {
+  if (input.assessmentIncludedPillars && input.assessmentIncludedPillars.length > 0) {
+    return resolveIncludedPillars(input.assessmentIncludedPillars);
+  }
+  if (
+    input.approvedScopeIncludedPillars &&
+    input.approvedScopeIncludedPillars.length > 0
+  ) {
+    return resolveIncludedPillars(input.approvedScopeIncludedPillars);
+  }
+  if (input.hasAssessmentRow) {
+    return resolveIncludedPillars([]);
+  }
+  return [];
 }
 
 /** Normalize waiver/approval scope writes; emphasis defaults to all included. */

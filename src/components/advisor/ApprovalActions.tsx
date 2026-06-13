@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +12,11 @@ import {
   approveClientIntake,
   rejectClientIntake,
 } from "@/lib/actions/advisor-actions";
+import { startFacilitatedSessionForClient } from "@/lib/actions/facilitated-session-actions";
 
 interface ApprovalActionsProps {
   interviewId: string;
+  clientId: string;
   approvalId?: string;
   currentStatus?: string;
   selectedIncludedPillars: string[];
@@ -25,6 +28,7 @@ interface ApprovalActionsProps {
 
 export function ApprovalActions({
   interviewId,
+  clientId,
   approvalId,
   currentStatus,
   selectedIncludedPillars,
@@ -33,6 +37,7 @@ export function ApprovalActions({
   onNotesChange,
   disabled = false
 }: ApprovalActionsProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showConfirmation, setShowConfirmation] = useState<'approve' | 'reject' | null>(null);
 
@@ -129,6 +134,24 @@ export function ApprovalActions({
         }
       } catch (error) {
         toast.error("Failed to reopen intake");
+      }
+    });
+  };
+
+  const handleStartLiveSession = () => {
+    startTransition(async () => {
+      try {
+        const result = await startFacilitatedSessionForClient({
+          clientId,
+          resumeExisting: true,
+        });
+        if (result.success) {
+          router.push(result.redirectTo);
+          return;
+        }
+        toast.error(result.error ?? "Failed to start live session");
+      } catch {
+        toast.error("Failed to start live session");
       }
     });
   };
@@ -271,6 +294,21 @@ export function ApprovalActions({
               Client can begin their assessment (
               {selectedIncludedPillars.length}{" "}
               {selectedIncludedPillars.length === 1 ? "domain" : "domains"} selected).
+              They have been notified by email.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              disabled={isPending || disabled}
+              onClick={handleStartLiveSession}
+              className="w-full"
+            >
+              Start live session
+            </Button>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Assign to client: the client can sign in and start their scoped assessment
+              from the dashboard when ready.
             </p>
           </div>
           <Button

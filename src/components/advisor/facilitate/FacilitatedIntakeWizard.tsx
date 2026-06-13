@@ -20,6 +20,7 @@ import {
   facilitatedSubmitIntake,
   facilitatedUpdateIntakeProgress,
 } from "@/lib/actions/facilitated-intake-actions";
+import { useIntakeAutoSave } from "@/lib/hooks/useIntakeAutoSave";
 import { useIntakeInterview } from "@/lib/hooks/useIntakeInterview";
 import { isInterviewResponseComplete } from "@/lib/intake/is-response-complete";
 import { useIntakeStore, type InterviewResponse } from "@/lib/intake/store";
@@ -40,9 +41,8 @@ export function FacilitatedIntakeWizard({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [typedSaving, setTypedSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [responseTab, setResponseTab] = useState<"record" | "type">("record");
+  const [responseTab, setResponseTab] = useState<"record" | "type">("type");
   const [typedDraft, setTypedDraft] = useState("");
 
   const {
@@ -58,6 +58,36 @@ export function FacilitatedIntakeWizard({
   } = useIntakeInterview(interviewId, scriptQuestions);
 
   const { setResponse, setCurrentQuestion, replaceResponses, responses } = useIntakeStore();
+
+  const saveFn = useCallback(
+    async (params: {
+      questionId: string;
+      transcription?: string;
+      skipped?: boolean;
+    }) => {
+      const result = await facilitatedSaveIntakeResponse(sessionId, {
+        interviewId,
+        questionId: params.questionId,
+        transcription: params.transcription,
+        skipped: params.skipped,
+      });
+      if (!result.success) {
+        return {
+          success: false,
+          error:
+            result.error ??
+            ("errors" in result && result.errors
+              ? Object.values(result.errors).flat()[0]
+              : "Failed to save response"),
+        };
+      }
+      return { success: true };
+    },
+    [interviewId, sessionId],
+  );
+
+  const { saveTypedDraft, skipQuestion, flushPendingSaves, isSaving } =
+    useIntakeAutoSave(interviewId, saveFn);
 
   const loadIntakeData = useCallback(
     async (isRetry = false) => {
@@ -105,8 +135,10 @@ export function FacilitatedIntakeWizard({
               audioUrl: response.audioUrl || undefined,
               audioDuration: response.audioDuration || 0,
               transcription: response.transcription || undefined,
+              skipped: response.skipped,
               transcriptionEditedAt: undefined,
               status:
+                response.skipped ||
                 response.transcriptionStatus === "COMPLETED" ||
                 (!response.audioUrl && Boolean(response.transcription?.trim()))
                   ? "completed"
@@ -141,27 +173,43 @@ export function FacilitatedIntakeWizard({
   useEffect(() => {
     if (!currentQuestion) return;
     const r = getResponseForQuestion(currentQuestion.id);
-    setResponseTab(r?.audioUrl ? "record" : r?.transcription?.trim() ? "type" : "record");
-    setTypedDraft(r?.transcription ?? "");
-  }, [currentQuestion, getResponseForQuestion, currentResponse?.audioUrl, currentResponse?.transcription]);
+    setResponseTab(
+      r?.skipped || r?.transcription?.trim()
+        ? "type"
+        : r?.audioUrl
+          ? "record"
+          : "type",
+    );
+    setTypedDraft(r?.skipped ? "" : (r?.transcription ?? ""));
+  }, [currentQuestion, getResponseForQuestion, currentResponse?.audioUrl, currentResponse?.transcription, currentResponse?.skipped]);
+
+  useEffect(() => {
+    if (!currentQuestion || !typedDraft.trim()) return;
+    saveTypedDraft(currentQuestion.id, typedDraft);
+  }, [typedDraft, currentQuestion, saveTypedDraft]);
 
   const submitIntake = useCallback(async () => {
     setSubmitting(true);
     try {
+      await flushPendingSaves();
       const result = await facilitatedSubmitIntake(sessionId);
       if (!result.success) {
         toast.error(result.error ?? "Failed to submit intake");
         return;
       }
       toast.success("Intake submitted");
+      if ("redirectTo" in result && result.redirectTo) {
+        router.push(result.redirectTo);
+        return;
+      }
       router.push(facilitatedPillarsPath(sessionId));
     } finally {
       setSubmitting(false);
     }
-  }, [router, sessionId]);
+  }, [flushPendingSaves, router, sessionId]);
 
   const handleRecordingComplete = async (blob: Blob, duration: number) => {
-    if (!currentQuestion || uploading || submitting || typedSaving) return;
+    if (!currentQuestion || uploading || submitting || isSaving) return;
 
     const questionId = currentQuestion.id;
     const recordedOnLastQuestion = isLastQuestion;
@@ -183,6 +231,7 @@ export function FacilitatedIntakeWizard({
       setResponse(questionId, {
         audioUrl: uploadData.audioUrl,
         audioDuration: duration,
+        skipped: false,
         status: "pending",
       });
 
@@ -229,36 +278,21 @@ export function FacilitatedIntakeWizard({
     }
   };
 
-  const handleTypedSave = async () => {
-    if (!currentQuestion || !typedDraft.trim()) return;
-    setTypedSaving(true);
-    try {
-      const result = await facilitatedSaveIntakeResponse(sessionId, {
-        interviewId,
-        questionId: currentQuestion.id,
-        transcription: typedDraft.trim(),
-      });
-      if (!result.success) {
-        toast.error(result.error ?? "Failed to save response");
-        return;
-      }
-      setResponse(currentQuestion.id, {
-        transcription: typedDraft.trim(),
-        status: "completed",
-      });
-      toast.success("Response saved");
-    } finally {
-      setTypedSaving(false);
-    }
+  const handleSkip = () => {
+    if (!currentQuestion) return;
+    skipQuestion(currentQuestion.id);
+    toast.success("Question skipped");
   };
 
   const handleNext = async () => {
     if (!canGoNext || !currentQuestion) return;
     const response = getResponseForQuestion(currentQuestion.id);
     if (!isInterviewResponseComplete(response)) {
-      toast.error("Answer this question before continuing");
+      toast.error("Answer or skip this question before continuing");
       return;
     }
+
+    await flushPendingSaves();
 
     if (isLastQuestion) {
       await submitIntake();
@@ -273,6 +307,12 @@ export function FacilitatedIntakeWizard({
     }
   };
 
+  const handlePrevious = async () => {
+    if (!canGoPrev) return;
+    await flushPendingSaves();
+    goToPrev();
+  };
+
   const completedSteps = useMemo(() => {
     const completed = new Set<number>();
     scriptQuestions.forEach((q, idx) => {
@@ -281,6 +321,8 @@ export function FacilitatedIntakeWizard({
     });
     return completed;
   }, [scriptQuestions, getResponseForQuestion, responses]);
+
+  const responseBusy = uploading || submitting || isSaving;
 
   if (loading) {
     return (
@@ -317,49 +359,60 @@ export function FacilitatedIntakeWizard({
       <Card className="p-4 sm:p-6">
         <Tabs value={responseTab} onValueChange={(v) => setResponseTab(v as "record" | "type")}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="record" className="gap-2">
-              <Mic className="size-4" />
-              Record
-            </TabsTrigger>
             <TabsTrigger value="type" className="gap-2">
               <Keyboard className="size-4" />
               Type
             </TabsTrigger>
+            <TabsTrigger value="record" className="gap-2">
+              <Mic className="size-4" />
+              Record
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="record" className="mt-4">
-            <AudioRecorder
-              onRecordingComplete={handleRecordingComplete}
-              disabled={uploading || submitting || typedSaving}
-              existingAudioUrl={currentResponse?.audioUrl}
-            />
-          </TabsContent>
           <TabsContent value="type" className="mt-4 space-y-3">
             <Textarea
               value={typedDraft}
               onChange={(e) => setTypedDraft(e.target.value)}
               rows={6}
               placeholder="Type the client's answer…"
+              disabled={responseBusy || currentResponse?.skipped}
             />
-            <Button
-              type="button"
-              onClick={() => void handleTypedSave()}
-              disabled={typedSaving || !typedDraft.trim()}
-            >
-              {typedSaving ? <Loader2 className="size-4 animate-spin" /> : "Save typed answer"}
-            </Button>
+            {isSaving ? (
+              <p className="text-xs text-muted-foreground">Saving…</p>
+            ) : typedDraft.trim() ? (
+              <p className="text-xs text-muted-foreground">Answer saves automatically.</p>
+            ) : null}
+          </TabsContent>
+          <TabsContent value="record" className="mt-4">
+            <AudioRecorder
+              onRecordingComplete={handleRecordingComplete}
+              disabled={responseBusy}
+              existingAudioUrl={currentResponse?.audioUrl}
+            />
           </TabsContent>
         </Tabs>
+
+        <div className="mt-4 text-center">
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-muted-foreground hover:text-foreground"
+            disabled={responseBusy}
+            onClick={handleSkip}
+          >
+            Skip this question
+          </Button>
+        </div>
       </Card>
 
       <div className="flex items-center justify-between gap-3">
-        <Button type="button" variant="outline" onClick={goToPrev} disabled={!canGoPrev}>
+        <Button type="button" variant="outline" onClick={() => void handlePrevious()} disabled={!canGoPrev || responseBusy}>
           <ArrowLeft className="size-4" />
           Previous
         </Button>
         <Button
           type="button"
           onClick={() => void handleNext()}
-          disabled={uploading || submitting || typedSaving}
+          disabled={responseBusy}
         >
           {isLastQuestion ? "Submit intake" : "Next"}
           {!isLastQuestion && <ArrowRight className="size-4" />}

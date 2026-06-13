@@ -811,6 +811,8 @@ model IntakeResponse {
   /// non-empty checks would be meaningless on ciphertext).
   hasTranscription    Boolean             @default(false)
   transcriptionStatus TranscriptionStatus @default(PENDING)
+  /// Advisor-led sessions may skip intake questions without an answer.
+  skipped             Boolean             @default(false)
   answeredAt          DateTime?
   updatedAt           DateTime            @updatedAt
 
