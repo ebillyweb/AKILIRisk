@@ -16,6 +16,9 @@ export default async function Home() {
       <main id="main-content" className="min-h-screen py-6 sm:py-8" tabIndex={-1}>
       <div className="page-shell">
         <div className="hero-surface app-grid grid min-h-[calc(100vh-3rem)] overflow-hidden rounded-[2rem] px-6 py-8 sm:px-8 lg:grid-cols-[1.2fr_0.8fr] lg:px-12 lg:py-10">
+          <div className="flex w-full justify-start text-foreground lg:hidden">
+            <AkiliLogoLockup className="h-auto w-full max-w-[220px]" />
+          </div>
           <section className="flex flex-col justify-between gap-8 lg:gap-10">
             <div className="space-y-7">
               <div className="space-y-4">
@@ -171,7 +174,7 @@ export default async function Home() {
           </section>
 
           <aside className="mt-12 flex flex-col items-stretch gap-8 lg:mt-0 lg:pl-10">
-            <div className="flex w-full justify-end text-foreground">
+            <div className="hidden w-full justify-end text-foreground lg:flex">
               <AkiliLogoLockup className="h-auto w-full max-w-[280px]" />
             </div>
             <Card className="w-full overflow-hidden">
