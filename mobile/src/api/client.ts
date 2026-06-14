@@ -1,19 +1,7 @@
 import { config } from '@/config';
+import { ApiError } from './errors';
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public body?: unknown,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-
-  get isAuthError() {
-    return this.status === 401 || this.status === 403;
-  }
-}
+export { ApiError };
 
 /**
  * Module-level bearer token. Set by AuthContext after sign-in so that both

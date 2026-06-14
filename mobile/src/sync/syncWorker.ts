@@ -13,21 +13,9 @@ import {
   type OutboxRow,
 } from '@/db/outbox';
 import { setDraftSyncState } from '@/db/drafts';
-
-const MAX_ATTEMPTS = 5;
+import { shouldDeadLetter } from './retryPolicy';
 
 let draining = false;
-
-/** A 4xx (other than 408/429) is permanent — it can't be fixed by retrying. */
-function isPermanent(err: unknown): boolean {
-  return (
-    err instanceof ApiError &&
-    err.status >= 400 &&
-    err.status < 500 &&
-    err.status !== 408 &&
-    err.status !== 429
-  );
-}
 
 async function processRow(row: OutboxRow): Promise<void> {
   if (row.mode === 'TYPE') {
@@ -76,7 +64,7 @@ export async function drainOutbox(): Promise<number> {
         synced += 1;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        const permanent = isPermanent(err) || row.attempts + 1 >= MAX_ATTEMPTS;
+        const permanent = shouldDeadLetter(err, row.attempts);
         await recordFailure(row.id, message, permanent);
         if (permanent) {
           await setDraftSyncState(row.questionId, 'FAILED');
