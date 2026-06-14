@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/mobile/token";
 import { submitIntakeInterview } from "@/lib/data/intake";
+import { notifyAdvisorsOfIntakeSubmission } from "@/lib/intake/notify-advisors";
 
 const schema = z.object({ interviewId: z.string().min(1) });
 
@@ -27,5 +28,13 @@ export async function POST(request: NextRequest) {
   }
 
   await submitIntakeInterview(interview.id);
+
+  // Notify assigned advisors; never let a notification failure fail the submit.
+  try {
+    await notifyAdvisorsOfIntakeSubmission(interview.id);
+  } catch (error) {
+    console.error("intake submit: advisor notification failed", error);
+  }
+
   return NextResponse.json({ referenceId: interview.id });
 }

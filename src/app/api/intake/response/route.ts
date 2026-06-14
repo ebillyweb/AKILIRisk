@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/mobile/token";
+import { isStaleWrite } from "@/lib/intake/conflict";
 
 const schema = z.object({
   interviewId: z.string().min(1),
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
   });
 
   // Server is source of truth: discard a stale client write.
-  if (existing && updatedAt && existing.updatedAt > new Date(updatedAt)) {
+  if (isStaleWrite(existing?.updatedAt, updatedAt)) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
