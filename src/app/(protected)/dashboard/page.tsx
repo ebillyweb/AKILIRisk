@@ -191,7 +191,7 @@ export default async function DashboardPage({
                 data-testid="hero-overall-risk"
               >
                 <p className="editorial-kicker">Overall risk</p>
-                {overallRisk ? (
+                {assessmentUnlocked && overallRisk ? (
                   <div className="mt-2 space-y-2">
                     <p className="text-2xl font-semibold tabular-nums leading-none tracking-tight sm:text-3xl">
                       {overallRisk.score.toFixed(1)} / 10
@@ -204,6 +204,15 @@ export default async function DashboardPage({
                     </Badge>
                   </div>
                 ) : (
+                  // The hero score sources from PillarScore rows directly;
+                  // the "Your Assessments" card below gates the assessment
+                  // results on `assessmentUnlocked` (i.e. the client's
+                  // current IntakeApproval is APPROVED, or intake was
+                  // waived with pillar scope). Without this gate, the hero
+                  // could show a score from a prior approval after an
+                  // advisor reverts approval status — contradicting the
+                  // body card that tells the client to wait for re-approval.
+                  // See INVENTORY "Fixed".
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     Complete your assessment to see your overall risk score.
                   </p>

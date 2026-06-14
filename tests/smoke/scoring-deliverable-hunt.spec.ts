@@ -97,67 +97,75 @@ test.describe("scoring + deliverable-phase hunt", () => {
   // Surfaced bugs — see tests/INVENTORY.md "Surfaced bugs".
   // ──────────────────────────────────────────────────────────────────
 
-  test.fixme(
-    "PREVIEW: /api/assessment/enhanced returns no recommendations until publish",
-    async ({ page, request }) => {
-      // Prepare a fully-scored client in PREVIEW phase. The expected
-      // behaviour once fixed: the enhanced-results endpoint suppresses
-      // `recommendations[]` and `actionPlan[]` until a PUBLISHED Report
-      // exists for the assessment (or deliverablePhase >= PROFILE).
-      const prep = await request.post("/api/test/assessment/prepare", {
-        data: { clientEmail: "client@test.com", reset: true, complete: true },
-      });
-      const p = (await prep.json()) as { assessmentId: string };
+  test("PREVIEW: /api/assessment/enhanced returns no recommendations until publish", async ({
+    page,
+    request,
+  }) => {
+    // PREVIEW phase: scored assessment, no PUBLISHED Report yet.
+    // Recommendations + action plan must be suppressed until publish.
+    const prep = await request.post("/api/test/assessment/prepare", {
+      data: { clientEmail: "client@test.com", reset: true, complete: true },
+    });
+    const p = (await prep.json()) as { assessmentId: string };
 
-      await new SignInPage(page).signInAs("client");
-      const cookies = (await page.context().cookies())
-        .map((c) => `${c.name}=${c.value}`)
-        .join("; ");
+    await new SignInPage(page).signInAs("client");
+    const cookies = (await page.context().cookies())
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
 
-      const r = await request.get(
-        `/api/assessment/enhanced/${p.assessmentId}/results`,
-        { headers: { cookie: cookies } }
+    const r = await request.get(
+      `/api/assessment/enhanced/${p.assessmentId}/results`,
+      { headers: { cookie: cookies } }
+    );
+    expect(r.status()).toBe(200);
+    const body = (await r.json()) as {
+      recommendations: unknown[];
+      actionPlan: unknown[];
+      pillarScores: unknown[];
+      overallScore: { score: number };
+    };
+    // The publish gate hides recommendations + action plan in PREVIEW.
+    expect(body.recommendations).toEqual([]);
+    expect(body.actionPlan).toEqual([]);
+    // The PREVIEW affordance (heat-map score data) stays visible — that's
+    // what BRD §6.3 says the client gets to see in Phase 1.
+    expect(body.pillarScores.length).toBeGreaterThan(0);
+    expect(body.overallScore.score).toBeGreaterThan(0);
+  });
+
+  test("dashboard does NOT contradict itself when intake is un-approved but assessment is COMPLETED", async ({
+    page,
+    request,
+  }) => {
+    // The contradiction we fixed: when intake approval is regressed (so
+    // `assessmentUnlocked=false`) but PillarScore rows still exist from
+    // a prior approval cycle, the hero used to render the score number
+    // while the body card said "Assessment unlocks after your advisor
+    // reviews and approves your intake." Both pieces now respect the
+    // same `assessmentUnlocked` gate: the hero falls back to the
+    // "Complete your assessment to see your overall risk score."
+    // placeholder when the gate is closed.
+    await request.post("/api/test/assessment/prepare", {
+      data: { clientEmail: "client@test.com", reset: true, complete: true },
+    });
+
+    await new SignInPage(page).signInAs("client");
+    await page.goto("/dashboard");
+    const main = await page.locator("main").innerText();
+
+    const bodyLocked = /Assessment unlocks after your advisor reviews/i.test(
+      main
+    );
+
+    if (bodyLocked) {
+      // When the body says "unlock after approval", the hero must NOT show
+      // a numeric overall-risk score (which would contradict the lock).
+      // Look for `<number>.<number> / 10` inside the Overall Risk box.
+      const heroBox = page.getByTestId("hero-overall-risk");
+      await expect(heroBox).toContainText(
+        /Complete your assessment to see your overall risk score/i
       );
-      const body = (await r.json()) as {
-        recommendations: unknown[];
-        actionPlan: unknown[];
-      };
-      expect(body.recommendations).toEqual([]);
-      expect(body.actionPlan).toEqual([]);
+      await expect(heroBox).not.toContainText(/\d+\.\d+\s*\/\s*10/);
     }
-  );
-
-  test.fixme(
-    "dashboard does NOT contradict itself when intake is un-approved but assessment is COMPLETED",
-    async ({ page, request }) => {
-      // Set the client to the rare regressed state: scored assessment +
-      // intake no longer approved. Today the hero shows
-      //   INTAKE: In review  /  ASSESSMENT: Complete  /  OVERALL: 1.9/10
-      // while the body card shows
-      //   "Assessment unlocks after your advisor reviews..."
-      // and there is no heat map / phase banner. Both blocks should
-      // agree on whether the assessment is usable.
-      await request.post("/api/test/assessment/prepare", {
-        data: { clientEmail: "client@test.com", reset: true, complete: true },
-      });
-
-      await new SignInPage(page).signInAs("client");
-      await page.goto("/dashboard");
-      const main = await page.locator("main").innerText();
-
-      const heroAssessment = /ASSESSMENT\s+Complete/i.test(main);
-      const heroIntakeReview = /INTAKE\s+In review/i.test(main);
-      const bodyLocked = /Assessment unlocks after your advisor reviews/i.test(
-        main
-      );
-
-      if (heroAssessment && heroIntakeReview) {
-        // If the hero shows "complete + in review", the body must NOT also
-        // tell the user to wait for advisor approval. Either show the
-        // heat-map / phase banner, or show a single unified "regressed
-        // approval" notice instead of contradicting the hero.
-        expect(bodyLocked).toBe(false);
-      }
-    }
-  );
+  });
 });

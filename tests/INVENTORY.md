@@ -388,65 +388,7 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-### Minor: `/api/assessment/enhanced/[id]/results` returns recommendations + actionPlan regardless of `deliverablePhase` / report publish status
-
-- **Where:** `src/app/api/assessment/enhanced/[id]/results/route.ts` — the
-  GET handler scopes by `userId: session.user.id` (owner-only ✓) and then
-  unconditionally returns `assessment.recommendations.map(...)` and the
-  derived `actionPlan`. No check on `assessment.deliverablePhase` or on
-  whether a PUBLISHED `Report` exists for the assessment.
-- **Expected:** Per BRD §6.3 (Phase 1 = "PREVIEW: heat-map view, no plan"),
-  the recommendations and action plan should be suppressed until the
-  advisor publishes the report (deliverablePhase advances to PROFILE).
-- **Actual:** A client whose assessment is in PREVIEW (scored but no
-  PUBLISHED report yet) can read the full recommendation set + action
-  plan via this API. Empirically zero recs come back in the current
-  fixture data because the recommendation rules don't fire for the
-  default maturity-2 seed, but `completeAssessmentForE2E` does invoke
-  `RecommendationEngine` and the rows are written to
-  `AssessmentRecommendation`. Different rules/data → leak manifests.
-- **Severity:** Minor (latent). No PII; the leak surfaces an
-  advisor's pre-publish service catalog to the client earlier than
-  intended. Becomes Major if the recommendation content gets
-  customized per-client and the customizations leak pre-publish.
-- **Fix sketch:** Gate `body.recommendations` and `body.actionPlan` on
-  `assessment.deliverablePhase !== "PREVIEW"` OR on `assessment.reports`
-  containing a row with `status: "PUBLISHED"`. Heat-map score data
-  (`pillarScores`, `overallScore`, `missingControls`) stays visible —
-  that's the explicit PREVIEW affordance.
-- **Test:** `tests/smoke/scoring-deliverable-hunt.spec.ts` — `PREVIEW:
-  /api/assessment/enhanced returns no recommendations until publish`
-  (test.fixme).
-
-### Cosmetic: client dashboard contradicts itself in the regressed intake-approval state
-
-- **Where:** `src/app/(protected)/dashboard/page.tsx` — the hero hub
-  sources `OVERALL RISK` from `PillarScore` rows and `ASSESSMENT` from
-  the assessment row's `status`; the "Your Assessments" body card and
-  the `RiskHeatMap` / `DeliverablePhaseBanner` are gated on
-  `assessmentUnlocked` (`getClientIntakeGateState`).
-- **Expected:** When `intakeApproved=false` but the assessment is
-  `COMPLETED` (scored, PREVIEW phase), both blocks should agree —
-  either show a unified "intake approval was revoked" notice, or
-  surface the existing heat-map + a single, accurate copy line.
-- **Actual:** Hero pill shows `ASSESSMENT: Complete` + `OVERALL RISK
-  1.9/10 MEDIUM RISK`; the body card simultaneously shows "Assessment
-  unlocks after your advisor reviews and approves your intake.
-  Complete your intake and wait for your advisor to approve it." No
-  heat map, no phase banner. Confirmed reproducible with
-  `client@test.com` after `POST /api/test/assessment/prepare`. The
-  state is also reachable in normal flow when an advisor revokes a
-  prior approval (e.g. resets approval status to `IN_REVIEW`).
-- **Severity:** Cosmetic. Confusing UX in a niche flow.
-- **Fix sketch:** Either (a) include the hero's
-  `latestAssessmentForHeatMap` score sources behind the same
-  `assessmentUnlocked` gate so the page presents one unified state,
-  or (b) keep showing the score and replace the "wait for advisor"
-  copy with a focused "your advisor has paused this assessment"
-  notice when scores exist but `intakeApproved=false`.
-- **Test:** `tests/smoke/scoring-deliverable-hunt.spec.ts` — `dashboard
-  does NOT contradict itself when intake is un-approved but assessment
-  is COMPLETED` (test.fixme).
+_None outstanding. See "Fixed" below._
 
 ## Fixed
 
@@ -535,6 +477,51 @@ the user in NOT_STARTED state.
   POST + DELETE `/api/advisor/subdomain/claim`. Regression:
   `advisor-api-authz-sweep.spec.ts` — 8 unauth probes, one per
   (verb, path).
+- **Pre-publish recommendation leak in
+  `/api/assessment/enhanced/[id]/results`**. The owner-only check on the
+  endpoint was correct, but it returned the full `recommendations[]` and
+  `actionPlan` regardless of `deliverablePhase` / report publish status.
+  Per BRD §6.3 Phase 1 PREVIEW is "heat-map view, no plan." The route now
+  loads `assessment.reports` filtered to `status: "PUBLISHED"` (`take: 1`)
+  and gates both `recommendations` and `actionPlan` on
+  `hasPublishedReport`. Heat-map score data (`pillarScores`,
+  `overallScore`, `missingControls`) stays visible — that's the explicit
+  PREVIEW affordance. Regression: `scoring-deliverable-hunt.spec.ts`
+  `PREVIEW: /api/assessment/enhanced returns no recommendations until
+  publish` flipped from fixme to live; asserts both
+  `recommendations.length === 0 && actionPlan.length === 0` AND
+  `pillarScores.length > 0 && overallScore.score > 0` so a regression
+  that drops the scores (over-correction) also fails the test.
+- **Dashboard contradicted itself when intake approval was regressed**.
+  Hero pill rendered `OVERALL RISK 1.9/10 MEDIUM` while the "Your
+  Assessments" card simultaneously said "Assessment unlocks after your
+  advisor reviews and approves your intake." The hero sourced from
+  `PillarScore` rows directly; the body gated on `assessmentUnlocked`
+  (`getClientIntakeGateState`). Fix: gate the hero `Overall risk` value
+  on `assessmentUnlocked && overallRisk` in
+  `src/app/(protected)/dashboard/page.tsx`. The placeholder copy
+  ("Complete your assessment to see your overall risk score.") was
+  already wired for the no-score case, so the regressed-approval case
+  now reuses it. Other hero pills (Intake / Assessment / Assessments
+  count / MFA) keep reporting DB facts since they're status-bearers
+  rather than result-bearers. Regression:
+  `scoring-deliverable-hunt.spec.ts` `dashboard does NOT contradict
+  itself...` flipped to live; asserts that whenever the locked-body
+  copy is present, the `hero-overall-risk` test-id no longer contains a
+  `N.N / 10` score string and instead carries the "Complete your
+  assessment..." copy.
+- **Suite-wide MFA-aware credentials sign-in** added in `SignInPage`.
+  A separate commit landed mandatory MFA enforcement for advisor-hub
+  roles via `proxy.ts`. Credentials sign-in on an MFA-required account
+  now lands on `/mfa/verify` (enrolled but un-verified) or
+  `/mfa/setup` (not enrolled). `SignInPage.signInAs` now primes the
+  fixture via `tests/helpers/mfa.ts` `prepareMfaFixture` for every
+  non-client role before submitting credentials, then auto-fills the
+  TOTP code via `generateTotpCode(secret)` when the post-credentials
+  redirect lands on `/mfa/verify`. If a stale prep races and the
+  redirect lands on `/mfa/setup` the helper re-primes and retries.
+  Recovered 5 previously-broken admin-api-authz tests and unblocks
+  the rest of the advisor-hub specs from the recent MFA enforcement.
 
 ## Process
 
