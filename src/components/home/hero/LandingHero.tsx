@@ -54,6 +54,9 @@ export function LandingHero({
         className
       )}
     >
+      <div className="flex w-full justify-start text-foreground lg:hidden">
+        <AkiliLogoLockup className="h-auto w-full max-w-[220px]" />
+      </div>
       <section className="flex flex-col justify-between gap-8 lg:gap-10">
         <div className="space-y-7">
           <HeroAudienceSwitcher
@@ -187,7 +190,7 @@ export function LandingHero({
       </section>
 
       <aside className="mt-12 flex flex-col items-stretch gap-8 lg:mt-0 lg:pl-10">
-        <div className="flex w-full justify-end text-foreground">
+        <div className="hidden w-full justify-end text-foreground lg:flex">
           <AkiliLogoLockup className="h-auto w-full max-w-[280px]" />
         </div>
         <Card className="w-full overflow-hidden">
