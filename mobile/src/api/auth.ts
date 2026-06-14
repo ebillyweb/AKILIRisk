@@ -36,7 +36,7 @@ export async function verifyCode(email: string, code: string): Promise<VerifyRes
 /** Re-reads the session user with the current bearer token. */
 export async function getSession(): Promise<TSessionUser | null> {
   try {
-    const raw = await apiRequest<unknown>('/api/auth/session');
+    const raw = await apiRequest<unknown>('/api/mobile/me');
     if (raw && typeof raw === 'object' && 'user' in raw) {
       const parsed = SessionUser.safeParse((raw as { user: unknown }).user);
       return parsed.success ? parsed.data : null;

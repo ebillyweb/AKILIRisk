@@ -66,6 +66,31 @@ export async function generateUploadUrl(
   return { signedUrl, key };
 }
 
+/** Presigns a PUT for an arbitrary object key (used by mobile intake audio). */
+export async function generateUploadUrlForKey(
+  key: string,
+  contentType: string
+): Promise<{ signedUrl: string; key: string }> {
+  const client = createS3Client();
+  if (!client) {
+    throw new Error("S3 client not configured - check AWS environment variables");
+  }
+
+  const bucketName = process.env.S3_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error("S3_BUCKET_NAME environment variable not configured");
+  }
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  const signedUrl = await getSignedUrl(client, command, { expiresIn: 3600 });
+  return { signedUrl, key };
+}
+
 export async function generateDownloadUrl(key: string): Promise<string> {
   const client = createS3Client();
   if (!client) {

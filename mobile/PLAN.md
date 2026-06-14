@@ -83,20 +83,26 @@ client is written to this contract (isolated in `src/api/*`):
 | GET | `/api/advisor/clients/:id/intake` | read-only transcript |
 | GET | `/api/advisor/clients/:id/audio/:qid` | signed playback URL |
 
-## Backend follow-ups (plan §10.1 names a 50% backend engineer)
+## Backend (implemented in the web app — `../src`)
 
-The existing web app authenticates with **NextAuth credentials + MFA**, not
-magic links, and does not yet expose `/api/intake/script` or the presign route
-in the shape above. To run end-to-end, the backend needs:
+The matching backend endpoints now live in the AkiliRisk Next.js app:
 
-1. Magic-link issue/verify endpoints returning a **bearer JWT** the API accepts.
-2. `GET /api/intake/script` projecting the existing question bank.
-3. `POST /api/intake/response` with `Idempotency-Key` + `(interviewId,questionId)` upsert.
-4. Audio presign + confirm endpoints over the existing S3 pipeline.
-5. Advisor read endpoints joined through `ClientAdvisorAssignment` (tenant isolation).
+| Concern | Implementation |
+| --- | --- |
+| Bearer auth + cookie fallback | `src/lib/mobile/token.ts` (`resolveUser`, HMAC token) |
+| Magic-link + paste-code | `src/lib/mobile/magic-link.ts`, `src/app/api/auth/{magic-link,verify}/route.ts`, `sendMagicLinkEmail` in `src/lib/email.ts` |
+| Session refresh | `src/app/api/mobile/me/route.ts` |
+| Intake script / response / submit | `src/app/api/intake/{script,response,submit}/route.ts` |
+| Voice presign | `src/app/api/intake/audio/presign/route.ts` + `generateUploadUrlForKey` in `src/lib/documents/s3.ts` |
+| Advisor read endpoints | `src/app/api/advisor/clients/**` + `src/lib/mobile/advisor.ts` (tenant isolation) |
+| Schema | `IntakeResponse.textResponse` column (migration `20260614120000_intake_text_response`) |
 
-A dedicated `/api/mobile/v1/*` surface is the plan's **Phase 2** item (§12.3);
-Phase 1 reuses web routes.
+Auth issues a stateless HMAC bearer token (AUTH_SECRET, 30-day TTL); the mobile
+endpoints accept it **or** a NextAuth cookie session, so they serve app + web.
+Apply the migration with `npx prisma migrate deploy`. Remaining ops items
+(plan §13): universal/app-link `apple-app-site-association` + `assetlinks.json`
+on the link host, and `MOBILE_LINK_BASE_URL` env. A dedicated `/api/mobile/v1/*`
+surface remains the plan's **Phase 2** item (§12.3).
 
 ## 12-week delivery plan (plan §10)
 
