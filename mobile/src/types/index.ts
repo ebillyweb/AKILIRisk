@@ -1,13 +1,6 @@
 import { z } from 'zod';
 
-/** Mirrors the backend Prisma enums so the client stays in lockstep with the API. */
-
-export const RiskLevel = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
-export type RiskLevel = z.infer<typeof RiskLevel>;
-
-export const AssessmentStatus = z.enum(['IN_PROGRESS', 'COMPLETED', 'ARCHIVED']);
-export type AssessmentStatus = z.infer<typeof AssessmentStatus>;
-
+/** Roles surfaced on mobile (ADMIN is web-only per the plan). */
 export const UserRole = z.enum(['USER', 'ADVISOR', 'ADMIN']);
 export type UserRole = z.infer<typeof UserRole>;
 
@@ -17,43 +10,83 @@ export const SessionUser = z.object({
   name: z.string().nullable().optional(),
   firstName: z.string().nullable().optional(),
   role: UserRole.catch('USER'),
-  mfaEnabled: z.boolean().optional(),
-  mfaVerified: z.boolean().optional(),
+  advisorFirmName: z.string().nullable().optional(),
 });
 export type SessionUser = z.infer<typeof SessionUser>;
 
-/** NextAuth `/api/auth/session` response shape. */
-export const SessionResponse = z.object({
-  user: SessionUser.optional(),
-  expires: z.string().optional(),
+/** Response from POST /api/auth/verify (magic link) and /api/auth/verify-code. */
+export const VerifyResponse = z.object({
+  token: z.string(),
+  user: SessionUser,
 });
-export type SessionResponse = z.infer<typeof SessionResponse>;
+export type VerifyResponse = z.infer<typeof VerifyResponse>;
 
-export const PillarScore = z.object({
+/** How a single intake answer was authored. */
+export const ResponseMode = z.enum(['TYPE', 'VOICE']);
+export type ResponseMode = z.infer<typeof ResponseMode>;
+
+/** Where a locally-authored answer currently lives (drives the save-status pill). */
+export type SyncState = 'SAVED_LOCAL' | 'QUEUED' | 'SYNCED' | 'FAILED';
+
+/** Canonical intake status, tolerant of backend casing. */
+export const IntakeStatus = z
+  .enum(['NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'IN_REVIEW', 'APPROVED'])
+  .catch('NOT_STARTED');
+export type IntakeStatus = z.infer<typeof IntakeStatus>;
+
+export const IntakeQuestion = z.object({
   id: z.string(),
-  assessmentId: z.string(),
+  /** Display order (0-based). */
+  order: z.number(),
   pillar: z.string(),
-  score: z.number(),
-  riskLevel: RiskLevel,
-  breakdown: z.unknown().optional(),
-  missingControls: z.unknown().nullable().optional(),
-  calculatedAt: z.string().optional(),
+  prompt: z.string(),
+  helpText: z.string().nullable().optional(),
+  /** Whether voice answers are permitted (defaults true). */
+  allowVoice: z.boolean().optional().default(true),
 });
-export type PillarScore = z.infer<typeof PillarScore>;
+export type IntakeQuestion = z.infer<typeof IntakeQuestion>;
 
-export const Assessment = z.object({
+/** GET /api/intake/script — the question set for the user's interview. */
+export const IntakeScript = z.object({
+  interviewId: z.string(),
+  status: IntakeStatus,
+  questions: z.array(IntakeQuestion),
+});
+export type IntakeScript = z.infer<typeof IntakeScript>;
+
+export const TranscriptionStatus = z
+  .enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'NONE'])
+  .catch('NONE');
+export type TranscriptionStatus = z.infer<typeof TranscriptionStatus>;
+
+/** A server-side intake response (used by the advisor read view). */
+export const IntakeResponse = z.object({
+  questionId: z.string(),
+  mode: ResponseMode.optional(),
+  text: z.string().nullable().optional(),
+  audioUrl: z.string().nullable().optional(),
+  transcript: z.string().nullable().optional(),
+  transcriptionStatus: TranscriptionStatus.optional(),
+  updatedAt: z.string().optional(),
+});
+export type IntakeResponse = z.infer<typeof IntakeResponse>;
+
+/** Advisor's view of an assigned client. */
+export const AdvisorClient = z.object({
   id: z.string(),
-  userId: z.string(),
-  version: z.number().optional(),
-  status: AssessmentStatus,
-  currentPillar: z.string().nullable().optional(),
-  currentQuestionIndex: z.number().nullable().optional(),
-  startedAt: z.string().optional(),
-  completedAt: z.string().nullable().optional(),
-  updatedAt: z.string(),
-  scores: z.array(PillarScore).optional(),
-  _count: z.object({ responses: z.number() }).optional(),
+  name: z.string().nullable().optional(),
+  email: z.string(),
+  intakeStatus: IntakeStatus,
+  submittedAt: z.string().nullable().optional(),
+  interviewId: z.string().nullable().optional(),
 });
-export type Assessment = z.infer<typeof Assessment>;
+export type AdvisorClient = z.infer<typeof AdvisorClient>;
+export const AdvisorClientList = z.array(AdvisorClient);
 
-export const AssessmentList = z.array(Assessment);
+/** Advisor's read-only detail for one client's intake. */
+export const ClientIntakeDetail = z.object({
+  client: AdvisorClient,
+  questions: z.array(IntakeQuestion),
+  responses: z.array(IntakeResponse),
+});
+export type ClientIntakeDetail = z.infer<typeof ClientIntakeDetail>;

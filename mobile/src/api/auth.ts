@@ -1,65 +1,49 @@
-import { apiRequest, ApiError } from './client';
-import { SessionResponse, type SessionUser } from '@/types';
-
-interface CsrfResponse {
-  csrfToken: string;
-}
+import { apiRequest } from './client';
+import { SessionUser, VerifyResponse, type SessionUser as TSessionUser } from '@/types';
 
 /**
- * Signs in against the NextAuth credentials provider.
- *
- * NextAuth's credential callback requires a CSRF token and a form-encoded
- * body, then sets the session cookie via Set-Cookie (handled by the native
- * cookie jar). We then read the resolved session to obtain the user.
+ * Auth surface per the mobile plan §7. The web backend may need a thin
+ * `/api/auth/magic-link` + `/api/auth/verify` shape (see PLAN.md "Backend
+ * follow-ups"); the client is written to that contract.
  */
-export async function signIn(email: string, password: string): Promise<SessionUser> {
-  const { csrfToken } = await apiRequest<CsrfResponse>('/api/auth/csrf');
 
-  await apiRequest('/api/auth/callback/credentials', {
+/** Requests a magic-link email (and paste-code) for the given address. */
+export async function requestMagicLink(email: string): Promise<void> {
+  await apiRequest('/api/auth/magic-link', {
     method: 'POST',
-    form: {
-      csrfToken,
-      email,
-      password,
-      json: 'true',
-      redirect: 'false',
-    },
-    raw: true,
-  });
-
-  const user = await getSession();
-  if (!user) {
-    throw new ApiError(401, 'Invalid email or password.');
-  }
-  return user;
-}
-
-/** Returns the current session user, or null if unauthenticated. */
-export async function getSession(): Promise<SessionUser | null> {
-  const raw = await apiRequest<unknown>('/api/auth/session');
-  const parsed = SessionResponse.safeParse(raw);
-  if (!parsed.success) return null;
-  return parsed.data.user ?? null;
-}
-
-/** Verifies a TOTP / MFA code for the active session. */
-export async function verifyMfa(code: string): Promise<void> {
-  await apiRequest('/api/auth/mfa/verify', {
-    method: 'POST',
-    json: { code },
+    json: { email },
   });
 }
 
-/** Clears the NextAuth session cookie server-side. */
-export async function signOut(): Promise<void> {
+/** Exchanges a magic-link token (from the deep link) for a session JWT. */
+export async function verifyToken(token: string): Promise<VerifyResponse> {
+  const raw = await apiRequest<unknown>('/api/auth/verify', {
+    method: 'POST',
+    json: { token },
+  });
+  return VerifyResponse.parse(raw);
+}
+
+/** Paste-code fallback: exchanges the 6-digit code for a session JWT. */
+export async function verifyCode(email: string, code: string): Promise<VerifyResponse> {
+  const raw = await apiRequest<unknown>('/api/auth/verify', {
+    method: 'POST',
+    json: { email, code },
+  });
+  return VerifyResponse.parse(raw);
+}
+
+/** Re-reads the session user with the current bearer token. */
+export async function getSession(): Promise<TSessionUser | null> {
   try {
-    const { csrfToken } = await apiRequest<CsrfResponse>('/api/auth/csrf');
-    await apiRequest('/api/auth/signout', {
-      method: 'POST',
-      form: { csrfToken, json: 'true' },
-      raw: true,
-    });
+    const raw = await apiRequest<unknown>('/api/auth/session');
+    if (raw && typeof raw === 'object' && 'user' in raw) {
+      const parsed = SessionUser.safeParse((raw as { user: unknown }).user);
+      return parsed.success ? parsed.data : null;
+    }
+    const direct = SessionUser.safeParse(raw);
+    return direct.success ? direct.data : null;
   } catch {
-    // Best-effort: local state is cleared regardless.
+    return null;
   }
 }

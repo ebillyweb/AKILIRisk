@@ -1,66 +1,39 @@
 /**
- * Canonical risk pillars, matching the backend pillar identifiers
- * (see src/lib/assessment + src/lib/{family,cyber-risk,identity-risk,intelligence}).
+ * Pillar tags preserved from the web intake script. The intake question bank
+ * tags each question with a pillar; the mobile app only displays it as a chip,
+ * so this is a presentation helper rather than scoring logic.
  */
 
-export type PillarKey =
-  | 'family-governance'
-  | 'cyber-risk'
-  | 'identity-risk'
-  | 'intelligence';
+const PILLAR_LABELS: Record<string, string> = {
+  'family-governance': 'Governance',
+  governance: 'Governance',
+  'cyber-risk': 'Cyber',
+  cyber: 'Cyber',
+  'identity-risk': 'Identity',
+  identity: 'Identity',
+  physical: 'Physical',
+  'physical-security': 'Physical',
+  intelligence: 'Intel',
+};
 
-export interface PillarMeta {
-  key: PillarKey;
-  label: string;
-  short: string;
-  description: string;
-  /** lucide-style / emoji glyph used as a lightweight icon. */
-  glyph: string;
+const PILLAR_COLORS: Record<string, string> = {
+  Governance: '#8b5cf6',
+  Cyber: '#10b981',
+  Identity: '#3b82f6',
+  Physical: '#f59e0b',
+  Intel: '#ec4899',
+};
+
+export function pillarLabel(pillar: string): string {
+  const key = pillar.trim().toLowerCase();
+  if (PILLAR_LABELS[key]) return PILLAR_LABELS[key];
+  // Title-case an unknown pillar slug as a fallback.
+  return key
+    .split(/[-_\s]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
-export const PILLARS: PillarMeta[] = [
-  {
-    key: 'family-governance',
-    label: 'Family Governance',
-    short: 'Governance',
-    description: 'Household structure, succession, and decision-making controls.',
-    glyph: '🏛️',
-  },
-  {
-    key: 'cyber-risk',
-    label: 'Cyber Risk',
-    short: 'Cyber',
-    description: 'Digital security posture across devices, accounts, and networks.',
-    glyph: '🛡️',
-  },
-  {
-    key: 'identity-risk',
-    label: 'Identity Risk',
-    short: 'Identity',
-    description: 'Exposure of personal information and digital footprint.',
-    glyph: '🪪',
-  },
-  {
-    key: 'intelligence',
-    label: 'Risk Intelligence',
-    short: 'Intel',
-    description: 'Threat intelligence and situational awareness for the family.',
-    glyph: '🔎',
-  },
-];
-
-export const PILLAR_BY_KEY: Record<string, PillarMeta> = Object.fromEntries(
-  PILLARS.map((p) => [p.key, p]),
-);
-
-export function pillarMeta(key: string): PillarMeta {
-  return (
-    PILLAR_BY_KEY[key] ?? {
-      key: key as PillarKey,
-      label: key,
-      short: key,
-      description: '',
-      glyph: '📊',
-    }
-  );
+export function pillarColor(pillar: string): string {
+  return PILLAR_COLORS[pillarLabel(pillar)] ?? '#6f6f8a';
 }

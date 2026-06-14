@@ -1,5 +1,3 @@
-import type { RiskLevel } from '@/types';
-
 /** Brand palette, aligned with the web platform (src/lib/branding/preview-hex.ts). */
 export const palette = {
   primary: '#1a1a2e',
@@ -22,18 +20,3 @@ export const palette = {
   warning: '#f59e0b',
   success: '#10b981',
 } as const;
-
-/** Maps a backend RiskLevel to its display color. */
-export const riskColor: Record<RiskLevel, string> = {
-  LOW: '#10b981',
-  MEDIUM: '#f59e0b',
-  HIGH: '#f97316',
-  CRITICAL: '#ef4444',
-};
-
-export const riskLabel: Record<RiskLevel, string> = {
-  LOW: 'Low Risk',
-  MEDIUM: 'Moderate Risk',
-  HIGH: 'High Risk',
-  CRITICAL: 'Critical Risk',
-};

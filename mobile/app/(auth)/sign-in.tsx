@@ -16,28 +16,24 @@ import { palette } from '@/theme/colors';
 import { fontSize, radius, spacing } from '@/theme/spacing';
 
 export default function SignInScreen() {
-  const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { requestMagicLink, pendingEmail } = useAuth();
+  const [email, setEmail] = useState(pendingEmail ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     setError(null);
-    if (!email.trim() || !password) {
-      setError('Enter your email and password.');
+    const trimmed = email.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+      setError('Enter a valid email address.');
       return;
     }
     setSubmitting(true);
     try {
-      const user = await signIn(email.trim().toLowerCase(), password);
-      if (user.mfaEnabled && !user.mfaVerified) {
-        router.replace('/(auth)/mfa');
-      } else {
-        router.replace('/(tabs)');
-      }
+      await requestMagicLink(trimmed);
+      router.push('/(auth)/check-email');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Unable to sign in. Try again.');
+      setError(err instanceof ApiError ? err.message : 'Could not send your sign-in link.');
     } finally {
       setSubmitting(false);
     }
@@ -51,11 +47,14 @@ export default function SignInScreen() {
       <ScreenContainer contentStyle={styles.content}>
         <View style={styles.brand}>
           <Text style={styles.logo}>AkiliRisk</Text>
-          <Text style={styles.tagline}>Family Risk Intelligence</Text>
+          <Text style={styles.tagline}>Intake & Assessment</Text>
         </View>
 
         <View style={styles.form}>
           <Text style={styles.heading}>Sign in</Text>
+          <Text style={styles.subtitle}>
+            Enter your email and we&apos;ll send you a secure sign-in link.
+          </Text>
 
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
@@ -68,19 +67,6 @@ export default function SignInScreen() {
               autoComplete="email"
               keyboardType="email-address"
               style={styles.input}
-            />
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={palette.textMuted}
-              secureTextEntry
-              autoComplete="password"
-              style={styles.input}
               onSubmitEditing={handleSubmit}
               returnKeyType="go"
             />
@@ -88,11 +74,11 @@ export default function SignInScreen() {
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Button label="Sign in" onPress={handleSubmit} loading={submitting} />
+          <Button label="Email me a sign-in link" onPress={handleSubmit} loading={submitting} />
         </View>
 
         <Text style={styles.footnote}>
-          Don&apos;t have an account? Ask your advisor for an invitation link.
+          No account? Ask your advisor for an invitation.
         </Text>
       </ScreenContainer>
     </KeyboardAvoidingView>
@@ -107,6 +93,7 @@ const styles = StyleSheet.create({
   tagline: { color: palette.accent, fontSize: fontSize.sm, fontWeight: '600' },
   form: { gap: spacing.lg },
   heading: { color: palette.textPrimary, fontSize: fontSize.xl, fontWeight: '700' },
+  subtitle: { color: palette.textSecondary, fontSize: fontSize.sm },
   field: { gap: spacing.xs },
   label: { color: palette.textSecondary, fontSize: fontSize.sm, fontWeight: '600' },
   input: {

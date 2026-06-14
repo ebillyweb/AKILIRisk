@@ -1,94 +1,109 @@
-# AkiliRisk Mobile — Build Plan
+# AkiliRisk Mobile — Implementation Plan & Status
 
-This document captures the architecture and roadmap for the AkiliRisk mobile
-companion app. Phase 0 (the foundation + core client experience) is implemented
-in this commit; later phases are scoped for follow-up work.
+> **Source of truth:** *Akili Risk Mobile App Development Plan* (v1.0, June 13 2026),
+> Google Drive `Akili_Risk_Mobile_App_Plan.docx`. This file maps that plan to the
+> code in this repo and tracks what is implemented vs. outstanding.
 
-## Goals
+## What the app is (per the plan)
 
-- Give clients a fast, secure, read-first view of their family risk profile.
-- Reuse the existing AkiliRisk web API rather than forking business logic.
-- Keep the domain model in lockstep with the backend (pillars, risk levels,
-  assessment status) so the two clients never drift.
-- Ship a foundation that an advisor-facing surface and richer authoring can be
-  layered onto.
+A focused **companion** to the AkiliRisk web platform — **not** a replacement.
+Phase 1 lets **clients complete the household risk intake** on a phone (Type or
+Voice, online or offline) and lets **advisors read submitted intake** on the go.
+Everything consequential — reporting, scoring, approval, configuration, billing —
+**stays on the web**.
 
-## Architecture decisions
+## Phase 1 scope ↔ implementation
 
-| Decision | Rationale |
-| --- | --- |
-| **Expo (managed)** | Fastest path to iOS + Android from one TS/React codebase; OTA updates via EAS; matches the team's existing React/TypeScript skills. |
-| **expo-router** | File-based, typed routes; mirrors the App Router mental model from the web app. |
-| **react-query** | Caching, background refetch, and pull-to-refresh with minimal boilerplate; centralizes auth-error handling (no retry on 401/403). |
-| **zod schemas as the type source** | The API is untyped over the wire; parsing at the boundary catches backend drift early and yields inferred TS types. |
-| **Cookie-session auth via native cookie jar** | Reuses NextAuth as-is with zero backend changes for v0. See "Backend follow-ups" for the token-based upgrade. |
-| **expo-secure-store** | Encrypted at-rest cache of the session user for instant cold-start hydration. |
+| Plan area | Where in this repo | Status |
+| --- | --- | --- |
+| §4.1 Magic-link sign-in + paste-code fallback | `app/(auth)/sign-in.tsx`, `check-email.tsx`, `src/api/auth.ts`, deep-link handler in `app/_layout.tsx` | ✅ |
+| §4.1 JWT in SecureStore + biometric unlock | `src/auth/secureStore.ts`, `biometric.ts`, `AuthContext.tsx`, `app/(auth)/unlock.tsx` | ✅ |
+| §4.2 Client home (Begin / Resume / Submitted) | `app/(client)/home.tsx` | ✅ |
+| §4.2 Intake landing (count, time, privacy) | `app/(client)/intake/index.tsx` | ✅ |
+| §4.2 Per-question Type & Voice tabs | `app/(client)/intake/wizard.tsx`, `src/components/{ModeTabs,VoiceAnswer}.tsx`, `src/audio/useAudioRecorder.ts` | ✅ |
+| §4.2 Per-answer save status (Saved/Synced/Queued/Failed) | `src/components/SaveStatusPill.tsx` | ✅ |
+| §4.2 Offline banner + pending summary | `src/components/OfflineBanner.tsx` | ✅ |
+| §4.2 Submission confirmation + reference ID | `app/(client)/intake/confirm.tsx` | ✅ |
+| §4.3 Advisor client list + search + filters | `app/(advisor)/clients.tsx` | ✅ |
+| §4.3 Read-only transcripts + inline voice playback | `app/(advisor)/client/[id].tsx`, `src/components/AudioPlayButton.tsx` | ✅ |
+| §4.3 Pillar tags | `src/components/PillarChip.tsx`, `src/constants/pillars.ts` | ✅ |
+| §4.3 "Approve & continue on web" | `app/(advisor)/client/[id].tsx` (opens web console) | ✅ |
+| §8 Local-first: SQLite drafts + outbox + idempotency | `src/db/{database,drafts,outbox}.ts`, `src/intake/service.ts` | ✅ |
+| §8.2 Sync worker + conflict rules + dead-letter | `src/sync/syncWorker.ts`, `src/sync/SyncContext.tsx` | ✅ |
+| §6 EAS Build profiles | `eas.json` | ✅ (scaffold) |
 
-## Domain model (mirrors backend)
+### Deliberately excluded in Phase 1 (per §2 / §4.4)
+Score views, recommendations, PDF reports, billing/Stripe, admin surfaces,
+advisor configuration, push notifications, tablet layouts, white-label apps.
 
-- **Pillars:** `family-governance`, `cyber-risk`, `identity-risk`, `intelligence`
-  (`src/constants/pillars.ts`).
-- **Risk levels:** `LOW` → `MEDIUM` → `HIGH` → `CRITICAL` with brand colors
-  (`src/theme/colors.ts`).
-- **Assessment status:** `IN_PROGRESS` / `COMPLETED` / `ARCHIVED`.
+## Technology stack (plan §5)
 
-## API surface consumed (v0)
+Expo SDK 53 (managed) · TypeScript strict · Expo Router · TanStack Query ·
+React Hook Form + Zod · Expo SecureStore · Expo LocalAuthentication · Expo AV ·
+Expo SQLite · `@react-native-community/netinfo` · EAS Build/Submit/Update ·
+Sentry (to be wired) · Jest + RNTL (tests, post-scaffold).
 
-| Endpoint | Use |
-| --- | --- |
-| `GET /api/auth/csrf` | CSRF token for credential sign-in |
-| `POST /api/auth/callback/credentials` | Credential sign-in |
-| `GET /api/auth/session` | Resolve current user |
-| `POST /api/auth/mfa/verify` | MFA verification |
-| `POST /api/auth/signout` | Sign out |
-| `GET /api/assessment` | List the user's assessments |
-| `GET /api/assessment/:id` | Assessment detail + pillar scores |
+> **UI primitives** are an open question in the plan (Tamagui vs. RN Paper, §13).
+> This scaffold uses lightweight in-repo components (`src/components`,
+> `src/theme`) so the choice can be made without reworking screens.
 
-## Phases
+## Architecture (plan §6, §8)
 
-### Phase 0 — Foundation & client read experience ✅ (this commit)
-- Expo + expo-router scaffold, strict TS, theming, reusable components.
-- Auth: sign-in, MFA, session persistence, auth-guarded tabs.
-- Dashboard: composite score + per-pillar snapshot.
-- Assessments: list + detail with pillar breakdown and recommended controls.
-- Profile: account info + sign out.
+The app is a thin, **local-first** client over the existing Next.js backend.
 
-### Phase 1 — Hardening & DX
-- Add app icon / splash assets and EAS build profiles (`eas.json`).
-- Unit tests (zod parsers, score aggregation) via jest-expo.
-- Error/telemetry (Sentry) and offline cache persistence for react-query.
-- Empty/error-state polish and accessibility pass.
+```
+UI ──save──▶ SQLite (drafts)  ──enqueue──▶ outbox (UUID idempotency key)
+                                              │
+NetInfo online / app-foreground ──▶ sync worker drains outbox in order
+   • TYPE  → POST /api/intake/response (Idempotency-Key)
+   • VOICE → presign → PUT S3 → POST /api/intake/response → evict local file
+   • 4xx (perm) → dead-letter + mark draft FAILED
+   • offline/5xx → stop, retry on reconnect
+Submission blocked until every draft is SYNCED.
+```
 
-### Phase 2 — Notifications & engagement
-- Push notifications (expo-notifications) for advisor messages, workflow stage
-  changes, and document-request reminders (backend triggers already exist).
-- Deep links from notifications into the relevant assessment/pillar.
+Conflict rule (plan §8.2): server `updatedAt` wins on first sync; idempotency
+keys make retries safe; responses are append-only per `(interviewId, questionId)`.
 
-### Phase 3 — On-device assessment authoring
-- Render the question bank and capture responses with auto-save
-  (`/api/assessment/:id/responses`), reusing the web branching logic.
-- Audio intake responses (expo-av) feeding the existing transcription pipeline.
+## API contract the client expects
 
-### Phase 4 — Advisor surface
-- Advisor login → portfolio list, client drill-down, and review/approval
-  actions, gated on `role === 'ADVISOR'`.
-- Advisor branding (logo/colors) applied dynamically per the branding API.
+Phase 1 reuses Next.js routes; some need a thin mobile-friendly shape. The
+client is written to this contract (isolated in `src/api/*`):
 
-## Backend follow-ups (recommended)
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/auth/magic-link` | send magic link + 6-digit code |
+| POST | `/api/auth/verify` | exchange `{token}` or `{email,code}` → `{token,user}` |
+| GET | `/api/auth/session` | resolve current user (bearer) |
+| GET | `/api/intake/script` | `{interviewId,status,questions[]}` |
+| POST | `/api/intake/response` | upsert typed/voice answer (idempotent) |
+| POST | `/api/intake/audio/presign` | `{uploadUrl,fileKey}` for voice upload |
+| POST | `/api/intake/submit` | finalize → `{referenceId}` |
+| GET | `/api/advisor/clients` | assigned clients |
+| GET | `/api/advisor/clients/:id/intake` | read-only transcript |
+| GET | `/api/advisor/clients/:id/audio/:qid` | signed playback URL |
 
-1. **Dedicated mobile auth** — issue a signed bearer/refresh token from a
-   `/api/mobile/auth/login` endpoint so the app isn't coupled to NextAuth's
-   CSRF + cookie flow (more robust across RN networking edge cases and easier
-   to test). The current client isolates auth in `src/api/auth.ts`, so this is
-   a localized change.
-2. **Scores endpoint shape** — return a stable, documented JSON contract for
-   `GET /api/assessment/:id` including `scores[]` with `breakdown` and
-   `missingControls` typed consistently.
-3. **CORS / mobile origin** — confirm the API accepts the app's requests when
-   pointed at non-production hosts during development.
-4. **Push token registration** — add an endpoint to store Expo push tokens per
-   user for Phase 2.
+## Backend follow-ups (plan §10.1 names a 50% backend engineer)
 
-## Out of scope (for now)
-- Payments/Stripe flows (advisor-side, web-first).
-- Document upload UI (S3 presigned flow exists; deferred to Phase 3+).
+The existing web app authenticates with **NextAuth credentials + MFA**, not
+magic links, and does not yet expose `/api/intake/script` or the presign route
+in the shape above. To run end-to-end, the backend needs:
+
+1. Magic-link issue/verify endpoints returning a **bearer JWT** the API accepts.
+2. `GET /api/intake/script` projecting the existing question bank.
+3. `POST /api/intake/response` with `Idempotency-Key` + `(interviewId,questionId)` upsert.
+4. Audio presign + confirm endpoints over the existing S3 pipeline.
+5. Advisor read endpoints joined through `ClientAdvisorAssignment` (tenant isolation).
+
+A dedicated `/api/mobile/v1/*` surface is the plan's **Phase 2** item (§12.3);
+Phase 1 reuses web routes.
+
+## 12-week delivery plan (plan §10)
+
+Weeks 1–2 scaffold+auth · 3–5 Type intake · 6–7 Voice · 8–9 offline · 10 advisor ·
+11 internal testing · 12 store submission. This scaffold front-loads the
+weeks 1–10 architecture so feature work lands on a stable base.
+
+## Phase 2 roadmap (plan §12)
+Push notifications · per-advisor white-label apps · dedicated mobile API ·
+mobile reporting/score view · (admin deferred indefinitely).

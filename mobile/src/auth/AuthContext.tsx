@@ -4,96 +4,124 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import * as authApi from '@/api/auth';
-import type { SessionUser } from '@/types';
-import { clearCachedUser, loadCachedUser, saveCachedUser } from './storage';
+import { setAuthToken, setUnauthorizedHandler } from '@/api/client';
+import type { SessionUser, VerifyResponse } from '@/types';
+import { secureStore } from './secureStore';
+import { isBiometricAvailable, promptBiometric } from './biometric';
+
+type AuthStatus = 'initializing' | 'signedOut' | 'locked' | 'authenticated';
 
 interface AuthState {
+  status: AuthStatus;
   user: SessionUser | null;
-  /** True while restoring the session on cold start. */
-  initializing: boolean;
-  isAuthenticated: boolean;
-  /** True when MFA is enabled but not yet verified for this session. */
-  needsMfa: boolean;
-  signIn: (email: string, password: string) => Promise<SessionUser>;
-  verifyMfa: (code: string) => Promise<void>;
+  /** Last email used, prefilled on the sign-in / paste-code screens. */
+  pendingEmail: string | null;
+  requestMagicLink: (email: string) => Promise<void>;
+  completeSignIn: (result: VerifyResponse) => Promise<void>;
+  unlock: () => Promise<boolean>;
   signOut: () => Promise<void>;
-  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [status, setStatus] = useState<AuthStatus>('initializing');
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [initializing, setInitializing] = useState(true);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
 
-  const applyUser = useCallback(async (next: SessionUser | null) => {
-    setUser(next);
-    if (next) await saveCachedUser(next);
-    else await clearCachedUser();
+  // On 401 the stored session is no longer valid — drop fully to the email flow.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void hardSignOut();
+    });
+    return () => setUnauthorizedHandler(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const refresh = useCallback(async () => {
-    const fresh = await authApi.getSession();
-    await applyUser(fresh);
-  }, [applyUser]);
+  const hardSignOut = useCallback(async () => {
+    tokenRef.current = null;
+    setAuthToken(null);
+    setUser(null);
+    await secureStore.clear();
+    setStatus('signedOut');
+  }, []);
 
   useEffect(() => {
-    let active = true;
     (async () => {
-      // Hydrate optimistically from cache, then reconcile with the server.
-      const cached = await loadCachedUser();
-      if (active && cached) setUser(cached);
-      try {
-        const fresh = await authApi.getSession();
-        if (active) await applyUser(fresh);
-      } catch {
-        // Offline: keep the cached user (if any).
-      } finally {
-        if (active) setInitializing(false);
+      const [token, cachedUser, email] = await Promise.all([
+        secureStore.getToken(),
+        secureStore.getUser(),
+        secureStore.getEmail(),
+      ]);
+      if (email) setPendingEmail(email);
+
+      if (!token || !cachedUser) {
+        setStatus('signedOut');
+        return;
+      }
+      tokenRef.current = token;
+      setUser(cachedUser);
+      // A stored session is gated behind biometrics on every cold start.
+      const biometric = await isBiometricAvailable();
+      if (biometric) {
+        setStatus('locked');
+      } else {
+        setAuthToken(token);
+        setStatus('authenticated');
       }
     })();
-    return () => {
-      active = false;
-    };
-  }, [applyUser]);
+  }, []);
 
-  const signIn = useCallback(
-    async (email: string, password: string) => {
-      const next = await authApi.signIn(email, password);
-      await applyUser(next);
-      return next;
-    },
-    [applyUser],
-  );
+  const requestMagicLink = useCallback(async (email: string) => {
+    const normalized = email.trim().toLowerCase();
+    await authApi.requestMagicLink(normalized);
+    await secureStore.setEmail(normalized);
+    setPendingEmail(normalized);
+  }, []);
 
-  const verifyMfa = useCallback(
-    async (code: string) => {
-      await authApi.verifyMfa(code);
-      await refresh();
-    },
-    [refresh],
-  );
+  const completeSignIn = useCallback(async (result: VerifyResponse) => {
+    tokenRef.current = result.token;
+    setAuthToken(result.token);
+    await Promise.all([
+      secureStore.setToken(result.token),
+      secureStore.setUser(result.user),
+      secureStore.setEmail(result.user.email),
+    ]);
+    setUser(result.user);
+    setPendingEmail(result.user.email);
+    setStatus('authenticated');
+  }, []);
+
+  const unlock = useCallback(async () => {
+    const ok = await promptBiometric('Unlock AkiliRisk');
+    if (ok && tokenRef.current) {
+      setAuthToken(tokenRef.current);
+      setStatus('authenticated');
+      return true;
+    }
+    return false;
+  }, []);
 
   const signOut = useCallback(async () => {
-    await authApi.signOut();
-    await applyUser(null);
-  }, [applyUser]);
+    await hardSignOut();
+  }, [hardSignOut]);
 
   const value = useMemo<AuthState>(
     () => ({
+      status,
       user,
-      initializing,
-      isAuthenticated: Boolean(user),
-      needsMfa: Boolean(user?.mfaEnabled && !user?.mfaVerified),
-      signIn,
-      verifyMfa,
+      pendingEmail,
+      requestMagicLink,
+      completeSignIn,
+      unlock,
       signOut,
-      refresh,
     }),
-    [user, initializing, signIn, verifyMfa, signOut, refresh],
+    [status, user, pendingEmail, requestMagicLink, completeSignIn, unlock, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

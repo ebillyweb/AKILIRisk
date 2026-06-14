@@ -8,7 +8,7 @@ interface ScreenContainerProps {
   children: React.ReactNode;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
-  refreshControl?: React.ReactElement;
+  refreshControl?: React.ReactElement<any>;
 }
 
 /** Brand-styled screen wrapper that respects safe-area insets. */

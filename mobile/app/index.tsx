@@ -5,19 +5,22 @@ import { useAuth } from '@/auth/AuthContext';
 import { LoadingView } from '@/components/StateViews';
 import { palette } from '@/theme/colors';
 
-/** Entry route: decides where to send the user based on auth state. */
+/** Routes the user based on auth status and role (plan §4). */
 export default function Index() {
-  const { initializing, isAuthenticated, needsMfa } = useAuth();
+  const { status, user } = useAuth();
 
-  if (initializing) {
+  if (status === 'initializing') {
     return (
       <View style={{ flex: 1, backgroundColor: palette.background }}>
-        <LoadingView label="Restoring your session…" />
+        <LoadingView label="Starting AkiliRisk…" />
       </View>
     );
   }
 
-  if (!isAuthenticated) return <Redirect href="/(auth)/sign-in" />;
-  if (needsMfa) return <Redirect href="/(auth)/mfa" />;
-  return <Redirect href="/(tabs)" />;
+  if (status === 'signedOut') return <Redirect href="/(auth)/sign-in" />;
+  if (status === 'locked') return <Redirect href="/(auth)/unlock" />;
+
+  // Authenticated — route by role.
+  if (user?.role === 'ADVISOR') return <Redirect href="/(advisor)/clients" />;
+  return <Redirect href="/(client)/home" />;
 }

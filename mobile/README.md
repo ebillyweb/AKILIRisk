@@ -1,46 +1,43 @@
 # AkiliRisk Mobile
 
-The mobile companion app for the **AkiliRisk** family risk governance platform,
-built with **Expo (React Native) + TypeScript** and **expo-router**.
+The mobile **companion** app for the **AkiliRisk** family risk platform, built
+with **Expo (React Native) + TypeScript**. It implements Phase 1 of the
+*Akili Risk Mobile App Development Plan* (June 2026): clients complete the
+household risk **intake** (Type or Voice, online or offline); advisors **review**
+submitted intake on the go. Reporting, scoring, approval, and admin stay on the
+web. See [`PLAN.md`](./PLAN.md) for the full plan-to-code mapping.
 
-It lets clients sign in, view their composite risk profile across the four risk
-pillars (Family Governance, Cyber, Identity, Intelligence), and drill into
-individual assessments and recommended controls — all backed by the existing
-AkiliRisk web API.
+## Highlights
 
----
-
-## Tech stack
-
-| Concern        | Choice                                   |
-| -------------- | ---------------------------------------- |
-| Runtime        | Expo SDK 52 / React Native 0.76          |
-| Language       | TypeScript (strict)                      |
-| Navigation     | expo-router (typed routes, file-based)   |
-| Data fetching  | @tanstack/react-query                    |
-| Validation     | zod (mirrors backend Prisma enums)       |
-| Secure storage | expo-secure-store                        |
-| Auth           | NextAuth credentials (cookie session)    |
+- **Magic-link auth** (`/api/auth/magic-link` → deep link → `/api/auth/verify`)
+  with a **paste-code fallback** and **biometric unlock** for stored sessions.
+- **Local-first intake** — answers commit to **SQLite + an outbox queue** with
+  idempotency keys; a **sync worker** drains them when online. Works on a plane.
+- **Type & Voice** answers (Expo AV), per-answer save status, offline banner,
+  dead-letter retry, and submission gated on a fully-synced queue.
+- **Advisor review** — client list with search/filters, read-only transcripts,
+  inline voice playback via signed URLs, and "Approve & continue on web".
 
 ## Project structure
 
 ```
 mobile/
-├─ app/                       # expo-router routes (file-based)
-│  ├─ _layout.tsx             # providers (QueryClient, Auth, SafeArea) + Stack
-│  ├─ index.tsx               # auth-aware entry redirect
-│  ├─ (auth)/                 # sign-in, MFA
-│  ├─ (tabs)/                 # dashboard, assessments, profile
-│  └─ assessment/[id].tsx     # assessment detail + pillar breakdown
+├─ app/                          # expo-router routes
+│  ├─ _layout.tsx                # providers + magic-link deep-link handler
+│  ├─ index.tsx                  # auth/role router
+│  ├─ (auth)/                    # sign-in, check-email (paste code), unlock (biometric)
+│  ├─ (client)/                  # home, intake landing, wizard (Type/Voice), confirm
+│  └─ (advisor)/                 # clients list, client/[id] read-only review
 ├─ src/
-│  ├─ api/                    # fetch client, auth, assessments, react-query setup
-│  ├─ auth/                   # AuthContext + secure-store session cache
-│  ├─ components/             # reusable brand-styled UI
-│  ├─ constants/pillars.ts    # canonical pillar metadata (matches backend keys)
-│  ├─ theme/                  # palette, spacing, risk-level colors
-│  ├─ types/                  # zod schemas / inferred types
-│  └─ config.ts               # API base URL resolution
-└─ app.json                   # Expo config
+│  ├─ api/                       # fetch client (JWT + idempotency), auth, intake, advisor
+│  ├─ auth/                      # SecureStore JWT, biometrics, auth state machine
+│  ├─ db/                        # SQLite database, drafts, outbox queue
+│  ├─ sync/                      # sync worker + NetInfo-driven SyncContext
+│  ├─ audio/                     # Expo AV recorder hook
+│  ├─ intake/                    # local-first save service
+│  ├─ components/  theme/  hooks/  constants/  types/
+│  └─ config.ts                  # API base URL resolution
+├─ app.json   eas.json           # Expo + EAS build config
 ```
 
 ## Getting started
@@ -48,49 +45,36 @@ mobile/
 ```bash
 cd mobile
 npm install
+npx expo install --fix      # align native module versions to the installed Expo SDK
 
-# Point the app at your API (defaults to https://app.akilirisk.com)
-cp .env.example .env
-# edit EXPO_PUBLIC_API_BASE_URL as needed
+cp .env.example .env        # set EXPO_PUBLIC_API_BASE_URL
+npm start                   # press i / a, or scan the QR in Expo Go / a dev build
 
-npm start            # then press i / a, or scan the QR with Expo Go
-npm run typecheck    # tsc --noEmit
+npm run typecheck
 npm run lint
 ```
 
-> **Local backend:** When running the web app via `npm run dev`, set
-> `EXPO_PUBLIC_API_BASE_URL` to your machine's LAN IP (e.g.
-> `http://192.168.1.20:3000`) so a device or simulator can reach it —
-> `localhost` resolves to the device itself, not your dev machine.
+> **Native modules** (SecureStore, LocalAuthentication, AV, SQLite, NetInfo)
+> require a **development build** (`npx expo run:ios` / `run:android` or an EAS
+> dev build), not plain Expo Go, to exercise biometrics and audio on device.
 
-## How auth works
+> **Local backend:** point `EXPO_PUBLIC_API_BASE_URL` at your machine's LAN IP
+> (e.g. `http://192.168.1.20:3000`) when running the web app via `npm run dev`.
 
-The web backend uses **NextAuth** with the credentials provider and a
-**cookie-based session**. The app:
+## Status & backend dependencies
 
-1. fetches a CSRF token (`/api/auth/csrf`),
-2. posts credentials to `/api/auth/callback/credentials`,
-3. reads the resolved session (`/api/auth/session`).
-
-React Native's native networking layer keeps a shared cookie jar, so the
-session cookie is replayed automatically on later requests. MFA-enabled
-accounts are routed through the verification screen before reaching the tabs.
-
-See [`PLAN.md`](./PLAN.md) for the architecture rationale, roadmap, and the
-recommended backend follow-ups (a dedicated mobile token endpoint, push
-notifications, on-device assessment authoring).
+This is a complete Phase-1 **client** aligned to the plan's architecture. It is
+**not yet wired to a live backend**: the web app currently uses NextAuth
+credentials+MFA and does not expose the magic-link / intake-script / presign
+endpoints in the shape the app expects. The required backend work is listed in
+[`PLAN.md` → "Backend follow-ups"]. The app has been written but **not yet
+compiler-verified** here — run `npm install && npm run typecheck` first.
 
 ## Promoting to a standalone repository
 
-This project is self-contained (its own `package.json`, `tsconfig`, Expo
-config). To move it into its own GitHub repo once one exists:
+This project is self-contained. To move it into its own repo:
 
 ```bash
-# from the monorepo root
 git subtree split --prefix=mobile -b akilirisk-mobile
-cd /tmp && git clone <new-empty-repo-url> akilirisk-mobile && cd akilirisk-mobile
-git pull <path-to-AKILIRisk-repo> akilirisk-mobile
-git push origin main
+# then pull that branch into a fresh empty repo, or copy mobile/ and `git init`
 ```
-
-Or simply copy the `mobile/` directory into a fresh repo and `git init`.

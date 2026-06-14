@@ -6,10 +6,7 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       retry: (failureCount, error) => {
-        // Never retry auth failures; the user must re-authenticate.
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-          return false;
-        }
+        if (error instanceof ApiError && error.isAuthError) return false;
         return failureCount < 2;
       },
     },
@@ -17,6 +14,7 @@ export const queryClient = new QueryClient({
 });
 
 export const queryKeys = {
-  assessments: ['assessments'] as const,
-  assessment: (id: string) => ['assessment', id] as const,
+  intakeScript: ['intake', 'script'] as const,
+  advisorClients: ['advisor', 'clients'] as const,
+  clientIntake: (id: string) => ['advisor', 'client', id] as const,
 };

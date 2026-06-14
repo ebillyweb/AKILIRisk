@@ -9,14 +9,31 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+
+  get isAuthError() {
+    return this.status === 401 || this.status === 403;
+  }
+}
+
+/**
+ * Module-level bearer token. Set by AuthContext after sign-in so that both
+ * React code and the background sync worker share one source of truth.
+ */
+let authToken: string | null = null;
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+/** Invoked when the API returns 401 so the app can drop to the lock/email screen. */
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
 }
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
-  /** JSON-serializable body. */
   json?: unknown;
-  /** URL-encoded form body (used by NextAuth credential callback). */
-  form?: Record<string, string>;
-  /** Skip JSON parsing and return the raw Response. */
+  /** Idempotency-Key header value (outbox writes set this). */
+  idempotencyKey?: string;
   raw?: boolean;
 }
 
@@ -25,19 +42,11 @@ function buildUrl(path: string): string {
   return `${config.apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-/**
- * Thin fetch wrapper around the AkiliRisk web API.
- *
- * Session handling: the backend uses NextAuth cookie sessions. On native,
- * React Native's networking layer (NSURLSession / OkHttp) maintains a shared
- * cookie jar automatically, so the session cookie set during sign-in is
- * replayed on subsequent requests without manual header juggling.
- */
 export async function apiRequest<T = unknown>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { json, form, raw, headers, ...rest } = options;
+  const { json, idempotencyKey, raw, headers, ...rest } = options;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.requestTimeoutMs);
@@ -46,16 +55,13 @@ export async function apiRequest<T = unknown>(
     Accept: 'application/json',
     ...(headers as Record<string, string> | undefined),
   };
+  if (authToken) finalHeaders.Authorization = `Bearer ${authToken}`;
+  if (idempotencyKey) finalHeaders['Idempotency-Key'] = idempotencyKey;
 
   let body: BodyInit | undefined;
   if (json !== undefined) {
     finalHeaders['Content-Type'] = 'application/json';
     body = JSON.stringify(json);
-  } else if (form !== undefined) {
-    finalHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-    body = Object.entries(form)
-      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-      .join('&');
   }
 
   let response: Response;
@@ -64,7 +70,6 @@ export async function apiRequest<T = unknown>(
       ...rest,
       headers: finalHeaders,
       body,
-      credentials: 'include',
       signal: controller.signal,
     });
   } catch (err) {
@@ -77,6 +82,10 @@ export async function apiRequest<T = unknown>(
     clearTimeout(timeout);
   }
 
+  if (response.status === 401) {
+    onUnauthorized?.();
+  }
+
   if (raw) return response as unknown as T;
 
   const contentType = response.headers.get('content-type') ?? '';
@@ -86,9 +95,9 @@ export async function apiRequest<T = unknown>(
 
   if (!response.ok) {
     const message =
-      (payload && typeof payload === 'object' && 'error' in payload
+      payload && typeof payload === 'object' && 'error' in payload
         ? String((payload as { error: unknown }).error)
-        : undefined) ?? `Request failed (${response.status})`;
+        : `Request failed (${response.status})`;
     throw new ApiError(response.status, message, payload);
   }
 
