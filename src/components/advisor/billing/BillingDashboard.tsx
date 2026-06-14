@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Download, ExternalLink, Mail, AlertCircle } from "lucide-react";
+import { CreditCard, Download, ExternalLink, AlertCircle } from "lucide-react";
 
 import {
   createCheckoutSession,
@@ -13,10 +13,6 @@ import {
 } from "@/lib/actions/billing";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { TIER_LIMITS } from "@/lib/billing/constants";
-import {
-  getEnterpriseSalesContactEmail,
-  getEnterpriseSalesMailtoHref,
-} from "@/lib/billing/enterprise-sales-contact";
 import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
 import type { EnterpriseBillingSummary } from "@/lib/enterprise/billing-details";
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
@@ -32,6 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EnterpriseSalesContactDialog } from "@/components/advisor/billing/EnterpriseSalesContactDialog";
 
 const TIER_ORDER: SubscriptionTier[] = ["STARTER", "GROWTH", "PROFESSIONAL"];
 
@@ -187,9 +184,8 @@ function UsageMonitor({ data }: { data: SubscriptionDetailsDTO }) {
 }
 
 function EnterpriseContactSalesCard() {
-  const salesEmail = getEnterpriseSalesContactEmail();
   return (
-    <div className="flex flex-col rounded-lg border border-dashed bg-card/50 p-4 shadow-sm">
+    <div className="flex h-full flex-col rounded-lg border bg-card/50 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold">{TIER_LABEL.ENTERPRISE}</h3>
         <Badge
@@ -200,18 +196,17 @@ function EnterpriseContactSalesCard() {
         </Badge>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Multi-advisor firms with shared branding, firm-wide caps, and custom contracts.
+        Up to {TIER_LIMITS.ENTERPRISE} firm clients
       </p>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Up to {TIER_LIMITS.ENTERPRISE} firm clients · custom seat packages
+      <p className="mt-3 text-lg font-semibold tracking-tight text-foreground">
+        Custom pricing
       </p>
-      <Button className="mt-4" type="button" variant="outline" asChild>
-        <a href={getEnterpriseSalesMailtoHref()} className="inline-flex items-center gap-2">
-          <Mail className="h-4 w-4" aria-hidden />
-          Contact sales
-        </a>
-      </Button>
-      <p className="mt-2 text-xs text-muted-foreground">{salesEmail}</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Multi-advisor firms with shared branding and custom contracts.
+      </p>
+      <div className="mt-auto flex min-h-10 items-end pt-4">
+        <EnterpriseSalesContactDialog />
+      </div>
     </div>
   );
 }
@@ -278,7 +273,7 @@ function PlanSelector({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <CardContent className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {TIER_ORDER.map((tier) => {
           const hasCommitted = committedPlan !== null;
           const isSameTier = hasCommitted && tier === committedPlan!.tier;
@@ -363,7 +358,7 @@ function PlanSelector({
             <div
               key={tier}
               className={cn(
-                "flex flex-col rounded-lg border bg-card/50 p-4 shadow-sm",
+                "flex h-full flex-col rounded-lg border bg-card/50 p-4 shadow-sm",
                 isCurrentSelection &&
                   "border-primary/35 bg-muted/25 ring-1 ring-primary/25 shadow-none"
               )}
@@ -402,25 +397,29 @@ function PlanSelector({
                   {priceLine}
                 </p>
               ) : (
-                <p className="mt-2 text-xs text-muted-foreground">Price unavailable</p>
+                <p className="mt-3 text-lg font-semibold tracking-tight text-muted-foreground">
+                  Price unavailable
+                </p>
               )}
-              {isCurrentSelection ? (
-                <div className="mt-4 rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-3">
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Your current plan. Pick another tier or switch monthly/annual above to change.
-                  </p>
-                </div>
-              ) : (
-                <Button
-                  className="mt-4"
-                  type="button"
-                  variant={planButtonVariant}
-                  disabled={disabled}
-                  onClick={() => onSelectPlan(tier)}
-                >
-                  {busy ? busyLabel : buttonLabel}
-                </Button>
-              )}
+              <div className="mt-auto flex min-h-10 items-end pt-4">
+                {isCurrentSelection ? (
+                  <div className="w-full rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2.5">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Your current plan. Pick another tier or switch monthly/annual above to change.
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full"
+                    type="button"
+                    variant={planButtonVariant}
+                    disabled={disabled}
+                    onClick={() => onSelectPlan(tier)}
+                  >
+                    {busy ? busyLabel : buttonLabel}
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}

@@ -10,9 +10,13 @@ describe("contact form intent", () => {
     expect(parseContactFormIntent(" DEMO ")).toBe("demo");
   });
 
-  it("returns demo preset copy", () => {
-    const preset = getContactFormIntentPreset("demo");
-    expect(preset?.subject).toMatch(/demonstration/i);
-    expect(preset?.message).toMatch(/advisor workspace/i);
+  it("parses enterprise intent", () => {
+    expect(parseContactFormIntent("enterprise")).toBe("enterprise");
+  });
+
+  it("returns enterprise preset copy", () => {
+    const preset = getContactFormIntentPreset("enterprise");
+    expect(preset?.subject).toMatch(/Enterprise plan/i);
+    expect(preset?.message).toMatch(/advisors/i);
   });
 });

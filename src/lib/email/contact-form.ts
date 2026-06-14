@@ -9,6 +9,9 @@ import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { LEGAL_ENTITY_NAME } from "@/lib/legal/documents";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { getEnterpriseSalesContactEmail } from "@/lib/billing/enterprise-sales-contact";
+
+export type ContactFormAudience = "general" | "sales";
 
 export type ContactFormEmailPayload = {
   name: string;
@@ -18,16 +21,21 @@ export type ContactFormEmailPayload = {
 };
 
 export function renderContactFormEmailHtml(
-  payload: ContactFormEmailPayload
+  payload: ContactFormEmailPayload,
+  audience: ContactFormAudience = "general"
 ): string {
   const safeName = escapeHtml(payload.name);
   const safeEmail = escapeHtml(payload.email);
   const safeSubject = escapeHtml(payload.subject);
   const safeMessage = escapeHtml(payload.message).replace(/\n/g, "<br />");
+  const sourceLabel =
+    audience === "sales"
+      ? "Enterprise sales inquiry (advisor billing)"
+      : `${escapeHtml(LEGAL_ENTITY_NAME)} website contact form`;
 
   const bodyHtml = `
-    ${renderPlatformEmailHeadline("New contact form message")}
-    <p style="margin:0 0 20px;font-size:14px;color:#64748b;">Submitted via the ${escapeHtml(LEGAL_ENTITY_NAME)} website contact form.</p>
+    ${renderPlatformEmailHeadline(audience === "sales" ? "Enterprise sales inquiry" : "New contact form message")}
+    <p style="margin:0 0 20px;font-size:14px;color:#64748b;">Submitted via the ${sourceLabel}.</p>
     <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;">
       <tr>
         <td style="padding:8px 0;font-weight:600;vertical-align:top;width:120px;color:#0f172a;">Name</td>
@@ -52,14 +60,20 @@ export function renderContactFormEmailHtml(
   });
 }
 
-export function getContactFormRecipientEmail(): string {
+export function getContactFormRecipientEmail(
+  audience: ContactFormAudience = "general"
+): string {
+  if (audience === "sales") {
+    return getEnterpriseSalesContactEmail();
+  }
   return process.env.CONTACT_FORM_TO_EMAIL?.trim() || DESIGNATED_ADMIN_EMAIL;
 }
 
 export async function sendContactFormEmail(
-  payload: ContactFormEmailPayload
+  payload: ContactFormEmailPayload,
+  audience: ContactFormAudience = "general"
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const to = getContactFormRecipientEmail();
+  const to = getContactFormRecipientEmail(audience);
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("RESEND_API_KEY not configured - contact form email not sent");
@@ -72,8 +86,12 @@ export async function sendContactFormEmail(
   try {
     const resend = new Resend(apiKey);
     const subjectLine = payload.subject
-      ? `[Contact] ${payload.subject}`
-      : `[Contact] Message from ${payload.name}`;
+      ? audience === "sales"
+        ? `[Enterprise Sales] ${payload.subject}`
+        : `[Contact] ${payload.subject}`
+      : audience === "sales"
+        ? `[Enterprise Sales] Inquiry from ${payload.name}`
+        : `[Contact] Message from ${payload.name}`;
 
     await resend.emails.send(
       withPlatformLogoAttachment({
@@ -81,7 +99,7 @@ export async function sendContactFormEmail(
         to,
         replyTo: payload.email,
         subject: subjectLine,
-        html: renderContactFormEmailHtml(payload),
+        html: renderContactFormEmailHtml(payload, audience),
       })
     );
 

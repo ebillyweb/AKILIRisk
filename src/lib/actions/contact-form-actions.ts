@@ -34,6 +34,7 @@ const contactFormSchema = z.object({
     .min(10, "Message must be at least 10 characters")
     .max(5000, "Message is too long"),
   turnstileToken: z.string().optional(),
+  audience: z.enum(["general", "sales"]).optional(),
 });
 
 function contactFormRateLimitKey(ip: string | null): string {
@@ -84,6 +85,9 @@ export async function submitContactForm(
     }
   }
 
-  const { name, email, subject, message } = parsed.data;
-  return sendContactFormEmail({ name, email, subject, message });
+  const { name, email, subject, message, audience } = parsed.data;
+  return sendContactFormEmail(
+    { name, email, subject, message },
+    audience ?? "general"
+  );
 }

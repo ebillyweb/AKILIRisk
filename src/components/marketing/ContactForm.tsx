@@ -12,6 +12,7 @@ import { TurnstileWidget } from "@/components/marketing/TurnstileWidget";
 import {
   getContactFormIntentPreset,
   parseContactFormIntent,
+  type ContactFormIntent,
 } from "@/lib/marketing/contact-form-intent";
 
 const TURNSTILE_SITE_KEY =
@@ -21,9 +22,19 @@ const CAPTCHA_ENABLED = Boolean(TURNSTILE_SITE_KEY);
 
 interface ContactFormProps {
   className?: string;
+  intent?: ContactFormIntent | null;
+  audience?: "general" | "sales";
+  embedded?: boolean;
+  onSuccess?: () => void;
 }
 
-export function ContactForm({ className }: ContactFormProps) {
+export function ContactForm({
+  className,
+  intent: intentProp = null,
+  audience = "general",
+  embedded = false,
+  onSuccess,
+}: ContactFormProps) {
   const searchParams = useSearchParams();
   const intentAppliedRef = useRef(false);
   const [name, setName] = useState("");
@@ -37,13 +48,14 @@ export function ContactForm({ className }: ContactFormProps) {
 
   useEffect(() => {
     if (intentAppliedRef.current) return;
-    const intent = parseContactFormIntent(searchParams.get("intent"));
+    const intent =
+      intentProp ?? parseContactFormIntent(searchParams.get("intent"));
     const preset = getContactFormIntentPreset(intent);
     if (!preset) return;
     setSubject((current) => (current.trim() ? current : preset.subject));
     setMessage((current) => (current.trim() ? current : preset.message));
     intentAppliedRef.current = true;
-  }, [searchParams]);
+  }, [intentProp, searchParams]);
 
   const handleTokenChange = useCallback((token: string | null) => {
     setTurnstileToken(token);
@@ -65,6 +77,7 @@ export function ContactForm({ className }: ContactFormProps) {
       subject,
       message,
       turnstileToken: turnstileToken ?? undefined,
+      audience,
     });
     setIsLoading(false);
 
@@ -75,6 +88,7 @@ export function ContactForm({ className }: ContactFormProps) {
       setSubject("");
       setMessage("");
       setTurnstileToken(null);
+      onSuccess?.();
       return;
     }
 
@@ -100,14 +114,22 @@ export function ContactForm({ className }: ContactFormProps) {
       className={className}
       data-testid="contact-form"
     >
-      <div className="space-y-5 rounded-[1.25rem] border border-border/70 bg-card/80 p-5 sm:p-6">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold text-foreground">Send a message</h2>
-          <p className="text-sm leading-7 text-muted-foreground">
-            Complete the form below and we will email you back at the address you
-            provide.
-          </p>
-        </div>
+      <div
+        className={
+          embedded
+            ? "space-y-4"
+            : "space-y-5 rounded-[1.25rem] border border-border/70 bg-card/80 p-5 sm:p-6"
+        }
+      >
+        {!embedded ? (
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold text-foreground">Send a message</h2>
+            <p className="text-sm leading-7 text-muted-foreground">
+              Complete the form below and we will email you back at the address you
+              provide.
+            </p>
+          </div>
+        ) : null}
 
         {error ? (
           <Alert variant="destructive">
