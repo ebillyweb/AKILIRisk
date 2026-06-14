@@ -1,0 +1,87 @@
+<svg width="240" height="80" viewBox="0 0 240 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      :root {
+        --brand-primary: #4EA5D9;
+        --trust-accent: #D97706;
+        --foreground: #1e293b;
+        --muted-foreground: #64748b;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --brand-primary: #7DD3FC;
+          --trust-accent: #F59E0B;
+          --foreground: #f1f5f9;
+          --muted-foreground: #94a3b8;
+        }
+      }
+
+      .brand-primary { fill: var(--brand-primary); }
+      .trust-accent { fill: var(--trust-accent); stroke: var(--trust-accent); }
+      .foreground { fill: var(--foreground); }
+    </style>
+
+    <linearGradient id="dataFillCompact" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="var(--trust-accent)" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="var(--brand-primary)" stop-opacity="0.08" />
+    </linearGradient>
+  </defs>
+
+  <!-- Radar Chart Icon -->
+  <g transform="translate(40,40)">
+    <!-- Outer ring -->
+    <polygon points="0,-22 20,-7 13,19 -13,19 -20,-7"
+             fill="none"
+             stroke="var(--brand-primary)"
+             stroke-width="2"
+             stroke-linejoin="round"
+             opacity="0.8"/>
+
+    <!-- Inner ring -->
+    <polygon points="0,-14 12.5,-4.5 8,12 -8,12 -12.5,-4.5"
+             fill="none"
+             stroke="var(--brand-primary)"
+             stroke-width="1.5"
+             stroke-linejoin="round"
+             opacity="0.6"/>
+
+    <!-- Center ring -->
+    <polygon points="0,-8 7,-2.5 4.5,6.5 -4.5,6.5 -7,-2.5"
+             fill="none"
+             stroke="var(--brand-primary)"
+             stroke-width="1.2"
+             stroke-linejoin="round"
+             opacity="0.4"/>
+
+    <!-- Axis lines -->
+    <line x1="0" y1="0" x2="0" y2="-22" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+    <line x1="0" y1="0" x2="20" y2="-7" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+    <line x1="0" y1="0" x2="13" y2="19" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+    <line x1="0" y1="0" x2="-13" y2="19" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+    <line x1="0" y1="0" x2="-20" y2="-7" stroke="var(--brand-primary)" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+
+    <!-- Risk assessment data polygon -->
+    <polygon points="0,-18 16,-4 9,14 -6,10 -14,-4"
+             fill="url(#dataFillCompact)"
+             stroke="var(--trust-accent)"
+             stroke-width="2"
+             stroke-linejoin="round"/>
+
+    <!-- Data points -->
+    <circle cx="0" cy="-18" r="2.5" class="trust-accent"/>
+    <circle cx="16" cy="-4" r="2.5" class="trust-accent"/>
+    <circle cx="9" cy="14" r="2.5" class="trust-accent"/>
+    <circle cx="-6" cy="10" r="2.5" class="trust-accent"/>
+    <circle cx="-14" cy="-4" r="2.5" class="trust-accent"/>
+
+    <!-- Center point -->
+    <circle cx="0" cy="0" r="3" class="brand-primary"/>
+  </g>
+
+  <!-- AKILI Text -->
+  <text x="75" y="50" text-anchor="start" font-family="IBM Plex Sans, -apple-system, system-ui, sans-serif" font-size="36" font-weight="800" class="foreground" letter-spacing="1">AKILI</text>
+
+  <!-- Trademark -->
+  <text x="218" y="19" text-anchor="start" font-family="IBM Plex Sans, sans-serif" font-size="10" font-weight="600" class="trust-accent">®</text>
+</svg>

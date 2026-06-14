@@ -118,6 +118,13 @@
   /* Advisor branding assets */
   --advisor-logo-url: '';
   --advisor-brand-name: '';
+
+  /* Platform logo lockup — official `logo/` palette (#4EA5D9 radar, not editorial --brand) */
+  --logo-brand-primary: #4ea5d9;
+  --logo-trust-accent: #d97706;
+  --logo-foreground: #1e293b;
+  --logo-muted-foreground: #64748b;
+  --logo-border: #e2e8f0;
 }
 
 .dark {
@@ -176,6 +183,12 @@
   --header-background: var(--advisor-secondary);
   --card-accent: var(--advisor-accent);
   --border-accent: var(--advisor-primary);
+
+  --logo-brand-primary: #7dd3fc;
+  --logo-trust-accent: #f59e0b;
+  --logo-foreground: #f1f5f9;
+  --logo-muted-foreground: #94a3b8;
+  --logo-border: #334155;
 }
 
 @layer base {
