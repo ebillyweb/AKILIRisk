@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "AkiliRisk",
+    "slug": "akilirisk-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "akilirisk",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ebilly.akilirisk"
+    },
+    "android": {
+      "package": "com.ebilly.akilirisk",
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1a2e"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://app.akilirisk.com"
+    }
+  }
+}
