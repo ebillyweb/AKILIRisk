@@ -44,8 +44,9 @@ export function AdminMfaPolicyForm({ initialMfaRequiredForAllRoles }: Props) {
         <div className="space-y-1">
           <Label htmlFor="mfa-all-roles">Require MFA for client accounts</Label>
           <p className="text-sm text-muted-foreground">
-            Advisor, admin, and super-admin accounts always require MFA. Enable
-            this to extend enrollment to client (USER) accounts as well.
+            MFA is optional for every account type. Users enable two-factor
+            authentication from Settings when they choose to. This toggle is
+            retained for compatibility but cannot be turned on.
           </p>
         </div>
       </div>

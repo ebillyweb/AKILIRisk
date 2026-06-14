@@ -4,21 +4,27 @@ import { prisma } from "@/lib/db";
 import { isMfaChallengePending, type MfaJwtClaims } from "@/lib/auth/mfa-gate";
 
 /**
- * Whether the user still owes an MFA challenge, reconciling JWT claims with
- * the database session row. After TOTP/recovery verify we set
- * `Session.mfaVerified=true` immediately, but the JWT cookie can remain stale
- * until the next sign-in — treat the DB as authoritative when JWT says pending.
+ * Whether the user still owes an MFA challenge.
+ *
+ * Uses the database as source of truth: only users who opted in (`mfaEnabled`)
+ * are challenged. Stale JWT `mfaEnabled` / `mfaEnrollmentRequired` claims do
+ * not force MFA. Session `mfaVerified` is authoritative over JWT `mfaVerified`.
  */
 export async function isMfaChallengePendingForUser(
   claims: MfaJwtClaims & { id?: string }
 ): Promise<boolean> {
-  if (!isMfaChallengePending(claims)) {
-    return false;
-  }
-
   const userId = claims.id;
   if (!userId) {
-    return true;
+    return isMfaChallengePending(claims);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { mfaEnabled: true },
+  });
+
+  if (!user?.mfaEnabled) {
+    return false;
   }
 
   const [session] = await prisma.session.findMany({

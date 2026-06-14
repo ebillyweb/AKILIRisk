@@ -35,25 +35,14 @@ describe("isMfaEnrollmentRequiredForUser", () => {
 });
 
 describe("isMfaEnrollmentPending", () => {
-  it("returns true when JWT marks enrollment required and MFA is off", () => {
+  it("never requires enrollment (MFA is opt-in only)", () => {
     expect(
       isMfaEnrollmentPending({
         mfaEnrollmentRequired: true,
         mfaEnabled: false,
       })
-    ).toBe(true);
-  });
-
-  it("returns false after MFA is enabled", () => {
-    expect(
-      isMfaEnrollmentPending({
-        mfaEnrollmentRequired: true,
-        mfaEnabled: true,
-      })
     ).toBe(false);
-  });
 
-  it("returns false when enrollment is not required", () => {
     expect(
       isMfaEnrollmentPending({
         mfaEnrollmentRequired: false,

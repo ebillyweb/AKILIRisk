@@ -25,10 +25,9 @@ export function isMfaEnrollmentRequiredForUser(_params: {
   return false;
 }
 
-/** JWT/session claim: user must complete /mfa/setup before workspace access. */
+/** MFA enrollment is never mandatory — users opt in from Settings. */
 export function isMfaEnrollmentPending(
-  claims: MfaEnrollmentClaims | null | undefined
+  _claims: MfaEnrollmentClaims | null | undefined
 ): boolean {
-  if (!claims) return false;
-  return Boolean(claims.mfaEnrollmentRequired) && !Boolean(claims.mfaEnabled);
+  return false;
 }

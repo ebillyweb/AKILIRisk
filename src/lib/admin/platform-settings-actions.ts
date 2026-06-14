@@ -145,6 +145,14 @@ export async function updatePlatformMfaPolicy(input: unknown) {
       };
     }
 
+    if (parsed.data.mfaRequiredForAllRoles) {
+      return {
+        success: false as const,
+        error:
+          "Platform-wide MFA requirement is disabled. Users enable MFA from Settings when they choose to.",
+      };
+    }
+
     const prior = await prisma.platformSettings.findUnique({
       where: { id: "default" },
       select: { mfaRequiredForAllRoles: true },

@@ -52,13 +52,13 @@ describe("isPageMfaExempt", () => {
 });
 
 describe("isMfaSetupPending", () => {
-  it("returns true when enrollment is required and MFA is not enabled", () => {
+  it("never requires enrollment (MFA is opt-in only)", () => {
     expect(
       isMfaSetupPending({
         mfaEnrollmentRequired: true,
         mfaEnabled: false,
       })
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
