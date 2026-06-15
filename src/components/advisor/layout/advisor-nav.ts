@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Archive,
   BarChart3,
   Bell,
   Briefcase,
@@ -62,9 +61,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     id: "clients",
     title: "Clients",
     items: [
-      { href: "/advisor/pipeline", label: "All clients", icon: Users },
-      { href: "/advisor/facilitate", label: "Live sessions", icon: PlayCircle },
-      { href: "/advisor/pipeline?inactive=1", label: "Inactive workflows", icon: Archive },
+      { href: "/advisor/pipeline", label: "All Clients", icon: Users },
       { href: "/advisor/invitations", label: "Invitations", icon: UserPlus },
     ],
   },
@@ -100,8 +97,13 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
   },
   {
     id: "workflows",
-    title: "Workflows",
+    title: "Workflow",
     items: [
+      {
+        href: "/advisor/facilitate",
+        label: "Risk Assessment",
+        icon: PlayCircle,
+      },
       {
         href: "/advisor/pipeline?awaitingReview=1",
         label: "Intake",

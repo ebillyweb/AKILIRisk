@@ -74,6 +74,19 @@ export function PipelineFilters({
     onFilterChange({ ...filters, stage });
   };
 
+  const setWorkflowStatus = (inactive: boolean) => {
+    if (inactive === Boolean(filters.inactive)) return;
+    onFilterChange({
+      ...filters,
+      inactive: inactive ? true : undefined,
+      stalled: undefined,
+      awaitingIntakeReview: undefined,
+      documentsNeeded: undefined,
+      needsRescore: undefined,
+      stage: undefined,
+    });
+  };
+
   const toggleFlag = (
     key: "stalled" | "awaitingIntakeReview" | "documentsNeeded" | "needsRescore" | "inactive",
   ) => {
@@ -111,6 +124,33 @@ export function PipelineFilters({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="inline-flex rounded-md border border-border/70 p-0.5"
+            role="group"
+            aria-label="Client workflow status"
+          >
+            <Button
+              type="button"
+              variant={filters.inactive ? "ghost" : "default"}
+              size="sm"
+              className="h-8 rounded-sm px-3"
+              onClick={() => setWorkflowStatus(false)}
+            >
+              Active
+            </Button>
+            <Button
+              type="button"
+              variant={filters.inactive ? "default" : "ghost"}
+              size="sm"
+              className="h-8 rounded-sm px-3"
+              onClick={() => setWorkflowStatus(true)}
+            >
+              Inactive
+              <Badge variant="secondary" className="ml-2">
+                {metrics.inactive}
+              </Badge>
+            </Button>
+          </div>
           <Button
             type="button"
             variant={filters.stalled ? "default" : "outline"}
@@ -153,17 +193,6 @@ export function PipelineFilters({
             Re-score needed
             <Badge variant="secondary" className="ml-2">
               {metrics.needsRescore}
-            </Badge>
-          </Button>
-          <Button
-            type="button"
-            variant={filters.inactive ? "default" : "outline"}
-            size="sm"
-            onClick={() => toggleFlag("inactive")}
-          >
-            Inactive
-            <Badge variant="secondary" className="ml-2">
-              {metrics.inactive}
             </Badge>
           </Button>
           <Select
@@ -236,7 +265,7 @@ export function PipelineFilters({
         )}
         {filters.inactive && (
           <span className="ml-2">
-            • <span className="font-medium">Inactive workflows only</span>
+            • <span className="font-medium">Inactive only</span>
           </span>
         )}
       </div>

@@ -12,9 +12,9 @@ export default async function FacilitateLauncherPage() {
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
       <header className="space-y-2 border-b border-border/50 pb-6">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Live sessions
+          Workflow
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Start client session</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Risk Assessment</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Conduct intake and assessment with a client in person or on a call — no client login
           required for this session.

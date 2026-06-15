@@ -18,7 +18,7 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
 } | null {
   if (filters.awaitingIntakeReview) {
     return {
-      kicker: "Workflows",
+      kicker: "Workflow",
       title: "Intake review queue",
       subtitle:
         "Clients who submitted intake and are waiting for your approval before assessment.",
@@ -26,7 +26,7 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   }
   if (filters.documentsNeeded) {
     return {
-      kicker: "Workflows",
+      kicker: "Workflow",
       title: "Document requests",
       subtitle:
         "Clients with mandatory document requirements still outstanding.",
@@ -34,7 +34,7 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   }
   if (filters.stalled) {
     return {
-      kicker: "Workflows",
+      kicker: "Workflow",
       title: "Stalled clients",
       subtitle: "Assigned clients with no activity in the last 7 days.",
     };
@@ -42,9 +42,9 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   if (filters.inactive) {
     return {
       kicker: "Clients",
-      title: "Inactive workflows",
+      title: "All Clients",
       subtitle:
-        "Clients you ended. Their accounts and history are kept; restore any workflow to return them to your active pipeline.",
+        "Inactive workflows you ended. Restore any client to return them to your active pipeline.",
     };
   }
   return null;
