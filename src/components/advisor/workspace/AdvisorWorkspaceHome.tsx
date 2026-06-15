@@ -7,8 +7,6 @@ import {
   GitBranch,
   Mail,
   PlayCircle,
-  Send,
-  Settings,
   Radio,
   UserPlus,
 } from "lucide-react";
@@ -293,12 +291,6 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <QuickActionButton
-            href="/advisor/facilitate"
-            label="Start client session"
-            description="Live intake and assessment without client login"
-            icon={PlayCircle}
-          />
-          <QuickActionButton
             href="/advisor/pipeline?awaitingReview=1"
             label="Intake queue"
             description="Review submitted client intakes"
@@ -315,24 +307,6 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
             label="Engagements"
             description="Accepted recommendations in progress"
             icon={Briefcase}
-          />
-          <QuickActionButton
-            href="/advisor/pipeline"
-            label="Pipeline"
-            description="Stages, filters, and client drill-down"
-            icon={GitBranch}
-          />
-          <QuickActionButton
-            href="/advisor/invitations"
-            label="Invitations"
-            description="Send and track client invites"
-            icon={Send}
-          />
-          <QuickActionButton
-            href="/advisor/settings"
-            label="Settings"
-            description="Branding and practice preferences"
-            icon={Settings}
           />
         </CardContent>
       </Card>
