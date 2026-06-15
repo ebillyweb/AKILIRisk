@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { InvitationStatus } from "@prisma/client";
 import { INVITATION_TTL_SEC } from "@/lib/invite";
-import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from "@/lib/schemas/invitation";
+import { buildDefaultInvitationPersonalMessage } from "@/lib/schemas/invitation";
 
 const createdRows: Record<string, unknown>[] = [];
 
@@ -92,7 +92,7 @@ describe("createAdvisorInvitation (US-1)", () => {
     const result = await createAdvisorInvitation("advisor-profile-1", {
       clientEmail: "client@example.com",
       clientName: "Jane",
-      personalMessage: DEFAULT_INVITATION_PERSONAL_MESSAGE,
+      personalMessage: buildDefaultInvitationPersonalMessage("Test Firm"),
       intakeWaived: false,
     });
     const after = Date.now();

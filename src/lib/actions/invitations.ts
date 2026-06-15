@@ -21,7 +21,7 @@ import {
 } from "@/lib/subscription/validation";
 import {
   createInvitationSchema,
-  DEFAULT_INVITATION_PERSONAL_MESSAGE,
+  buildDefaultInvitationPersonalMessage,
 } from "@/lib/schemas/invitation";
 import { InvitationListFilters, InvitationListResult, InvitationWithDetails } from "@/lib/invitations/types";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -94,6 +94,10 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
     };
 
     const validatedInput = createInvitationSchema.parse(rawData);
+    const personalMessage =
+      validatedInput.personalMessage ??
+      buildDefaultInvitationPersonalMessage(profile.firmName);
+    const invitationInput = { ...validatedInput, personalMessage };
 
     await assertCanAddClientForAdvisorProfile(profile.id);
 
@@ -102,7 +106,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
       STARTER_SUBSCRIPTION_FEATURES;
     const emailTheme = invitationEmailThemeForProfile(profile, features);
 
-    const invitation = await createAdvisorInvitation(profile.id, validatedInput, {
+    const invitation = await createAdvisorInvitation(profile.id, invitationInput, {
       subscriptionFeatures: {
         customSubdomainEnabled: features.customSubdomainEnabled,
       },
@@ -120,7 +124,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
     const emailResult = await sendInvitationEmail({
       clientEmail: validatedInput.clientEmail,
       advisorInfo,
-      personalMessage: validatedInput.personalMessage,
+      personalMessage: invitationInput.personalMessage,
       invitationUrl: invitation.url,
       clientName: validatedInput.clientName,
       profile: {
@@ -224,7 +228,8 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       clientEmail: invitation.prefillEmail || "",
       advisorInfo,
       personalMessage:
-        invitation.personalMessage || DEFAULT_INVITATION_PERSONAL_MESSAGE,
+        invitation.personalMessage ||
+        buildDefaultInvitationPersonalMessage(profile.firmName),
       invitationUrl: invitation.url,
       clientName: invitation.clientName || undefined,
       profile: {

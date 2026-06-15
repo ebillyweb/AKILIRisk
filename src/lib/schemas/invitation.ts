@@ -1,9 +1,19 @@
 import { z } from "zod";
 import { waiverAssessmentScopeSchema } from "@/lib/schemas/advisor";
 
+const DEFAULT_FIRM_FALLBACK = "Your advisor";
+
 /** US-1: standard copy when the advisor leaves the personal message blank. */
+export function buildDefaultInvitationPersonalMessage(
+  firmName?: string | null,
+): string {
+  const firm = firmName?.trim() || DEFAULT_FIRM_FALLBACK;
+  return `${firm} is inviting you to complete your family's Risk Profile. This confidential process will help us identify areas of risk that require action plans to protect your wealth for the long term`;
+}
+
+/** @deprecated Use buildDefaultInvitationPersonalMessage(firmName) for advisor-specific copy. */
 export const DEFAULT_INVITATION_PERSONAL_MESSAGE =
-  "I'd like to invite you to complete a personal risk profile. This confidential process will help us identify areas where your family's wealth management governance can be strengthened.";
+  buildDefaultInvitationPersonalMessage(null);
 
 function emptyToUndefined(val: unknown): unknown {
   if (val === undefined || val === null) return undefined;
@@ -28,11 +38,7 @@ export const createInvitationSchema = z.object({
   ),
   personalMessage: z.preprocess(
     emptyToUndefined,
-    z
-      .string()
-      .max(2000, "Message too long")
-      .optional()
-      .default(DEFAULT_INVITATION_PERSONAL_MESSAGE)
+    z.string().max(2000, "Message too long").optional()
   ),
   intakeWaived: z.boolean().optional().default(false),
   includedPillars: z.array(z.string()).max(6).optional(),

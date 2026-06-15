@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   createInvitationSchema,
-  DEFAULT_INVITATION_PERSONAL_MESSAGE,
+  buildDefaultInvitationPersonalMessage,
 } from "./invitation";
 
 /** US-1 — Send a Client Invitation (Advisor) acceptance criteria */
@@ -13,27 +13,27 @@ describe("createInvitationSchema (US-1)", () => {
     expect(result.clientEmail).toBe("client@example.com");
   });
 
-  it("uses the default personal message when omitted", () => {
+  it("leaves personal message undefined when omitted", () => {
     const result = createInvitationSchema.parse({
       clientEmail: "client@example.com",
     });
-    expect(result.personalMessage).toBe(DEFAULT_INVITATION_PERSONAL_MESSAGE);
+    expect(result.personalMessage).toBeUndefined();
   });
 
-  it("uses the default personal message when blank or whitespace only", () => {
+  it("leaves personal message undefined when blank or whitespace only", () => {
     expect(
       createInvitationSchema.parse({
         clientEmail: "client@example.com",
         personalMessage: "",
       }).personalMessage
-    ).toBe(DEFAULT_INVITATION_PERSONAL_MESSAGE);
+    ).toBeUndefined();
 
     expect(
       createInvitationSchema.parse({
         clientEmail: "client@example.com",
         personalMessage: "   \n\t  ",
       }).personalMessage
-    ).toBe(DEFAULT_INVITATION_PERSONAL_MESSAGE);
+    ).toBeUndefined();
   });
 
   it("keeps a custom personal message when provided", () => {
@@ -84,5 +84,19 @@ describe("createInvitationSchema (US-1)", () => {
         clientName: "   ",
       }).clientName
     ).toBeUndefined();
+  });
+});
+
+describe("buildDefaultInvitationPersonalMessage", () => {
+  it("includes the advisor firm name when provided", () => {
+    expect(buildDefaultInvitationPersonalMessage("Belvedere Wealth")).toBe(
+      "Belvedere Wealth is inviting you to complete your family's Risk Profile. This confidential process will help us identify areas of risk that require action plans to protect your wealth for the long term"
+    );
+  });
+
+  it("falls back when firm name is missing", () => {
+    expect(buildDefaultInvitationPersonalMessage(null)).toContain(
+      "Your advisor is inviting you"
+    );
   });
 });

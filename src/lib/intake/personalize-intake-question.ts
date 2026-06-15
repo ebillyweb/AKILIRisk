@@ -1,7 +1,7 @@
 import type { IntakeQuestion } from "@/lib/intake/types";
 
 const LEGACY_FIRM_NAME_PATTERN =
-  /\bat (Belvedere Risk Management|Belvedere|AKILI)\b/gi;
+  /\bat (AKILI Risk Management|AKILI Risk Intelligence|AKILI)\b/gi;
 
 /** Replace `{{firmName}}` and legacy hardcoded platform names in intake copy. */
 export function personalizeIntakeQuestionText(

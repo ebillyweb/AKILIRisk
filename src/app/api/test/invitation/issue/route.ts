@@ -5,7 +5,7 @@ import { findUserByEmail } from "@/lib/auth/user-email";
 import { isTestAuthEnabled } from "@/lib/auth/test-auth-enabled";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { createAdvisorInvitation } from "@/lib/invitations/service";
-import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from "@/lib/schemas/invitation";
+import { buildDefaultInvitationPersonalMessage } from "@/lib/schemas/invitation";
 import {
   getSubscriptionFeatures,
   STARTER_SUBSCRIPTION_FEATURES,
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   const profile = await prisma.advisorProfile.findUnique({
     where: { userId: advisorUser.id },
-    select: { id: true },
+    select: { id: true, firmName: true },
   });
 
   if (!profile) {
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       {
         clientEmail,
         clientName,
-        personalMessage: DEFAULT_INVITATION_PERSONAL_MESSAGE,
+        personalMessage: buildDefaultInvitationPersonalMessage(profile.firmName),
         intakeWaived,
       },
       {

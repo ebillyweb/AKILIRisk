@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { AssessmentDomainsSelector } from '@/components/advisor/AssessmentDomainsSelector';
 import { EmphasisAreasSelector } from '@/components/advisor/EmphasisAreasSelector';
 import { sendInvitation } from '@/lib/actions/invitations';
-import { DEFAULT_INVITATION_PERSONAL_MESSAGE } from '@/lib/schemas/invitation';
 import { Loader2 } from 'lucide-react';
 import { ShareableInvitationLinkAlert } from './ShareableInvitationLinkAlert';
 
@@ -38,7 +37,11 @@ const formSchema = z
 
 type FormData = z.infer<typeof formSchema>;
 
-export function InviteClientForm() {
+interface InviteClientFormProps {
+  defaultPersonalMessage: string;
+}
+
+export function InviteClientForm({ defaultPersonalMessage }: InviteClientFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string; emailSent: boolean; reason?: string } | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
@@ -212,7 +215,7 @@ export function InviteClientForm() {
           <Textarea
             id="personalMessage"
             {...register('personalMessage')}
-            placeholder={DEFAULT_INVITATION_PERSONAL_MESSAGE}
+            placeholder={defaultPersonalMessage}
             rows={4}
             aria-invalid={!!errors.personalMessage}
             disabled={isSubmitting}

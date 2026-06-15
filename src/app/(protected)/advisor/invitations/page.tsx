@@ -6,6 +6,8 @@ import { InvitationListFilters } from "@/components/advisor/invitations/Invitati
 import { InvitationListPagination } from "@/components/advisor/invitations/InvitationListPagination";
 import { getInvitationsAction } from "@/lib/actions/invitations";
 import { parseInvitationListParams } from "@/lib/invitations/parse-invitation-list-params";
+import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { buildDefaultInvitationPersonalMessage } from "@/lib/schemas/invitation";
 
 export default async function InvitationsPage({
   searchParams,
@@ -20,7 +22,12 @@ export default async function InvitationsPage({
   const sp = await searchParams;
   const { filters, page, pageSize, hasActiveFilters } = parseInvitationListParams(sp);
 
-  const result = await getInvitationsAction(filters, { page, pageSize });
+  const [{ userId }, result] = await Promise.all([
+    requireAdvisorRole(),
+    getInvitationsAction(filters, { page, pageSize }),
+  ]);
+  const profile = await getAdvisorProfileOrThrow(userId);
+  const defaultPersonalMessage = buildDefaultInvitationPersonalMessage(profile.firmName);
 
   if (!result.success) {
     return (
@@ -38,7 +45,7 @@ export default async function InvitationsPage({
 
   return (
     <div className="space-y-8">
-      <InviteClientForm />
+      <InviteClientForm defaultPersonalMessage={defaultPersonalMessage} />
 
       <div className="border-t section-divider" />
 
