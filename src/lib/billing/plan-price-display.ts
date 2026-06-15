@@ -14,7 +14,8 @@ function formatCents(amount: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: currency.toUpperCase(),
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount / 100);
 }
 

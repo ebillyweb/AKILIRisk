@@ -364,12 +364,12 @@ function PlanSelector({
               )}
               aria-current={isCurrentSelection ? "true" : undefined}
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="space-y-2">
                 <h3 className="font-semibold">{TIER_LABEL[tier]}</h3>
                 {isCurrentSelection ? (
                   <Badge
                     variant="secondary"
-                    className="shrink-0 text-[0.65rem] font-semibold normal-case tracking-normal"
+                    className="w-fit text-[0.65rem] font-semibold normal-case tracking-normal"
                   >
                     Current plan
                   </Badge>
@@ -379,12 +379,12 @@ function PlanSelector({
                   !isSamePlan ? (
                   <Badge
                     variant="outline"
-                    className="shrink-0 text-[0.65rem] font-semibold normal-case tracking-normal"
+                    className="w-fit text-[0.65rem] font-semibold normal-case tracking-normal"
                   >
                     Other interval
                   </Badge>
                 ) : isSameTier && hasCommitted && awaitingCheckoutOnly ? (
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  <span className="inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     Your plan
                   </span>
                 ) : null}
