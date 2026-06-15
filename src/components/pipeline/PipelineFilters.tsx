@@ -190,7 +190,7 @@ export function PipelineFilters({
             size="sm"
             onClick={() => toggleFlag("needsRescore")}
           >
-            Re-score needed
+            Reassessment
             <Badge variant="secondary" className="ml-2">
               {metrics.needsRescore}
             </Badge>
@@ -260,7 +260,7 @@ export function PipelineFilters({
         )}
         {filters.needsRescore && (
           <span className="ml-2">
-            • <span className="font-medium">Assessment re-score needed</span>
+            • <span className="font-medium">Reassessment needed</span>
           </span>
         )}
         {filters.inactive && (

@@ -29,11 +29,11 @@ test.describe("Epic 5.4 — advisor workspace", () => {
       );
     });
 
-    test("Document requests opens the documents-needed pipeline view", async ({
+    test("Document Requests opens the documents-needed pipeline view", async ({
       page,
     }) => {
       const nav = advisorWorkspaceNav(page);
-      await nav.getByRole("link", { name: "Document requests" }).click();
+      await nav.getByRole("link", { name: "Document Requests" }).click();
 
       await expect(page).toHaveURL(/\/advisor\/pipeline\?.*documentsNeeded=1/);
       await expect(
@@ -42,7 +42,7 @@ test.describe("Epic 5.4 — advisor workspace", () => {
       await expect(
         page.getByText(/required documents outstanding/i),
       ).toBeVisible();
-      await expect(nav.getByRole("link", { name: "Document requests" })).toHaveAttribute(
+      await expect(nav.getByRole("link", { name: "Document Requests" })).toHaveAttribute(
         "aria-current",
         "page",
       );

@@ -82,7 +82,7 @@ export function PipelineTable({ clients }: PipelineTableProps) {
               </span>
               {client.needsRescore ? (
                 <Badge variant="warning" className="shrink-0 text-[0.65rem]">
-                  Re-score
+                  Reassessment
                 </Badge>
               ) : null}
               {client.stalled ? (

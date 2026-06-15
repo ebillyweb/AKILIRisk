@@ -34,6 +34,8 @@ const updatePasswordPolicySchema = z
 const updateFlagsSchema = z.object({
   advisorGovernanceDashboardEnabled: z.boolean(),
   advisorRiskIntelligenceEnabled: z.boolean(),
+  advisorWorkflowTasksEnabled: z.boolean(),
+  advisorWorkflowFollowUpsEnabled: z.boolean(),
 });
 
 const updateMfaPolicySchema = z.object({
@@ -59,6 +61,8 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
       select: {
         advisorGovernanceDashboardEnabled: true,
         advisorRiskIntelligenceEnabled: true,
+        advisorWorkflowTasksEnabled: true,
+        advisorWorkflowFollowUpsEnabled: true,
       },
     });
 
@@ -68,10 +72,14 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
         id: "default",
         advisorGovernanceDashboardEnabled: parsed.data.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
+        advisorWorkflowTasksEnabled: parsed.data.advisorWorkflowTasksEnabled,
+        advisorWorkflowFollowUpsEnabled: parsed.data.advisorWorkflowFollowUpsEnabled,
       },
       update: {
         advisorGovernanceDashboardEnabled: parsed.data.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
+        advisorWorkflowTasksEnabled: parsed.data.advisorWorkflowTasksEnabled,
+        advisorWorkflowFollowUpsEnabled: parsed.data.advisorWorkflowFollowUpsEnabled,
       },
     });
 
@@ -84,10 +92,14 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
         // First-write case: capture the implicit defaults so the diff is honest.
         advisorGovernanceDashboardEnabled: true,
         advisorRiskIntelligenceEnabled: true,
+        advisorWorkflowTasksEnabled: false,
+        advisorWorkflowFollowUpsEnabled: false,
       },
       afterData: {
         advisorGovernanceDashboardEnabled: parsed.data.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
+        advisorWorkflowTasksEnabled: parsed.data.advisorWorkflowTasksEnabled,
+        advisorWorkflowFollowUpsEnabled: parsed.data.advisorWorkflowFollowUpsEnabled,
       },
     });
 
@@ -115,6 +127,8 @@ export async function getPlatformAdvisorFeatureFlagsForAdmin() {
         data: {
           advisorGovernanceDashboardEnabled: true,
           advisorRiskIntelligenceEnabled: true,
+          advisorWorkflowTasksEnabled: false,
+          advisorWorkflowFollowUpsEnabled: false,
           mfaRequiredForAllRoles: false,
         },
       };
@@ -124,6 +138,8 @@ export async function getPlatformAdvisorFeatureFlagsForAdmin() {
       data: {
         advisorGovernanceDashboardEnabled: row.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: row.advisorRiskIntelligenceEnabled,
+        advisorWorkflowTasksEnabled: row.advisorWorkflowTasksEnabled,
+        advisorWorkflowFollowUpsEnabled: row.advisorWorkflowFollowUpsEnabled,
         mfaRequiredForAllRoles: row.mfaRequiredForAllRoles,
       },
     };

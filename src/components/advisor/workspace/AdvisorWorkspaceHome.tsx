@@ -306,7 +306,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
           />
           <QuickActionButton
             href="/advisor/pipeline?documentsNeeded=1"
-            label="Document requests"
+            label="Document Requests"
             description="Outstanding mandatory uploads"
             icon={Mail}
           />

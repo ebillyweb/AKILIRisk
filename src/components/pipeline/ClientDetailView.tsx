@@ -277,7 +277,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
               <CardContent className="space-y-5">
                 {client.needsRescore && assessmentDetails.answersChangedAfterCompleteAt ? (
                   <Alert variant="warning">
-                    <AlertTitle>Re-score needed</AlertTitle>
+                    <AlertTitle>Reassessment needed</AlertTitle>
                     <AlertDescription>
                       This client changed assessment answers after completion
                       {assessmentDetails.version

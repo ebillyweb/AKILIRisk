@@ -94,6 +94,8 @@ export default async function AdminSettingsPage() {
             <AdminAdvisorFeatureFlagsForm
               initialGovernanceDashboard={flagsRes.data.advisorGovernanceDashboardEnabled}
               initialRiskIntelligence={flagsRes.data.advisorRiskIntelligenceEnabled}
+              initialWorkflowTasks={flagsRes.data.advisorWorkflowTasksEnabled}
+              initialWorkflowFollowUps={flagsRes.data.advisorWorkflowFollowUpsEnabled}
             />
           )}
         </CardContent>

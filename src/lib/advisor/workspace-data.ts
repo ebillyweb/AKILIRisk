@@ -65,7 +65,7 @@ export function deriveAdvisorPriorities(
     priorities.push({
       id: "rescore",
       kind: "in_progress",
-      title: "Assessment re-score needed",
+      title: "Reassessment needed",
       description: `${metrics.needsRescore} client${metrics.needsRescore === 1 ? "" : "s"} changed answers after completing the assessment.`,
       href: "/advisor/pipeline?needsRescore=1",
       count: metrics.needsRescore,

@@ -100,23 +100,23 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Workflow",
     items: [
       {
-        href: "/advisor/facilitate",
-        label: "Risk Assessment",
-        icon: PlayCircle,
-      },
-      {
         href: "/advisor/pipeline?awaitingReview=1",
         label: "Intake",
         icon: ClipboardList,
       },
       {
+        href: "/advisor/facilitate",
+        label: "Risk Assessment",
+        icon: PlayCircle,
+      },
+      {
         href: "/advisor/pipeline?documentsNeeded=1",
-        label: "Document requests",
+        label: "Document Requests",
         icon: Mail,
       },
       {
         href: "/advisor/pipeline?needsRescore=1",
-        label: "Re-score needed",
+        label: "Reassessment",
         icon: BarChart3,
       },
       { href: "/advisor/engagements", label: "Engagements", icon: Briefcase },
@@ -125,12 +125,14 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         icon: ListTodo,
         disabled: true,
         comingSoonTooltip: ADVISOR_COMING_SOON_TOOLTIP,
+        requiresFlag: "workflowTasksEnabled",
       },
       {
         label: "Follow-ups",
         icon: MessageSquare,
         disabled: true,
         comingSoonTooltip: ADVISOR_COMING_SOON_TOOLTIP,
+        requiresFlag: "workflowFollowUpsEnabled",
       },
     ],
   },

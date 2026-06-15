@@ -7,6 +7,8 @@ const PLATFORM_SETTINGS_ID = "default";
 export type AdvisorPlatformFeatureFlags = {
   governanceDashboardEnabled: boolean;
   riskIntelligenceEnabled: boolean;
+  workflowTasksEnabled: boolean;
+  workflowFollowUpsEnabled: boolean;
 };
 
 /**
@@ -24,6 +26,8 @@ export async function getPlatformFeatureFlags(): Promise<AdvisorPlatformFeatureF
     return {
       governanceDashboardEnabled: true,
       riskIntelligenceEnabled: true,
+      workflowTasksEnabled: false,
+      workflowFollowUpsEnabled: false,
     };
   }
 
@@ -37,6 +41,8 @@ export async function getPlatformFeatureFlags(): Promise<AdvisorPlatformFeatureF
         id: PLATFORM_SETTINGS_ID,
         advisorGovernanceDashboardEnabled: true,
         advisorRiskIntelligenceEnabled: true,
+        advisorWorkflowTasksEnabled: false,
+        advisorWorkflowFollowUpsEnabled: false,
       },
     });
   }
@@ -44,5 +50,7 @@ export async function getPlatformFeatureFlags(): Promise<AdvisorPlatformFeatureF
   return {
     governanceDashboardEnabled: row.advisorGovernanceDashboardEnabled,
     riskIntelligenceEnabled: row.advisorRiskIntelligenceEnabled,
+    workflowTasksEnabled: row.advisorWorkflowTasksEnabled,
+    workflowFollowUpsEnabled: row.advisorWorkflowFollowUpsEnabled,
   };
 }

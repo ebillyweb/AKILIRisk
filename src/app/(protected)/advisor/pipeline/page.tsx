@@ -27,9 +27,17 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   if (filters.documentsNeeded) {
     return {
       kicker: "Workflow",
-      title: "Document requests",
+      title: "Document Requests",
       subtitle:
         "Clients with mandatory document requirements still outstanding.",
+    };
+  }
+  if (filters.needsRescore) {
+    return {
+      kicker: "Workflow",
+      title: "Reassessment",
+      subtitle:
+        "Clients who changed assessment answers after completion and need a fresh score.",
     };
   }
   if (filters.stalled) {

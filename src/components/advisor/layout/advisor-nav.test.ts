@@ -8,6 +8,8 @@ import {
 const flags = {
   governanceDashboardEnabled: true,
   riskIntelligenceEnabled: true,
+  workflowTasksEnabled: false,
+  workflowFollowUpsEnabled: false,
 };
 
 describe("getActiveAdvisorNavHref", () => {
@@ -57,11 +59,27 @@ describe("getActiveAdvisorNavHref", () => {
 
   it("workflow nav items use filtered pipeline hrefs", () => {
     const workflows = ADVISOR_NAV_SECTIONS.find((s) => s.id === "workflows");
-    expect(workflows?.items[0]?.href).toBe("/advisor/facilitate");
-    expect(workflows?.items[1]?.href).toBe("/advisor/pipeline?awaitingReview=1");
+    expect(workflows?.items[0]?.href).toBe("/advisor/pipeline?awaitingReview=1");
+    expect(workflows?.items[1]?.href).toBe("/advisor/facilitate");
     expect(workflows?.items[2]?.href).toBe("/advisor/pipeline?documentsNeeded=1");
     expect(workflows?.items[3]?.href).toBe("/advisor/pipeline?needsRescore=1");
     expect(workflows?.items[4]?.href).toBe("/advisor/engagements");
+  });
+
+  it("hides Tasks and Follow-ups until workflow feature flags are enabled", () => {
+    const hidden = getVisibleAdvisorNavSections(flags);
+    const workflowItems = hidden.find((s) => s.id === "workflows")?.items ?? [];
+    expect(workflowItems.some((item) => item.label === "Tasks")).toBe(false);
+    expect(workflowItems.some((item) => item.label === "Follow-ups")).toBe(false);
+
+    const visible = getVisibleAdvisorNavSections({
+      ...flags,
+      workflowTasksEnabled: true,
+      workflowFollowUpsEnabled: true,
+    });
+    const enabledItems = visible.find((s) => s.id === "workflows")?.items ?? [];
+    expect(enabledItems.some((item) => item.label === "Tasks")).toBe(true);
+    expect(enabledItems.some((item) => item.label === "Follow-ups")).toBe(true);
   });
 
   it("shows Team nav only when enterprise team management is enabled", () => {
