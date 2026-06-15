@@ -8,6 +8,7 @@ import {
 } from "@/lib/advisor/platform-subdomain";
 import { isTenantPassThroughPath } from "@/lib/advisor/tenant-pass-through-paths";
 import {
+  isMfaChallengePending,
   isPageMfaExempt,
   isWorkspacePath,
   isMfaSetupPending,
@@ -20,7 +21,6 @@ import {
   shouldBlockApiForPasswordChangePending,
 } from "@/lib/auth/password-change-gate";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
-import { isMfaChallengePendingForUser } from "@/lib/auth/mfa-session-status";
 
 /** For server layouts (e.g. advisor) that branch on URL without middleware.
  *
@@ -134,14 +134,21 @@ export default async function proxy(req: NextRequest) {
   // US-48: block workspace API calls until MFA challenge completes. Auth
   // routes (/api/auth/* including mfa/verify) stay reachable so the user
   // can finish the challenge; cron/webhooks use their own secrets.
+  type JwtClaims = {
+    id?: string;
+    sub?: string;
+    mfaEnabled?: boolean;
+    mfaVerified?: boolean;
+    mfaEnrollmentRequired?: boolean;
+    passwordChangeRequired?: boolean;
+  };
+  const jwt = token as JwtClaims | null;
   const mfaClaims = {
-    id: (token as { id?: string; sub?: string }).id ?? (token as { sub?: string }).sub,
-    mfaEnabled: (token as { mfaEnabled?: boolean }).mfaEnabled,
-    mfaVerified: (token as { mfaVerified?: boolean }).mfaVerified,
-    mfaEnrollmentRequired: (token as { mfaEnrollmentRequired?: boolean })
-      .mfaEnrollmentRequired,
-    passwordChangeRequired: (token as { passwordChangeRequired?: boolean })
-      .passwordChangeRequired,
+    id: jwt?.id ?? jwt?.sub,
+    mfaEnabled: jwt?.mfaEnabled,
+    mfaVerified: jwt?.mfaVerified,
+    mfaEnrollmentRequired: jwt?.mfaEnrollmentRequired,
+    passwordChangeRequired: jwt?.passwordChangeRequired,
   };
 
   if (
@@ -168,7 +175,7 @@ export default async function proxy(req: NextRequest) {
 
   if (
     isAuthenticated &&
-    (await isMfaChallengePendingForUser(mfaClaims)) &&
+    isMfaChallengePending(mfaClaims) &&
     shouldBlockApiForMfaPending(pathname)
   ) {
     return NextResponse.json(
@@ -207,7 +214,7 @@ export default async function proxy(req: NextRequest) {
       return NextResponse.redirect(mfaSetupUrl);
     }
 
-    if (await isMfaChallengePendingForUser(mfaClaims)) {
+    if (isMfaChallengePending(mfaClaims)) {
       const mfaVerifyUrl = new URL("/mfa/verify", req.url);
       mfaVerifyUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(mfaVerifyUrl);

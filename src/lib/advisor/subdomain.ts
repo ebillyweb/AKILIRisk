@@ -83,7 +83,7 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
 
     const brandingEnabled =
       advisorSubdomain?.enterprise?.brandingEnabled ??
-      advisorSubdomain?.advisor.brandingEnabled ??
+      advisorSubdomain?.advisor?.brandingEnabled ??
       false;
 
     const result = advisorSubdomain && brandingEnabled
