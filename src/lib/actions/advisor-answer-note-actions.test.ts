@@ -7,7 +7,12 @@ const {
   getAdvisorProfileOrThrowSpy,
 } = vi.hoisted(() => ({
   prismaSpies: {
-    intakeResponse: { findUnique: vi.fn() },
+    intakeInterview: { findUnique: vi.fn() },
+    intakeResponse: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+      delete: vi.fn(),
+    },
     intakeResponseAdvisorNote: {
       findUnique: vi.fn(),
       create: vi.fn(),
@@ -50,6 +55,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import {
   saveIntakeResponseAdvisorNote,
+  saveIntakeQuestionAdvisorNote,
   deleteIntakeResponseAdvisorNote,
   saveAssessmentResponseAdvisorNote,
   deleteAssessmentResponseAdvisorNote,
@@ -68,16 +74,31 @@ beforeEach(() => {
 
 function mockAssignedIntakeResponse(opts: {
   existing?: { id: string; body: string } | null;
+  hasClientAnswer?: boolean;
 }) {
   prismaSpies.intakeResponse.findUnique.mockResolvedValue({
     id: "ir-1",
     interviewId: "int-1",
+    answeredAt: opts.hasClientAnswer === false ? null : new Date(),
+    audioUrl: null,
+    audioS3Key: null,
+    hasTranscription: opts.hasClientAnswer !== false,
+    transcription: opts.hasClientAnswer === false ? null : "answered",
     interview: { userId: "client-1" },
   });
   prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue({ id: "a-1" });
   prismaSpies.intakeResponseAdvisorNote.findUnique.mockResolvedValue(
     opts.existing ?? null
   );
+}
+
+function mockAssignedIntakeQuestion() {
+  prismaSpies.intakeInterview.findUnique.mockResolvedValue({
+    id: "int-1",
+    userId: "client-1",
+  });
+  prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue({ id: "a-1" });
+  prismaSpies.intakeResponse.upsert.mockResolvedValue({ id: "ir-new" });
 }
 
 function mockAssignedAssessmentResponse(opts: {
@@ -493,5 +514,34 @@ describe("advisor answer notes (US-46c)", () => {
     expect(
       (prismaSpies as unknown as Record<string, unknown>).intakeResponseAdminNote
     ).toBeUndefined();
+  });
+
+  it("creates a placeholder intake response when noting an unanswered question", async () => {
+    mockAssignedIntakeQuestion();
+    prismaSpies.intakeResponse.upsert.mockResolvedValue({ id: "ir-1" });
+    mockAssignedIntakeResponse({ existing: null });
+    prismaSpies.intakeResponseAdvisorNote.create.mockResolvedValue({
+      id: "note-1",
+      body: "Ask about council cadence on next call.",
+    });
+
+    const result = await saveIntakeQuestionAdvisorNote({
+      interviewId: "int-1",
+      questionId: "intake-q7",
+      body: "Ask about council cadence on next call.",
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaSpies.intakeResponse.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          interviewId_questionId: {
+            interviewId: "int-1",
+            questionId: "intake-q7",
+          },
+        },
+      }),
+    );
+    expect(prismaSpies.intakeResponseAdvisorNote.create).toHaveBeenCalled();
   });
 });

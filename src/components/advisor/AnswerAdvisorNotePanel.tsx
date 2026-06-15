@@ -87,7 +87,7 @@ export function AnswerAdvisorNotePanel({
         value={body}
         onChange={(e) => setBody(e.target.value)}
         maxLength={ANSWER_ADVISOR_NOTE_MAX_LENGTH}
-        placeholder="Add a private note on this answer…"
+        placeholder="Add a private note on this question…"
         aria-label={`Advisor note for ${targetLabel}`}
         data-testid="answer-advisor-note-input"
       />

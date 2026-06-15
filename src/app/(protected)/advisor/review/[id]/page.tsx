@@ -6,8 +6,9 @@ import { AdvisorIntakeView } from "@/components/advisor/AdvisorIntakeView";
 import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
 import { ReviewSidebar } from "@/components/advisor/ReviewSidebar";
 import { getIntakeReviewDataForAdvisorPage } from "@/lib/advisor/intake-review-queries";
-import { isIntakeExportableStatus } from "@/lib/pdf/intake/build-intake-pdf-data";
 import { formatIntakeApprovalStatus } from "@/lib/intake/approval-status-label";
+import { intakeResponseHasClientAnswer } from "@/lib/intake/response-has-answer";
+import { isIntakeExportableStatus } from "@/lib/pdf/intake/build-intake-pdf-data";
 
 interface ReviewPageProps {
   params: Promise<{ id: string }>;
@@ -47,6 +48,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
     formatIntakeApprovalStatus(status);
 
   const canExportPdf = isIntakeExportableStatus(interview.status);
+  const answeredCount = interview.responses.filter(intakeResponseHasClientAnswer).length;
 
   /** Client intake row status — separate from advisor approval (IntakeApproval). */
   const getIntakeCompletionLabel = (status: string) => {
@@ -127,7 +129,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                     Responses
                   </dt>
                   <dd className="font-medium text-foreground">
-                    {interview.responses.length} of {questions.length}
+                    {answeredCount} of {questions.length}
                   </dd>
                 </div>
                 <div className="min-w-0 space-y-1">
@@ -159,7 +161,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                     <ExportIntakePdfButton interviewId={interview.id} />
                   ) : null}
                   <span className="text-sm text-muted-foreground">
-                    {interview.responses.length} of {questions.length} responses
+                    {answeredCount} of {questions.length} responses
                   </span>
                 </div>
               </div>
@@ -169,6 +171,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
               </p>
 
               <AdvisorIntakeView
+                interviewId={interview.id}
                 responses={interview.responses}
                 questions={questions}
                 totalQuestions={questions.length}

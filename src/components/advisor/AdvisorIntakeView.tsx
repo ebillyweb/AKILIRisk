@@ -6,11 +6,15 @@ import { AudioPlayer } from "./AudioPlayer";
 import { AnswerAdvisorNotePanel } from "./AnswerAdvisorNotePanel";
 import {
   deleteIntakeResponseAdvisorNote,
+  deleteIntakeQuestionAdvisorNote,
   saveIntakeResponseAdvisorNote,
+  saveIntakeQuestionAdvisorNote,
 } from "@/lib/actions/advisor-answer-note-actions";
 import type { IntakeReviewData } from "@/lib/advisor/types";
+import { intakeResponseHasClientAnswer } from "@/lib/intake/response-has-answer";
 
 interface AdvisorIntakeViewProps {
+  interviewId: string;
   responses: IntakeReviewData["interview"]["responses"];
   questions: IntakeReviewData["questions"];
   totalQuestions: number;
@@ -21,6 +25,7 @@ interface AdvisorIntakeViewProps {
  * Advisor view: question text (read-only) and the client's recorded or typed answer.
  */
 export function AdvisorIntakeView({
+  interviewId,
   responses,
   questions,
   totalQuestions,
@@ -73,7 +78,25 @@ export function AdvisorIntakeView({
                 }
                 onDelete={() => deleteIntakeResponseAdvisorNote(response.id)}
               />
-            ) : null}
+            ) : (
+              <AnswerAdvisorNotePanel
+                targetLabel={`intake Q${num}`}
+                initialNote={null}
+                onSave={(body) =>
+                  saveIntakeQuestionAdvisorNote({
+                    interviewId,
+                    questionId: question.id,
+                    body,
+                  })
+                }
+                onDelete={() =>
+                  deleteIntakeQuestionAdvisorNote({
+                    interviewId,
+                    questionId: question.id,
+                  })
+                }
+              />
+            )}
           </section>
         );
       })}
@@ -114,7 +137,7 @@ function ClientResponseBlock({
   response: IntakeReviewData["interview"]["responses"][0] | undefined;
   questionNumber: number;
 }) {
-  if (!response) {
+  if (!response || !intakeResponseHasClientAnswer(response)) {
     return (
       <div className="rounded-lg bg-muted/30 p-4">
         <p className="text-sm italic text-muted-foreground">No response recorded for this question.</p>

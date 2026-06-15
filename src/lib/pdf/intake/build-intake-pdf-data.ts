@@ -1,5 +1,6 @@
 import type { IntakeReviewData } from "@/lib/advisor/types";
 import { formatIntakeAnswerDisplay } from "@/lib/pdf/intake/format-intake-answer";
+import { intakeResponseHasClientAnswer } from "@/lib/intake/response-has-answer";
 
 export type IntakePdfQuestionRow = {
   questionNumber: number;
@@ -65,7 +66,8 @@ export function buildIntakePdfData(review: IntakeReviewData): IntakePdfData {
     clientEmail: review.interview.user.email,
     submittedAt,
     intakeStatus: review.interview.status,
-    responseCount: review.interview.responses.length,
+    responseCount: review.interview.responses.filter(intakeResponseHasClientAnswer)
+      .length,
     totalQuestions: review.questions.length,
     questions,
   };

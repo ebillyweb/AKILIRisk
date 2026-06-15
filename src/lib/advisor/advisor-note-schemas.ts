@@ -21,6 +21,12 @@ export const intakeAnswerAdvisorNoteInputSchema = z.object({
   body: answerAdvisorNoteBodySchema,
 });
 
+export const intakeQuestionAdvisorNoteInputSchema = z.object({
+  interviewId: z.string().min(1),
+  questionId: z.string().min(1),
+  body: answerAdvisorNoteBodySchema,
+});
+
 export const assessmentAnswerAdvisorNoteInputSchema = z.object({
   assessmentResponseId: z.string().min(1),
   body: answerAdvisorNoteBodySchema,

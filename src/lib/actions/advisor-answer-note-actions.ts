@@ -8,9 +8,11 @@ import { getAdvisorProfileOrThrow, requireAdvisorRole } from "@/lib/advisor/auth
 import {
   assessmentAnswerAdvisorNoteInputSchema,
   intakeAnswerAdvisorNoteInputSchema,
+  intakeQuestionAdvisorNoteInputSchema,
 } from "@/lib/advisor/advisor-note-schemas";
 import { prisma } from "@/lib/db";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { intakeResponseHasClientAnswer } from "@/lib/intake/response-has-answer";
 
 /**
  * US-46c: advisor-scoped advisory notes on individual intake/assessment
@@ -67,6 +69,11 @@ async function loadAssignedIntakeResponse(
     select: {
       id: true,
       interviewId: true,
+      answeredAt: true,
+      audioUrl: true,
+      audioS3Key: true,
+      hasTranscription: true,
+      transcription: true,
       interview: { select: { userId: true } },
     },
   });
@@ -97,7 +104,74 @@ async function loadAssignedIntakeResponse(
     interviewId: response.interviewId,
     clientId: response.interview.userId,
     existing,
+    hasClientAnswer: intakeResponseHasClientAnswer(response),
   };
+}
+
+async function loadAssignedIntakeQuestion(
+  interviewId: string,
+  questionId: string,
+  advisorProfileId: string,
+  advisorUserId: string,
+) {
+  const interview = await prisma.intakeInterview.findUnique({
+    where: { id: interviewId },
+    select: { id: true, userId: true },
+  });
+  if (!interview) return null;
+
+  const assignment = await prisma.clientAdvisorAssignment.findFirst({
+    where: {
+      advisorId: advisorProfileId,
+      clientId: interview.userId,
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  });
+  if (!assignment) return null;
+
+  return { interviewId: interview.id, clientId: interview.userId, questionId };
+}
+
+async function ensureIntakeResponseForAdvisorNote(
+  interviewId: string,
+  questionId: string,
+): Promise<string> {
+  const response = await prisma.intakeResponse.upsert({
+    where: {
+      interviewId_questionId: { interviewId, questionId },
+    },
+    create: {
+      interviewId,
+      questionId,
+    },
+    update: {},
+    select: { id: true },
+  });
+  return response.id;
+}
+
+async function deleteAdvisorNotePlaceholderResponseIfEmpty(
+  intakeResponseId: string,
+): Promise<void> {
+  const response = await prisma.intakeResponse.findUnique({
+    where: { id: intakeResponseId },
+    select: {
+      id: true,
+      answeredAt: true,
+      audioUrl: true,
+      audioS3Key: true,
+      hasTranscription: true,
+      transcription: true,
+      advisorNotes: { select: { id: true }, take: 1 },
+      adminNote: { select: { id: true } },
+    },
+  });
+  if (!response) return;
+  if (intakeResponseHasClientAnswer(response)) return;
+  if (response.advisorNotes.length > 0 || response.adminNote) return;
+
+  await prisma.intakeResponse.delete({ where: { id: response.id } });
 }
 
 async function loadAssignedAssessmentResponse(
@@ -289,8 +363,86 @@ export async function deleteIntakeResponseAdvisorNote(
       },
     });
 
+    if (!response.hasClientAnswer) {
+      await deleteAdvisorNotePlaceholderResponseIfEmpty(response.id);
+    }
+
     revalidateIntakeReviewPaths(response.interviewId);
     return { success: true };
+  } catch (e) {
+    return { success: false, error: formatActionError(e) };
+  }
+}
+
+export async function saveIntakeQuestionAdvisorNote(input: {
+  interviewId: string;
+  questionId: string;
+  body: string;
+}): Promise<AdvisorAnswerNoteActionResult> {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const parsed = intakeQuestionAdvisorNoteInputSchema.parse(input);
+
+    const question = await loadAssignedIntakeQuestion(
+      parsed.interviewId,
+      parsed.questionId,
+      profile.id,
+      userId,
+    );
+    if (!question) {
+      return { success: false, error: "Not found." };
+    }
+
+    const intakeResponseId = await ensureIntakeResponseForAdvisorNote(
+      parsed.interviewId,
+      parsed.questionId,
+    );
+
+    return saveIntakeResponseAdvisorNote({
+      intakeResponseId,
+      body: parsed.body,
+    });
+  } catch (e) {
+    return { success: false, error: formatActionError(e) };
+  }
+}
+
+export async function deleteIntakeQuestionAdvisorNote(input: {
+  interviewId: string;
+  questionId: string;
+}): Promise<AdvisorAnswerNoteActionResult> {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const parsed = intakeQuestionAdvisorNoteInputSchema
+      .pick({ interviewId: true, questionId: true })
+      .parse(input);
+
+    const question = await loadAssignedIntakeQuestion(
+      parsed.interviewId,
+      parsed.questionId,
+      profile.id,
+      userId,
+    );
+    if (!question) {
+      return { success: false, error: "Not found." };
+    }
+
+    const response = await prisma.intakeResponse.findUnique({
+      where: {
+        interviewId_questionId: {
+          interviewId: parsed.interviewId,
+          questionId: parsed.questionId,
+        },
+      },
+      select: { id: true },
+    });
+    if (!response) {
+      return { success: false, error: "No advisor note on this response." };
+    }
+
+    return deleteIntakeResponseAdvisorNote(response.id);
   } catch (e) {
     return { success: false, error: formatActionError(e) };
   }
