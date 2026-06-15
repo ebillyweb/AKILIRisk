@@ -52,7 +52,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
       { href: "/advisor", label: "Today", icon: Home },
       {
         href: "/advisor/dashboard",
-        label: "Governance portfolio",
+        label: "Risk Profile Portfolio",
         icon: BarChart3,
         requiresFlag: "governanceDashboardEnabled",
       },

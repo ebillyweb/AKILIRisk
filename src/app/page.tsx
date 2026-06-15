@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
+import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
 import { Button } from "@/components/ui/button";
 import { LandingHero } from "@/components/home/hero/LandingHero";
 import { parseHeroAudienceParam } from "@/components/home/hero/hero-audience-persistence";
@@ -14,6 +16,10 @@ export default async function Home({ searchParams }: HomePageProps) {
   const session = await auth();
   const { audience: audienceParam } = await searchParams;
   const initialAudience = parseHeroAudienceParam(audienceParam) ?? "families";
+  const advisorWorkspaceTitle =
+    session?.user?.id && isAdvisorHubNavRole(session.user.role)
+      ? await resolveAdvisorWorkspaceTitleForUserId(session.user.id)
+      : undefined;
 
   return (
     <>
@@ -23,6 +29,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             initialAudience={initialAudience}
             authenticated={Boolean(session?.user)}
             userEmail={session?.user?.email}
+            advisorWorkspaceTitle={advisorWorkspaceTitle}
             authenticatedActions={
               session?.user ? (
                 <>

@@ -7,6 +7,7 @@ import { AdvisorSidebarNav } from "./AdvisorSidebarNav";
 interface AdvisorSidebarProps {
   featureFlags: AdvisorPlatformFeatureFlags;
   unreadNotificationCount: number;
+  workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
   className?: string;
@@ -15,6 +16,7 @@ interface AdvisorSidebarProps {
 export function AdvisorSidebar({
   featureFlags,
   unreadNotificationCount,
+  workspaceTitle,
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
   className,
@@ -30,7 +32,7 @@ export function AdvisorSidebar({
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              Advisor Workspace
+              {workspaceTitle}
             </h2>
             <p className="text-xs text-muted-foreground">Practice operations</p>
           </div>

@@ -92,7 +92,7 @@ function SignInForm() {
 
   return (
     <AuthPanel
-      eyebrow={isAdvisorPortal ? "Advisor Workspace" : "Advisor & Admin"}
+      eyebrow={isAdvisorPortal ? "Advisor's Workspace" : "Advisor & Admin"}
       title="Sign in"
       description="Email and password sign-in is for advisors and platform administrators. Client accounts use a one-time email link."
       footer={

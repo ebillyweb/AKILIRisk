@@ -11,6 +11,7 @@ import { AdvisorSidebarNav } from "./AdvisorSidebarNav";
 interface AdvisorMobileNavProps {
   featureFlags: AdvisorPlatformFeatureFlags;
   unreadNotificationCount: number;
+  workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
 }
@@ -18,6 +19,7 @@ interface AdvisorMobileNavProps {
 export function AdvisorMobileNav({
   featureFlags,
   unreadNotificationCount,
+  workspaceTitle,
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
 }: AdvisorMobileNavProps) {
@@ -71,7 +73,7 @@ export function AdvisorMobileNav({
           </span>
         </Button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">Advisor Workspace</p>
+          <p className="truncate text-sm font-semibold text-foreground">{workspaceTitle}</p>
           <p className="truncate text-xs text-muted-foreground">Practice operations</p>
         </div>
         <NotificationBell initialCount={unreadNotificationCount} />
@@ -103,7 +105,7 @@ export function AdvisorMobileNav({
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold text-foreground">
-                    Advisor Workspace
+                    {workspaceTitle}
                   </p>
                   <p className="text-xs text-muted-foreground">Practice operations</p>
                 </div>

@@ -6,8 +6,9 @@ import {
 } from "@/lib/advisor/auth";
 import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { canAccessAdvisorBilling } from "@/lib/enterprise/billing-details";
-import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
+import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
+import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ReactNode } from "react";
@@ -50,7 +51,8 @@ export default async function AdvisorLayout({
     }
   }
 
-  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled] = await Promise.all([
+  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, workspaceTitle] =
+    await Promise.all([
     getPlatformFeatureFlags(),
     onBillingPage
       ? Promise.resolve({
@@ -60,6 +62,7 @@ export default async function AdvisorLayout({
       : getAdvisorDashboardData(),
     userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
     userId ? canAccessAdvisorBilling(userId) : Promise.resolve(true),
+    resolveAdvisorWorkspaceTitleForUserId(userId),
   ]);
 
   const unreadNotificationCount = dash.success
@@ -70,6 +73,7 @@ export default async function AdvisorLayout({
     <AdvisorControlCenterLayout
       featureFlags={featureFlags}
       unreadNotificationCount={unreadNotificationCount}
+      workspaceTitle={workspaceTitle}
       enterpriseTeamEnabled={enterpriseTeamEnabled}
       billingNavEnabled={billingNavEnabled}
     >

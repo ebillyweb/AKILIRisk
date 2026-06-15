@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { getAdvisorWorkspaceHomeData } from "@/lib/actions/advisor-workspace-actions";
+import { advisorWorkspaceTitle } from "@/lib/advisor/advisor-workspace-label";
 import { MetricCard } from "./MetricCard";
 import type {
   AdvisorActivityItem,
@@ -145,6 +146,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
   const { profile, metrics, priorities, activity, intelligenceHighlights, flags } = data;
   const firstName = profile.user.firstName;
   const firmName = profile.firmName;
+  const workspaceTitle = advisorWorkspaceTitle(profile.user);
 
   return (
     <div className="space-y-6">
@@ -152,7 +154,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
 
       <header className="space-y-1 border-b border-border/50 pb-5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Advisor Workspace
+          {workspaceTitle}
         </p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
           Today

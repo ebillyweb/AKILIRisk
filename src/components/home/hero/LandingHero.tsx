@@ -11,6 +11,7 @@ import {
   HERO_AUDIENCE_CONTENT,
   type HeroAudience,
 } from "@/components/home/hero/hero-audience-content";
+import { ADVISOR_HERO_FEATURES, HOME_HERO_FEATURES } from "@/components/home/hero/home-hero-features";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHeroAudience } from "@/components/home/hero/useHeroAudience";
@@ -20,6 +21,7 @@ type LandingHeroProps = {
   initialAudience?: HeroAudience;
   authenticated: boolean;
   userEmail?: string | null;
+  advisorWorkspaceTitle?: string;
   authenticatedActions?: ReactNode;
   className?: string;
 };
@@ -34,6 +36,7 @@ export function LandingHero({
   initialAudience = "families",
   authenticated,
   userEmail,
+  advisorWorkspaceTitle,
   authenticatedActions,
   className,
 }: LandingHeroProps) {
@@ -41,6 +44,12 @@ export function LandingHero({
   const prefersReducedMotion = useReducedMotion();
   const { audience, setAudience } = useHeroAudience(initialAudience);
   const copy = HERO_AUDIENCE_CONTENT[audience];
+  const heroFeatures =
+    audience === "families" ? HOME_HERO_FEATURES : ADVISOR_HERO_FEATURES;
+  const kicker =
+    audience === "advisors" && advisorWorkspaceTitle
+      ? advisorWorkspaceTitle
+      : copy.kicker;
   const panelId = `${baseId}-panel-${audience}`;
   const tabId = `${baseId}-tab-${audience}`;
   const transition = prefersReducedMotion
@@ -80,7 +89,7 @@ export function LandingHero({
               className="space-y-7"
             >
               <div className="space-y-4">
-                <p className="editorial-kicker">{copy.kicker}</p>
+                <p className="editorial-kicker">{kicker}</p>
                 <div className="max-w-3xl space-y-4">
                   <h1 className="text-4xl font-semibold leading-[1.05] text-balance sm:text-6xl lg:text-[4.5rem]">
                     {copy.headline}
@@ -177,7 +186,7 @@ export function LandingHero({
             }}
             className="grid gap-4 sm:grid-cols-3"
           >
-            {copy.features.map((feature) => (
+            {heroFeatures.map((feature) => (
               <HeroFeatureCard
                 key={feature.title}
                 title={feature.title}

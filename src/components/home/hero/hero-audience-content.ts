@@ -1,13 +1,3 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  BarChart3,
-  ShieldCheck,
-  Sparkles,
-  UserRound,
-  Users,
-  Waypoints,
-} from "lucide-react";
-
 export type HeroAudience = "families" | "advisors";
 
 export const HERO_AUDIENCE_OPTIONS: ReadonlyArray<{
@@ -17,12 +7,6 @@ export const HERO_AUDIENCE_OPTIONS: ReadonlyArray<{
   { id: "families", label: "For Families" },
   { id: "advisors", label: "For Advisors" },
 ] as const;
-
-export type HeroFeature = {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-};
 
 export type HeroAudienceCopy = {
   kicker: string;
@@ -38,7 +22,6 @@ export type HeroAudienceCopy = {
     href?: string;
     linkLabel?: string;
   }>;
-  features: ReadonlyArray<HeroFeature>;
 };
 
 export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
@@ -73,30 +56,11 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
         text: "Private and encrypted. Responses visible only to your advisor.",
       },
     ],
-    features: [
-      {
-        title: "Governance Risk Identification",
-        description:
-          "Surface structural governance gaps before they become disputes.",
-        icon: ShieldCheck,
-      },
-      {
-        title: "Advisor-Guided Assessment",
-        description:
-          "A structured interview designed for families and their advisors.",
-        icon: Waypoints,
-      },
-      {
-        title: "Continuity Intelligence",
-        description:
-          "Receive governance recommendations and succession frameworks.",
-        icon: Sparkles,
-      },
-    ],
   },
   advisors: {
-    kicker: "Advisor Workspace",
-    headline: "Governance intelligence for modern advisory firms.",
+    kicker: "Advisor's Workspace",
+    headline:
+      "A personal and intentional way to assess your clients' vulnerabilities.",
     supporting:
       "Manage personal risk profiles, client intelligence, succession planning, and structured recommendations from a unified advisor workspace.",
     primaryCta: {
@@ -128,26 +92,6 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
         id: "workspace",
         content: "text",
         text: "Secure workspace for client governance profiles, scoring, and continuity planning.",
-      },
-    ],
-    features: [
-      {
-        title: "Client Governance Profiles",
-        description:
-          "Centralize household governance context, intake, and assessment progress.",
-        icon: Users,
-      },
-      {
-        title: "Risk Scoring & Recommendations",
-        description:
-          "Translate assessment outcomes into structured, advisor-ready guidance.",
-        icon: BarChart3,
-      },
-      {
-        title: "Family Continuity Planning",
-        description:
-          "Support succession frameworks and long-horizon continuity decisions.",
-        icon: UserRound,
       },
     ],
   },
