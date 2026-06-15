@@ -76,6 +76,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
   const intakeWaived = advisorAssignment.intakeWaivedAt != null;
   const intakeSubmitted = isIntakeFinished(intakeDetails);
   const assessmentCompleted = assessmentDetails?.status === "COMPLETED";
+  const assessmentStarted = assessmentDetails != null;
   const intakeNeedsAdvisorReview =
     client.awaitingIntakeReview && !assessmentCompleted;
   const intakeReviewId =
@@ -179,6 +180,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
                   showWaiverAction={false}
+                  waiverLocked={assessmentStarted}
                 />
               ) : intakeDetails ? (
                 <>
@@ -255,6 +257,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         includedPillars={advisorAssignment.includedPillars}
                         focusAreas={advisorAssignment.focusAreas}
                         showWaiverAction
+                        waiverLocked={assessmentStarted}
                       />
                     ) : null}
                   </div>
@@ -268,6 +271,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
                   showWaiverAction
+                  waiverLocked={assessmentStarted}
                 />
               )}
             </CardContent>

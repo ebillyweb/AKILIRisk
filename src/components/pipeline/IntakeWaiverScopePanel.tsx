@@ -24,6 +24,8 @@ type IntakeWaiverScopePanelProps = {
   focusAreas: string[];
   /** When true, show the waiver + scope form (no intake submitted). */
   showWaiverAction: boolean;
+  /** When true, waiver on/off cannot be changed (assessment already started). */
+  waiverLocked?: boolean;
 };
 
 function pillarLabel(id: string): string {
@@ -38,6 +40,7 @@ export function IntakeWaiverScopePanel({
   includedPillars,
   focusAreas,
   showWaiverAction,
+  waiverLocked = false,
 }: IntakeWaiverScopePanelProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -83,7 +86,7 @@ export function IntakeWaiverScopePanel({
           <Button
             type="button"
             variant="outline"
-            disabled={pending || !assignmentActive}
+            disabled={pending || !assignmentActive || waiverLocked}
             onClick={() =>
               runAction(() => setClientIntakeWaiver(clientId, false))
             }
@@ -91,6 +94,11 @@ export function IntakeWaiverScopePanel({
             Require intake again
           </Button>
         </div>
+        {waiverLocked ? (
+          <p className="text-sm text-muted-foreground">
+            Assessment is already in progress, so intake waiver cannot be reversed.
+          </p>
+        ) : null}
 
         {!scopeSet && !editingScope ? (
           <Alert>
@@ -191,6 +199,15 @@ export function IntakeWaiverScopePanel({
 
   if (!showWaiverAction) {
     return null;
+  }
+
+  if (waiverLocked) {
+    return (
+      <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+        Assessment is already in progress. Intake can no longer be waived for this
+        household.
+      </p>
+    );
   }
 
   return (

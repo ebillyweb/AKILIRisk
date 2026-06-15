@@ -28,6 +28,17 @@ async function requireAdvisorAssignment(clientId: string, advisorProfileId: stri
   });
 }
 
+async function clientHasStartedAssessment(clientId: string): Promise<boolean> {
+  const assessment = await prisma.assessment.findFirst({
+    where: {
+      userId: clientId,
+      status: { in: ["IN_PROGRESS", "COMPLETED"] },
+    },
+    select: { id: true },
+  });
+  return assessment != null;
+}
+
 async function persistWaiverScope(
   assignmentId: string,
   clientId: string,
@@ -84,6 +95,14 @@ export async function setClientIntakeWaiver(
 
     if (!assignment) {
       return { success: false, error: "This client is not assigned to you." };
+    }
+
+    if (await clientHasStartedAssessment(clientId)) {
+      return {
+        success: false,
+        error:
+          "Assessment is already in progress. Intake waiver cannot be changed for this household.",
+      };
     }
 
     if (waive) {
