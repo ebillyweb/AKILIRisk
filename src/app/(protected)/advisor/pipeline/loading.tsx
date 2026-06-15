@@ -2,8 +2,8 @@ export default function PipelineLoading() {
   return (
     <div className="space-y-6">
       {/* Metrics skeleton */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-        {[...Array(8)].map((_, i) => (
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="rounded-md bg-muted/50 px-3 py-2">
             <div className="space-y-2">
               <div className="h-6 w-8 bg-muted rounded animate-pulse" />

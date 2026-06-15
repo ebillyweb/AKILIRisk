@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { Send, UserPlus } from "lucide-react";
 
 import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/lib/pipeline/parse-pipeline-filters";
 import type { PipelineFilters } from "@/lib/pipeline/types";
 import { MetricCard } from "@/components/advisor/workspace/MetricCard";
+import { Button } from "@/components/ui/button";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
 
@@ -85,31 +87,15 @@ function MetricsSummary({ metrics }: { metrics: any }) {
         "border-orange-200/70 bg-orange-50/80 dark:border-orange-800/40 dark:bg-orange-950/25",
     },
     {
-      label: "Documents",
-      count: metrics.byStage.DOCUMENTS_REQUIRED,
-      className:
-        "border-yellow-200/70 bg-yellow-50/80 dark:border-yellow-800/40 dark:bg-yellow-950/25",
-    },
-    {
-      label: "Complete",
+      label: "Completed",
       count: metrics.byStage.COMPLETE,
       className:
         "border-emerald-200/70 bg-emerald-50/80 dark:border-emerald-800/40 dark:bg-emerald-950/25",
     },
-    {
-      label: "Stalled",
-      count: metrics.stalled,
-      className: "border-red-200/70 bg-red-50/80 dark:border-red-800/40 dark:bg-red-950/25",
-    },
-    {
-      label: "Total",
-      count: metrics.total,
-      className: "border-border/70 bg-muted/40 dark:bg-muted/20",
-    },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       {metricCards.map((metric) => (
         <MetricCard
           key={metric.label}
@@ -118,6 +104,25 @@ function MetricsSummary({ metrics }: { metrics: any }) {
           className={metric.className}
         />
       ))}
+    </div>
+  );
+}
+
+function PipelineClientActions() {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button asChild size="sm">
+        <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
+          <UserPlus className="size-4" />
+          Create New Client
+        </Link>
+      </Button>
+      <Button asChild variant="outline" size="sm">
+        <Link href="/advisor/invitations" className="inline-flex items-center gap-2">
+          <Send className="size-4" />
+          Send New Invitation
+        </Link>
+      </Button>
     </div>
   );
 }
@@ -181,6 +186,8 @@ export default async function PipelinePage({
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      <PipelineClientActions />
+
       {workflowHeading ? (
         <header className="space-y-1 border-b border-border/50 pb-5">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -200,16 +207,6 @@ export default async function PipelinePage({
           </p>
         </header>
       ) : null}
-
-      {/* Quick navigation */}
-      <div className="flex justify-center">
-        <Link
-          href="/advisor/invitations"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Send new invitations
-        </Link>
-      </div>
 
       {/* Data-dependent content with Suspense streaming */}
       <Suspense fallback={<PipelineLoading />}>
