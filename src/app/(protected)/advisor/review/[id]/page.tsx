@@ -3,8 +3,10 @@ import { Clock, FileText, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AdvisorHouseholdDirectory } from "@/components/advisor/AdvisorHouseholdDirectory";
 import { AdvisorIntakeView } from "@/components/advisor/AdvisorIntakeView";
+import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
 import { ReviewSidebar } from "@/components/advisor/ReviewSidebar";
 import { getIntakeReviewDataForAdvisorPage } from "@/lib/advisor/intake-review-queries";
+import { isIntakeExportableStatus } from "@/lib/pdf/intake/build-intake-pdf-data";
 import { formatIntakeApprovalStatus } from "@/lib/intake/approval-status-label";
 
 interface ReviewPageProps {
@@ -44,6 +46,8 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
   const getApprovalStatusLabel = (status?: string) =>
     formatIntakeApprovalStatus(status);
 
+  const canExportPdf = isIntakeExportableStatus(interview.status);
+
   /** Client intake row status — separate from advisor approval (IntakeApproval). */
   const getIntakeCompletionLabel = (status: string) => {
     switch (status) {
@@ -74,6 +78,9 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
             </div>
 
             <div className="flex items-center gap-2">
+              {canExportPdf ? (
+                <ExportIntakePdfButton interviewId={interview.id} />
+              ) : null}
               <span className="text-sm text-muted-foreground">Advisor review</span>
               <Badge variant={getStatusVariant(approval?.status)}>
                 {getApprovalStatusLabel(approval?.status)}
@@ -145,11 +152,16 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
 
             {/* Intake form: view each question (with Play question) and client response */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold">View intake</h3>
-                <span className="text-sm text-muted-foreground">
-                  {interview.responses.length} of {questions.length} responses
-                </span>
+                <div className="flex items-center gap-2">
+                  {canExportPdf ? (
+                    <ExportIntakePdfButton interviewId={interview.id} />
+                  ) : null}
+                  <span className="text-sm text-muted-foreground">
+                    {interview.responses.length} of {questions.length} responses
+                  </span>
+                </div>
               </div>
               <p className="text-sm text-muted-foreground">
                 Read each question and listen to voice recordings where the client recorded an answer.

@@ -6,6 +6,7 @@ import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "luc
 
 import { cn } from "@/lib/utils";
 import { IntakeWaiverScopePanel } from "@/components/pipeline/IntakeWaiverScopePanel";
+import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -238,6 +239,12 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         </Link>
                       </Button>
                     )}
+                    {intakeReviewId && intakeSubmitted && intakeDetails.responseCount > 0 ? (
+                      <ExportIntakePdfButton
+                        interviewId={intakeReviewId}
+                        className="sm:w-auto"
+                      />
+                    ) : null}
                     {!intakeSubmitted ? (
                       <IntakeWaiverScopePanel
                         clientId={client.id}

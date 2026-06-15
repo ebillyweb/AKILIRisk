@@ -165,3 +165,115 @@ export async function getIntakeReviewDataForAdvisorPage(
     householdMembers,
   };
 }
+
+/**
+ * Read-only intake review loader for PDF export. Same tenant access as the
+ * review page but does not transition IntakeApproval to IN_REVIEW.
+ */
+export async function getIntakeReviewDataForAdvisorExport(
+  interviewId: string,
+): Promise<(IntakeReviewData & { assignmentAdvisorProfileId: string }) | null> {
+  const trimmedId = interviewId.trim();
+  if (!trimmedId) return null;
+
+  const { userId, role } = await requireAdvisorRole();
+  const isPlatformAdmin = isPlatformAdminRole(role);
+
+  let reviewData;
+  let profile;
+
+  if (isPlatformAdmin) {
+    reviewData = await getIntakeInterviewForPlatformAdminReview(trimmedId, userId);
+    if (!reviewData) return null;
+
+    const assignment = await prisma.clientAdvisorAssignment.findFirst({
+      where: { clientId: reviewData.interview.userId, status: "ACTIVE" },
+      orderBy: { assignedAt: "desc" },
+      select: { advisorId: true },
+    });
+    if (!assignment) return null;
+
+    profile = await prisma.advisorProfile.findUnique({
+      where: { id: assignment.advisorId },
+    });
+    if (!profile) return null;
+  } else {
+    profile = await getAdvisorProfileOrThrow(userId);
+    reviewData = await getClientIntakeForReview(profile.id, trimmedId, userId);
+    if (!reviewData) return null;
+  }
+
+  const assignmentAdvisorProfileId =
+    reviewData.assignmentAdvisorProfileId ?? profile.id;
+  const assignmentProfile =
+    assignmentAdvisorProfileId === profile.id
+      ? profile
+      : await prisma.advisorProfile.findUnique({
+          where: { id: assignmentAdvisorProfileId },
+        });
+  if (!assignmentProfile) return null;
+
+  const [script, firmName] = await Promise.all([
+    loadIntakeScriptQuestions(),
+    getAssignedAdvisorFirmNameForClient(reviewData.interview.userId),
+  ]);
+  const personalizedScript = personalizeIntakeScript(script, firmName);
+
+  const rawHouseholdMembers = assignmentProfile.householdProfilesEnabled
+    ? await prisma.householdMember.findMany({
+        where: { userId: reviewData.interview.userId },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+
+  const assignment = await prisma.clientAdvisorAssignment.findFirst({
+    where: {
+      advisorId: assignmentAdvisorProfileId,
+      clientId: reviewData.interview.userId,
+      status: "ACTIVE",
+    },
+    select: { fieldVisibility: true },
+  });
+  const advisorPolicy = await loadAdvisorPiiPolicy(assignmentAdvisorProfileId);
+  const effective = resolveEffectiveFieldVisibility(
+    advisorPolicy,
+    assignment?.fieldVisibility ?? null,
+  );
+  const householdMembers = toAdvisorHouseholdMemberViews(
+    rawHouseholdMembers,
+    effective,
+  );
+
+  const pillarRecommendations = computePillarRecommendations({
+    questions: personalizedScript.map((q) => ({
+      id: q.id,
+      questionText: q.questionText,
+      relatedPillarIds: q.relatedPillarIds,
+      recommendedActions: q.recommendedActions,
+    })),
+    responses: reviewData.interview.responses.map((r) => ({
+      questionId: r.questionId,
+      transcription: r.transcription,
+    })),
+  });
+
+  return {
+    interview: reviewData.interview,
+    approval: reviewData.approval,
+    pillarRecommendations,
+    questions: personalizedScript.map((q) => ({
+      id: q.id,
+      text: q.questionText,
+      helpText: q.context,
+      type: "audio",
+      questionNumber: q.questionNumber,
+      questionText: q.questionText,
+      context: q.context,
+      whyThisMatters: q.whyThisMatters,
+      recommendedActions: q.recommendedActions,
+      recordingTips: q.recordingTips,
+    })),
+    householdMembers,
+    assignmentAdvisorProfileId,
+  };
+}
