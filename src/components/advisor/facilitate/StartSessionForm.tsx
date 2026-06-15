@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, PlayCircle, UserPlus } from "lucide-react";
@@ -70,10 +71,6 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
       }
       toast.error(result.error ?? "Could not create client");
     });
-  };
-
-  const resumeSession = (sessionId: string, status: Parameters<typeof facilitatedSessionStepPath>[1]) => {
-    router.push(facilitatedSessionStepPath(sessionId, status));
   };
 
   return (
@@ -183,14 +180,13 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
           </CardHeader>
           <CardContent className="space-y-2">
             {data.openSessions.map((session) => (
-              <button
+              <Link
                 key={session.id}
-                type="button"
+                href={facilitatedSessionStepPath(session.id, session.status)}
                 className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-muted/40"
-                onClick={() => resumeSession(session.id, session.status)}
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">
+                  <p className="truncate text-sm font-medium">
                     {session.clientName ?? "Client"}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -198,7 +194,7 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
                   </p>
                 </div>
                 <Badge variant="secondary">{session.status.replace("_", " ")}</Badge>
-              </button>
+              </Link>
             ))}
           </CardContent>
         </Card>

@@ -45,10 +45,12 @@ export async function listRecentFacilitatedSessionsForAdvisor(
   advisorProfileId: string,
   limit = 10,
 ): Promise<FacilitatedSessionSummary[]> {
+  const cutoff = new Date(Date.now() - FACILITATED_SESSION_RESUME_MAX_AGE_MS);
   const rows = await prisma.facilitatedSession.findMany({
     where: {
       advisorProfileId,
       status: { in: OPEN_FACILITATED_STATUSES },
+      startedAt: { gte: cutoff },
     },
     orderBy: { updatedAt: "desc" },
     take: limit,
