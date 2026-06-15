@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AssessmentDomainsSelector } from '@/components/advisor/AssessmentDomainsSelector';
 import { EmphasisAreasSelector } from '@/components/advisor/EmphasisAreasSelector';
 import { sendInvitation } from '@/lib/actions/invitations';
+import { buildDefaultInvitationPersonalMessage } from '@/lib/schemas/invitation';
 import { Loader2 } from 'lucide-react';
 import { ShareableInvitationLinkAlert } from './ShareableInvitationLinkAlert';
 
@@ -38,14 +39,15 @@ const formSchema = z
 type FormData = z.infer<typeof formSchema>;
 
 interface InviteClientFormProps {
-  defaultPersonalMessage: string;
+  firmName: string | null;
 }
 
-export function InviteClientForm({ defaultPersonalMessage }: InviteClientFormProps) {
+export function InviteClientForm({ firmName }: InviteClientFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string; emailSent: boolean; reason?: string } | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>([]);
+  const [messageEdited, setMessageEdited] = useState(false);
   const router = useRouter();
 
   const {
@@ -70,6 +72,21 @@ export function InviteClientForm({ defaultPersonalMessage }: InviteClientFormPro
   const personalMessage = watch('personalMessage');
   const intakeWaived = watch('intakeWaived');
   const messageLength = personalMessage?.length || 0;
+
+  const suggestedPersonalMessage = useMemo(
+    () =>
+      buildDefaultInvitationPersonalMessage(
+        firmName,
+        intakeWaived && selectedDomains.length > 0 ? selectedDomains : undefined,
+      ),
+    [firmName, intakeWaived, selectedDomains],
+  );
+
+  useEffect(() => {
+    if (!messageEdited) {
+      setValue('personalMessage', suggestedPersonalMessage);
+    }
+  }, [messageEdited, setValue, suggestedPersonalMessage]);
 
   useEffect(() => {
     if (!intakeWaived) {
@@ -99,6 +116,7 @@ export function InviteClientForm({ defaultPersonalMessage }: InviteClientFormPro
     reset();
     setSelectedDomains([]);
     setSelectedEmphasis([]);
+    setMessageEdited(false);
   };
 
   const onSubmit = async (data: FormData) => {
@@ -210,12 +228,14 @@ export function InviteClientForm({ defaultPersonalMessage }: InviteClientFormPro
             Personal Message
           </label>
           <p className={fieldHintClassName}>
-            Optional. Leave blank to send the standard invitation message.
+            Optional. Updates automatically when you select assessment domains, or edit your own message.
           </p>
           <Textarea
             id="personalMessage"
-            {...register('personalMessage')}
-            placeholder={defaultPersonalMessage}
+            {...register('personalMessage', {
+              onChange: () => setMessageEdited(true),
+            })}
+            placeholder={suggestedPersonalMessage}
             rows={4}
             aria-invalid={!!errors.personalMessage}
             disabled={isSubmitting}

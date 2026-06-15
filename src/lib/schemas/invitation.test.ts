@@ -94,6 +94,24 @@ describe("buildDefaultInvitationPersonalMessage", () => {
     );
   });
 
+  it("lists selected assessment domains when scope is provided", () => {
+    expect(
+      buildDefaultInvitationPersonalMessage("Belvedere Wealth", [
+        "governance",
+        "insurance",
+        "geographic-environmental",
+      ]),
+    ).toBe(
+      "Belvedere Wealth is inviting you to complete 3 Risk Profile Assessments in Governance, Insurance and Geographic. This confidential process will help us identify areas of risk that require action plans to protect your wealth for the long term",
+    );
+  });
+
+  it("uses singular assessment label for one domain", () => {
+    expect(
+      buildDefaultInvitationPersonalMessage("Belvedere Wealth", ["governance"]),
+    ).toContain("1 Risk Profile Assessment in Governance.");
+  });
+
   it("falls back when firm name is missing", () => {
     expect(buildDefaultInvitationPersonalMessage(null)).toContain(
       "Your advisor is inviting you"

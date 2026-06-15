@@ -1,14 +1,29 @@
 import { z } from "zod";
+import { pillarDisplayName, formatEnglishList } from "@/lib/assessment/included-pillars";
 import { waiverAssessmentScopeSchema } from "@/lib/schemas/advisor";
 
 const DEFAULT_FIRM_FALLBACK = "Your advisor";
 
+const INVITATION_MESSAGE_CLOSING =
+  "This confidential process will help us identify areas of risk that require action plans to protect your wealth for the long term";
+
 /** US-1: standard copy when the advisor leaves the personal message blank. */
 export function buildDefaultInvitationPersonalMessage(
   firmName?: string | null,
+  includedPillars?: string[] | null,
 ): string {
   const firm = firmName?.trim() || DEFAULT_FIRM_FALLBACK;
-  return `${firm} is inviting you to complete your family's Risk Profile. This confidential process will help us identify areas of risk that require action plans to protect your wealth for the long term`;
+  const pillars = includedPillars?.filter((id) => id.trim().length > 0) ?? [];
+
+  if (pillars.length > 0) {
+    const count = pillars.length;
+    const assessmentLabel =
+      count === 1 ? "Risk Profile Assessment" : "Risk Profile Assessments";
+    const domainNames = formatEnglishList(pillars.map((id) => pillarDisplayName(id)));
+    return `${firm} is inviting you to complete ${count} ${assessmentLabel} in ${domainNames}. ${INVITATION_MESSAGE_CLOSING}`;
+  }
+
+  return `${firm} is inviting you to complete your family's Risk Profile. ${INVITATION_MESSAGE_CLOSING}`;
 }
 
 /** @deprecated Use buildDefaultInvitationPersonalMessage(firmName) for advisor-specific copy. */

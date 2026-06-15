@@ -1,7 +1,7 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { SelectionCheckboxIndicator } from "@/components/advisor/SelectionCheckboxIndicator";
 import { RISK_AREAS } from "@/lib/advisor/types";
 import { cn } from "@/lib/utils";
 
@@ -80,12 +80,9 @@ export function EmphasisAreasSelector({
                   disabled && "cursor-not-allowed opacity-50",
                 )}
               >
-                <Checkbox
+                <SelectionCheckboxIndicator
                   checked={isSelected}
-                  disabled={disabled}
-                  tabIndex={-1}
-                  aria-hidden
-                  className="mt-0.5 shrink-0 pointer-events-none"
+                  className="mt-0.5"
                 />
                 <span className="text-sm font-medium">{area.name}</span>
               </button>

@@ -96,7 +96,10 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
     const validatedInput = createInvitationSchema.parse(rawData);
     const personalMessage =
       validatedInput.personalMessage ??
-      buildDefaultInvitationPersonalMessage(profile.firmName);
+      buildDefaultInvitationPersonalMessage(
+        profile.firmName,
+        validatedInput.intakeWaived ? validatedInput.includedPillars : undefined,
+      );
     const invitationInput = { ...validatedInput, personalMessage };
 
     await assertCanAddClientForAdvisorProfile(profile.id);
@@ -229,7 +232,10 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       advisorInfo,
       personalMessage:
         invitation.personalMessage ||
-        buildDefaultInvitationPersonalMessage(profile.firmName),
+        buildDefaultInvitationPersonalMessage(
+          profile.firmName,
+          invitation.includedPillars?.length ? invitation.includedPillars : undefined,
+        ),
       invitationUrl: invitation.url,
       clientName: invitation.clientName || undefined,
       profile: {

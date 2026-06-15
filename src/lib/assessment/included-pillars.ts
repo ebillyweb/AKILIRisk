@@ -80,6 +80,14 @@ export function formatIncludedPillarNames(includedPillars: string[]): string {
   return includedPillars.map((id) => pillarDisplayName(id)).join(", ");
 }
 
+/** Natural-language list: "A, B and C". */
+export function formatEnglishList(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0]!;
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
 /** Client-facing risk preview scope summary (US-72). */
 export function formatNarrowScopePreviewCopy(includedPillars: string[]): string {
   const count = includedPillars.length;
