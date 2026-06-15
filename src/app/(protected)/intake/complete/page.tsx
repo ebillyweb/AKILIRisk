@@ -102,7 +102,7 @@ export default async function CompletePage() {
               <div className="space-y-1">
                 <h3 className="font-medium">Focus Area Identification</h3>
                 <p className="text-sm text-muted-foreground">
-                  They will identify key focus areas for your governance assessment based on
+                  They will identify key focus areas for your personal risk profile based on
                   your family&apos;s specific needs and challenges.
                 </p>
               </div>
@@ -115,7 +115,7 @@ export default async function CompletePage() {
               <div className="space-y-1">
                 <h3 className="font-medium">Customized Assessment</h3>
                 <p className="text-sm text-muted-foreground">
-                  You will receive a customized governance assessment tailored to your
+                  You will receive a customized personal risk profile tailored to your
                   family&apos;s circumstances and priorities.
                 </p>
               </div>

@@ -17,7 +17,7 @@ const INTAKE_WAIVED_HEADER_CONFIG: ClientPageHeaderConfig = {
   kicker: "Family Assessment",
   title: "Intake not required",
   subtitle:
-    "Your advisor waived the intake interview — you can begin your governance assessment directly.",
+    "Your advisor waived the intake interview — you can begin your personal risk profile directly.",
 };
 
 const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] = [
@@ -46,7 +46,7 @@ const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] =
     config: {
       icon: "clipboard-check",
       kicker: "Family Assessment",
-      title: "Governance Assessment",
+      title: "Personal Risk Profile",
       subtitle:
         "Comprehensive evaluation of governance structure and family decision-making practices",
     },

@@ -145,7 +145,7 @@ Screens: Home, Auth (sign-in/sign-up), Dashboard, Intake (landing, interview, co
 
 - **Assessment hub:** Skeleton (pulse bars) while rehydrating.  
 - **Intake interview:** “Loading interview…” with spinner.  
-- **Assessment results:** “Calculating your governance assessment results…” with spinner.  
+- **Assessment results:** “Calculating your personal risk profile results…” with spinner.  
 - **Dashboard:** Empty state for “No assessments yet” with “Start Assessment” CTA.  
 
 **Verdict:** Loading and empty states are present and understandable.

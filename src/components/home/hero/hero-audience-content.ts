@@ -43,16 +43,16 @@ export type HeroAudienceCopy = {
 
 export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
   families: {
-    kicker: "Governance Assessment",
+    kicker: "Personal Risk Profile",
     headline:
       "The governance intelligence platform for modern family wealth.",
     supporting:
-      "A discreet digital governance assessment designed to identify structural risks and strengthen family decision frameworks.",
-    subtext: "12–15 minute governance assessment",
+      "A discreet digital personal risk profile designed to identify structural risks and strengthen family decision frameworks.",
+    subtext: "12–15 minute personal risk profile",
     primaryCta: {
       label: "Start Assessment",
       href: "/start",
-      title: "Start your governance assessment",
+      title: "Start your personal risk profile",
     },
     secondaryCta: {
       label: "Sign In with Email Link",
@@ -98,7 +98,7 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     kicker: "Advisor Workspace",
     headline: "Governance intelligence for modern advisory firms.",
     supporting:
-      "Manage governance assessments, client intelligence, succession planning, and structured recommendations from a unified advisor workspace.",
+      "Manage personal risk profiles, client intelligence, succession planning, and structured recommendations from a unified advisor workspace.",
     primaryCta: {
       label: "Advisor Sign In",
       href: "/signin?portal=advisor",

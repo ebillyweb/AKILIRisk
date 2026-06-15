@@ -32,7 +32,7 @@ async function AnalyticsContent({ clientId }: { clientId: string }) {
       <div className="text-center py-12">
         <h2 className="text-lg font-semibold mb-2">No Completed Assessments Yet</h2>
         <p className="text-muted-foreground">
-          This family hasn&apos;t completed any governance assessments. Analytics will appear after the first assessment is completed.
+          This family hasn&apos;t completed any personal risk profiles. Analytics will appear after the first assessment is completed.
         </p>
       </div>
     );

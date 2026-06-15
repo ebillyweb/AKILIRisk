@@ -129,7 +129,7 @@ export const privacyPolicySections: LegalSection[] = [
     id: "introduction",
     title: "Introduction",
     paragraphs: [
-      `${LEGAL_ENTITY_NAME} ("we," "us," or "our") respects your privacy. This policy describes how we collect, use, disclose, and protect personal information when you use our governance assessment platform.`,
+      `${LEGAL_ENTITY_NAME} ("we," "us," or "our") respects your privacy. This policy describes how we collect, use, disclose, and protect personal information when you use our personal risk profile platform.`,
       "This policy applies to the public website, authenticated application, and related services we operate.",
     ],
   },

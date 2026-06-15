@@ -89,8 +89,8 @@ export default async function IntakePage() {
                 </h2>
                 <p className="text-muted-foreground max-w-md">
                   {assessmentComplete
-                    ? "Your advisor waived the intake interview. Review your completed governance assessment and any published results."
-                    : "Your advisor waived the family governance intake interview for your household. You can go straight to the governance assessment when you are ready."}
+                    ? "Your advisor waived the intake interview. Review your completed personal risk profile and any published results."
+                    : "Your advisor waived the family governance intake interview for your household. You can go straight to the personal risk profile when you are ready."}
                 </p>
               </div>
             </div>
@@ -178,7 +178,7 @@ export default async function IntakePage() {
         {/* Additional Context */}
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
-            Your responses will be reviewed by a qualified advisor to customize your governance assessment.
+            Your responses will be reviewed by a qualified advisor to customize your personal risk profile.
           </p>
         </div>
       </div>

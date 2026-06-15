@@ -58,7 +58,7 @@ async function IntelligenceContent({
       <div className="space-y-6">
         <div className="text-center py-12">
           <p className="text-muted-foreground">
-            No families have completed assessments yet. Risk intelligence will be available after families complete their governance assessments.
+            No families have completed assessments yet. Risk intelligence will be available after families complete their personal risk profiles.
           </p>
         </div>
       </div>

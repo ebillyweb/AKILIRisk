@@ -383,7 +383,7 @@ export default async function DashboardPage({
             <CardTitle className="text-3xl">Your Assessments</CardTitle>
             <CardDescription>
               {assessmentUnlocked
-                ? "Monitor progress and continue or review the latest family governance assessment."
+                ? "Monitor progress and continue or review the latest personal risk profile."
                 : "Assessment unlocks after your advisor reviews and approves your intake."}
             </CardDescription>
           </CardHeader>
@@ -423,7 +423,7 @@ export default async function DashboardPage({
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div className="space-y-1">
                             <CardTitle className="text-2xl">
-                              Family Governance Assessment
+                              Personal Risk Profile
                             </CardTitle>
                             <CardDescription>
                               Updated{" "}

@@ -68,7 +68,7 @@ async function main() {
     update: {
       status: 'APPROVED',
       focusAreas: ['insurance', 'cyber-digital', 'reputational-social'],
-      notes: 'Intake approved for comprehensive governance assessment. Client demonstrates strong foundational understanding.',
+      notes: 'Intake approved for comprehensive personal risk profile. Client demonstrates strong foundational understanding.',
       reviewedAt: new Date(),
       approvedAt: new Date()
     },
@@ -77,7 +77,7 @@ async function main() {
       advisorId: advisor.advisorProfile.id,
       status: 'APPROVED',
       focusAreas: ['insurance', 'cyber-digital', 'reputational-social'],
-      notes: 'Intake approved for comprehensive governance assessment. Client demonstrates strong foundational understanding.',
+      notes: 'Intake approved for comprehensive personal risk profile. Client demonstrates strong foundational understanding.',
       reviewedAt: new Date(),
       approvedAt: new Date()
     }

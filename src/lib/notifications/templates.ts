@@ -234,7 +234,7 @@ function renderRegistrationTemplate(data: RegistrationTemplateData): string {
     logoUrl,
     bodyHtml: `
       ${renderPlatformEmailHeadline("New client registration")}
-      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has registered from your invitation and is ready to begin their governance assessment.</p>
+      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has registered from your invitation and is ready to begin their personal risk profile.</p>
       ${renderPlatformEmailCta({ label: "View pipeline", href: pipelineUrl })}
       ${renderPlatformEmailUrlFallback(pipelineUrl)}`,
     footerHtml: footer,
@@ -255,7 +255,7 @@ function renderMilestoneTemplate(data: MilestoneTemplateData): string {
     logoUrl,
     bodyHtml: `
       ${renderPlatformEmailHeadline("Milestone complete")}
-      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has completed <strong style="color:#0f172a;">${escapeHtml(milestoneName)}</strong> in their governance assessment workflow.</p>
+      <p style="margin:0 0 8px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has completed <strong style="color:#0f172a;">${escapeHtml(milestoneName)}</strong> in their personal risk profile workflow.</p>
       ${renderPlatformEmailCta({ label: "View client details", href: clientDetailUrl })}
       ${renderPlatformEmailUrlFallback(clientDetailUrl)}`,
     footerHtml: footer,
@@ -277,7 +277,7 @@ function renderStalledWorkflowTemplate(data: StalledWorkflowTemplateData): strin
     bodyHtml: `
       ${renderPlatformEmailHeadline("Workflow stalled")}
       <p style="margin:0 0 12px;"><strong style="color:#0f172a;">${escapeHtml(clientName)}</strong> has been inactive for <strong>${days} days</strong> at the <strong style="color:#0f172a;">${escapeHtml(stage)}</strong> stage.</p>
-      <p style="margin:0 0 8px;">This client may need follow-up to continue their governance assessment.</p>
+      <p style="margin:0 0 8px;">This client may need follow-up to continue their personal risk profile.</p>
       ${renderPlatformEmailCta({ label: "Review client", href: clientDetailUrl })}
       ${renderPlatformEmailUrlFallback(clientDetailUrl)}`,
     footerHtml: footer,
@@ -300,7 +300,7 @@ function renderAssessmentReminderTemplate(data: AssessmentReminderTemplateData):
     bodyHtml: `
       <p style="margin:0 0 16px;font-size:16px;color:#0f172a;">${greeting}</p>
       ${renderPlatformEmailHeadline("Your assessment is waiting")}
-      <p style="margin:0 0 8px;">Your governance assessment is ready to complete. Finishing it helps us provide personalized recommendations for protecting and managing your family wealth.</p>
+      <p style="margin:0 0 8px;">Your personal risk profile is ready to complete. Finishing it helps us provide personalized recommendations for protecting and managing your family wealth.</p>
       ${renderPlatformEmailCta({ label: "Complete assessment", href: assessmentUrl })}
       ${renderPlatformEmailUrlFallback(assessmentUrl)}`,
     footerHtml: footer,

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     default: "AKILI Risk Intelligence",
     template: "%s | AKILI Risk Intelligence",
   },
-  description: "Family Governance Risk Assessment",
+  description: "Personal Risk Profile",
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },

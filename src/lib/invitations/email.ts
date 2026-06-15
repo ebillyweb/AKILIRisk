@@ -248,7 +248,7 @@ export async function sendAdvisorInvitationEmail(data: SendInvitationData): Prom
         withPlatformLogoAttachment({
           from: resolveFromEmail(),
           to: data.clientEmail,
-          subject: `Invitation from ${data.advisorInfo.advisorName} - Family Governance Assessment`,
+          subject: `Invitation from ${data.advisorInfo.advisorName} - Personal Risk Profile`,
           html: htmlContent,
         }),
         data.logoAttachment ?? null

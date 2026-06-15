@@ -79,7 +79,7 @@ export function renderDocumentReminderTemplate(data: DocumentReminderData): stri
 
           <!-- Main Message -->
           <p style="margin: 16px 0;">
-            You have <strong>${documentCount} ${documentsText}</strong> still needed for your governance assessment. Uploading these documents will help us provide you with more accurate recommendations.
+            You have <strong>${documentCount} ${documentsText}</strong> still needed for your personal risk profile. Uploading these documents will help us provide you with more accurate recommendations.
           </p>
 
           <!-- Document List -->

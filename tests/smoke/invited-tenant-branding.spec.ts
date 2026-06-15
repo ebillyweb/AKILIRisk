@@ -106,6 +106,6 @@ test.describe("invited client portal branding on tenant host", () => {
     expectOnTenantHost(page.url());
     await expectBrandingUnavailableNotShown(page);
     await expectBrandedClientPortalShell(page);
-    await expect(page.getByRole("heading", { name: /Governance Assessment/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Personal Risk Profile/i })).toBeVisible();
   });
 });

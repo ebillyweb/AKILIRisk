@@ -149,7 +149,7 @@ export function InviteClientForm() {
       <div className="space-y-2 mb-6">
         <h2 className="text-xl font-semibold tracking-[-0.03em]">Send New Invitation</h2>
         <p className="text-sm text-muted-foreground">
-          Invite a client to complete their family governance assessment with personalized messaging.
+          Invite a client to complete their personal risk profile with personalized messaging.
         </p>
       </div>
 

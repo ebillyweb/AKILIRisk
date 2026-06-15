@@ -1,4 +1,4 @@
-/** Canonical admin routes for governance assessment question bank (pillar DDL). */
+/** Canonical admin routes for personal risk profile question bank (pillar DDL). */
 export const ADMIN_ASSESSMENT_QUESTIONS_PATH = "/admin/assessment/questions";
 
 export function adminAssessmentQuestionsAreaPath(riskAreaId: string): string {

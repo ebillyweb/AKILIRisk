@@ -100,14 +100,14 @@ export function AssessmentReport({
 
   return (
     <Document
-      title={documentMetadata?.title ?? "Family Governance Assessment Report"}
+      title={documentMetadata?.title ?? "Personal Risk Profile Report"}
       author={
         documentMetadata?.author ??
         advisorBranding?.firmName ??
         "AKILI Risk Intelligence"
       }
       subject={
-        documentMetadata?.subject ?? "Confidential Governance Assessment"
+        documentMetadata?.subject ?? "Confidential Personal Risk Profile"
       }
       creator={documentMetadata?.creator ?? "AKILI Assessment Platform"}
       producer={documentMetadata?.producer}

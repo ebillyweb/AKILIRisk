@@ -52,7 +52,7 @@ export function ReportCover({
         </Text>
 
         <Text style={styles.coverTitle}>
-          {"Family Governance\nAssessment Report"}
+          {"Personal Risk\nProfile Report"}
         </Text>
 
         <Text style={styles.coverSubtitle}>

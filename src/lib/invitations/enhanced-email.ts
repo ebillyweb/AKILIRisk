@@ -435,7 +435,7 @@ export async function sendEnhancedAdvisorInvitationEmail(
         {
           from: resolveFromEmail(),
           to: data.clientEmail,
-          subject: `Invitation from ${advisorName} - Family Governance Assessment`,
+          subject: `Invitation from ${advisorName} - Personal Risk Profile`,
           html: htmlContent,
         },
         data.logoAttachment ?? null

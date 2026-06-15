@@ -92,7 +92,7 @@ export default async function FamilyDashboardPage() {
               <div className="rounded-[1.5rem] border section-divider bg-background/55 px-6 py-10">
                 <h3 className="text-xl font-semibold mb-3">Ready to Begin?</h3>
                 <p className="mx-auto mb-6 max-w-2xl text-sm leading-7 text-muted-foreground">
-                  Complete your first governance assessment to see your results here.
+                  Complete your first personal risk profile to see your results here.
                   Your family dashboard will show your governance score, risk areas,
                   and progress over time.
                 </p>

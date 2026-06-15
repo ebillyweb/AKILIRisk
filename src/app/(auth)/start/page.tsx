@@ -73,7 +73,7 @@ export default function StartAssessmentPage() {
 
   return (
     <AuthPanel
-      eyebrow="Governance Assessment"
+      eyebrow="Personal Risk Profile"
       title="Enter invite code"
       description="Your advisor has provided a 6-character invite code (letters and numbers) to start the assessment. Enter it below to create your account and begin."
       footer={

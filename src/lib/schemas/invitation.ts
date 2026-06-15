@@ -3,7 +3,7 @@ import { waiverAssessmentScopeSchema } from "@/lib/schemas/advisor";
 
 /** US-1: standard copy when the advisor leaves the personal message blank. */
 export const DEFAULT_INVITATION_PERSONAL_MESSAGE =
-  "I'd like to invite you to complete a family governance assessment. This confidential process will help us identify areas where your family's wealth management governance can be strengthened.";
+  "I'd like to invite you to complete a personal risk profile. This confidential process will help us identify areas where your family's wealth management governance can be strengthened.";
 
 function emptyToUndefined(val: unknown): unknown {
   if (val === undefined || val === null) return undefined;

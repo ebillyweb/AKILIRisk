@@ -12,7 +12,7 @@ export function DefaultAuthShell({ children }: { children: React.ReactNode }) {
         <div className="hero-surface app-grid grid min-h-[calc(100vh-3rem)] overflow-hidden rounded-[2rem] lg:grid-cols-[1.05fr_0.95fr]">
           <section className="order-2 flex flex-col justify-between gap-8 border-t section-divider px-6 py-6 sm:px-8 lg:order-1 lg:border-t-0 lg:border-r lg:px-12 lg:py-12">
             <div className="space-y-6">
-              <p className="editorial-kicker">Governance Assessment</p>
+              <p className="editorial-kicker">Personal Risk Profile</p>
               <div className="max-w-xl space-y-4">
                 <h1 className="text-4xl font-semibold leading-none text-balance sm:text-5xl lg:text-6xl">
                   A calmer, more intentional way to assess governance risk.

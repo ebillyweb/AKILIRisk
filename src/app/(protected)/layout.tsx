@@ -285,7 +285,7 @@ export default async function ProtectedLayout({
                           previewHex ? { color: previewHex.primary } : undefined
                         }
                       >
-                        Governance Assessment Workspace
+                        Personal Risk Profile Workspace
                       </h1>
                     </div>
                   </div>

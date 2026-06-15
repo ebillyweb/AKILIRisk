@@ -84,6 +84,6 @@ test.describe("invited client portal branding", () => {
 
     await page.waitForURL(/\/assessment(\/|$|\?)/, { timeout: 30_000 });
     await expectBrandedClientShell(page);
-    await expect(page.getByRole("heading", { name: /Governance Assessment/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Personal Risk Profile/i })).toBeVisible();
   });
 });

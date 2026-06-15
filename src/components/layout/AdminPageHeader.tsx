@@ -86,7 +86,7 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
       icon: ClipboardCheck,
       kicker: "Assessments",
       title: "Active assessments",
-      subtitle: "Governance assessment oversight, progress, and rescore tools",
+      subtitle: "Personal risk profile oversight, progress, and rescore tools",
     },
   },
   {
@@ -96,7 +96,7 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
       kicker: "Configuration",
       title: "Assessment question bank",
       subtitle:
-        "Governance assessment questions by risk area — edit copy, visibility, and ordering",
+        "Personal risk profile questions by risk area — edit copy, visibility, and ordering",
     },
   },
   {

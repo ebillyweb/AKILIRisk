@@ -191,7 +191,7 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
           recipientEmail: clientEmail,
           category: 'reminder',
           title: 'Assessment Reminder',
-          message: `Your governance assessment is ready to complete`,
+          message: `Your personal risk profile is ready to complete`,
           referenceId: client.id,
           advisorProfileId: advisor.id,
           emailSubject: 'Your Assessment is Waiting - Akili Risk',

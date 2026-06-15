@@ -13,10 +13,10 @@ describe("getClientPageHeaderConfig", () => {
       "Family Governance Intake"
     );
     expect(getClientPageHeaderConfig("/assessment")?.title).toBe(
-      "Governance Assessment"
+      "Personal Risk Profile"
     );
     expect(getClientPageHeaderConfig("/assessment/cyber-risk/2")?.title).toBe(
-      "Governance Assessment"
+      "Personal Risk Profile"
     );
   });
 

@@ -25,7 +25,7 @@ export default async function AdminAssessmentPage() {
           <div className="space-y-1">
             <CardTitle className="text-base">Assessment questions</CardTitle>
             <CardDescription>
-              Create, edit, hide, and reorder governance assessment questions by risk area.
+              Create, edit, hide, and reorder personal risk profile questions by risk area.
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" className="shrink-0" asChild>

@@ -19,7 +19,7 @@ export const aboutUsSections: LegalSection[] = [
     id: "what-we-do",
     title: "What we do",
     paragraphs: [
-      "We provide a discreet digital governance assessment that identifies structural gaps across succession planning, authority, and family decision-making.",
+      "We provide a discreet digital personal risk profile that identifies structural gaps across succession planning, authority, and family decision-making.",
       "Advisors use the platform to guide clients through a consistent interview, scoring, and recommendation workflow—so governance conversations are evidence-based, not anecdotal.",
     ],
   },
@@ -47,7 +47,7 @@ export const contactUsSections: LegalSection[] = [
     id: "clients",
     title: "Clients and assessments",
     paragraphs: [
-      "If you are completing a governance assessment, contact your assigned advisor first—they manage your invitation and account access.",
+      "If you are completing a personal risk profile, contact your assigned advisor first—they manage your invitation and account access.",
       "Include the email address on your account when asking about sign-in links or access issues.",
     ],
   },

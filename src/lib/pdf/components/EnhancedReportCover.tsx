@@ -18,7 +18,7 @@ export function EnhancedReportCover({
   overallScore,
   riskLevel,
   clientName,
-  reportType = 'Family Governance Assessment Report',
+  reportType = 'Personal Risk Profile Report',
   branding,
 }: EnhancedReportCoverProps) {
   const styles = createBrandedStyles(branding);
