@@ -7,6 +7,7 @@ import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "luc
 import { cn } from "@/lib/utils";
 import { IntakeWaiverScopePanel } from "@/components/pipeline/IntakeWaiverScopePanel";
 import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
+import { ExportAssessmentPdfButton } from "@/components/advisor/ExportAssessmentPdfButton";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -369,6 +370,13 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         </Link>
                       </Button>
                     )}
+                    {assessmentDetails.id &&
+                    assessmentDetails.status === "COMPLETED" ? (
+                      <ExportAssessmentPdfButton
+                        assessmentId={assessmentDetails.id}
+                        className="justify-center sm:w-auto"
+                      />
+                    ) : null}
                   </div>
                 )}
               </CardContent>

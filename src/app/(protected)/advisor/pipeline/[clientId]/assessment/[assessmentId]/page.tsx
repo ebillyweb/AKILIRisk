@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AdvisorAssessmentReviewView } from "@/components/advisor/AdvisorAssessmentReviewView";
+import { ExportAssessmentPdfButton } from "@/components/advisor/ExportAssessmentPdfButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAssessmentForAdvisorReview } from "@/lib/advisor/assessment-review-queries";
+import { isAssessmentExportableStatus } from "@/lib/pdf/assessment/build-assessment-pdf-data";
 
 /**
  * US-46c: advisor surface for reviewing individual assessment answers and
@@ -30,6 +32,7 @@ export default async function AdvisorAssessmentReviewPage({
   if (data.assessment.user.id !== clientId) notFound();
 
   const { assessment } = data;
+  const canExportPdf = isAssessmentExportableStatus(assessment.status);
   const completedLabel = assessment.completedAt
     ? new Intl.DateTimeFormat("en-US", {
         dateStyle: "medium",
@@ -49,6 +52,9 @@ export default async function AdvisorAssessmentReviewPage({
             Back to client
           </Link>
         </Button>
+        {canExportPdf ? (
+          <ExportAssessmentPdfButton assessmentId={assessment.id} />
+        ) : null}
         <Badge variant="outline">{assessment.status}</Badge>
         <span className="text-xs text-muted-foreground">v{assessment.version}</span>
       </div>

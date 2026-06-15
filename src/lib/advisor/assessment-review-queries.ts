@@ -3,6 +3,7 @@ import "server-only";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import {
   listAdvisorProfileIdsForScope,
+  findPortfolioAssignmentForClient,
   resolvePortfolioScope,
 } from "@/lib/enterprise/portfolio-access";
 import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
@@ -143,5 +144,30 @@ export async function getAssessmentForAdvisorReview(
       }),
     },
     questionsById,
+  };
+}
+
+/** Read-only assessment loader for PDF export with branding assignment id. */
+export async function getAssessmentForAdvisorExport(
+  assessmentId: string,
+): Promise<
+  (AdvisorAssessmentReviewPayload & { assignmentAdvisorProfileId: string }) | null
+> {
+  const { userId } = await requireAdvisorRole();
+  const payload = await getAssessmentForAdvisorReview(assessmentId);
+  if (!payload) return null;
+
+  const scope = await resolvePortfolioScope(userId);
+  if (!scope) return null;
+
+  const access = await findPortfolioAssignmentForClient(
+    scope,
+    payload.assessment.user.id,
+  );
+  if (!access) return null;
+
+  return {
+    ...payload,
+    assignmentAdvisorProfileId: access.assignmentAdvisorProfileId,
   };
 }
