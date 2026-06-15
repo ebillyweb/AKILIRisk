@@ -37,7 +37,7 @@ export function StageProgressBar({
 
   return (
     <div
-      className={cn("flex w-full max-w-[9.5rem] gap-0.5", className)}
+      className={cn("flex w-full min-w-0 gap-0.5", className)}
       role="img"
       aria-label={`Workflow progress: ${WORKFLOW_SEGMENTS.find((s) => getStageOrder(s.stage) === currentOrder)?.label ?? currentStage}`}
     >

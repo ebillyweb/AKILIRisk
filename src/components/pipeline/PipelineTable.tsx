@@ -74,29 +74,29 @@ export function PipelineTable({ clients }: PipelineTableProps) {
         return (
           <Link
             href={`/advisor/pipeline/${client.id}`}
-            className="-m-1 block min-w-0 rounded-md p-1 transition-colors hover:bg-muted/50"
+            className="-m-1 block min-w-0 max-w-full rounded-md p-1 transition-colors hover:bg-muted/50"
+            title={`${displayName} · ${client.email}`}
           >
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate font-medium text-primary hover:underline">
-                {displayName}
-              </span>
-              {client.needsRescore ? (
-                <Badge variant="warning" className="shrink-0 text-[0.65rem]">
-                  Reassessment
-                </Badge>
-              ) : null}
-              {client.stalled ? (
-                <Badge variant="warning" className="shrink-0 text-[0.65rem]">
-                  Stalled
-                </Badge>
-              ) : null}
-            </div>
-            <p
-              className="mt-0.5 truncate text-sm text-muted-foreground"
-              title={client.email}
-            >
+            <p className="truncate font-medium text-primary hover:underline">
+              {displayName}
+            </p>
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">
               {client.email}
             </p>
+            {client.needsRescore || client.stalled ? (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {client.needsRescore ? (
+                  <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
+                    Reassessment
+                  </Badge>
+                ) : null}
+                {client.stalled ? (
+                  <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
+                    Stalled
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
           </Link>
         );
       },
@@ -107,14 +107,17 @@ export function PipelineTable({ clients }: PipelineTableProps) {
       header: "Stage",
       cell: (info) => {
         const stage = info.getValue();
+        const stageLabel = getStageLabel(stage);
         return (
-          <div className="min-w-[8.5rem] space-y-2">
-            <Badge
-              variant={getStageBadgeVariant(stage)}
-              className="whitespace-nowrap text-[0.65rem] font-semibold uppercase tracking-wide"
-            >
-              {getStageLabel(stage)}
-            </Badge>
+          <div className="min-w-0 space-y-2">
+            <div className="min-w-0 overflow-hidden" title={stageLabel}>
+              <Badge
+                variant={getStageBadgeVariant(stage)}
+                className="max-w-full truncate text-[0.65rem] font-semibold uppercase tracking-wide"
+              >
+                {stageLabel}
+              </Badge>
+            </div>
             <StageProgressBar currentStage={stage} />
           </div>
         );
@@ -126,8 +129,8 @@ export function PipelineTable({ clients }: PipelineTableProps) {
       cell: (info) => {
         const progress = info.getValue();
         return (
-          <div className="flex min-w-[6.5rem] items-center gap-2">
-            <Progress value={progress} className="h-2 min-w-[4rem] flex-1" />
+          <div className="flex min-w-0 items-center gap-2">
+            <Progress value={progress} className="h-2 min-w-0 flex-1" />
             <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
               {progress}%
             </span>
@@ -140,9 +143,13 @@ export function PipelineTable({ clients }: PipelineTableProps) {
       header: "Last activity",
       cell: (info) => {
         const date = info.getValue();
+        const label = formatDistanceToNow(date, { addSuffix: true });
         return (
-          <span className="whitespace-nowrap text-sm text-foreground">
-            {formatDistanceToNow(date, { addSuffix: true })}
+          <span
+            className="block truncate text-sm text-foreground"
+            title={label}
+          >
+            {label}
           </span>
         );
       },
@@ -157,7 +164,7 @@ export function PipelineTable({ clients }: PipelineTableProps) {
           return <span className="text-muted-foreground">—</span>;
         }
         return (
-          <span className="whitespace-nowrap text-sm tabular-nums">
+          <span className="block truncate text-sm tabular-nums" title={`${docs.fulfilled}/${docs.required} documents`}>
             {docs.fulfilled}/{docs.required}
           </span>
         );
@@ -197,16 +204,27 @@ export function PipelineTable({ clients }: PipelineTableProps) {
     );
   }
 
+  const columnWidths: Record<string, string> = {
+    name: "w-[34%]",
+    stage: "w-[22%]",
+    progress: "w-[16%]",
+    lastActivity: "w-[20%]",
+    documents: "w-[8%]",
+  };
+
   return (
-    <div className="w-full overflow-x-auto rounded-md border">
-      <table className="w-full min-w-[48rem] border-collapse text-sm">
+    <div className="w-full overflow-hidden rounded-md border">
+      <table className="w-full table-fixed border-collapse text-sm">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b bg-muted/30">
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  className={cn(
+                    "overflow-hidden px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:px-4",
+                    columnWidths[header.column.id] ?? columnWidths[header.id],
+                  )}
                 >
                   {header.isPlaceholder ? null : (
                     <div
@@ -237,7 +255,13 @@ export function PipelineTable({ clients }: PipelineTableProps) {
               className="border-b last:border-b-0 transition-colors hover:bg-muted/40"
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3.5 align-top">
+                <td
+                  key={cell.id}
+                  className={cn(
+                    "overflow-hidden px-3 py-3.5 align-top sm:px-4",
+                    columnWidths[cell.column.id],
+                  )}
+                >
                   {typeof cell.column.columnDef.cell === "function"
                     ? cell.column.columnDef.cell(cell.getContext())
                     : (cell.getValue() as ReactNode)}

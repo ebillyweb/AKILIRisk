@@ -14,14 +14,22 @@ export default function PipelineLoading() {
       </div>
 
       {/* Filter bar skeleton */}
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 max-w-sm">
-            <div className="h-10 bg-muted rounded animate-pulse" />
+      <div className="space-y-4 rounded-lg border border-border/70 bg-card p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="h-10 flex-1 rounded-md bg-muted animate-pulse" />
+          <div className="flex gap-2">
+            <div className="h-10 w-36 rounded-md bg-muted animate-pulse" />
+            <div className="h-10 w-44 rounded-md bg-muted animate-pulse" />
           </div>
-          <div className="w-48 h-10 bg-muted rounded animate-pulse" />
         </div>
-        <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+        <div className="space-y-2 border-t border-border/50 pt-4">
+          <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-10 rounded-md bg-muted animate-pulse" />
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Table skeleton */}
