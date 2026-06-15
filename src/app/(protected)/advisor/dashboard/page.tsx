@@ -80,7 +80,7 @@ async function DashboardContent() {
         <CardHeader>
           <CardTitle className="text-3xl">Family Portfolio</CardTitle>
           <CardDescription>
-            View governance scores, risk levels, and assessment status for all assigned families.
+            View risk scores, risk levels, and assessment status for all assigned families.
             Click column headers to sort data.
           </CardDescription>
         </CardHeader>

@@ -86,7 +86,7 @@ export function GovernanceTable({ clients }: GovernanceTableProps) {
       (row) => row.latestScore?.score ?? null,
       {
         id: 'score',
-        header: 'Governance Score',
+        header: 'Risk Score',
         cell: (info) => {
           const client = info.row.original;
           return (
