@@ -346,6 +346,8 @@ export async function getClientPipeline(
     const pipelineClient: PipelineClient = {
       id: client.id,
       name: clientDisplayName,
+      firstName: client.firstName,
+      lastName: client.lastName,
       email: clientEmail,
       assignedAt: assignment.assignedAt,
       stage,
@@ -703,6 +705,8 @@ export async function getClientDetail(
   const pipelineClient: PipelineClient = {
     id: client.id,
     name: clientDisplayName,
+    firstName: client.firstName,
+    lastName: client.lastName,
     email: clientEmail,
     assignedAt: assignment.assignedAt,
     stage,

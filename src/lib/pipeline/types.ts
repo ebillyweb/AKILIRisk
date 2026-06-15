@@ -12,6 +12,8 @@ export { ClientWorkflowStage } from '@prisma/client';
 export type PipelineClient = {
   id: string;              // User.id
   name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   email: string;
   assignedAt: Date;
   stage: ClientWorkflowStage;

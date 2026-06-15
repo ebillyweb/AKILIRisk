@@ -15,6 +15,10 @@ import { StageProgressBar } from "./StageIndicator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { getStageLabel } from "@/lib/pipeline/status";
+import {
+  formatPipelineClientRowTitle,
+  formatPipelineClientSecondaryLabel,
+} from "@/lib/pipeline/client-display";
 import type { PipelineClient, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { cn } from "@/lib/utils";
 
@@ -70,18 +74,19 @@ export function PipelineTable({ clients }: PipelineTableProps) {
       cell: (info) => {
         const client = info.row.original;
         const displayName = client.name || "Unnamed Client";
+        const secondaryLabel = formatPipelineClientSecondaryLabel(client);
 
         return (
           <Link
             href={`/advisor/pipeline/${client.id}`}
             className="-m-1 block min-w-0 max-w-full rounded-md p-1 transition-colors hover:bg-muted/50"
-            title={`${displayName} · ${client.email}`}
+            title={formatPipelineClientRowTitle(client)}
           >
             <p className="truncate font-medium text-primary hover:underline">
               {displayName}
             </p>
             <p className="mt-0.5 truncate text-sm text-muted-foreground">
-              {client.email}
+              {secondaryLabel}
             </p>
             {client.needsRescore || client.stalled ? (
               <div className="mt-1.5 flex flex-wrap gap-1">
