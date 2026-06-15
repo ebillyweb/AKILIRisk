@@ -16,6 +16,8 @@ const { Pool } = require('pg');
 const bcryptjs = require('bcryptjs');
 const { TEST_PASSWORD } = require('./lib/test-password');
 const { userEmailCiphertext } = require('./lib/user-email-ciphertext-cjs');
+const { MFA_OFF_FIELDS } = require('./lib/mfa-off-fields-cjs');
+const { resetFixtureMfa } = require('./lib/reset-fixture-mfa-cjs');
 
 if (!process.env.ENCRYPTION_KEY) {
   console.error(
@@ -45,7 +47,8 @@ async function main() {
       name: 'Test Advisor',
       firstName: 'Test',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...MFA_OFF_FIELDS,
     },
     create: {
       emailCiphertext: advisorCt,
@@ -748,6 +751,11 @@ async function main() {
     },
   });
   console.log(`✅ Created platform admin (ADMIN role): ${platformAdminEmail}`);
+
+  const mfaResetCount = await resetFixtureMfa(prisma);
+  console.log(
+    `✅ MFA cleared on ${mfaResetCount} fixture account(s) (opt-in — enable from Settings)`
+  );
 
   console.log('\n🎉 Test data seeded successfully!');
   console.log('\n📋 Verification credentials:');

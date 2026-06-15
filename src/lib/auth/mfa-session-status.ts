@@ -13,7 +13,7 @@ import { isMfaChallengePending, type MfaJwtClaims } from "@/lib/auth/mfa-gate";
 export async function isMfaChallengePendingForUser(
   claims: MfaJwtClaims & { id?: string }
 ): Promise<boolean> {
-  const userId = claims.id;
+  const userId = claims.id ?? (claims as { sub?: string }).sub;
   if (!userId) {
     return isMfaChallengePending(claims);
   }

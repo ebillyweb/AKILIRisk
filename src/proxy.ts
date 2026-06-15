@@ -134,12 +134,14 @@ export default async function proxy(req: NextRequest) {
   // US-48: block workspace API calls until MFA challenge completes. Auth
   // routes (/api/auth/* including mfa/verify) stay reachable so the user
   // can finish the challenge; cron/webhooks use their own secrets.
-  const mfaClaims = token as {
-    id?: string;
-    mfaEnabled?: boolean;
-    mfaVerified?: boolean;
-    mfaEnrollmentRequired?: boolean;
-    passwordChangeRequired?: boolean;
+  const mfaClaims = {
+    id: (token as { id?: string; sub?: string }).id ?? (token as { sub?: string }).sub,
+    mfaEnabled: (token as { mfaEnabled?: boolean }).mfaEnabled,
+    mfaVerified: (token as { mfaVerified?: boolean }).mfaVerified,
+    mfaEnrollmentRequired: (token as { mfaEnrollmentRequired?: boolean })
+      .mfaEnrollmentRequired,
+    passwordChangeRequired: (token as { passwordChangeRequired?: boolean })
+      .passwordChangeRequired,
   };
 
   if (

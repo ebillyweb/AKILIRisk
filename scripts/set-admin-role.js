@@ -17,6 +17,7 @@ const { PrismaPg } = require("@prisma/adapter-pg");
 const { Pool } = require("pg");
 const bcryptjs = require("bcryptjs");
 const { userEmailCiphertext } = require("./lib/user-email-ciphertext-cjs");
+const { MFA_OFF_FIELDS } = require("./lib/mfa-off-fields-cjs");
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -41,6 +42,7 @@ async function main() {
       password: hashedPassword,
       passwordChangeRequired: false,
       passwordPolicyRevision: 1,
+      ...MFA_OFF_FIELDS,
     },
     create: {
       emailCiphertext: adminCt,

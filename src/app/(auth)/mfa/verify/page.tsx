@@ -27,11 +27,7 @@ export default async function MFAVerifyPage({
   const mfaState = await getMfaUserState(session.user.id);
 
   if (!mfaState?.mfaEnabled) {
-    const setup = new URL("/mfa/setup", "http://local");
-    if (callbackUrl.startsWith("/")) {
-      setup.searchParams.set("callbackUrl", callbackUrl);
-    }
-    redirect(`${setup.pathname}${setup.search}`);
+    redirect(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
   }
 
   if (session.user.mfaVerified) {
