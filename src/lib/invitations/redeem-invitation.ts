@@ -102,7 +102,8 @@ export async function syncInvitationStatusForClientEmail(
 
 /**
  * Repairs invitation rows left at SENT/OPENED when the invited client
- * already registered or finished intake under this advisor.
+ * already registered under this advisor (e.g. signed up without clicking
+ * the invite link). Does not provision clients or change status on list load.
  */
 export async function reconcileAdvisorInvitationStatuses(
   advisorProfileId: string,
@@ -124,27 +125,17 @@ export async function reconcileAdvisorInvitationStatuses(
       where: { deletedAt: null, role: "USER" },
       select: { id: true },
     });
+    if (!user) continue;
 
-    let hasAssignment = false;
-    if (user) {
-      const assignment = await prisma.clientAdvisorAssignment.findFirst({
-        where: {
-          clientId: user.id,
-          advisorId: advisorProfileId,
-          status: "ACTIVE",
-        },
-        select: { id: true },
-      });
-      hasAssignment = Boolean(assignment);
-    }
-
-    if (!hasAssignment) {
-      const provisioned = await provisionClientFromInviteCode(invite.id, email);
-      if (!provisioned.ok) continue;
-      hasAssignment = true;
-    }
-
-    if (!hasAssignment) continue;
+    const assignment = await prisma.clientAdvisorAssignment.findFirst({
+      where: {
+        clientId: user.id,
+        advisorId: advisorProfileId,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    });
+    if (!assignment) continue;
 
     await prisma.inviteCode.update({
       where: { id: invite.id },

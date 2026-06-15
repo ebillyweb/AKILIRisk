@@ -120,7 +120,7 @@ describe("reconcileAdvisorInvitationStatuses", () => {
     });
   });
 
-  it("provisions and promotes stale invites when the client exists but is unassigned", async () => {
+  it("leaves stale invites alone when the client exists but is unassigned", async () => {
     prismaSpies.inviteCode.findMany.mockResolvedValue([
       { id: "invite-1", prefillEmail: "client@test.com" },
     ]);
@@ -129,40 +129,22 @@ describe("reconcileAdvisorInvitationStatuses", () => {
       role: "USER",
     } as Awaited<ReturnType<typeof findUserByEmail>>);
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue(null);
-    vi.mocked(provisionClientFromInviteCode).mockResolvedValue({
-      ok: true,
-      userId: "user-1",
-      created: false,
-    });
 
     await reconcileAdvisorInvitationStatuses("advisor-1");
 
-    expect(provisionClientFromInviteCode).toHaveBeenCalledWith(
-      "invite-1",
-      "client@test.com",
-    );
-    expect(prismaSpies.inviteCode.update).toHaveBeenCalledWith({
-      where: { id: "invite-1" },
-      data: {
-        status: InvitationStatus.REGISTERED,
-        statusUpdatedAt: expect.any(Date),
-      },
-    });
+    expect(provisionClientFromInviteCode).not.toHaveBeenCalled();
+    expect(prismaSpies.inviteCode.update).not.toHaveBeenCalled();
   });
 
-  it("leaves stale invites alone when provisioning fails", async () => {
+  it("leaves stale invites alone when no client account exists", async () => {
     prismaSpies.inviteCode.findMany.mockResolvedValue([
       { id: "invite-1", prefillEmail: "client@test.com" },
     ]);
     vi.mocked(findUserByEmail).mockResolvedValue(null);
-    vi.mocked(provisionClientFromInviteCode).mockResolvedValue({
-      ok: false,
-      error: "not found",
-      code: "not_found",
-    });
 
     await reconcileAdvisorInvitationStatuses("advisor-1");
 
+    expect(provisionClientFromInviteCode).not.toHaveBeenCalled();
     expect(prismaSpies.inviteCode.update).not.toHaveBeenCalled();
   });
 });
