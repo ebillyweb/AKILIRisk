@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DisableMfaControl } from "@/components/settings/DisableMfaControl";
 import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
 import { ClientPersonalDetailsForm } from "@/components/settings/ClientPersonalDetailsForm";
 import { ClientPiiConsentForm } from "@/components/settings/ClientPiiConsentForm";
@@ -216,13 +217,7 @@ export default async function SettingsPage({
                       This control is planned for a future iteration and is not yet available.
                     </p>
                   </div>
-                  <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-4">
-                    <p className="editorial-kicker">Planned Control</p>
-                    <p className="mt-2 text-sm font-semibold">Disable MFA</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Direct MFA deactivation has not been implemented yet.
-                    </p>
-                  </div>
+                  <DisableMfaControl />
                 </div>
               </>
             ) : (

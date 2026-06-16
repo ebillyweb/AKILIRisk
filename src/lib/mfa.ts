@@ -3,6 +3,7 @@ import { NobleCryptoPlugin } from "@otplib/plugin-crypto-noble";
 import { ScureBase32Plugin } from "@otplib/plugin-base32-scure";
 import { toDataURL } from "qrcode";
 import crypto from "crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { recordUserLogin } from "@/lib/auth/record-login";
 import { encrypt, decrypt } from "@/lib/encryption";
@@ -200,10 +201,52 @@ export async function enableMFA(userId: string, token: string) {
 }
 
 /**
- * Mark the newest active DB session as MFA verified.
- * Falls back to creating a verified session row when none exists.
+ * Disable MFA for a user: clear the secret, recovery codes, and enabled flag,
+ * and delete all of the user's DB session rows. Dropping the session rows
+ * guarantees no stale `mfaVerified` state lingers — on the next JWT refresh the
+ * `else` branch in the auth `jwt` callback sets `mfaVerified=true`, so the user
+ * is never re-challenged after disabling.
  */
-export async function markSessionMfaVerified(userId: string): Promise<void> {
+export async function disableMFA(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      mfaEnabled: false,
+      mfaSecret: null,
+      mfaRecoveryCodes: Prisma.DbNull,
+    },
+  });
+  await prisma.session.deleteMany({ where: { userId } });
+}
+
+/**
+ * Mark a DB session as MFA verified.
+ *
+ * When `sessionToken` is provided (the row bound to the caller's JWT), that
+ * exact row is updated — this is the correct path and keeps the verification
+ * write aligned with the bound read in the auth `jwt` callback. Without it,
+ * falls back to the newest active row (legacy behavior), creating a verified
+ * row when none exists.
+ */
+export async function markSessionMfaVerified(
+  userId: string,
+  sessionToken?: string | null
+): Promise<void> {
+  if (sessionToken) {
+    const bound = await prisma.session.findUnique({
+      where: { sessionToken },
+      select: { id: true, userId: true },
+    });
+    if (bound?.id && bound.userId === userId) {
+      await prisma.session.update({
+        where: { id: bound.id },
+        data: { mfaVerified: true },
+      });
+      await recordUserLogin(userId);
+      return;
+    }
+  }
+
   const [activeSession] = await prisma.session.findMany({
     where: {
       userId,
@@ -223,10 +266,10 @@ export async function markSessionMfaVerified(userId: string): Promise<void> {
     return;
   }
 
-  const sessionToken = crypto.randomBytes(32).toString("hex");
+  const newSessionToken = crypto.randomBytes(32).toString("hex");
   await prisma.session.create({
     data: {
-      sessionToken,
+      sessionToken: newSessionToken,
       userId,
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       mfaVerified: true,

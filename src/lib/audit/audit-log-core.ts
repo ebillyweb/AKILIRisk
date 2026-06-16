@@ -158,6 +158,7 @@ export const AUDIT_ACTIONS = {
   AUTH_PASSWORD_RESET_REQUESTED: "auth.password_reset_requested",
   AUTH_PASSWORD_RESET_COMPLETED: "auth.password_reset_completed",
   AUTH_MFA_ENROLLED: "auth.mfa_enrolled",
+  AUTH_MFA_DISABLED: "auth.mfa_disabled",
   AUTH_MFA_CHALLENGE_SUCCESS: "auth.mfa_challenge_success",
   AUTH_MFA_CHALLENGE_FAILURE: "auth.mfa_challenge_failure",
   AUTH_MFA_RECOVERY_USED: "auth.mfa_recovery_used",

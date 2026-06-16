@@ -28,6 +28,8 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     email?: string;
+    /** DB Session.sessionToken bound to this login; tracks MFA verification. */
+    sessionToken?: string;
     mfaEnabled?: boolean;
     mfaVerified?: boolean;
     mfaEnrollmentRequired?: boolean;

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { verifyRecoveryCode, markSessionMfaVerified } from "@/lib/mfa";
 import { rateLimit } from "@/lib/rate-limit";
+import { getBoundSessionToken } from "@/lib/auth/bound-session";
 import { prisma } from "@/lib/db";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
@@ -93,7 +94,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await markSessionMfaVerified(session.user.id);
+    await markSessionMfaVerified(
+      session.user.id,
+      await getBoundSessionToken(req)
+    );
 
     // Get remaining recovery code count
     const user = await prisma.user.findUnique({

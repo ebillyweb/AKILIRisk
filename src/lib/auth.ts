@@ -20,6 +20,17 @@ function emailHash(email: string | null | undefined): string | undefined {
     .slice(0, 8);
 }
 
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/** Edge-safe random session token (Web Crypto, no Node `crypto` dependency). */
+function generateSessionToken(): string {
+  const randomBytes = new Uint8Array(32);
+  crypto.getRandomValues(randomBytes);
+  return Array.from(randomBytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   adapter: PrismaAdapter(prisma),
@@ -49,32 +60,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      // Create a database session on sign-in for MFA tracking
+      // Audit + login bookkeeping on sign-in. The DB session row that tracks
+      // MFA verification is created in the `jwt` callback below, where we can
+      // bind its sessionToken to the JWT (see jwt() for the rationale).
       if (user.id) {
-        // Use Web Crypto API for Edge Runtime compatibility
-        const randomBytes = new Uint8Array(32);
-        crypto.getRandomValues(randomBytes);
-        const sessionToken = Array.from(randomBytes)
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
-
-        // Check if user has MFA enabled
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { mfaEnabled: true, role: true },
         });
 
-        // Create session with mfaVerified=false if MFA is enabled, true otherwise
-        await prisma.session.create({
-          data: {
-            sessionToken,
-            userId: user.id,
-            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-            mfaVerified: !dbUser?.mfaEnabled, // Auto-verify if MFA not enabled
-          },
-        });
-
-        console.info("Auth signIn callback created session", {
+        console.info("Auth signIn callback", {
           userId: user.id,
           emailHash: emailHash(user.email),
           mfaEnabled: Boolean(dbUser?.mfaEnabled),
@@ -117,18 +112,59 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.accountDeactivated = Boolean(dbUser?.deletedAt);
         token.mfaEnrollmentRequired = false;
         token.passwordChangeRequired = Boolean(dbUser?.passwordChangeRequired);
-        if (token.mfaEnabled) {
-          const [session] = await prisma.session.findMany({
-            where: {
+
+        // Bind the JWT to a DB session row that tracks MFA verification for
+        // THIS login. Binding is the fix for the spurious-TOTP bug: previously
+        // `mfaVerified` was read from the single newest-expiring session row
+        // regardless of which login it belonged to, so a stale or unrelated
+        // row could re-trigger the challenge. Now the read (here) and the write
+        // (markSessionMfaVerified) operate on the same bound row.
+        //
+        // We create the row when none is bound yet: on first sign-in (`user`
+        // present) and also for legacy JWTs minted before this binding existed
+        // (no `user`, no `sessionToken`). For the legacy case we seed
+        // mfaVerified from the previous newest-row value so already-verified
+        // sessions are not re-challenged after the upgrade.
+        if (userId && !token.sessionToken) {
+          let seedVerified = !token.mfaEnabled;
+          if (token.mfaEnabled && !user?.id) {
+            const [prev] = await prisma.session.findMany({
+              where: { userId, expires: { gt: new Date() } },
+              orderBy: { expires: "desc" },
+              take: 1,
+              select: { mfaVerified: true },
+            });
+            seedVerified = Boolean(prev?.mfaVerified);
+          }
+          const sessionToken = generateSessionToken();
+          await prisma.session.create({
+            data: {
+              sessionToken,
               userId,
-              expires: { gt: new Date() },
+              expires: new Date(Date.now() + SESSION_MAX_AGE_MS),
+              mfaVerified: seedVerified,
             },
-            orderBy: { expires: "desc" },
-            take: 1,
-            select: { mfaVerified: true },
           });
-          token.mfaVerified = session?.mfaVerified ?? false;
+          token.sessionToken = sessionToken;
+        }
+
+        if (token.mfaEnabled) {
+          const boundToken =
+            typeof token.sessionToken === "string" ? token.sessionToken : null;
+          let verified = false;
+          if (boundToken) {
+            const session = await prisma.session.findUnique({
+              where: { sessionToken: boundToken },
+              select: { mfaVerified: true, expires: true },
+            });
+            verified =
+              Boolean(session?.mfaVerified) &&
+              session!.expires.getTime() > Date.now();
+          }
+          token.mfaVerified = verified;
         } else {
+          // MFA disabled: never challenge, and clear any stale binding so a
+          // re-enable starts a fresh, unverified session row.
           token.mfaVerified = true;
         }
       }
@@ -157,6 +193,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
       }
       return session;
+    },
+  },
+  events: {
+    // JWT-strategy sign-out does not call the adapter's deleteSession, so the
+    // per-login DB row (created in jwt()) would otherwise linger for 30 days.
+    // Delete the bound row here to keep the Session table clean and prevent
+    // stale mfaVerified state from ever being read again.
+    async signOut(message) {
+      const token = (message as { token?: { sessionToken?: unknown } }).token;
+      const sessionToken =
+        typeof token?.sessionToken === "string" ? token.sessionToken : null;
+      if (sessionToken) {
+        await prisma.session
+          .deleteMany({ where: { sessionToken } })
+          .catch(() => {});
+      }
     },
   },
   ...authConfig,

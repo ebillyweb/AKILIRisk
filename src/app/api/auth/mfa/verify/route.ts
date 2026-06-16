@@ -6,6 +6,7 @@ import {
   markSessionMfaVerified,
 } from "@/lib/mfa";
 import { rateLimit } from "@/lib/rate-limit";
+import { getBoundSessionToken } from "@/lib/auth/bound-session";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 export async function POST(req: NextRequest) {
@@ -86,7 +87,10 @@ export async function POST(req: NextRequest) {
       // Enrollment proves possession of the authenticator — treat the
       // current session as MFA-verified so the JWT does not immediately
       // redirect to /mfa/verify after setup completes.
-      await markSessionMfaVerified(session.user.id);
+      await markSessionMfaVerified(
+        session.user.id,
+        await getBoundSessionToken(req)
+      );
 
       return NextResponse.json({
         success: true,
@@ -117,7 +121,10 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      await markSessionMfaVerified(session.user.id);
+      await markSessionMfaVerified(
+        session.user.id,
+        await getBoundSessionToken(req)
+      );
 
       // Audit MFA-challenge success.
       await writeAudit({
