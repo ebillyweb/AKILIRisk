@@ -129,19 +129,22 @@ Platform-owned tenant hosts under `PRODUCTION_DOMAIN` (see `docs/white-label-sub
 
 ## Test Credentials
 
-Use these credentials for local development testing:
+Use these credentials for local development testing. Advisor/admin accounts sign
+in with email + password (`Testpass1`, from `scripts/lib/test-password.js`).
+Client accounts (role `USER`) have no password — they sign in via magic link only
+(credentials sign-in is blocked for `USER`).
 
 | Role | Email | Password | Notes |
 |------|--------|----------|--------|
-| **Advisor** | `advisor@test.com` | `testpassword123` | Access Advisor Hub/Portfolio |
-| **Advisor (no clients)** | `advisor2@test.com` | `testpassword123` | Slug `independent-wealth` (active+verified). Staging URL: `independent-wealth-staging.akilirisk.com`. |
-| **Advisor (unverified subdomain)** | `advisor3@test.com` | `testpassword123` | Slug `inactive-tenant` (not verified). Staging: `inactive-tenant-staging.akilirisk.com`. Billing-gate fixture (`tests/fixtures/users.ts`). |
-| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `testpassword123` | Slug `disabled-tenant` (inactive). Staging: `disabled-tenant-staging.akilirisk.com`. |
-| **Advisor (no branding)** | `advisor-unbranded@test.com` | `testpassword123` | `brandingEnabled=false` on profile. Used by the default-branding-fallback test. |
-| **Client (no branding)** | `client-unbranded@test.com` | `testpassword123` | Assigned to `advisor-unbranded`; their dashboard renders the default Akili lockup instead of an advisor portal. |
-| **Client** | `client@test.com` | `testpassword123` | Standard client account (SUBMITTED + Approved intake) |
-| **Client (MFA)** | `client-mfa@test.com` | `testpassword123` | For MFA flow testing |
-| **Client (fresh)** | `client-fresh@test.com` | `testpassword123` | No intake row; used by Playwright intake tests. Reset via `node scripts/reset-fresh-client-intake.js` |
+| **Advisor** | `advisor@test.com` | `Testpass1` | Access Advisor Hub/Portfolio |
+| **Advisor (no clients)** | `advisor2@test.com` | `Testpass1` | Slug `independent-wealth` (active+verified). Staging URL: `independent-wealth-staging.akilirisk.com`. |
+| **Advisor (unverified subdomain)** | `advisor3@test.com` | `Testpass1` | Slug `inactive-tenant` (not verified). Staging: `inactive-tenant-staging.akilirisk.com`. Billing-gate fixture (`tests/fixtures/users.ts`). |
+| **Advisor (deactivated subdomain)** | `advisor4@test.com` | `Testpass1` | Slug `disabled-tenant` (inactive). Staging: `disabled-tenant-staging.akilirisk.com`. |
+| **Advisor (no branding)** | `advisor-unbranded@test.com` | `Testpass1` | `brandingEnabled=false` on profile. Used by the default-branding-fallback test. |
+| **Client (no branding)** | `client-unbranded@test.com` | _magic link_ | Assigned to `advisor-unbranded`; their dashboard renders the default Akili lockup instead of an advisor portal. |
+| **Client** | `client@test.com` | _magic link_ | Standard client account (SUBMITTED + Approved intake) |
+| **Client (MFA)** | `client-mfa@test.com` | _magic link_ | For MFA flow testing |
+| **Client (fresh)** | `client-fresh@test.com` | _magic link_ | No intake row; used by Playwright intake tests. Reset via `node scripts/reset-fresh-client-intake.js` |
 | **Super admin** | `buddy@ebilly.com` | `Test1111!` | Full admin + platform settings (`node scripts/set-admin-role.js` sets `SUPER_ADMIN`) |
 
 ### Invite Codes
