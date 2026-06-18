@@ -102,7 +102,7 @@ test.describe("Epic 5.6 — PII policy & consent (US-50 / US-51)", () => {
       const phoneField = page.locator('[data-pii-field="ClientProfile.phone"]');
       await phoneField.getByText("Yes, allow").click();
 
-      await page.getByRole("button", { name: /^continue$/i }).click();
+      await page.getByRole("button", { name: /^continue to (dashboard|assessment)$/i }).click();
 
       await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
       await expect(page.getByText(/welcome back/i)).toBeVisible();
@@ -115,7 +115,7 @@ test.describe("Epic 5.6 — PII policy & consent (US-50 / US-51)", () => {
       await signInClientViaMagicLink(page, request, USERS.client.email);
       await page.waitForURL(/\/consent\/pending/, { timeout: 30_000 });
 
-      await page.getByRole("button", { name: /^continue$/i }).click();
+      await page.getByRole("button", { name: /^continue to (dashboard|assessment)$/i }).click();
       await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
     });
 
