@@ -40,13 +40,16 @@ test.describe("tenant isolation", () => {
 
     await new SignInPage(page).signInAs("advisor2");
 
-    await page.goto(clientPathOwnedByAdvisor1);
+    const resp = await page.goto(clientPathOwnedByAdvisor1);
 
+    // The custom 404 was replaced with branded copy
+    // ("This page did not pass due diligence.") and dropped the standalone
+    // "404" heading. Asserting the HTTP status + the new copy + the lack
+    // of leaked client data keeps the tenant-isolation guarantee while
+    // tolerating future copy tweaks.
+    expect(resp?.status()).toBe(404);
     await expect(
-      page.getByRole("heading", { name: /^404$/ })
-    ).toBeVisible();
-    await expect(
-      page.getByText(/This page could not be found/i)
+      page.getByText(/did not pass due diligence/i)
     ).toBeVisible();
     await expect(
       page.getByText(USERS.client.email)

@@ -145,6 +145,41 @@ async function main() {
 
   console.log('✅ Created intake interview with SUBMITTED status');
 
+  // Approve the intake with full pillar scope so `assessmentUnlocked` is
+  // true for client@test.com. The getClientIntakeGateState gate requires
+  // approval.status=APPROVED AND includedPillars.length > 0; without this
+  // upsert, ~30 specs that assume client@test.com can reach the assessment
+  // pillar hub get redirected to /dashboard?assessment=awaiting-approval.
+  // Defer the advisorProfile lookup — the advisor row is created later in
+  // this script; pull it from the closure already captured above.
+  const ALL_PILLARS = [
+    'governance', 'cyber-digital', 'physical-security',
+    'insurance', 'geographic-environmental', 'reputational-social',
+  ];
+  await prisma.intakeApproval.upsert({
+    where: { interviewId: intakeInterview.id },
+    update: {
+      advisorId: advisorProfile.id,
+      status: 'APPROVED',
+      focusAreas: ALL_PILLARS,
+      includedPillars: ALL_PILLARS,
+      reviewedAt: new Date(Date.now() - 1000 * 60),
+      approvedAt: new Date(Date.now() - 1000 * 60),
+      notes: 'Seeded approval. Unlocks the six-pillar assessment hub.',
+    },
+    create: {
+      interviewId: intakeInterview.id,
+      advisorId: advisorProfile.id,
+      status: 'APPROVED',
+      focusAreas: ALL_PILLARS,
+      includedPillars: ALL_PILLARS,
+      reviewedAt: new Date(Date.now() - 1000 * 60),
+      approvedAt: new Date(Date.now() - 1000 * 60),
+      notes: 'Seeded approval. Unlocks the six-pillar assessment hub.',
+    },
+  });
+  console.log('✅ Approved intake for client@test.com with all 6 pillars included');
+
   // Use the same question ids as the app (intake-q1..intake-q10) so "View intake" shows responses
   const INTAKE_QUESTION_IDS = ['intake-q1', 'intake-q2', 'intake-q3', 'intake-q4', 'intake-q5', 'intake-q6', 'intake-q7', 'intake-q8', 'intake-q9', 'intake-q10'];
 
