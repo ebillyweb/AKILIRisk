@@ -25,8 +25,8 @@ const DASHBOARDS: DashboardAssertion[] = [
   {
     role: "admin",
     expectedUrlPath: "/admin",
-    heading: /System Administration/i,
-    secondarySignal: /Advisors/i,
+    heading: /AKILI Control Center/i,
+    secondarySignal: /Quick Access|Platform health/i,
   },
 ];
 

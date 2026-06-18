@@ -58,7 +58,7 @@ export class SignInPage {
       await this.signInViaMagicLink(user.email, user.expectedLandingPath, options);
       return;
     }
-    await this.signInWithCredentialsAndMfa(
+    await this.signInWithCredentialsAndMaybeMfa(
       user.email,
       user.password,
       user.expectedLandingPath
@@ -66,83 +66,59 @@ export class SignInPage {
   }
 
   /**
-   * Credentials sign-in for advisor-hub roles, transparently completing the
-   * MFA challenge when the post-credentials redirect lands on /mfa/verify.
+   * Credentials sign-in for advisor-hub roles. Post commit 560bde0 MFA is
+   * opt-in for the platform, so the default flow does NOT enroll MFA on
+   * the fixture — that previously caused redirect loops between the JWT
+   * (no MFA claim) and the DB (mfaEnabled=true) after the prepare call
+   * re-enrolled the user.
    *
-   * Calls /api/test/mfa/prepare BEFORE submitting the form so the user's
-   * MFA secret is reset + re-enrolled (and we know it). After the form
-   * submit:
-   *   - if MFA was disabled at the moment of submit, the next request
-   *     observes mfaEnabled=true and the proxy redirects to /mfa/verify
-   *     anyway — auth.ts re-reads mfaClaims from the JWT, which now
-   *     reflects the new enrolled state;
-   *   - if landed on /mfa/setup, prime again and retry (defensive against
-   *     timing windows where the prep call lost a race).
+   * If the post-credentials redirect lands on /mfa/verify (the user happens
+   * to have MFA on — e.g. epic-5.6-mfa-sign-in.spec.ts left it enabled),
+   * call /api/test/mfa/prepare to rotate to a known TOTP secret, then
+   * submit the 6-digit code. We deliberately do NOT auto-handle
+   * /mfa/setup: MFA is opt-in now, so a fixture landing there is a real
+   * test-data drift signal worth surfacing.
    */
-  private async signInWithCredentialsAndMfa(
+  private async signInWithCredentialsAndMaybeMfa(
     email: string,
     password: string,
     expectedLandingPath: string
   ) {
-    const secret = await this.primeMfaSecret(email);
-
     await this.goto();
     await this.signIn(email, password);
 
     const landing = new RegExp(`${expectedLandingPath}(/|$|\\?)`);
-    const mfaInterceptors = [
-      /\/mfa\/verify(\?|$)/,
-      /\/mfa\/setup(\?|$)/,
-    ];
 
-    let attempts = 0;
-    while (attempts < 3) {
-      attempts += 1;
-      const matched = await this.page
-        .waitForURL((url) => {
-          const path = url.pathname;
-          if (landing.test(`${path}${url.search}`)) return true;
-          return mfaInterceptors.some((rx) => rx.test(`${path}${url.search}`));
-        }, { timeout: 30_000 })
-        .then(() => true)
-        .catch(() => false);
+    const matched = await this.page
+      .waitForURL((url) => {
+        const pathSearch = `${url.pathname}${url.search}`;
+        if (landing.test(pathSearch)) return true;
+        return /\/mfa\/(verify|setup)(\?|$)/.test(pathSearch);
+      }, { timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
 
-      if (!matched) {
-        throw new Error(
-          `Credentials sign-in for ${email} did not reach landing or MFA: ${this.page.url()}`
-        );
-      }
-
-      const path = new URL(this.page.url()).pathname;
-      if (landing.test(`${path}/`)) return;
-
-      if (path === "/mfa/setup") {
-        // Stale prep — re-enroll and retry from the sign-in form.
-        await this.primeMfaSecret(email);
-        await this.goto();
-        await this.signIn(email, password);
-        continue;
-      }
-
-      // /mfa/verify — submit a fresh TOTP code generated from the
-      // primed secret. The Input is `#token`, the submit button is
-      // labelled "Verify".
-      const code = await generateTotpCode(secret);
-      await this.page.locator("#token").fill(code);
-      await this.page.getByRole("button", { name: /^verify$/i }).click();
-      await this.page.waitForURL(landing, { timeout: 30_000 });
-      return;
+    if (!matched) {
+      throw new Error(
+        `Credentials sign-in for ${email} did not reach landing or MFA: ${this.page.url()}`
+      );
     }
 
-    throw new Error(
-      `Credentials + MFA sign-in for ${email} did not settle after 3 attempts`
-    );
-  }
+    const path = new URL(this.page.url()).pathname;
+    if (landing.test(`${path}/`)) return;
 
-  /** Reset + re-enroll MFA on an advisor-hub fixture; return the secret. */
-  private async primeMfaSecret(email: string): Promise<string> {
+    if (path === "/mfa/setup") {
+      throw new Error(
+        `Credentials sign-in for ${email} landed on /mfa/setup — MFA enforcement is opt-in (commit 560bde0), so this fixture has MFA-required state that needs to be cleared via scripts/reset-user-mfa.js (or by re-running scripts/seed-advisor-test-data.js).`
+      );
+    }
+
+    // /mfa/verify — rotate to a known secret + complete TOTP.
     const fixture = await prepareMfaFixture(this.page.request, email);
-    return fixture.secret;
+    const code = await generateTotpCode(fixture.secret);
+    await this.page.locator("#token").fill(code);
+    await this.page.getByRole("button", { name: /^verify$/i }).click();
+    await this.page.waitForURL(landing, { timeout: 30_000 });
   }
 
   /**
