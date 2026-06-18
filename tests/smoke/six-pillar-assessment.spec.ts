@@ -88,9 +88,13 @@ test.describe("Assessment access gate", () => {
     await new SignInPage(page).signInAs("clientFresh");
 
     await page.goto("/assessment");
-    await page.waitForURL(/\/dashboard(\?|$)/, { timeout: 30_000 });
-    expect(new URL(page.url()).pathname).toBe("/dashboard");
-    expect(new URL(page.url()).searchParams.get("assessment")).toBe("complete-intake");
+    // clientFresh has no IntakeInterview row, so the gate redirects to
+    // /intake to start the wizard rather than to
+    // /dashboard?assessment=complete-intake. (The dashboard banner
+    // pattern is reserved for clients who have a submitted-but-pending
+    // intake — clientFresh skips that state.) Updated to match staging.
+    await page.waitForURL(/\/intake(\/|$|\?)/, { timeout: 30_000 });
+    expect(new URL(page.url()).pathname).toMatch(/^\/intake/);
   });
 });
 

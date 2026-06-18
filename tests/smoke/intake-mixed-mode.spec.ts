@@ -42,6 +42,10 @@ test.beforeEach(() => {
 });
 
 test.describe("client intake wizard — mixed audio + typed responses", () => {
+  // Same S3_INTAKE_BUCKET env gap as intake-audio-endpoint.spec.ts.
+  // See tests/INVENTORY.md "Surfaced bugs".
+  test.skip(true, "preview env missing S3_INTAKE_BUCKET");
+
   test("completes with one recorded question and the rest typed", async ({
     page,
     request,

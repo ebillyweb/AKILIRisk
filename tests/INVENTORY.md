@@ -388,7 +388,28 @@ the user in NOT_STARTED state.
 
 ## Surfaced bugs (filed during test writing)
 
-_None outstanding. See "Fixed" below._
+### Major (env): preview env missing `S3_INTAKE_BUCKET`
+
+- **Where:** `src/lib/s3/intake-audio-uploads.ts:35-39` throws
+  "S3_INTAKE_BUCKET is required for intake voice recordings." whenever
+  the var is unset. `/api/intake/[id]/audio` POST therefore returns
+  500 with body `{"success":false,"error":"Failed to upload audio file"}`
+  for every authenticated owner upload.
+- **Live evidence:** signed in as `client@test.com`, POST to
+  `/api/intake/test-interview-cmp7bp0xz0002slg8a377o48a/audio` with the
+  correct multipart shape (`audio` + `questionId`, valid 28-byte WebM
+  buffer) returns 500.
+- **Severity:** Major if voice intake is supposed to work on preview;
+  Minor otherwise (preview is local-dev convenience, prod has its own
+  bucket). Voice flow is unusable on the preview deployment today.
+- **Action required:** add `S3_INTAKE_BUCKET` (and `S3_INTAKE_REGION`
+  if region differs from `AWS_REGION`) to Vercel Preview env vars for
+  `akili-risk`. Bucket should mirror the production bucket's
+  configuration; uploads write under `intake-audio/<interviewId>/`.
+- **Tests parked:** `intake-audio-endpoint.spec.ts` (5 tests) and
+  `intake-mixed-mode.spec.ts` (1 test) both `test.skip(true, "preview
+  env missing S3_INTAKE_BUCKET")` at the describe level. Remove the
+  skip the moment the var lands.
 
 ## Fixed
 
