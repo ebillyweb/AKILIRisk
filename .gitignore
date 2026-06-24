@@ -70,3 +70,6 @@ public/uploads/
 staging
 
 .playwright-mcp/
+
+# local agent rules (personal)
+.cursor/rules/github-identity.mdc
