@@ -9,6 +9,7 @@ import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { LEGAL_ENTITY_NAME } from "@/lib/legal/documents";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { formatEmailSubject } from "@/lib/email/format-email-subject";
 import { getEnterpriseSalesContactEmail } from "@/lib/billing/enterprise-sales-contact";
 
 export type ContactFormAudience = "general" | "sales";
@@ -85,13 +86,15 @@ export async function sendContactFormEmail(
 
   try {
     const resend = new Resend(apiKey);
-    const subjectLine = payload.subject
-      ? audience === "sales"
-        ? `[Enterprise Sales] ${payload.subject}`
-        : `[Contact] ${payload.subject}`
-      : audience === "sales"
-        ? `[Enterprise Sales] Inquiry from ${payload.name}`
-        : `[Contact] Message from ${payload.name}`;
+    const subjectLine = formatEmailSubject(
+      payload.subject
+        ? audience === "sales"
+          ? `[Enterprise Sales] ${payload.subject}`
+          : `[Contact] ${payload.subject}`
+        : audience === "sales"
+          ? `[Enterprise Sales] Inquiry from ${payload.name}`
+          : `[Contact] Message from ${payload.name}`,
+    );
 
     await resend.emails.send(
       withPlatformLogoAttachment({

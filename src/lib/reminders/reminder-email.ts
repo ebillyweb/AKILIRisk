@@ -3,6 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/escape-html";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { formatEmailSubject } from "@/lib/email/format-email-subject";
 
 interface DocumentReminderData {
   clientEmail: string;
@@ -147,7 +148,9 @@ export async function sendDocumentReminderEmail(data: DocumentReminderData): Pro
 
     const documentCount = data.missingDocuments.length;
     const documentsText = documentCount === 1 ? 'Document' : 'Documents';
-    const subject = `${documentsText} Needed - ${data.advisorFirmName}`;
+    const subject = formatEmailSubject(
+      `${documentsText} Needed - ${data.advisorFirmName}`,
+    );
 
     const result = await resend.emails.send({
       from: resolveFromEmail(),

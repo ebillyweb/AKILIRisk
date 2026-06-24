@@ -9,6 +9,7 @@ import {
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 import { logResendResult } from "@/lib/email/log-resend-result";
+import { formatEmailSubject } from "@/lib/email/format-email-subject";
 
 function appOriginFromUrl(url: string): string | null {
   try {
@@ -126,7 +127,9 @@ export async function sendIntakeApprovedMagicLinkEmail(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: email,
-        subject: `Your assessment is ready — ${sanitizeSubjectFragment(clientName)}`,
+        subject: formatEmailSubject(
+          `Your assessment is ready — ${sanitizeSubjectFragment(clientName)}`,
+        ),
         html: renderIntakeApprovedMagicLinkEmailHtml(
           clientName,
           advisorFirmName,
@@ -156,7 +159,7 @@ export async function sendMagicLinkEmail(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: email,
-        subject: "Sign in to Akili Risk",
+        subject: formatEmailSubject("Sign in to Akili Risk"),
         html: renderMagicLinkEmailHtml(magicLinkUrl),
       })
     );
@@ -186,7 +189,7 @@ export async function sendPasswordResetEmail(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: email,
-        subject: "Reset your Akili Risk password",
+        subject: formatEmailSubject("Reset your Akili Risk password"),
         html: renderPasswordResetEmailHtml(resetUrl),
       })
     );
@@ -271,7 +274,9 @@ export async function sendAdvisorIntakeNotification(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: advisorEmail,
-        subject: `New Intake Ready for Review - ${sanitizeSubjectFragment(clientName)}`,
+        subject: formatEmailSubject(
+          `New Intake Ready for Review - ${sanitizeSubjectFragment(clientName)}`,
+        ),
         html: renderAdvisorIntakeNotificationHtml(
           advisorName,
           clientName,

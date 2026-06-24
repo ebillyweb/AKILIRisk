@@ -16,6 +16,7 @@ import { looksLikeAdvisorBrandingS3Url } from "@/lib/branding/advisor-logo-displ
 import type { InvitationEmailTheme } from "@/lib/invitations/invitation-email-theme";
 import { PLATFORM_INVITATION_CTA_COLOR } from "@/lib/invitations/invitation-email-theme";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { formatEmailSubject } from "@/lib/email/format-email-subject";
 
 interface AdvisorInfo {
   advisorName: string;
@@ -248,7 +249,9 @@ export async function sendAdvisorInvitationEmail(data: SendInvitationData): Prom
         withPlatformLogoAttachment({
           from: resolveFromEmail(),
           to: data.clientEmail,
-          subject: `Invitation from ${data.advisorInfo.advisorName} - Personal Risk Profile`,
+          subject: formatEmailSubject(
+            `Invitation from ${data.advisorInfo.advisorName} - Personal Risk Profile`,
+          ),
           html: htmlContent,
         }),
         data.logoAttachment ?? null

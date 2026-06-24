@@ -10,6 +10,7 @@ import {
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { formatEmailSubject } from "@/lib/email/format-email-subject";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -73,7 +74,9 @@ export async function sendAdminInvitationEmail(data: AdminInvitationData) {
       withPlatformLogoAttachment({
         from: formatFromAddress(),
         to: [email],
-        subject: `Welcome to AKILI Risk Intelligence - ${roleLabel} Access`,
+        subject: formatEmailSubject(
+          `Welcome to AKILI Risk Intelligence - ${roleLabel} Access`,
+        ),
         html: renderAdminInvitationHtml({
           name,
           email,

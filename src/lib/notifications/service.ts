@@ -6,6 +6,7 @@ import { NotificationCategory, SendNotificationParams } from "./types";
 import { shouldSendNotification } from "./preferences";
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { formatEmailSubject } from "@/lib/email/format-email-subject";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import { buildNotificationTemplateData, renderNotificationEmail } from "./templates";
 import { NotificationType } from "@prisma/client";
@@ -109,7 +110,7 @@ export async function sendNotification(params: SendNotificationParams): Promise<
             "Notification email skipped: public app URL not configured (AUTH_URL / NEXT_PUBLIC_URL)."
           );
         } else {
-          const subject = emailSubject || `${title} - Akili Risk`;
+          const subject = formatEmailSubject(emailSubject || `${title} - Akili Risk`);
 
           const result = await resend.emails.send(
             withPlatformLogoAttachment({

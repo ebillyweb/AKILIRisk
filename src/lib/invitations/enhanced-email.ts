@@ -10,6 +10,7 @@ import {
 } from '@/lib/email/advisor-email-logo';
 import type { SendEmailResult } from '@/lib/invitations/email';
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { formatEmailSubject } from "@/lib/email/format-email-subject";
 
 /**
  * Enhanced advisor branding data for emails
@@ -435,7 +436,9 @@ export async function sendEnhancedAdvisorInvitationEmail(
         {
           from: resolveFromEmail(),
           to: data.clientEmail,
-          subject: `Invitation from ${advisorName} - Personal Risk Profile`,
+          subject: formatEmailSubject(
+            `Invitation from ${advisorName} - Personal Risk Profile`,
+          ),
           html: htmlContent,
         },
         data.logoAttachment ?? null
