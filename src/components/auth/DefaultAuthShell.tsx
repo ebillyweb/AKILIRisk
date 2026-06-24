@@ -45,7 +45,7 @@ export function DefaultAuthShell({ children }: { children: React.ReactNode }) {
             </div>
             <div
               id="main-content"
-              className="flex w-full max-w-xl flex-1 items-center justify-center"
+              className="flex w-full min-w-0 max-w-xl flex-1 items-center justify-center"
               tabIndex={-1}
             >
               {children}

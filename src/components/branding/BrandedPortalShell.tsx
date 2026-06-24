@@ -95,7 +95,7 @@ export function BrandedPortalShell({
           <div
             id="main-content"
             className={cn(
-              "mx-auto w-full",
+              "mx-auto w-full min-w-0",
               variant === "auth" ? "max-w-xl" : "max-w-4xl",
             )}
             tabIndex={-1}

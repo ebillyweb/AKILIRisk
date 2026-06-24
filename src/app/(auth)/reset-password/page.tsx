@@ -92,7 +92,7 @@ function ResetPasswordForm() {
     return (
       <AuthPanel
         eyebrow="Password Recovery"
-        title="Password reset successfully"
+        title="Password updated"
         description="Your password has been updated. You can now return to the workspace and sign in with your new credentials."
       >
         <Button asChild size="lg" className="w-full">
