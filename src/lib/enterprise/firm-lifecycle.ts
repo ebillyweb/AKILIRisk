@@ -2,6 +2,7 @@ import "server-only";
 
 import type { UserRole } from "@prisma/client";
 
+import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-subscription";
 import { prisma } from "@/lib/db";
 import { getSubdomainActivationData } from "@/lib/advisor/platform-subdomain";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -10,18 +11,6 @@ export class EnterpriseLifecycleError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "EnterpriseLifecycleError";
-  }
-}
-
-async function cancelStripeSubscriptionBestEffort(
-  stripeSubscriptionId: string | null | undefined
-): Promise<void> {
-  if (!stripeSubscriptionId?.trim()) return;
-  try {
-    const { getStripe } = await import("@/lib/stripe");
-    await getStripe().subscriptions.cancel(stripeSubscriptionId);
-  } catch (error) {
-    console.error("Enterprise lifecycle: Stripe cancel failed", error);
   }
 }
 

@@ -5,7 +5,8 @@ import type { EnterpriseRole } from "@prisma/client";
 import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
 import { decryptUserEmail } from "@/lib/auth/user-email-crypto";
 import { prisma } from "@/lib/db";
-import { userHasBlockingSoloSubscription } from "@/lib/enterprise/solo-subscription-block";
+import { cancelSoloSubscriptionForEnterprise } from "@/lib/enterprise/cancel-solo-subscription";
+import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-subscription";
 import { getEnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
 import {
   buildEnterpriseTeamInviteUrl,
@@ -114,12 +115,6 @@ export async function inviteEnterpriseMember(
     throw new EnterpriseTeamInviteError("Team invites require an advisor account email.");
   }
 
-  if (existingByEmail && (await userHasBlockingSoloSubscription(existingByEmail.id))) {
-    throw new EnterpriseTeamInviteError(
-      "This advisor must cancel their personal subscription before joining your firm."
-    );
-  }
-
   const inviteeUser =
     existingByEmail ??
     (await prisma.user.create({
@@ -172,13 +167,19 @@ export async function acceptEnterpriseTeamInvite(
     );
   }
 
-  if (await userHasBlockingSoloSubscription(acceptingUserId)) {
-    throw new EnterpriseTeamInviteError(
-      "Cancel your personal subscription in Billing, then open this invitation link again."
-    );
-  }
+  let soloStripeSubscriptionId: string | null = null;
 
   await prisma.$transaction(async (tx) => {
+    const soloCancel = await cancelSoloSubscriptionForEnterprise(
+      acceptingUserId,
+      {
+        reason: "enterprise_team_join",
+        enterpriseId: membership.enterpriseId,
+      },
+      tx
+    );
+    soloStripeSubscriptionId = soloCancel.stripeSubscriptionId;
+
     let profile = await tx.advisorProfile.findUnique({
       where: { userId: acceptingUserId },
       select: { id: true, enterpriseId: true },
@@ -211,6 +212,8 @@ export async function acceptEnterpriseTeamInvite(
       },
     });
   });
+
+  await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
 
   return {
     enterpriseId: membership.enterprise.id,

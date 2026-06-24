@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { Files } from "lucide-react";
 
+import { auth } from "@/lib/auth";
+import { isSuperAdmin } from "@/lib/admin/auth";
+import { getClientAssignmentTargetsForAdmin } from "@/lib/admin/client-assignment-queries";
 import { getClientsForAdmin, type ClientsAdminScope } from "@/lib/admin/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 import { AdminClientAccountActions } from "@/components/admin/AdminClientAccountActions";
+import { AdminClientAssignSelect } from "@/components/admin/AdminClientAssignSelect";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
@@ -33,11 +37,17 @@ export default async function AdminClientsPage({
   const sp = await searchParams;
   const scope: ClientsAdminScope = sp.filter === "all" ? "all" : "active";
   const requestedPage = toPositiveInt(sp.page, 1);
-  const { clients, totalCount, page: currentPage, pageSize } = await getClientsForAdmin({
-    scope,
-    page: requestedPage,
-    pageSize: PAGE_SIZE,
-  });
+  const session = await auth();
+  const superUser = isSuperAdmin(session);
+  const [clientsResult, assignmentTargetGroups] = await Promise.all([
+    getClientsForAdmin({
+      scope,
+      page: requestedPage,
+      pageSize: PAGE_SIZE,
+    }),
+    superUser ? getClientAssignmentTargetsForAdmin() : Promise.resolve([]),
+  ]);
+  const { clients, totalCount, page: currentPage, pageSize } = clientsResult;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasNextPage = currentPage * pageSize < totalCount;
 
@@ -116,7 +126,7 @@ export default async function AdminClientsPage({
                           />
                         </>
                       ) : null}
-                      <div className="ml-auto flex shrink-0 items-center gap-2">
+                      <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
                         {activeAssignments.length > 0 ? (
                           <Badge
                             variant="secondary"
@@ -125,6 +135,11 @@ export default async function AdminClientsPage({
                             {activeAssignments.length} advisor
                             {activeAssignments.length === 1 ? "" : "s"}
                           </Badge>
+                        ) : superUser && !isDeactivated ? (
+                          <AdminClientAssignSelect
+                            clientId={c.id}
+                            targetGroups={assignmentTargetGroups}
+                          />
                         ) : (
                           <Badge variant="outline" className="whitespace-nowrap normal-case tracking-normal">
                             Unassigned

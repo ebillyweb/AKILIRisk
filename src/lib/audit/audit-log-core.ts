@@ -75,6 +75,8 @@ export const AUDIT_ACTIONS = {
    *  threshold changes are filterable separately in the audit log. */
   RISK_THRESHOLDS_UPDATE: "risk_thresholds.update",
   GOVERNANCE_LEAD_ASSIGN: "governance_lead.assign",
+  /** Super admin assigns an unassigned client to an advisor or enterprise owner. */
+  CLIENT_ASSIGNMENT_ADMIN_ASSIGN: "client_assignment.admin_assign",
   INTAKE_QUESTION_UPDATE: "intake_question.update",
   INTAKE_QUESTION_VISIBILITY_TOGGLE: "intake_question.visibility_toggle",
   BANK_QUESTION_CREATE: "bank_question.create",

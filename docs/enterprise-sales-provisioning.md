@@ -6,7 +6,7 @@ Sales-assisted provisioning for the **Enterprise** advisor tier. There is no sel
 
 - Sales quote agreed (defaults: **25 seats**, **100 firm clients**, **25 clients per advisor** unless negotiated).
 - **Owner** is an existing Akili advisor user (`ADVISOR` role) with an `AdvisorProfile`.
-- Owner has **no active solo subscription** — they must cancel personal billing before provisioning or accepting an enterprise role.
+- Owner has **no active solo Stripe subscription** at provision time — any solo row (including admin grace) is **cancelled automatically** when the firm is created.
 - Owner is **not** already a member of another enterprise.
 
 ## Wire transfer (primary)
@@ -55,14 +55,11 @@ Sales-assisted provisioning for the **Enterprise** advisor tier. There is no sel
 
 When active team members exceed `seatLimit`, the admin enterprise list and owner billing/team UI show overage. **v1 does not block invites or hub access** — ops uses the admin **Seat overage** column for reporting.
 
-## Solo subscription block
+## Solo subscription on enterprise join
 
-Users with an active personal subscription cannot:
+When an advisor becomes an enterprise **owner** (admin provision) or **accepts a team invite**, their solo `Subscription` row is set to `CANCELLED` and any linked Stripe solo subscription is cancelled (best effort). Hub access then comes from the firm subscription via `resolveBillingContext`.
 
-- Be selected as enterprise owner during admin provisioning (validation error).
-- Accept an enterprise team invite until they cancel solo billing first.
-
-There is no automatic migration of solo clients or Stripe customers to the firm.
+There is no dual billing and no manual pre-cancel step for grace-period or wire-only solo accounts. Solo client assignments stay on the advisor profile; billing context switches to the firm.
 
 ## Environment
 
@@ -108,7 +105,7 @@ Use when deprovisioning a firm entirely.
 
 | Issue | Action |
 |-------|--------|
-| “Owner must cancel their personal subscription” | Owner completes solo cancellation in Stripe portal, then retry. |
+| “Owner must cancel their personal subscription” | Legacy — solo subs are now auto-cancelled on provision. Retry the form. |
 | “Owner already belongs to an enterprise” | Transfer ownership or use a different owner account. |
 | Slug reserved / taken | Choose another slug; check platform reserved labels in `docs/white-label-subdomains.md`. |
 | Wire firm shows no invoices on billing page | Expected — wire firms have no Stripe customer; invoices are offline. |

@@ -26,7 +26,8 @@ import {
   ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT,
   ENTERPRISE_DEFAULT_SEAT_LIMIT,
 } from "@/lib/enterprise/constants";
-import { userHasBlockingSoloSubscription } from "@/lib/enterprise/solo-subscription-block";
+import { cancelSoloSubscriptionForEnterprise } from "@/lib/enterprise/cancel-solo-subscription";
+import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-subscription";
 import {
   deleteEnterpriseFirmByAdmin,
   EnterpriseLifecycleError,
@@ -805,13 +806,6 @@ export async function createEnterpriseByAdmin(input: unknown) {
     if (owner.advisorProfile.enterpriseId) {
       return { success: false, error: "Owner profile is already linked to an enterprise" };
     }
-    if (await userHasBlockingSoloSubscription(owner.id)) {
-      return {
-        success: false,
-        error:
-          "Owner must cancel their personal subscription before becoming an enterprise owner.",
-      };
-    }
 
     const existingSlug = await prisma.advisorEnterprise.findUnique({
       where: { slug: parsed.data.slug },
@@ -829,6 +823,8 @@ export async function createEnterpriseByAdmin(input: unknown) {
     const periodEnd = new Date();
     periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1);
 
+    let soloStripeSubscriptionId: string | null = null;
+
     const result = await prisma.$transaction(async (tx) => {
       const enterprise = await tx.advisorEnterprise.create({
         data: {
@@ -841,6 +837,16 @@ export async function createEnterpriseByAdmin(input: unknown) {
           billingContactUserId: owner.id,
         },
       });
+
+      const soloCancel = await cancelSoloSubscriptionForEnterprise(
+        owner.id,
+        {
+          reason: "enterprise_owner_provision",
+          enterpriseId: enterprise.id,
+        },
+        tx
+      );
+      soloStripeSubscriptionId = soloCancel.stripeSubscriptionId;
 
       await tx.advisorProfile.update({
         where: { id: owner.advisorProfile!.id },
@@ -919,6 +925,8 @@ export async function createEnterpriseByAdmin(input: unknown) {
 
       return { enterprise, membership, subscription };
     });
+
+    await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
 
     await writeAudit({
       actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },

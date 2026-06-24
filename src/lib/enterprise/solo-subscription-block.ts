@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 
 /**
  * True when the user has a solo Subscription row that still entitles portal use.
- * Blocks enterprise invite accept / admin attach until cancelled (spec).
+ * Used for read-only checks; solo subs are auto-cancelled on enterprise join.
  */
 export async function userHasBlockingSoloSubscription(
   userId: string

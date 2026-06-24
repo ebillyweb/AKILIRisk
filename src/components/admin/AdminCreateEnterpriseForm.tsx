@@ -238,8 +238,8 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
             </Button>
             {owners.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No eligible advisor owners found. Advisors must not already belong to a firm and
-                must cancel any solo subscription first.
+                No eligible advisor owners found. Advisors must not already belong to another firm.
+                Any personal subscription is cancelled automatically when the firm is created.
               </p>
             ) : null}
           </form>
