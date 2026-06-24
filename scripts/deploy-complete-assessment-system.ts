@@ -60,7 +60,7 @@ async function deployCompleteAssessmentSystem() {
 
     {
       name: 'Pillar Question Bank',
-      description: 'Verify Belvedere pillar DDL (`questions`) is seeded',
+      description: 'Verify platform question banks (`questions`) are seeded',
       execute: async () => {
         const scoredCount = await prisma.pillarQuestion.count({
           where: {

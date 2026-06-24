@@ -54,7 +54,7 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 
 ## US-37 — Administer the Assessment Question Bank
 
-**Single source:** Belvedere pillar DDL (`questions` table / `PillarQuestion`). Legacy `AssessmentBankQuestion` removed (migration `20260523140000`). BRD **US-65** legacy-table fallback is **not** implemented — see [FR-6 reconciliation](./EPIC-FR6-EXTENDED-DELIVERABLES-RECONCILIATION.md).
+**Single source:** Platform assessment question bank (`questions` table / `PillarQuestion`, kind `ASSESSMENT`). Legacy `AssessmentBankQuestion` removed (migration `20260523140000`). BRD **US-65** legacy-table fallback is **not** implemented — see [FR-6 reconciliation](./EPIC-FR6-EXTENDED-DELIVERABLES-RECONCILIATION.md).
 
 | Acceptance criterion | Met | Implementation |
 |---------------------|-----|----------------|
@@ -83,6 +83,8 @@ Repo history used internal IDs **US-29 – US-34** for the same capabilities; th
 ---
 
 ## US-38 — Administer the Intake Interview Script
+
+**Single source:** Platform intake bank (`questions` table / `PillarQuestion`, kind `INTAKE`).
 
 | Acceptance criterion | Met | Implementation |
 |---------------------|-----|----------------|

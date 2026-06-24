@@ -8,7 +8,7 @@ import "./load-repo-env";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import { cloneAdvisorDefaultsIfNeeded } from "../src/lib/methodology/clone-advisor-defaults";
+import { cloneAdvisorDefaultsIfNeeded, syncAdvisorPlatformContent } from "../src/lib/methodology/clone-advisor-defaults";
 
 async function main(): Promise<void> {
   const url = process.env.DATABASE_URL;
@@ -33,12 +33,17 @@ async function main(): Promise<void> {
     }
 
     let cloned = 0;
+    let synced = 0;
     for (const advisor of advisors) {
       const did = await cloneAdvisorDefaultsIfNeeded(advisor.id, { force });
       if (did) cloned++;
+      const result = await syncAdvisorPlatformContent(advisor.id);
+      if (result.intakeAdded > 0 || result.assessmentAdded > 0 || result.rulesAdded > 0) {
+        synced++;
+      }
     }
     console.log(
-      `seed:advisor-defaults complete — processed ${advisors.length} advisors, cloned ${cloned}`,
+      `seed:advisor-defaults complete — processed ${advisors.length} advisors, cloned ${cloned}, synced ${synced}`,
     );
   } finally {
     await prisma.$disconnect();

@@ -32,16 +32,23 @@ export default async function MethodologyIntakePage() {
           Edit or hide platform base questions, or add custom audio prompts for your clients.
         </p>
       </div>
-      <IntakeScriptEditor
-        questions={questions.map((q) => ({
-          id: q.id,
-          sourceKind: q.sourceKind,
-          displayOrder: q.displayOrder,
-          questionText: q.questionText,
-          context: q.context,
-          isVisible: q.isVisible,
-        }))}
-      />
+      {questions.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+          Platform intake questions are loading. Refresh in a moment — if this persists, contact
+          platform support.
+        </div>
+      ) : (
+        <IntakeScriptEditor
+          questions={questions.map((q) => ({
+            id: q.id,
+            sourceKind: q.sourceKind,
+            displayOrder: q.displayOrder,
+            questionText: q.questionText,
+            context: q.context,
+            isVisible: q.isVisible,
+          }))}
+        />
+      )}
     </div>
   );
 }

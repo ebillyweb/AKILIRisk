@@ -1,6 +1,6 @@
 /**
- * Run a SQL file against DATABASE_URL to seed Belvedere pillar tables:
- * `categories`, `sections`, `questions` (see prisma/schema.prisma).
+ * Run a SQL file against DATABASE_URL to seed platform question bank tables:
+ * intake bank + assessment question bank (`categories`, `sections`, `questions`).
  * Apply migrations first; the bundled SQL is INSERT-focused (schema lives in migrations).
  *
  * Default file: scripts/sql/belvedere-pillar-ddl-seed.sql
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   if (!existsSync(sqlPath)) {
     console.error(
       `Pillar DDL seed file not found: ${sqlPath}\n` +
-        `Create it or set PILLAR_DDL_SEED_PATH to your Belvedere .sql file.`
+        `Create it or set PILLAR_DDL_SEED_PATH to your platform question bank .sql file.`
     );
     process.exit(1);
   }

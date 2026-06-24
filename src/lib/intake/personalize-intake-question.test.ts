@@ -31,7 +31,7 @@ describe("personalizeIntakeQuestionText", () => {
     ).toBe("What we do at your advisor?");
   });
 
-  it("rewrites legacy Belvedere and AKILI copy", () => {
+  it("rewrites legacy platform firm names and AKILI copy", () => {
     expect(
       personalizeIntakeQuestionText(
         "How did your advisor describe what we do at Belvedere?",

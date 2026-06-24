@@ -545,7 +545,7 @@ model PillarScore {
 }
 
 
-/// Belvedere `categories` row: scored workbook pillars vs. audio/script intake (see `kind`).
+/// Platform `categories` row: intake bank vs. scored assessment pillars (see `kind`).
 enum PillarCategoryKind {
   INTAKE
   ASSESSMENT
@@ -553,7 +553,7 @@ enum PillarCategoryKind {
   @@map("pillar_category_kind")
 }
 
-/// Belvedere workbook taxonomy (DDL source of truth). Maps to SQL table `categories`.
+/// Platform question bank taxonomy (intake bank + assessment). Maps to SQL table `categories`.
 model PillarCategory {
   id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code         String             @unique @db.VarChar(50)
@@ -588,7 +588,7 @@ model PillarSection {
   @@map("sections")
 }
 
-/// Question row aligned to Belvedere DDL (answer labels, types, cross-references).
+/// Question row in the intake bank or assessment question bank (answer labels, types, cross-references).
 /// Maps to SQL table `questions`.
 model PillarQuestion {
   id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

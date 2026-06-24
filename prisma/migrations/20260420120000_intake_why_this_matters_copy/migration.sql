@@ -1,5 +1,5 @@
 -- Intake pillar questions: warmer, shorter why_this_matters copy.
--- Targets fixed section UUIDs from Belvedere pillar DDL (intake category).
+-- Targets fixed section UUIDs from the platform intake bank seed (intake category).
 
 -- Section GEN — General Discovery
 UPDATE questions SET why_this_matters = 'Helps us make sure we''re speaking the same language from the start.'

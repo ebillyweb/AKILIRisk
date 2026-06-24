@@ -35,10 +35,11 @@ export async function getAssignedAdvisorProfileIdForClient(
 export async function ensureAdvisorDefaultsCloned(
   advisorProfileId: string,
 ): Promise<void> {
-  const { cloneAdvisorDefaultsIfNeeded } = await import(
+  const { cloneAdvisorDefaultsIfNeeded, syncAdvisorPlatformContent } = await import(
     "@/lib/methodology/clone-advisor-defaults"
   );
   await cloneAdvisorDefaultsIfNeeded(advisorProfileId);
+  await syncAdvisorPlatformContent(advisorProfileId);
 }
 
 export async function buildAdvisorConfigSnapshot(

@@ -133,6 +133,43 @@ export async function cloneAdvisorDefaultsIfNeeded(
   return true;
 }
 
+/** Backfill platform base rows added after the advisor's initial clone (idempotent). */
+export async function syncAdvisorPlatformContent(
+  advisorProfileId: string,
+): Promise<{ intakeAdded: number; assessmentAdded: number; rulesAdded: number }> {
+  const pillars = await prisma.pillar.findMany({
+    where: { archivedAt: null },
+    orderBy: { defaultOrder: "asc" },
+  });
+  if (pillars.length === 0) {
+    return { intakeAdded: 0, assessmentAdded: 0, rulesAdded: 0 };
+  }
+
+  const slugToPillarId = new Map(pillars.map((p) => [p.slug, p.id]));
+
+  return prisma.$transaction(
+    async (tx) => {
+      const intakeAdded = await syncMissingPlatformIntakeQuestions(
+        tx,
+        advisorProfileId,
+        slugToPillarId,
+      );
+      const assessmentAdded = await syncMissingPlatformAssessmentQuestions(
+        tx,
+        advisorProfileId,
+        slugToPillarId,
+      );
+      const rulesAdded = await syncMissingPlatformRecommendationRules(
+        tx,
+        advisorProfileId,
+        slugToPillarId,
+      );
+      return { intakeAdded, assessmentAdded, rulesAdded };
+    },
+    { timeout: 120_000 },
+  );
+}
+
 type CloneTx = Prisma.TransactionClient;
 
 async function cloneAllPlatformAssessmentQuestions(
@@ -291,7 +328,6 @@ export async function syncMissingPlatformIntakeQuestions(
 async function loadPlatformIntakeRows(tx: CloneTx): Promise<PillarQuestionWithHierarchy[]> {
   return (await tx.pillarQuestion.findMany({
     where: {
-      isVisible: true,
       section: { category: { kind: PillarCategoryKind.INTAKE } },
     },
     include: pillarQuestionInclude,

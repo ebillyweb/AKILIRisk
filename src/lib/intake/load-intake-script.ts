@@ -10,7 +10,11 @@ import {
   type PillarQuestionWithHierarchy,
 } from "@/lib/assessment/bank/pillar-question-wire";
 import { intakeQuestionsFromSnapshot } from "@/lib/intake/intake-script-from-snapshot";
-import { loadSnapshotForInterview } from "@/lib/methodology/snapshot";
+import {
+  ensureAdvisorDefaultsCloned,
+  getAssignedAdvisorProfileIdForClient,
+  loadSnapshotForInterview,
+} from "@/lib/methodology/snapshot";
 
 const DEFAULT_RECORDING_TIPS = [
   "Speak clearly and at a normal pace",
@@ -27,10 +31,76 @@ function recordingTipsFromRow(row: PillarQuestionWithHierarchy): string[] {
   return DEFAULT_RECORDING_TIPS;
 }
 
+function pillarRowsToIntakeQuestions(rows: PillarQuestionWithHierarchy[]): IntakeQuestion[] {
+  const sorted = sortPillarQuestionRows(rows);
+  return sorted.map((row, i) => {
+    const why = row.whyThisMatters?.trim();
+    const recommended = row.recommendedActions?.trim();
+    const related =
+      row.relatedPillarIds?.length > 0 ? [...row.relatedPillarIds] : undefined;
+    return {
+      id: row.id,
+      questionNumber: i + 1,
+      questionText: row.questionText,
+      whyThisMatters: why || undefined,
+      recommendedActions: recommended || undefined,
+      relatedPillarIds: related,
+      context:
+        why ||
+        "Take your time; speak naturally as if in conversation with your advisor.",
+      recordingTips: recordingTipsFromRow(row),
+    };
+  });
+}
+
+/** Visible advisor-owned intake script (after platform sync). */
+export async function loadAdvisorIntakeScriptQuestions(
+  advisorProfileId: string,
+): Promise<IntakeQuestion[]> {
+  await ensureAdvisorDefaultsCloned(advisorProfileId);
+  const rows = await prisma.advisorIntakeQuestion.findMany({
+    where: { advisorProfileId, isVisible: true },
+    orderBy: { displayOrder: "asc" },
+  });
+  if (rows.length === 0) return [];
+
+  return rows.map((row, i) => {
+    const context =
+      row.context?.trim() ||
+      row.helpText?.trim() ||
+      "Take your time; speak naturally as if in conversation with your advisor.";
+    const recommended = row.recommendedActions?.trim();
+    const tips = recommended
+      ? recommended
+          .split(/\n+|•|;/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 8)
+      : DEFAULT_RECORDING_TIPS;
+
+    return {
+      id: row.id,
+      questionNumber: i + 1,
+      questionText: row.questionText,
+      whyThisMatters: row.helpText ?? row.context ?? undefined,
+      recommendedActions: recommended || undefined,
+      relatedPillarIds:
+        row.relatedPillarIds?.length > 0 ? [...row.relatedPillarIds] : undefined,
+      context,
+      recordingTips: tips.length ? tips : DEFAULT_RECORDING_TIPS,
+    };
+  });
+}
+
+async function loadAdvisorIntakeScriptForUser(userId: string): Promise<IntakeQuestion[]> {
+  const advisorProfileId = await getAssignedAdvisorProfileIdForClient(userId);
+  if (!advisorProfileId) return [];
+  return loadAdvisorIntakeScriptQuestions(advisorProfileId);
+}
+
 /**
- * Ordered intake script for the audio interview: `questions` rows in category `INTAKE`
- * with `is_visible` true (e.g. demographic / DEM section defaults to hidden in pillar seed;
- * admins can show rows again). If none match, returns legacy `INTAKE_QUESTIONS` (TypeScript).
+ * Ordered intake script for the audio interview: visible rows in the platform intake bank
+ * (`questions` / category `INTAKE`). If none match, returns legacy `INTAKE_QUESTIONS` (TypeScript).
  */
 export async function loadIntakeScriptQuestions(): Promise<IntakeQuestion[]> {
   try {
@@ -46,25 +116,7 @@ export async function loadIntakeScriptQuestions(): Promise<IntakeQuestion[]> {
       return INTAKE_QUESTIONS;
     }
 
-    const sorted = sortPillarQuestionRows(rows);
-    return sorted.map((row, i) => {
-      const why = row.whyThisMatters?.trim();
-      const recommended = row.recommendedActions?.trim();
-      const related =
-        row.relatedPillarIds?.length > 0 ? [...row.relatedPillarIds] : undefined;
-      return {
-        id: row.id,
-        questionNumber: i + 1,
-        questionText: row.questionText,
-        whyThisMatters: why || undefined,
-        recommendedActions: recommended || undefined,
-        relatedPillarIds: related,
-        context:
-          why ||
-          "Take your time; speak naturally as if in conversation with your advisor.",
-        recordingTips: recordingTipsFromRow(row),
-      };
-    });
+    return pillarRowsToIntakeQuestions(rows);
   } catch (e) {
     console.warn("[loadIntakeScriptQuestions] falling back to static list:", e);
     return INTAKE_QUESTIONS;
@@ -79,6 +131,16 @@ export async function loadIntakeScriptForInterview(
   if (snapshot?.intakeQuestions?.length) {
     return intakeQuestionsFromSnapshot(snapshot);
   }
+
+  const interview = await prisma.intakeInterview.findUnique({
+    where: { id: interviewId },
+    select: { userId: true },
+  });
+  if (interview) {
+    const advisorScript = await loadAdvisorIntakeScriptForUser(interview.userId);
+    if (advisorScript.length > 0) return advisorScript;
+  }
+
   return loadIntakeScriptQuestions();
 }
 
@@ -98,5 +160,9 @@ export async function loadIntakeScriptForClient(
   if (interview) {
     return loadIntakeScriptForInterview(interview.id);
   }
+
+  const advisorScript = await loadAdvisorIntakeScriptForUser(userId);
+  if (advisorScript.length > 0) return advisorScript;
+
   return loadIntakeScriptQuestions();
 }

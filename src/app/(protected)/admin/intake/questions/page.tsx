@@ -35,9 +35,9 @@ export default async function AdminIntakeQuestionsPage({
         <Alert>
           <AlertTitle>No intake questions yet</AlertTitle>
           <AlertDescription>
-            No intake questions are configured yet. Run the pillar seed or add intake questions in
-            the database to manage the live interview here. Until then, clients hear the built-in
-            fallback list.
+            No intake questions are configured yet. Run the intake bank seed (`npm run seed:pillar-ddl`)
+            or add intake questions in the database to manage the live interview here. Until then,
+            clients hear the built-in fallback list.
           </AlertDescription>
         </Alert>
       ) : (

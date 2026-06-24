@@ -76,7 +76,7 @@ const prisma = new PrismaClient({ adapter });
       select: { id: true },
     });
     if (!firstQuestion) {
-      throw new Error('No visible INTAKE-category PillarQuestion rows. Re-seed the question bank.');
+      throw new Error('No visible INTAKE-category PillarQuestion rows. Re-seed the intake bank.');
     }
 
     process.stdout.write(

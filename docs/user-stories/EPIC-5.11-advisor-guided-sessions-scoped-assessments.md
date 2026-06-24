@@ -546,7 +546,7 @@ Build in five phases. Each phase is shippable to staging; later phases depend on
 | Stories | Work |
 |---------|------|
 | **US-76** | Pipeline stage/badge “Preview ready”; dashboard priority card; scope labels on queue rows |
-| **US-77** (content) | Belvedere/workbook mapping for all intake questions → pillars |
+| **US-77** (content) | Intake bank / workbook mapping for all intake questions → pillars |
 | **Epic 5.2 amend** | Update US-11, US-12, US-15 reconciled criteria in epic doc + tests |
 
 **Exit criteria**

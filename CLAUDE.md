@@ -44,9 +44,9 @@ npx prisma migrate reset
 # View database in Prisma Studio
 npx prisma studio
 
-# Pillar workbook tables (categories → sections → questions) — Belvedere Household Risk Profile DDL
+# Platform question banks (categories → sections → questions): intake bank + assessment question bank
 # Prisma: PillarCategory / PillarSection / PillarQuestion → DB tables categories, sections, questions
-# After `prisma migrate deploy`, load your Belvedere SQL into those tables (see migration 20260418120000;
+# After `prisma migrate deploy`, load the platform seed SQL into those tables (see migration 20260418120000;
 # admin hide/show uses `questions.is_visible` from 20260419120000_questions_is_visible):
 # npm run seed:pillar-ddl
 # Default file: scripts/sql/belvedere-pillar-ddl-seed.sql — replace with your INSERTs or set PILLAR_DDL_SEED_PATH.
