@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
@@ -16,6 +16,10 @@ import {
   resolveIncludedPillars,
 } from "@/lib/assessment/included-pillars";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
+import {
+  resolveResumePillarSlug,
+  resolveResumeQuestionIndexForPillar,
+} from "@/lib/assessment/resolve-resume-index";
 import { useAssessmentStore } from "@/lib/assessment/store";
 import {
   useAllPillarQuestions,
@@ -43,6 +47,8 @@ export function FacilitatedAssessmentHub({
   householdProfile = null,
 }: FacilitatedAssessmentHubProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shouldAutoResume = searchParams.get("resume") === "1";
   const store = useAssessmentStore();
   const pillarDefinitions = useAssessmentPillarDefinitions();
   const { questionsByPillarId, isLoading: questionsLoading } = useAllPillarQuestions({
@@ -53,6 +59,7 @@ export function FacilitatedAssessmentHub({
     facilitatedSessionId: sessionId,
   });
   const [ready, setReady] = useState(false);
+  const didAutoResume = useRef(false);
 
   const includedPillars = useMemo(
     () => resolveIncludedPillars(includedPillarsProp.length ? includedPillarsProp : [...DEFAULT_INCLUDED_PILLARS]),
@@ -77,10 +84,9 @@ export function FacilitatedAssessmentHub({
   });
 
   useEffect(() => {
-    const prior = useAssessmentStore.getState();
     store.setAssessmentId(assessmentId);
     store.setHouseholdProfile(householdProfile);
-    if (assessmentData && (!prior.isHydrated || prior.assessmentId !== assessmentId)) {
+    if (assessmentData) {
       store.loadFromServer(assessmentData);
       store.setHydrated(true);
     }
@@ -130,15 +136,73 @@ export function FacilitatedAssessmentHub({
     };
   });
 
-  const completedCount = pillarStats.filter((p) => p.status === "completed").length;
-  const allComplete = completedCount === includedPillars.length;
+  const resumePillarSlug = useMemo(
+    () =>
+      resolveResumePillarSlug(
+        pillarStats.map((stat) => ({
+          slug: stat.pillar.slug,
+          status: stat.status,
+        })),
+        assessmentData,
+        store.currentPillar,
+      ),
+    [assessmentData, pillarStats, store.currentPillar],
+  );
 
-  const goToPillar = (pillarSlug: string, index = 0) => {
+  const resolveQuestionIndex = (pillarSlug: string) =>
+    resolveResumeQuestionIndexForPillar(
+      pillarSlug,
+      questionsByPillarId.get(pillarSlug) ?? [],
+      householdProfile,
+      {
+        answers: store.answers,
+        skippedQuestions: store.skippedQuestions,
+        currentPillar: store.currentPillar,
+        currentQuestionIndex: store.currentQuestionIndex,
+      },
+      assessmentData,
+    );
+
+  const goToPillar = (pillarSlug: string, questionIndex?: number) => {
+    const index = questionIndex ?? resolveQuestionIndex(pillarSlug);
     store.setCurrentPosition(pillarSlug, index);
     router.push(facilitatedAssessmentQuestionPath(sessionId, pillarSlug, index));
   };
 
-  if (!ready || questionsLoading) {
+  useEffect(() => {
+    if (!shouldAutoResume || !ready || questionsLoading || didAutoResume.current) {
+      return;
+    }
+    didAutoResume.current = true;
+
+    if (!resumePillarSlug) return;
+
+    const stat = pillarStats.find((p) => p.pillar.slug === resumePillarSlug);
+    if (!stat || stat.status === "completed") return;
+
+    const index = resolveQuestionIndex(resumePillarSlug);
+    store.setCurrentPosition(resumePillarSlug, index);
+    router.replace(
+      facilitatedAssessmentQuestionPath(sessionId, resumePillarSlug, index),
+    );
+  }, [
+    shouldAutoResume,
+    ready,
+    questionsLoading,
+    resumePillarSlug,
+    pillarStats,
+    router,
+    sessionId,
+    store,
+    assessmentData,
+    questionsByPillarId,
+    householdProfile,
+  ]);
+
+  const completedCount = pillarStats.filter((p) => p.status === "completed").length;
+  const allComplete = completedCount === includedPillars.length;
+
+  if (!ready || questionsLoading || (shouldAutoResume && !didAutoResume.current)) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -173,10 +237,8 @@ export function FacilitatedAssessmentHub({
             onClick={() => {
               if (stat.status === "completed") {
                 goToPillar(stat.pillar.slug, 0);
-              } else if (stat.status === "in-progress") {
-                goToPillar(stat.pillar.slug, store.currentQuestionIndex ?? 0);
               } else {
-                goToPillar(stat.pillar.slug, 0);
+                goToPillar(stat.pillar.slug);
               }
             }}
           />

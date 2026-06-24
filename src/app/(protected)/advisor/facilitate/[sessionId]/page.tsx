@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { facilitatedSessionStepPath } from "@/lib/facilitated/types";
+import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
 import { getFacilitatedSessionForAdvisor } from "@/lib/facilitated/session-access";
 
 export default async function FacilitatedSessionIndexPage({
@@ -16,5 +17,9 @@ export default async function FacilitatedSessionIndexPage({
   const facilitated = await getFacilitatedSessionForAdvisor(sessionId, session.user.id);
   if (!facilitated) redirect("/advisor/facilitate");
 
-  redirect(facilitatedSessionStepPath(sessionId, facilitated.status));
+  redirect(
+    facilitated.status === "ASSESSMENT"
+      ? facilitatedAssessmentHubPath(sessionId, { resume: true })
+      : facilitatedSessionStepPath(sessionId, facilitated.status),
+  );
 }

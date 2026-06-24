@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FacilitatedAssessmentHub } from "@/components/advisor/facilitate/FacilitatedAssessmentHub";
@@ -32,11 +33,19 @@ export default async function FacilitatedAssessmentHubPage({
   );
 
   return (
-    <FacilitatedAssessmentHub
-      sessionId={sessionId}
-      assessmentId={facilitated.assessmentId}
-      includedPillars={includedPillars}
-      householdProfile={householdProfile}
-    />
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+          Loading assessment…
+        </div>
+      }
+    >
+      <FacilitatedAssessmentHub
+        sessionId={sessionId}
+        assessmentId={facilitated.assessmentId}
+        includedPillars={includedPillars}
+        householdProfile={householdProfile}
+      />
+    </Suspense>
   );
 }

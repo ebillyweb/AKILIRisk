@@ -24,6 +24,7 @@ import {
 } from "@/lib/actions/facilitated-session-actions";
 import type { FacilitatedLauncherData } from "@/lib/actions/facilitated-session-actions";
 import { facilitatedSessionStepPath } from "@/lib/facilitated/types";
+import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
 
 interface StartSessionFormProps {
   data: FacilitatedLauncherData;
@@ -182,7 +183,11 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
             {data.openSessions.map((session) => (
               <Link
                 key={session.id}
-                href={facilitatedSessionStepPath(session.id, session.status)}
+                href={
+                  session.status === "ASSESSMENT"
+                    ? facilitatedAssessmentHubPath(session.id, { resume: true })
+                    : facilitatedSessionStepPath(session.id, session.status)
+                }
                 className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-muted/40"
               >
                 <div className="min-w-0">

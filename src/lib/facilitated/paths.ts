@@ -10,8 +10,12 @@ export function facilitatedPillarsPath(sessionId: string): string {
   return `${facilitatedSessionRoot(sessionId)}/pillars`;
 }
 
-export function facilitatedAssessmentHubPath(sessionId: string): string {
-  return `${facilitatedSessionRoot(sessionId)}/assessment`;
+export function facilitatedAssessmentHubPath(
+  sessionId: string,
+  options?: { resume?: boolean },
+): string {
+  const base = `${facilitatedSessionRoot(sessionId)}/assessment`;
+  return options?.resume ? `${base}?resume=1` : base;
 }
 
 export function facilitatedAssessmentQuestionPath(

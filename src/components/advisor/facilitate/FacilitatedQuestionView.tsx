@@ -19,6 +19,9 @@ import {
   pillarDefinitionFor,
 } from "@/lib/assessment/pillar-registry";
 import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
+import {
+  resolveResumeQuestionIndexForPillar,
+} from "@/lib/assessment/resolve-resume-index";
 import { useAssessmentStore } from "@/lib/assessment/store";
 import { useAutoSave } from "@/lib/hooks/useAutoSave";
 import { useAssessmentNavigation } from "@/lib/hooks/useAssessmentNavigation";
@@ -144,9 +147,35 @@ export function FacilitatedQuestionView({
   useEffect(() => {
     if (questionsLoading || visibleQuestions.length === 0) return;
     if (questionIndex < 0 || questionIndex >= visibleQuestions.length) {
-      router.push(facilitatedAssessmentQuestionPath(sessionId, pillarSlug, 0));
+      const resumeIndex = resolveResumeQuestionIndexForPillar(
+        pillarSlug,
+        pillarQuestions,
+        householdProfile,
+        {
+          answers,
+          skippedQuestions,
+          currentPillar: useAssessmentStore.getState().currentPillar,
+          currentQuestionIndex: useAssessmentStore.getState().currentQuestionIndex,
+        },
+        assessmentData,
+      );
+      router.replace(
+        facilitatedAssessmentQuestionPath(sessionId, pillarSlug, resumeIndex),
+      );
     }
-  }, [questionIndex, visibleQuestions.length, pillarSlug, router, questionsLoading, sessionId]);
+  }, [
+    questionIndex,
+    visibleQuestions.length,
+    pillarSlug,
+    router,
+    questionsLoading,
+    sessionId,
+    pillarQuestions,
+    householdProfile,
+    answers,
+    skippedQuestions,
+    assessmentData,
+  ]);
 
   useEffect(() => {
     if (!branchingChange || branchingChange.newlyVisible.length === 0) return;

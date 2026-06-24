@@ -7,9 +7,7 @@ import {
 } from "@/lib/client/assessment-scope";
 import { syncInProgressAssessmentScope } from "@/lib/assessment/sync-client-assessment-scope";
 import { syncAssessmentScopeFromApproval } from "@/lib/assessment/sync-scope-from-approval";
-import { resolveIncludedPillars } from "@/lib/assessment/included-pillars";
-import { facilitatedAssessmentQuestionPath } from "@/lib/facilitated/paths";
-import { resolveSnapshotIdForClient } from "@/lib/methodology/platform-pillars";
+import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
 import { getActivePillars, loadSnapshotForInterview } from "@/lib/methodology/snapshot";
 
 /** Create or reuse a scoped in-progress assessment for facilitated entry (not at approve time). */
@@ -102,6 +100,5 @@ export async function tryBootstrapFacilitatedFromExistingApproval(
     data: { status: "ASSESSMENT", assessmentId },
   });
 
-  const [firstPillar] = resolveIncludedPillars(scope.includedPillars);
-  return facilitatedAssessmentQuestionPath(facilitatedSessionId, firstPillar, 0);
+  return facilitatedAssessmentHubPath(facilitatedSessionId, { resume: true });
 }

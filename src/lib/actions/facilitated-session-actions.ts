@@ -23,6 +23,7 @@ import {
   createFacilitatedClientSchema,
   startFacilitatedSessionSchema,
 } from "@/lib/schemas/facilitated";
+import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
 import {
   facilitatedSessionStepPath,
   type FacilitatedSessionSummary,
@@ -151,12 +152,18 @@ export async function startFacilitatedSessionForClient(data: unknown) {
       parsed.data.clientId,
     );
 
+    const stepPath = facilitatedSessionStepPath(session.id, session.status);
+    const redirectTo =
+      bootstrapPath ??
+      (session.status === "ASSESSMENT"
+        ? facilitatedAssessmentHubPath(session.id, { resume: true })
+        : stepPath);
+
     revalidatePath("/advisor/facilitate");
     return {
       success: true as const,
       sessionId: session.id,
-      redirectTo:
-        bootstrapPath ?? facilitatedSessionStepPath(session.id, session.status),
+      redirectTo,
     };
   } catch (error) {
     return {
