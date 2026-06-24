@@ -4,6 +4,7 @@ import { config } from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "prisma/config";
+import { resolveMigrationDatabaseUrl } from "./src/lib/db/migration-database-url";
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(repoRoot, ".env.local") });
@@ -14,6 +15,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: resolveMigrationDatabaseUrl(),
   },
 });
