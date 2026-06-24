@@ -9,6 +9,7 @@ import { issuePasswordResetToken } from "@/lib/auth/password-reset";
 import { recordTestPasswordResetToken } from "@/lib/auth/password-reset-test-store";
 import { isTestAuthEnabled } from "@/lib/auth/test-auth-enabled";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
+import { scheduleAfterResponse } from "@/lib/server/schedule-after-response";
 import crypto from "crypto";
 
 /** Short, non-reversible identifier for an email — used in the
@@ -138,16 +139,10 @@ export async function POST(req: NextRequest) {
     // Email enumeration mitigation has two pieces:
     //   1. Same response body for existing/non-existing emails (below).
     //   2. Move the slow path (token persistence + email send) off the
-    //      response timeline. We `void` the helper instead of awaiting so
-    //      the response returns in DB-lookup time regardless of whether we
-    //      have work to do. Previously the known-email branch waited on a
-    //      Resend round-trip (~100–500ms) while the unknown branch
-    //      returned in ~5ms — a measurable side-channel.
+    //      response timeline via `after()` so Vercel keeps the function
+    //      alive until the work finishes (plain `void` is often frozen).
     if (eligibleForPasswordReset) {
-      // Round-11 commit 2.4a: send to the form-input plaintext rather
-      // than user.email — the column may be null for users created
-      // post-2.4a.
-      void issueResetEmail(email, baseUrl);
+      scheduleAfterResponse(() => issueResetEmail(email, baseUrl));
     }
 
     // Generic success response (same for existing and non-existing emails)

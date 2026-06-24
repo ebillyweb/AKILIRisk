@@ -10,6 +10,7 @@ import {
   invalidatePriorMagicLinkTokens,
 } from "@/lib/auth/magic-link";
 import { findUserByEmail } from "@/lib/auth/user-email";
+import { scheduleAfterResponse } from "@/lib/server/schedule-after-response";
 
 /**
  * Round-11 commit 2 (BRD §5.1.AUTH): magic-link issuance endpoint.
@@ -142,10 +143,8 @@ export async function POST(req: NextRequest) {
     // magic links to advisor/admin accounts — they must use /signin.
     const isClientUser = user?.role === "USER";
     if (isClientUser || (!user && inviteCode)) {
-      void issueMagicLinkInBackground(
-        email,
-        baseUrl,
-        inviteCode?.id ?? null
+      scheduleAfterResponse(() =>
+        issueMagicLinkInBackground(email, baseUrl, inviteCode?.id ?? null)
       );
     }
 

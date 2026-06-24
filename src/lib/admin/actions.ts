@@ -92,6 +92,20 @@ export async function updateAdvisorByAdmin(input: UpdateAdvisorInput) {
       };
     }
 
+    const normalizedNewEmail = parsed.data.email;
+    const normalizedExistingEmail = existing.email.trim().toLowerCase();
+    if (normalizedNewEmail !== normalizedExistingEmail) {
+      const conflict = await findUserByEmail(normalizedNewEmail, {
+        select: { id: true },
+      });
+      if (conflict && conflict.id !== parsed.data.userId) {
+        return {
+          success: false,
+          error: "An account with this email already exists",
+        };
+      }
+    }
+
     // Round-11 commit 2.3 (BRD §5.1.AUTH / phase A): dual-write —
     // userEmailWriteData populates both `email` and `emailCiphertext`.
     await prisma.user.update({

@@ -8,6 +8,7 @@ import {
 } from "@/lib/email/platform-email-layout";
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { logResendResult } from "@/lib/email/log-resend-result";
 
 function appOriginFromUrl(url: string): string | null {
   try {
@@ -121,7 +122,7 @@ export async function sendIntakeApprovedMagicLinkEmail(
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send(
+    const result = await resend.emails.send(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: email,
@@ -133,6 +134,7 @@ export async function sendIntakeApprovedMagicLinkEmail(
         ),
       })
     );
+    logResendResult("intake-approved-magic-link", result);
   } catch (error) {
     console.error("Failed to send intake-approved magic-link email:", error);
   }
@@ -150,7 +152,7 @@ export async function sendMagicLinkEmail(
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send(
+    const result = await resend.emails.send(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: email,
@@ -158,6 +160,7 @@ export async function sendMagicLinkEmail(
         html: renderMagicLinkEmailHtml(magicLinkUrl),
       })
     );
+    logResendResult("magic-link", result);
   } catch (error) {
     // Same error semantics as sendPasswordResetEmail: log + swallow to
     // prevent enumeration via response timing or error-shape.
@@ -179,7 +182,7 @@ export async function sendPasswordResetEmail(
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send(
+    const result = await resend.emails.send(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: email,
@@ -187,6 +190,7 @@ export async function sendPasswordResetEmail(
         html: renderPasswordResetEmailHtml(resetUrl),
       })
     );
+    logResendResult("password-reset", result);
   } catch (error) {
     // Log error but don't throw - prevents email enumeration attacks
     // In production, use proper logging service (e.g., Sentry)
@@ -263,7 +267,7 @@ export async function sendAdvisorIntakeNotification(
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send(
+    const result = await resend.emails.send(
       withPlatformLogoAttachment({
         from: resolveFromEmail(),
         to: advisorEmail,
@@ -276,6 +280,7 @@ export async function sendAdvisorIntakeNotification(
         ),
       })
     );
+    logResendResult("advisor-intake-notification", result);
   } catch (error) {
     // Log error but don't throw - prevents blocking the notification flow
     // In production, use proper logging service (e.g., Sentry)
