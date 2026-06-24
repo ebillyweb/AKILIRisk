@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useLayoutEffect, ReactNode } from 'react';
 import { clientPortalBrandingDisplayTitle } from '@/lib/client/client-portal-branding';
 import { AdvisorBrandingData } from '@/lib/validation/branding';
 import { applyAdvisorTheme, removeAdvisorTheme, validateThemeAccessibility } from '@/lib/theming/theme-utils';
@@ -28,26 +28,20 @@ export function BrandingProvider({
   children,
   autoApply = true,
 }: BrandingProviderProps) {
-  // Apply theme on mount if autoApply is enabled and branding is available
-  useEffect(() => {
-    if (autoApply && branding) {
-      const validation = validateThemeAccessibility(branding);
-      // Always apply so shadcn tokens (--primary, etc.) pick up advisor colors; validation is advisory only
-      applyAdvisorTheme(branding);
-      if (!validation.isValid) {
-        console.warn('Advisor theme accessibility:', validation.errors);
-      }
-      if (validation.warnings.length > 0) {
-        console.warn('Advisor theme warnings:', validation.warnings);
-      }
-    }
+  // Apply before paint so route changes between tenant layouts do not flash default tokens.
+  // Do not removeAdvisorTheme on unmount — adjacent layouts (landing vs auth) remount this
+  // provider in the same navigation; clearing :root vars between them caused light/dark flicker.
+  useLayoutEffect(() => {
+    if (!autoApply || !branding) return;
 
-    // Cleanup theme on unmount
-    return () => {
-      if (autoApply) {
-        removeAdvisorTheme();
-      }
-    };
+    const validation = validateThemeAccessibility(branding);
+    applyAdvisorTheme(branding);
+    if (!validation.isValid) {
+      console.warn('Advisor theme accessibility:', validation.errors);
+    }
+    if (validation.warnings.length > 0) {
+      console.warn('Advisor theme warnings:', validation.warnings);
+    }
   }, [branding, autoApply, subdomain]);
 
   const contextValue: BrandingContextValue = {

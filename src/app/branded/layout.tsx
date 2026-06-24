@@ -5,8 +5,6 @@ import { getAdvisorBrandingBySubdomain } from '@/lib/advisor/subdomain';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
 import { BrandingUnavailable } from '@/components/branding/BrandingUnavailable';
 import { ClientPortalRootTheme } from '@/components/branding/ClientPortalRootTheme';
-import { Toaster } from 'react-hot-toast';
-import '@/app/globals.css';
 import { brandedPortalLogoImgSrc } from '@/lib/branding/branded-portal-logo';
 import { withClientPortalLogoSrc } from '@/lib/client/resolve-client-portal-branding';
 
@@ -27,11 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
   }
   const branding = await getAdvisorBrandingBySubdomain(subdomain);
   const brandName = branding?.brandName?.trim() || DEFAULT_BRANDED_TITLE;
+  const logoSrc = branding ? brandedPortalLogoImgSrc(branding) : null;
   return {
     title: { absolute: brandName },
     description:
       branding?.tagline?.trim() ||
       'Comprehensive risk assessment and family governance analysis',
+    ...(logoSrc ? { icons: { icon: [{ url: logoSrc }] } } : {}),
   };
 }
 
@@ -45,22 +45,14 @@ export default async function BrandedLayout({
   const subdomain = headersList.get('x-subdomain');
   const brandedMode = headersList.get('x-branded-mode');
 
-  // If not in branded mode, redirect to main app
   if (!brandedMode || !advisorId || !subdomain) {
     redirect('/');
   }
 
-  // Fetch advisor branding data
   const branding = await getAdvisorBrandingBySubdomain(subdomain);
 
   if (!branding) {
-    return (
-      <html lang="en">
-        <body className="min-h-screen bg-background font-sans antialiased">
-          <BrandingUnavailable audience="client" />
-        </body>
-      </html>
-    );
+    return <BrandingUnavailable audience="client" />;
   }
 
   const logoSrc = brandedPortalLogoImgSrc(branding);
@@ -74,20 +66,9 @@ export default async function BrandedLayout({
   );
 
   return (
-    <html lang="en">
-      <head>
-        {logoSrc && <link rel="icon" href={logoSrc} />}
-      </head>
-      <body
-        className="min-h-screen bg-background font-sans antialiased"
-        data-branded-mode="true"
-      >
-        <BrandingProvider branding={portalBranding} subdomain={subdomain}>
-          <ClientPortalRootTheme branding={portalBranding} />
-          {children}
-          <Toaster position="top-right" />
-        </BrandingProvider>
-      </body>
-    </html>
+    <BrandingProvider branding={portalBranding} subdomain={subdomain}>
+      <ClientPortalRootTheme branding={portalBranding} />
+      {children}
+    </BrandingProvider>
   );
 }

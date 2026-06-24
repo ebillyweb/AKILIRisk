@@ -38,12 +38,13 @@ export function BrandedPortalShell({
 
   return (
     <div
-      className="min-h-screen py-6 sm:py-8"
+      className={cn("min-h-screen py-6 sm:py-8", previewHex && "branded-portal-shell")}
       style={
         previewHex
-          ? {
-              backgroundColor: previewHex.secondary,
-            }
+          ? ({
+              "--branded-portal-shell-bg": previewHex.secondary,
+              "--client-brand-primary": previewHex.primary,
+            } as React.CSSProperties)
           : undefined
       }
     >

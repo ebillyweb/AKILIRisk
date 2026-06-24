@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist_Mono, Manrope } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { getThemeInlineScript } from "@/lib/theme/theme-inline-script";
@@ -39,11 +40,14 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const isBrandedTenant = headersList.get("x-branded-mode") === "true";
+
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
@@ -62,6 +66,7 @@ export default function RootLayout({
       </head>
       <body
         className={`${manrope.variable} ${geistMono.variable} ${cormorant.variable} bg-background text-foreground antialiased`}
+        data-branded-mode={isBrandedTenant ? "true" : undefined}
         suppressHydrationWarning
       >
         <Providers>
