@@ -5,89 +5,108 @@ import {
   AKILIRISK_THEME_STORAGE_KEY,
   type AkiliriskStoredTheme,
 } from "@/lib/theme/constants";
+import {
+  applyThemeClass,
+  readStoredThemePreference,
+  resolveThemePreference,
+} from "@/lib/theme/resolve-theme";
 
 export type ThemeContextValue = {
-  /** Resolved appearance after script + user choice. */
+  /** Appearance currently applied to the document (may be locked on public tenant routes). */
   theme: AkiliriskStoredTheme;
   setTheme: (theme: AkiliriskStoredTheme) => void;
+  lockTheme: (theme: AkiliriskStoredTheme) => void;
+  unlockTheme: () => void;
 };
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
-function readResolvedThemeFromDocument(): AkiliriskStoredTheme {
-  if (typeof document === "undefined") return "light";
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
-function applyThemeClass(theme: AkiliriskStoredTheme) {
-  const root = document.documentElement;
-  if (theme === "dark") {
-    root.classList.add("dark");
-  } else {
-    root.classList.remove("dark");
-  }
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = React.useState<AkiliriskStoredTheme>("light");
+  const [preferredTheme, setPreferredTheme] =
+    React.useState<AkiliriskStoredTheme>("light");
+  const [themeLock, setThemeLock] = React.useState<AkiliriskStoredTheme | null>(
+    null,
+  );
+  const displayedTheme = themeLock ?? preferredTheme;
 
   React.useLayoutEffect(() => {
-    setThemeState(readResolvedThemeFromDocument());
+    setPreferredTheme(resolveThemePreference());
   }, []);
 
-  const setTheme = React.useCallback((next: AkiliriskStoredTheme) => {
+  React.useLayoutEffect(() => {
+    applyThemeClass(displayedTheme);
+  }, [displayedTheme]);
+
+  const setTheme = React.useCallback(
+    (next: AkiliriskStoredTheme) => {
+      try {
+        localStorage.setItem(AKILIRISK_THEME_STORAGE_KEY, next);
+      } catch {
+        /* ignore quota / private mode */
+      }
+      setPreferredTheme(next);
+      applyThemeClass(themeLock ?? next);
+    },
+    [themeLock],
+  );
+
+  const lockTheme = React.useCallback((locked: AkiliriskStoredTheme) => {
+    setThemeLock(locked);
+    applyThemeClass(locked);
+  }, []);
+
+  const unlockTheme = React.useCallback(() => {
+    setThemeLock(null);
+    const next = resolveThemePreference();
+    setPreferredTheme(next);
     applyThemeClass(next);
-    try {
-      localStorage.setItem(AKILIRISK_THEME_STORAGE_KEY, next);
-    } catch {
-      /* ignore quota / private mode */
-    }
-    setThemeState(next);
   }, []);
 
   React.useEffect(() => {
-    let stored: string | null = null;
-    try {
-      stored = localStorage.getItem(AKILIRISK_THEME_STORAGE_KEY);
-    } catch {
-      return;
-    }
-    if (stored === "light" || stored === "dark") {
-      return;
-    }
+    if (themeLock) return;
+
+    const stored = readStoredThemePreference();
+    if (stored) return;
 
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
       const next: AkiliriskStoredTheme = mql.matches ? "dark" : "light";
+      setPreferredTheme(next);
       applyThemeClass(next);
-      setThemeState(next);
     };
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
-  }, []);
+  }, [themeLock]);
 
   React.useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key !== AKILIRISK_THEME_STORAGE_KEY || e.storageArea !== localStorage) {
         return;
       }
+      if (themeLock) return;
+
       if (e.newValue === "dark" || e.newValue === "light") {
+        setPreferredTheme(e.newValue);
         applyThemeClass(e.newValue);
-        setThemeState(e.newValue);
         return;
       }
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      applyThemeClass(prefersDark ? "dark" : "light");
-      setThemeState(prefersDark ? "dark" : "light");
+      const next = resolveThemePreference();
+      setPreferredTheme(next);
+      applyThemeClass(next);
     };
 
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [themeLock]);
 
   const value = React.useMemo(
-    () => ({ theme, setTheme }),
-    [theme, setTheme]
+    () => ({
+      theme: displayedTheme,
+      setTheme,
+      lockTheme,
+      unlockTheme,
+    }),
+    [displayedTheme, setTheme, lockTheme, unlockTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

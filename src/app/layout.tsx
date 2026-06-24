@@ -47,9 +47,15 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const isBrandedTenant = headersList.get("x-branded-mode") === "true";
+  const forceTenantLight = headersList.get("x-tenant-force-light") === "true";
 
   return (
-    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      data-tenant-force-light={forceTenantLight ? "true" : undefined}
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{

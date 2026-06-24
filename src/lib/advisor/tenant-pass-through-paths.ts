@@ -1,7 +1,7 @@
 import { WORKSPACE_PATH_PREFIXES } from "@/lib/auth/mfa-gate";
 
 /** Public/auth/marketing routes on tenant hosts that stay on the main app tree. */
-const TENANT_PUBLIC_PREFIXES = [
+export const TENANT_PUBLIC_PREFIXES = [
   "/signup",
   "/signin",
   "/consent",

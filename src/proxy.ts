@@ -7,6 +7,7 @@ import {
   isPlatformHostname,
 } from "@/lib/advisor/platform-subdomain";
 import { isTenantPassThroughPath } from "@/lib/advisor/tenant-pass-through-paths";
+import { isTenantPublicSurfacePath } from "@/lib/advisor/tenant-public-surface";
 import {
   isMfaChallengePending,
   isPageMfaExempt,
@@ -103,6 +104,9 @@ export default async function proxy(req: NextRequest) {
           requestHeaders.set('x-advisor-id', advisorSubdomain.advisorId);
           requestHeaders.set('x-subdomain', subdomain);
           requestHeaders.set('x-branded-mode', 'true');
+          if (isTenantPublicSurfacePath(pathname)) {
+            requestHeaders.set('x-tenant-force-light', 'true');
+          }
 
           if (isTenantPassThroughPath(pathname)) {
             return NextResponse.next({

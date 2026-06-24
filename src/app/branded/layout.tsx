@@ -7,6 +7,7 @@ import { BrandingUnavailable } from '@/components/branding/BrandingUnavailable';
 import { ClientPortalRootTheme } from '@/components/branding/ClientPortalRootTheme';
 import { brandedPortalLogoImgSrc } from '@/lib/branding/branded-portal-logo';
 import { withClientPortalLogoSrc } from '@/lib/client/resolve-client-portal-branding';
+import { TenantPublicThemeLock } from '@/components/theme/TenantPublicThemeLock';
 
 const DEFAULT_BRANDED_TITLE = 'Risk Assessment Portal';
 
@@ -67,6 +68,7 @@ export default async function BrandedLayout({
 
   return (
     <BrandingProvider branding={portalBranding} subdomain={subdomain}>
+      <TenantPublicThemeLock />
       <ClientPortalRootTheme branding={portalBranding} />
       {children}
     </BrandingProvider>
