@@ -9,6 +9,8 @@ import { syncInProgressAssessmentScope } from "@/lib/assessment/sync-client-asse
 import { syncAssessmentScopeFromApproval } from "@/lib/assessment/sync-scope-from-approval";
 import { resolveIncludedPillars } from "@/lib/assessment/included-pillars";
 import { facilitatedAssessmentQuestionPath } from "@/lib/facilitated/paths";
+import { resolveSnapshotIdForClient } from "@/lib/methodology/platform-pillars";
+import { getActivePillars, loadSnapshotForInterview } from "@/lib/methodology/snapshot";
 
 /** Create or reuse a scoped in-progress assessment for facilitated entry (not at approve time). */
 export async function ensureScopedAssessmentForClient(
@@ -35,13 +37,30 @@ export async function ensureScopedAssessmentForClient(
     select: { id: true, includedPillars: true },
   });
 
+  const snapshotId = await resolveSnapshotIdForClient(clientUserId);
+  let includedPillars = scope.includedPillars;
+  if (snapshotId) {
+    const interview = await prisma.intakeInterview.findFirst({
+      where: { userId: clientUserId },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true },
+    });
+    if (interview) {
+      const snap = await loadSnapshotForInterview(interview.id);
+      if (snap) {
+        includedPillars = getActivePillars(snap);
+      }
+    }
+  }
+
   if (existing) {
-    if (existing.includedPillars.length === 0 && scope.includedPillars.length > 0) {
+    if (existing.includedPillars.length === 0 && includedPillars.length > 0) {
       await prisma.assessment.update({
         where: { id: existing.id },
         data: {
           approvalId: scope.approvalId,
-          includedPillars: scope.includedPillars,
+          includedPillars,
+          snapshotId: snapshotId ?? undefined,
         },
       });
     }
@@ -54,7 +73,8 @@ export async function ensureScopedAssessmentForClient(
       version: 1,
       status: "IN_PROGRESS",
       approvalId: scope.approvalId,
-      includedPillars: scope.includedPillars,
+      includedPillars,
+      snapshotId,
     },
     select: { id: true },
   });

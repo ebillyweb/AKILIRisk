@@ -18,6 +18,7 @@ import {
   PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS,
 } from "./pillar-outcome-expectations";
 import type { Question, RiskLevel, ScoreResult } from "./types";
+import type { SnapshotPillarNarrative } from "@/lib/methodology/types";
 
 /** Accepts scoring-engine or Prisma `RiskLevel` enum strings. */
 export function normalizeScoreRiskLevel(riskLevel: RiskLevel | string): RiskLevel {
@@ -63,10 +64,29 @@ export function pillarNarrativeRecommendations(
   pillarId: string,
   score: ScoreResult,
   answers: Record<string, unknown>,
-  questions: Question[]
+  questions: Question[],
+  snapshotNarrative?: SnapshotPillarNarrative,
 ): string[] {
   const normalized = normalizePillarSlug(pillarId);
   const riskLevel = normalizeScoreRiskLevel(score.riskLevel);
+
+  if (snapshotNarrative) {
+    if (
+      riskLevel === "critical" &&
+      allVisibleAnswersMatchBand(answers, questions, "lowest")
+    ) {
+      if (snapshotNarrative.allNegative.length) return [...snapshotNarrative.allNegative];
+    }
+    if (
+      riskLevel === "low" &&
+      allVisibleAnswersMatchBand(answers, questions, "highest")
+    ) {
+      if (snapshotNarrative.allYes.length) return [...snapshotNarrative.allYes];
+    }
+    const tierNarratives = snapshotNarrative.midBand[riskLevel];
+    if (tierNarratives?.length) return [...tierNarratives];
+    return [];
+  }
 
   if (
     riskLevel === "critical" &&
@@ -101,7 +121,8 @@ export function resolvePillarNarratives(
   score: number,
   riskLevel: RiskLevel | string,
   answers: Record<string, unknown>,
-  questions: Question[]
+  questions: Question[],
+  snapshotNarrative?: SnapshotPillarNarrative,
 ): string[] {
   return pillarNarrativeRecommendations(
     pillarId,
@@ -112,7 +133,8 @@ export function resolvePillarNarratives(
       missingControls: [],
     },
     answers,
-    questions
+    questions,
+    snapshotNarrative,
   );
 }
 

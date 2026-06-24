@@ -11,7 +11,7 @@ import {
 } from "@/lib/assessment/included-pillars";
 
 describe("resolveIncludedPillars", () => {
-  it("returns all six when empty or null", () => {
+  it("returns all platform pillars when empty or null", () => {
     expect(resolveIncludedPillars([])).toEqual([...DEFAULT_INCLUDED_PILLARS]);
     expect(resolveIncludedPillars(null)).toEqual([...DEFAULT_INCLUDED_PILLARS]);
     expect(resolveIncludedPillars(undefined)).toEqual([...DEFAULT_INCLUDED_PILLARS]);
@@ -98,7 +98,7 @@ describe("isPillarInAssessmentScope", () => {
 });
 
 describe("scope display helpers", () => {
-  it("detects narrow scope when fewer than six pillars", () => {
+  it("detects narrow scope when fewer than all platform pillars", () => {
     expect(isNarrowAssessmentScope(["governance", "cyber-digital"])).toBe(true);
     expect(isNarrowAssessmentScope([...DEFAULT_INCLUDED_PILLARS])).toBe(false);
   });
@@ -108,7 +108,7 @@ describe("scope display helpers", () => {
       "Governance, Cyber security",
     );
     expect(formatNarrowScopePreviewCopy(["governance", "cyber-digital"])).toMatch(
-      /2 of 6 household risk domains/,
+      /2 of 10 household risk domains/,
     );
   });
 });

@@ -1,8 +1,12 @@
+import { PLATFORM_PILLAR_SLUGS } from "@/lib/methodology/pillar-catalog-starter";
 import { RISK_AREAS } from "@/lib/advisor/types";
 import type { Pillar } from "@/lib/assessment/types";
 
-/** Canonical six-pillar ids (BRD §4.1). */
-export const ASSESSMENT_PILLAR_IDS = RISK_AREAS.map((a) => a.id);
+/** Canonical platform pillar slugs. */
+export const ASSESSMENT_PILLAR_IDS =
+  PLATFORM_PILLAR_SLUGS.length > 0
+    ? PLATFORM_PILLAR_SLUGS
+    : RISK_AREAS.map((a) => a.id);
 
 /**
  * Pass-through for pillar slugs. Pre-launch we have no legacy data, so no

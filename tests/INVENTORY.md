@@ -208,11 +208,19 @@ Re-run locally: `PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers npm run test:e2
 | `tests/smoke/magic-link-test-helper.spec.ts` | issue → verify URL → dashboard signs the client in | Infra | Implemented |
 | `tests/smoke/magic-link-test-helper.spec.ts` | malformed email returns 400, not 500 | Infra | Implemented |
 | `tests/smoke/signin-after-phase-b.spec.ts` | magic-link issue → verify → dashboard, session.user.email is the original plaintext | Infra | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | approved client sees all six pillar cards | US-12 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | client can open governance pillar and reach the questionnaire | US-12 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | client can open governance and cyber pillars from the hub | US-12 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | client without approved intake cannot open /assessment | US-12 | Implemented |
-| `tests/smoke/six-pillar-assessment.spec.ts` | waived invitation redemption shows six pillar cards | US-12 | Implemented |
+| `tests/smoke/pillar-assessment.spec.ts` | approved client sees pillar cards for included scope | US-12 | Implemented |
+| `tests/smoke/pillar-assessment.spec.ts` | client can open governance pillar and reach the questionnaire | US-12 | Implemented |
+| `tests/smoke/pillar-assessment.spec.ts` | client can open governance and cyber pillars from the hub | US-12 | Implemented |
+| `tests/smoke/pillar-assessment.spec.ts` | client without approved intake cannot open /assessment | US-12 | Implemented |
+| `tests/smoke/pillar-assessment.spec.ts` | waived invitation redemption shows pillar cards | US-12 | Implemented |
+| `src/lib/methodology/snapshot.test.ts` | snapshot hash determinism and pillar helpers | Methodology v3 | Implemented |
+| `src/lib/methodology/snapshot-integrity.test.ts` | intake / assessment / narrative blob isolation | Methodology v3 | Implemented |
+| `tests/smoke/methodology-snapshot-integrity.spec.ts` | mid-intake script + mid-assessment narratives stay pinned after advisor edits | Methodology v3 | Implemented |
+| `tests/smoke/advisor-custom-questions.spec.ts` | custom intake in snapshot; platform hide/delete rules | Methodology v3 | Implemented |
+| `src/lib/methodology/advisor-question-policy.test.ts` | platform vs custom delete policy | Methodology v3 | Implemented |
+| `src/lib/actions/methodology-question-actions.test.ts` | delete guards on server actions | Methodology v3 | Implemented |
+| `src/lib/methodology/advisor-custom-questions.test.ts` | custom rows in snapshot blob runtime | Methodology v3 | Implemented |
+| `src/lib/methodology/advisor-custom-recommendations.test.ts` | custom rec rules in snapshot blob runtime | Methodology v3 | Implemented |
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | same event.id delivered twice → second call is deduped (no double-processing) | TBD | Implemented |
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | two parallel deliveries of same event.id → exactly one is processed (atomic claim) | TBD | Implemented |
 | `tests/smoke/stripe-webhook-endpoint.spec.ts` | bad signature → 400 and no StripeWebhookEvent row created | TBD | Implemented |
@@ -258,11 +266,11 @@ Ordered roughly by BRD section. Fill in TC IDs and split into specs as work proc
 - Submitted intake moves to `IN_REVIEW` state and surfaces on advisor's review queue
 - ~~Advisor approval unlocks assessment (`intakeGate.assessmentUnlocked`)~~ *(covered by `epic-5.2-advisor-intake-approval.spec.ts`)*
 - Advisor rejection surfaces "Update needed" hero state on dashboard *(reject gate covered; dashboard hero copy TBD)*
-- ~~Advisor waiver path (intake skipped, assessment unlocked)~~ *(partial: waived invite hub in `six-pillar-assessment.spec.ts`)*
+- ~~Advisor waiver path (intake skipped, assessment unlocked)~~ *(partial: waived invite hub in `pillar-assessment.spec.ts`)*
 
 ### Risk Assessments (Epic 5.2 — six pillars)
-- ~~Six-pillar hub loads for assessment-unlocked client~~ *(covered by `six-pillar-assessment.spec.ts`)*
-- ~~Governance question bank loads on assessment start~~ *(covered by `six-pillar-assessment.spec.ts`)*
+- ~~Six-pillar hub loads for assessment-unlocked client~~ *(covered by `pillar-assessment.spec.ts`)*
+- ~~Governance question bank loads on assessment start~~ *(covered by `pillar-assessment.spec.ts`)*
 - Score all six pillars → assessment `COMPLETED` (US-15) *(via `/api/test/assessment/prepare` in report smokes)*
 - Client resilience / heat map after multi-pillar score (US-16)
 - ~~Full flow: score → advisor draft report → publish → client PDF download (US-19–20)~~ *(covered by `epic-5.2-report-publish.spec.ts`)*

@@ -11,7 +11,8 @@ import {
   submitIntakeInterview,
   updateInterviewProgress,
 } from "@/lib/data/intake";
-import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
+import { loadIntakeScriptForInterview } from "@/lib/intake/load-intake-script";
+import { writeIntakeSnapshot } from "@/lib/methodology/snapshot";
 import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
 import type { IntakeQuestion } from "@/lib/intake/types";
 import { prisma } from "@/lib/db";
@@ -87,7 +88,7 @@ export async function facilitatedUpdateIntakeProgress(
   questionIndex: number,
 ) {
   try {
-    await getFacilitatorActor();
+    const actor = await getFacilitatorActor();
     const facilitated = await requireFacilitatedSessionForAdvisor(
       facilitatedSessionId,
     );
@@ -104,8 +105,18 @@ export async function facilitatedUpdateIntakeProgress(
     }
 
     let status = interview.status;
-    if (status === "NOT_STARTED") status = "IN_PROGRESS";
-    const script = await loadIntakeScriptQuestions();
+    if (status === "NOT_STARTED") {
+      status = "IN_PROGRESS";
+      const profile = await getAdvisorProfileOrThrow(actor.userId);
+      const assignment = await prisma.clientAdvisorAssignment.findFirst({
+        where: { clientId: facilitated.clientId, status: "ACTIVE" },
+        orderBy: { assignedAt: "desc" },
+        select: { advisorId: true },
+      });
+      const advisorId = assignment?.advisorId ?? profile.id;
+      await writeIntakeSnapshot(facilitated.interviewId, advisorId);
+    }
+    const script = await loadIntakeScriptForInterview(facilitated.interviewId);
     if (script.length > 0 && questionIndex >= script.length - 1) {
       status = "COMPLETED";
     }
@@ -142,7 +153,7 @@ export async function facilitatedSubmitIntake(facilitatedSessionId: string) {
       return { success: false as const, error: "Interview not found" };
     }
 
-    const script = await loadIntakeScriptQuestions();
+    const script = await loadIntakeScriptForInterview(facilitated.interviewId);
     const expectedIds = script.map((q) => q.id);
     const responses = await getIntakeResponsesByInterview(facilitated.interviewId);
     const byQuestionId = new Map(responses.map((r) => [r.questionId, r]));
@@ -223,11 +234,18 @@ export async function facilitatedGetIntakeScriptQuestions(
 ) {
   try {
     const actor = await getFacilitatorActor();
-    await requireFacilitatedSessionForAdvisor(facilitatedSessionId);
+    const facilitated = await requireFacilitatedSessionForAdvisor(facilitatedSessionId);
+    if (!facilitated.interviewId) {
+      return {
+        success: false as const,
+        error: "Interview not found",
+        questions: [] as IntakeQuestion[],
+      };
+    }
 
     const profile = await getAdvisorProfileOrThrow(actor.userId);
     const [questions, firmName] = await Promise.all([
-      loadIntakeScriptQuestions(),
+      loadIntakeScriptForInterview(facilitated.interviewId),
       Promise.resolve(profile.firmName?.trim() || profile.brandName?.trim() || null),
     ]);
 

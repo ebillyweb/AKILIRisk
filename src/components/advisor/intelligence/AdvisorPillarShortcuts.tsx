@@ -14,13 +14,16 @@ export function AdvisorPillarShortcuts() {
             Assessment pillars
           </CardTitle>
           <CardDescription>
-            The six focus areas used across intake and governance scoring. Open the question bank
-            for any pillar.
+            Household risk domains for intake and scoring. Configure your methodology in{" "}
+            <Link href="/advisor/methodology" className="font-medium text-primary underline-offset-4 hover:underline">
+              Configuration → Methodology
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 px-0 pb-0 sm:grid-cols-2 lg:grid-cols-3">
           {ADVISOR_PILLAR_SHORTCUTS.map(({ id, name, summary, icon: PillarIcon }) => {
-            const href = `/advisor/question-bank/${encodeURIComponent(id)}`;
+            const href = `/advisor/methodology/questions/${encodeURIComponent(id)}`;
             return (
               <Link key={id} href={href} className="group">
                 <div className="h-full rounded-lg border border-border/70 bg-card p-5 transition-colors hover:border-primary/25 hover:bg-muted/40">

@@ -17,9 +17,11 @@ import { prisma } from "@/lib/db";
 import { RELATIONSHIP_LABELS } from "@/lib/schemas/profile";
 import { getAdvisorBrandingForPDF } from "@/lib/pdf/branding-integration";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
-import { getPillarAssessmentConfig } from "@/lib/assessment/pillar-config";
 import { loadAssessmentAnswersForQuestions } from "@/lib/assessment/pillar-answer-loader";
-import { resolvePillarNarratives } from "@/lib/assessment/pillar-outcomes";
+import {
+  resolvePillarConfigForAssessment,
+  resolvePillarNarrativesForAssessment,
+} from "@/lib/methodology/assessment-runtime";
 // Re-exported types intentionally narrow — the snapshot is the storage
 // boundary, not a public API. Consumers use `ReportSnapshot` directly.
 
@@ -222,16 +224,19 @@ export async function buildReportSnapshot(
   });
 
   let pillarNarratives: string[] = [];
-  const pillarConfig = await getPillarAssessmentConfig(pillarScore.pillar);
+  const pillarConfig = await resolvePillarConfigForAssessment(
+    assessmentId,
+    pillarScore.pillar,
+  );
   if (pillarConfig) {
     const questionIds = pillarConfig.questions.map((question) => question.id);
     const answers = await loadAssessmentAnswersForQuestions(assessmentId, questionIds);
-    pillarNarratives = resolvePillarNarratives(
+    pillarNarratives = await resolvePillarNarrativesForAssessment(
+      assessmentId,
       pillarScore.pillar,
       pillarScore.score,
       pillarScore.riskLevel,
       answers,
-      pillarConfig.questions
     );
   }
 

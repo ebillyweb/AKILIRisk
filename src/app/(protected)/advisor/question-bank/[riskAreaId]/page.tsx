@@ -1,100 +1,15 @@
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { RISK_AREAS } from "@/lib/advisor/types";
-import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
-import { loadQuestionBankDashboardRows } from "@/lib/assessment/bank/question-bank-dashboard";
-import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { redirect } from "next/navigation";
+import { legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 
-export default async function AdvisorQuestionBankAreaPage({
+/** Legacy read-only question bank → advisor methodology question editor. */
+export default async function AdvisorQuestionBankRedirectPage({
   params,
 }: {
   params: Promise<{ riskAreaId: string }>;
 }) {
   const { riskAreaId } = await params;
-
-  // F2 / BRD §4.1 — old bookmark URL? 302 to the current ID instead of 404.
   const legacy = legacyRiskAreaRedirect(riskAreaId);
-  if (legacy) {
-    redirect(`/advisor/question-bank/${legacy}`);
-  }
-
-  if (!isRiskAreaId(riskAreaId)) {
-    notFound();
-  }
-
-  const area = RISK_AREAS.find((a) => a.id === riskAreaId)!;
-
-  const questions = await loadQuestionBankDashboardRows(riskAreaId);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/advisor/intelligence">Risk intelligence</Link>
-        </Button>
-      </div>
-
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold tracking-tight">Question bank</h2>
-        <p className="text-sm text-muted-foreground">{area.name}</p>
-        <p className="text-sm text-muted-foreground max-w-2xl">{area.summary}</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            {questions.length} question{questions.length === 1 ? "" : "s"}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Read-only view of assessment questions for this risk area. Contact your platform admin
-            to edit question copy.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 p-6 pt-0">
-          {questions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No questions seeded for this area yet.</p>
-          ) : (
-            <ol className="list-decimal space-y-6 pl-5 marker:text-muted-foreground">
-              {questions.map((q) => (
-                <li key={q.questionId} className="space-y-2 pl-1">
-                  <Badge
-                    variant={q.isVisible ? "success" : "secondary"}
-                    className="mb-1"
-                  >
-                    {q.isVisible ? "Visible to clients" : "Hidden"}
-                  </Badge>
-                  <p className="text-sm font-medium leading-relaxed text-foreground">
-                    {formatQuestionTextForDisplay(q.text)}
-                  </p>
-                  {q.helpText ? (
-                    <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Why this matters
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed text-foreground/90">
-                        {formatQuestionTextForDisplay(q.helpText)}
-                      </p>
-                    </div>
-                  ) : null}
-                  {q.learnMore ? (
-                    <div className="rounded-lg border-2 border-dashed border-brand/35 bg-brand/5 px-3 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-                        Recommended actions
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-                        {formatQuestionTextForDisplay(String(q.learnMore))}
-                      </p>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const slug = normalizePillarSlug(legacy ?? riskAreaId);
+  redirect(`/advisor/methodology/questions/${slug}`);
 }

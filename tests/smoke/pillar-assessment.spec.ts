@@ -1,9 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "node:child_process";
 import { SignInPage } from "../page-objects/SignInPage";
-import {
-  AssessmentHubPage,
-} from "../page-objects/AssessmentHubPage";
+import { AssessmentHubPage } from "../page-objects/AssessmentHubPage";
 import { skipUnlessTestAuth } from "../helpers/test-auth";
 import {
   issueTestInvitation,
@@ -13,17 +11,17 @@ import {
 import { restoreClientConsent } from "../helpers/consent-prepare";
 
 /**
- * US-12 / US-14 smoke — six-pillar assessment hub and pillar entry.
+ * US-12 / US-14 smoke — platform pillar assessment hub and pillar entry.
  *
  * Requires ENABLE_TEST_AUTH=1 for client magic-link sign-in (see SignInPage).
  * Seeded `client@test.com` must have advisor-approved intake on the target env.
  */
-test.describe("Six-pillar assessment hub (US-12)", () => {
+test.describe("Platform pillar assessment hub (US-12)", () => {
   test.beforeEach(async ({ request }) => {
     await skipUnlessTestAuth(request);
   });
 
-  test("approved client sees all six pillar cards", async ({ page }) => {
+  test("approved client sees pillar cards for included scope", async ({ page }) => {
     await new SignInPage(page).signInAs("client");
 
     const hub = new AssessmentHubPage(page);
@@ -88,28 +86,23 @@ test.describe("Assessment access gate", () => {
     await new SignInPage(page).signInAs("clientFresh");
 
     await page.goto("/assessment");
-    // clientFresh has no IntakeInterview row, so the gate redirects to
-    // /intake to start the wizard rather than to
-    // /dashboard?assessment=complete-intake. (The dashboard banner
-    // pattern is reserved for clients who have a submitted-but-pending
-    // intake — clientFresh skips that state.) Updated to match staging.
     await page.waitForURL(/\/intake(\/|$|\?)/, { timeout: 30_000 });
     expect(new URL(page.url()).pathname).toMatch(/^\/intake/);
   });
 });
 
-test.describe("Intake-waived six-pillar hub", () => {
+test.describe("Intake-waived assessment hub", () => {
   test.beforeEach(async ({ request }) => {
     await skipUnlessTestAuth(request);
   });
 
-  test("waived invitation redemption shows six pillar cards", async ({
+  test("waived invitation redemption shows pillar cards", async ({
     page,
     request,
   }) => {
     test.setTimeout(120_000);
 
-    const email = uniqueInvitationEmail("six-pillar-hub");
+    const email = uniqueInvitationEmail("pillar-hub");
     const { url } = await issueTestInvitation(request, {
       clientEmail: email,
       intakeWaived: true,

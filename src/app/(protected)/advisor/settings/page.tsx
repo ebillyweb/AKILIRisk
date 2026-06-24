@@ -75,6 +75,21 @@ export default async function AdvisorSettingsPage() {
       </div>
 
       <div className="space-y-6">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight">Risk methodology</h2>
+              <p className="text-sm text-muted-foreground">
+                Pillars, intake script, assessment questions, narratives, and recommendation
+                rules for your practice. Changes apply to new intakes only.
+              </p>
+            </div>
+            <Button asChild variant="default" size="sm" className="shrink-0">
+              <Link href="/advisor/methodology">Open methodology</Link>
+            </Button>
+          </div>
+        </div>
+
         {/* Branding Section (page title: sr-only "Settings" in advisor layout) */}
         <EnhancedBrandingForm
           profile={{

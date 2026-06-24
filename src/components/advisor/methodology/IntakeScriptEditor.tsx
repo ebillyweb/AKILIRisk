@@ -1,0 +1,127 @@
+"use client";
+
+import { useTransition } from "react";
+import type { AdvisorQuestionSource } from "@prisma/client";
+import {
+  createAdvisorIntakeQuestion,
+  deleteAdvisorIntakeQuestion,
+  updateAdvisorIntakeQuestion,
+} from "@/lib/actions/methodology-actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+
+type IntakeRow = {
+  id: string;
+  sourceKind: AdvisorQuestionSource;
+  displayOrder: number;
+  questionText: string;
+  context: string | null;
+  isVisible: boolean;
+};
+
+export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <div className="space-y-4">
+      {questions.map((q, index) => (
+        <Card key={q.id} className={!q.isVisible ? "opacity-70" : undefined}>
+          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+            <div className="space-y-1">
+              <CardTitle className="text-base">Question {index + 1}</CardTitle>
+              <Badge variant={q.sourceKind === "CUSTOM" ? "secondary" : "outline"}>
+                {q.sourceKind === "CUSTOM" ? "Custom" : "Platform base"}
+              </Badge>
+            </div>
+            {q.sourceKind === "CUSTOM" ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={pending}
+                onClick={() => {
+                  if (!window.confirm("Remove this custom question?")) return;
+                  startTransition(async () => {
+                    await deleteAdvisorIntakeQuestion(q.id);
+                  });
+                }}
+              >
+                Delete
+              </Button>
+            ) : null}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                defaultChecked={q.isVisible}
+                onCheckedChange={(checked) => {
+                  startTransition(async () => {
+                    await updateAdvisorIntakeQuestion(q.id, {
+                      isVisible: checked === true,
+                    });
+                  });
+                }}
+              />
+              <Label>Visible to clients</Label>
+            </div>
+            <form
+              className="space-y-3"
+              action={(formData) => {
+                startTransition(async () => {
+                  await updateAdvisorIntakeQuestion(q.id, {
+                    questionText: formData.get("questionText")?.toString() ?? q.questionText,
+                    context: formData.get("context")?.toString() ?? null,
+                  });
+                });
+              }}
+            >
+              <Textarea name="questionText" defaultValue={q.questionText} rows={3} />
+              <Textarea
+                name="context"
+                defaultValue={q.context ?? ""}
+                placeholder="Context / coaching prompt"
+                rows={2}
+              />
+              <Button type="submit" size="sm" disabled={pending}>
+                Save
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ))}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Add custom intake question</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Custom questions are snapshotted at intake start for your clients only. Platform base
+            questions can be edited or hidden but not removed.
+          </p>
+          <form
+            className="space-y-3"
+            action={(formData) => {
+              startTransition(async () => {
+                await createAdvisorIntakeQuestion({
+                  questionText: formData.get("questionText")?.toString() ?? "",
+                  context: formData.get("context")?.toString() || null,
+                });
+              });
+            }}
+          >
+            <Textarea name="questionText" placeholder="Question text" rows={3} required />
+            <Textarea name="context" placeholder="Context / coaching prompt (optional)" rows={2} />
+            <Button type="submit" size="sm" disabled={pending}>
+              Add question
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

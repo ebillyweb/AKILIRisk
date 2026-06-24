@@ -1,18 +1,25 @@
 import { RISK_AREAS } from "@/lib/advisor/types";
+import { PLATFORM_PILLAR_SLUGS } from "@/lib/methodology/pillar-catalog-starter";
 import {
   ASSESSMENT_PILLAR_IDS,
   isAssessmentPillarId,
   normalizePillarSlug,
 } from "@/lib/assessment/pillar-registry";
 
-/** Full six-pillar scope used for legacy rows and default backfill. */
-export const DEFAULT_INCLUDED_PILLARS: readonly string[] = ASSESSMENT_PILLAR_IDS;
+/** Full platform pillar scope (10 pillars). */
+export const DEFAULT_INCLUDED_PILLARS: readonly string[] =
+  PLATFORM_PILLAR_SLUGS.length > 0 ? PLATFORM_PILLAR_SLUGS : ASSESSMENT_PILLAR_IDS;
 
+export function totalPlatformPillarCount(): number {
+  return DEFAULT_INCLUDED_PILLARS.length;
+}
+
+/** @deprecated Use totalPlatformPillarCount() or snapshot active count. */
 export const TOTAL_ASSESSMENT_PILLAR_COUNT = DEFAULT_INCLUDED_PILLARS.length;
 
 /**
  * Resolve assessment pillar scope. Empty or missing `includedPillars` means all
- * six canonical pillars (back-compat for pre–Epic 5.11 rows and pre-approval creates).
+ * platform pillars (back-compat for pre–Epic 5.11 rows and pre-approval creates).
  */
 export function resolveIncludedPillars(
   includedPillars: string[] | null | undefined,
@@ -64,9 +71,9 @@ export function isPillarInAssessmentScope(
   return resolveIncludedPillars(includedPillars).includes(normalized);
 }
 
-/** True when the resolved scope is fewer than all six canonical pillars. */
+/** True when the resolved scope is fewer than all platform pillars. */
 export function isNarrowAssessmentScope(includedPillars: string[]): boolean {
-  return includedPillars.length < TOTAL_ASSESSMENT_PILLAR_COUNT;
+  return includedPillars.length < totalPlatformPillarCount();
 }
 
 /** Display name for a canonical pillar id. */
@@ -92,5 +99,5 @@ export function formatEnglishList(items: string[]): string {
 export function formatNarrowScopePreviewCopy(includedPillars: string[]): string {
   const count = includedPillars.length;
   const names = formatIncludedPillarNames(includedPillars);
-  return `Based on ${count} of ${TOTAL_ASSESSMENT_PILLAR_COUNT} household risk domains selected by your advisor: ${names}.`;
+  return `Based on ${count} of ${totalPlatformPillarCount()} household risk domains selected by your advisor: ${names}.`;
 }

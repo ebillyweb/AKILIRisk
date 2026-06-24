@@ -72,21 +72,20 @@ vi.mock("@/lib/assessment/scoring", () => ({
 vi.mock("@/lib/assessment/branching", () => ({
   getVisibleQuestions: (...args: unknown[]) => scoringSpies.getVisibleQuestions(...args),
 }));
-vi.mock("@/lib/assessment/family-governance-pillar", () => ({
-  familyGovernancePillar: { id: "family-governance" },
-}));
-vi.mock("@/lib/assessment/bank/load-bank", () => ({
-  loadGovernanceQuestionsMerged: vi.fn().mockResolvedValue([{ id: "q1" }, { id: "q2" }]),
-}));
-vi.mock("@/lib/identity-risk/questions", () => ({
-  identityRiskPillar: { id: "identity-risk" },
-  identityRiskQuestions: [{ id: "iq1" }],
-}));
 vi.mock("@/lib/identity-risk/scoring", () => ({
   calculateIdentityRiskScore: (...args: unknown[]) => scoringSpies.calculateIdentityRiskScore(...args),
 }));
-vi.mock("@/lib/assessment/risk-thresholds", () => ({
-  getActiveRiskThresholds: () => getActiveThresholdsSpy(),
+vi.mock("@/lib/methodology/assessment-runtime", () => ({
+  resolvePillarConfigForAssessment: vi.fn(async () => ({
+    pillarData: { id: "family-governance", subCategories: [] },
+    questions: [{ id: "q1" }, { id: "q2" }],
+  })),
+  resolveThresholdsForAssessmentPillar: vi.fn(async () => ({
+    lowMin: 80,
+    mediumMin: 60,
+    highMin: 40,
+  })),
+  resolveRecommendationRulesForAssessment: vi.fn(async () => undefined),
 }));
 vi.mock("@/lib/assessment/engines/recommendation-engine", () => ({
   RecommendationEngine: engineCtorSpy,

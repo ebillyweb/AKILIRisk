@@ -16,6 +16,10 @@ export const PILLAR_CATEGORY_CODE_TO_RISK_AREA_ID: Record<string, string> = {
   "4_insurance": "insurance",
   "5_geographic": "geographic-environmental",
   "6_reputational": "reputational-social",
+  "7_liquidity": "liquidity-cash",
+  "8_tax": "tax-exposure",
+  "9_estate": "estate-succession",
+  "10_family_governance": "family-governance-behavioral",
 };
 
 export function riskAreaIdForPillarCategory(category: {

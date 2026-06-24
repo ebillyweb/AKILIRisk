@@ -5,36 +5,44 @@ import type { FamilyAnalyticsData, AssessmentComparison, GovernanceTrendPoint, C
 import { CATEGORY_LABELS } from "./formatters";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 
-// Pillar weights from the family governance pillar definition
+// Pillar weights — legacy map for historical rows; prefer snapshot weights at runtime.
 export const PILLAR_WEIGHTS = {
-  governance: 11,
-  "cyber-digital": 20,
-  'physical-security': 13,
-  'insurance': 34,
-  'geographic-environmental': 12,
-  'reputational-social': 10,
+  governance: 9,
+  "cyber-digital": 16,
+  "physical-security": 10,
+  insurance: 14,
+  "geographic-environmental": 10,
+  "reputational-social": 8,
+  "liquidity-cash": 12,
+  "tax-exposure": 10,
+  "estate-succession": 6,
+  "family-governance-behavioral": 5,
   /** Historical category rows */
-  'health-medical-preparedness': 11,
-  // Legacy weights for historical PillarScore rows
-  'decision-making-authority': 13,
-  'access-controls': 13,
-  'trust-estate-governance': 9,
-  'marriage-relationship-risk': 9,
-  'succession-planning': 9,
-  'behavior-standards': 13,
-  'business-involvement': 9,
-  'documentation-communication': 13,
+  "health-medical-preparedness": 11,
+  "decision-making-authority": 13,
+  "access-controls": 13,
+  "trust-estate-governance": 9,
+  "marriage-relationship-risk": 9,
+  "succession-planning": 9,
+  "behavior-standards": 13,
+  "business-involvement": 9,
+  "documentation-communication": 13,
 } as const;
 
 /**
  * Calculate weighted overall score from pillar scores
  */
-function calculateWeightedScore(pillarScores: { pillar: string; score: number }[]): number {
+export function calculateWeightedScoreFromPillars(
+  pillarScores: { pillar: string; score: number }[],
+  weightMap?: Record<string, number>,
+): number {
   let totalScore = 0;
   let totalWeight = 0;
 
   for (const pillarScore of pillarScores) {
-    const weight = PILLAR_WEIGHTS[pillarScore.pillar as keyof typeof PILLAR_WEIGHTS];
+    const weight =
+      weightMap?.[pillarScore.pillar] ??
+      PILLAR_WEIGHTS[pillarScore.pillar as keyof typeof PILLAR_WEIGHTS];
     if (weight) {
       totalScore += pillarScore.score * weight;
       totalWeight += weight;
@@ -42,6 +50,10 @@ function calculateWeightedScore(pillarScores: { pillar: string; score: number }[
   }
 
   return totalWeight > 0 ? totalScore / totalWeight : 0;
+}
+
+function calculateWeightedScore(pillarScores: { pillar: string; score: number }[]): number {
+  return calculateWeightedScoreFromPillars(pillarScores);
 }
 
 /**

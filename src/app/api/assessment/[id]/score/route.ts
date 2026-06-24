@@ -20,6 +20,14 @@ import {
   getCustomizationConfig,
   getEmphasisMultipliers,
 } from "@/lib/assessment/customization";
+import { loadSnapshotForAssessment } from "@/lib/methodology/snapshot";
+import {
+  pillarAssessmentConfigFromSnapshot,
+} from "@/lib/methodology/assessment-from-snapshot";
+import {
+  recommendationRulesFromSnapshot,
+  snapshotThresholdForPillar,
+} from "@/lib/methodology/snapshot-helpers";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { triggerPreviewAvailable } from "@/lib/notifications/deliverable-phase-triggers";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
@@ -156,9 +164,15 @@ export async function GET(
       );
     }
 
-    const pillarConfig = await getPillarAssessmentConfig(pillar);
+    const snapshot = await loadSnapshotForAssessment(id);
+    const snapshotConfig = snapshot
+      ? pillarAssessmentConfigFromSnapshot(snapshot, pillar)
+      : null;
+    const pillarConfig =
+      snapshotConfig ?? (await getPillarAssessmentConfig(pillar));
     const questionIds = pillarConfig?.questions.map((q) => q.id) ?? [];
     const answers = await loadAssessmentAnswersForQuestions(id, questionIds);
+    const snapshotNarrative = snapshot?.pillarNarratives[pillar];
     const pillarNarratives =
       pillarConfig != null
         ? resolvePillarNarratives(
@@ -166,7 +180,8 @@ export async function GET(
             score.score,
             score.riskLevel,
             answers,
-            pillarConfig.questions
+            pillarConfig.questions,
+            snapshotNarrative,
           )
         : [];
 
@@ -279,7 +294,12 @@ export async function POST(
       );
     }
 
-    const pillarConfig = await getPillarAssessmentConfig(pillar);
+    const snapshot = await loadSnapshotForAssessment(id);
+    const pillarConfigFromSnapshot = snapshot
+      ? pillarAssessmentConfigFromSnapshot(snapshot, pillar)
+      : null;
+    const pillarConfig =
+      pillarConfigFromSnapshot ?? (await getPillarAssessmentConfig(pillar));
     if (!pillarConfig) {
       return NextResponse.json(
         { error: `Unsupported pillar: ${pillar}` },
@@ -327,16 +347,9 @@ export async function POST(
       );
     }
 
-    // A2 (BRD §4.2 + §7.1): fetch the configured Low/Medium/High cutoffs
-    // once per scoring run so all three branches use the same thresholds.
-    // Falls back to the original 80/60/40 bands when PlatformSettings is
-    // missing or DB read fails — see getActiveRiskThresholds().
-    //
-    // Caveat: this writes the resulting riskLevel into PillarScore (a
-    // persisted column). Existing scored assessments retain their previous
-    // risk level until the assessment is re-scored. Threshold changes
-    // apply to NEW scoring runs only.
-    const activeThresholds = await getActiveRiskThresholds();
+    const activeThresholds =
+      (snapshot && snapshotThresholdForPillar(snapshot, pillar)) ??
+      (await getActiveRiskThresholds());
 
     const emphasisMultipliers = customizationConfig
       ? getEmphasisMultipliers(customizationConfig)
@@ -404,15 +417,21 @@ export async function POST(
       );
 
       const recommendationEngine = new RecommendationEngine();
+      const rulesOverride = snapshot
+        ? recommendationRulesFromSnapshot(snapshot)
+        : undefined;
       const matchedRecommendations =
-        await recommendationEngine.matchAndDedupeRecommendations({
-          assessmentId: id,
-          userId: clientId,
-          pillarScores: pillarScoresMap,
-          answers,
-          householdProfile: null,
-          missingControls: scoreResult.missingControls,
-        });
+        await recommendationEngine.matchAndDedupeRecommendations(
+          {
+            assessmentId: id,
+            userId: clientId,
+            pillarScores: pillarScoresMap,
+            answers,
+            householdProfile: null,
+            missingControls: scoreResult.missingControls,
+          },
+          rulesOverride,
+        );
 
       await tx.assessmentRecommendation.deleteMany({ where: { assessmentId: id } });
 
@@ -467,12 +486,14 @@ export async function POST(
       afterScores: afterSnapshots,
     });
 
+    const snapshotNarrative = snapshot?.pillarNarratives[pillar];
     const pillarNarratives = resolvePillarNarratives(
       pillar,
       scoreResult.score,
       scoreResult.riskLevel,
       answers,
-      pillarConfig.questions
+      pillarConfig.questions,
+      snapshotNarrative,
     );
 
     const updatedAssessment = await prisma.assessment.findUnique({

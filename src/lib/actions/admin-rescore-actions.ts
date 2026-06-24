@@ -32,14 +32,15 @@ import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { calculatePillarScore } from "@/lib/assessment/scoring";
 import { getVisibleQuestions } from "@/lib/assessment/branching";
-import { familyGovernancePillar } from "@/lib/assessment/family-governance-pillar";
-import { loadGovernanceQuestionsMerged } from "@/lib/assessment/bank/load-bank";
-import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/questions";
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
-import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
 import { safeDecryptAnswer } from "@/lib/data/response-content";
-import type { MissingControl, Question, Pillar } from "@/lib/assessment/types";
+import type { MissingControl } from "@/lib/assessment/types";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
+import {
+  resolvePillarConfigForAssessment,
+  resolveRecommendationRulesForAssessment,
+  resolveThresholdsForAssessmentPillar,
+} from "@/lib/methodology/assessment-runtime";
 
 // ── Input shapes ─────────────────────────────────────────────────────────
 
@@ -117,18 +118,10 @@ function mapRiskLevelToPrisma(riskLevel: string): PrismaRiskLevel {
 }
 
 async function getPillarConfig(
-  pillar: string
-): Promise<{ pillarData: Pillar; questions: Question[] } | null> {
-  switch (pillar) {
-    case "family-governance": {
-      const questions = await loadGovernanceQuestionsMerged({ onlyVisible: true });
-      return { pillarData: familyGovernancePillar, questions };
-    }
-    case "identity-risk":
-      return { pillarData: identityRiskPillar, questions: identityRiskQuestions };
-    default:
-      return null;
-  }
+  assessmentId: string,
+  pillar: string,
+) {
+  return resolvePillarConfigForAssessment(assessmentId, pillar);
 }
 
 // ── Single-assessment rescore ────────────────────────────────────────────
@@ -195,8 +188,8 @@ export async function rescoreAssessment(
       );
     }
 
-    // 3. Threshold + customization context.
-    const activeThresholds = await getActiveRiskThresholds();
+    // 3. Threshold context: pinned per pillar when assessment has a snapshot.
+    const rulesOverride = await resolveRecommendationRulesForAssessment(assessmentId);
     const approvalFocusAreas: string[] | null = assessment.approvalId
       ? (await prisma.intakeApproval
           .findUnique({
@@ -216,13 +209,17 @@ export async function rescoreAssessment(
     }> = [];
 
     for (const existing of assessment.scores) {
-      const pillarConfig = await getPillarConfig(existing.pillar);
+      const pillarConfig = await getPillarConfig(assessmentId, existing.pillar);
       if (!pillarConfig) {
         // Unknown pillar — preserve the existing row by skipping
         // recompute. This shouldn't happen in practice but defensively
         // we don't lose data.
         continue;
       }
+      const activeThresholds = await resolveThresholdsForAssessmentPillar(
+        assessmentId,
+        existing.pillar,
+      );
       const visibleQuestions = getVisibleQuestions(allAnswers, pillarConfig.questions);
       const visibleIds = visibleQuestions.map((q) => q.id);
       const scoreResult =
@@ -260,16 +257,19 @@ export async function rescoreAssessment(
     });
 
     const engine = new RecommendationEngine();
-    const newRecs = await engine.matchAndDedupeRecommendations({
-      assessmentId,
-      userId: assessment.userId,
-      pillarScores: pillarScoreMap,
-      answers: allAnswers,
-      // The engine's profile_condition handler is a placeholder; passing
-      // null is safe.
-      householdProfile: null,
-      missingControls: aggregatedMissingControls,
-    });
+    const newRecs = await engine.matchAndDedupeRecommendations(
+      {
+        assessmentId,
+        userId: assessment.userId,
+        pillarScores: pillarScoreMap,
+        answers: allAnswers,
+        // The engine's profile_condition handler is a placeholder; passing
+        // null is safe.
+        householdProfile: null,
+        missingControls: aggregatedMissingControls,
+      },
+      rulesOverride,
+    );
     void approvalFocusAreas; // currently unused by recompute; reserved for
                              // future customization parity.
 

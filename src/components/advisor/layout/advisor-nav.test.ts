@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADVISOR_NAV_SECTIONS,
   getActiveAdvisorNavHref,
+  getAdvisorNavSectionForHref,
   getVisibleAdvisorNavSections,
 } from "./advisor-nav";
 
@@ -66,6 +67,32 @@ describe("getActiveAdvisorNavHref", () => {
     expect(workflows?.items[4]?.href).toBe("/advisor/engagements");
   });
 
+  it("exposes Configuration section with methodology and settings", () => {
+    const config = ADVISOR_NAV_SECTIONS.find((s) => s.id === "configuration");
+    expect(config?.title).toBe("Configuration");
+    const hrefs = config?.items.map((item) => item.href) ?? [];
+    expect(hrefs).toContain("/advisor/methodology");
+    expect(hrefs).toContain("/advisor/settings");
+    expect(hrefs).toContain("/advisor/settings/notifications");
+  });
+
+  it("highlights Methodology on nested methodology routes", () => {
+    const sections = getVisibleAdvisorNavSections(flags);
+    expect(getActiveAdvisorNavHref("/advisor/methodology/pillars", sections)).toBe(
+      "/advisor/methodology",
+    );
+  });
+
+  it("highlights Settings on nested settings routes except notification preferences", () => {
+    const sections = getVisibleAdvisorNavSections(flags);
+    expect(getActiveAdvisorNavHref("/advisor/settings/pii-policy", sections)).toBe(
+      "/advisor/settings",
+    );
+    expect(getActiveAdvisorNavHref("/advisor/settings/notifications", sections)).toBe(
+      "/advisor/settings/notifications",
+    );
+  });
+
   it("hides Tasks and Follow-ups until workflow feature flags are enabled", () => {
     const hidden = getVisibleAdvisorNavSections(flags);
     const workflowItems = hidden.find((s) => s.id === "workflows")?.items ?? [];
@@ -92,6 +119,7 @@ describe("getActiveAdvisorNavHref", () => {
     expect(
       visible.flatMap((section) => section.items).some((item) => item.href === "/advisor/settings/team")
     ).toBe(true);
+    expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/team")).toBe("configuration");
   });
 
   it("hides Billing nav when billing access is disabled for enterprise advisors", () => {

@@ -9,6 +9,8 @@ import {
   sortPillarQuestionRows,
   type PillarQuestionWithHierarchy,
 } from "@/lib/assessment/bank/pillar-question-wire";
+import { intakeQuestionsFromSnapshot } from "@/lib/intake/intake-script-from-snapshot";
+import { loadSnapshotForInterview } from "@/lib/methodology/snapshot";
 
 const DEFAULT_RECORDING_TIPS = [
   "Speak clearly and at a normal pace",
@@ -67,4 +69,34 @@ export async function loadIntakeScriptQuestions(): Promise<IntakeQuestion[]> {
     console.warn("[loadIntakeScriptQuestions] falling back to static list:", e);
     return INTAKE_QUESTIONS;
   }
+}
+
+/** Load intake script for a client interview (snapshot-first). */
+export async function loadIntakeScriptForInterview(
+  interviewId: string,
+): Promise<IntakeQuestion[]> {
+  const snapshot = await loadSnapshotForInterview(interviewId);
+  if (snapshot?.intakeQuestions?.length) {
+    return intakeQuestionsFromSnapshot(snapshot);
+  }
+  return loadIntakeScriptQuestions();
+}
+
+/** Resolve script for a client user (latest in-flight or active interview). */
+export async function loadIntakeScriptForClient(
+  userId: string,
+  interviewId?: string,
+): Promise<IntakeQuestion[]> {
+  if (interviewId) {
+    return loadIntakeScriptForInterview(interviewId);
+  }
+  const interview = await prisma.intakeInterview.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+  if (interview) {
+    return loadIntakeScriptForInterview(interview.id);
+  }
+  return loadIntakeScriptQuestions();
 }

@@ -14,7 +14,11 @@ import {
 import { saveResponseSchema, submitInterviewSchema } from '@/lib/schemas/intake';
 import { revalidatePath } from 'next/cache';
 import type { IntakeQuestion } from '@/lib/intake/types';
-import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
+import { loadIntakeScriptForClient, loadIntakeScriptForInterview } from '@/lib/intake/load-intake-script';
+import {
+  getAssignedAdvisorProfileIdForClient,
+  writeIntakeSnapshot,
+} from '@/lib/methodology/snapshot';
 import { personalizeIntakeScript } from '@/lib/intake/personalize-intake-question';
 import { getAssignedAdvisorFirmNameForClient } from '@/lib/client/assigned-advisor-firm-name';
 import { prisma } from '@/lib/db';
@@ -132,8 +136,12 @@ export async function updateProgress(interviewId: string, questionIndex: number)
     let status = interview.status;
     if (status === 'NOT_STARTED') {
       status = 'IN_PROGRESS';
+      const advisorId = await getAssignedAdvisorProfileIdForClient(userId);
+      if (advisorId) {
+        await writeIntakeSnapshot(interviewId, advisorId);
+      }
     }
-    const script = await loadIntakeScriptQuestions();
+    const script = await loadIntakeScriptForInterview(interviewId);
     if (script.length > 0 && questionIndex >= script.length - 1) {
       status = 'COMPLETED';
     }
@@ -168,7 +176,7 @@ export async function submitIntakeInterviewAction(interviewId: string) {
       return { success: false, error: 'Interview not found' };
     }
 
-    const script = await loadIntakeScriptQuestions();
+    const script = await loadIntakeScriptForInterview(interviewId);
     const expectedIds = script.map((q) => q.id);
     const responses = await getIntakeResponsesByInterview(interviewId);
     const byQuestionId = new Map(responses.map((r) => [r.questionId, r]));
@@ -284,8 +292,9 @@ export async function getLatestIntakeInterviewAction() {
 export async function getIntakeScriptQuestionsAction() {
   try {
     const userId = await getAuthUserId();
+    const interview = await getActiveIntakeInterview(userId);
     const [questions, firmName] = await Promise.all([
-      loadIntakeScriptQuestions(),
+      loadIntakeScriptForClient(userId, interview?.id),
       getAssignedAdvisorFirmNameForClient(userId),
     ]);
     return {

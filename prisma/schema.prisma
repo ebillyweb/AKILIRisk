@@ -419,6 +419,8 @@ model Assessment {
   answersChangedAfterCompleteAt DateTime?
   updatedAt     DateTime         @updatedAt
   approvalId    String?          // Links to IntakeApproval for customized assessments
+  /// Frozen advisor methodology at intake start (10-pillar advisor methodology).
+  snapshotId    String?          @map("snapshot_id")
   /// Epic 5.11: advisor-selected pillar scope (1–6 canonical ids). Empty array
   /// means all six pillars (legacy / pre-approval backfill).
   includedPillars String[]       @default([]) @map("included_pillars")
@@ -446,10 +448,12 @@ model Assessment {
   /// assessment (frozen reports include client PII in snapshotData).
   reports        Report[]
   portfolioEngagement PortfolioEngagement?
+  snapshot            IntakeSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([status])
   @@index([deliverablePhase])
+  @@index([snapshotId])
 }
 
 model AssessmentResponse {
@@ -612,6 +616,8 @@ model PillarQuestion {
   relatedPillarIds     String[] @default([]) @map("related_pillar_ids")
 
   section PillarSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  advisorAssessmentClones AdvisorPillarQuestion[] @relation("AdvisorAssessmentPlatformSource")
+  advisorIntakeClones     AdvisorIntakeQuestion[] @relation("AdvisorIntakePlatformSource")
 
   @@unique([sectionId, questionNumber])
   @@unique([sectionId, displayOrder])
@@ -790,6 +796,7 @@ model IntakeInterview {
   user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   responses            IntakeResponse[]
   approval             IntakeApproval?
+  snapshot             IntakeSnapshot?
 
   @@index([userId])
   @@index([status])
@@ -1032,6 +1039,11 @@ model AdvisorProfile {
   /// retroactively hide data already collected from an existing client.
   piiPolicy        Json     @default("{\"schemaVersion\":1,\"fields\":{\"User.name\":true,\"ClientProfile.phone\":true,\"HouseholdMember.fullName\":true,\"HouseholdMember.phone\":true,\"HouseholdMember.notes\":true}}")
 
+  /// When starter content was cloned into advisor-owned methodology tables.
+  starterContentClonedAt DateTime? @map("starter_content_cloned_at")
+  /// Last platform Pillar.catalogVersion seen by this advisor.
+  catalogVersionSeen     Int       @default(0) @map("catalog_version_seen")
+
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt
   clientAssignments ClientAdvisorAssignment[] @relation("AdvisorAssignments")
@@ -1045,6 +1057,12 @@ model AdvisorProfile {
   assignedGovernanceLeads GovernanceReviewLead[] @relation("GovernanceLeadAssignment")
   subdomain        AdvisorSubdomain?
   auditLogs        AdvisorBrandingAuditLog[]
+  pillarOverrides       AdvisorPillarOverride[]
+  pillarQuestions       AdvisorPillarQuestion[]
+  intakeQuestions       AdvisorIntakeQuestion[]
+  pillarNarratives      AdvisorPillarNarrative[]
+  recommendationRules   AdvisorRecommendationRule[]
+  intakeSnapshots       IntakeSnapshot[]
 
   @@index([userId])
   @@index([enterpriseId])
@@ -1421,6 +1439,7 @@ model RecommendationRule {
   updatedAt               DateTime @updatedAt
 
   serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id], onDelete: Cascade)
+  advisorClones         AdvisorRecommendationRule[] @relation("AdvisorRecRulePlatformSource")
 
   @@index([serviceRecommendationId])
   @@index([isActive, priority])
@@ -1613,4 +1632,183 @@ model RuleExecution {
 
   @@index([assessmentId])
   @@index([ruleType, executedAt])
+}
+
+/// Platform-owned pillar catalog (10 pillars). Advisors cannot create/delete.
+model Pillar {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug           String    @unique @db.VarChar(80)
+  canonicalName  String    @map("canonical_name") @db.VarChar(200)
+  description    String?   @db.Text
+  defaultOrder   Int       @default(0) @map("default_order")
+  catalogVersion Int       @default(1) @map("catalog_version")
+  archivedAt     DateTime? @map("archived_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  overrides           AdvisorPillarOverride[]
+  assessmentQuestions AdvisorPillarQuestion[]
+  narratives          AdvisorPillarNarrative[]
+  recommendationRules AdvisorRecommendationRule[]
+
+  @@index([defaultOrder])
+  @@index([archivedAt])
+  @@map("pillars")
+}
+
+/// Per-advisor pillar toggle, rename, weight, and thresholds.
+model AdvisorPillarOverride {
+  id                 String   @id @default(cuid())
+  advisorProfileId   String   @map("advisor_profile_id")
+  pillarId           String   @map("pillar_id") @db.Uuid
+  isActive           Boolean  @default(true) @map("is_active")
+  displayName        String?  @map("display_name") @db.VarChar(200)
+  weight             Float    @default(10)
+  threshold          Json
+  sectionWeights     Json?    @map("section_weights")
+  emphasisMultiplier Float    @default(1.5) @map("emphasis_multiplier")
+  displayOrder       Int      @default(0) @map("display_order")
+  version            Int      @default(1)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar         Pillar         @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+
+  @@unique([advisorProfileId, pillarId])
+  @@index([advisorProfileId])
+  @@index([pillarId])
+  @@map("advisor_pillar_overrides")
+}
+
+/// Source of an advisor-owned question row.
+enum AdvisorQuestionSource {
+  PLATFORM
+  CUSTOM
+}
+
+/// Per-advisor assessment question bank row.
+model AdvisorPillarQuestion {
+  id                 String                 @id @default(cuid())
+  advisorProfileId   String                 @map("advisor_profile_id")
+  pillarId           String                 @map("pillar_id") @db.Uuid
+  sourceKind         AdvisorQuestionSource  @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?                @map("platform_source_id") @db.Uuid
+  sectionCode        String                 @default("") @map("section_code") @db.VarChar(20)
+  displayOrder       Int                    @default(0) @map("display_order")
+  questionNumber     String?                @map("question_number") @db.VarChar(20)
+  questionText       String                 @map("question_text") @db.Text
+  answerType         String                 @default("scored_0_3") @map("answer_type") @db.VarChar(50)
+  scoreMap           Json                   @map("score_map")
+  whyThisMatters     String?                @map("why_this_matters") @db.Text
+  recommendedActions String?                @map("recommended_actions") @db.Text
+  isVisible          Boolean                @default(true) @map("is_visible")
+  isKeyRiskIndicator Boolean                @default(false) @map("is_key_risk_indicator")
+  relatedPillarIds   String[]               @default([]) @map("related_pillar_ids") @db.Uuid
+  version            Int                    @default(1)
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+
+  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar         Pillar         @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  platformSource PillarQuestion? @relation("AdvisorAssessmentPlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+
+  @@index([advisorProfileId, pillarId])
+  @@index([advisorProfileId])
+  @@index([advisorProfileId, sourceKind])
+  @@map("advisor_pillar_questions")
+}
+
+/// Per-advisor intake audio script question.
+model AdvisorIntakeQuestion {
+  id                 String                 @id @default(cuid())
+  advisorProfileId   String                 @map("advisor_profile_id")
+  sourceKind         AdvisorQuestionSource  @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?                @map("platform_source_id") @db.Uuid
+  displayOrder       Int                    @default(0) @map("display_order")
+  questionNumber     String?                @map("question_number") @db.VarChar(20)
+  questionText       String                 @map("question_text") @db.Text
+  context            String?                @db.Text
+  helpText           String?                @map("help_text") @db.Text
+  learnMore          String?                @map("learn_more") @db.Text
+  answerType         String                 @default("audio") @map("answer_type") @db.VarChar(50)
+  options            Json?
+  relatedPillarIds   String[]               @default([]) @map("related_pillar_ids") @db.Uuid
+  recommendedActions String?                @map("recommended_actions") @db.Text
+  isVisible          Boolean                @default(true) @map("is_visible")
+  version            Int                    @default(1)
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+
+  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  platformSource PillarQuestion? @relation("AdvisorIntakePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+
+  @@index([advisorProfileId, displayOrder])
+  @@index([advisorProfileId, sourceKind])
+  @@map("advisor_intake_questions")
+}
+
+/// Per-advisor pillar narrative copy for reports and score API.
+model AdvisorPillarNarrative {
+  id               String   @id @default(cuid())
+  advisorProfileId String   @map("advisor_profile_id")
+  pillarId         String   @map("pillar_id") @db.Uuid
+  allNegative      Json     @map("all_negative")
+  allYes           Json     @map("all_yes")
+  midBand          Json     @map("mid_band")
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar         Pillar         @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+
+  @@unique([advisorProfileId, pillarId])
+  @@index([advisorProfileId])
+  @@map("advisor_pillar_narratives")
+}
+
+/// Per-advisor recommendation rule (triggers platform ServiceRecommendation).
+model AdvisorRecommendationRule {
+  id                 String                @id @default(cuid())
+  advisorProfileId   String                @map("advisor_profile_id")
+  pillarId           String?               @map("pillar_id") @db.Uuid
+  sourceKind         AdvisorQuestionSource @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?               @map("platform_source_id")
+  name               String                @db.VarChar(200)
+  triggerConditions  Json                  @map("trigger_conditions")
+  servicePayload     Json                  @map("service_payload")
+  priority           Int                   @default(1)
+  isActive           Boolean               @default(true) @map("is_active")
+  version            Int                   @default(1)
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  advisorProfile AdvisorProfile     @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar         Pillar?            @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  platformSource RecommendationRule? @relation("AdvisorRecRulePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+
+  @@index([advisorProfileId])
+  @@index([advisorProfileId, isActive])
+  @@index([advisorProfileId, sourceKind])
+  @@map("advisor_recommendation_rules")
+}
+
+/// Immutable advisor methodology frozen at intake start.
+model IntakeSnapshot {
+  id                 String   @id @default(cuid())
+  intakeInterviewId  String   @unique @map("intake_interview_id")
+  advisorProfileId   String   @map("advisor_profile_id")
+  snapshotBlob       Json     @map("snapshot_blob")
+  snapshotHash       String   @map("snapshot_hash") @db.VarChar(64)
+  schemaVersion      Int      @default(2) @map("schema_version")
+  takenAt            DateTime @default(now()) @map("taken_at")
+
+  intakeInterview IntakeInterview @relation(fields: [intakeInterviewId], references: [id], onDelete: Cascade)
+  advisorProfile  AdvisorProfile  @relation(fields: [advisorProfileId], references: [id], onDelete: Restrict)
+  assessments     Assessment[]
+
+  @@index([advisorProfileId])
+  @@index([takenAt])
+  @@map("intake_snapshots")
 }

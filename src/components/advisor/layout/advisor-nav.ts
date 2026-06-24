@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Bell,
+  BookOpen,
   Briefcase,
   ClipboardList,
   CreditCard,
@@ -14,6 +15,7 @@ import {
   Radio,
   Settings,
   Shield,
+  SlidersHorizontal,
   Sparkles,
   UserPlus,
   Users,
@@ -137,18 +139,34 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     ],
   },
   {
-    id: "account",
-    title: "Account",
+    id: "configuration",
+    title: "Configuration",
     items: [
-      { href: "/advisor/notifications", label: "Notifications", icon: Bell },
-      { href: "/advisor/billing", label: "Billing", icon: CreditCard, requiresBillingAccess: true },
+      {
+        href: "/advisor/methodology",
+        label: "Methodology",
+        icon: BookOpen,
+      },
+      { href: "/advisor/settings", label: "Settings", icon: Settings },
+      {
+        href: "/advisor/settings/notifications",
+        label: "Notification preferences",
+        icon: SlidersHorizontal,
+      },
       {
         href: "/advisor/settings/team",
         label: "Team",
         icon: Users,
         requiresEnterpriseTeam: true,
       },
-      { href: "/advisor/settings", label: "Settings", icon: Settings },
+    ],
+  },
+  {
+    id: "account",
+    title: "Account",
+    items: [
+      { href: "/advisor/notifications", label: "Notifications", icon: Bell },
+      { href: "/advisor/billing", label: "Billing", icon: CreditCard, requiresBillingAccess: true },
     ],
   },
 ];

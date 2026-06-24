@@ -32,7 +32,6 @@ import { approveClientSchema } from '@/lib/schemas/advisor';
 import { normalizeIncludedPillarIds } from '@/lib/assessment/included-pillars';
 import { syncAssessmentScopeFromApproval } from '@/lib/assessment/sync-scope-from-approval';
 import { computePillarRecommendations } from '@/lib/intake/pillar-recommendations';
-import { loadIntakeScriptQuestions } from '@/lib/intake/load-intake-script';
 import { decryptUserEmail } from '@/lib/auth/user-email';
 import {
   loadAdvisorPiiPolicy,
@@ -241,7 +240,10 @@ export async function approveClientIntake(data: unknown) {
       ? normalizeIncludedPillarIds(focusAreas)
       : normalizedIncluded;
 
-    const script = await loadIntakeScriptQuestions();
+    const { loadIntakeScriptForInterview } = await import(
+      '@/lib/intake/load-intake-script'
+    );
+    const script = await loadIntakeScriptForInterview(interviewId);
     const pillarRecommendations = computePillarRecommendations({
       questions: script.map((q) => ({
         id: q.id,

@@ -109,6 +109,35 @@ vi.mock("@/lib/assessment/pillar-config", async () => {
   };
 });
 
+vi.mock("@/lib/methodology/assessment-runtime", async () => {
+  const { belvedereQuestionsForPillar } = await import(
+    "@/lib/assessment/test-fixtures/belvedere-pillar-questions"
+  );
+  const { pillarDefinitionFor } = await import("@/lib/assessment/pillar-registry");
+  const { resolvePillarNarratives } = await import("@/lib/assessment/pillar-outcomes");
+  return {
+    resolvePillarConfigForAssessment: async (_assessmentId: string, pillarKey: string) => ({
+      pillarData: pillarDefinitionFor(
+        pillarKey === "family-governance" ? "governance" : pillarKey,
+      ),
+      questions: belvedereQuestionsForPillar(
+        pillarKey === "family-governance" ? "governance" : pillarKey,
+      ),
+    }),
+    resolvePillarNarrativesForAssessment: async (
+      _assessmentId: string,
+      pillarKey: string,
+      score: number,
+      riskLevel: string,
+      answers: Record<string, unknown>,
+    ) => {
+      const slug = pillarKey === "family-governance" ? "governance" : pillarKey;
+      const questions = belvedereQuestionsForPillar(slug);
+      return resolvePillarNarratives(slug, score, riskLevel, answers, questions);
+    },
+  };
+});
+
 /** Plaintext answers in DB rows (no encryption in this test harness). */
 vi.mock("@/lib/data/response-content", () => ({
   safeDecryptAnswer: (value: unknown) => value,

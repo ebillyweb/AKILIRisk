@@ -15,8 +15,8 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { fakes, resolvePillarNarrativesSpy } = vi.hoisted(() => {
-  const resolvePillarNarrativesSpy = vi.fn(() => [] as string[]);
+const { fakes, resolvePillarNarrativesForAssessmentSpy } = vi.hoisted(() => {
+  const resolvePillarNarrativesForAssessmentSpy = vi.fn(async () => [] as string[]);
   const state = {
     assessment: null as null | { id: string; userId: string; startedAt: Date },
     pillarScores: [] as Array<{
@@ -45,7 +45,7 @@ const { fakes, resolvePillarNarrativesSpy } = vi.hoisted(() => {
       serviceRecommendation: { name: string; description: string; category: string };
     }>,
   };
-  return { fakes: state, resolvePillarNarrativesSpy };
+  return { fakes: state, resolvePillarNarrativesForAssessmentSpy };
 });
 
 vi.mock("@/lib/db", () => ({
@@ -141,27 +141,24 @@ vi.mock("@/lib/schemas/profile", () => ({
   },
 }));
 
-vi.mock("@/lib/assessment/pillar-config", () => ({
-  getPillarAssessmentConfig: vi.fn(async () => ({
+vi.mock("@/lib/methodology/assessment-runtime", () => ({
+  resolvePillarConfigForAssessment: vi.fn(async () => ({
     pillarData: { id: "cyber-digital", subCategories: [] },
     questions: [{ id: "belvedere-cyber-a1" }],
   })),
+  resolvePillarNarrativesForAssessment: (...args: unknown[]) =>
+    resolvePillarNarrativesForAssessmentSpy(...args),
 }));
 
 vi.mock("@/lib/assessment/pillar-answer-loader", () => ({
   loadAssessmentAnswersForQuestions: vi.fn(async () => ({ "belvedere-cyber-a1": 0 })),
 }));
 
-vi.mock("@/lib/assessment/pillar-outcomes", () => ({
-  resolvePillarNarratives: (...args: Parameters<typeof resolvePillarNarrativesSpy>) =>
-    resolvePillarNarrativesSpy(...args),
-}));
-
 import { buildReportSnapshot } from "./build-report-snapshot";
 
 beforeEach(() => {
-  resolvePillarNarrativesSpy.mockReset();
-  resolvePillarNarrativesSpy.mockReturnValue([]);
+  resolvePillarNarrativesForAssessmentSpy.mockReset();
+  resolvePillarNarrativesForAssessmentSpy.mockResolvedValue([]);
   fakes.assessment = null;
   fakes.pillarScores.length = 0;
   fakes.responses.length = 0;
@@ -336,20 +333,20 @@ describe("buildReportSnapshot", () => {
     expect(snap.householdProfile!.members[0].relationship).toBe("Spouse"); // pretty-labeled
   });
 
-  it("includes pillarNarratives from resolvePillarNarratives", async () => {
-    resolvePillarNarrativesSpy.mockReturnValueOnce([
+  it("includes pillarNarratives from snapshotted assessment runtime", async () => {
+    resolvePillarNarrativesForAssessmentSpy.mockResolvedValueOnce([
       "Client operates without a formal cybersecurity framework.",
     ]);
     seedScoredAssessment();
 
     const snap = await buildReportSnapshot("asmt-1");
 
-    expect(resolvePillarNarrativesSpy).toHaveBeenCalledWith(
+    expect(resolvePillarNarrativesForAssessmentSpy).toHaveBeenCalledWith(
+      "asmt-1",
       "cyber-digital",
       6.5,
       "MEDIUM",
       { "belvedere-cyber-a1": 0 },
-      [{ id: "belvedere-cyber-a1" }]
     );
     expect(snap.reportData.pillarNarratives).toEqual([
       "Client operates without a formal cybersecurity framework.",

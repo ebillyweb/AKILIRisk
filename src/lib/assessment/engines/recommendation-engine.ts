@@ -62,8 +62,14 @@ export class RecommendationEngine {
    * the persistence step in its own transaction (atomic with PillarScore
    * upserts). Both paths share the matching logic.
    */
-  async generateRecommendations(context: RecommendationContext): Promise<ServiceRecommendation[]> {
-    const uniqueRecommendations = await this.matchAndDedupeRecommendations(context);
+  async generateRecommendations(
+    context: RecommendationContext,
+    rulesOverride?: RecommendationRule[],
+  ): Promise<ServiceRecommendation[]> {
+    const uniqueRecommendations = await this.matchAndDedupeRecommendations(
+      context,
+      rulesOverride,
+    );
 
     // Save recommendations to database
     await this.saveAssessmentRecommendations(context.assessmentId, uniqueRecommendations);
@@ -80,8 +86,11 @@ export class RecommendationEngine {
    * Identical matching/dedup logic to generateRecommendations; only the
    * trailing `saveAssessmentRecommendations` call is omitted.
    */
-  async matchAndDedupeRecommendations(context: RecommendationContext): Promise<ServiceRecommendation[]> {
-    const rules = await this.loadRecommendationRules();
+  async matchAndDedupeRecommendations(
+    context: RecommendationContext,
+    rulesOverride?: RecommendationRule[],
+  ): Promise<ServiceRecommendation[]> {
+    const rules = rulesOverride ?? (await this.loadRecommendationRules());
     const recommendations: ServiceRecommendation[] = [];
 
     for (const rule of rules) {
