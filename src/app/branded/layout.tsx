@@ -4,9 +4,11 @@ import { redirect } from 'next/navigation';
 import { getAdvisorBrandingBySubdomain } from '@/lib/advisor/subdomain';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
 import { BrandingUnavailable } from '@/components/branding/BrandingUnavailable';
+import { ClientPortalRootTheme } from '@/components/branding/ClientPortalRootTheme';
 import { Toaster } from 'react-hot-toast';
 import '@/app/globals.css';
 import { brandedPortalLogoImgSrc } from '@/lib/branding/branded-portal-logo';
+import { withClientPortalLogoSrc } from '@/lib/client/resolve-client-portal-branding';
 
 const DEFAULT_BRANDED_TITLE = 'Risk Assessment Portal';
 
@@ -62,6 +64,14 @@ export default async function BrandedLayout({
   }
 
   const logoSrc = brandedPortalLogoImgSrc(branding);
+  const portalBranding = withClientPortalLogoSrc(
+    {
+      ...branding,
+      logoUrl: logoSrc ?? branding.logoUrl ?? undefined,
+      advisorFirmName: branding.brandName,
+    },
+    true,
+  );
 
   return (
     <html lang="en">
@@ -70,24 +80,10 @@ export default async function BrandedLayout({
       </head>
       <body
         className="min-h-screen bg-background font-sans antialiased"
-        style={{
-          '--advisor-primary': branding.primaryColor || '#1a1a2e',
-          '--advisor-secondary': branding.secondaryColor || '#f5f5f5',
-          '--advisor-accent': branding.accentColor || '#10b981',
-          '--advisor-logo-url': logoSrc ? `url(${logoSrc})` : 'none',
-          '--advisor-brand-name': `"${branding.brandName || 'Risk Portal'}"`,
-        } as React.CSSProperties}
-        data-advisor-theme={`advisor-${advisorId}`}
         data-branded-mode="true"
       >
-        <BrandingProvider
-          branding={{
-            ...branding,
-            logoUrl: logoSrc ?? branding.logoUrl ?? undefined,
-            advisorFirmName: branding.brandName, // Legacy support
-          }}
-          subdomain={subdomain}
-        >
+        <BrandingProvider branding={portalBranding} subdomain={subdomain}>
+          <ClientPortalRootTheme branding={portalBranding} />
           {children}
           <Toaster position="top-right" />
         </BrandingProvider>

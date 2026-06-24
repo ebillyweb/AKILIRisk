@@ -8,6 +8,9 @@ type ClientPortalBrandedHeaderMarkProps = {
   logoSrc: string | null;
   /** Match advisor branding preview: primary hex for title (and link) */
   primaryHex?: string;
+  homeHref?: string;
+  /** Use h1 on public landing pages for SEO/accessibility */
+  titleAsHeading?: boolean;
 };
 
 /**
@@ -17,10 +20,14 @@ export function ClientPortalBrandedHeaderMark({
   brandTitle,
   logoSrc,
   primaryHex,
+  homeHref = "/dashboard",
+  titleAsHeading = false,
 }: ClientPortalBrandedHeaderMarkProps) {
+  const TitleTag = titleAsHeading ? "h1" : "span";
+
   return (
     <Link
-      href="/dashboard"
+      href={homeHref}
       className="block text-foreground"
       aria-label={`${brandTitle} home`}
       style={primaryHex ? { color: primaryHex } : undefined}
@@ -36,12 +43,12 @@ export function ClientPortalBrandedHeaderMark({
             }}
           />
         ) : null}
-        <span
-          className="text-lg font-semibold tracking-tight"
+        <TitleTag
+          className="text-lg font-semibold tracking-tight sm:text-xl"
           style={primaryHex ? { color: primaryHex } : undefined}
         >
           {brandTitle}
-        </span>
+        </TitleTag>
       </div>
     </Link>
   );
