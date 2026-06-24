@@ -65,8 +65,8 @@ next-env.d.ts
 public/uploads/
 .env*.local
 
-# Local preview artifacts (round-10 B1 color review)
-preview/
+# Local preview artifacts (round-10 B1 color review) — repo root only
+/preview/
 staging
 
 .playwright-mcp/
