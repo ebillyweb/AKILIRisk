@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   firstUnansweredQuestionIndex,
+  lastUnansweredQuestionIndex,
   resolveResumeQuestionIndex,
   resolveResumePillarSlug,
+  shouldShowSkipToLastUnanswered,
 } from "./resolve-resume-index";
 import type { Question } from "./types";
 
@@ -52,6 +54,48 @@ describe("firstUnansweredQuestionIndex", () => {
     expect(
       firstUnansweredQuestionIndex(questions, { q0: 1, q1: 2, q2: 0 }, []),
     ).toBe(2);
+  });
+});
+
+describe("lastUnansweredQuestionIndex", () => {
+  it("returns the furthest unanswered visible question", () => {
+    expect(
+      lastUnansweredQuestionIndex(
+        questions,
+        { q0: 1, q1: undefined, q2: 2 },
+        [],
+      ),
+    ).toBe(1);
+  });
+
+  it("returns null when every question is answered", () => {
+    expect(
+      lastUnansweredQuestionIndex(questions, { q0: 1, q1: 2, q2: 0 }, []),
+    ).toBeNull();
+  });
+});
+
+describe("shouldShowSkipToLastUnanswered", () => {
+  it("offers skip when viewing an earlier question than the last gap", () => {
+    expect(
+      shouldShowSkipToLastUnanswered(
+        0,
+        questions,
+        { q0: 1, q1: undefined, q2: 2 },
+        [],
+      ),
+    ).toEqual({ show: true, targetIndex: 1 });
+  });
+
+  it("hides skip when already on the last unanswered question", () => {
+    expect(
+      shouldShowSkipToLastUnanswered(
+        1,
+        questions,
+        { q0: 1, q1: undefined, q2: 2 },
+        [],
+      ),
+    ).toEqual({ show: false, targetIndex: 1 });
   });
 });
 

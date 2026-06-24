@@ -9,10 +9,7 @@ import {
   markAssessmentAnswersChangedAfterComplete,
 } from "@/lib/assessment/answers-changed-after-complete";
 import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
-import {
-  authorizeAssessmentApiAccess,
-  markFacilitatedSessionPreviewIfComplete,
-} from "@/lib/facilitated/assessment-access";
+import { authorizeAssessmentApiAccess } from "@/lib/facilitated/assessment-access";
 
 /**
  * Assessment Responses API Routes
@@ -251,10 +248,6 @@ export async function POST(
 
     if (answerChangedAfterComplete) {
       void markAssessmentAnswersChangedAfterComplete(id);
-    }
-
-    if (facilitatedSessionId) {
-      void markFacilitatedSessionPreviewIfComplete(facilitatedSessionId);
     }
 
     return NextResponse.json(response, { status: 201 });

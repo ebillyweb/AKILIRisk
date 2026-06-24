@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { authorizeAssessmentApiAccess } from "@/lib/facilitated/assessment-access";
+import { mapAssessmentForRehydration } from "@/lib/assessment/map-assessment-for-rehydration";
 
 /**
  * Single Assessment API Route
@@ -34,6 +35,7 @@ export async function GET(
       include: {
         responses: {
           select: {
+            id: true,
             questionId: true,
             answer: true,
             skipped: true,
@@ -62,7 +64,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(assessment);
+    return NextResponse.json(mapAssessmentForRehydration(assessment));
   } catch (error) {
     console.error("Error fetching assessment:", error);
     return NextResponse.json(

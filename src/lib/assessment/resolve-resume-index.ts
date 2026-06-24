@@ -26,6 +26,40 @@ export function firstUnansweredQuestionIndex(
   return idx === -1 ? visibleQuestions.length - 1 : idx;
 }
 
+/** Furthest visible question in the pillar that still needs an answer. */
+export function lastUnansweredQuestionIndex(
+  visibleQuestions: Question[],
+  answers: Record<string, unknown>,
+  skippedQuestions: string[],
+): number | null {
+  if (visibleQuestions.length === 0) return null;
+  let last: number | null = null;
+  for (let i = 0; i < visibleQuestions.length; i++) {
+    const question = visibleQuestions[i];
+    if (!isQuestionAnsweredForResume(question.id, answers, skippedQuestions)) {
+      last = i;
+    }
+  }
+  return last;
+}
+
+export function shouldShowSkipToLastUnanswered(
+  currentIndex: number,
+  visibleQuestions: Question[],
+  answers: Record<string, unknown>,
+  skippedQuestions: string[],
+): { show: boolean; targetIndex: number | null } {
+  const targetIndex = lastUnansweredQuestionIndex(
+    visibleQuestions,
+    answers,
+    skippedQuestions,
+  );
+  return {
+    show: targetIndex !== null && targetIndex !== currentIndex,
+    targetIndex,
+  };
+}
+
 export type ResumeIndexInput = {
   assessmentData?: Pick<
     ServerAssessmentData,

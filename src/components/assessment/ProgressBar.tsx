@@ -16,6 +16,11 @@ interface SectionProgressProps {
   answeredCount: number;
   totalCount: number;
   pillarName: string;
+  /** When set during active assessment, shows which question the user is viewing. */
+  activeQuestion?: {
+    index: number;
+    total: number;
+  };
   /** When set, header shows which question the client is reviewing. */
   reviewingQuestion?: {
     index: number;
@@ -27,17 +32,22 @@ export function SectionProgress({
   answeredCount,
   totalCount,
   pillarName,
+  activeQuestion,
   reviewingQuestion,
 }: SectionProgressProps) {
   const isReviewing = reviewingQuestion != null && reviewingQuestion.total > 0;
   const reviewIndex = reviewingQuestion?.index ?? 0;
   const reviewTotal = reviewingQuestion?.total ?? 0;
+  const activeIndex = activeQuestion?.index ?? 0;
+  const activeTotal = activeQuestion?.total ?? 0;
 
   const percentage = isReviewing
     ? (reviewIndex / reviewTotal) * 100
-    : totalCount > 0
-      ? (answeredCount / totalCount) * 100
-      : 0;
+    : activeQuestion && activeTotal > 0
+      ? (activeIndex / activeTotal) * 100
+      : totalCount > 0
+        ? (answeredCount / totalCount) * 100
+        : 0;
 
   return (
     <div className="space-y-3">
@@ -51,6 +61,14 @@ export function SectionProgress({
               </span>
               <p className="text-sm text-muted-foreground">{pillarName}</p>
             </>
+          ) : activeQuestion && activeTotal > 0 ? (
+            <>
+              <p className="editorial-kicker">Current section</p>
+              <span className="text-lg font-semibold text-foreground">
+                Question {activeIndex} of {activeTotal}
+              </span>
+              <p className="text-sm text-muted-foreground">{pillarName}</p>
+            </>
           ) : (
             <>
               <p className="editorial-kicker">Current Section</p>
@@ -61,7 +79,9 @@ export function SectionProgress({
         <span className="text-sm text-muted-foreground">
           {isReviewing
             ? `${reviewIndex} of ${reviewTotal} questions`
-            : `${answeredCount} of ${totalCount} questions`}
+            : activeQuestion && activeTotal > 0
+              ? `${answeredCount} of ${totalCount} answered`
+              : `${answeredCount} of ${totalCount} questions`}
         </span>
       </div>
       <Progress value={percentage} className="h-2.5" />

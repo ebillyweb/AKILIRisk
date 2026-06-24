@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FacilitatedQuestionPage } from "@/components/advisor/facilitate/FacilitatedQuestionView";
@@ -36,11 +37,19 @@ export default async function FacilitatedQuestionRoutePage({
   );
 
   return (
-    <FacilitatedQuestionPage
-      params={Promise.resolve(resolved)}
-      assessmentId={facilitated.assessmentId}
-      includedPillars={resolveIncludedPillars(assessment?.includedPillars ?? [])}
-      householdProfile={householdProfile}
-    />
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+          Loading question…
+        </div>
+      }
+    >
+      <FacilitatedQuestionPage
+        params={Promise.resolve(resolved)}
+        assessmentId={facilitated.assessmentId}
+        includedPillars={resolveIncludedPillars(assessment?.includedPillars ?? [])}
+        householdProfile={householdProfile}
+      />
+    </Suspense>
   );
 }

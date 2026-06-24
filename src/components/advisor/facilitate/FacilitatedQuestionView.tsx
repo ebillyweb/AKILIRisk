@@ -1,13 +1,14 @@
 "use client";
 
-import { use, useEffect, useMemo } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { NavigationButtons } from "@/components/assessment/NavigationButtons";
 import { QuestionCard } from "@/components/assessment/QuestionCard";
 import { SectionProgress } from "@/components/assessment/ProgressBar";
+import { SkipToLastUnansweredQuestion } from "@/components/assessment/SkipToLastUnansweredQuestion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPersonalizedText } from "@/lib/assessment/personalization";
@@ -29,6 +30,7 @@ import {
   useAssessmentPillarScores,
   usePillarQuestions,
 } from "@/lib/hooks/useAssessmentPillars";
+import { useFacilitatedAssessmentHydration } from "@/lib/hooks/useFacilitatedAssessmentHydration";
 import {
   facilitatedAssessmentCompletePath,
   facilitatedAssessmentHubPath,
@@ -53,8 +55,11 @@ export function FacilitatedQuestionView({
   householdProfile = null,
 }: FacilitatedQuestionViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shouldAutoResume = searchParams.get("resume") === "1";
+  const [resumeReady, setResumeReady] = useState(!shouldAutoResume);
   const pillarSlug = normalizePillarSlug(rawSlug);
-  const { answers, setHouseholdProfile, skippedQuestions, setAssessmentId, loadFromServer, setHydrated, assessmentId: storeAssessmentId, isHydrated } =
+  const { answers, setHouseholdProfile, skippedQuestions, setCurrentPosition } =
     useAssessmentStore();
   const { data: pillarQuestionData, isLoading: questionsLoading, isError: questionsError } =
     usePillarQuestions(pillarSlug, {
@@ -109,28 +114,47 @@ export function FacilitatedQuestionView({
       enabled: !!assessmentId,
     });
 
-  useEffect(() => {
-    setAssessmentId(assessmentId);
-  }, [assessmentId, setAssessmentId]);
-
-  useEffect(() => {
-    if (!assessmentData) return;
-    if (!isHydrated || storeAssessmentId !== assessmentId) {
-      loadFromServer(assessmentData);
-      setHydrated(true);
-    }
-  }, [
-    assessmentData,
+  const { isReady: assessmentSynced } = useFacilitatedAssessmentHydration(
     assessmentId,
-    isHydrated,
-    loadFromServer,
-    setHydrated,
-    storeAssessmentId,
-  ]);
+    assessmentData,
+    assessmentLoading,
+  );
+
+  const pillarHasScore = useMemo(
+    () =>
+      pillarScores.some(
+        (score) => normalizePillarSlug(score.pillar) === pillarSlug,
+      ),
+    [pillarScores, pillarSlug],
+  );
 
   useEffect(() => {
     setHouseholdProfile(householdProfile);
   }, [householdProfile, setHouseholdProfile]);
+
+  useEffect(() => {
+    if (!shouldAutoResume) {
+      setResumeReady(true);
+      return;
+    }
+    if (pillarHasScore || !assessmentSynced || questionsLoading) {
+      return;
+    }
+    setResumeReady(true);
+    if (searchParams.get("resume") === "1") {
+      router.replace(facilitatedAssessmentQuestionPath(sessionId, pillarSlug, questionIndex));
+    }
+  }, [
+    shouldAutoResume,
+    pillarHasScore,
+    assessmentSynced,
+    questionsLoading,
+    questionIndex,
+    pillarSlug,
+    router,
+    sessionId,
+    searchParams,
+  ]);
 
   useEffect(() => {
     if (rawSlug !== pillarSlug && isAssessmentPillarId(pillarSlug)) {
@@ -145,6 +169,7 @@ export function FacilitatedQuestionView({
   }, [includedPillars, pillarSlug, router, sessionId]);
 
   useEffect(() => {
+    if (pillarHasScore) return;
     if (questionsLoading || visibleQuestions.length === 0) return;
     if (questionIndex < 0 || questionIndex >= visibleQuestions.length) {
       const resumeIndex = resolveResumeQuestionIndexForPillar(
@@ -175,6 +200,7 @@ export function FacilitatedQuestionView({
     answers,
     skippedQuestions,
     assessmentData,
+    pillarHasScore,
   ]);
 
   useEffect(() => {
@@ -205,7 +231,7 @@ export function FacilitatedQuestionView({
     );
   }
 
-  if (questionsLoading || assessmentLoading || !currentQuestion) {
+  if (questionsLoading || !assessmentSynced || !resumeReady || !currentQuestion) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
         Loading question…
@@ -215,9 +241,6 @@ export function FacilitatedQuestionView({
 
   const currentAnswer = answers[currentQuestion.id];
   const personalizedText = getPersonalizedText(currentQuestion, householdProfile);
-  const pillarHasScore = pillarScores.some(
-    (score) => normalizePillarSlug(score.pillar) === pillarSlug,
-  );
 
   const handleAnswer = (answer: unknown) => {
     saveAnswer({
@@ -281,6 +304,11 @@ export function FacilitatedQuestionView({
     })();
   };
 
+  const handleJumpToLastUnanswered = (targetIndex: number) => {
+    setCurrentPosition(pillarSlug, targetIndex);
+    router.push(facilitatedAssessmentQuestionPath(sessionId, pillarSlug, targetIndex));
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
@@ -288,12 +316,26 @@ export function FacilitatedQuestionView({
           answeredCount={progress.answered}
           totalCount={progress.total}
           pillarName={currentPillar.name}
+          activeQuestion={
+            pillarHasScore
+              ? undefined
+              : { index: currentIndex + 1, total: visibleQuestions.length }
+          }
           reviewingQuestion={
             pillarHasScore
               ? { index: currentIndex + 1, total: visibleQuestions.length }
               : undefined
           }
         />
+        {!pillarHasScore ? (
+          <SkipToLastUnansweredQuestion
+            currentIndex={currentIndex}
+            visibleQuestions={visibleQuestions}
+            answers={answers}
+            skippedQuestions={skippedQuestions}
+            onJump={handleJumpToLastUnanswered}
+          />
+        ) : null}
       </section>
 
       <Card>

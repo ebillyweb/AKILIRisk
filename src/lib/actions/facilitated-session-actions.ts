@@ -16,8 +16,9 @@ import {
 } from "@/lib/facilitated/session-access";
 import {
   findResumableFacilitatedSession,
-  listRecentFacilitatedSessionsForAdvisor,
+  listOpenFacilitatedSessionsForAdvisor,
 } from "@/lib/facilitated/queries";
+import { mergeFacilitatedLauncherClients, type FacilitatedLauncherClient } from "@/lib/facilitated/launcher-clients";
 import { provisionFacilitatedClient } from "@/lib/facilitated/provision-facilitated-client";
 import {
   createFacilitatedClientSchema,
@@ -32,7 +33,7 @@ import { getClientPipelineForAdvisorUser } from "@/lib/pipeline/queries";
 import { tryBootstrapFacilitatedFromExistingApproval } from "@/lib/facilitated/bootstrap-assessment-from-approval";
 
 export type FacilitatedLauncherData = {
-  clients: Array<{ id: string; name: string; email: string }>;
+  clients: FacilitatedLauncherClient[];
   openSessions: FacilitatedSessionSummary[];
 };
 
@@ -41,14 +42,17 @@ export async function getFacilitatedLauncherData(): Promise<FacilitatedLauncherD
   const profile = await getAdvisorProfileOrThrow(userId);
   const [pipeline, openSessions] = await Promise.all([
     getClientPipelineForAdvisorUser(userId, { assignmentStatus: "ACTIVE" }),
-    listRecentFacilitatedSessionsForAdvisor(profile.id),
+    listOpenFacilitatedSessionsForAdvisor(profile.id),
   ]);
   return {
-    clients: pipeline.map((c) => ({
-      id: c.id,
-      name: c.name ?? "Client",
-      email: c.email,
-    })),
+    clients: mergeFacilitatedLauncherClients(
+      pipeline.map((c) => ({
+        id: c.id,
+        name: c.name ?? "Client",
+        email: c.email,
+      })),
+      openSessions,
+    ),
     openSessions,
   };
 }

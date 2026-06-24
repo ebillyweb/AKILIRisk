@@ -70,6 +70,11 @@ export async function resolveFacilitatedAssessmentAccess(input: {
   return { clientId: session.clientId, sessionId: session.id };
 }
 
+/**
+ * Move a live session into PREVIEW only when every included pillar is scored
+ * (`assessment.status === "COMPLETED"`). Do not use `deliverablePhase` — it
+ * defaults to PREVIEW for in-progress assessments.
+ */
 export async function markFacilitatedSessionPreviewIfComplete(
   facilitatedSessionId: string,
 ): Promise<void> {
@@ -79,22 +84,62 @@ export async function markFacilitatedSessionPreviewIfComplete(
       id: true,
       status: true,
       assessmentId: true,
-      clientId: true,
     },
   });
   if (!session?.assessmentId || session.status !== "ASSESSMENT") return;
 
   const assessment = await prisma.assessment.findUnique({
     where: { id: session.assessmentId },
-    select: { status: true, deliverablePhase: true },
+    select: { status: true },
   });
-  if (
-    assessment?.status === "COMPLETED" ||
-    assessment?.deliverablePhase === "PREVIEW"
-  ) {
-    await prisma.facilitatedSession.update({
-      where: { id: facilitatedSessionId },
-      data: { status: "PREVIEW" },
-    });
-  }
+  if (assessment?.status !== "COMPLETED") return;
+
+  await prisma.facilitatedSession.update({
+    where: { id: facilitatedSessionId },
+    data: { status: "PREVIEW" },
+  });
+}
+
+/** Revert sessions wrongly promoted to PREVIEW while the assessment is still in progress. */
+export async function reconcileMislabeledFacilitatedPreviewSessions(input: {
+  advisorProfileId?: string;
+  clientId?: string;
+}): Promise<void> {
+  const previewRows = await prisma.facilitatedSession.findMany({
+    where: {
+      ...(input.advisorProfileId ? { advisorProfileId: input.advisorProfileId } : {}),
+      ...(input.clientId ? { clientId: input.clientId } : {}),
+      status: "PREVIEW",
+      assessmentId: { not: null },
+    },
+    select: { id: true, assessmentId: true },
+  });
+  if (previewRows.length === 0) return;
+
+  const assessmentIds = [
+    ...new Set(
+      previewRows
+        .map((row) => row.assessmentId)
+        .filter((id): id is string => id != null),
+    ),
+  ];
+  const assessments = await prisma.assessment.findMany({
+    where: { id: { in: assessmentIds } },
+    select: { id: true, status: true },
+  });
+  const statusById = new Map(assessments.map((row) => [row.id, row.status]));
+
+  const sessionIdsToRevert = previewRows
+    .filter(
+      (row) =>
+        row.assessmentId != null &&
+        statusById.get(row.assessmentId) !== "COMPLETED",
+    )
+    .map((row) => row.id);
+  if (sessionIdsToRevert.length === 0) return;
+
+  await prisma.facilitatedSession.updateMany({
+    where: { id: { in: sessionIdsToRevert } },
+    data: { status: "ASSESSMENT" },
+  });
 }

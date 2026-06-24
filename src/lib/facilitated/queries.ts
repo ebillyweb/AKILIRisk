@@ -3,8 +3,8 @@ import "server-only";
 import type { FacilitatedSessionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { userEmailForDisplay } from "@/lib/auth/user-email";
+import { reconcileMislabeledFacilitatedPreviewSessions } from "@/lib/facilitated/assessment-access";
 import {
-  FACILITATED_SESSION_RESUME_MAX_AGE_MS,
   OPEN_FACILITATED_STATUSES,
   type FacilitatedSessionSummary,
 } from "@/lib/facilitated/types";
@@ -27,13 +27,16 @@ export async function findResumableFacilitatedSession(input: {
   clientId: string;
   advisorProfileId: string;
 }): Promise<FacilitatedSessionSummary | null> {
-  const cutoff = new Date(Date.now() - FACILITATED_SESSION_RESUME_MAX_AGE_MS);
+  await reconcileMislabeledFacilitatedPreviewSessions({
+    advisorProfileId: input.advisorProfileId,
+    clientId: input.clientId,
+  });
+
   const session = await prisma.facilitatedSession.findFirst({
     where: {
       clientId: input.clientId,
       advisorProfileId: input.advisorProfileId,
       status: { in: OPEN_FACILITATED_STATUSES },
-      startedAt: { gte: cutoff },
     },
     orderBy: { startedAt: "desc" },
     select: sessionSelect,
@@ -41,16 +44,16 @@ export async function findResumableFacilitatedSession(input: {
   return session ? mapSessionSummary(session) : null;
 }
 
-export async function listRecentFacilitatedSessionsForAdvisor(
+export async function listOpenFacilitatedSessionsForAdvisor(
   advisorProfileId: string,
-  limit = 10,
+  limit = 50,
 ): Promise<FacilitatedSessionSummary[]> {
-  const cutoff = new Date(Date.now() - FACILITATED_SESSION_RESUME_MAX_AGE_MS);
+  await reconcileMislabeledFacilitatedPreviewSessions({ advisorProfileId });
+
   const rows = await prisma.facilitatedSession.findMany({
     where: {
       advisorProfileId,
       status: { in: OPEN_FACILITATED_STATUSES },
-      startedAt: { gte: cutoff },
     },
     orderBy: { updatedAt: "desc" },
     take: limit,
@@ -58,6 +61,9 @@ export async function listRecentFacilitatedSessionsForAdvisor(
   });
   return rows.map(mapSessionSummary);
 }
+
+/** @deprecated Use listOpenFacilitatedSessionsForAdvisor */
+export const listRecentFacilitatedSessionsForAdvisor = listOpenFacilitatedSessionsForAdvisor;
 
 function mapSessionSummary(
   row: {

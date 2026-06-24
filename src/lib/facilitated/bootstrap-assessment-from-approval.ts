@@ -8,6 +8,7 @@ import {
 import { syncInProgressAssessmentScope } from "@/lib/assessment/sync-client-assessment-scope";
 import { syncAssessmentScopeFromApproval } from "@/lib/assessment/sync-scope-from-approval";
 import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
+import { resolveSnapshotIdForClient } from "@/lib/methodology/platform-pillars";
 import { getActivePillars, loadSnapshotForInterview } from "@/lib/methodology/snapshot";
 
 /** Create or reuse a scoped in-progress assessment for facilitated entry (not at approve time). */

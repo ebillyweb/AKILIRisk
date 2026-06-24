@@ -13,13 +13,11 @@ export type FacilitatedSessionSummary = {
   clientEmail: string | null;
 };
 
-export const FACILITATED_SESSION_RESUME_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-
+/** Resumable in-progress steps only — not PREVIEW (formal review / finish flow). */
 export const OPEN_FACILITATED_STATUSES: FacilitatedSessionStatus[] = [
   "INTAKE",
   "PILLAR_SELECT",
   "ASSESSMENT",
-  "PREVIEW",
 ];
 
 export function facilitatedSessionStepPath(

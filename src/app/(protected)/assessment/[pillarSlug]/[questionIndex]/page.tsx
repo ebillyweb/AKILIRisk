@@ -12,6 +12,7 @@ import { hasDocumentUploadFiles } from '@/lib/assessment/question-upload';
 import { QuestionCard } from '@/components/assessment/QuestionCard';
 import { NavigationButtons } from '@/components/assessment/NavigationButtons';
 import { SectionProgress } from '@/components/assessment/ProgressBar';
+import { SkipToLastUnansweredQuestion } from '@/components/assessment/SkipToLastUnansweredQuestion';
 import { Card, CardContent } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import type { CustomizationConfig } from '@/lib/assessment/customization';
@@ -36,7 +37,8 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   const pillarSlug = normalizePillarSlug(rawSlug);
   const questionIndex = parseInt(resolvedParams.questionIndex, 10);
 
-  const { assessmentId, answers, setHouseholdProfile, skippedQuestions } = useAssessmentStore();
+  const { assessmentId, answers, setHouseholdProfile, skippedQuestions, setCurrentPosition } =
+    useAssessmentStore();
   const { profile } = useHouseholdProfile();
   const { data: pillarQuestionData, isLoading: questionsLoading } =
     usePillarQuestions(pillarSlug);
@@ -207,6 +209,11 @@ export default function QuestionPage({ params }: QuestionPageProps) {
     })();
   };
 
+  const handleJumpToLastUnanswered = (targetIndex: number) => {
+    setCurrentPosition(pillarSlug, targetIndex);
+    router.push(`/assessment/${pillarSlug}/${targetIndex}`);
+  };
+
   const isValid =
     currentQuestion.type === "document-upload"
       ? hasDocumentUploadFiles(currentAnswer) || isQuestionSkipped
@@ -220,6 +227,11 @@ export default function QuestionPage({ params }: QuestionPageProps) {
           answeredCount={progress.answered}
           totalCount={progress.total}
           pillarName={currentPillar.name}
+          activeQuestion={
+            isReviewingPillar
+              ? undefined
+              : { index: currentIndex + 1, total: visibleQuestions.length }
+          }
           reviewingQuestion={
             isReviewingPillar
               ? {
@@ -229,6 +241,15 @@ export default function QuestionPage({ params }: QuestionPageProps) {
               : undefined
           }
         />
+        {!isReviewingPillar ? (
+          <SkipToLastUnansweredQuestion
+            currentIndex={currentIndex}
+            visibleQuestions={visibleQuestions}
+            answers={answers}
+            skippedQuestions={skippedQuestions}
+            onJump={handleJumpToLastUnanswered}
+          />
+        ) : null}
       </section>
 
       <Card className="overflow-hidden">

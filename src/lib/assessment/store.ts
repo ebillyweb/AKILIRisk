@@ -49,7 +49,7 @@ interface AssessmentState {
   skipQuestion: (questionId: string) => void;
   setCurrentPosition: (pillar: string, questionIndex: number) => void;
   markPillarComplete: (pillar: string) => void;
-  loadFromServer: (data: ServerAssessmentData) => void;
+  loadFromServer: (data: ServerAssessmentData, options?: { preferServer?: boolean }) => void;
   resetAssessment: () => void;
   setHydrated: (hydrated: boolean) => void;
   setLoading: (loading: boolean) => void;
@@ -134,7 +134,7 @@ export const useAssessmentStore = create<AssessmentState>()(
           completedPillars: [...new Set([...state.completedPillars, pillar])],
         })),
 
-      loadFromServer: (data: ServerAssessmentData) =>
+      loadFromServer: (data: ServerAssessmentData, options?: { preferServer?: boolean }) =>
         set((state) => {
           const serverAnswers: Record<string, unknown> = {};
           const serverSkipped: string[] = [];
@@ -147,7 +147,9 @@ export const useAssessmentStore = create<AssessmentState>()(
             }
           });
 
-          const mergedAnswers = { ...serverAnswers, ...state.answers };
+          const mergedAnswers = options?.preferServer
+            ? { ...state.answers, ...serverAnswers }
+            : { ...serverAnswers, ...state.answers };
           const mergedSkipped = [
             ...new Set([...serverSkipped, ...state.skippedQuestions]),
           ].filter((id) => mergedAnswers[id] === undefined);

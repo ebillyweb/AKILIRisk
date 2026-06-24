@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, PlayCircle, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
@@ -23,26 +23,36 @@ import {
   startFacilitatedSessionForClient,
 } from "@/lib/actions/facilitated-session-actions";
 import type { FacilitatedLauncherData } from "@/lib/actions/facilitated-session-actions";
-import { facilitatedSessionStepPath } from "@/lib/facilitated/types";
-import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
+import { facilitatedSessionResumePath } from "@/lib/facilitated/paths";
 
 interface StartSessionFormProps {
   data: FacilitatedLauncherData;
 }
 
+function formatSessionStatus(status: string): string {
+  return status.replaceAll("_", " ");
+}
+
 export function StartSessionForm({ data }: StartSessionFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isStartingExisting, startExistingTransition] = useTransition();
+  const [isCreatingClient, startCreateTransition] = useTransition();
   const [selectedClientId, setSelectedClientId] = useState("");
   const [newClientName, setNewClientName] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
+
+  const selectedClient = useMemo(
+    () => data.clients.find((client) => client.id === selectedClientId),
+    [data.clients, selectedClientId],
+  );
+  const hasOpenSession = Boolean(selectedClient?.openSession);
 
   const handleStartExisting = () => {
     if (!selectedClientId) {
       toast.error("Select a client to continue");
       return;
     }
-    startTransition(async () => {
+    startExistingTransition(async () => {
       const result = await startFacilitatedSessionForClient({
         clientId: selectedClientId,
         resumeExisting: true,
@@ -56,7 +66,7 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
   };
 
   const handleCreateAndStart = () => {
-    startTransition(async () => {
+    startCreateTransition(async () => {
       const result = await createClientAndStartFacilitatedSession({
         clientName: newClientName,
         clientEmail: newClientEmail,
@@ -81,6 +91,7 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
           <CardTitle className="text-base">Select existing client</CardTitle>
           <CardDescription>
             Start or resume a live session with someone already in your portfolio.
+            Clients with open sessions appear first.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -100,6 +111,7 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
                     {data.clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name} · {client.email}
+                        {client.openSession ? " — open session" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -108,15 +120,15 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
               <Button
                 type="button"
                 className="w-full"
-                disabled={isPending || !selectedClientId}
+                disabled={isStartingExisting || isCreatingClient || !selectedClientId}
                 onClick={handleStartExisting}
               >
-                {isPending ? (
+                {isStartingExisting ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <>
                     <PlayCircle className="size-4" />
-                    Start session
+                    {hasOpenSession ? "Resume session" : "Start session"}
                   </>
                 )}
               </Button>
@@ -158,10 +170,15 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
             type="button"
             variant="outline"
             className="w-full"
-            disabled={isPending || !newClientName.trim() || !newClientEmail.trim()}
+            disabled={
+              isCreatingClient ||
+              isStartingExisting ||
+              !newClientName.trim() ||
+              !newClientEmail.trim()
+            }
             onClick={handleCreateAndStart}
           >
-            {isPending ? (
+            {isCreatingClient ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <>
@@ -177,17 +194,16 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
         <Card className="border-border/70 shadow-sm lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Resume open sessions</CardTitle>
-            <CardDescription>Sessions started in the last 24 hours</CardDescription>
+            <CardDescription>
+              Resume intake or in-progress assessments. Completed assessments move to your
+              pipeline for formal review.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {data.openSessions.map((session) => (
               <Link
                 key={session.id}
-                href={
-                  session.status === "ASSESSMENT"
-                    ? facilitatedAssessmentHubPath(session.id, { resume: true })
-                    : facilitatedSessionStepPath(session.id, session.status)
-                }
+                href={facilitatedSessionResumePath(session.id, session.status)}
                 className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 px-4 py-3 text-left transition-colors hover:border-primary/30 hover:bg-muted/40"
               >
                 <div className="min-w-0">
@@ -198,7 +214,7 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
                     Started {new Date(session.startedAt).toLocaleString()}
                   </p>
                 </div>
-                <Badge variant="secondary">{session.status.replace("_", " ")}</Badge>
+                <Badge variant="secondary">{formatSessionStatus(session.status)}</Badge>
               </Link>
             ))}
           </CardContent>
