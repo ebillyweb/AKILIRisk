@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { getAdvisorBrandingBySubdomain } from "@/lib/advisor/subdomain";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { InviteCodeForm } from "@/components/auth/InviteCodeForm";
-import { BrandedPortalFooter } from "@/components/branding/BrandedPortalFooter";
 import { BrandedPortalShell } from "@/components/branding/BrandedPortalShell";
 import { HeroFeatureCard } from "@/components/home/hero/HeroFeatureCard";
 import { HOME_HERO_FEATURES } from "@/components/home/hero/home-hero-features";
@@ -31,8 +30,7 @@ export default async function BrandedClientPortalPage() {
       branding={branding}
       homeHref="/"
       variant="landing"
-      showPublicNav
-      footer={<BrandedPortalFooter branding={branding} />}
+      titleAsHeading
     >
       <div className="space-y-10">
         <div className="space-y-3 text-center">

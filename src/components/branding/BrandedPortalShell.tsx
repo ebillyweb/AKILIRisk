@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
+import { BrandedPortalFooter } from "@/components/branding/BrandedPortalFooter";
 import {
   clientPortalBrandingDisplayTitle,
   clientPortalLogoImgSrc,
@@ -16,21 +17,20 @@ type BrandedPortalShellProps = {
   children: React.ReactNode;
   /** Wider landing layout vs. centered auth forms */
   variant?: "auth" | "landing";
-  showPublicNav?: boolean;
-  footer?: React.ReactNode;
+  /** Use h1 for brand title on the tenant landing page only */
+  titleAsHeading?: boolean;
 };
 
 /**
  * Shared white-label shell for tenant landing and auth routes.
- * Matches platform `hero-surface` / `page-shell` styling so links feel consistent.
+ * Header nav and footer are always shown so public pages stay consistent.
  */
 export function BrandedPortalShell({
   branding,
   homeHref = "/",
   children,
   variant = "auth",
-  showPublicNav = false,
-  footer,
+  titleAsHeading = false,
 }: BrandedPortalShellProps) {
   const brandTitle = clientPortalBrandingDisplayTitle(branding);
   const logoSrc = clientPortalLogoImgSrc(branding);
@@ -66,7 +66,7 @@ export function BrandedPortalShell({
                 logoSrc={logoSrc}
                 primaryHex={previewHex?.primary}
                 homeHref={homeHref}
-                titleAsHeading={homeHref === "/"}
+                titleAsHeading={titleAsHeading}
               />
               <p
                 className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
@@ -76,22 +76,20 @@ export function BrandedPortalShell({
               </p>
             </div>
 
-            {showPublicNav ? (
-              <nav
-                className="flex flex-wrap items-center gap-2 sm:justify-end"
-                aria-label="Portal"
-              >
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/signin/magic-link">Sign In</Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/start">
-                    Get started
-                    <ArrowRight className="ml-1 size-4" aria-hidden />
-                  </Link>
-                </Button>
-              </nav>
-            ) : null}
+            <nav
+              className="flex flex-wrap items-center gap-2 sm:justify-end"
+              aria-label="Portal"
+            >
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/signin/magic-link">Sign In</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/start">
+                  Get started
+                  <ArrowRight className="ml-1 size-4" aria-hidden />
+                </Link>
+              </Button>
+            </nav>
           </header>
 
           <div
@@ -105,7 +103,9 @@ export function BrandedPortalShell({
             {children}
           </div>
 
-          {footer ? <div className="mt-10 border-t border-border/60 pt-8">{footer}</div> : null}
+          <div className="mt-10 border-t border-border/60 pt-8">
+            <BrandedPortalFooter branding={branding} />
+          </div>
         </div>
       </div>
     </div>
