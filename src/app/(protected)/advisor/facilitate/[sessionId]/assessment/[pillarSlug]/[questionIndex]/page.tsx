@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { FacilitatedQuestionPage } from "@/components/advisor/facilitate/FacilitatedQuestionView";
 import { resolveIncludedPillars } from "@/lib/assessment/included-pillars";
 import { assertFacilitatedSessionStep } from "@/lib/facilitated/session-layout";
+import { getHouseholdProfileForClientAssessment } from "@/lib/household/member-profile";
 
 export default async function FacilitatedQuestionRoutePage({
   params,
@@ -30,11 +31,16 @@ export default async function FacilitatedQuestionRoutePage({
     select: { includedPillars: true },
   });
 
+  const householdProfile = await getHouseholdProfileForClientAssessment(
+    facilitated.clientId,
+  );
+
   return (
     <FacilitatedQuestionPage
       params={Promise.resolve(resolved)}
       assessmentId={facilitated.assessmentId}
       includedPillars={resolveIncludedPillars(assessment?.includedPillars ?? [])}
+      householdProfile={householdProfile}
     />
   );
 }

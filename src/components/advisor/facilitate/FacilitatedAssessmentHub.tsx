@@ -22,7 +22,7 @@ import {
   useAssessmentPillarDefinitions,
   useAssessmentPillarScores,
 } from "@/lib/hooks/useAssessmentPillars";
-import { useHouseholdProfile } from "@/lib/hooks/useHouseholdProfile";
+import type { HouseholdProfile } from "@/lib/assessment/personalization";
 import {
   facilitatedAssessmentQuestionPath,
   facilitatedPreviewPath,
@@ -33,18 +33,22 @@ interface FacilitatedAssessmentHubProps {
   sessionId: string;
   assessmentId: string;
   includedPillars: string[];
+  householdProfile?: HouseholdProfile | null;
 }
 
 export function FacilitatedAssessmentHub({
   sessionId,
   assessmentId,
   includedPillars: includedPillarsProp,
+  householdProfile = null,
 }: FacilitatedAssessmentHubProps) {
   const router = useRouter();
   const store = useAssessmentStore();
   const pillarDefinitions = useAssessmentPillarDefinitions();
-  const { profile } = useHouseholdProfile();
-  const { questionsByPillarId, isLoading: questionsLoading } = useAllPillarQuestions();
+  const { questionsByPillarId, isLoading: questionsLoading } = useAllPillarQuestions({
+    facilitatedSessionId: sessionId,
+    assessmentId,
+  });
   const { data: pillarScores = [] } = useAssessmentPillarScores(assessmentId, {
     facilitatedSessionId: sessionId,
   });
@@ -73,13 +77,15 @@ export function FacilitatedAssessmentHub({
   });
 
   useEffect(() => {
+    const prior = useAssessmentStore.getState();
     store.setAssessmentId(assessmentId);
-    if (assessmentData && !store.isHydrated) {
+    store.setHouseholdProfile(householdProfile);
+    if (assessmentData && (!prior.isHydrated || prior.assessmentId !== assessmentId)) {
       store.loadFromServer(assessmentData);
       store.setHydrated(true);
     }
     if (!assessmentLoading) setReady(true);
-  }, [assessmentData, assessmentId, assessmentLoading, store]);
+  }, [assessmentData, assessmentId, assessmentLoading, householdProfile, store]);
 
   const scoredPillarIds = useMemo(
     () => new Set(pillarScores.map((s) => normalizePillarSlug(s.pillar))),
@@ -99,7 +105,7 @@ export function FacilitatedAssessmentHub({
 
   const pillarStats = assessmentPillars.map(({ pillar, questions }) => {
     const pillarSlug = pillar.slug;
-    const visibleQuestions = getVisibleQuestions(store.answers, questions, profile);
+    const visibleQuestions = getVisibleQuestions(store.answers, questions, householdProfile);
     const questionsAnswered = visibleQuestions.filter((q) => {
       const answer = store.answers[q.id];
       return answer !== undefined && answer !== null;

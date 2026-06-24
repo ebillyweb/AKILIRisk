@@ -13,12 +13,40 @@ export function useAssessmentPillarDefinitions(): Pillar[] {
   return assessmentPillarDefinitions();
 }
 
-export function usePillarQuestions(pillarId: string, enabled = true) {
+export type PillarQuestionsQueryOptions = {
+  enabled?: boolean;
+  facilitatedSessionId?: string;
+  assessmentId?: string;
+};
+
+function pillarQuestionsQueryString(options?: PillarQuestionsQueryOptions): string {
+  const params = new URLSearchParams();
+  if (options?.facilitatedSessionId) {
+    params.set("facilitatedSessionId", options.facilitatedSessionId);
+  }
+  if (options?.assessmentId) {
+    params.set("assessmentId", options.assessmentId);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function usePillarQuestions(pillarId: string, options?: PillarQuestionsQueryOptions) {
   const normalized = normalizePillarSlug(pillarId);
+  const enabled = options?.enabled ?? true;
+  const querySuffix = pillarQuestionsQueryString(options);
+
   return useQuery<{ pillarId: string; questions: Question[] }>({
-    queryKey: ["pillar-questions", normalized],
+    queryKey: [
+      "pillar-questions",
+      normalized,
+      options?.facilitatedSessionId,
+      options?.assessmentId,
+    ],
     queryFn: async () => {
-      const res = await fetch(`/api/assessment/pillars/${normalized}/questions`);
+      const res = await fetch(
+        `/api/assessment/pillars/${normalized}/questions${querySuffix}`,
+      );
       if (!res.ok) throw new Error("Failed to load pillar questions");
       return res.json();
     },
@@ -27,13 +55,23 @@ export function usePillarQuestions(pillarId: string, enabled = true) {
   });
 }
 
-export function useAllPillarQuestions(enabled = true) {
+export function useAllPillarQuestions(options?: PillarQuestionsQueryOptions) {
   const pillars = assessmentPillarDefinitions();
+  const enabled = options?.enabled ?? true;
+  const querySuffix = pillarQuestionsQueryString(options);
+
   const queries = useQueries({
     queries: pillars.map((p) => ({
-      queryKey: ["pillar-questions", p.slug],
+      queryKey: [
+        "pillar-questions",
+        p.slug,
+        options?.facilitatedSessionId,
+        options?.assessmentId,
+      ],
       queryFn: async () => {
-        const res = await fetch(`/api/assessment/pillars/${p.slug}/questions`);
+        const res = await fetch(
+          `/api/assessment/pillars/${p.slug}/questions${querySuffix}`,
+        );
         if (!res.ok) throw new Error(`Failed to load ${p.slug} questions`);
         return res.json() as Promise<{ pillarId: string; questions: Question[] }>;
       },

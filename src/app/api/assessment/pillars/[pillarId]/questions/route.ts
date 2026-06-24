@@ -6,15 +6,17 @@ import { isAssessmentPillarId, normalizePillarSlug } from "@/lib/assessment/pill
 import { wireQuestionsToQuestions } from "@/lib/assessment/bank/behaviors";
 import type { GovernanceQuestionWire } from "@/lib/assessment/bank/behaviors";
 import { loadGovernanceQuestionWires } from "@/lib/assessment/bank/load-bank";
+import { authorizeAssessmentApiAccess } from "@/lib/facilitated/assessment-access";
 import { loadSnapshotForAssessment } from "@/lib/methodology/snapshot";
 import { pillarQuestionsFromSnapshot } from "@/lib/methodology/assessment-from-snapshot";
 
 /**
  * GET /api/assessment/pillars/[pillarId]/questions
  * Visible questions for one assessment pillar (snapshot-pinned when in progress).
+ * Advisors facilitating a session must pass `facilitatedSessionId` + `assessmentId`.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ pillarId: string }> }
 ) {
   try {
@@ -30,14 +32,34 @@ export async function GET(
       return NextResponse.json({ error: "Unknown pillar" }, { status: 400 });
     }
 
-    const inProgress = await prisma.assessment.findFirst({
-      where: { userId: session.user.id, status: "IN_PROGRESS" },
-      orderBy: { updatedAt: "desc" },
-      select: { id: true },
-    });
+    const searchParams = new URL(request.url).searchParams;
+    const facilitatedSessionId = searchParams.get("facilitatedSessionId");
+    const assessmentIdParam = searchParams.get("assessmentId");
 
-    if (inProgress) {
-      const snapshot = await loadSnapshotForAssessment(inProgress.id);
+    let assessmentId: string | null = null;
+
+    if (facilitatedSessionId && assessmentIdParam) {
+      const access = await authorizeAssessmentApiAccess({
+        assessmentId: assessmentIdParam,
+        userId: session.user.id,
+        userRole: session.user.role,
+        facilitatedSessionId,
+      });
+      if (!access) {
+        return NextResponse.json({ error: "Assessment not found" }, { status: 404 });
+      }
+      assessmentId = assessmentIdParam;
+    } else {
+      const inProgress = await prisma.assessment.findFirst({
+        where: { userId: session.user.id, status: "IN_PROGRESS" },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true },
+      });
+      assessmentId = inProgress?.id ?? null;
+    }
+
+    if (assessmentId) {
+      const snapshot = await loadSnapshotForAssessment(assessmentId);
       if (snapshot) {
         const questions = pillarQuestionsFromSnapshot(snapshot, normalized);
         if (questions.length > 0) {

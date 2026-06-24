@@ -1,13 +1,17 @@
 "use client";
 
 import { use, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import { NavigationButtons } from "@/components/assessment/NavigationButtons";
 import { QuestionCard } from "@/components/assessment/QuestionCard";
 import { SectionProgress } from "@/components/assessment/ProgressBar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPersonalizedText } from "@/lib/assessment/personalization";
+import type { HouseholdProfile } from "@/lib/assessment/personalization";
 import { hasDocumentUploadFiles } from "@/lib/assessment/question-upload";
 import {
   isAssessmentPillarId,
@@ -18,7 +22,6 @@ import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
 import { useAssessmentStore } from "@/lib/assessment/store";
 import { useAutoSave } from "@/lib/hooks/useAutoSave";
 import { useAssessmentNavigation } from "@/lib/hooks/useAssessmentNavigation";
-import { useHouseholdProfile } from "@/lib/hooks/useHouseholdProfile";
 import {
   useAssessmentPillarScores,
   usePillarQuestions,
@@ -35,6 +38,7 @@ interface FacilitatedQuestionViewProps {
   includedPillars: string[];
   pillarSlug: string;
   questionIndex: number;
+  householdProfile?: HouseholdProfile | null;
 }
 
 export function FacilitatedQuestionView({
@@ -43,14 +47,17 @@ export function FacilitatedQuestionView({
   includedPillars,
   pillarSlug: rawSlug,
   questionIndex,
+  householdProfile = null,
 }: FacilitatedQuestionViewProps) {
   const router = useRouter();
   const pillarSlug = normalizePillarSlug(rawSlug);
-  const { answers, setHouseholdProfile, skippedQuestions, setAssessmentId } =
+  const { answers, setHouseholdProfile, skippedQuestions, setAssessmentId, loadFromServer, setHydrated, assessmentId: storeAssessmentId, isHydrated } =
     useAssessmentStore();
-  const { profile } = useHouseholdProfile();
-  const { data: pillarQuestionData, isLoading: questionsLoading } =
-    usePillarQuestions(pillarSlug);
+  const { data: pillarQuestionData, isLoading: questionsLoading, isError: questionsError } =
+    usePillarQuestions(pillarSlug, {
+      facilitatedSessionId: sessionId,
+      assessmentId,
+    });
   const pillarQuestions = pillarQuestionData?.questions ?? [];
   const currentPillar = pillarDefinitionFor(pillarSlug);
 
@@ -86,13 +93,41 @@ export function FacilitatedQuestionView({
     facilitatedSessionId: sessionId,
   });
 
+  const { data: assessmentData, isLoading: assessmentLoading, isError: assessmentError } =
+    useQuery({
+      queryKey: ["facilitated-assessment", assessmentId, sessionId],
+      queryFn: async () => {
+        const res = await fetch(
+          `/api/assessment/${assessmentId}?facilitatedSessionId=${encodeURIComponent(sessionId)}`,
+        );
+        if (!res.ok) throw new Error("Failed to load assessment");
+        return res.json();
+      },
+      enabled: !!assessmentId,
+    });
+
   useEffect(() => {
     setAssessmentId(assessmentId);
   }, [assessmentId, setAssessmentId]);
 
   useEffect(() => {
-    setHouseholdProfile(profile);
-  }, [profile, setHouseholdProfile]);
+    if (!assessmentData) return;
+    if (!isHydrated || storeAssessmentId !== assessmentId) {
+      loadFromServer(assessmentData);
+      setHydrated(true);
+    }
+  }, [
+    assessmentData,
+    assessmentId,
+    isHydrated,
+    loadFromServer,
+    setHydrated,
+    storeAssessmentId,
+  ]);
+
+  useEffect(() => {
+    setHouseholdProfile(householdProfile);
+  }, [householdProfile, setHouseholdProfile]);
 
   useEffect(() => {
     if (rawSlug !== pillarSlug && isAssessmentPillarId(pillarSlug)) {
@@ -128,7 +163,20 @@ export function FacilitatedQuestionView({
     })();
   }, [branchingChange, visibleQuestions, pillarSlug, router, flushPendingSaves, sessionId]);
 
-  if (questionsLoading || !currentQuestion) {
+  if (questionsError || assessmentError) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 px-4 py-12 text-center">
+        <p className="text-sm text-muted-foreground">
+          Unable to load this assessment question. Return to the hub and try again.
+        </p>
+        <Button asChild variant="outline">
+          <Link href={facilitatedAssessmentHubPath(sessionId)}>Back to assessment</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (questionsLoading || assessmentLoading || !currentQuestion) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
         Loading question…
@@ -137,7 +185,7 @@ export function FacilitatedQuestionView({
   }
 
   const currentAnswer = answers[currentQuestion.id];
-  const personalizedText = getPersonalizedText(currentQuestion, profile);
+  const personalizedText = getPersonalizedText(currentQuestion, householdProfile);
   const pillarHasScore = pillarScores.some(
     (score) => normalizePillarSlug(score.pillar) === pillarSlug,
   );
@@ -259,6 +307,7 @@ export function FacilitatedQuestionPage(props: {
   }>;
   assessmentId: string;
   includedPillars: string[];
+  householdProfile?: HouseholdProfile | null;
 }) {
   const resolved = use(props.params);
   const questionIndex = parseInt(resolved.questionIndex, 10);
@@ -270,6 +319,7 @@ export function FacilitatedQuestionPage(props: {
       includedPillars={props.includedPillars}
       pillarSlug={resolved.pillarSlug}
       questionIndex={questionIndex}
+      householdProfile={props.householdProfile}
     />
   );
 }
