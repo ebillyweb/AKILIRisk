@@ -19,6 +19,7 @@ import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
 import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
 import { toAdvisorHouseholdMemberViews } from "@/lib/profiles/advisor-household-view";
 import { computePillarRecommendations } from "@/lib/intake/pillar-recommendations";
+import { loadAdvisorAssessmentDomainOptions } from "@/lib/methodology/advisor-assessment-domains";
 
 /**
  * Advisor intake review page loader. Mirrors `getAssessmentForAdvisorReview`:
@@ -146,10 +147,16 @@ export async function getIntakeReviewDataForAdvisorPage(
     })),
   });
 
+  const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
+    assignmentAdvisorProfileId,
+  );
+
   return {
     interview: reviewData.interview,
     approval,
     pillarRecommendations,
+    assessmentDomains,
+    assignmentAdvisorProfileId,
     questions: personalizedScript.map((q) => ({
       id: q.id,
       text: q.questionText,
@@ -257,10 +264,15 @@ export async function getIntakeReviewDataForAdvisorExport(
     })),
   });
 
+  const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
+    assignmentAdvisorProfileId,
+  );
+
   return {
     interview: reviewData.interview,
     approval: reviewData.approval,
     pillarRecommendations,
+    assessmentDomains,
     questions: personalizedScript.map((q) => ({
       id: q.id,
       text: q.questionText,

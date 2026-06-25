@@ -31,6 +31,7 @@ import type { PortfolioReportsFilters } from '@/lib/reports/portfolio-types';
 import { approveClientSchema } from '@/lib/schemas/advisor';
 import { normalizeIncludedPillarIds } from '@/lib/assessment/included-pillars';
 import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
+import { assertAdvisorAssessmentDomainSelection } from "@/lib/methodology/advisor-assessment-domains";
 import { computePillarRecommendations } from '@/lib/intake/pillar-recommendations';
 import { decryptUserEmail } from '@/lib/auth/user-email';
 import {
@@ -239,6 +240,11 @@ export async function approveClientIntake(data: unknown) {
     const normalizedFocus = focusAreas?.length
       ? normalizeIncludedPillarIds(focusAreas)
       : normalizedIncluded;
+
+    await assertAdvisorAssessmentDomainSelection(
+      assignmentAdvisorProfileId,
+      normalizedIncluded,
+    );
 
     const { loadIntakeScriptForInterview } = await import(
       '@/lib/intake/load-intake-script'

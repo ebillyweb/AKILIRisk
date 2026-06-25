@@ -12,24 +12,39 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { facilitatedApproveScope } from "@/lib/actions/facilitated-pillar-actions";
 import type { PillarRecommendation } from "@/lib/intake/pillar-recommendations";
+import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import { resolveDefaultAssessmentDomainSelection } from "@/lib/advisor/assessment-domain-option";
+
 import { strongRecommendationPillarIds } from "@/lib/intake/pillar-recommendations";
 
 interface FacilitatedPillarSelectFormProps {
   sessionId: string;
   recommendations: PillarRecommendation[];
+  assessmentDomains: AssessmentDomainOption[];
 }
 
 export function FacilitatedPillarSelectForm({
   sessionId,
   recommendations,
+  assessmentDomains,
 }: FacilitatedPillarSelectFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const availableDomainIds = useMemo(
+    () => assessmentDomains.map((d) => d.id),
+    [assessmentDomains],
+  );
+  const availableSet = useMemo(() => new Set(availableDomainIds), [availableDomainIds]);
   const suggestedIds = useMemo(
     () => strongRecommendationPillarIds(recommendations),
     [recommendations],
   );
-  const [selectedDomains, setSelectedDomains] = useState<string[]>(suggestedIds);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>(() =>
+    resolveDefaultAssessmentDomainSelection({
+      availableDomainIds,
+      suggestedIds,
+    }),
+  );
   const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
 
@@ -38,8 +53,10 @@ export function FacilitatedPillarSelectForm({
     const moderate = recommendations
       .filter((r) => r.strength === "moderate")
       .map((r) => r.pillarId);
-    setSelectedDomains([...new Set([...strong, ...moderate])]);
-  }, [recommendations]);
+    setSelectedDomains(
+      [...new Set([...strong, ...moderate])].filter((id) => availableSet.has(id)),
+    );
+  }, [recommendations, availableSet]);
 
   const handleApprove = () => {
     if (selectedDomains.length === 0) {
@@ -82,12 +99,14 @@ export function FacilitatedPillarSelectForm({
         </div>
 
         <AssessmentDomainsSelector
+          domains={assessmentDomains}
           selectedDomains={selectedDomains}
           onChange={setSelectedDomains}
           recommendedIds={recommendedForDomains}
         />
 
         <EmphasisAreasSelector
+          domains={assessmentDomains}
           includedDomains={selectedDomains}
           selectedEmphasis={selectedEmphasis}
           onChange={setSelectedEmphasis}

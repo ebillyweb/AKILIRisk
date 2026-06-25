@@ -104,6 +104,16 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
 
     await assertCanAddClientForAdvisorProfile(profile.id);
 
+    if (validatedInput.intakeWaived && validatedInput.includedPillars?.length) {
+      const { assertAdvisorAssessmentDomainSelection } = await import(
+        "@/lib/methodology/advisor-assessment-domains"
+      );
+      await assertAdvisorAssessmentDomainSelection(
+        profile.id,
+        validatedInput.includedPillars,
+      );
+    }
+
     const features =
       (await getSubscriptionFeatures(profile.userId)) ??
       STARTER_SUBSCRIPTION_FEATURES;

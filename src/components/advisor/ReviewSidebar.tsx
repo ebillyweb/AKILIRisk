@@ -6,11 +6,11 @@ import { AssessmentDomainsSelector } from "./AssessmentDomainsSelector";
 import { EmphasisAreasSelector } from "./EmphasisAreasSelector";
 import { PillarRecommendationsPanel } from "./PillarRecommendationsPanel";
 import { ApprovalActions } from "./ApprovalActions";
+import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import { resolveDefaultAssessmentDomainSelection } from "@/lib/advisor/assessment-domain-option";
 import type { IntakeReviewData } from "@/lib/advisor/types";
 import type { PillarRecommendation } from "@/lib/intake/pillar-recommendations";
-import {
-  strongRecommendationPillarIds,
-} from "@/lib/intake/pillar-recommendations";
+import { strongRecommendationPillarIds } from "@/lib/intake/pillar-recommendations";
 
 interface ReviewSidebarProps {
   interviewId: string;
@@ -18,6 +18,7 @@ interface ReviewSidebarProps {
   approval: IntakeReviewData["approval"];
   householdProfileCount: number;
   pillarRecommendations: PillarRecommendation[];
+  assessmentDomains: AssessmentDomainOption[];
 }
 
 export function ReviewSidebar({
@@ -26,27 +27,38 @@ export function ReviewSidebar({
   approval,
   householdProfileCount,
   pillarRecommendations,
+  assessmentDomains,
 }: ReviewSidebarProps) {
   const locked =
     approval?.status === "APPROVED" || approval?.status === "REJECTED";
+
+  const availableDomainIds = useMemo(
+    () => assessmentDomains.map((d) => d.id),
+    [assessmentDomains],
+  );
+  const availableSet = useMemo(() => new Set(availableDomainIds), [availableDomainIds]);
 
   const suggestedIds = useMemo(
     () => strongRecommendationPillarIds(pillarRecommendations),
     [pillarRecommendations],
   );
 
-  const initialIncluded = useMemo(() => {
-    if (approval?.includedPillars?.length) return approval.includedPillars;
-    if (suggestedIds.length > 0) return suggestedIds;
-    return approval?.focusAreas?.length ? approval.focusAreas : [];
-  }, [approval, suggestedIds]);
+  const initialIncluded = useMemo(
+    () =>
+      resolveDefaultAssessmentDomainSelection({
+        availableDomainIds,
+        existingIncluded: approval?.includedPillars,
+        suggestedIds,
+      }),
+    [approval?.includedPillars, suggestedIds, availableDomainIds],
+  );
 
   const [selectedDomains, setSelectedDomains] = useState<string[]>(initialIncluded);
   const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>(
     approval?.focusAreas?.length &&
       approval.includedPillars?.length &&
       approval.focusAreas.length < approval.includedPillars.length
-      ? approval.focusAreas
+      ? approval.focusAreas.filter((id) => availableSet.has(id))
       : [],
   );
   const [notes, setNotes] = useState(approval?.notes || "");
@@ -58,20 +70,22 @@ export function ReviewSidebar({
       if (approval?.includedPillars?.length && approval.focusAreas?.length) {
         const emphasisSubset =
           approval.focusAreas.length < approval.includedPillars.length
-            ? approval.focusAreas
+            ? approval.focusAreas.filter((id) => availableSet.has(id))
             : [];
         setSelectedEmphasis(emphasisSubset);
       }
     });
-  }, [approval, initialIncluded]);
+  }, [approval, initialIncluded, availableSet]);
 
   const handleSelectRecommended = useCallback(() => {
     const strong = strongRecommendationPillarIds(pillarRecommendations);
     const moderate = pillarRecommendations
       .filter((r) => r.strength === "moderate")
       .map((r) => r.pillarId);
-    setSelectedDomains([...new Set([...strong, ...moderate])]);
-  }, [pillarRecommendations]);
+    setSelectedDomains(
+      [...new Set([...strong, ...moderate])].filter((id) => availableSet.has(id)),
+    );
+  }, [pillarRecommendations, availableSet]);
 
   const handleScrollToQuestion = useCallback((questionId: string) => {
     const el = document.getElementById(`intake-question-${questionId}`);
@@ -120,6 +134,7 @@ export function ReviewSidebar({
       ) : null}
 
       <AssessmentDomainsSelector
+        domains={assessmentDomains}
         selectedDomains={selectedDomains}
         onChange={setSelectedDomains}
         disabled={locked}
@@ -127,6 +142,7 @@ export function ReviewSidebar({
       />
 
       <EmphasisAreasSelector
+        domains={assessmentDomains}
         includedDomains={selectedDomains}
         selectedEmphasis={selectedEmphasis}
         onChange={setSelectedEmphasis}

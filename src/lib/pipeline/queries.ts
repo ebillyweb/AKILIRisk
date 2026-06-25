@@ -817,9 +817,16 @@ export async function getClientDetail(
   }
 
   const engagementScope = await getClientEngagementScope(clientId);
+  const { loadAdvisorAssessmentDomainOptions } = await import(
+    "@/lib/methodology/advisor-assessment-domains"
+  );
+  const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
+    assignmentAdvisorProfileId,
+  );
 
   return {
     client: pipelineClient,
+    assessmentDomains,
     advisorAssignment: {
       id: assignment.id,
       status: assignment.status,

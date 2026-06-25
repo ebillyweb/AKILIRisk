@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { getAdvisorProfileOrThrow, requireAdvisorRole } from "@/lib/advisor/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
+import { assertAdvisorAssessmentDomainSelection } from "@/lib/methodology/advisor-assessment-domains";
 import { waiverAssessmentScopeSchema } from "@/lib/schemas/advisor";
 
 export type IntakeWaiverActionResult =
@@ -39,6 +40,7 @@ async function clientHasStartedAssessment(clientId: string): Promise<boolean> {
 }
 
 async function persistWaiverScope(
+  advisorProfileId: string,
   _assignmentId: string,
   clientId: string,
   scope: WaiverScopeInput,
@@ -49,6 +51,10 @@ async function persistWaiverScope(
       const msg = parsed.error.issues[0]?.message ?? "Invalid assessment scope";
       return { success: false, error: msg };
     }
+    await assertAdvisorAssessmentDomainSelection(
+      advisorProfileId,
+      parsed.data.includedPillars,
+    );
     await persistClientEngagementScope({
       clientId,
       includedPillars: parsed.data.includedPillars,
@@ -106,7 +112,12 @@ export async function setClientIntakeWaiver(
         };
       }
 
-      const scopeResult = await persistWaiverScope(assignment.id, clientId, scope);
+      const scopeResult = await persistWaiverScope(
+        profile.id,
+        assignment.id,
+        clientId,
+        scope,
+      );
       if (!scopeResult.success) return scopeResult;
 
       const newWaivedAt = new Date();
@@ -204,7 +215,12 @@ export async function updateClientWaiverAssessmentScope(
       };
     }
 
-    const scopeResult = await persistWaiverScope(assignment.id, clientId, scope);
+    const scopeResult = await persistWaiverScope(
+      profile.id,
+      assignment.id,
+      clientId,
+      scope,
+    );
     if (!scopeResult.success) return scopeResult;
 
     await writeAudit({

@@ -2,10 +2,11 @@
 
 import { Badge } from "@/components/ui/badge";
 import { SelectionCheckboxIndicator } from "@/components/advisor/SelectionCheckboxIndicator";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
 import { cn } from "@/lib/utils";
 
 interface AssessmentDomainsSelectorProps {
+  domains: AssessmentDomainOption[];
   selectedDomains: string[];
   onChange: (domains: string[]) => void;
   disabled?: boolean;
@@ -13,6 +14,7 @@ interface AssessmentDomainsSelectorProps {
 }
 
 export function AssessmentDomainsSelector({
+  domains,
   selectedDomains,
   onChange,
   disabled = false,
@@ -33,7 +35,19 @@ export function AssessmentDomainsSelector({
   const selectionLabel =
     selectedDomains.length === 0
       ? "None selected"
-      : `${selectedDomains.length} of ${RISK_AREAS.length} selected`;
+      : `${selectedDomains.length} of ${domains.length} selected`;
+
+  if (domains.length === 0) {
+    return (
+      <section className="space-y-4" aria-labelledby="assessment-domains-heading">
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+          No assessment domains are active in your methodology. Enable pillars under{" "}
+          <span className="font-medium text-foreground">Methodology → Pillar manager</span>{" "}
+          before approving or inviting clients.
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-4" aria-labelledby="assessment-domains-heading">
@@ -46,8 +60,8 @@ export function AssessmentDomainsSelector({
             Assessment domains
           </h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Choose which pillars to include in this client&apos;s assessment (1–6
-            required).
+            Choose which pillars to include in this client&apos;s assessment (at least
+            one required). Only domains active in your methodology are shown.
           </p>
         </div>
         <Badge
@@ -62,7 +76,7 @@ export function AssessmentDomainsSelector({
         className="divide-y divide-border overflow-hidden rounded-lg border bg-card"
         role="list"
       >
-        {RISK_AREAS.map((area) => {
+        {domains.map((area) => {
           const isSelected = selectedDomains.includes(area.id);
           const isRecommended = recommended.has(area.id);
 
@@ -95,14 +109,16 @@ export function AssessmentDomainsSelector({
                       </Badge>
                     ) : null}
                   </span>
-                  <span
-                    className={cn(
-                      "block text-xs leading-relaxed text-muted-foreground",
-                      !isSelected && "line-clamp-2",
-                    )}
-                  >
-                    {area.summary}
-                  </span>
+                  {area.summary ? (
+                    <span
+                      className={cn(
+                        "block text-xs leading-relaxed text-muted-foreground",
+                        !isSelected && "line-clamp-2",
+                      )}
+                    >
+                      {area.summary}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             </li>
@@ -111,8 +127,8 @@ export function AssessmentDomainsSelector({
       </ul>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        At least one domain is required to approve. The client will only see and
-        complete the domains you select.
+        At least one domain is required. The client will only see and complete the
+        domains you select.
       </p>
     </section>
   );

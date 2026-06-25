@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AssessmentDomainsSelector } from '@/components/advisor/AssessmentDomainsSelector';
 import { EmphasisAreasSelector } from '@/components/advisor/EmphasisAreasSelector';
+import type { AssessmentDomainOption } from '@/lib/advisor/assessment-domain-option';
+import { resolveDefaultAssessmentDomainSelection } from '@/lib/advisor/assessment-domain-option';
 import { sendInvitation } from '@/lib/actions/invitations';
 import { buildDefaultInvitationPersonalMessage } from '@/lib/schemas/invitation';
 import { Loader2 } from 'lucide-react';
@@ -40,9 +42,10 @@ type FormData = z.infer<typeof formSchema>;
 
 interface InviteClientFormProps {
   firmName: string | null;
+  assessmentDomains: AssessmentDomainOption[];
 }
 
-export function InviteClientForm({ firmName }: InviteClientFormProps) {
+export function InviteClientForm({ firmName, assessmentDomains }: InviteClientFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string; emailSent: boolean; reason?: string } | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
@@ -94,8 +97,16 @@ export function InviteClientForm({ firmName }: InviteClientFormProps) {
       setSelectedEmphasis([]);
       setValue('includedPillars', []);
       setValue('focusAreas', []);
+      return;
     }
-  }, [intakeWaived, setValue]);
+    if (selectedDomains.length === 0 && assessmentDomains.length > 0) {
+      const defaults = resolveDefaultAssessmentDomainSelection({
+        availableDomainIds: assessmentDomains.map((d) => d.id),
+      });
+      setSelectedDomains(defaults);
+      setValue('includedPillars', defaults, { shouldValidate: true });
+    }
+  }, [intakeWaived, assessmentDomains, selectedDomains.length, setValue]);
 
   const handleDomainsChange = (domains: string[]) => {
     setSelectedDomains(domains);
@@ -269,11 +280,13 @@ export function InviteClientForm({ firmName }: InviteClientFormProps) {
                 these are set.
               </p>
               <AssessmentDomainsSelector
+                domains={assessmentDomains}
                 selectedDomains={selectedDomains}
                 onChange={handleDomainsChange}
                 disabled={isSubmitting}
               />
               <EmphasisAreasSelector
+                domains={assessmentDomains}
                 includedDomains={selectedDomains}
                 selectedEmphasis={selectedEmphasis}
                 onChange={handleEmphasisChange}

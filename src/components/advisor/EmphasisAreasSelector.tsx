@@ -2,10 +2,11 @@
 
 import { Badge } from "@/components/ui/badge";
 import { SelectionCheckboxIndicator } from "@/components/advisor/SelectionCheckboxIndicator";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
 import { cn } from "@/lib/utils";
 
 interface EmphasisAreasSelectorProps {
+  domains: AssessmentDomainOption[];
   includedDomains: string[];
   selectedEmphasis: string[];
   onChange: (areas: string[]) => void;
@@ -13,12 +14,13 @@ interface EmphasisAreasSelectorProps {
 }
 
 export function EmphasisAreasSelector({
+  domains,
   includedDomains,
   selectedEmphasis,
   onChange,
   disabled = false,
 }: EmphasisAreasSelectorProps) {
-  const included = RISK_AREAS.filter((a) => includedDomains.includes(a.id));
+  const included = domains.filter((a) => includedDomains.includes(a.id));
 
   if (included.length === 0) {
     return null;

@@ -12,6 +12,7 @@ import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
 import { getIntakeInterview } from "@/lib/data/intake";
 import { normalizeIncludedPillarIds, resolveIncludedPillars } from "@/lib/assessment/included-pillars";
 import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
+import { assertAdvisorAssessmentDomainSelection } from "@/lib/methodology/advisor-assessment-domains";
 import { prisma } from "@/lib/db";
 import { approveClientSchema } from "@/lib/schemas/advisor";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -50,6 +51,8 @@ export async function facilitatedApproveScope(
     const normalizedFocus = focusAreas?.length
       ? normalizeIncludedPillarIds(focusAreas)
       : normalizedIncluded;
+
+    await assertAdvisorAssessmentDomainSelection(profile.id, normalizedIncluded);
 
     const interview = await getIntakeInterview(
       facilitated.clientId,

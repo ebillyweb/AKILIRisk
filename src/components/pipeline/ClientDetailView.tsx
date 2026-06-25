@@ -70,7 +70,7 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
 }
 
 export function ClientDetailView({ detail }: ClientDetailViewProps) {
-  const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment } = detail;
+  const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomains } = detail;
   const displayName = client.name || 'Unnamed Client';
   const assignmentActive = advisorAssignment.status === "ACTIVE";
   const intakeWaived = advisorAssignment.intakeWaivedAt != null;
@@ -179,6 +179,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   intakeWaivedAt={advisorAssignment.intakeWaivedAt}
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
+                  assessmentDomains={assessmentDomains}
                   showWaiverAction={false}
                   waiverLocked={assessmentStarted}
                 />
@@ -256,6 +257,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         intakeWaivedAt={null}
                         includedPillars={advisorAssignment.includedPillars}
                         focusAreas={advisorAssignment.focusAreas}
+                        assessmentDomains={assessmentDomains}
                         showWaiverAction
                         waiverLocked={assessmentStarted}
                       />
@@ -270,6 +272,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   intakeWaivedAt={null}
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
+                  assessmentDomains={assessmentDomains}
                   showWaiverAction
                   waiverLocked={assessmentStarted}
                 />

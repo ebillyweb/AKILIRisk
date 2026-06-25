@@ -10,7 +10,11 @@ import {
 } from "@/lib/actions/advisor-intake-waiver-actions";
 import { AssessmentDomainsSelector } from "@/components/advisor/AssessmentDomainsSelector";
 import { EmphasisAreasSelector } from "@/components/advisor/EmphasisAreasSelector";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import {
+  assessmentDomainLabel,
+  resolveDefaultAssessmentDomainSelection,
+} from "@/lib/advisor/assessment-domain-option";
+import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,15 +26,12 @@ type IntakeWaiverScopePanelProps = {
   intakeWaivedAt: Date | null;
   includedPillars: string[];
   focusAreas: string[];
+  assessmentDomains: AssessmentDomainOption[];
   /** When true, show the waiver + scope form (no intake submitted). */
   showWaiverAction: boolean;
   /** When true, waiver on/off cannot be changed (assessment already started). */
   waiverLocked?: boolean;
 };
-
-function pillarLabel(id: string): string {
-  return RISK_AREAS.find((a) => a.id === id)?.name ?? id;
-}
 
 export function IntakeWaiverScopePanel({
   clientId,
@@ -39,6 +40,7 @@ export function IntakeWaiverScopePanel({
   intakeWaivedAt,
   includedPillars,
   focusAreas,
+  assessmentDomains,
   showWaiverAction,
   waiverLocked = false,
 }: IntakeWaiverScopePanelProps) {
@@ -47,7 +49,14 @@ export function IntakeWaiverScopePanel({
   const [error, setError] = useState<string | null>(null);
   const [editingScope, setEditingScope] = useState(false);
   const [showWaiverForm, setShowWaiverForm] = useState(false);
-  const [selectedDomains, setSelectedDomains] = useState<string[]>(includedPillars);
+
+  const availableDomainIds = assessmentDomains.map((d) => d.id);
+  const defaultSelection = resolveDefaultAssessmentDomainSelection({
+    availableDomainIds,
+    existingIncluded: includedPillars,
+  });
+
+  const [selectedDomains, setSelectedDomains] = useState<string[]>(defaultSelection);
   const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>(
     focusAreas.length > 0 && focusAreas.length < includedPillars.length
       ? focusAreas
@@ -115,14 +124,16 @@ export function IntakeWaiverScopePanel({
             <div className="flex flex-wrap gap-2">
               {includedPillars.map((id) => (
                 <Badge key={id} variant="outline">
-                  {pillarLabel(id)}
+                  {assessmentDomainLabel(assessmentDomains, id)}
                 </Badge>
               ))}
             </div>
             {focusAreas.length > 0 && focusAreas.length < includedPillars.length ? (
               <p className="text-xs text-muted-foreground">
                 Scoring emphasis:{" "}
-                {focusAreas.map((id) => pillarLabel(id)).join(", ")}
+                {focusAreas
+                  .map((id) => assessmentDomainLabel(assessmentDomains, id))
+                  .join(", ")}
               </p>
             ) : null}
             <Button
@@ -148,11 +159,13 @@ export function IntakeWaiverScopePanel({
         {(editingScope || !scopeSet) && (
           <div className="space-y-4 rounded-lg border border-border/80 p-4">
             <AssessmentDomainsSelector
+              domains={assessmentDomains}
               selectedDomains={selectedDomains}
               onChange={setSelectedDomains}
               disabled={pending || !assignmentActive}
             />
             <EmphasisAreasSelector
+              domains={assessmentDomains}
               includedDomains={selectedDomains}
               selectedEmphasis={selectedEmphasis}
               onChange={setSelectedEmphasis}
@@ -217,7 +230,11 @@ export function IntakeWaiverScopePanel({
           type="button"
           variant="secondary"
           disabled={pending || !assignmentActive}
-          onClick={() => setShowWaiverForm(true)}
+          onClick={() => {
+            setSelectedDomains(defaultSelection);
+            setSelectedEmphasis([]);
+            setShowWaiverForm(true);
+          }}
         >
           Allow assessment without intake
         </Button>
@@ -228,11 +245,13 @@ export function IntakeWaiverScopePanel({
             until you confirm.
           </p>
           <AssessmentDomainsSelector
+            domains={assessmentDomains}
             selectedDomains={selectedDomains}
             onChange={setSelectedDomains}
             disabled={pending || !assignmentActive}
           />
           <EmphasisAreasSelector
+            domains={assessmentDomains}
             includedDomains={selectedDomains}
             selectedEmphasis={selectedEmphasis}
             onChange={setSelectedEmphasis}

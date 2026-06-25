@@ -43,6 +43,8 @@ function makeReview(overrides?: Partial<IntakeReviewData>): IntakeReviewData {
     },
     approval: null,
     pillarRecommendations: [],
+    assessmentDomains: [],
+    assignmentAdvisorProfileId: "advisor-1",
     householdMembers: [],
     questions: [
       {
