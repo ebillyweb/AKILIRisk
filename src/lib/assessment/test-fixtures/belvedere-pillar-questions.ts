@@ -38,6 +38,22 @@ export const BELVEDERE_TEST_QUESTION_IDS = {
   repBs02: "belvedere-rep-bs02",
   repBs04: "belvedere-rep-bs04",
   repBs05: "belvedere-rep-bs05",
+  // Liquidity & Cash Management (pillar 7)
+  liqA1: "belvedere-liq-a1",
+  liqA2: "belvedere-liq-a2",
+  liqA3: "belvedere-liq-a3",
+  // Tax Exposure (pillar 8)
+  taxA1: "belvedere-tax-a1",
+  taxA2: "belvedere-tax-a2",
+  taxA3: "belvedere-tax-a3",
+  // Estate & Succession (pillar 9)
+  estA1: "belvedere-est-a1",
+  estA2: "belvedere-est-a2",
+  estA3: "belvedere-est-a3",
+  // Behavioral Resilience (pillar 10)
+  behA1: "belvedere-beh-a1",
+  behA2: "belvedere-beh-a2",
+  behA3: "belvedere-beh-a3",
 } as const;
 
 const CATEGORY_CODE: Record<string, string> = {
@@ -47,6 +63,10 @@ const CATEGORY_CODE: Record<string, string> = {
   insurance: "4_insurance",
   "geographic-environmental": "5_geographic",
   "reputational-social": "6_reputational",
+  "liquidity-cash": "7_liquidity",
+  "tax-exposure": "8_tax",
+  "estate-succession": "9_estate",
+  "family-governance-behavioral": "10_family_governance",
 };
 
 function row(
@@ -216,6 +236,82 @@ const BELVEDERE_ROWS: PillarQuestionWithHierarchy[] = [
     answer1: "Reactive",
     answer2: "Planned",
     answer3: "Tested",
+  }),
+  // Liquidity & Cash Management (pillar 7)
+  row(BELVEDERE_TEST_QUESTION_IDS.liqA1, "liquidity-cash", "Emergency liquidity reserve documentation", "scored_0_3", {
+    answer0: "None",
+    answer1: "Informal",
+    answer2: "Documented",
+    answer3: "Active + stress-tested",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.liqA2, "liquidity-cash", "Credit lines reviewed and tested for availability", "scored_0_3", {
+    answer0: "None",
+    answer1: "Informal",
+    answer2: "Documented",
+    answer3: "Active + stress-tested",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.liqA3, "liquidity-cash", "Illiquid concentration stress-tested", "scored_0_3", {
+    answer0: "None",
+    answer1: "Informal",
+    answer2: "Documented",
+    answer3: "Active + stress-tested",
+  }),
+  // Tax Exposure (pillar 8)
+  row(BELVEDERE_TEST_QUESTION_IDS.taxA1, "tax-exposure", "Tax residency posture documented and reviewed", "scored_0_3", {
+    answer0: "None",
+    answer1: "Ad-hoc",
+    answer2: "Reviewed annually",
+    answer3: "Proactively managed",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.taxA2, "tax-exposure", "Compensation tax impacts modeled before liquidity events", "scored_0_3", {
+    answer0: "None",
+    answer1: "Ad-hoc",
+    answer2: "Reviewed annually",
+    answer3: "Proactively managed",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.taxA3, "tax-exposure", "Estate-tax exposure mapped across entities", "scored_0_3", {
+    answer0: "None",
+    answer1: "Ad-hoc",
+    answer2: "Reviewed annually",
+    answer3: "Proactively managed",
+  }),
+  // Estate & Succession (pillar 9)
+  row(BELVEDERE_TEST_QUESTION_IDS.estA1, "estate-succession", "Wills, trusts, and powers of attorney current", "scored_0_3", {
+    answer0: "None/outdated",
+    answer1: "Partial",
+    answer2: "Current",
+    answer3: "Current + multi-jurisdictional",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.estA2, "estate-succession", "Beneficiary designations aligned across accounts", "scored_0_3", {
+    answer0: "None/outdated",
+    answer1: "Partial",
+    answer2: "Current",
+    answer3: "Current + multi-jurisdictional",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.estA3, "estate-succession", "Business succession protocol documented", "scored_0_3", {
+    answer0: "None/outdated",
+    answer1: "Partial",
+    answer2: "Current",
+    answer3: "Current + multi-jurisdictional",
+  }),
+  // Behavioral Resilience (pillar 10)
+  row(BELVEDERE_TEST_QUESTION_IDS.behA1, "family-governance-behavioral", "Structured family meetings held regularly", "scored_0_3", {
+    answer0: "None",
+    answer1: "Informal",
+    answer2: "Documented",
+    answer3: "Active + enforced",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.behA2, "family-governance-behavioral", "Decision rights and spending authorities documented", "scored_0_3", {
+    answer0: "None",
+    answer1: "Informal",
+    answer2: "Documented",
+    answer3: "Active + enforced",
+  }),
+  row(BELVEDERE_TEST_QUESTION_IDS.behA3, "family-governance-behavioral", "Behavioral-finance pitfalls discussed before major investments", "scored_0_3", {
+    answer0: "None",
+    answer1: "Informal",
+    answer2: "Documented",
+    answer3: "Active + enforced",
   }),
 ];
 
