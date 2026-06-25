@@ -5,10 +5,59 @@
  * Usage: npx tsx scripts/backfill-assignment-engagement-scope.ts
  *        DRY_RUN=1 npx tsx scripts/backfill-assignment-engagement-scope.ts
  */
-import { prisma } from "@/lib/db";
-import { getClientEngagementScope } from "@/lib/client/engagement-scope";
+import {
+  disconnectPrismaScript,
+  prisma,
+} from "./lib/prisma-for-scripts.js";
 
 const dryRun = process.env.DRY_RUN === "1";
+
+type LegacyScope = {
+  includedPillars: string[];
+  focusAreas: string[];
+  source: "approval" | "assessment" | null;
+};
+
+async function resolveLegacyScope(clientId: string): Promise<LegacyScope> {
+  const approval = await prisma.intakeApproval.findFirst({
+    where: {
+      status: "APPROVED",
+      interview: { userId: clientId },
+    },
+    orderBy: { approvedAt: "desc" },
+    select: { includedPillars: true, focusAreas: true },
+  });
+
+  if (approval && approval.includedPillars.length > 0) {
+    return {
+      includedPillars: approval.includedPillars,
+      focusAreas:
+        approval.focusAreas.length > 0
+          ? approval.focusAreas
+          : approval.includedPillars,
+      source: "approval",
+    };
+  }
+
+  const assessment = await prisma.assessment.findFirst({
+    where: {
+      userId: clientId,
+      status: { in: ["IN_PROGRESS", "COMPLETED"] },
+    },
+    orderBy: { updatedAt: "desc" },
+    select: { includedPillars: true },
+  });
+
+  if (assessment?.includedPillars.length) {
+    return {
+      includedPillars: assessment.includedPillars,
+      focusAreas: assessment.includedPillars,
+      source: "assessment",
+    };
+  }
+
+  return { includedPillars: [], focusAreas: [], source: null };
+}
 
 async function main() {
   const assignments = await prisma.clientAdvisorAssignment.findMany({
@@ -23,29 +72,26 @@ async function main() {
   let unchanged = 0;
 
   for (const assignment of assignments) {
-    const before = await prisma.clientAdvisorAssignment.findUnique({
-      where: { id: assignment.id },
-      select: { includedPillars: true },
-    });
-
-    if ((before?.includedPillars.length ?? 0) > 0) {
-      unchanged++;
-      continue;
-    }
-
-    const scope = await getClientEngagementScope(assignment.clientId, {
-      reconcile: !dryRun,
-    });
-
-    if (scope.includedPillars.length === 0) {
+    const legacy = await resolveLegacyScope(assignment.clientId);
+    if (legacy.includedPillars.length === 0) {
       unchanged++;
       continue;
     }
 
     updated++;
     console.log(
-      `${dryRun ? "[dry-run] " : ""}client=${assignment.clientId} pillars=${scope.includedPillars.join(",")} source=${scope.source}`,
+      `${dryRun ? "[dry-run] " : ""}client=${assignment.clientId} pillars=${legacy.includedPillars.join(",")} source=${legacy.source}`,
     );
+
+    if (!dryRun) {
+      await prisma.clientAdvisorAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          includedPillars: legacy.includedPillars,
+          focusAreas: legacy.focusAreas,
+        },
+      });
+    }
   }
 
   console.log(
@@ -58,4 +104,4 @@ main()
     console.error(error);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => disconnectPrismaScript());
