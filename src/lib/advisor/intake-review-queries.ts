@@ -20,6 +20,7 @@ import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-questio
 import { toAdvisorHouseholdMemberViews } from "@/lib/profiles/advisor-household-view";
 import { computePillarRecommendations } from "@/lib/intake/pillar-recommendations";
 import { loadAdvisorAssessmentDomainOptions } from "@/lib/methodology/advisor-assessment-domains";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 /**
  * Advisor intake review page loader. Mirrors `getAssessmentForAdvisorReview`:
@@ -108,6 +109,7 @@ export async function getIntakeReviewDataForAdvisorPage(
     getAssignedAdvisorFirmNameForClient(reviewData.interview.userId),
   ]);
   const personalizedScript = personalizeIntakeScript(script, firmName);
+  const catalog = await getPlatformPillarCatalog();
 
   const rawHouseholdMembers = assignmentProfile.householdProfilesEnabled
     ? await prisma.householdMember.findMany({
@@ -145,7 +147,7 @@ export async function getIntakeReviewDataForAdvisorPage(
       questionId: r.questionId,
       transcription: r.transcription,
     })),
-  });
+  }, catalog);
 
   const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
     assignmentAdvisorProfileId,
@@ -225,6 +227,7 @@ export async function getIntakeReviewDataForAdvisorExport(
     getAssignedAdvisorFirmNameForClient(reviewData.interview.userId),
   ]);
   const personalizedScript = personalizeIntakeScript(script, firmName);
+  const catalog = await getPlatformPillarCatalog();
 
   const rawHouseholdMembers = assignmentProfile.householdProfilesEnabled
     ? await prisma.householdMember.findMany({
@@ -262,7 +265,7 @@ export async function getIntakeReviewDataForAdvisorExport(
       questionId: r.questionId,
       transcription: r.transcription,
     })),
-  });
+  }, catalog);
 
   const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
     assignmentAdvisorProfileId,

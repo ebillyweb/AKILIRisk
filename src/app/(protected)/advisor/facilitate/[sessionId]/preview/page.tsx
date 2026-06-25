@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FacilitatedRiskPreviewView } from "@/components/advisor/facilitate/FacilitatedRiskPreviewView";
 import { resolveIncludedPillars } from "@/lib/assessment/included-pillars";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { normalizePillarScoreId, normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { assertFacilitatedSessionStep } from "@/lib/facilitated/session-layout";
 
@@ -25,7 +26,8 @@ export default async function FacilitatedPreviewPage({
     select: { includedPillars: true },
   });
 
-  const includedPillars = resolveIncludedPillars(assessment?.includedPillars ?? []);
+  const catalog = await getPlatformPillarCatalog();
+  const includedPillars = resolveIncludedPillars(assessment?.includedPillars ?? [], catalog);
   const includedSet = new Set(includedPillars.map(normalizePillarSlug));
 
   const pillarScoreRows = await prisma.pillarScore.findMany({
@@ -48,6 +50,7 @@ export default async function FacilitatedPreviewPage({
       clientName={facilitated.client.name}
       includedPillars={includedPillars}
       pillarScores={pillarScores}
+      pillarCatalog={catalog}
     />
   );
 }

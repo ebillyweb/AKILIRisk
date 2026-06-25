@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAssessmentStore } from '@/lib/assessment/store';
 import { pillarDefinitionFor } from '@/lib/assessment/pillar-registry';
+import { usePlatformPillarCatalog } from '@/lib/hooks/usePlatformPillarCatalog';
 import { resolveScoringPillar } from '@/lib/assessment/scoring-pillar';
 import { syncStoreAnswersToServer } from '@/lib/assessment/sync-store-responses';
 import { useAssessmentPersistHydrated } from '@/lib/hooks/useAssessmentPersistHydrated';
@@ -22,6 +23,7 @@ import { Card, CardContent } from '@/components/ui/card';
 export default function AssessmentCompletePage() {
   const router = useRouter();
   const { assessmentId, currentPillar } = useAssessmentStore();
+  const { data: catalog = [] } = usePlatformPillarCatalog();
   const persistHydrated = useAssessmentPersistHydrated();
   const [isCalculating, setIsCalculating] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +168,7 @@ export default function AssessmentCompletePage() {
   }
 
   const pillarLabel = currentPillar
-    ? pillarDefinitionFor(currentPillar).name
+    ? pillarDefinitionFor(currentPillar, catalog).name
     : 'pillar';
 
   return (

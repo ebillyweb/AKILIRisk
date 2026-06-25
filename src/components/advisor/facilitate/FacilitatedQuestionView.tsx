@@ -30,6 +30,7 @@ import {
   useAssessmentPillarScores,
   usePillarQuestions,
 } from "@/lib/hooks/useAssessmentPillars";
+import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
 import { useFacilitatedAssessmentHydration } from "@/lib/hooks/useFacilitatedAssessmentHydration";
 import {
   facilitatedAssessmentCompletePath,
@@ -67,7 +68,8 @@ export function FacilitatedQuestionView({
       assessmentId,
     });
   const pillarQuestions = pillarQuestionData?.questions ?? [];
-  const currentPillar = pillarDefinitionFor(pillarSlug);
+  const { data: catalog = [] } = usePlatformPillarCatalog();
+  const currentPillar = pillarDefinitionFor(pillarSlug, catalog);
 
   const navPaths = useMemo(
     () => ({
@@ -157,16 +159,17 @@ export function FacilitatedQuestionView({
   ]);
 
   useEffect(() => {
-    if (rawSlug !== pillarSlug && isAssessmentPillarId(pillarSlug)) {
+    if (rawSlug !== pillarSlug && catalog.length > 0 && isAssessmentPillarId(pillarSlug, catalog)) {
       router.replace(facilitatedAssessmentQuestionPath(sessionId, pillarSlug, questionIndex));
     }
-  }, [rawSlug, pillarSlug, questionIndex, router, sessionId]);
+  }, [rawSlug, pillarSlug, questionIndex, router, sessionId, catalog]);
 
   useEffect(() => {
-    if (!isPillarInAssessmentScope(pillarSlug, includedPillars)) {
+    if (catalog.length === 0) return;
+    if (!isPillarInAssessmentScope(pillarSlug, includedPillars, catalog)) {
       router.replace(facilitatedAssessmentHubPath(sessionId));
     }
-  }, [includedPillars, pillarSlug, router, sessionId]);
+  }, [includedPillars, pillarSlug, router, sessionId, catalog]);
 
   useEffect(() => {
     if (pillarHasScore) return;

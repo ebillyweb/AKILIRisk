@@ -33,6 +33,7 @@ import { normalizeIncludedPillarIds } from '@/lib/assessment/included-pillars';
 import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
 import { assertAdvisorAssessmentDomainSelection } from "@/lib/methodology/advisor-assessment-domains";
 import { computePillarRecommendations } from '@/lib/intake/pillar-recommendations';
+import { getPlatformPillarCatalog } from '@/lib/methodology/cached-pillar-catalog';
 import { decryptUserEmail } from '@/lib/auth/user-email';
 import {
   loadAdvisorPiiPolicy,
@@ -236,9 +237,10 @@ export async function approveClientIntake(data: unknown) {
     const assignmentAdvisorProfileId =
       reviewData.assignmentAdvisorProfileId ?? profile.id;
 
-    const normalizedIncluded = normalizeIncludedPillarIds(includedPillars);
+    const catalog = await getPlatformPillarCatalog();
+    const normalizedIncluded = normalizeIncludedPillarIds(includedPillars, catalog);
     const normalizedFocus = focusAreas?.length
-      ? normalizeIncludedPillarIds(focusAreas)
+      ? normalizeIncludedPillarIds(focusAreas, catalog)
       : normalizedIncluded;
 
     await assertAdvisorAssessmentDomainSelection(
@@ -261,7 +263,7 @@ export async function approveClientIntake(data: unknown) {
         questionId: r.questionId,
         transcription: r.transcription,
       })),
-    });
+    }, catalog);
 
     // First ensure an approval exists
     const priorApproval = await createIntakeApproval(

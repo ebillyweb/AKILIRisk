@@ -13,6 +13,7 @@ import { getIntakeInterview } from "@/lib/data/intake";
 import { normalizeIncludedPillarIds, resolveIncludedPillars } from "@/lib/assessment/included-pillars";
 import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
 import { assertAdvisorAssessmentDomainSelection } from "@/lib/methodology/advisor-assessment-domains";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { prisma } from "@/lib/db";
 import { approveClientSchema } from "@/lib/schemas/advisor";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -47,9 +48,10 @@ export async function facilitatedApproveScope(
     }
 
     const { includedPillars, focusAreas, notes } = parsed.data;
-    const normalizedIncluded = normalizeIncludedPillarIds(includedPillars);
+    const catalog = await getPlatformPillarCatalog();
+    const normalizedIncluded = normalizeIncludedPillarIds(includedPillars, catalog);
     const normalizedFocus = focusAreas?.length
-      ? normalizeIncludedPillarIds(focusAreas)
+      ? normalizeIncludedPillarIds(focusAreas, catalog)
       : normalizedIncluded;
 
     await assertAdvisorAssessmentDomainSelection(profile.id, normalizedIncluded);
@@ -74,7 +76,7 @@ export async function facilitatedApproveScope(
         questionId: r.questionId,
         transcription: r.transcription,
       })),
-    });
+    }, catalog);
 
     const priorApproval = await createIntakeApproval(
       facilitated.interviewId,
@@ -129,7 +131,7 @@ export async function facilitatedApproveScope(
     revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/pillars`);
     revalidatePath("/assessment", "layout");
 
-    const firstPillar = resolveIncludedPillars(normalizedIncluded)[0];
+    const firstPillar = resolveIncludedPillars(normalizedIncluded, catalog)[0];
     return {
       success: true as const,
       redirectTo: `/advisor/facilitate/${facilitatedSessionId}/assessment/${firstPillar}/0`,
@@ -159,6 +161,7 @@ export async function facilitatedGetPillarSelectContext(facilitatedSessionId: st
       return { success: false as const, error: "Interview not found" };
     }
     const script = await loadIntakeScriptQuestions();
+    const catalog = await getPlatformPillarCatalog();
     const recommendations = computePillarRecommendations({
       questions: script.map((q) => ({
         id: q.id,
@@ -170,7 +173,7 @@ export async function facilitatedGetPillarSelectContext(facilitatedSessionId: st
         questionId: r.questionId,
         transcription: r.transcription,
       })),
-    });
+    }, catalog);
     return {
       success: true as const,
       recommendations,

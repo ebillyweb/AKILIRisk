@@ -2,10 +2,12 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { decryptUserEmail } from "@/lib/auth/user-email";
-import { RISK_AREAS } from "@/lib/advisor/types";
 import { loadLatestPillarScoresByClient } from "@/lib/admin/analytics-queries";
 import { getSeverity } from "@/lib/intelligence/queries";
 import type { RiskSeverity } from "@/lib/intelligence/types";
+import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
+import { sortPillarCatalog } from "@/lib/methodology/pillar-catalog";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 /**
  * Platform-wide risk signals — aggregate intelligence-style metrics across
@@ -143,9 +145,10 @@ function aggregateClientPillarRows(
 }
 
 function buildPillarSignals(
-  pillarBuckets: Map<string, PillarBucket>
+  catalog: readonly PillarCatalogEntry[],
+  pillarBuckets: Map<string, PillarBucket>,
 ): PillarRiskSignal[] {
-  const signals = RISK_AREAS.map((area) => {
+  const signals = sortPillarCatalog(catalog).map((area) => {
     const bucket = pillarBuckets.get(area.id);
     if (!bucket || bucket.count === 0) {
       return {
@@ -267,12 +270,15 @@ async function getTopTenantsByRiskExposure(
 }
 
 export async function getPlatformRiskSignals(): Promise<PlatformRiskSignals> {
-  const rows = await loadLatestPillarScoresByClient();
+  const [rows, catalog] = await Promise.all([
+    loadLatestPillarScoresByClient(),
+    getPlatformPillarCatalog(),
+  ]);
   const { byClient, summary, bySeverity, risksByCategory, pillarBuckets } =
     aggregateClientPillarRows(rows);
 
   const [pillars, topTenantsByRisk] = await Promise.all([
-    Promise.resolve(buildPillarSignals(pillarBuckets)),
+    Promise.resolve(buildPillarSignals(catalog, pillarBuckets)),
     getTopTenantsByRiskExposure(byClient),
   ]);
 

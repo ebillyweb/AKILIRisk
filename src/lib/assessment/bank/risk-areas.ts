@@ -1,9 +1,21 @@
-import { RISK_AREAS } from "@/lib/advisor/types";
+import {
+  isPillarInCatalog,
+  pillarCatalogMap,
+  type PillarCatalogEntry,
+} from "@/lib/methodology/pillar-catalog";
 
-export const RISK_AREA_IDS = RISK_AREAS.map((a) => a.id) as readonly string[];
+export function isRiskAreaId(
+  id: string,
+  catalog: readonly PillarCatalogEntry[],
+): boolean {
+  return isPillarInCatalog(catalog, id);
+}
 
-export function isRiskAreaId(id: string): id is (typeof RISK_AREA_IDS)[number] {
-  return (RISK_AREA_IDS as readonly string[]).includes(id);
+export function riskAreaFromCatalog(
+  catalog: readonly PillarCatalogEntry[],
+  riskAreaId: string,
+): PillarCatalogEntry | undefined {
+  return pillarCatalogMap(catalog).get(riskAreaId);
 }
 
 /**
@@ -12,7 +24,7 @@ export function isRiskAreaId(id: string): id is (typeof RISK_AREA_IDS)[number] {
  * Migration 20260521120000 renamed the four drifted IDs in the DB; this
  * map lets the question-bank page-level loaders 302 old bookmarks to the
  * current URL instead of 404-ing. Returns `null` for IDs that were never
- * renamed (and for current IDs already in `RISK_AREAS`).
+ * renamed (and for current IDs already in the platform catalog).
  *
  * Stop-using-this date: Phase 3 / D2C launch. Revisit then; if no traffic
  * to the old IDs in 90 days, the map can be removed and old bookmarks

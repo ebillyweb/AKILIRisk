@@ -1,10 +1,11 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   formatIncludedPillarNames,
   isNarrowAssessmentScope,
 } from "@/lib/assessment/included-pillars";
+import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type AssessmentScopeBannerProps = {
   includedPillars: string[];
@@ -14,13 +15,15 @@ type AssessmentScopeBannerProps = {
 export function AssessmentScopeBanner({
   includedPillars,
 }: AssessmentScopeBannerProps) {
-  if (!isNarrowAssessmentScope(includedPillars)) {
+  const { data: catalog = [] } = usePlatformPillarCatalog();
+
+  if (!catalog.length || !isNarrowAssessmentScope(includedPillars, catalog)) {
     return null;
   }
 
   const domainLabel =
     includedPillars.length === 1 ? "domain" : "domains";
-  const names = formatIncludedPillarNames(includedPillars);
+  const names = formatIncludedPillarNames(includedPillars, catalog);
 
   return (
     <Alert variant="info" data-testid="assessment-scope-banner">

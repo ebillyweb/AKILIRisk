@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { pillarDisplayName, formatEnglishList } from "@/lib/assessment/included-pillars";
+import { starterPillarCatalog, type PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 import { waiverAssessmentScopeSchema } from "@/lib/schemas/advisor";
 
 const DEFAULT_FIRM_FALLBACK = "Your advisor";
@@ -11,6 +12,7 @@ const INVITATION_MESSAGE_CLOSING =
 export function buildDefaultInvitationPersonalMessage(
   firmName?: string | null,
   includedPillars?: string[] | null,
+  catalog: readonly PillarCatalogEntry[] = starterPillarCatalog(),
 ): string {
   const firm = firmName?.trim() || DEFAULT_FIRM_FALLBACK;
   const pillars = includedPillars?.filter((id) => id.trim().length > 0) ?? [];
@@ -19,7 +21,9 @@ export function buildDefaultInvitationPersonalMessage(
     const count = pillars.length;
     const assessmentLabel =
       count === 1 ? "Risk Profile Assessment" : "Risk Profile Assessments";
-    const domainNames = formatEnglishList(pillars.map((id) => pillarDisplayName(id)));
+    const domainNames = formatEnglishList(
+      pillars.map((id) => pillarDisplayName(id, catalog)),
+    );
     return `${firm} is inviting you to complete ${count} ${assessmentLabel} in ${domainNames}. ${INVITATION_MESSAGE_CLOSING}`;
   }
 

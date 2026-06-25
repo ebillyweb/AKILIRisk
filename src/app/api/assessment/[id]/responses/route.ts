@@ -9,6 +9,7 @@ import {
   markAssessmentAnswersChangedAfterComplete,
 } from "@/lib/assessment/answers-changed-after-complete";
 import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { authorizeAssessmentApiAccess } from "@/lib/facilitated/assessment-access";
 
 /**
@@ -157,7 +158,8 @@ export async function POST(
       );
     }
 
-    if (!isPillarInAssessmentScope(pillar, assessment.includedPillars)) {
+    const catalog = await getPlatformPillarCatalog();
+    if (!isPillarInAssessmentScope(pillar, assessment.includedPillars, catalog)) {
       return NextResponse.json(
         {
           error: "This pillar is not included in your assessment scope.",

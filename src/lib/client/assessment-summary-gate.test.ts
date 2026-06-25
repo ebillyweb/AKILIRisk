@@ -4,6 +4,9 @@ import {
   isAssessmentSummaryUnlockedFromStatus,
 } from "@/lib/client/assessment-summary-gate";
 import { ASSESSMENT_PILLAR_IDS } from "@/lib/assessment/pillar-registry";
+import { starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
+
+const catalog = starterPillarCatalog();
 
 function allPillarScores() {
   return ASSESSMENT_PILLAR_IDS.map((pillar) => ({ pillar }));
@@ -15,6 +18,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
       pillarScores: [{ pillar: "governance" }],
       deliverablePhase: "PROFILE",
       includedPillars: [...ASSESSMENT_PILLAR_IDS],
+      catalog,
     });
 
     expect(result.allPillarsComplete).toBe(false);
@@ -27,13 +31,14 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
       pillarScores: allPillarScores(),
       deliverablePhase: "PREVIEW",
       includedPillars: [...ASSESSMENT_PILLAR_IDS],
+      catalog,
     });
 
     expect(result.allPillarsComplete).toBe(true);
     expect(result.advisorPublishedProfile).toBe(false);
     expect(result.canViewRiskPreview).toBe(true);
     expect(result.canViewSummary).toBe(false);
-    expect(result.includedPillars).toHaveLength(6);
+    expect(result.includedPillars).toHaveLength(ASSESSMENT_PILLAR_IDS.length);
   });
 
   it("completes scoped assessment when only included pillars are scored", () => {
@@ -41,6 +46,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
       pillarScores: [{ pillar: "governance" }, { pillar: "cyber-digital" }],
       deliverablePhase: "PREVIEW",
       includedPillars: ["governance", "cyber-digital"],
+      catalog,
     });
 
     expect(result.allPillarsComplete).toBe(true);
@@ -53,6 +59,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
       pillarScores: allPillarScores(),
       deliverablePhase: "PROFILE",
       includedPillars: [...ASSESSMENT_PILLAR_IDS],
+      catalog,
     });
 
     expect(result.canViewSummary).toBe(true);
@@ -63,6 +70,7 @@ describe("evaluateClientAssessmentSummaryAccess", () => {
       pillarScores: allPillarScores(),
       deliverablePhase: "PORTFOLIO",
       includedPillars: [...ASSESSMENT_PILLAR_IDS],
+      catalog,
     });
 
     expect(result.canViewSummary).toBe(true);

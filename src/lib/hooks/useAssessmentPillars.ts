@@ -1,16 +1,23 @@
-"use client";
-
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
   assessmentPillarDefinitions,
   isAssessmentPillarId,
   normalizePillarSlug,
+  scopedPillarCatalog,
 } from "@/lib/assessment/pillar-registry";
+import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
 import type { Question } from "@/lib/assessment/types";
 import type { Pillar } from "@/lib/assessment/types";
 
-export function useAssessmentPillarDefinitions(): Pillar[] {
-  return assessmentPillarDefinitions();
+export function useAssessmentPillarDefinitions(
+  scopedPillarIds?: readonly string[],
+): { pillars: Pillar[]; isLoading: boolean } {
+  const { data: catalog = [], isLoading } = usePlatformPillarCatalog();
+  const scoped = scopedPillarCatalog(catalog, scopedPillarIds);
+  return {
+    pillars: assessmentPillarDefinitions(scoped),
+    isLoading,
+  };
 }
 
 export type PillarQuestionsQueryOptions = {
@@ -32,6 +39,7 @@ function pillarQuestionsQueryString(options?: PillarQuestionsQueryOptions): stri
 }
 
 export function usePillarQuestions(pillarId: string, options?: PillarQuestionsQueryOptions) {
+  const { data: catalog = [] } = usePlatformPillarCatalog();
   const normalized = normalizePillarSlug(pillarId);
   const enabled = options?.enabled ?? true;
   const querySuffix = pillarQuestionsQueryString(options);
@@ -50,13 +58,18 @@ export function usePillarQuestions(pillarId: string, options?: PillarQuestionsQu
       if (!res.ok) throw new Error("Failed to load pillar questions");
       return res.json();
     },
-    enabled: enabled && isAssessmentPillarId(normalized),
+    enabled: enabled && catalog.length > 0 && isAssessmentPillarId(normalized, catalog),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useAllPillarQuestions(options?: PillarQuestionsQueryOptions) {
-  const pillars = assessmentPillarDefinitions();
+export function useAllPillarQuestions(
+  scopedPillarIds?: readonly string[],
+  options?: PillarQuestionsQueryOptions,
+) {
+  const { pillars, isLoading: catalogLoading } = useAssessmentPillarDefinitions(
+    scopedPillarIds,
+  );
   const enabled = options?.enabled ?? true;
   const querySuffix = pillarQuestionsQueryString(options);
 
@@ -75,7 +88,7 @@ export function useAllPillarQuestions(options?: PillarQuestionsQueryOptions) {
         if (!res.ok) throw new Error(`Failed to load ${p.slug} questions`);
         return res.json() as Promise<{ pillarId: string; questions: Question[] }>;
       },
-      enabled,
+      enabled: enabled && pillars.length > 0,
       staleTime: 5 * 60 * 1000,
     })),
   });
@@ -89,7 +102,7 @@ export function useAllPillarQuestions(options?: PillarQuestionsQueryOptions) {
 
   return {
     questionsByPillarId: byPillarId,
-    isLoading: queries.some((q) => q.isLoading),
+    isLoading: catalogLoading || queries.some((q) => q.isLoading),
   };
 }
 

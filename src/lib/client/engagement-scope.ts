@@ -6,11 +6,12 @@ import {
   normalizeIncludedPillarIds,
   resolveIncludedPillars,
 } from "@/lib/assessment/included-pillars";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
+import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 
 export type ClientEngagementScope = {
   includedPillars: string[];
   focusAreas: string[];
-  /** Canonical store when populated; legacy sources reconciled on read. */
   source: "assignment" | "approval" | "assessment" | null;
   approvalId: string | null;
   assignmentId: string | null;
@@ -18,17 +19,18 @@ export type ClientEngagementScope = {
 };
 
 /** Normalize scope writes; emphasis defaults to all included. */
-export function normalizeEngagementScopeInput(input: {
+export async function normalizeEngagementScopeInput(input: {
   includedPillars: string[];
   focusAreas?: string[];
-}): { includedPillars: string[]; focusAreas: string[] } {
-  const includedPillars = normalizeIncludedPillarIds(input.includedPillars);
+}): Promise<{ includedPillars: string[]; focusAreas: string[] }> {
+  const catalog = await getPlatformPillarCatalog();
+  const includedPillars = normalizeIncludedPillarIds(input.includedPillars, catalog);
   if (includedPillars.length < 1) {
     throw new Error("Select at least one assessment domain");
   }
 
   const focusAreas = input.focusAreas?.length
-    ? normalizeIncludedPillarIds(input.focusAreas).filter((id) =>
+    ? normalizeIncludedPillarIds(input.focusAreas, catalog).filter((id) =>
         includedPillars.includes(id),
       )
     : includedPillars;
@@ -36,22 +38,25 @@ export function normalizeEngagementScopeInput(input: {
   return { includedPillars, focusAreas };
 }
 
-function resolveClientAssessmentIncludedPillars(input: {
-  assessmentIncludedPillars?: string[] | null;
-  approvedScopeIncludedPillars?: string[] | null;
-  hasAssessmentRow: boolean;
-}): string[] {
+async function resolveClientAssessmentIncludedPillars(
+  input: {
+    assessmentIncludedPillars?: string[] | null;
+    approvedScopeIncludedPillars?: string[] | null;
+    hasAssessmentRow: boolean;
+  },
+  catalog: PillarCatalogEntry[],
+): Promise<string[]> {
   if (input.assessmentIncludedPillars && input.assessmentIncludedPillars.length > 0) {
-    return resolveIncludedPillars(input.assessmentIncludedPillars);
+    return resolveIncludedPillars(input.assessmentIncludedPillars, catalog);
   }
   if (
     input.approvedScopeIncludedPillars &&
     input.approvedScopeIncludedPillars.length > 0
   ) {
-    return resolveIncludedPillars(input.approvedScopeIncludedPillars);
+    return resolveIncludedPillars(input.approvedScopeIncludedPillars, catalog);
   }
   if (input.hasAssessmentRow) {
-    return resolveIncludedPillars([]);
+    return resolveIncludedPillars([], catalog);
   }
   return [];
 }
@@ -91,17 +96,13 @@ async function writeAssignmentScope(
   });
 }
 
-/**
- * Single write path for advisor-selected pillar scope. Updates the active
- * assignment (source of truth) and syncs any in-progress assessment snapshot.
- */
 export async function persistClientEngagementScope(input: {
   clientId: string;
   includedPillars: string[];
   focusAreas?: string[];
   approvalId?: string | null;
 }): Promise<{ includedPillars: string[]; focusAreas: string[] }> {
-  const normalized = normalizeEngagementScopeInput({
+  const normalized = await normalizeEngagementScopeInput({
     includedPillars: input.includedPillars,
     focusAreas: input.focusAreas,
   });
@@ -121,10 +122,6 @@ export async function persistClientEngagementScope(input: {
   return normalized;
 }
 
-/**
- * Canonical read for engagement pillar scope. `ClientAdvisorAssignment` is
- * authoritative; legacy approval/assessment copies are reconciled on read.
- */
 export async function getClientEngagementScope(
   clientUserId: string,
   options?: { reconcile?: boolean },
@@ -224,22 +221,24 @@ export async function getClientEngagementScope(
   };
 }
 
-/** Whether the client may access the assessment flow (scope set on engagement). */
 export function isEngagementAssessmentUnlocked(
   scope: Pick<ClientEngagementScope, "includedPillars">,
 ): boolean {
   return scope.includedPillars.length > 0;
 }
 
-/** Included pillars for an in-flight assessment row (assignment scope + legacy fallback). */
-export function resolveAssessmentIncludedPillars(input: {
+export async function resolveAssessmentIncludedPillars(input: {
   assessmentIncludedPillars?: string[] | null;
   engagementIncludedPillars?: string[] | null;
   hasAssessmentRow: boolean;
-}): string[] {
-  return resolveClientAssessmentIncludedPillars({
-    assessmentIncludedPillars: input.assessmentIncludedPillars,
-    approvedScopeIncludedPillars: input.engagementIncludedPillars,
-    hasAssessmentRow: input.hasAssessmentRow,
-  });
+}): Promise<string[]> {
+  const catalog = await getPlatformPillarCatalog();
+  return resolveClientAssessmentIncludedPillars(
+    {
+      assessmentIncludedPillars: input.assessmentIncludedPillars,
+      approvedScopeIncludedPillars: input.engagementIncludedPillars,
+      hasAssessmentRow: input.hasAssessmentRow,
+    },
+    catalog,
+  );
 }

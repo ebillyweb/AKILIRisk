@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { LucideIcon } from "lucide-react";
 import {
   Globe,
@@ -11,7 +13,7 @@ import {
   ScrollText,
   HeartHandshake,
 } from "lucide-react";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import { loadAdvisorMethodologyPillars } from "@/lib/methodology/methodology-queries";
 
 const PILLAR_ICONS: Record<string, LucideIcon> = {
   governance: Scale,
@@ -26,10 +28,26 @@ const PILLAR_ICONS: Record<string, LucideIcon> = {
   "family-governance-behavioral": HeartHandshake,
 };
 
-/** Platform assessment pillars — same IDs as methodology and intake focus areas. */
-export const ADVISOR_PILLAR_SHORTCUTS = RISK_AREAS.map((area) => ({
-  id: area.id,
-  name: area.name,
-  summary: area.summary,
-  icon: PILLAR_ICONS[area.id] ?? Shield,
-}));
+export type AdvisorPillarShortcut = {
+  id: string;
+  name: string;
+  summary: string;
+  icon: LucideIcon;
+};
+
+/** Active methodology pillars for advisor intelligence shortcuts (from DB). */
+export async function loadAdvisorPillarShortcuts(
+  advisorProfileId: string,
+): Promise<AdvisorPillarShortcut[]> {
+  const pillars = await loadAdvisorMethodologyPillars(advisorProfileId);
+
+  return pillars
+    .filter((pillar) => pillar.isActive)
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((pillar) => ({
+      id: pillar.slug,
+      name: pillar.displayName?.trim() || pillar.canonicalName,
+      summary: pillar.description?.trim() ?? "",
+      icon: PILLAR_ICONS[pillar.slug] ?? Shield,
+    }));
+}

@@ -6,7 +6,7 @@ import {
   PILLAR_CATEGORY_CODE_TO_RISK_AREA_ID,
   riskAreaIdForPillarCategory,
 } from "./pillar-category-risk-area";
-import { isRiskAreaId } from "./risk-areas";
+import { isPlatformRiskAreaSlug } from "@/lib/methodology/cached-pillar-catalog";
 
 export type PillarSectionOption = {
   id: string;
@@ -28,7 +28,7 @@ function categoryCodesForRiskArea(riskAreaId: string): string[] {
 export async function loadPillarSectionsForRiskArea(
   riskAreaId: string
 ): Promise<PillarSectionOption[]> {
-  if (!isRiskAreaId(riskAreaId)) return [];
+  if (!(await isPlatformRiskAreaSlug(riskAreaId))) return [];
 
   const categoryCodes = categoryCodesForRiskArea(riskAreaId);
   const categories = await prisma.pillarCategory.findMany({

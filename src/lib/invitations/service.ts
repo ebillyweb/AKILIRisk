@@ -166,7 +166,7 @@ export async function createAdvisorInvitation(
 
     const waiverScope =
       input.intakeWaived && input.includedPillars?.length
-        ? normalizeWaiverScopeInput({
+        ? await normalizeWaiverScopeInput({
             includedPillars: input.includedPillars,
             focusAreas: input.focusAreas,
           })

@@ -32,6 +32,7 @@ import {
   evaluateClientAssessmentSummaryAccess,
   isAssessmentSummaryUnlockedFromStatus,
 } from "@/lib/client/assessment-summary-gate";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 export default async function DashboardPage({
   searchParams,
@@ -161,13 +162,15 @@ export default async function DashboardPage({
     score: latestAssessmentForHeatMap?.scores[0]?.score ?? null,
     riskLevel: latestAssessmentForHeatMap?.scores[0]?.riskLevel ?? null,
   });
-  const topRisks = resolveTopRisks(allPillarScores);
+  const pillarCatalog = await getPlatformPillarCatalog();
+  const topRisks = resolveTopRisks(allPillarScores, pillarCatalog);
   const showHeatMap = assessmentUnlocked && allPillarScores.length > 0;
   const summaryAccess = latestAssessmentForHeatMap
     ? evaluateClientAssessmentSummaryAccess({
         pillarScores: allPillarScores,
         deliverablePhase: latestAssessmentForHeatMap.deliverablePhase,
         includedPillars: latestAssessmentForHeatMap.includedPillars,
+        catalog: pillarCatalog,
       })
     : null;
   const summaryUnlocked = summaryAccess?.canViewSummary ?? false;
@@ -305,6 +308,7 @@ export default async function DashboardPage({
               <RiskHeatMap
                 mode="single-client"
                 pillarScores={allPillarScores}
+                catalog={pillarCatalog}
               />
             </CardContent>
           </Card>

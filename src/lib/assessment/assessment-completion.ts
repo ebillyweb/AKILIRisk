@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { normalizePillarScoreId } from "@/lib/assessment/pillar-registry";
 import { isAssessmentScopeComplete } from "@/lib/assessment/included-pillars";
 import { enterPreview } from "@/lib/assessment/deliverable-phase";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 type Tx = Prisma.TransactionClient;
 
@@ -31,9 +32,11 @@ export async function syncAssessmentCompletionStatus(
   });
 
   const scoredIds = scored.map((s) => normalizePillarScoreId(s.pillar));
+  const catalog = await getPlatformPillarCatalog();
   const allPillarsScored = isAssessmentScopeComplete(
     scoredIds,
     assessment.includedPillars,
+    catalog,
   );
 
   const now = new Date();

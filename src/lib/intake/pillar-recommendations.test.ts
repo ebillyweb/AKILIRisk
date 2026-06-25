@@ -3,13 +3,16 @@ import {
   computePillarRecommendations,
   strongRecommendationPillarIds,
 } from "@/lib/intake/pillar-recommendations";
+import { starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
+
+const catalog = starterPillarCatalog();
 
 describe("computePillarRecommendations", () => {
   it("returns low strength when no tagged questions match", () => {
     const result = computePillarRecommendations({
       questions: [{ id: "q1", questionText: "Tell us about travel." }],
       responses: [{ questionId: "q1", transcription: "We travel often." }],
-    });
+    }, catalog);
     expect(result.every((r) => r.strength === "low")).toBe(true);
   });
 
@@ -38,7 +41,7 @@ describe("computePillarRecommendations", () => {
         { questionId: "q2", transcription: "Family council meets yearly." },
         { questionId: "q3", transcription: "Phishing attempts last month." },
       ],
-    });
+    }, catalog);
 
     const cyber = result.find((r) => r.pillarId === "cyber-digital");
     const gov = result.find((r) => r.pillarId === "governance");
@@ -65,7 +68,7 @@ describe("computePillarRecommendations", () => {
         { questionId: "q2", transcription: "y" },
         { questionId: "q3", transcription: "z" },
       ],
-    });
+    }, catalog);
     expect(strongRecommendationPillarIds(recs)).toContain("governance");
   });
 });

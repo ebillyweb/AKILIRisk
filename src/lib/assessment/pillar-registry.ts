@@ -1,18 +1,21 @@
-import { PLATFORM_PILLAR_SLUGS } from "@/lib/methodology/pillar-catalog-starter";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import {
+  assessmentPillarDefinitionsFromCatalog,
+  isPillarInCatalog,
+  pillarCatalogDisplayName,
+  pillarDefinitionFromCatalog,
+  pillarCatalogMap,
+  scopedPillarCatalog,
+  sortPillarCatalog,
+  starterPillarCatalog,
+  type PillarCatalogEntry,
+} from "@/lib/methodology/pillar-catalog";
 import type { Pillar } from "@/lib/assessment/types";
 
-/** Canonical platform pillar slugs. */
-export const ASSESSMENT_PILLAR_IDS =
-  PLATFORM_PILLAR_SLUGS.length > 0
-    ? PLATFORM_PILLAR_SLUGS
-    : RISK_AREAS.map((a) => a.id);
+export type { PillarCatalogEntry };
 
-/**
- * Pass-through for pillar slugs. Pre-launch we have no legacy data, so no
- * legacy→canonical aliasing is required; the function is retained as the
- * single point of normalization should it be needed again.
- */
+/** @deprecated Prefer getPlatformPillarSlugs() — starter slugs for tests only. */
+export const ASSESSMENT_PILLAR_IDS = starterPillarCatalog().map((p) => p.id);
+
 export function normalizePillarSlug(slug: string): string {
   return slug;
 }
@@ -21,26 +24,32 @@ export function normalizePillarScoreId(pillar: string): string {
   return normalizePillarSlug(pillar);
 }
 
-export function isAssessmentPillarId(id: string): boolean {
+export function isAssessmentPillarId(
+  id: string,
+  catalog: readonly PillarCatalogEntry[],
+): boolean {
   const normalized = normalizePillarSlug(id);
-  return (ASSESSMENT_PILLAR_IDS as readonly string[]).includes(normalized);
+  return isPillarInCatalog(catalog, normalized);
 }
 
-export function pillarDefinitionFor(riskAreaId: string): Pillar {
+export function pillarDefinitionFor(
+  riskAreaId: string,
+  catalog: readonly PillarCatalogEntry[],
+): Pillar {
   const id = normalizePillarSlug(riskAreaId);
-  const area = RISK_AREAS.find((a) => a.id === id);
-  const name = area?.name ?? id;
+  const entry = pillarCatalogMap(catalog).get(id);
+  if (entry) return pillarDefinitionFromCatalog(entry);
   return {
     id,
-    name,
+    name: id,
     slug: id,
-    description: area?.summary ?? "",
+    description: "",
     estimatedMinutes: 15,
     subCategories: [
       {
         id,
-        name,
-        description: area?.summary ?? "",
+        name: id,
+        description: "",
         weight: 1,
         questionIds: [],
       },
@@ -48,11 +57,17 @@ export function pillarDefinitionFor(riskAreaId: string): Pillar {
   };
 }
 
-export function assessmentPillarDefinitions(): Pillar[] {
-  return ASSESSMENT_PILLAR_IDS.map(pillarDefinitionFor);
+export function assessmentPillarDefinitions(
+  catalog: readonly PillarCatalogEntry[],
+): Pillar[] {
+  return assessmentPillarDefinitionsFromCatalog(catalog);
 }
 
-export function pillarDisplayName(pillarId: string): string {
-  const id = normalizePillarSlug(pillarId);
-  return RISK_AREAS.find((a) => a.id === id)?.name ?? id;
+export function pillarDisplayName(
+  pillarId: string,
+  catalog: readonly PillarCatalogEntry[],
+): string {
+  return pillarCatalogDisplayName(catalog, normalizePillarSlug(pillarId));
 }
+
+export { scopedPillarCatalog };

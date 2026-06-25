@@ -36,6 +36,7 @@ import { emitAssessmentSignals } from "@/lib/signals/emit";
 import type { PillarScoreSnapshot } from "@/lib/signals/types";
 import { evaluateClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import {
   authorizeAssessmentApiAccess,
   markFacilitatedSessionPreviewIfComplete,
@@ -136,11 +137,14 @@ export async function GET(
       );
     }
 
+    const catalog = await getPlatformPillarCatalog();
+
     if (!access.isFacilitated) {
       const summaryAccess = evaluateClientAssessmentSummaryAccess({
         pillarScores: assessment.scores,
         deliverablePhase: assessment.deliverablePhase,
         includedPillars: assessment.includedPillars,
+        catalog,
       });
       if (!summaryAccess.canViewSummary) {
         return NextResponse.json(
@@ -166,7 +170,7 @@ export async function GET(
 
     const snapshot = await loadSnapshotForAssessment(id);
     const snapshotConfig = snapshot
-      ? pillarAssessmentConfigFromSnapshot(snapshot, pillar)
+      ? pillarAssessmentConfigFromSnapshot(snapshot, pillar, catalog)
       : null;
     const pillarConfig =
       snapshotConfig ?? (await getPillarAssessmentConfig(pillar));
@@ -283,8 +287,9 @@ export async function POST(
     }
 
     const clientId = access.clientId;
+    const catalog = await getPlatformPillarCatalog();
 
-    if (!isPillarInAssessmentScope(pillar, assessment.includedPillars)) {
+    if (!isPillarInAssessmentScope(pillar, assessment.includedPillars, catalog)) {
       return NextResponse.json(
         {
           error: "This pillar is not included in your assessment scope.",
@@ -296,7 +301,7 @@ export async function POST(
 
     const snapshot = await loadSnapshotForAssessment(id);
     const pillarConfigFromSnapshot = snapshot
-      ? pillarAssessmentConfigFromSnapshot(snapshot, pillar)
+      ? pillarAssessmentConfigFromSnapshot(snapshot, pillar, catalog)
       : null;
     const pillarConfig =
       pillarConfigFromSnapshot ?? (await getPillarAssessmentConfig(pillar));
@@ -318,7 +323,7 @@ export async function POST(
         select: { focusAreas: true },
       });
       if (approval) {
-        customizationConfig = getCustomizationConfig(approval.focusAreas);
+        customizationConfig = getCustomizationConfig(approval.focusAreas, catalog);
         customizationMetadata = {
           isCustomized: true,
           focusAreaCount: approval.focusAreas.length,
@@ -509,6 +514,7 @@ export async function POST(
           pillarScores: updatedAssessment.scores,
           deliverablePhase: updatedAssessment.deliverablePhase,
           includedPillars: updatedAssessment.includedPillars,
+          catalog,
         })
       : { canViewSummary: false, allPillarsComplete: false };
 

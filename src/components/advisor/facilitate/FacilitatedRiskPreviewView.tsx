@@ -16,6 +16,7 @@ import {
   isNarrowAssessmentScope,
 } from "@/lib/assessment/included-pillars";
 import { resolveTopRisks } from "@/lib/dashboard/client-summary";
+import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
 
 type FacilitatedRiskPreviewViewProps = {
@@ -23,6 +24,7 @@ type FacilitatedRiskPreviewViewProps = {
   clientName: string | null;
   includedPillars: string[];
   pillarScores: Array<{ pillar: string; score: number; riskLevel: string }>;
+  pillarCatalog: PillarCatalogEntry[];
 };
 
 export function FacilitatedRiskPreviewView({
@@ -30,9 +32,10 @@ export function FacilitatedRiskPreviewView({
   clientName,
   includedPillars,
   pillarScores,
+  pillarCatalog,
 }: FacilitatedRiskPreviewViewProps) {
-  const narrowScope = isNarrowAssessmentScope(includedPillars);
-  const topRisks = resolveTopRisks(pillarScores);
+  const narrowScope = isNarrowAssessmentScope(includedPillars, pillarCatalog);
+  const topRisks = resolveTopRisks(pillarScores, pillarCatalog);
 
   return (
     <div
@@ -58,7 +61,7 @@ export function FacilitatedRiskPreviewView({
             <CardTitle className="text-2xl">Risk by domain</CardTitle>
             <CardDescription>
               {narrowScope
-                ? formatNarrowScopePreviewCopy(includedPillars)
+                ? formatNarrowScopePreviewCopy(includedPillars, pillarCatalog)
                 : "High-level view of the assessed risk domains for this session."}
             </CardDescription>
           </CardHeader>
@@ -67,6 +70,7 @@ export function FacilitatedRiskPreviewView({
               mode="single-client"
               pillarScores={pillarScores}
               includedPillarIds={narrowScope ? includedPillars : undefined}
+              catalog={pillarCatalog}
             />
           </CardContent>
         </Card>

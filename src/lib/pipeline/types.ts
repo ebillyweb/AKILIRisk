@@ -89,6 +89,7 @@ export type PipelineFilters = {
 };
 
 import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 
 // Client detail data for drill-down view
 export type ClientDetail = {
@@ -121,6 +122,8 @@ export type ClientDetail = {
   };
   /** Active methodology pillars for waiver/scope pickers (from DB). */
   assessmentDomains: AssessmentDomainOption[];
+  /** Platform pillar catalog for heat map labels and scope display. */
+  pillarCatalog: PillarCatalogEntry[];
   assessmentDetails: {
     /** §4.5 commit 2: needed by the per-client view to build a
      *  `/api/reports/[id]/pdf` URL for the advisor's "Download client

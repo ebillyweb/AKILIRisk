@@ -11,6 +11,7 @@ import { reorderPillarQuestionInRiskArea } from "@/lib/assessment/bank/pillar-qu
 import { isPillarQuestionBankActive } from "@/lib/assessment/bank/question-bank-source";
 import { isRiskAreaId } from "@/lib/assessment/bank/risk-areas";
 import { prisma } from "@/lib/db";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import {
   ADMIN_ASSESSMENT_QUESTIONS_PATH,
   adminAssessmentQuestionsAreaPath,
@@ -53,21 +54,23 @@ function formatActionError(e: unknown): string {
   return "Something went wrong.";
 }
 
-function redirectCreateError(formData: FormData, message: string): never {
+async function redirectCreateError(formData: FormData, message: string): Promise<never> {
   const riskAreaId = formData.get("riskAreaId");
+  const catalog = await getPlatformPillarCatalog();
   const base =
-    typeof riskAreaId === "string" && isRiskAreaId(riskAreaId)
+    typeof riskAreaId === "string" && isRiskAreaId(riskAreaId, catalog)
       ? adminAssessmentQuestionsNewPath(riskAreaId)
       : ADMIN_ASSESSMENT_QUESTIONS_PATH;
   redirect(`${base}?err=${encodeURIComponent(message)}`);
 }
 
-function redirectUpdateError(formData: FormData, message: string): never {
+async function redirectUpdateError(formData: FormData, message: string): Promise<never> {
   const riskAreaId = formData.get("riskAreaId");
   const questionId = formData.get("questionId");
+  const catalog = await getPlatformPillarCatalog();
   if (
     typeof riskAreaId === "string" &&
-    isRiskAreaId(riskAreaId) &&
+    isRiskAreaId(riskAreaId, catalog) &&
     typeof questionId === "string" &&
     questionId.length > 0
   ) {
@@ -83,8 +86,12 @@ function redirectAreaSaved(riskAreaId: string, extraQuery?: string): never {
   redirect(`${adminAssessmentQuestionsAreaPath(riskAreaId)}?saved=1${q}`);
 }
 
-function parseRiskAreaIdFromForm(raw: FormDataEntryValue | null): string | null {
-  if (typeof raw !== "string" || !isRiskAreaId(raw)) {
+async function parseRiskAreaIdFromForm(raw: FormDataEntryValue | null): Promise<string | null> {
+  if (typeof raw !== "string") {
+    return null;
+  }
+  const catalog = await getPlatformPillarCatalog();
+  if (!isRiskAreaId(raw, catalog)) {
     return null;
   }
   return raw;
@@ -103,7 +110,7 @@ function optionalFormString(raw: FormDataEntryValue | null): string | null {
  */
 export async function updatePillarQuestionKriFlag(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
-  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  const riskAreaId = await parseRiskAreaIdFromForm(formData.get("riskAreaId"));
   if (!riskAreaId) {
     redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
   }
@@ -146,7 +153,7 @@ export async function updatePillarQuestionKriFlag(formData: FormData) {
 
 export async function updatePillarQuestionVisibility(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
-  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  const riskAreaId = await parseRiskAreaIdFromForm(formData.get("riskAreaId"));
   if (!riskAreaId) {
     redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
   }
@@ -189,7 +196,7 @@ export async function updatePillarQuestionVisibility(formData: FormData) {
 
 export async function deletePillarQuestion(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
-  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  const riskAreaId = await parseRiskAreaIdFromForm(formData.get("riskAreaId"));
   if (!riskAreaId) {
     redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
   }
@@ -232,12 +239,13 @@ export async function deletePillarQuestion(formData: FormData) {
 
 export async function updatePillarQuestionContent(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+  const catalog = await getPlatformPillarCatalog();
   let questionId: string;
   let riskAreaId: string;
   try {
     questionId = parsePillarDbUuid(formData.get("questionId"), "questionId");
     const riskAreaIdRaw = formData.get("riskAreaId");
-    if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
+    if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw, catalog)) {
       throw new Error("Invalid risk area.");
     }
     riskAreaId = riskAreaIdRaw;
@@ -330,7 +338,7 @@ export async function updatePillarQuestionContent(formData: FormData) {
       metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
     });
   } catch (e: unknown) {
-    redirectUpdateError(formData, formatActionError(e));
+    return await redirectUpdateError(formData, formatActionError(e));
   }
 
   revalidateQuestionBankPaths(riskAreaId);
@@ -339,10 +347,11 @@ export async function updatePillarQuestionContent(formData: FormData) {
 
 export async function createPillarQuestion(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+  const catalog = await getPlatformPillarCatalog();
   let riskAreaId: string;
   try {
     const riskAreaIdRaw = formData.get("riskAreaId");
-    if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw)) {
+    if (typeof riskAreaIdRaw !== "string" || !isRiskAreaId(riskAreaIdRaw, catalog)) {
       throw new Error("Invalid risk area.");
     }
     riskAreaId = riskAreaIdRaw;
@@ -428,7 +437,7 @@ export async function createPillarQuestion(formData: FormData) {
       metadata: { riskAreaId, categoryKind: "ASSESSMENT" },
     });
   } catch (e: unknown) {
-    redirectCreateError(formData, formatActionError(e));
+    return await redirectCreateError(formData, formatActionError(e));
   }
 
   revalidateQuestionBankPaths(riskAreaId);
@@ -437,7 +446,7 @@ export async function createPillarQuestion(formData: FormData) {
 
 export async function movePillarQuestionOrder(formData: FormData) {
   const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
-  const riskAreaId = parseRiskAreaIdFromForm(formData.get("riskAreaId"));
+  const riskAreaId = await parseRiskAreaIdFromForm(formData.get("riskAreaId"));
   if (!riskAreaId) {
     redirect(ADMIN_ASSESSMENT_QUESTIONS_PATH);
   }

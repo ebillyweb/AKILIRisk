@@ -9,12 +9,12 @@ import {
   sortPillarQuestionRows,
   type PillarQuestionWithHierarchy,
 } from "./pillar-question-wire";
-import { isRiskAreaId } from "./risk-areas";
+import { isPlatformRiskAreaSlug } from "@/lib/methodology/cached-pillar-catalog";
 
 export async function loadSortedPillarQuestionsForRiskArea(
   riskAreaId: string
 ): Promise<PillarQuestionWithHierarchy[]> {
-  if (!isRiskAreaId(riskAreaId)) return [];
+  if (!(await isPlatformRiskAreaSlug(riskAreaId))) return [];
 
   const rows = (await prisma.pillarQuestion.findMany({
     where: {
@@ -43,7 +43,7 @@ export async function reorderPillarQuestionInRiskArea(input: {
   direction: "up" | "down";
 }): Promise<ReorderResult> {
   const { riskAreaId, questionId, direction } = input;
-  if (!isRiskAreaId(riskAreaId)) {
+  if (!(await isPlatformRiskAreaSlug(riskAreaId))) {
     return { ok: false, reason: "invalid_area" };
   }
 

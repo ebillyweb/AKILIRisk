@@ -1,3 +1,4 @@
+import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 import { cn } from "@/lib/utils";
 import {
   ariaLabelForCell,
@@ -22,11 +23,9 @@ import {
 
 interface SingleClientProps {
   mode: "single-client";
+  catalog: readonly PillarCatalogEntry[];
   pillarScores: ReadonlyArray<PillarScoreInput>;
-  /** When set, show only pillars in this scope (Epic 5.11 US-72). */
   includedPillarIds?: readonly string[];
-  /** When true and ALL pillars are unassessed, render the "no scored
-   *  assessment" banner above the cells. Default true. */
   showUnassessedBanner?: boolean;
   className?: string;
 }
@@ -39,6 +38,7 @@ interface PortfolioRow {
 
 interface PortfolioProps {
   mode: "portfolio";
+  catalog: readonly PillarCatalogEntry[];
   rows: ReadonlyArray<PortfolioRow>;
   className?: string;
 }
@@ -68,12 +68,16 @@ function scoreBarPercent(score: number | null): number {
 }
 
 function SingleClientHeatMap({
+  catalog,
   pillarScores,
   includedPillarIds,
   showUnassessedBanner = true,
   className,
 }: SingleClientProps) {
-  const cells = buildHeatMapCells(pillarScores, { includedPillarIds });
+  const cells = buildHeatMapCells(pillarScores, {
+    catalog,
+    includedPillarIds,
+  });
   const allUnassessed = cells.every((c) => c.level === "unassessed");
 
   return (
@@ -144,11 +148,9 @@ function SingleCell({ cell }: { cell: HeatMapCell }) {
 
 // ── Portfolio mode ──────────────────────────────────────────────────────
 
-function PortfolioHeatMap({ rows, className }: PortfolioProps) {
-  // Build cells once per row, then sort by row severity DESC. Most-at-risk
-  // client first per round-10 sign-off.
+function PortfolioHeatMap({ catalog, rows, className }: PortfolioProps) {
   const enriched = rows.map((row) => {
-    const cells = buildHeatMapCells(row.pillarScores);
+    const cells = buildHeatMapCells(row.pillarScores, { catalog });
     return { ...row, cells, sev: rowSeverity(cells) };
   });
   enriched.sort((a, b) => {
@@ -168,8 +170,7 @@ function PortfolioHeatMap({ rows, className }: PortfolioProps) {
     );
   }
 
-  // Header row: pillar names from the first row's cells (same column order
-  // for every row, guaranteed by buildHeatMapCells iterating RISK_AREAS).
+  // Header row: pillar names from the first row's cells (catalog order).
   const headerCells = enriched[0]!.cells;
 
   return (

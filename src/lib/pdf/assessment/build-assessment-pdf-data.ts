@@ -1,5 +1,6 @@
 import { formatAssessmentAnswerForDisplay } from "@/lib/admin/format-assessment-answer";
 import { pillarDisplayName } from "@/lib/assessment/included-pillars";
+import { starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import type { AdvisorAssessmentReviewPayload } from "@/lib/advisor/assessment-review-queries";
 
 export type AssessmentPdfResponseRow = {
@@ -38,7 +39,7 @@ export function buildAssessmentPdfData(
     return {
       index: index + 1,
       questionText,
-      pillarLabel: pillarDisplayName(row.pillar),
+      pillarLabel: pillarDisplayName(row.pillar, starterPillarCatalog()),
       subCategoryLabel: formatSubCategoryLabel(row.subCategory),
       answerText: formatAssessmentAnswerForDisplay(
         question,

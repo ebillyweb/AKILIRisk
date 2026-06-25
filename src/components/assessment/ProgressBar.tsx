@@ -1,7 +1,6 @@
 'use client';
 
 import { Progress } from "@/components/ui/progress";
-import { RISK_AREAS } from "@/lib/advisor/types";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { cn } from "@/lib/utils";
 
@@ -93,25 +92,16 @@ interface OverallProgressProps {
   completedPillars: string[];
   totalPillars: number;
   currentPillar?: string;
-  /** When set, progress bar shows only these pillars (Epic 5.11 scoped hub). */
-  scopedPillarIds?: string[];
+  /** Pillar labels in catalog order; when scoped, only included pillars. */
+  pillars: ReadonlyArray<{ id: string; label: string }>;
 }
 
 export function OverallProgress({
   completedPillars,
   totalPillars,
   currentPillar,
-  scopedPillarIds,
+  pillars,
 }: OverallProgressProps) {
-  const scopedSet = scopedPillarIds?.length
-    ? new Set(scopedPillarIds.map(normalizePillarSlug))
-    : null;
-  const pillars = RISK_AREAS.filter(
-    (area) => !scopedSet || scopedSet.has(area.id),
-  ).map((area) => ({
-    id: area.id,
-    label: area.name,
-  }));
   const completedSet = new Set(completedPillars.map(normalizePillarSlug));
   const normalizedCurrent = currentPillar
     ? normalizePillarSlug(currentPillar)

@@ -1,46 +1,52 @@
-import { RISK_AREAS } from "@/lib/advisor/types";
-import { PLATFORM_PILLAR_SLUGS } from "@/lib/methodology/pillar-catalog-starter";
 import {
-  ASSESSMENT_PILLAR_IDS,
-  isAssessmentPillarId,
-  normalizePillarSlug,
-} from "@/lib/assessment/pillar-registry";
+  isPillarInCatalog,
+  pillarCatalogDisplayName,
+  pillarCatalogSlugs,
+  starterPillarCatalog,
+  type PillarCatalogEntry,
+} from "@/lib/methodology/pillar-catalog";
+import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 
-/** Full platform pillar scope (10 pillars). */
-export const DEFAULT_INCLUDED_PILLARS: readonly string[] =
-  PLATFORM_PILLAR_SLUGS.length > 0 ? PLATFORM_PILLAR_SLUGS : ASSESSMENT_PILLAR_IDS;
+/** @deprecated Use pillarCatalogSlugs(await getPlatformPillarCatalog()) on server. */
+export const DEFAULT_INCLUDED_PILLARS: readonly string[] = pillarCatalogSlugs(
+  starterPillarCatalog(),
+);
 
-export function totalPlatformPillarCount(): number {
-  return DEFAULT_INCLUDED_PILLARS.length;
+export function totalPlatformPillarCount(catalog: readonly PillarCatalogEntry[]): number {
+  return catalog.length;
 }
 
-/** @deprecated Use totalPlatformPillarCount() or snapshot active count. */
+/** @deprecated Use totalPlatformPillarCount(catalog). */
 export const TOTAL_ASSESSMENT_PILLAR_COUNT = DEFAULT_INCLUDED_PILLARS.length;
 
 /**
  * Resolve assessment pillar scope. Empty or missing `includedPillars` means all
- * platform pillars (back-compat for pre–Epic 5.11 rows and pre-approval creates).
+ * platform pillars in the supplied catalog.
  */
 export function resolveIncludedPillars(
   includedPillars: string[] | null | undefined,
+  catalog: readonly PillarCatalogEntry[],
 ): string[] {
   if (!includedPillars || includedPillars.length === 0) {
-    return [...DEFAULT_INCLUDED_PILLARS];
+    return pillarCatalogSlugs(catalog);
   }
   return includedPillars.map((id) => normalizePillarSlug(id));
 }
 
 /**
- * Validate and dedupe pillar ids for writes (approval, assessment create, admin tags).
- * Throws on unknown ids; preserves first-seen order.
+ * Validate and dedupe pillar ids for writes. Throws on unknown ids; preserves
+ * first-seen order.
  */
-export function normalizeIncludedPillarIds(raw: string[]): string[] {
+export function normalizeIncludedPillarIds(
+  raw: string[],
+  catalog: readonly PillarCatalogEntry[],
+): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const id of raw) {
     const normalized = normalizePillarSlug(id.trim());
     if (!normalized) continue;
-    if (!isAssessmentPillarId(normalized)) {
+    if (!isPillarInCatalog(catalog, normalized)) {
       throw new Error(`Unknown assessment pillar: ${id}`);
     }
     if (seen.has(normalized)) continue;
@@ -54,8 +60,9 @@ export function normalizeIncludedPillarIds(raw: string[]): string[] {
 export function isAssessmentScopeComplete(
   scoredPillarIds: Iterable<string>,
   includedPillars: string[] | null | undefined,
+  catalog: readonly PillarCatalogEntry[],
 ): boolean {
-  const scoped = resolveIncludedPillars(includedPillars);
+  const scoped = resolveIncludedPillars(includedPillars, catalog);
   const scored = new Set(
     [...scoredPillarIds].map((id) => normalizePillarSlug(id)),
   );
@@ -66,25 +73,34 @@ export function isAssessmentScopeComplete(
 export function isPillarInAssessmentScope(
   pillarSlug: string,
   includedPillars: string[] | null | undefined,
+  catalog: readonly PillarCatalogEntry[],
 ): boolean {
   const normalized = normalizePillarSlug(pillarSlug);
-  return resolveIncludedPillars(includedPillars).includes(normalized);
+  return resolveIncludedPillars(includedPillars, catalog).includes(normalized);
 }
 
 /** True when the resolved scope is fewer than all platform pillars. */
-export function isNarrowAssessmentScope(includedPillars: string[]): boolean {
-  return includedPillars.length < totalPlatformPillarCount();
+export function isNarrowAssessmentScope(
+  includedPillars: string[],
+  catalog: readonly PillarCatalogEntry[],
+): boolean {
+  return includedPillars.length < totalPlatformPillarCount(catalog);
 }
 
 /** Display name for a canonical pillar id. */
-export function pillarDisplayName(pillarId: string): string {
-  const normalized = normalizePillarSlug(pillarId);
-  return RISK_AREAS.find((area) => area.id === normalized)?.name ?? pillarId;
+export function pillarDisplayName(
+  pillarId: string,
+  catalog: readonly PillarCatalogEntry[],
+): string {
+  return pillarCatalogDisplayName(catalog, normalizePillarSlug(pillarId));
 }
 
 /** Comma-separated pillar names in scope order. */
-export function formatIncludedPillarNames(includedPillars: string[]): string {
-  return includedPillars.map((id) => pillarDisplayName(id)).join(", ");
+export function formatIncludedPillarNames(
+  includedPillars: string[],
+  catalog: readonly PillarCatalogEntry[],
+): string {
+  return includedPillars.map((id) => pillarDisplayName(id, catalog)).join(", ");
 }
 
 /** Natural-language list: "A, B and C". */
@@ -96,8 +112,11 @@ export function formatEnglishList(items: string[]): string {
 }
 
 /** Client-facing risk preview scope summary (US-72). */
-export function formatNarrowScopePreviewCopy(includedPillars: string[]): string {
+export function formatNarrowScopePreviewCopy(
+  includedPillars: string[],
+  catalog: readonly PillarCatalogEntry[],
+): string {
   const count = includedPillars.length;
-  const names = formatIncludedPillarNames(includedPillars);
-  return `Based on ${count} of ${totalPlatformPillarCount()} household risk domains selected by your advisor: ${names}.`;
+  const names = formatIncludedPillarNames(includedPillars, catalog);
+  return `Based on ${count} of ${totalPlatformPillarCount(catalog)} household risk domains selected by your advisor: ${names}.`;
 }

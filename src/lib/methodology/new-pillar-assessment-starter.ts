@@ -143,12 +143,12 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Family governance & behavioral resilience",
-    sheetName: "Family governance",
+    categoryName: "Behavioural resilience",
+    sheetName: "Behavioural resilience",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "A",
-    sectionName: "Family governance",
+    sectionName: "Behavioural resilience",
     questions: [
       {
         questionNumber: "10.1",

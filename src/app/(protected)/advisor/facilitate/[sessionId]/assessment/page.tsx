@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FacilitatedAssessmentHub } from "@/components/advisor/facilitate/FacilitatedAssessmentHub";
 import { resolveIncludedPillars } from "@/lib/assessment/included-pillars";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { assertFacilitatedSessionStep } from "@/lib/facilitated/session-layout";
 import { getHouseholdProfileForClientAssessment } from "@/lib/household/member-profile";
 
@@ -27,7 +28,8 @@ export default async function FacilitatedAssessmentHubPage({
     select: { includedPillars: true },
   });
 
-  const includedPillars = resolveIncludedPillars(assessment?.includedPillars ?? []);
+  const catalog = await getPlatformPillarCatalog();
+  const includedPillars = resolveIncludedPillars(assessment?.includedPillars ?? [], catalog);
   const householdProfile = await getHouseholdProfileForClientAssessment(
     facilitated.clientId,
   );

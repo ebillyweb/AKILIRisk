@@ -823,10 +823,15 @@ export async function getClientDetail(
   const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
     assignmentAdvisorProfileId,
   );
+  const { getPlatformPillarCatalog } = await import(
+    "@/lib/methodology/cached-pillar-catalog"
+  );
+  const pillarCatalog = await getPlatformPillarCatalog();
 
   return {
     client: pipelineClient,
     assessmentDomains,
+    pillarCatalog,
     advisorAssignment: {
       id: assignment.id,
       status: assignment.status,

@@ -14,7 +14,7 @@ import {
   REPUTATIONAL_SOCIAL_ALL_YES_NARRATIVE_RECOMMENDATIONS,
   PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS,
 } from "@/lib/assessment/pillar-outcome-expectations";
-import { PLATFORM_PILLAR_SLUGS } from "@/lib/methodology/pillar-catalog-starter";
+import { pillarCatalogSlugs, starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
 
 export type PillarNarrativeBands = {
   allNegative: string[];
@@ -85,12 +85,12 @@ const NEW_PILLAR_NARRATIVES: Record<string, PillarNarrativeBands> = {
   },
   "family-governance-behavioral": {
     allNegative: [
-      "Internal family governance and behavioral norms are underdeveloped, increasing inter-generational conflict and decision friction. Establish regular family forums, documented decision rights, and education on behavioral pitfalls in wealth decisions.",
+      "Behavioral norms and emotional resilience under wealth stress are underdeveloped, increasing inter-generational conflict and reactive decision-making. Invest in next-generation education, shared values forums, and awareness of behavioral-finance pitfalls.",
     ],
     allYes: [
-      "The family demonstrates mature internal governance and behavioral awareness. Continue structured meetings and next-generation development as complexity grows.",
+      "The family demonstrates strong behavioral awareness and resilience as complexity grows. Continue structured education and open dialogue as circumstances change.",
     ],
-    midBand: GENERIC_MID_BAND("family governance and behavioral resilience"),
+    midBand: GENERIC_MID_BAND("behavioural resilience"),
   },
 };
 
@@ -107,5 +107,5 @@ export function narrativeStarterForSlug(slug: string): PillarNarrativeBands {
 }
 
 export function allNarrativeStarterSlugs(): string[] {
-  return [...PLATFORM_PILLAR_SLUGS];
+  return pillarCatalogSlugs(starterPillarCatalog());
 }

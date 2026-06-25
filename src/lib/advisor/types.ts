@@ -1,7 +1,6 @@
 import type { IntakeApproval, IntakeInterview, IntakeResponse } from '@prisma/client';
 import type { PillarRecommendation } from '@/lib/intake/pillar-recommendations';
 import type { AdvisorHouseholdMemberView } from '@/lib/profiles/advisor-household-view';
-import { PLATFORM_PILLAR_CATALOG } from '@/lib/methodology/pillar-catalog-starter';
 
 // Dashboard client data for advisor's client list.
 // Round-11 commit 2.1 (BRD §5.1 amendment): clientProfile contact +
@@ -87,22 +86,3 @@ export type RiskAreaSelection = {
   subCategoryName: string;
   selected: boolean;
 };
-
-// Risk areas: platform pillars for comprehensive assessment.
-// F2 / BRD §4.1 — the six IDs match BRD-domain wording. Migration
-// 20260521120000 renamed the four drifted IDs in the DB; the code-side
-// rename here keeps the source of truth in sync. Unchanged: governance,
-// physical-security. Renamed (old → new):
-//   cybersecurity                  → cyber-digital
-//   financial-asset-protection     → insurance
-//   environmental-geographic-risk  → geographic-environmental
-//   lifestyle-behavioral-risk      → reputational-social
-export const RISK_AREAS = PLATFORM_PILLAR_CATALOG.map((p) => ({
-  id: p.slug,
-  name: p.canonicalName,
-  summary: p.description,
-})) as readonly {
-  id: string;
-  name: string;
-  summary: string;
-}[];

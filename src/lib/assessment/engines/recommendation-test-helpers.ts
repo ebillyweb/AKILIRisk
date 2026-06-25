@@ -8,6 +8,7 @@ import { buildHighestMaturityAnswers } from "../highest-maturity-answers";
 import { buildLowestMaturityAnswers } from "../lowest-maturity-answers";
 import { calculatePillarScore } from "../scoring";
 import { normalizePillarSlug, pillarDefinitionFor } from "../pillar-registry";
+import { starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import {
   belvedereAllAssessmentQuestions,
   belvedereFamilyGovernancePillar,
@@ -55,7 +56,7 @@ export function scorePillar(
   questions?: Question[]
 ) {
   const qs = questions ?? questionsForPillar(pillarId);
-  const pillar = pillarDefinitionFor(pillarId);
+  const pillar = pillarDefinitionFor(pillarId, starterPillarCatalog());
   return calculatePillarScore(answers, pillar, qs, visibleIds);
 }
 

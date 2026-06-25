@@ -9,6 +9,7 @@ import { loadGovernanceQuestionWires } from "@/lib/assessment/bank/load-bank";
 import { authorizeAssessmentApiAccess } from "@/lib/facilitated/assessment-access";
 import { loadSnapshotForAssessment } from "@/lib/methodology/snapshot";
 import { pillarQuestionsFromSnapshot } from "@/lib/methodology/assessment-from-snapshot";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 /**
  * GET /api/assessment/pillars/[pillarId]/questions
@@ -27,8 +28,9 @@ export async function GET(
 
     const { pillarId } = await params;
     const normalized = normalizePillarSlug(pillarId);
+    const catalog = await getPlatformPillarCatalog();
 
-    if (!isAssessmentPillarId(normalized)) {
+    if (!isAssessmentPillarId(normalized, catalog)) {
       return NextResponse.json({ error: "Unknown pillar" }, { status: 400 });
     }
 

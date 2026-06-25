@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getIntakeQuestionForAdmin } from "@/lib/admin/intake-questions-queries";
 import { updateIntakePillarQuestionContent } from "@/lib/actions/admin-intake-questions-actions";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { FormHasCheckbox } from "@/components/admin/form-submission-checkbox";
 import { IntakeRelatedPillarsField } from "@/components/admin/IntakeRelatedPillarsField";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,7 +22,10 @@ export default async function AdminIntakeQuestionEditPage({
 }) {
   const { questionId } = await params;
   const sp = await searchParams;
-  const question = await getIntakeQuestionForAdmin(questionId);
+  const [question, pillarCatalog] = await Promise.all([
+    getIntakeQuestionForAdmin(questionId),
+    getPlatformPillarCatalog(),
+  ]);
   if (!question) notFound();
 
   return (
@@ -97,6 +101,7 @@ export default async function AdminIntakeQuestionEditPage({
             </div>
 
             <IntakeRelatedPillarsField
+              pillars={pillarCatalog}
               defaultSelected={question.relatedPillarIds ?? []}
             />
 

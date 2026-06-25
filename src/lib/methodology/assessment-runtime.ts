@@ -10,6 +10,7 @@ import { identityRiskPillar, identityRiskQuestions } from "@/lib/identity-risk/q
 import {
   pillarAssessmentConfigFromSnapshot,
 } from "@/lib/methodology/assessment-from-snapshot";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import {
   recommendationRulesFromSnapshot,
   snapshotThresholdForPillar,
@@ -34,7 +35,8 @@ export async function resolvePillarConfigForAssessment(
   const pillarSlug = pillarSlugFromScoreKey(pillarKey);
   const snapshot = await loadSnapshotForAssessment(assessmentId);
   if (snapshot) {
-    const fromSnapshot = pillarAssessmentConfigFromSnapshot(snapshot, pillarSlug);
+    const catalog = await getPlatformPillarCatalog();
+    const fromSnapshot = pillarAssessmentConfigFromSnapshot(snapshot, pillarSlug, catalog);
     if (fromSnapshot) return fromSnapshot;
   }
   return getPillarAssessmentConfig(pillarSlug);

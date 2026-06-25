@@ -23,6 +23,7 @@ import {
   getCustomizationConfig,
   getEmphasisMultipliers,
 } from "@/lib/assessment/customization";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
 import { encryptAnswer } from "@/lib/data/response-content";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
@@ -126,7 +127,8 @@ export async function completeAssessmentForE2E(
       select: { focusAreas: true },
     });
     if (approvalRow) {
-      customizationConfig = getCustomizationConfig(approvalRow.focusAreas);
+      const catalog = await getPlatformPillarCatalog();
+      customizationConfig = getCustomizationConfig(approvalRow.focusAreas, catalog);
     }
   }
 

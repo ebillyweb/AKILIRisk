@@ -7,8 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
-import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import { isRiskAreaId, legacyRiskAreaRedirect, riskAreaFromCatalog } from "@/lib/assessment/bank/risk-areas";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { adminAssessmentQuestionsAreaPath } from "@/lib/admin/assessment-questions-paths";
 import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
 import { prisma } from "@/lib/db";
@@ -32,11 +32,13 @@ export default async function AdminQuestionBankEditPage({
     );
   }
 
-  if (!isRiskAreaId(riskAreaId)) {
+  const catalog = await getPlatformPillarCatalog();
+
+  if (!isRiskAreaId(riskAreaId, catalog)) {
     notFound();
   }
 
-  const area = RISK_AREAS.find((a) => a.id === riskAreaId)!;
+  const area = riskAreaFromCatalog(catalog, riskAreaId)!;
 
   const pillarRow = await prisma.pillarQuestion.findUnique({
     where: { id: questionId },

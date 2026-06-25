@@ -22,6 +22,7 @@ import {
   pillarDefinitionFor,
 } from '@/lib/assessment/pillar-registry';
 import { isPillarInAssessmentScope } from '@/lib/assessment/included-pillars';
+import { usePlatformPillarCatalog } from '@/lib/hooks/usePlatformPillarCatalog';
 
 interface QuestionPageProps {
   params: Promise<{
@@ -42,9 +43,10 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   const { profile } = useHouseholdProfile();
   const { data: pillarQuestionData, isLoading: questionsLoading } =
     usePillarQuestions(pillarSlug);
+  const { data: catalog = [] } = usePlatformPillarCatalog();
 
   const pillarQuestions = pillarQuestionData?.questions ?? [];
-  const currentPillar = pillarDefinitionFor(pillarSlug);
+  const currentPillar = pillarDefinitionFor(pillarSlug, catalog);
 
   useQuery<CustomizationConfig>({
     queryKey: ['assessment-customization'],
@@ -95,16 +97,16 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   const { saveAnswer, flushPendingSaves, isSaving } = useAutoSave(assessmentId);
 
   useEffect(() => {
-    if (rawSlug !== pillarSlug && isAssessmentPillarId(pillarSlug)) {
+    if (rawSlug !== pillarSlug && catalog.length > 0 && isAssessmentPillarId(pillarSlug, catalog)) {
       router.replace(`/assessment/${pillarSlug}/${questionIndex}`);
     }
-  }, [rawSlug, pillarSlug, questionIndex, router]);
+  }, [rawSlug, pillarSlug, questionIndex, router, catalog]);
 
   useEffect(() => {
-    if (!isAssessmentPillarId(pillarSlug)) {
+    if (catalog.length > 0 && !isAssessmentPillarId(pillarSlug, catalog)) {
       router.replace('/assessment');
     }
-  }, [pillarSlug, router]);
+  }, [pillarSlug, router, catalog]);
 
   useEffect(() => {
     if (!assessmentId) {
@@ -113,11 +115,11 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   }, [assessmentId, router]);
 
   useEffect(() => {
-    if (!summaryAccess?.includedPillars?.length) return;
-    if (!isPillarInAssessmentScope(pillarSlug, summaryAccess.includedPillars)) {
+    if (!summaryAccess?.includedPillars?.length || catalog.length === 0) return;
+    if (!isPillarInAssessmentScope(pillarSlug, summaryAccess.includedPillars, catalog)) {
       router.replace('/assessment?scope=excluded');
     }
-  }, [summaryAccess, pillarSlug, router]);
+  }, [summaryAccess, pillarSlug, router, catalog]);
 
   useEffect(() => {
     if (questionsLoading || visibleQuestions.length === 0) return;

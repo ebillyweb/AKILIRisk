@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { FacilitatedQuestionPage } from "@/components/advisor/facilitate/FacilitatedQuestionView";
 import { resolveIncludedPillars } from "@/lib/assessment/included-pillars";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { assertFacilitatedSessionStep } from "@/lib/facilitated/session-layout";
 import { getHouseholdProfileForClientAssessment } from "@/lib/household/member-profile";
 
@@ -35,6 +36,7 @@ export default async function FacilitatedQuestionRoutePage({
   const householdProfile = await getHouseholdProfileForClientAssessment(
     facilitated.clientId,
   );
+  const catalog = await getPlatformPillarCatalog();
 
   return (
     <Suspense
@@ -47,7 +49,7 @@ export default async function FacilitatedQuestionRoutePage({
       <FacilitatedQuestionPage
         params={Promise.resolve(resolved)}
         assessmentId={facilitated.assessmentId}
-        includedPillars={resolveIncludedPillars(assessment?.includedPillars ?? [])}
+        includedPillars={resolveIncludedPillars(assessment?.includedPillars ?? [], catalog)}
         householdProfile={householdProfile}
       />
     </Suspense>

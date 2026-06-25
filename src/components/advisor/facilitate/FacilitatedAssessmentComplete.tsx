@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { pillarDefinitionFor } from "@/lib/assessment/pillar-registry";
+import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
 import { resolveScoringPillar } from "@/lib/assessment/scoring-pillar";
 import { syncStoreAnswersToServer } from "@/lib/assessment/sync-store-responses";
 import { useAssessmentStore } from "@/lib/assessment/store";
@@ -24,6 +25,7 @@ export function FacilitatedAssessmentComplete({
 }: FacilitatedAssessmentCompleteProps) {
   const router = useRouter();
   const { currentPillar } = useAssessmentStore();
+  const { data: catalog = [] } = usePlatformPillarCatalog();
   const [isCalculating, setIsCalculating] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +74,7 @@ export function FacilitatedAssessmentComplete({
   }, [runScoreCalculation]);
 
   const pillarLabel = currentPillar
-    ? pillarDefinitionFor(currentPillar).name
+    ? pillarDefinitionFor(currentPillar, catalog).name
     : "pillar";
 
   if (error) {

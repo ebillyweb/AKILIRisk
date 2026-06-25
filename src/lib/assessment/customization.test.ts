@@ -10,8 +10,11 @@ import {
   estimateCompletionMinutes,
   CustomizationConfig
 } from './customization';
-import { RISK_AREAS } from '@/lib/advisor/types';
+import { pillarCatalogSlugs, starterPillarCatalog } from '@/lib/methodology/pillar-catalog';
 import { Question } from '@/lib/assessment/types';
+
+const catalog = starterPillarCatalog();
+const allPillarIds = pillarCatalogSlugs(catalog);
 
 // Mock questions for testing
 const mockQuestions: Question[] = [
@@ -59,18 +62,18 @@ const mockQuestions: Question[] = [
 
 describe('getCustomizationConfig', () => {
   test('returns not customized config with empty focus areas', () => {
-    const config = getCustomizationConfig([]);
+    const config = getCustomizationConfig([], catalog);
 
     expect(config.isCustomized).toBe(false);
-    expect(config.visibleSubCategories).toHaveLength(6); // All RISK_AREAS
-    expect(config.visibleSubCategories).toEqual(RISK_AREAS.map(area => area.id));
+    expect(config.visibleSubCategories).toHaveLength(allPillarIds.length);
+    expect(config.visibleSubCategories).toEqual(allPillarIds);
     expect(config.emphasisAreas).toEqual(config.visibleSubCategories);
     expect(config.emphasisMultiplier).toBe(1.5);
   });
 
   test('returns customized config with valid focus areas', () => {
     const focusAreas = ['reputational-social', 'cyber-digital', 'insurance'];
-    const config = getCustomizationConfig(focusAreas);
+    const config = getCustomizationConfig(focusAreas, catalog);
 
     expect(config.isCustomized).toBe(true);
     expect(config.visibleSubCategories).toEqual(focusAreas);
@@ -80,7 +83,7 @@ describe('getCustomizationConfig', () => {
 
   test('filters out invalid focus area IDs', () => {
     const focusAreas = ['reputational-social', 'invalid-id', 'cyber-digital', 'another-invalid'];
-    const config = getCustomizationConfig(focusAreas);
+    const config = getCustomizationConfig(focusAreas, catalog);
 
     expect(config.isCustomized).toBe(true);
     expect(config.visibleSubCategories).toEqual(['reputational-social', 'cyber-digital']);
@@ -89,36 +92,36 @@ describe('getCustomizationConfig', () => {
 });
 
 describe('getVisibleSubCategories', () => {
-  test('returns all RISK_AREAS when empty array provided', () => {
-    const visible = getVisibleSubCategories([]);
+  test('returns all platform pillars when empty array provided', () => {
+    const visible = getVisibleSubCategories([], catalog);
 
-    expect(visible).toHaveLength(6);
-    expect(visible).toEqual(RISK_AREAS.map(area => area.id));
+    expect(visible).toHaveLength(allPillarIds.length);
+    expect(visible).toEqual(allPillarIds);
   });
 
   test('filters valid focus areas', () => {
     const focusAreas = ['reputational-social', 'invalid-id', 'cyber-digital'];
-    const visible = getVisibleSubCategories(focusAreas);
+    const visible = getVisibleSubCategories(focusAreas, catalog);
 
     expect(visible).toEqual(['reputational-social', 'cyber-digital']);
   });
 
   test('returns empty array when no valid focus areas', () => {
     const focusAreas = ['invalid-1', 'invalid-2'];
-    const visible = getVisibleSubCategories(focusAreas);
+    const visible = getVisibleSubCategories(focusAreas, catalog);
 
     expect(visible).toEqual([]);
   });
 
   test('maps legacy health-medical focus area to insurance (financial-asset-protection)', () => {
-    expect(getVisibleSubCategories(['health-medical-preparedness'])).toEqual([
+    expect(getVisibleSubCategories(['health-medical-preparedness'], catalog)).toEqual([
       'insurance',
     ]);
   });
 
   test('dedupes when legacy health and insurance both appear', () => {
     expect(
-      getVisibleSubCategories(['health-medical-preparedness', 'insurance'])
+      getVisibleSubCategories(['health-medical-preparedness', 'insurance'], catalog)
     ).toEqual(['insurance']);
   });
 });
@@ -142,16 +145,15 @@ describe('getEmphasisMultipliers', () => {
   test('handles non-customized config', () => {
     const config: CustomizationConfig = {
       isCustomized: false,
-      visibleSubCategories: RISK_AREAS.map(area => area.id),
-      emphasisAreas: RISK_AREAS.map(area => area.id),
+      visibleSubCategories: allPillarIds,
+      emphasisAreas: allPillarIds,
       emphasisMultiplier: 1.5
     };
 
     const multipliers = getEmphasisMultipliers(config);
 
-    // All areas should get emphasis multiplier
-    for (const area of RISK_AREAS) {
-      expect(multipliers[area.id]).toBe(1.5);
+    for (const areaId of allPillarIds) {
+      expect(multipliers[areaId]).toBe(1.5);
     }
   });
 });

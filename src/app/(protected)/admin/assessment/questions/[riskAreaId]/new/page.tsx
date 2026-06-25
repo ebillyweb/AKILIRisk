@@ -2,13 +2,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { createPillarQuestion } from "@/lib/actions/admin-question-bank-actions";
-import { RISK_AREAS } from "@/lib/advisor/types";
 import { PillarQuestionBankFields } from "@/components/admin/PillarQuestionBankFields";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadPillarSectionsForRiskArea } from "@/lib/assessment/bank/pillar-sections-for-risk-area";
-import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
+import { isRiskAreaId, legacyRiskAreaRedirect, riskAreaFromCatalog } from "@/lib/assessment/bank/risk-areas";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { adminAssessmentQuestionsAreaPath } from "@/lib/admin/assessment-questions-paths";
 import { isPillarQuestionBankActive } from "@/lib/assessment/bank/question-bank-source";
 
@@ -28,11 +28,13 @@ export default async function AdminQuestionBankNewPage({
     redirect(`${adminAssessmentQuestionsAreaPath(legacy)}/new`);
   }
 
-  if (!isRiskAreaId(riskAreaId)) {
+  const catalog = await getPlatformPillarCatalog();
+
+  if (!isRiskAreaId(riskAreaId, catalog)) {
     notFound();
   }
 
-  const area = RISK_AREAS.find((a) => a.id === riskAreaId)!;
+  const area = riskAreaFromCatalog(catalog, riskAreaId)!;
   const bankReady = await isPillarQuestionBankActive();
   const sections = await loadPillarSectionsForRiskArea(riskAreaId);
 

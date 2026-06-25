@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db';
 import { getClientAssessmentScope } from '@/lib/client/assessment-scope';
 import { getClientIntakeGateState } from '@/lib/client/intake-gate';
 import { getCustomizationConfig, type CustomizationConfig } from '@/lib/assessment/customization';
+import { getPlatformPillarCatalog } from '@/lib/methodology/cached-pillar-catalog';
 
 /**
  * Get the most recent approved IntakeApproval for a user
@@ -39,11 +40,12 @@ export async function getActiveApprovalForUser(userId: string) {
  * Returns null if no approved intake exists
  */
 export async function getCustomizationForUser(userId: string): Promise<CustomizationConfig | null> {
+  const catalog = await getPlatformPillarCatalog();
   const gate = await getClientIntakeGateState(userId);
 
   if (gate.intakeWaived && !gate.intakeApproved) {
     const scope = await getClientAssessmentScope(userId);
-    const config = getCustomizationConfig(scope.focusAreas);
+    const config = getCustomizationConfig(scope.focusAreas, catalog);
     return {
       ...config,
       advisorName: undefined,
@@ -57,7 +59,7 @@ export async function getCustomizationForUser(userId: string): Promise<Customiza
     return null;
   }
 
-  const config = getCustomizationConfig(approval.focusAreas);
+  const config = getCustomizationConfig(approval.focusAreas, catalog);
 
   return {
     ...config,

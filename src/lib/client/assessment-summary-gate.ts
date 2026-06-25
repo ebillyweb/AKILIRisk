@@ -6,6 +6,8 @@ import { normalizePillarScoreId } from "@/lib/assessment/pillar-registry";
 import {
   isAssessmentScopeComplete,
 } from "@/lib/assessment/included-pillars";
+import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import {
   getClientAssessmentScope,
   resolveClientAssessmentIncludedPillars,
@@ -48,8 +50,8 @@ export function isAssessmentSummaryUnlockedFromStatus(input: {
 export function evaluateClientAssessmentSummaryAccess(input: {
   pillarScores: Array<{ pillar: string }>;
   deliverablePhase: DeliverablePhase;
-  /** Already resolved via resolveClientAssessmentIncludedPillars. */
   includedPillars: string[];
+  catalog: readonly PillarCatalogEntry[];
 }): Omit<ClientAssessmentSummaryAccess, "assessmentId"> {
   const scoredIds = input.pillarScores.map((row) =>
     normalizePillarScoreId(row.pillar),
@@ -58,7 +60,7 @@ export function evaluateClientAssessmentSummaryAccess(input: {
     input.includedPillars.length > 0 ? input.includedPillars : null;
   const allPillarsComplete =
     scopeForCompletion !== null &&
-    isAssessmentScopeComplete(scoredIds, scopeForCompletion);
+    isAssessmentScopeComplete(scoredIds, scopeForCompletion, input.catalog);
   const advisorPublishedProfile =
     input.deliverablePhase === "PROFILE" ||
     input.deliverablePhase === "PORTFOLIO";
@@ -76,7 +78,7 @@ export function evaluateClientAssessmentSummaryAccess(input: {
 export async function getClientAssessmentSummaryAccess(
   clientUserId: string,
 ): Promise<ClientAssessmentSummaryAccess> {
-  const [latest, approvedScope] = await Promise.all([
+  const [latest, approvedScope, catalog] = await Promise.all([
     prisma.assessment.findFirst({
       where: { userId: clientUserId },
       orderBy: { startedAt: "desc" },
@@ -88,9 +90,10 @@ export async function getClientAssessmentSummaryAccess(
       },
     }),
     getClientAssessmentScope(clientUserId),
+    getPlatformPillarCatalog(),
   ]);
 
-  const includedPillars = resolveClientAssessmentIncludedPillars({
+  const includedPillars = await resolveClientAssessmentIncludedPillars({
     assessmentIncludedPillars: latest?.includedPillars,
     approvedScopeIncludedPillars: approvedScope.includedPillars,
     hasAssessmentRow: latest != null,
@@ -112,6 +115,7 @@ export async function getClientAssessmentSummaryAccess(
     pillarScores: latest.scores,
     deliverablePhase: latest.deliverablePhase,
     includedPillars,
+    catalog,
   });
 
   return { ...evaluated, assessmentId: latest.id };
@@ -121,18 +125,27 @@ export async function getAssessmentSummaryAccessForAssessment(
   assessmentId: string,
   clientUserId: string,
 ): Promise<ClientAssessmentSummaryAccess> {
-  const assessment = await prisma.assessment.findFirst({
-    where: { id: assessmentId, userId: clientUserId },
-    select: {
-      id: true,
-      deliverablePhase: true,
-      includedPillars: true,
-      scores: { select: { pillar: true } },
-    },
+  const [assessment, approvedScope, catalog] = await Promise.all([
+    prisma.assessment.findFirst({
+      where: { id: assessmentId, userId: clientUserId },
+      select: {
+        id: true,
+        deliverablePhase: true,
+        includedPillars: true,
+        scores: { select: { pillar: true } },
+      },
+    }),
+    getClientAssessmentScope(clientUserId),
+    getPlatformPillarCatalog(),
+  ]);
+
+  const includedPillars = await resolveClientAssessmentIncludedPillars({
+    assessmentIncludedPillars: assessment?.includedPillars,
+    approvedScopeIncludedPillars: approvedScope.includedPillars,
+    hasAssessmentRow: assessment != null,
   });
 
   if (!assessment) {
-    const approvedScope = await getClientAssessmentScope(clientUserId);
     return {
       canViewRiskPreview: false,
       canViewSummary: false,
@@ -140,24 +153,15 @@ export async function getAssessmentSummaryAccessForAssessment(
       advisorPublishedProfile: false,
       deliverablePhase: "PREVIEW",
       assessmentId: null,
-      includedPillars: resolveClientAssessmentIncludedPillars({
-        approvedScopeIncludedPillars: approvedScope.includedPillars,
-        hasAssessmentRow: false,
-      }),
+      includedPillars,
     };
   }
-
-  const approvedScope = await getClientAssessmentScope(clientUserId);
-  const includedPillars = resolveClientAssessmentIncludedPillars({
-    assessmentIncludedPillars: assessment.includedPillars,
-    approvedScopeIncludedPillars: approvedScope.includedPillars,
-    hasAssessmentRow: true,
-  });
 
   const evaluated = evaluateClientAssessmentSummaryAccess({
     pillarScores: assessment.scores,
     deliverablePhase: assessment.deliverablePhase,
     includedPillars,
+    catalog,
   });
 
   return { ...evaluated, assessmentId: assessment.id };

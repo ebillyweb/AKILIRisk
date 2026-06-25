@@ -4,6 +4,7 @@ import {
   formatHeatMapScore,
   type PillarScoreInput,
 } from "@/lib/assessment/heat-map-data";
+import { starterPillarCatalog, type PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 import { DraftWatermark } from "./DraftWatermark";
 
 /**
@@ -24,6 +25,7 @@ interface RiskHeatMapPdfProps {
   companyName: string;
   /** §4.5 commit 3: see DraftWatermark. */
   draft?: boolean;
+  catalog?: readonly PillarCatalogEntry[];
 }
 
 const styles = StyleSheet.create({
@@ -83,8 +85,13 @@ const styles = StyleSheet.create({
   },
 });
 
-export function RiskHeatMapPdf({ pillarScores, companyName, draft }: RiskHeatMapPdfProps) {
-  const cells = buildHeatMapCells(pillarScores);
+export function RiskHeatMapPdf({
+  pillarScores,
+  companyName,
+  draft,
+  catalog = starterPillarCatalog(),
+}: RiskHeatMapPdfProps) {
+  const cells = buildHeatMapCells(pillarScores, { catalog });
   const allUnassessed = cells.every((c) => c.level === "unassessed");
 
   return (

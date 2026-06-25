@@ -1,4 +1,8 @@
-import { RISK_AREAS } from "@/lib/advisor/types";
+import {
+  pillarCatalogMap,
+  sortPillarCatalog,
+  type PillarCatalogEntry,
+} from "@/lib/methodology/pillar-catalog";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 
 export type PillarRecommendationStrength = "strong" | "moderate" | "low";
@@ -53,6 +57,7 @@ export type ComputePillarRecommendationsInput = {
  */
 export function computePillarRecommendations(
   input: ComputePillarRecommendationsInput,
+  catalog: readonly PillarCatalogEntry[],
 ): PillarRecommendation[] {
   const responseByQuestion = new Map(
     input.responses
@@ -94,20 +99,22 @@ export function computePillarRecommendations(
     }
   }
 
-  const byId = new Map(RISK_AREAS.map((a) => [a.id, a]));
+  const byId = pillarCatalogMap(catalog);
 
-  return RISK_AREAS.map((area) => {
-    const entry = aggregates.get(area.id);
-    const score = entry?.score ?? 0;
-    return {
-      pillarId: area.id,
-      pillarName: area.name,
-      strength: strengthForScore(score),
-      score,
-      reasons: entry?.reasons ?? [],
-      suggestedAction: entry?.actions[0],
-    };
-  }).sort((a, b) => b.score - a.score || a.pillarName.localeCompare(b.pillarName));
+  return sortPillarCatalog(catalog)
+    .map((area) => {
+      const entry = aggregates.get(area.id);
+      const score = entry?.score ?? 0;
+      return {
+        pillarId: area.id,
+        pillarName: area.name,
+        strength: strengthForScore(score),
+        score,
+        reasons: entry?.reasons ?? [],
+        suggestedAction: entry?.actions[0],
+      };
+    })
+    .sort((a, b) => b.score - a.score || a.pillarName.localeCompare(b.pillarName));
 }
 
 export function strongRecommendationPillarIds(

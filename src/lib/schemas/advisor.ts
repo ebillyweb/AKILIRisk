@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { normalizeIncludedPillarIds } from '@/lib/assessment/included-pillars';
+import { starterPillarCatalog } from '@/lib/methodology/pillar-catalog';
+
+const VALIDATION_PILLAR_CATALOG = starterPillarCatalog();
 
 // Schema for assigning a client to an advisor
 export const assignClientSchema = z.object({
@@ -14,7 +17,7 @@ function refineAssessmentScopeFields(
 ) {
   let included: string[];
   try {
-    included = normalizeIncludedPillarIds(data.includedPillars);
+    included = normalizeIncludedPillarIds(data.includedPillars, VALIDATION_PILLAR_CATALOG);
   } catch (e) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -36,7 +39,7 @@ function refineAssessmentScopeFields(
 
   let emphasis: string[];
   try {
-    emphasis = normalizeIncludedPillarIds(data.focusAreas);
+    emphasis = normalizeIncludedPillarIds(data.focusAreas, VALIDATION_PILLAR_CATALOG);
   } catch (e) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -65,8 +68,8 @@ export const approveClientSchema = z
     includedPillars: z
       .array(z.string())
       .min(1, "Select at least one assessment domain")
-      .max(6, "At most six assessment domains"),
-    focusAreas: z.array(z.string()).max(6).optional(),
+      .max(20, "Too many assessment domains"),
+    focusAreas: z.array(z.string()).max(20).optional(),
     notes: z.string().optional(),
   })
   .superRefine(refineAssessmentScopeFields);
@@ -77,14 +80,14 @@ export const waiverAssessmentScopeSchema = z
     includedPillars: z
       .array(z.string())
       .min(1, "Select at least one assessment domain")
-      .max(6, "At most six assessment domains"),
-    focusAreas: z.array(z.string()).max(6).optional(),
+      .max(20, "Too many assessment domains"),
+    focusAreas: z.array(z.string()).max(20).optional(),
   })
   .superRefine(refineAssessmentScopeFields);
 
 // Schema for selecting risk areas during approval process
 export const selectRiskAreasSchema = z.object({
-  focusAreas: z.array(z.string()).min(1).max(6),
+  focusAreas: z.array(z.string()).min(1).max(20),
 });
 
 // Schema for updating approval status

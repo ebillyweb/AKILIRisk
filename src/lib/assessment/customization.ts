@@ -5,10 +5,10 @@
  * from advisor-approved focus areas.
  */
 
-import { RISK_AREAS } from '@/lib/advisor/types';
+import { pillarCatalogSlugs, type PillarCatalogEntry } from '@/lib/methodology/pillar-catalog';
 import { Question } from '@/lib/assessment/types';
 
-/** Prior intake IDs mapped to current `RISK_AREAS` ids */
+/** Prior intake IDs mapped to current pillar ids */
 const FOCUS_AREA_LEGACY_ALIASES: Record<string, string> = {
   'health-medical-preparedness': 'insurance',
 };
@@ -29,29 +29,36 @@ export interface CustomizationConfig {
 /**
  * Get customization configuration from focus areas
  */
-export function getCustomizationConfig(focusAreas: string[]): CustomizationConfig {
-  const validFocusAreas = getVisibleSubCategories(focusAreas);
+export function getCustomizationConfig(
+  focusAreas: string[],
+  catalog: readonly PillarCatalogEntry[],
+): CustomizationConfig {
+  const validFocusAreas = getVisibleSubCategories(focusAreas, catalog);
   const isCustomized = focusAreas.length > 0;
 
   return {
     isCustomized,
     visibleSubCategories: validFocusAreas,
-    emphasisAreas: validFocusAreas, // All visible areas get emphasis for now
+    emphasisAreas: validFocusAreas,
     emphasisMultiplier: 1.5,
   };
 }
 
 /**
- * Filter focus areas to only valid RISK_AREAS IDs
- * Returns all 6 pillar subcategory IDs if focusAreas is empty (fallback to standard assessment)
+ * Filter focus areas to valid platform pillar IDs.
+ * Returns all catalog pillar ids when focusAreas is empty.
  */
-export function getVisibleSubCategories(focusAreas: string[]): string[] {
+export function getVisibleSubCategories(
+  focusAreas: string[],
+  catalog: readonly PillarCatalogEntry[],
+): string[] {
+  const allIds = pillarCatalogSlugs(catalog);
+
   if (focusAreas.length === 0) {
-    // Fallback to standard assessment - all categories visible
-    return RISK_AREAS.map(area => area.id);
+    return allIds;
   }
 
-  const validRiskAreaIds = new Set<string>(RISK_AREAS.map(area => area.id));
+  const validRiskAreaIds = new Set(allIds);
   const seen = new Set<string>();
   const out: string[] = [];
   for (const raw of focusAreas) {
@@ -71,12 +78,10 @@ export function getVisibleSubCategories(focusAreas: string[]): string[] {
 export function getEmphasisMultipliers(config: CustomizationConfig): Record<string, number> {
   const multipliers: Record<string, number> = {};
 
-  // All visible subcategories get at least 1.0x weight
   for (const subCategoryId of config.visibleSubCategories) {
     multipliers[subCategoryId] = 1.0;
   }
 
-  // Emphasis areas get the emphasis multiplier
   for (const emphasisArea of config.emphasisAreas) {
     multipliers[emphasisArea] = config.emphasisMultiplier;
   }
@@ -86,7 +91,6 @@ export function getEmphasisMultipliers(config: CustomizationConfig): Record<stri
 
 /**
  * Get visible question IDs based on visible subcategories
- * This is the key filter that controls which questions appear
  */
 export function getVisibleQuestionIds(visibleSubCategories: string[], allQuestions: Question[]): string[] {
   const visibleSubCategoriesSet = new Set(visibleSubCategories);
@@ -97,13 +101,11 @@ export function getVisibleQuestionIds(visibleSubCategories: string[], allQuestio
 
 /**
  * Estimate completion time based on visible questions
- * ~20 seconds per question, capped at 15 minutes
  */
 export function estimateCompletionMinutes(visibleSubCategories: string[], allQuestions: Question[]): number {
   const visibleQuestions = getVisibleQuestionIds(visibleSubCategories, allQuestions);
   const estimatedSeconds = visibleQuestions.length * 20;
   const estimatedMinutes = Math.ceil(estimatedSeconds / 60);
 
-  // Cap at 15 minutes
   return Math.min(estimatedMinutes, 15);
 }

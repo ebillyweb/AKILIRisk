@@ -356,6 +356,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                       score: p.score,
                       riskLevel: p.riskLevel,
                     }))}
+                    catalog={detail.pillarCatalog}
                   />
                 </div>
 

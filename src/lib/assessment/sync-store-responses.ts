@@ -2,6 +2,7 @@ import {
   assessmentPillarDefinitions,
   normalizePillarSlug,
 } from "@/lib/assessment/pillar-registry";
+import { starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import type { Question } from "@/lib/assessment/types";
 
 type SyncInput = {
@@ -28,7 +29,17 @@ async function resolveQuestionBank(
   const pillarsWithAnswers = new Set<string>();
   if (currentPillar) pillarsWithAnswers.add(normalizePillarSlug(currentPillar));
 
-  for (const pillar of assessmentPillarDefinitions()) {
+  let catalog = starterPillarCatalog();
+  try {
+    const response = await fetch("/api/platform/pillars");
+    if (response.ok) {
+      catalog = await response.json();
+    }
+  } catch {
+    // fallback to starter catalog
+  }
+
+  for (const pillar of assessmentPillarDefinitions(catalog)) {
     pillarsWithAnswers.add(pillar.slug);
   }
 

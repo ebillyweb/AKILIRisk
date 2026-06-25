@@ -85,9 +85,9 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   },
   {
     slug: "family-governance-behavioral",
-    canonicalName: "Family governance & behavioral resilience",
+    canonicalName: "Behavioural resilience",
     description:
-      "Heir preparedness, family meetings, decision norms, and behavioral-finance pitfalls.",
+      "Family dynamics, heir preparedness, emotional resilience, and behavioral-finance pitfalls.",
     defaultOrder: 10,
     defaultWeight: 5,
   },

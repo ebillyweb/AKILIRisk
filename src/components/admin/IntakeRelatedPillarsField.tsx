@@ -1,17 +1,21 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
+import { sortPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import { cn } from "@/lib/utils";
 
 type IntakeRelatedPillarsFieldProps = {
+  pillars: PillarCatalogEntry[];
   defaultSelected: string[];
   disabled?: boolean;
 };
 
 export function IntakeRelatedPillarsField({
+  pillars,
   defaultSelected,
   disabled = false,
 }: IntakeRelatedPillarsFieldProps) {
   const selected = new Set(defaultSelected);
+  const areas = sortPillarCatalog(pillars);
 
   return (
     <fieldset className="space-y-3" disabled={disabled}>
@@ -23,7 +27,7 @@ export function IntakeRelatedPillarsField({
         Select zero or more.
       </p>
       <ul className="divide-y divide-border overflow-hidden rounded-lg border bg-card">
-        {RISK_AREAS.map((area) => {
+        {areas.map((area) => {
           const isChecked = selected.has(area.id);
           return (
             <li key={area.id}>

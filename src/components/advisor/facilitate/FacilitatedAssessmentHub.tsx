@@ -26,6 +26,8 @@ import {
   useAssessmentPillarDefinitions,
   useAssessmentPillarScores,
 } from "@/lib/hooks/useAssessmentPillars";
+import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
+import { scopedPillarCatalog } from "@/lib/assessment/pillar-registry";
 import { useFacilitatedAssessmentHydration } from "@/lib/hooks/useFacilitatedAssessmentHydration";
 import type { HouseholdProfile } from "@/lib/assessment/personalization";
 import {
@@ -57,11 +59,16 @@ export function FacilitatedAssessmentHub({
   const setHouseholdProfile = useAssessmentStore((s) => s.setHouseholdProfile);
   const setCurrentPosition = useAssessmentStore((s) => s.setCurrentPosition);
 
-  const pillarDefinitions = useAssessmentPillarDefinitions();
-  const { questionsByPillarId, isLoading: questionsLoading } = useAllPillarQuestions({
-    facilitatedSessionId: sessionId,
-    assessmentId,
-  });
+  const { data: catalog = [] } = usePlatformPillarCatalog();
+  const { pillars: pillarDefinitions, isLoading: catalogLoading } =
+    useAssessmentPillarDefinitions(includedPillarsProp);
+  const { questionsByPillarId, isLoading: questionsLoading } = useAllPillarQuestions(
+    includedPillarsProp,
+    {
+      facilitatedSessionId: sessionId,
+      assessmentId,
+    },
+  );
   const { data: pillarScores = [] } = useAssessmentPillarScores(assessmentId, {
     facilitatedSessionId: sessionId,
   });
@@ -72,14 +79,25 @@ export function FacilitatedAssessmentHub({
     () =>
       resolveIncludedPillars(
         includedPillarsProp.length ? includedPillarsProp : [...DEFAULT_INCLUDED_PILLARS],
+        catalog,
       ),
-    [includedPillarsProp],
+    [includedPillarsProp, catalog],
   );
   const includedSet = useMemo(
     () => new Set(includedPillars.map(normalizePillarSlug)),
     [includedPillars],
   );
-  const narrowScope = isNarrowAssessmentScope(includedPillars);
+  const narrowScope =
+    catalog.length > 0 && isNarrowAssessmentScope(includedPillars, catalog);
+
+  const progressPillars = useMemo(
+    () =>
+      scopedPillarCatalog(catalog, includedPillars).map((pillar) => ({
+        id: pillar.id,
+        label: pillar.name,
+      })),
+    [catalog, includedPillars],
+  );
 
   const { data: assessmentData, isLoading: assessmentLoading } = useQuery({
     queryKey: ["facilitated-assessment", assessmentId, sessionId],
@@ -231,7 +249,7 @@ export function FacilitatedAssessmentHub({
   const completedCount = pillarStats.filter((p) => p.status === "completed").length;
   const allComplete = completedCount === includedPillars.length;
 
-  if (!assessmentSynced || questionsLoading || (shouldAutoResume && !didAutoResume)) {
+  if (!assessmentSynced || catalogLoading || questionsLoading || (shouldAutoResume && !didAutoResume)) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -248,7 +266,7 @@ export function FacilitatedAssessmentHub({
           .filter((p) => p.status === "completed")
           .map((p) => p.pillar.slug)}
         totalPillars={includedPillars.length}
-        scopedPillarIds={includedPillars}
+        pillars={progressPillars}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

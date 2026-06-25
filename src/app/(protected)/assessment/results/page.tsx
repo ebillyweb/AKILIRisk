@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { pillarDisplayName as getPillarDisplayName, normalizePillarSlug } from "@/lib/assessment/pillar-registry";
+import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
 import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
 import type { RiskLevel } from "@/lib/assessment/types";
 
@@ -63,6 +64,7 @@ export default function AssessmentResultsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pillarParam = searchParams.get("pillar");
+  const { data: catalog = [] } = usePlatformPillarCatalog();
   const { assessmentId, markPillarComplete, currentPillar, completedPillars } = useAssessmentStore();
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
   /** Pillar we actually loaded/scored (may differ from `currentPillar` if store was stale). */
@@ -186,7 +188,7 @@ export default function AssessmentResultsPage() {
 
   if (isLoading || !isReadyForRedirects) {
     const loadingPillar = normalizePillarSlug(pillarParam ?? currentPillar ?? "governance");
-    const loadingLabel = getPillarDisplayName(loadingPillar);
+    const loadingLabel = getPillarDisplayName(loadingPillar, catalog);
 
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -244,7 +246,7 @@ export default function AssessmentResultsPage() {
   const targetPillar = normalizePillarSlug(
     resultsPillar ?? pillarParam ?? currentPillar ?? "governance"
   );
-  const pillarLabel = getPillarDisplayName(targetPillar);
+  const pillarLabel = getPillarDisplayName(targetPillar, catalog);
 
   const isCyberOnlyScore =
     scoreData.breakdown.length === 1 && scoreData.breakdown[0]?.categoryId === "cyber-digital";

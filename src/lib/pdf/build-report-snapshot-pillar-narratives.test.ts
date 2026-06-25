@@ -101,9 +101,11 @@ vi.mock("@/lib/assessment/pillar-config", async () => {
     "@/lib/assessment/test-fixtures/belvedere-pillar-questions"
   );
   const { pillarDefinitionFor } = await import("@/lib/assessment/pillar-registry");
+  const { starterPillarCatalog } = await import("@/lib/methodology/pillar-catalog");
+  const catalog = starterPillarCatalog();
   return {
     getPillarAssessmentConfig: async (pillarId: string) => ({
-      pillarData: pillarDefinitionFor(pillarId),
+      pillarData: pillarDefinitionFor(pillarId, catalog),
       questions: belvedereQuestionsForPillar(pillarId),
     }),
   };
@@ -114,11 +116,14 @@ vi.mock("@/lib/methodology/assessment-runtime", async () => {
     "@/lib/assessment/test-fixtures/belvedere-pillar-questions"
   );
   const { pillarDefinitionFor } = await import("@/lib/assessment/pillar-registry");
+  const { starterPillarCatalog } = await import("@/lib/methodology/pillar-catalog");
+  const catalog = starterPillarCatalog();
   const { resolvePillarNarratives } = await import("@/lib/assessment/pillar-outcomes");
   return {
     resolvePillarConfigForAssessment: async (_assessmentId: string, pillarKey: string) => ({
       pillarData: pillarDefinitionFor(
         pillarKey === "family-governance" ? "governance" : pillarKey,
+        catalog,
       ),
       questions: belvedereQuestionsForPillar(
         pillarKey === "family-governance" ? "governance" : pillarKey,

@@ -11,6 +11,7 @@ import {
   isNarrowAssessmentScope,
 } from "@/lib/assessment/included-pillars";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -62,13 +63,14 @@ export default async function AssessmentPreviewPage() {
     orderBy: { pillar: "asc" },
   });
 
+  const catalog = await getPlatformPillarCatalog();
   const includedPillars = access.includedPillars;
-  const narrowScope = isNarrowAssessmentScope(includedPillars);
+  const narrowScope = isNarrowAssessmentScope(includedPillars, catalog);
   const includedSet = new Set(includedPillars.map(normalizePillarSlug));
   const scopedScores = pillarScores.filter((row) =>
     includedSet.has(normalizePillarSlug(row.pillar)),
   );
-  const topRisks = resolveTopRisks(scopedScores);
+  const topRisks = resolveTopRisks(scopedScores, catalog);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
@@ -91,7 +93,7 @@ export default async function AssessmentPreviewPage() {
             <CardTitle className="text-2xl">Risk by domain</CardTitle>
             <CardDescription>
               {narrowScope
-                ? formatNarrowScopePreviewCopy(includedPillars)
+                ? formatNarrowScopePreviewCopy(includedPillars, catalog)
                 : "High-level view of your six risk domains. Each cell shows the maturity score and risk level from your completed assessment."}
             </CardDescription>
           </CardHeader>
@@ -100,6 +102,7 @@ export default async function AssessmentPreviewPage() {
               mode="single-client"
               pillarScores={scopedScores}
               includedPillarIds={narrowScope ? includedPillars : undefined}
+              catalog={catalog}
             />
           </CardContent>
         </Card>

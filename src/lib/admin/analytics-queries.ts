@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
-import { RISK_AREAS } from "@/lib/advisor/types";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
+import { sortPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import type { RiskLevelPalette } from "@/lib/assessment/risk-color-palette";
 
 /**
@@ -256,7 +257,10 @@ export interface PillarAveragesResult {
 }
 
 export async function getPillarAverages(): Promise<PillarAveragesResult> {
-  const rows = await loadLatestPillarScoresPlatformWide();
+  const [rows, catalog] = await Promise.all([
+    loadLatestPillarScoresPlatformWide(),
+    getPlatformPillarCatalog(),
+  ]);
 
   type LvlKey = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   type Bucket = {
@@ -288,7 +292,7 @@ export async function getPillarAverages(): Promise<PillarAveragesResult> {
     }
   }
 
-  const pillars: PillarAverage[] = RISK_AREAS.map((area) => {
+  const pillars: PillarAverage[] = sortPillarCatalog(catalog).map((area) => {
     const bucket = byPillar.get(area.id);
     if (!bucket || bucket.count === 0) {
       return {

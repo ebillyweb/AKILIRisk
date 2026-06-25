@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { requireAdminRole } from "@/lib/admin/auth";
-import { RISK_AREAS } from "@/lib/advisor/types";
 import { isQuestionBankFilterType } from "@/lib/assessment/bank/question-bank-types";
-import { isRiskAreaId, legacyRiskAreaRedirect } from "@/lib/assessment/bank/risk-areas";
+import { isRiskAreaId, legacyRiskAreaRedirect, riskAreaFromCatalog } from "@/lib/assessment/bank/risk-areas";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import {
   adminAssessmentQuestionsAreaPath,
   adminAssessmentQuestionsEditPath,
@@ -44,11 +44,13 @@ export default async function AdminQuestionBankAreaPage({
     redirect(`${adminAssessmentQuestionsAreaPath(legacy)}${typeQuery}`);
   }
 
-  if (!isRiskAreaId(riskAreaId)) {
+  const catalog = await getPlatformPillarCatalog();
+
+  if (!isRiskAreaId(riskAreaId, catalog)) {
     notFound();
   }
 
-  const area = RISK_AREAS.find((a) => a.id === riskAreaId)!;
+  const area = riskAreaFromCatalog(catalog, riskAreaId)!;
 
   const questions = await loadQuestionBankDashboardRows(riskAreaId);
   const filteredQuestions = typeFilter
@@ -67,7 +69,7 @@ export default async function AdminQuestionBankAreaPage({
         </Button>
         <Suspense fallback={null}>
           <div className="flex flex-wrap items-center gap-4 border-l border-border pl-4">
-            <QuestionBankRiskAreaFilter activeAreaId={riskAreaId} />
+            <QuestionBankRiskAreaFilter activeAreaId={riskAreaId} pillars={catalog} />
             <QuestionBankTypeFilter />
           </div>
         </Suspense>

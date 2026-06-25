@@ -27,6 +27,8 @@ import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import {
   isNarrowAssessmentScope,
 } from "@/lib/assessment/included-pillars";
+import { scopedPillarCatalog } from "@/lib/assessment/pillar-registry";
+import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
 import type { RiskLevel } from "@/lib/assessment/types";
 
 /**
@@ -38,7 +40,9 @@ function AssessmentHubPageContent() {
   const scopeExcluded = searchParams.get("scope") === "excluded";
   const store = useAssessmentStore();
   const persistHydrated = useAssessmentPersistHydrated();
-  const pillarDefinitions = useAssessmentPillarDefinitions();
+  const { data: catalog = [] } = usePlatformPillarCatalog();
+  const { pillars: pillarDefinitions, isLoading: catalogLoading } =
+    useAssessmentPillarDefinitions();
   const [isInitializing, setIsInitializing] = useState(true);
   const { profile } = useHouseholdProfile();
   const { questionsByPillarId, isLoading: questionsLoading } = useAllPillarQuestions();
@@ -208,7 +212,8 @@ function AssessmentHubPageContent() {
     () => new Set(includedPillars.map(normalizePillarSlug)),
     [includedPillars],
   );
-  const narrowScope = isNarrowAssessmentScope(includedPillars);
+  const narrowScope =
+    catalog.length > 0 && isNarrowAssessmentScope(includedPillars, catalog);
   const scopedDomainLabel = narrowScope
     ? `${includedPillars.length} risk domain${includedPillars.length === 1 ? "" : "s"}`
     : "Six risk pillars";
@@ -276,8 +281,18 @@ function AssessmentHubPageContent() {
         completedPillarSlugs.includes(normalizePillarSlug(id)),
       ));
 
+  const progressPillars = useMemo(
+    () =>
+      scopedPillarCatalog(catalog, includedPillars).map((pillar) => ({
+        id: pillar.id,
+        label: pillar.name,
+      })),
+    [catalog, includedPillars],
+  );
+
   if (
     isInitializing ||
+    catalogLoading ||
     questionsLoading ||
     (store.assessmentId && !store.isHydrated)
   ) {
@@ -355,7 +370,7 @@ function AssessmentHubPageContent() {
               completedPillars={completedPillarSlugs}
               totalPillars={includedPillars.length}
               currentPillar={store.currentPillar || serverResumePillar || undefined}
-              scopedPillarIds={includedPillars}
+              pillars={progressPillars}
             />
           </CardContent>
         </Card>
