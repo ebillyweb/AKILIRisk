@@ -27,6 +27,13 @@ vi.mock("@/lib/assessment/sync-client-assessment-scope", () => ({
   syncInProgressAssessmentScope: (...args: unknown[]) => mockSyncScope(...args),
 }));
 
+vi.mock("@/lib/methodology/cached-pillar-catalog", async () => {
+  const { starterPillarCatalog } = await import("@/lib/methodology/pillar-catalog");
+  return {
+    getPlatformPillarCatalog: vi.fn(async () => starterPillarCatalog()),
+  };
+});
+
 import {
   getClientEngagementScope,
   persistClientEngagementScope,

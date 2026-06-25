@@ -114,7 +114,7 @@ describe("scope display helpers", () => {
 
   it("formats pillar names and preview copy", () => {
     expect(formatIncludedPillarNames(["governance", "cyber-digital"], catalog)).toBe(
-      "Governance, Cyber security",
+      "Governance & Decision-Making, Cyber & Digital Security",
     );
     expect(formatNarrowScopePreviewCopy(["governance", "cyber-digital"], catalog)).toMatch(
       /2 of 10 household risk domains/,

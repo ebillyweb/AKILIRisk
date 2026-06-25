@@ -3,7 +3,10 @@ import "server-only";
 import { Prisma, RiskLevel as PrismaRiskLevel } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { findUserByEmail } from "@/lib/auth/user-email";
-import { getActiveApprovalForUser } from "@/lib/data/assessment-customization";
+import {
+  getActiveApprovalForUser,
+  getScoringCustomizationForClient,
+} from "@/lib/data/assessment-customization";
 import { getVisibleQuestions } from "@/lib/assessment/branching";
 import { getPillarAssessmentConfig } from "@/lib/assessment/pillar-config";
 import {
@@ -20,10 +23,8 @@ import {
   calculatePillarScore,
 } from "@/lib/assessment/scoring";
 import {
-  getCustomizationConfig,
   getEmphasisMultipliers,
 } from "@/lib/assessment/customization";
-import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
 import { encryptAnswer } from "@/lib/data/response-content";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
@@ -120,18 +121,7 @@ export async function completeAssessmentForE2E(
 
   const activeThresholds = await getActiveRiskThresholds();
 
-  let customizationConfig = null;
-  if (assessment.approvalId) {
-    const approvalRow = await prisma.intakeApproval.findUnique({
-      where: { id: assessment.approvalId },
-      select: { focusAreas: true },
-    });
-    if (approvalRow) {
-      const catalog = await getPlatformPillarCatalog();
-      customizationConfig = getCustomizationConfig(approvalRow.focusAreas, catalog);
-    }
-  }
-
+  const customizationConfig = await getScoringCustomizationForClient(user.id);
   const emphasisMultipliers = customizationConfig
     ? getEmphasisMultipliers(customizationConfig)
     : null;

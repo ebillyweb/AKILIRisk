@@ -90,7 +90,7 @@ const NEW_PILLAR_NARRATIVES: Record<string, PillarNarrativeBands> = {
     allYes: [
       "The family demonstrates strong behavioral awareness and resilience as complexity grows. Continue structured education and open dialogue as circumstances change.",
     ],
-    midBand: GENERIC_MID_BAND("behavioural resilience"),
+    midBand: GENERIC_MID_BAND("behavioral resilience"),
   },
 };
 

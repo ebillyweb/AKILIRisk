@@ -18,23 +18,27 @@ export function formatScore(score: number): string {
  * Maps pillar subcategory IDs to display names for chart labels
  */
 export const CATEGORY_LABELS: Record<string, string> = {
-  governance: 'Governance',
-  "cyber-digital": 'Cyber security',
-  'physical-security': 'Physical security',
-  'insurance': 'Insurance',
-  'geographic-environmental': 'Geographic',
-  'reputational-social': 'Reputational & social risk',
+  governance: 'Governance & Decision-Making',
+  "cyber-digital": 'Cyber & Digital Security',
+  'physical-security': 'Physical Security',
+  'insurance': 'Protection & Risk Transfer',
+  'geographic-environmental': 'Geographic & Environmental',
+  'reputational-social': 'Reputation & Social Risk',
+  'liquidity-cash': 'Liquidity & Cash Management',
+  'tax-exposure': 'Tax Exposure',
+  'estate-succession': 'Estate & Succession',
+  'family-governance-behavioral': 'Behavioral Resilience',
   /** Historical breakdown rows */
-  'health-medical-preparedness': 'Insurance (prior medical section)',
+  'health-medical-preparedness': 'Protection & Risk Transfer (prior medical section)',
   // Legacy governance subcategory IDs (scores stored before six-pillar taxonomy)
-  'decision-making-authority': 'Governance',
-  'access-controls': 'Cyber security',
-  'trust-estate-governance': 'Insurance',
-  'marriage-relationship-risk': 'Insurance',
-  'succession-planning': 'Insurance',
-  'behavior-standards': 'Reputational & social risk',
-  'business-involvement': 'Insurance',
-  'documentation-communication': 'Governance',
+  'decision-making-authority': 'Governance & Decision-Making',
+  'access-controls': 'Cyber & Digital Security',
+  'trust-estate-governance': 'Protection & Risk Transfer',
+  'marriage-relationship-risk': 'Protection & Risk Transfer',
+  'succession-planning': 'Protection & Risk Transfer',
+  'behavior-standards': 'Reputation & Social Risk',
+  'business-involvement': 'Protection & Risk Transfer',
+  'documentation-communication': 'Governance & Decision-Making',
 };
 
 /**
@@ -48,6 +52,10 @@ export const CHART_COLORS: Record<string, string> = {
   'insurance': '#ca8a04',
   'geographic-environmental': '#0d9488',
   'reputational-social': '#2563eb',
+  'liquidity-cash': '#059669',
+  'tax-exposure': '#dc2626',
+  'estate-succession': '#9333ea',
+  'family-governance-behavioral': '#0891b2',
   'health-medical-preparedness': '#e11d48',
   'decision-making-authority': '#78350f',
   'access-controls': '#7c3aed',

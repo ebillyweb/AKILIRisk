@@ -14,7 +14,7 @@ export type PlatformPillarStarter = {
 export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   {
     slug: "governance",
-    canonicalName: "Governance",
+    canonicalName: "Governance & Decision-Making",
     description:
       "Decision rights, family authority, advisor coordination, documentation, and dispute resolution.",
     defaultOrder: 1,
@@ -22,14 +22,14 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   },
   {
     slug: "cyber-digital",
-    canonicalName: "Cyber security",
+    canonicalName: "Cyber & Digital Security",
     description: "Digital footprint, data protection, fraud, and online threats.",
     defaultOrder: 2,
     defaultWeight: 16,
   },
   {
     slug: "physical-security",
-    canonicalName: "Physical security",
+    canonicalName: "Physical Security",
     description:
       "Personal safety, property security, travel, and physical access control.",
     defaultOrder: 3,
@@ -37,23 +37,23 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   },
   {
     slug: "insurance",
-    canonicalName: "Insurance",
+    canonicalName: "Protection & Risk Transfer",
     description:
-      "Property, liability, and health continuity coverage; trusts, titling, succession, and concentration risk.",
+      "Property, liability, and health coverage; risk transfer, titling, concentration, and continuity planning.",
     defaultOrder: 4,
     defaultWeight: 14,
   },
   {
     slug: "geographic-environmental",
-    canonicalName: "Geographic",
+    canonicalName: "Geographic & Environmental",
     description:
-      "Climate and location factors, regional hazards, regulatory context, and geography-driven exposure.",
+      "Climate and location factors, regional hazards, environmental exposure, regulatory context, and geography-driven risk.",
     defaultOrder: 5,
     defaultWeight: 10,
   },
   {
     slug: "reputational-social",
-    canonicalName: "Reputational & social risk",
+    canonicalName: "Reputation & Social Risk",
     description:
       "Public footprint, conduct and social media norms, family standards, and reputation-sensitive behavior.",
     defaultOrder: 6,
@@ -61,7 +61,7 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   },
   {
     slug: "liquidity-cash",
-    canonicalName: "Liquidity & cash management",
+    canonicalName: "Liquidity & Cash Management",
     description:
       "Emergency reserves, line-of-credit headroom, illiquid concentration, and short-term obligations.",
     defaultOrder: 7,
@@ -69,7 +69,7 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   },
   {
     slug: "tax-exposure",
-    canonicalName: "Tax exposure",
+    canonicalName: "Tax Exposure",
     description:
       "Residency posture, compensation deferral, AMT/surtax exposure, and estate-tax footprint.",
     defaultOrder: 8,
@@ -77,7 +77,7 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   },
   {
     slug: "estate-succession",
-    canonicalName: "Estate & succession",
+    canonicalName: "Estate & Succession",
     description:
       "Wills and trusts, beneficiary alignment, POA, digital asset access, and business succession readiness.",
     defaultOrder: 9,
@@ -85,7 +85,7 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
   },
   {
     slug: "family-governance-behavioral",
-    canonicalName: "Behavioural resilience",
+    canonicalName: "Behavioral Resilience",
     description:
       "Family dynamics, heir preparedness, emotional resilience, and behavioral-finance pitfalls.",
     defaultOrder: 10,

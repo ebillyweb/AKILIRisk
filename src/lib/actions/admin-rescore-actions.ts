@@ -30,9 +30,11 @@ import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
-import { calculatePillarScore } from "@/lib/assessment/scoring";
+import { calculatePillarScore, calculateCustomizedPillarScore } from "@/lib/assessment/scoring";
 import { getVisibleQuestions } from "@/lib/assessment/branching";
 import { calculateIdentityRiskScore } from "@/lib/identity-risk/scoring";
+import { getEmphasisMultipliers } from "@/lib/assessment/customization";
+import { getScoringCustomizationForClient } from "@/lib/data/assessment-customization";
 import { safeDecryptAnswer } from "@/lib/data/response-content";
 import type { MissingControl } from "@/lib/assessment/types";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
@@ -190,13 +192,9 @@ export async function rescoreAssessment(
 
     // 3. Threshold context: pinned per pillar when assessment has a snapshot.
     const rulesOverride = await resolveRecommendationRulesForAssessment(assessmentId);
-    const approvalFocusAreas: string[] | null = assessment.approvalId
-      ? (await prisma.intakeApproval
-          .findUnique({
-            where: { id: assessment.approvalId },
-            select: { focusAreas: true },
-          })
-          ?.then((a) => a?.focusAreas ?? null)) ?? null
+    const customizationConfig = await getScoringCustomizationForClient(assessment.userId);
+    const emphasisMultipliers = customizationConfig
+      ? getEmphasisMultipliers(customizationConfig)
       : null;
 
     // 4. Recompute every existing pillar's score (in memory).
@@ -222,16 +220,28 @@ export async function rescoreAssessment(
       );
       const visibleQuestions = getVisibleQuestions(allAnswers, pillarConfig.questions);
       const visibleIds = visibleQuestions.map((q) => q.id);
+      const hasEmphasis =
+        emphasisMultipliers != null &&
+        (emphasisMultipliers[existing.pillar] ?? 1) > 1;
       const scoreResult =
         existing.pillar === "identity-risk"
           ? calculateIdentityRiskScore(allAnswers, visibleIds, activeThresholds)
-          : calculatePillarScore(
-              allAnswers,
-              pillarConfig.pillarData,
-              pillarConfig.questions,
-              visibleIds,
-              activeThresholds
-            );
+          : hasEmphasis
+            ? calculateCustomizedPillarScore(
+                allAnswers,
+                pillarConfig.pillarData,
+                pillarConfig.questions,
+                visibleIds,
+                emphasisMultipliers!,
+                activeThresholds,
+              )
+            : calculatePillarScore(
+                allAnswers,
+                pillarConfig.pillarData,
+                pillarConfig.questions,
+                visibleIds,
+                activeThresholds,
+              );
 
       newPillarRows.push({
         pillar: existing.pillar,
@@ -270,9 +280,6 @@ export async function rescoreAssessment(
       },
       rulesOverride,
     );
-    void approvalFocusAreas; // currently unused by recompute; reserved for
-                             // future customization parity.
-
     // 6. ATOMIC TRANSACTION: upsert pillar scores, replace recommendations,
     //    bump version + lastRescoredAt. Any failure rolls all of it back.
     const rescoredAt = new Date();

@@ -169,7 +169,7 @@ test.describe("Epic 5.5 platform administration", () => {
         page.getByRole("heading", { level: 1, name: "Assessment question bank" })
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "Governance", exact: true })
+        page.getByRole("link", { name: "Governance & Decision-Making", exact: true })
       ).toBeVisible();
     });
 

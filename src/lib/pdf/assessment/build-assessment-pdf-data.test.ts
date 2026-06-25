@@ -67,7 +67,7 @@ describe("buildAssessmentPdfData", () => {
     expect(data.responses[0]).toMatchObject({
       index: 1,
       questionText: "How are family decisions documented?",
-      pillarLabel: "Governance",
+      pillarLabel: "Governance & Decision-Making",
       subCategoryLabel: "decision rights",
       advisorNote: "Strong council structure.",
     });

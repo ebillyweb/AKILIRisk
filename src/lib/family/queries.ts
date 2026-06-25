@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { getClientAssessmentScope } from "@/lib/client/assessment-scope";
 import { PILLAR_WEIGHTS } from "@/lib/analytics/queries";
 import { CATEGORY_LABELS } from "@/lib/analytics/formatters";
 import type { FamilyDashboardData, FamilyHouseholdMember, FamilyPillarScore, FamilyHistoricalAssessment } from "./types";
@@ -64,13 +65,6 @@ export async function getFamilyDashboardData(userId: string): Promise<FamilyDash
         },
       },
       intakeInterviews: {
-        include: {
-          approval: {
-            select: {
-              focusAreas: true,
-            },
-          },
-        },
         orderBy: {
           completedAt: 'desc',
         },
@@ -136,9 +130,8 @@ export async function getFamilyDashboardData(userId: string): Promise<FamilyDash
     previousScore = overallScore;
   }
 
-  // Extract advisor emphasis from latest intake approval
-  const advisorEmphasis: string[] =
-    user.intakeInterviews[0]?.approval?.focusAreas || [];
+  const scope = await getClientAssessmentScope(userId);
+  const advisorEmphasis = scope.focusAreas;
 
   return {
     householdMembers,

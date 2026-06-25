@@ -29,7 +29,7 @@ const SCORED_0_3 = {
 export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
   {
     categoryCode: "7_liquidity",
-    categoryName: "Liquidity & cash management",
+    categoryName: "Liquidity & Cash Management",
     sheetName: "Liquidity",
     displayOrder: 7,
     slug: "liquidity-cash",
@@ -67,7 +67,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
   },
   {
     categoryCode: "8_tax",
-    categoryName: "Tax exposure",
+    categoryName: "Tax Exposure",
     sheetName: "Tax",
     displayOrder: 8,
     slug: "tax-exposure",
@@ -105,7 +105,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
   },
   {
     categoryCode: "9_estate",
-    categoryName: "Estate & succession",
+    categoryName: "Estate & Succession",
     sheetName: "Estate",
     displayOrder: 9,
     slug: "estate-succession",
@@ -143,12 +143,12 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Behavioural resilience",
-    sheetName: "Behavioural resilience",
+    categoryName: "Behavioral Resilience",
+    sheetName: "Behavioral Resilience",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "A",
-    sectionName: "Behavioural resilience",
+    sectionName: "Behavioral Resilience",
     questions: [
       {
         questionNumber: "10.1",

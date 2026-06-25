@@ -17,9 +17,9 @@ import { getActiveRiskThresholds } from "@/lib/assessment/risk-thresholds";
 import { loadAssessmentAnswersForQuestions } from "@/lib/assessment/pillar-answer-loader";
 import { resolvePillarNarratives } from "@/lib/assessment/pillar-outcomes";
 import {
-  getCustomizationConfig,
   getEmphasisMultipliers,
 } from "@/lib/assessment/customization";
+import { getScoringCustomizationForClient } from "@/lib/data/assessment-customization";
 import { loadSnapshotForAssessment } from "@/lib/methodology/snapshot";
 import {
   pillarAssessmentConfigFromSnapshot,
@@ -317,19 +317,14 @@ export async function POST(
 
     let customizationConfig = null;
     let customizationMetadata = null;
-    if (assessment.approvalId) {
-      const approval = await prisma.intakeApproval.findUnique({
-        where: { id: assessment.approvalId },
-        select: { focusAreas: true },
-      });
-      if (approval) {
-        customizationConfig = getCustomizationConfig(approval.focusAreas, catalog);
-        customizationMetadata = {
-          isCustomized: true,
-          focusAreaCount: approval.focusAreas.length,
-          emphasisMultiplier: customizationConfig.emphasisMultiplier,
-        };
-      }
+    const scoringCustomization = await getScoringCustomizationForClient(clientId);
+    if (scoringCustomization) {
+      customizationConfig = scoringCustomization;
+      customizationMetadata = {
+        isCustomized: scoringCustomization.isCustomized,
+        focusAreaCount: scoringCustomization.emphasisAreas.length,
+        emphasisMultiplier: scoringCustomization.emphasisMultiplier,
+      };
     }
 
     const visibleQuestions = getVisibleQuestions(answers, pillarConfig.questions);
