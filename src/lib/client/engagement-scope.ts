@@ -56,16 +56,6 @@ function resolveClientAssessmentIncludedPillars(input: {
   return [];
 }
 
-export type ClientEngagementScope = {
-  includedPillars: string[];
-  focusAreas: string[];
-  /** Canonical store when populated; legacy sources reconciled on read. */
-  source: "assignment" | "approval" | "assessment" | null;
-  approvalId: string | null;
-  assignmentId: string | null;
-  intakeWaived: boolean;
-};
-
 type ActiveAssignment = {
   id: string;
   intakeWaivedAt: Date | null;
