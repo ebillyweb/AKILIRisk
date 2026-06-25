@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { RecommendationEngine } from "./recommendation-engine";
+import { RecommendationEngine, type RecommendationRule } from "./recommendation-engine";
 import {
   FAMILY_GOVERNANCE_ALL_NO_EXPECTED_SERVICE_IDS,
   HIGH_RISK_FAMILY_ANSWERS,
@@ -99,6 +99,10 @@ describe("RecommendationEngine — happy paths (production catalog)", () => {
         insurance: { score: 2.9, riskLevel: "low" },
         "geographic-environmental": { score: 2.8, riskLevel: "low" },
         "reputational-social": { score: 2.9, riskLevel: "low" },
+        "liquidity-cash": { score: 2.8, riskLevel: "low" },
+        "tax-exposure": { score: 2.9, riskLevel: "low" },
+        "estate-succession": { score: 2.8, riskLevel: "low" },
+        "family-governance-behavioral": { score: 2.9, riskLevel: "low" },
       },
       answers: LOW_RISK_FAMILY_ANSWERS,
       householdProfile: { householdSize: 6 },
@@ -127,6 +131,110 @@ describe("RecommendationEngine — happy paths (production catalog)", () => {
     expect(charter!.triggerReason.some((r) => r.includes("governance_family_charter"))).toBe(
       true
     );
+  });
+});
+
+describe("RecommendationEngine — new pillar high-risk triggering", () => {
+  it("liquidity-cash high-risk answers trigger liquidity services", async () => {
+    const engine = new RecommendationEngine();
+    const recs = await engine.matchAndDedupeRecommendations({
+      assessmentId: "as-liq-high",
+      userId: "u-liq",
+      pillarScores: { "liquidity-cash": { score: 0.5, riskLevel: "critical" } },
+      answers: {
+        liquidity_cash_reserves: "none",
+        liquidity_credit_facilities: "none",
+        liquidity_concentration: "concentrated",
+      },
+      householdProfile: null,
+      missingControls: [],
+    });
+    const ids = recs.map((r) => r.id);
+    expect(ids).toContain("liquidity_cash_reserve_planning");
+  });
+
+  it("tax-exposure high-risk answers trigger tax services", async () => {
+    const engine = new RecommendationEngine();
+    const recs = await engine.matchAndDedupeRecommendations({
+      assessmentId: "as-tax-high",
+      userId: "u-tax",
+      pillarScores: { "tax-exposure": { score: 0.6, riskLevel: "critical" } },
+      answers: {
+        tax_residency_posture: "none",
+        tax_event_modeling: "none",
+        tax_estate_mapping: "none",
+      },
+      householdProfile: null,
+      missingControls: [],
+    });
+    const ids = recs.map((r) => r.id);
+    expect(ids).toContain("tax_residency_review");
+  });
+
+  it("estate-succession high-risk answers trigger estate services", async () => {
+    const engine = new RecommendationEngine();
+    const recs = await engine.matchAndDedupeRecommendations({
+      assessmentId: "as-est-high",
+      userId: "u-est",
+      pillarScores: { "estate-succession": { score: 0.5, riskLevel: "critical" } },
+      answers: {
+        estate_document_currency: "none_outdated",
+        estate_beneficiary_alignment: "none",
+        estate_succession_protocol: "none",
+      },
+      householdProfile: null,
+      missingControls: [],
+    });
+    const ids = recs.map((r) => r.id);
+    expect(ids).toContain("estate_document_review");
+  });
+
+  it("family-governance-behavioral high-risk answers trigger behavioral services", async () => {
+    const engine = new RecommendationEngine();
+    const recs = await engine.matchAndDedupeRecommendations({
+      assessmentId: "as-beh-high",
+      userId: "u-beh",
+      pillarScores: { "family-governance-behavioral": { score: 0.7, riskLevel: "critical" } },
+      answers: {
+        behavioral_family_meetings: "none",
+        behavioral_decision_rights: "none",
+        behavioral_investment_discipline: "none",
+      },
+      householdProfile: null,
+      missingControls: [],
+    });
+    const ids = recs.map((r) => r.id);
+    expect(ids).toContain("behavioral_family_governance_program");
+  });
+
+  it("advisor rulesOverride restricts recommendations to overridden ruleset", async () => {
+    const engine = new RecommendationEngine();
+    // Filter to governance-only rules, then map CatalogRule -> RecommendationRule shape
+    const governanceOnlyRules: RecommendationRule[] = PRODUCTION_CATALOG_RULES
+      .filter((r) => r.serviceRecommendationId.startsWith("governance_"))
+      .map((r) => ({
+        id: r.id,
+        serviceId: r.serviceRecommendationId,   // CatalogRule field -> engine field
+        conditions: r.triggerConditions,          // CatalogRule field -> engine field
+        priority: r.priority,
+      }));
+    // Feed high-risk answers and scores for ALL pillars, but override rules to governance-only
+    const recs = await engine.matchAndDedupeRecommendations(
+      {
+        assessmentId: "as-override",
+        userId: "u-override",
+        pillarScores: HIGH_RISK_PILLAR_SCORES,
+        answers: HIGH_RISK_FAMILY_ANSWERS,
+        householdProfile: null,
+        missingControls: [],
+      },
+      governanceOnlyRules,
+    );
+    const ids = recs.map((r) => r.id);
+    // Only governance services should appear despite all pillars being high-risk
+    expect(ids.sort()).toEqual([...GOVERNANCE_REMEDIATION_SERVICE_IDS].sort());
+    // No non-governance services should leak through
+    expect(ids.every((id) => id.startsWith("governance_"))).toBe(true);
   });
 });
 
