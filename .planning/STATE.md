@@ -9,22 +9,14 @@
 ## Current Position
 
 **Milestone:** v1.5 Cyber Risk Intelligence
-**Phase:** 20 - Identity Risk Intelligence
-**Plan:** 3 of 3 (20-01, 20-02, 20-03 complete)
-**Status:** Complete
+**Phase:** 21 - Platform Recommendation Engine
+**Plan:** 1 of TBD
+**Status:** In Progress
 
-**Progress Bar:** █░░░░░░░░░ 11% (Phase 20 of 22)
+### Phase 21 Goal
+Every one of the ten risk pillars independently generates platform recommendations, advisor customizations are honored, and the recommendation engine produces a fully prioritized recommendation set for every completed assessment.
 
-### Phase 20 Goal
-Establish identity risk assessment as third pillar with threat intelligence integration
-
-**Success Criteria:**
-1. Family can complete cyber risk assessment with numerical scoring (0-10 scale matching governance)
-2. System generates automated cyber risk recommendations based on assessment results
-3. Advisor can view client cyber risk scores in separate portal section
-4. Assessment evaluates banking security practices and payment method risks with actionable feedback
-
-**Requirements:** CYBER-01, CYBER-02, FINANCE-01, FINANCE-02
+**Requirements:** UNIFIED-01, UNIFIED-02
 
 ## Performance Metrics
 
@@ -64,6 +56,8 @@ Establish identity risk assessment as third pillar with threat intelligence inte
 - **gpt-4o-mini model selection for cost-effective structured output**
 - **Identity Risk Subcategory Weighting:** Social Exposure and Public Information weighted 4 (vs 3 for Digital Footprint and Family Visibility) reflecting primary identity theft vectors
 - **Identity Risk Question Bank Size:** 21 questions providing comprehensive coverage while maintaining assessment efficiency and user experience
+- **Phase 21-01: Dual registration pattern:** New pillar rules added to both setup-all-pillar-rules.ts (DB seed) AND recommendation-catalog-fixtures.ts (test mocks) — both must stay in sync
+- **Phase 21-01: New pillar service categories:** financial (liquidity, tax), legal (estate), advisory (behavioral) — distinct from existing governance/security/insurance/reputation
 
 ### Architecture Approach
 - **Foundation:** Builds on proven v1.4 platform patterns (Next.js/Prisma/PostgreSQL)
@@ -85,12 +79,10 @@ Establish identity risk assessment as third pillar with threat intelligence inte
 ## Active TODOs
 
 ### Immediate
-- [x] Execute Plan 20-01 - Identity Risk Foundation (complete)
-- [x] Execute Plan 20-02 - Assessment UI Integration (complete)
-- [x] Execute Plan 20-03 - Threat Intelligence Integration (complete)
+- [ ] Plan Phase 21 - Platform Recommendation Engine (10-pillar recommendations + advisor customization)
 
 ### Upcoming
-- [ ] Plan Phase 21 - Unified Risk Intelligence
+- [ ] Execute Phase 21
 - [ ] Plan Phase 22 - Advanced Reporting
 
 ### Phase 19 Complete
@@ -111,22 +103,11 @@ None identified. Ready to proceed with Phase 19 planning.
 
 ## Session Continuity
 
-**Last Action:** Completed Plan 20-03 (Threat Intelligence Integration)
-**Files Created:**
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/lib/identity-risk/recommendations.ts`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/api/identity-risk/recommendations/route.ts`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/(protected)/advisor/identity-risk/page.tsx`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/(protected)/advisor/identity-risk/loading.tsx`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/.planning/phases/20-identity-risk-intelligence/20-03-SUMMARY.md`
+**Last Action:** Completed Phase 21 Plan 01 — 10-pillar recommendation rules content
+**Next Action:** Execute Phase 21 Plan 02
 
-**Files Modified:**
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/lib/actions/advisor-actions.ts`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/(protected)/advisor/page.tsx`
-
-**Next Action:** Plan Phase 21 (Unified Risk Intelligence)
-
-**Context Preservation:** Identity risk intelligence complete with AI recommendations, advisor dashboard, and threat intelligence integration. Phase 20 objectives achieved.
+**Context Preservation:** Phases 19-20 complete (cyber + identity pillars). Phase 21 Plan 01 complete: added 12 services, 12 legacy rules, 12 UI rules, and 12 Belvedere test question IDs for the 4 missing pillars (liquidity-cash, tax-exposure, estate-succession, family-governance-behavioral). All 10 pillars now have ServiceRecommendation and RecommendationRule entries. RecommendationEngine is pillar-agnostic; next: advisor customization via AdvisorRecommendationRule (Plan 02) and recommendation display (Plan 03).
 
 ---
-*State updated: 2026-03-19*
-*Stopped at: Completed 20-03-PLAN.md*
+*State updated: 2026-06-25*
+*Stopped at: Completed 21-01-PLAN.md*
