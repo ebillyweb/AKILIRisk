@@ -22,6 +22,7 @@ import {
   findPortfolioAssignmentForClient,
   resolvePortfolioScope,
 } from "@/lib/enterprise/portfolio-access";
+import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -817,10 +818,7 @@ export async function getClientDetail(
   }
 
   const engagementScope = await getClientEngagementScope(clientId);
-  const { loadAdvisorAssessmentDomainOptions } = await import(
-    "@/lib/methodology/advisor-assessment-domains"
-  );
-  const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
+  const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(
     assignmentAdvisorProfileId,
   );
   const { getPlatformPillarCatalog } = await import(
@@ -830,7 +828,8 @@ export async function getClientDetail(
 
   return {
     client: pipelineClient,
-    assessmentDomains,
+    assessmentDomains: assessmentDomainPicker.domains,
+    assessmentDomainPicker,
     pillarCatalog,
     advisorAssignment: {
       id: assignment.id,

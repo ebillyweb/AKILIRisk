@@ -6,7 +6,7 @@ import { InvitationListFilters } from "@/components/advisor/invitations/Invitati
 import { InvitationListPagination } from "@/components/advisor/invitations/InvitationListPagination";
 import { getInvitationsAction } from "@/lib/actions/invitations";
 import { parseInvitationListParams } from "@/lib/invitations/parse-invitation-list-params";
-import { loadAdvisorAssessmentDomainOptions } from "@/lib/methodology/advisor-assessment-domains";
+import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 
 export default async function InvitationsPage({
@@ -27,7 +27,7 @@ export default async function InvitationsPage({
     getInvitationsAction(filters, { page, pageSize }),
   ]);
   const profile = await getAdvisorProfileOrThrow(userId);
-  const assessmentDomains = await loadAdvisorAssessmentDomainOptions(profile.id);
+  const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(profile.id);
 
   if (!result.success) {
     return (
@@ -45,7 +45,7 @@ export default async function InvitationsPage({
 
   return (
     <div className="space-y-8">
-      <InviteClientForm firmName={profile.firmName} assessmentDomains={assessmentDomains} />
+      <InviteClientForm firmName={profile.firmName} assessmentDomainPicker={assessmentDomainPicker} />
 
       <div className="border-t section-divider" />
 

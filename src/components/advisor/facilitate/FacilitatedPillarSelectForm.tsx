@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { facilitatedApproveScope } from "@/lib/actions/facilitated-pillar-actions";
 import type { PillarRecommendation } from "@/lib/intake/pillar-recommendations";
-import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import type { AdvisorAssessmentDomainPickerData } from "@/lib/advisor/assessment-domain-option";
 import { resolveDefaultAssessmentDomainSelection } from "@/lib/advisor/assessment-domain-option";
 
 import { strongRecommendationPillarIds } from "@/lib/intake/pillar-recommendations";
@@ -20,14 +20,15 @@ import { strongRecommendationPillarIds } from "@/lib/intake/pillar-recommendatio
 interface FacilitatedPillarSelectFormProps {
   sessionId: string;
   recommendations: PillarRecommendation[];
-  assessmentDomains: AssessmentDomainOption[];
+  assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
 }
 
 export function FacilitatedPillarSelectForm({
   sessionId,
   recommendations,
-  assessmentDomains,
+  assessmentDomainPicker,
 }: FacilitatedPillarSelectFormProps) {
+  const assessmentDomains = assessmentDomainPicker.domains;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const availableDomainIds = useMemo(
@@ -103,6 +104,8 @@ export function FacilitatedPillarSelectForm({
           selectedDomains={selectedDomains}
           onChange={setSelectedDomains}
           recommendedIds={recommendedForDomains}
+          platformTotal={assessmentDomainPicker.platformTotal}
+          inactiveDomains={assessmentDomainPicker.inactiveDomains}
         />
 
         <EmphasisAreasSelector

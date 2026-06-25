@@ -43,8 +43,8 @@ export function EmphasisAreasSelector({
 
   return (
     <section className="space-y-4" aria-labelledby="emphasis-areas-heading">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-1">
           <h3
             id="emphasis-areas-heading"
             className="text-base font-semibold tracking-tight"
@@ -56,7 +56,10 @@ export function EmphasisAreasSelector({
             If none are checked, all selected domains are weighted equally.
           </p>
         </div>
-        <Badge variant="secondary" className="shrink-0 tabular-nums">
+        <Badge
+          variant="secondary"
+          className="w-fit shrink-0 tabular-nums normal-case tracking-normal text-xs font-medium"
+        >
           {emphasisLabel}
         </Badge>
       </div>

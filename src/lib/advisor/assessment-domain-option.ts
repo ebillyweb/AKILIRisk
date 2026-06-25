@@ -5,6 +5,13 @@ export type AssessmentDomainOption = {
   summary: string;
 };
 
+/** Active domains plus platform totals for assessment scope pickers. */
+export type AdvisorAssessmentDomainPickerData = {
+  domains: AssessmentDomainOption[];
+  platformTotal: number;
+  inactiveDomains: AssessmentDomainOption[];
+};
+
 /** Default client scope: existing → suggested ∩ available → all available. */
 export function resolveDefaultAssessmentDomainSelection(input: {
   availableDomainIds: readonly string[];

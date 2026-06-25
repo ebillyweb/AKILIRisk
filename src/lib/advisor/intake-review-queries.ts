@@ -19,7 +19,7 @@ import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
 import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
 import { toAdvisorHouseholdMemberViews } from "@/lib/profiles/advisor-household-view";
 import { computePillarRecommendations } from "@/lib/intake/pillar-recommendations";
-import { loadAdvisorAssessmentDomainOptions } from "@/lib/methodology/advisor-assessment-domains";
+import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 /**
@@ -149,7 +149,7 @@ export async function getIntakeReviewDataForAdvisorPage(
     })),
   }, catalog);
 
-  const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
+  const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(
     assignmentAdvisorProfileId,
   );
 
@@ -157,7 +157,8 @@ export async function getIntakeReviewDataForAdvisorPage(
     interview: reviewData.interview,
     approval,
     pillarRecommendations,
-    assessmentDomains,
+    assessmentDomains: assessmentDomainPicker.domains,
+    assessmentDomainPicker,
     assignmentAdvisorProfileId,
     questions: personalizedScript.map((q) => ({
       id: q.id,
@@ -267,7 +268,7 @@ export async function getIntakeReviewDataForAdvisorExport(
     })),
   }, catalog);
 
-  const assessmentDomains = await loadAdvisorAssessmentDomainOptions(
+  const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(
     assignmentAdvisorProfileId,
   );
 
@@ -275,7 +276,8 @@ export async function getIntakeReviewDataForAdvisorExport(
     interview: reviewData.interview,
     approval: reviewData.approval,
     pillarRecommendations,
-    assessmentDomains,
+    assessmentDomains: assessmentDomainPicker.domains,
+    assessmentDomainPicker,
     questions: personalizedScript.map((q) => ({
       id: q.id,
       text: q.questionText,

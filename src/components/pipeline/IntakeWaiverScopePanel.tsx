@@ -14,7 +14,7 @@ import {
   assessmentDomainLabel,
   resolveDefaultAssessmentDomainSelection,
 } from "@/lib/advisor/assessment-domain-option";
-import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import type { AdvisorAssessmentDomainPickerData } from "@/lib/advisor/assessment-domain-option";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ type IntakeWaiverScopePanelProps = {
   intakeWaivedAt: Date | null;
   includedPillars: string[];
   focusAreas: string[];
-  assessmentDomains: AssessmentDomainOption[];
+  assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
   /** When true, show the waiver + scope form (no intake submitted). */
   showWaiverAction: boolean;
   /** When true, waiver on/off cannot be changed (assessment already started). */
@@ -40,10 +40,11 @@ export function IntakeWaiverScopePanel({
   intakeWaivedAt,
   includedPillars,
   focusAreas,
-  assessmentDomains,
+  assessmentDomainPicker,
   showWaiverAction,
   waiverLocked = false,
 }: IntakeWaiverScopePanelProps) {
+  const assessmentDomains = assessmentDomainPicker.domains;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +164,8 @@ export function IntakeWaiverScopePanel({
               selectedDomains={selectedDomains}
               onChange={setSelectedDomains}
               disabled={pending || !assignmentActive}
+              platformTotal={assessmentDomainPicker.platformTotal}
+              inactiveDomains={assessmentDomainPicker.inactiveDomains}
             />
             <EmphasisAreasSelector
               domains={assessmentDomains}
@@ -249,6 +252,8 @@ export function IntakeWaiverScopePanel({
             selectedDomains={selectedDomains}
             onChange={setSelectedDomains}
             disabled={pending || !assignmentActive}
+            platformTotal={assessmentDomainPicker.platformTotal}
+            inactiveDomains={assessmentDomainPicker.inactiveDomains}
           />
           <EmphasisAreasSelector
             domains={assessmentDomains}

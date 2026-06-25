@@ -70,7 +70,8 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
 }
 
 export function ClientDetailView({ detail }: ClientDetailViewProps) {
-  const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomains } = detail;
+  const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker } = detail;
+  const assessmentDomains = assessmentDomainPicker.domains;
   const displayName = client.name || 'Unnamed Client';
   const assignmentActive = advisorAssignment.status === "ACTIVE";
   const intakeWaived = advisorAssignment.intakeWaivedAt != null;
@@ -179,7 +180,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   intakeWaivedAt={advisorAssignment.intakeWaivedAt}
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
-                  assessmentDomains={assessmentDomains}
+                  assessmentDomainPicker={assessmentDomainPicker}
                   showWaiverAction={false}
                   waiverLocked={assessmentStarted}
                 />
@@ -257,7 +258,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         intakeWaivedAt={null}
                         includedPillars={advisorAssignment.includedPillars}
                         focusAreas={advisorAssignment.focusAreas}
-                        assessmentDomains={assessmentDomains}
+                        assessmentDomainPicker={assessmentDomainPicker}
                         showWaiverAction
                         waiverLocked={assessmentStarted}
                       />
@@ -272,7 +273,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   intakeWaivedAt={null}
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
-                  assessmentDomains={assessmentDomains}
+                  assessmentDomainPicker={assessmentDomainPicker}
                   showWaiverAction
                   waiverLocked={assessmentStarted}
                 />

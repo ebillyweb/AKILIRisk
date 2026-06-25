@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AssessmentDomainsSelector } from '@/components/advisor/AssessmentDomainsSelector';
 import { EmphasisAreasSelector } from '@/components/advisor/EmphasisAreasSelector';
-import type { AssessmentDomainOption } from '@/lib/advisor/assessment-domain-option';
+import type { AdvisorAssessmentDomainPickerData } from '@/lib/advisor/assessment-domain-option';
 import { resolveDefaultAssessmentDomainSelection } from '@/lib/advisor/assessment-domain-option';
 import { sendInvitation } from '@/lib/actions/invitations';
 import { buildDefaultInvitationPersonalMessage } from '@/lib/schemas/invitation';
@@ -42,10 +42,11 @@ type FormData = z.infer<typeof formSchema>;
 
 interface InviteClientFormProps {
   firmName: string | null;
-  assessmentDomains: AssessmentDomainOption[];
+  assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
 }
 
-export function InviteClientForm({ firmName, assessmentDomains }: InviteClientFormProps) {
+export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteClientFormProps) {
+  const assessmentDomains = assessmentDomainPicker.domains;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string; emailSent: boolean; reason?: string } | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
@@ -284,6 +285,8 @@ export function InviteClientForm({ firmName, assessmentDomains }: InviteClientFo
                 selectedDomains={selectedDomains}
                 onChange={handleDomainsChange}
                 disabled={isSubmitting}
+                platformTotal={assessmentDomainPicker.platformTotal}
+                inactiveDomains={assessmentDomainPicker.inactiveDomains}
               />
               <EmphasisAreasSelector
                 domains={assessmentDomains}

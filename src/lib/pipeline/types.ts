@@ -88,7 +88,7 @@ export type PipelineFilters = {
   sortDir?: 'asc' | 'desc';
 };
 
-import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import type { AdvisorAssessmentDomainPickerData, AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
 import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 
 // Client detail data for drill-down view
@@ -122,6 +122,7 @@ export type ClientDetail = {
   };
   /** Active methodology pillars for waiver/scope pickers (from DB). */
   assessmentDomains: AssessmentDomainOption[];
+  assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
   /** Platform pillar catalog for heat map labels and scope display. */
   pillarCatalog: PillarCatalogEntry[];
   assessmentDetails: {

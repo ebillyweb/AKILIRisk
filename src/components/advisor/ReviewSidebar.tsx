@@ -6,7 +6,7 @@ import { AssessmentDomainsSelector } from "./AssessmentDomainsSelector";
 import { EmphasisAreasSelector } from "./EmphasisAreasSelector";
 import { PillarRecommendationsPanel } from "./PillarRecommendationsPanel";
 import { ApprovalActions } from "./ApprovalActions";
-import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import type { AdvisorAssessmentDomainPickerData } from "@/lib/advisor/assessment-domain-option";
 import { resolveDefaultAssessmentDomainSelection } from "@/lib/advisor/assessment-domain-option";
 import type { IntakeReviewData } from "@/lib/advisor/types";
 import type { PillarRecommendation } from "@/lib/intake/pillar-recommendations";
@@ -18,7 +18,7 @@ interface ReviewSidebarProps {
   approval: IntakeReviewData["approval"];
   householdProfileCount: number;
   pillarRecommendations: PillarRecommendation[];
-  assessmentDomains: AssessmentDomainOption[];
+  assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
 }
 
 export function ReviewSidebar({
@@ -27,8 +27,9 @@ export function ReviewSidebar({
   approval,
   householdProfileCount,
   pillarRecommendations,
-  assessmentDomains,
+  assessmentDomainPicker,
 }: ReviewSidebarProps) {
+  const assessmentDomains = assessmentDomainPicker.domains;
   const locked =
     approval?.status === "APPROVED" || approval?.status === "REJECTED";
 
@@ -139,6 +140,8 @@ export function ReviewSidebar({
         onChange={setSelectedDomains}
         disabled={locked}
         recommendedIds={recommendedForDomains}
+        platformTotal={assessmentDomainPicker.platformTotal}
+        inactiveDomains={assessmentDomainPicker.inactiveDomains}
       />
 
       <EmphasisAreasSelector

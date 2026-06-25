@@ -22,7 +22,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
     notFound();
   }
 
-  const { interview, approval, questions, householdMembers, pillarRecommendations, assessmentDomains } =
+  const { interview, approval, questions, householdMembers, pillarRecommendations, assessmentDomainPicker } =
     data;
 
   // Format submission date
@@ -190,7 +190,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
                   approval={approval}
                   householdProfileCount={householdMembers.length}
                   pillarRecommendations={pillarRecommendations}
-                  assessmentDomains={assessmentDomains}
+                  assessmentDomainPicker={assessmentDomainPicker}
                 />
               </div>
             </div>

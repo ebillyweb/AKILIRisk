@@ -46,7 +46,10 @@ export type IntakeInterviewReviewBundle = {
   assignmentAdvisorProfileId?: string;
 };
 
-import type { AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import type {
+  AdvisorAssessmentDomainPickerData,
+  AssessmentDomainOption,
+} from "@/lib/advisor/assessment-domain-option";
 
 // Complete data for reviewing a client's intake interview
 export type IntakeReviewData = {
@@ -59,6 +62,7 @@ export type IntakeReviewData = {
   householdMembers: AdvisorHouseholdMemberView[];
   /** Active methodology pillars for domain pickers (from DB). */
   assessmentDomains: AssessmentDomainOption[];
+  assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
   assignmentAdvisorProfileId: string;
 };
 
