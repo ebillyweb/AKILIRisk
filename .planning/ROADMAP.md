@@ -48,23 +48,23 @@ Plans:
 3. Advisor dashboard displays identity risk metrics alongside existing governance analytics
 4. Platform identifies specific identity exposure gaps and generates remediation steps
 
-### Phase 21: Unified Risk Intelligence
+### Phase 21: Platform Recommendation Engine
 **Dependencies:** Phase 20 (identity assessment complete)
 **Requirements:** UNIFIED-01, UNIFIED-02
-**Plans:** 3 plans
+**Plans:** 2 plans
 
-**Goal:** Combine governance, cyber risk, and identity risk into holistic family risk profiles
+**Goal:** Every one of the ten risk pillars independently generates platform recommendations, advisor customizations are honored, and the recommendation engine produces a fully prioritized recommendation set for every completed assessment.
 
 Plans:
-- [ ] 21-01-PLAN.md -- Unified risk types, composite scoring engine, and data queries
-- [ ] 21-02-PLAN.md -- Advisor unified risk dashboard with composite portfolio view
-- [ ] 21-03-PLAN.md -- Family dashboard unified risk section and cross-domain action plans
+- [ ] 21-01-PLAN.md -- Add recommendation rules and services for 4 missing pillars (liquidity, tax, estate, behavioral)
+- [ ] 21-02-PLAN.md -- Wire advisor rulesOverride into submission route and extend 10-pillar test coverage
 
 **Success Criteria:**
-1. Advisor dashboard shows combined risk profile with weighted composite scoring (governance + cyber)
-2. Platform displays individual pillar scores and highlights risk domain interactions
-3. Family dashboard shows unified risk view with both governance and cyber metrics
-4. Advisor can create action plans that address both governance and cyber risk domains
+1. All 10 pillars (governance, cyber-digital, physical-security, insurance, geographic-environmental, reputational-social, liquidity-cash, tax-exposure, estate-succession, family-governance-behavioral) have platform recommendation rules in the DB
+2. RecommendationEngine generates pillar-specific recommendations triggered by score thresholds, risk levels, and answer conditions for each pillar
+3. AdvisorRecommendationRule overrides (enable/disable, re-prioritize, custom rules) are applied when generating recommendations for an advisor's clients
+4. Assessment submission produces a fully prioritized, deduplicated recommendation set across all assessed pillars
+5. Existing governance recommendation rules continue to work unchanged
 
 ### Phase 22: Advanced Reporting
 **Dependencies:** Phase 21 (unified scoring complete)
@@ -84,7 +84,7 @@ Plans:
 |-------|--------|-------|-------|------------|
 | 19 - Cyber Foundation | Planned | 0/3 | 0/7 | ░░░░░░░░░░ 0% |
 | 20 - Identity Intelligence | Planned | 0/3 | 0/6 | ░░░░░░░░░░ 0% |
-| 21 - Unified Intelligence | Planned | 0/3 | 0/6 | ░░░░░░░░░░ 0% |
+| 21 - Recommendation Engine | Planned | 0/2 | 0/4 | ░░░░░░░░░░ 0% |
 | 22 - Advanced Reporting | Pending | 0/0 | 0/0 | ░░░░░░░░░░ 0% |
 
 **Overall:** ░░░░░░░░░░ 0% (0/4 phases complete)
