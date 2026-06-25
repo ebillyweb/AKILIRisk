@@ -40,6 +40,7 @@
     "import:question-copy": "npx tsx scripts/import-question-copy.ts",
     "s3:copy-intake-audio-to-intake-bucket": "node scripts/copy-intake-audio-to-intake-bucket.js",
     "db:backfill-user-email-ciphertext": "npx tsx scripts/backfill-user-email-ciphertext.ts",
+    "db:backfill-assignment-engagement-scope": "npx tsx scripts/backfill-assignment-engagement-scope.ts",
     "db:reset-fixture-mfa": "node scripts/reset-fixture-mfa.js",
     "env:vercel:link": "npx vercel link",
     "env:vercel": "npx vercel env pull .env.local",

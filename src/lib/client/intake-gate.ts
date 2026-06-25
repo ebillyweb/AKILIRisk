@@ -1,6 +1,10 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import {
+  getClientEngagementScope,
+  isEngagementAssessmentUnlocked,
+} from "@/lib/client/engagement-scope";
 
 export type ClientIntakeGateState = {
   hasSubmittedInterview: boolean;
@@ -20,40 +24,27 @@ export type ClientIntakeGateState = {
 export async function getClientIntakeGateState(
   clientUserId: string,
 ): Promise<ClientIntakeGateState> {
-  const assignment = await prisma.clientAdvisorAssignment.findFirst({
-    where: { clientId: clientUserId, status: "ACTIVE" },
-    orderBy: { assignedAt: "desc" },
-    select: {
-      intakeWaivedAt: true,
-      includedPillars: true,
-    },
-  });
+  const [engagementScope, submittedInterview, latestApproval] = await Promise.all([
+    getClientEngagementScope(clientUserId),
+    prisma.intakeInterview.findFirst({
+      where: { userId: clientUserId, status: "SUBMITTED" },
+      select: { id: true },
+    }),
+    prisma.intakeApproval.findFirst({
+      where: {
+        status: "APPROVED",
+        interview: { userId: clientUserId },
+      },
+      orderBy: { approvedAt: "desc" },
+      select: { status: true },
+    }),
+  ]);
 
-  const intakeWaived = assignment?.intakeWaivedAt != null;
-  const waiverScopeSet = (assignment?.includedPillars?.length ?? 0) > 0;
-
-  const submittedInterview = await prisma.intakeInterview.findFirst({
-    where: { userId: clientUserId, status: "SUBMITTED" },
-    select: { id: true },
-  });
+  const intakeWaived = engagementScope.intakeWaived;
   const hasSubmittedInterview = !!submittedInterview;
-
-  const latestApproval = await prisma.intakeApproval.findFirst({
-    where: {
-      status: "APPROVED",
-      interview: { userId: clientUserId },
-    },
-    orderBy: { approvedAt: "desc" },
-    select: { status: true, includedPillars: true },
-  });
-
   const intakeApproved = latestApproval?.status === "APPROVED";
-  const approvedWithScope =
-    intakeApproved && (latestApproval?.includedPillars?.length ?? 0) > 0;
-  const waivedWithScope = intakeWaived && waiverScopeSet;
-  const assessmentUnlocked = approvedWithScope || waivedWithScope;
-  const assessmentScopePending = intakeWaived && !waiverScopeSet;
-
+  const assessmentUnlocked = isEngagementAssessmentUnlocked(engagementScope);
+  const assessmentScopePending = intakeWaived && !assessmentUnlocked;
   const restrictNavToIntake = !hasSubmittedInterview && !intakeWaived;
 
   return {

@@ -11,7 +11,7 @@ import { computePillarRecommendations } from "@/lib/intake/pillar-recommendation
 import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
 import { getIntakeInterview } from "@/lib/data/intake";
 import { normalizeIncludedPillarIds, resolveIncludedPillars } from "@/lib/assessment/included-pillars";
-import { syncAssessmentScopeFromApproval } from "@/lib/assessment/sync-scope-from-approval";
+import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
 import { prisma } from "@/lib/db";
 import { approveClientSchema } from "@/lib/schemas/advisor";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -86,11 +86,12 @@ export async function facilitatedApproveScope(
       approvedAt: new Date(),
     });
 
-    await syncAssessmentScopeFromApproval(
-      facilitated.clientId,
-      approval.id,
-      normalizedIncluded,
-    );
+    await persistClientEngagementScope({
+      clientId: facilitated.clientId,
+      includedPillars: normalizedIncluded,
+      focusAreas: normalizedFocus,
+      approvalId: approval.id,
+    });
 
     const assessmentId = await ensureScopedAssessmentForClient(facilitated.clientId, {
       includedPillars: normalizedIncluded,

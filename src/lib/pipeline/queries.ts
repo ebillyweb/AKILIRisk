@@ -13,6 +13,9 @@ import {
   loadAdvisorPiiPolicy,
   resolveAdvisorClientIdentity,
 } from "@/lib/advisor/field-visibility";
+import {
+  getClientEngagementScope,
+} from "@/lib/client/engagement-scope";
 import type { PortfolioScope } from "@/lib/enterprise/portfolio-access";
 import {
   listAdvisorProfileIdsForScope,
@@ -813,14 +816,16 @@ export async function getClientDetail(
     };
   }
 
+  const engagementScope = await getClientEngagementScope(clientId);
+
   return {
     client: pipelineClient,
     advisorAssignment: {
       id: assignment.id,
       status: assignment.status,
       intakeWaivedAt: assignment.intakeWaivedAt,
-      includedPillars: assignment.includedPillars,
-      focusAreas: assignment.focusAreas,
+      includedPillars: engagementScope.includedPillars,
+      focusAreas: engagementScope.focusAreas,
     },
     timeline: events,
     documentRequirements: documentRequirements.map(req => ({

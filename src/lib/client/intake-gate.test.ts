@@ -1,15 +1,18 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 
-const mockFindAssignment = vi.fn();
+const mockGetEngagementScope = vi.fn();
 const mockFindInterview = vi.fn();
 const mockFindApproval = vi.fn();
 
+vi.mock("@/lib/client/engagement-scope", () => ({
+  getClientEngagementScope: (...args: unknown[]) => mockGetEngagementScope(...args),
+  isEngagementAssessmentUnlocked: (scope: { includedPillars: string[] }) =>
+    scope.includedPillars.length > 0,
+}));
+
 vi.mock("@/lib/db", () => ({
   prisma: {
-    clientAdvisorAssignment: {
-      findFirst: (...args: unknown[]) => mockFindAssignment(...args),
-    },
     intakeInterview: {
       findFirst: (...args: unknown[]) => mockFindInterview(...args),
     },
@@ -22,26 +25,34 @@ vi.mock("@/lib/db", () => ({
 describe("getClientIntakeGateState", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFindAssignment.mockResolvedValue({
-      intakeWaivedAt: null,
+    mockGetEngagementScope.mockResolvedValue({
       includedPillars: [],
+      focusAreas: [],
+      source: null,
+      approvalId: null,
+      assignmentId: "asg-1",
+      intakeWaived: false,
     });
     mockFindInterview.mockResolvedValue({ id: "iv-1" });
+    mockFindApproval.mockResolvedValue(null);
   });
 
-  it("locks assessment when intake not approved with pillars", async () => {
-    mockFindApproval.mockResolvedValue(null);
-
+  it("locks assessment when engagement scope is empty", async () => {
     const gate = await getClientIntakeGateState("client-1");
     expect(gate.assessmentUnlocked).toBe(false);
     expect(gate.intakeApproved).toBe(false);
   });
 
-  it("unlocks assessment when approved with included pillars", async () => {
-    mockFindApproval.mockResolvedValue({
-      status: "APPROVED",
+  it("unlocks assessment when engagement scope is set", async () => {
+    mockGetEngagementScope.mockResolvedValue({
       includedPillars: ["governance", "cyber-digital"],
+      focusAreas: ["governance", "cyber-digital"],
+      source: "assignment",
+      approvalId: null,
+      assignmentId: "asg-1",
+      intakeWaived: false,
     });
+    mockFindApproval.mockResolvedValue({ status: "APPROVED" });
 
     const gate = await getClientIntakeGateState("client-1");
     expect(gate.assessmentUnlocked).toBe(true);
@@ -49,11 +60,14 @@ describe("getClientIntakeGateState", () => {
   });
 
   it("does not unlock on waiver alone without assessment domains", async () => {
-    mockFindAssignment.mockResolvedValue({
-      intakeWaivedAt: new Date(),
+    mockGetEngagementScope.mockResolvedValue({
       includedPillars: [],
+      focusAreas: [],
+      source: null,
+      approvalId: null,
+      assignmentId: "asg-1",
+      intakeWaived: true,
     });
-    mockFindApproval.mockResolvedValue(null);
 
     const gate = await getClientIntakeGateState("client-1");
     expect(gate.intakeWaived).toBe(true);
@@ -62,11 +76,14 @@ describe("getClientIntakeGateState", () => {
   });
 
   it("unlocks when intake waived with assignment pillar scope", async () => {
-    mockFindAssignment.mockResolvedValue({
-      intakeWaivedAt: new Date(),
+    mockGetEngagementScope.mockResolvedValue({
       includedPillars: ["governance", "cyber-digital"],
+      focusAreas: ["governance", "cyber-digital"],
+      source: "assignment",
+      approvalId: null,
+      assignmentId: "asg-1",
+      intakeWaived: true,
     });
-    mockFindApproval.mockResolvedValue(null);
 
     const gate = await getClientIntakeGateState("client-1");
     expect(gate.intakeWaived).toBe(true);
@@ -74,11 +91,8 @@ describe("getClientIntakeGateState", () => {
     expect(gate.assessmentScopePending).toBe(false);
   });
 
-  it("does not unlock when approved but included pillars empty", async () => {
-    mockFindApproval.mockResolvedValue({
-      status: "APPROVED",
-      includedPillars: [],
-    });
+  it("does not unlock when approved but engagement scope empty", async () => {
+    mockFindApproval.mockResolvedValue({ status: "APPROVED" });
 
     const gate = await getClientIntakeGateState("client-1");
     expect(gate.intakeApproved).toBe(true);

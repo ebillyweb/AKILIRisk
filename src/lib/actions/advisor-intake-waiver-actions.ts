@@ -5,8 +5,7 @@ import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getAdvisorProfileOrThrow, requireAdvisorRole } from "@/lib/advisor/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
-import { syncInProgressAssessmentScope } from "@/lib/assessment/sync-client-assessment-scope";
-import { normalizeWaiverScopeInput } from "@/lib/client/assessment-scope";
+import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
 import { waiverAssessmentScopeSchema } from "@/lib/schemas/advisor";
 
 export type IntakeWaiverActionResult =
@@ -40,34 +39,28 @@ async function clientHasStartedAssessment(clientId: string): Promise<boolean> {
 }
 
 async function persistWaiverScope(
-  assignmentId: string,
+  _assignmentId: string,
   clientId: string,
   scope: WaiverScopeInput,
 ): Promise<IntakeWaiverActionResult> {
-  let normalized: { includedPillars: string[]; focusAreas: string[] };
   try {
     const parsed = waiverAssessmentScopeSchema.safeParse(scope);
     if (!parsed.success) {
       const msg = parsed.error.issues[0]?.message ?? "Invalid assessment scope";
       return { success: false, error: msg };
     }
-    normalized = normalizeWaiverScopeInput(parsed.data);
+    await persistClientEngagementScope({
+      clientId,
+      includedPillars: parsed.data.includedPillars,
+      focusAreas: parsed.data.focusAreas,
+      approvalId: null,
+    });
   } catch (e) {
     return {
       success: false,
       error: e instanceof Error ? e.message : "Invalid assessment scope",
     };
   }
-
-  await prisma.clientAdvisorAssignment.update({
-    where: { id: assignmentId },
-    data: {
-      includedPillars: normalized.includedPillars,
-      focusAreas: normalized.focusAreas,
-    },
-  });
-
-  await syncInProgressAssessmentScope(clientId, normalized.includedPillars, null);
 
   revalidatePath("/advisor/pipeline");
   revalidatePath(`/advisor/pipeline/${clientId}`);

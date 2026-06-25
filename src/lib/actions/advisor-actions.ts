@@ -30,7 +30,7 @@ import { getPortfolioReports } from '@/lib/reports/portfolio-queries';
 import type { PortfolioReportsFilters } from '@/lib/reports/portfolio-types';
 import { approveClientSchema } from '@/lib/schemas/advisor';
 import { normalizeIncludedPillarIds } from '@/lib/assessment/included-pillars';
-import { syncAssessmentScopeFromApproval } from '@/lib/assessment/sync-scope-from-approval';
+import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
 import { computePillarRecommendations } from '@/lib/intake/pillar-recommendations';
 import { decryptUserEmail } from '@/lib/auth/user-email';
 import {
@@ -273,11 +273,12 @@ export async function approveClientIntake(data: unknown) {
       approvedAt: new Date(),
     });
 
-    await syncAssessmentScopeFromApproval(
-      reviewData.interview.userId,
-      approval.id,
-      normalizedIncluded,
-    );
+    await persistClientEngagementScope({
+      clientId: reviewData.interview.userId,
+      includedPillars: normalizedIncluded,
+      focusAreas: normalizedFocus,
+      approvalId: approval.id,
+    });
 
     await writeAudit({
       actor: { userId, role: role as UserRole, email },
