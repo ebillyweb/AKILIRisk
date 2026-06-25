@@ -285,6 +285,7 @@ vi.mock("@/lib/db", () => ({
         }
       ),
     },
+    pillar: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -431,7 +432,7 @@ describe("getPillarAverages", () => {
   it("returns 6 unassessed cells when no scores exist", async () => {
     const result = await getPillarAverages();
     expect(result.totalScored).toBe(0);
-    expect(result.pillars).toHaveLength(6);
+    expect(result.pillars).toHaveLength(10);
     expect(result.pillars.every((p) => p.dominantLevel === "unassessed")).toBe(true);
     expect(result.pillars.every((p) => p.avgScore === null)).toBe(true);
   });

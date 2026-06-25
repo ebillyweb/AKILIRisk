@@ -99,7 +99,7 @@ describe("ariaLabelForCell", () => {
       { catalog },
     );
     expect(ariaLabelForCell(first)).toBe(
-      "Governance: medium risk, score 1.8 of 3"
+      "Governance & Decision-Making: medium risk, score 1.8 of 3"
     );
   });
 

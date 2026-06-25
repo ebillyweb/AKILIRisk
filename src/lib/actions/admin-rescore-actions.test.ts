@@ -30,6 +30,7 @@ const { prismaSpies, writeAuditSpy, requireAdminRoleSpy, scoringSpies, engineCto
       createMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     clientAdvisorAssignment: { findMany: vi.fn() },
+    pillar: { findMany: vi.fn().mockResolvedValue([]) },
     $transaction: vi.fn(),
   };
   const writeAuditSpy = vi.fn().mockResolvedValue(undefined);
@@ -89,6 +90,13 @@ vi.mock("@/lib/methodology/assessment-runtime", () => ({
 }));
 vi.mock("@/lib/assessment/engines/recommendation-engine", () => ({
   RecommendationEngine: engineCtorSpy,
+}));
+vi.mock("@/lib/data/assessment-customization", () => ({
+  getScoringCustomizationForClient: vi.fn(async () => null),
+}));
+vi.mock("@/lib/assessment/customization", () => ({
+  getEmphasisMultipliers: vi.fn(() => ({})),
+  getCustomizationConfig: vi.fn(),
 }));
 
 import {

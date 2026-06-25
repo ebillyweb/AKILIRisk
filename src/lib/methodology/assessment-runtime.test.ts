@@ -40,6 +40,15 @@ vi.mock("@/lib/methodology/assessment-from-snapshot", () => ({
   })),
 }));
 
+vi.mock("@/lib/methodology/cached-pillar-catalog", async () => {
+  const { starterPillarCatalog } = await import("@/lib/methodology/pillar-catalog");
+  return {
+    getPlatformPillarCatalog: vi.fn(async () => starterPillarCatalog()),
+    getPlatformPillarSlugs: vi.fn(async () => starterPillarCatalog().map((p) => p.id)),
+    isPlatformRiskAreaSlug: vi.fn(async (slug: string) => starterPillarCatalog().some((p) => p.id === slug)),
+  };
+});
+
 describe("resolvePillarNarrativesForAssessment", () => {
   it("prefers snapshotted narrative bands over live TS constants", async () => {
     const narratives = await resolvePillarNarrativesForAssessment(

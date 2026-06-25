@@ -29,6 +29,7 @@ const getAdvisorProfileOrThrowMock = vi.fn();
 vi.mock("@/lib/advisor/auth", () => ({
   requireAdvisorRole: () => requireAdvisorRoleMock(),
   getAdvisorProfileOrThrow: (userId: string) => getAdvisorProfileOrThrowMock(userId),
+  advisorHubActionErrorMessage: (err: unknown) => err instanceof Error ? err.message : String(err),
 }));
 
 const getAdvisorSignalFeed = vi.fn();

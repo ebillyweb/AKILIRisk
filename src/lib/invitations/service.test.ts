@@ -37,6 +37,7 @@ const prismaSpies = vi.hoisted(() => ({
   clientAdvisorAssignment: {
     findFirst: vi.fn(async () => null),
   },
+  pillar: { findMany: vi.fn().mockResolvedValue([]) },
   $transaction: vi.fn(
     async (fn: (tx: typeof prismaSpies) => Promise<unknown>) => fn(prismaSpies)
   ),
