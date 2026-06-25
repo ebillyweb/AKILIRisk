@@ -3,10 +3,10 @@
 import { useTransition } from "react";
 import type { AdvisorQuestionSource } from "@prisma/client";
 import {
-  createAdvisorRecommendationRule,
-  deleteAdvisorRecommendationRule,
-  updateAdvisorRecommendationRule,
-} from "@/lib/actions/methodology-actions";
+  createEnterpriseRecommendationRule,
+  deleteEnterpriseRecommendationRule,
+  updateEnterpriseRecommendationRule,
+} from "@/lib/actions/enterprise-recommendation-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,7 +28,18 @@ type ServiceOption = {
   category: string;
 };
 
-export function RecommendationRulesEditor({
+function sourceLabel(sourceKind: AdvisorQuestionSource): string {
+  switch (sourceKind) {
+    case "CUSTOM":
+      return "Enterprise custom";
+    case "PLATFORM":
+      return "Platform base";
+    default:
+      return sourceKind;
+  }
+}
+
+export function EnterpriseRecommendationRulesEditor({
   pillarSlug,
   rules,
   services,
@@ -47,11 +58,7 @@ export function RecommendationRulesEditor({
             <div className="space-y-1">
               <CardTitle className="text-base">{rule.name}</CardTitle>
               <Badge variant={rule.sourceKind === "CUSTOM" ? "secondary" : "outline"}>
-                {rule.sourceKind === "CUSTOM"
-                  ? "Custom"
-                  : rule.sourceKind === "ENTERPRISE"
-                    ? "Firm default"
-                    : "Platform base"}
+                {sourceLabel(rule.sourceKind)}
               </Badge>
             </div>
             {rule.sourceKind === "CUSTOM" ? (
@@ -61,9 +68,9 @@ export function RecommendationRulesEditor({
                 size="sm"
                 disabled={pending}
                 onClick={() => {
-                  if (!window.confirm("Remove this custom rule?")) return;
+                  if (!window.confirm("Remove this custom enterprise rule? Member advisor copies will be deactivated.")) return;
                   startTransition(async () => {
-                    await deleteAdvisorRecommendationRule(rule.id);
+                    await deleteEnterpriseRecommendationRule(rule.id);
                   });
                 }}
               >
@@ -77,13 +84,13 @@ export function RecommendationRulesEditor({
                 defaultChecked={rule.isActive}
                 onCheckedChange={(checked) => {
                   startTransition(async () => {
-                    await updateAdvisorRecommendationRule(rule.id, {
+                    await updateEnterpriseRecommendationRule(rule.id, {
                       isActive: checked === true,
                     });
                   });
                 }}
               />
-              <Label>Active for new intakes</Label>
+              <Label>Active for firm advisors</Label>
             </div>
             <form
               className="grid gap-3 md:grid-cols-2"
@@ -92,7 +99,7 @@ export function RecommendationRulesEditor({
                   const name = formData.get("name")?.toString();
                   const priority = Number(formData.get("priority"));
                   if (!name?.trim() || !Number.isFinite(priority)) return;
-                  await updateAdvisorRecommendationRule(rule.id, {
+                  await updateEnterpriseRecommendationRule(rule.id, {
                     name: name.trim(),
                     priority,
                   });
@@ -122,13 +129,13 @@ export function RecommendationRulesEditor({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Add custom rule</CardTitle>
+          <CardTitle className="text-base">Add firm-wide custom rule</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-3 text-sm text-muted-foreground">
-            Custom rules trigger when the pillar is high or critical risk. They apply to new
-            intakes only and are visible only to your clients. Platform base rules can be edited
-            or deactivated but not removed.
+            Custom enterprise rules are automatically synced to all firm member advisors.
+            Members inherit enterprise rules as defaults and can further adjust them.
+            Platform base rules can be edited or deactivated but not removed.
           </p>
           <form
             className="grid gap-3 md:grid-cols-2"
@@ -138,7 +145,7 @@ export function RecommendationRulesEditor({
                 const serviceRecommendationId =
                   formData.get("serviceRecommendationId")?.toString() ?? "";
                 const priority = Number(formData.get("priority"));
-                await createAdvisorRecommendationRule(pillarSlug, {
+                await createEnterpriseRecommendationRule(pillarSlug, {
                   name,
                   serviceRecommendationId,
                   priority: Number.isFinite(priority) ? priority : 1,
@@ -147,13 +154,13 @@ export function RecommendationRulesEditor({
             }}
           >
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="custom-rule-name">Rule name</Label>
-              <Input id="custom-rule-name" name="name" required placeholder="Rule name" />
+              <Label htmlFor="ent-rule-name">Rule name</Label>
+              <Input id="ent-rule-name" name="name" required placeholder="Rule name" />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="custom-rule-service">Service</Label>
+              <Label htmlFor="ent-rule-service">Service</Label>
               <select
-                id="custom-rule-service"
+                id="ent-rule-service"
                 name="serviceRecommendationId"
                 required
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
@@ -171,9 +178,9 @@ export function RecommendationRulesEditor({
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="custom-rule-priority">Priority</Label>
+              <Label htmlFor="ent-rule-priority">Priority</Label>
               <Input
-                id="custom-rule-priority"
+                id="ent-rule-priority"
                 name="priority"
                 type="number"
                 defaultValue={1}

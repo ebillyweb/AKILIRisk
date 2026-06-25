@@ -112,10 +112,19 @@ export async function cloneAdvisorDefaultsIfNeeded(
       const ruleCount = await tx.advisorRecommendationRule.count({
         where: { advisorProfileId },
       });
+      const enterpriseId = await resolveEnterpriseIdForAdvisor(tx, advisorProfileId);
       if (ruleCount === 0) {
-        await cloneAllPlatformRecommendationRules(tx, advisorProfileId, slugToPillarId);
+        if (enterpriseId) {
+          await cloneAllEnterpriseRecommendationRules(tx, advisorProfileId, enterpriseId, slugToPillarId);
+        } else {
+          await cloneAllPlatformRecommendationRules(tx, advisorProfileId, slugToPillarId);
+        }
       } else if (options?.force) {
-        await syncMissingPlatformRecommendationRules(tx, advisorProfileId, slugToPillarId);
+        if (enterpriseId) {
+          await syncMissingEnterpriseRecommendationRules(tx, advisorProfileId, enterpriseId, slugToPillarId);
+        } else {
+          await syncMissingPlatformRecommendationRules(tx, advisorProfileId, slugToPillarId);
+        }
       }
 
       const catalogVersion = pillars[0]?.catalogVersion ?? 1;
@@ -159,11 +168,10 @@ export async function syncAdvisorPlatformContent(
         advisorProfileId,
         slugToPillarId,
       );
-      const rulesAdded = await syncMissingPlatformRecommendationRules(
-        tx,
-        advisorProfileId,
-        slugToPillarId,
-      );
+      const enterpriseId = await resolveEnterpriseIdForAdvisor(tx, advisorProfileId);
+      const rulesAdded = enterpriseId
+        ? await syncMissingEnterpriseRecommendationRules(tx, advisorProfileId, enterpriseId, slugToPillarId)
+        : await syncMissingPlatformRecommendationRules(tx, advisorProfileId, slugToPillarId);
       return { intakeAdded, assessmentAdded, rulesAdded };
     },
     { timeout: 120_000 },
@@ -460,6 +468,98 @@ async function createPlatformRecommendationClone(
         serviceRecommendationId: rule.serviceRecommendationId,
         serviceId: rule.serviceRecommendationId,
       },
+      priority: rule.priority,
+      isActive: true,
+    },
+  });
+}
+
+// --- Enterprise-aware cloning ---
+
+async function resolveEnterpriseIdForAdvisor(
+  tx: CloneTx,
+  advisorProfileId: string,
+): Promise<string | null> {
+  const profile = await tx.advisorProfile.findUnique({
+    where: { id: advisorProfileId },
+    select: { enterpriseId: true },
+  });
+  return profile?.enterpriseId ?? null;
+}
+
+async function cloneAllEnterpriseRecommendationRules(
+  tx: CloneTx,
+  advisorProfileId: string,
+  enterpriseId: string,
+  slugToPillarId: Map<string, string>,
+): Promise<void> {
+  const entRules = await tx.enterpriseRecommendationRule.findMany({
+    where: { enterpriseId, isActive: true },
+    orderBy: { priority: "desc" },
+  });
+  for (const rule of entRules) {
+    await createEnterpriseAdvisorClone(tx, advisorProfileId, rule, slugToPillarId);
+  }
+}
+
+async function syncMissingEnterpriseRecommendationRules(
+  tx: CloneTx,
+  advisorProfileId: string,
+  enterpriseId: string,
+  _slugToPillarId: Map<string, string>,
+): Promise<number> {
+  const existing = await tx.advisorRecommendationRule.findMany({
+    where: { advisorProfileId, enterpriseSourceId: { not: null } },
+    select: { enterpriseSourceId: true },
+  });
+  const known = new Set(
+    existing.map((r) => r.enterpriseSourceId).filter((id): id is string => id != null),
+  );
+
+  const entRules = await tx.enterpriseRecommendationRule.findMany({
+    where: { enterpriseId, isActive: true },
+    orderBy: { priority: "desc" },
+  });
+
+  let added = 0;
+  for (const rule of entRules) {
+    if (known.has(rule.id)) continue;
+    await createEnterpriseAdvisorClone(tx, advisorProfileId, rule, _slugToPillarId);
+    added++;
+  }
+  return added;
+}
+
+async function createEnterpriseAdvisorClone(
+  tx: CloneTx,
+  advisorProfileId: string,
+  rule: {
+    id: string;
+    pillarId: string | null;
+    sourceKind: AdvisorQuestionSource;
+    platformSourceId: string | null;
+    name: string;
+    triggerConditions: unknown;
+    servicePayload: unknown;
+    priority: number;
+  },
+  _slugToPillarId: Map<string, string>,
+): Promise<void> {
+  const sourceKind =
+    rule.sourceKind === AdvisorQuestionSource.PLATFORM
+      ? AdvisorQuestionSource.PLATFORM
+      : AdvisorQuestionSource.ENTERPRISE;
+
+  await tx.advisorRecommendationRule.create({
+    data: {
+      advisorProfileId,
+      pillarId: rule.pillarId,
+      sourceKind,
+      platformSourceId: rule.platformSourceId,
+      enterpriseSourceId: rule.id,
+      name: rule.name,
+      triggerConditions: rule.triggerConditions as Prisma.InputJsonValue,
+      servicePayload: rule.servicePayload as Prisma.InputJsonValue,
       priority: rule.priority,
       isActive: true,
     },

@@ -178,10 +178,11 @@ model AdvisorEnterprise {
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 
-  subscription    Subscription?
-  memberships     EnterpriseMembership[]
-  advisorProfiles AdvisorProfile[]
-  subdomain       AdvisorSubdomain?
+  subscription          Subscription?
+  memberships           EnterpriseMembership[]
+  advisorProfiles       AdvisorProfile[]
+  subdomain             AdvisorSubdomain?
+  recommendationRules   EnterpriseRecommendationRule[]
 
   @@index([billingContactUserId])
   @@index([status])
@@ -1440,6 +1441,7 @@ model RecommendationRule {
 
   serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id], onDelete: Cascade)
   advisorClones         AdvisorRecommendationRule[] @relation("AdvisorRecRulePlatformSource")
+  enterpriseClones      EnterpriseRecommendationRule[] @relation("EnterpriseRecRulePlatformSource")
 
   @@index([serviceRecommendationId])
   @@index([isActive, priority])
@@ -1649,7 +1651,8 @@ model Pillar {
   overrides           AdvisorPillarOverride[]
   assessmentQuestions AdvisorPillarQuestion[]
   narratives          AdvisorPillarNarrative[]
-  recommendationRules AdvisorRecommendationRule[]
+  recommendationRules           AdvisorRecommendationRule[]
+  enterpriseRecommendationRules EnterpriseRecommendationRule[]
 
   @@index([defaultOrder])
   @@index([archivedAt])
@@ -1684,6 +1687,7 @@ model AdvisorPillarOverride {
 /// Source of an advisor-owned question row.
 enum AdvisorQuestionSource {
   PLATFORM
+  ENTERPRISE
   CUSTOM
 }
 
@@ -1768,6 +1772,33 @@ model AdvisorPillarNarrative {
   @@map("advisor_pillar_narratives")
 }
 
+/// Enterprise-level recommendation rule override (between platform and advisor).
+model EnterpriseRecommendationRule {
+  id                 String                     @id @default(cuid())
+  enterpriseId       String                     @map("enterprise_id")
+  pillarId           String?                    @map("pillar_id") @db.Uuid
+  sourceKind         AdvisorQuestionSource      @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?                    @map("platform_source_id")
+  name               String                     @db.VarChar(200)
+  triggerConditions  Json                       @map("trigger_conditions")
+  servicePayload     Json                       @map("service_payload")
+  priority           Int                        @default(1)
+  isActive           Boolean                    @default(true) @map("is_active")
+  version            Int                        @default(1)
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  enterprise     AdvisorEnterprise  @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  pillar         Pillar?            @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  platformSource RecommendationRule? @relation("EnterpriseRecRulePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  advisorClones  AdvisorRecommendationRule[] @relation("AdvisorRecRuleEnterpriseSource")
+
+  @@index([enterpriseId])
+  @@index([enterpriseId, isActive])
+  @@index([enterpriseId, sourceKind])
+  @@map("enterprise_recommendation_rules")
+}
+
 /// Per-advisor recommendation rule (triggers platform ServiceRecommendation).
 model AdvisorRecommendationRule {
   id                 String                @id @default(cuid())
@@ -1775,6 +1806,7 @@ model AdvisorRecommendationRule {
   pillarId           String?               @map("pillar_id") @db.Uuid
   sourceKind         AdvisorQuestionSource @default(PLATFORM) @map("source_kind")
   platformSourceId   String?               @map("platform_source_id")
+  enterpriseSourceId String?               @map("enterprise_source_id")
   name               String                @db.VarChar(200)
   triggerConditions  Json                  @map("trigger_conditions")
   servicePayload     Json                  @map("service_payload")
@@ -1784,13 +1816,15 @@ model AdvisorRecommendationRule {
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
-  advisorProfile AdvisorProfile     @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
-  pillar         Pillar?            @relation(fields: [pillarId], references: [id], onDelete: SetNull)
-  platformSource RecommendationRule? @relation("AdvisorRecRulePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  advisorProfile   AdvisorProfile              @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar           Pillar?                     @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  platformSource   RecommendationRule?         @relation("AdvisorRecRulePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  enterpriseSource EnterpriseRecommendationRule? @relation("AdvisorRecRuleEnterpriseSource", fields: [enterpriseSourceId], references: [id], onDelete: SetNull)
 
   @@index([advisorProfileId])
   @@index([advisorProfileId, isActive])
   @@index([advisorProfileId, sourceKind])
+  @@index([enterpriseSourceId])
   @@map("advisor_recommendation_rules")
 }
 
