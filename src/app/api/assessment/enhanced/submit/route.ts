@@ -12,6 +12,7 @@ import { RecommendationEngine } from '@/lib/assessment/engines/recommendation-en
 import { RuleEngine } from '@/lib/assessment/engines/rule-engine';
 import { loadGovernanceQuestionsMerged } from '@/lib/assessment/bank/load-bank';
 import { encryptAnswer } from '@/lib/data/response-content';
+import { resolveRecommendationRulesForAssessment } from '@/lib/methodology/assessment-runtime';
 import { z } from 'zod';
 
 function parseRiskLevel(value: string): RiskLevel {
@@ -131,14 +132,19 @@ export async function POST(request: NextRequest) {
         const recommendationEngine = new RecommendationEngine();
         const pillarScores = { [validatedData.pillarId]: { score: scoreResult.score, riskLevel: scoreResult.riskLevel } };
 
-        recommendations = await recommendationEngine.generateRecommendations({
-          assessmentId: validatedData.assessmentId,
-          userId: session.user.id!,
-          pillarScores,
-          answers: validatedData.answers,
-          householdProfile: null, // This would be loaded from user profile
-          missingControls: scoreResult.missingControls,
-        });
+        const rulesOverride = await resolveRecommendationRulesForAssessment(validatedData.assessmentId);
+
+        recommendations = await recommendationEngine.generateRecommendations(
+          {
+            assessmentId: validatedData.assessmentId,
+            userId: session.user.id!,
+            pillarScores,
+            answers: validatedData.answers,
+            householdProfile: null, // This would be loaded from user profile
+            missingControls: scoreResult.missingControls,
+          },
+          rulesOverride,
+        );
       }
 
       // Update assessment status if complete
