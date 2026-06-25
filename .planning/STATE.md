@@ -10,7 +10,7 @@
 
 **Milestone:** v1.5 Cyber Risk Intelligence
 **Phase:** 21 - Platform Recommendation Engine
-**Plan:** 1 of TBD
+**Plan:** 2 of TBD
 **Status:** In Progress
 
 ### Phase 21 Goal
@@ -58,6 +58,8 @@ Every one of the ten risk pillars independently generates platform recommendatio
 - **Identity Risk Question Bank Size:** 21 questions providing comprehensive coverage while maintaining assessment efficiency and user experience
 - **Phase 21-01: Dual registration pattern:** New pillar rules added to both setup-all-pillar-rules.ts (DB seed) AND recommendation-catalog-fixtures.ts (test mocks) — both must stay in sync
 - **Phase 21-01: New pillar service categories:** financial (liquidity, tax), legal (estate), advisory (behavioral) — distinct from existing governance/security/insurance/reputation
+- **Phase 21-02: rulesOverride backward-compatibility:** resolveRecommendationRulesForAssessment returns undefined when no snapshot — engine falls back to DB load, zero behavior change for existing assessments
+- **Phase 21-02: CatalogRule->RecommendationRule mapping required:** must map serviceRecommendationId->serviceId and triggerConditions->conditions before passing as rulesOverride to engine
 
 ### Architecture Approach
 - **Foundation:** Builds on proven v1.4 platform patterns (Next.js/Prisma/PostgreSQL)
@@ -103,11 +105,11 @@ None identified. Ready to proceed with Phase 19 planning.
 
 ## Session Continuity
 
-**Last Action:** Completed Phase 21 Plan 01 — 10-pillar recommendation rules content
-**Next Action:** Execute Phase 21 Plan 02
+**Last Action:** Completed Phase 21 Plan 02 — advisor rulesOverride wiring + 10-pillar test coverage
+**Next Action:** Execute Phase 21 Plan 03
 
-**Context Preservation:** Phases 19-20 complete (cyber + identity pillars). Phase 21 Plan 01 complete: added 12 services, 12 legacy rules, 12 UI rules, and 12 Belvedere test question IDs for the 4 missing pillars (liquidity-cash, tax-exposure, estate-succession, family-governance-behavioral). All 10 pillars now have ServiceRecommendation and RecommendationRule entries. RecommendationEngine is pillar-agnostic; next: advisor customization via AdvisorRecommendationRule (Plan 02) and recommendation display (Plan 03).
+**Context Preservation:** Phases 19-20 complete (cyber + identity pillars). Phase 21 Plans 01-02 complete. Plan 01: added 12 services, 12 legacy rules, 12 UI rules, and 12 Belvedere test question IDs for the 4 missing pillars. Plan 02: wired resolveRecommendationRulesForAssessment into submission route (advisor methodology snapshots now flow to generateRecommendations via rulesOverride); extended happy-path tests to 11 tests covering all 10 pillars (high-risk per-pillar, all-pillar low-risk zero, advisor override filter). Next: recommendation display (Plan 03).
 
 ---
 *State updated: 2026-06-25*
-*Stopped at: Completed 21-01-PLAN.md*
+*Stopped at: Completed 21-02-PLAN.md*
