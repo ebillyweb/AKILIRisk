@@ -56,8 +56,8 @@ Plans:
 **Goal:** Every one of the ten risk pillars independently generates platform recommendations, advisor customizations are honored, and the recommendation engine produces a fully prioritized recommendation set for every completed assessment.
 
 Plans:
-- [ ] 21-01-PLAN.md -- Add recommendation rules and services for 4 missing pillars (liquidity, tax, estate, behavioral)
-- [ ] 21-02-PLAN.md -- Wire advisor rulesOverride into submission route and extend 10-pillar test coverage
+- [x] 21-01-PLAN.md -- Add recommendation rules and services for 4 missing pillars (liquidity, tax, estate, behavioral)
+- [x] 21-02-PLAN.md -- Wire advisor rulesOverride into submission route and extend 10-pillar test coverage
 
 **Success Criteria:**
 1. All 10 pillars (governance, cyber-digital, physical-security, insurance, geographic-environmental, reputational-social, liquidity-cash, tax-exposure, estate-succession, family-governance-behavioral) have platform recommendation rules in the DB
@@ -84,10 +84,10 @@ Plans:
 |-------|--------|-------|-------|------------|
 | 19 - Cyber Foundation | Planned | 0/3 | 0/7 | ░░░░░░░░░░ 0% |
 | 20 - Identity Intelligence | Planned | 0/3 | 0/6 | ░░░░░░░░░░ 0% |
-| 21 - Recommendation Engine | Planned | 0/2 | 0/4 | ░░░░░░░░░░ 0% |
+| 21 - Recommendation Engine | Complete | 2/2 | 4/4 | ██████████ 100% |
 | 22 - Advanced Reporting | Pending | 0/0 | 0/0 | ░░░░░░░░░░ 0% |
 
-**Overall:** ░░░░░░░░░░ 0% (0/4 phases complete)
+**Overall:** ███░░░░░░░ 25% (1/4 phases complete)
 
 ## Architecture Notes
 
