@@ -23,6 +23,7 @@
 /playwright-results.json
 /playwright-run.log
 /playwright-run.stderr
+.playwright-mcp
 
 # next.js
 /.next/
