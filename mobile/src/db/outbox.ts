@@ -25,11 +25,22 @@ export interface EnqueueInput {
   updatedAt: string;
 }
 
-/** Adds a write to the outbox with a fresh UUID idempotency key. */
+/**
+ * Adds a write to the outbox with a fresh UUID idempotency key.
+ *
+ * Per-question dedupe: any prior PENDING row for the same (interviewId,
+ * questionId) is removed first, so only the latest write per question is ever
+ * queued. This prevents a stale earlier edit from overwriting a newer one on
+ * the server when rows drain out of order.
+ */
 export async function enqueueWrite(input: EnqueueInput): Promise<string> {
   const db = await getDb();
   const id = Crypto.randomUUID();
   const now = new Date().toISOString();
+  await db.runAsync(
+    `DELETE FROM outbox WHERE status = 'PENDING' AND interviewId = ? AND questionId = ?`,
+    [input.interviewId, input.questionId],
+  );
   await db.runAsync(
     `INSERT INTO outbox (id, interviewId, questionId, mode, text, audioUri, updatedAt, createdAt)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,

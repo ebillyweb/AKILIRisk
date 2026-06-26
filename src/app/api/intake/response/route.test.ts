@@ -113,6 +113,34 @@ describe("POST /api/intake/response", () => {
     expect(arg.create.transcriptionStatus).toBe("PENDING");
   });
 
+  it("rejects a VOICE fileKey that belongs to another interview", async () => {
+    const res = await POST(
+      postRequest({
+        interviewId: "intv-1",
+        questionId: "intake-q1",
+        mode: "VOICE",
+        fileKey: "intake/OTHER-INTERVIEW/intake-q1.m4a",
+        updatedAt: "2026-06-14T12:00:00Z",
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(prismaMock.intakeResponse.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a VOICE fileKey pointing outside the intake namespace", async () => {
+    const res = await POST(
+      postRequest({
+        interviewId: "intv-1",
+        questionId: "intake-q1",
+        mode: "VOICE",
+        fileKey: "documents/intv-1/secret.pdf",
+        updatedAt: "2026-06-14T12:00:00Z",
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(prismaMock.intakeResponse.upsert).not.toHaveBeenCalled();
+  });
+
   it("promotes a NOT_STARTED interview to IN_PROGRESS on first answer", async () => {
     prismaMock.intakeInterview.findFirst.mockResolvedValue({
       id: "intv-1",

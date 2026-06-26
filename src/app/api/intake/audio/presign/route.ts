@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/mobile/token";
 import { generateUploadUrlForKey } from "@/lib/documents/s3";
+import { intakeAudioKey } from "@/lib/intake/audio-key";
 
 const schema = z.object({
   interviewId: z.string().min(1),
@@ -30,8 +31,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Interview not found" }, { status: 404 });
   }
 
-  const safeQuestion = questionId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const key = `intake/${interviewId}/${safeQuestion}/${Date.now()}.m4a`;
+  // Deterministic key: a retry re-uploads to the same object instead of
+  // orphaning a new one (idempotent across crash/resync).
+  const key = intakeAudioKey(interviewId, questionId);
 
   try {
     const { signedUrl } = await generateUploadUrlForKey(key, "audio/m4a");

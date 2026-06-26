@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveUser } from "@/lib/mobile/token";
 import { getAssignedClientIntake } from "@/lib/mobile/advisor";
 import { generateDownloadUrl } from "@/lib/documents/s3";
+import { isOwnedIntakeAudioKey } from "@/lib/intake/audio-key";
 
 /** GET /api/advisor/clients/:id/audio/:questionId — signed playback URL. */
 export async function GET(
@@ -24,6 +25,11 @@ export async function GET(
 
   const response = result.interview.responses.find((r) => r.questionId === questionId);
   if (!response?.audioUrl) {
+    return NextResponse.json({ error: "No audio for this question" }, { status: 404 });
+  }
+  // Defense in depth: only ever sign a key inside this interview's namespace,
+  // so a tampered audioUrl can't turn this endpoint into a bucket-wide reader.
+  if (!isOwnedIntakeAudioKey(response.audioUrl, result.interview.id)) {
     return NextResponse.json({ error: "No audio for this question" }, { status: 404 });
   }
 

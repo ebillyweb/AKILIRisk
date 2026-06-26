@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/mobile/token";
 import { isStaleWrite } from "@/lib/intake/conflict";
+import { isOwnedIntakeAudioKey } from "@/lib/intake/audio-key";
 
 const schema = z.object({
   interviewId: z.string().min(1),
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
   }
   if (mode === "VOICE" && !fileKey) {
     return NextResponse.json({ error: "Voice answers require a fileKey." }, { status: 400 });
+  }
+  // The fileKey must belong to THIS interview's audio namespace — otherwise a
+  // client could point audioUrl at another interview's (or any) S3 object,
+  // which the advisor playback endpoint would then sign.
+  if (mode === "VOICE" && !isOwnedIntakeAudioKey(fileKey, interviewId)) {
+    return NextResponse.json({ error: "Invalid fileKey for this interview." }, { status: 400 });
   }
 
   // Tenant isolation: the interview must belong to the caller.

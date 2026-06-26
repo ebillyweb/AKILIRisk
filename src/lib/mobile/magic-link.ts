@@ -52,14 +52,20 @@ export async function consumeCode(email: string, code: string): Promise<string |
 
 async function consumeToken(token: string): Promise<string | null> {
   const row = await prisma.verificationToken.findUnique({ where: { token } });
-  if (!row || row.used || row.expires < new Date()) return null;
+  if (!row) return null;
 
-  // Mark used and clear sibling tokens for the same identifier in one shot.
-  await prisma.$transaction([
-    prisma.verificationToken.update({ where: { token }, data: { used: true } }),
-    prisma.verificationToken.deleteMany({
-      where: { identifier: row.identifier, used: false },
-    }),
-  ]);
+  // Atomic single-use: only the winner of a concurrent race flips used=false→true
+  // for an unexpired row. This closes the read-check-write TOCTOU where two
+  // requests could both consume the same token/code.
+  const claimed = await prisma.verificationToken.updateMany({
+    where: { token, used: false, expires: { gt: new Date() } },
+    data: { used: true },
+  });
+  if (claimed.count === 0) return null;
+
+  // Winner clears the remaining sibling tokens for the identifier.
+  await prisma.verificationToken.deleteMany({
+    where: { identifier: row.identifier, used: false },
+  });
   return row.identifier;
 }

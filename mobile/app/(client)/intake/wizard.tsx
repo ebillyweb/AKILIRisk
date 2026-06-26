@@ -11,6 +11,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useIntakeScript } from '@/hooks/useIntake';
 import { useSync } from '@/sync/SyncContext';
 import { allDraftsSynced, getDraftsForInterview, type DraftRow } from '@/db/drafts';
+import { countPending } from '@/db/outbox';
 import { saveTypedAnswer, saveVoiceAnswer } from '@/intake/service';
 import { submitIntake } from '@/api/intake';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -98,8 +99,13 @@ export default function IntakeWizard() {
 
   const handleSubmit = async () => {
     setSubmitError(null);
-    const synced = await allDraftsSynced(interviewId);
-    if (!synced) {
+    // Gate on BOTH the draft table and the outbox: a draft can read SYNCED while
+    // a separate write for it is still queued, so check the queue is empty too.
+    const [synced, pending] = await Promise.all([
+      allDraftsSynced(interviewId),
+      countPending(),
+    ]);
+    if (!synced || pending > 0) {
       setSubmitError(
         'Some answers are still saving. Stay connected for a moment, then submit again.',
       );

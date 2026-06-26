@@ -3,8 +3,17 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createMagicLink } from "@/lib/mobile/magic-link";
 import { sendMagicLinkEmail } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().email() });
+
+function clientIp(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 function linkBaseUrl(): string {
   return (
@@ -28,6 +37,15 @@ export async function POST(request: NextRequest) {
     email = parsed.data.email.toLowerCase();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  // Throttle issuance per email and per IP: stops email-bombing a victim and
+  // stops an attacker from repeatedly wiping a pending code via re-issue.
+  // Returns 200 regardless of which key tripped, to preserve non-enumeration.
+  const perEmail = rateLimit({ key: `magic-link:email:${email}`, limit: 3, windowMs: 15 * 60 * 1000 });
+  const perIp = rateLimit({ key: `magic-link:ip:${clientIp(request)}`, limit: 10, windowMs: 15 * 60 * 1000 });
+  if (!perEmail.success || !perIp.success) {
+    return NextResponse.json({ ok: true });
   }
 
   try {
