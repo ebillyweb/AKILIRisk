@@ -17,6 +17,8 @@ import {
   nextDisplayOrder,
 } from "@/lib/methodology/advisor-question-policy";
 import { defaultCustomRecommendationConditions } from "@/lib/methodology/advisor-recommendation-starter";
+import { parseRecommendationTriggerConditions } from "@/lib/admin/recommendation-rule-schemas";
+import type { RecommendationCondition } from "@/lib/admin/recommendation-rule-schemas";
 
 export async function updateAdvisorPillarOverride(
   pillarSlug: string,
@@ -183,6 +185,7 @@ export async function updateAdvisorRecommendationRule(
     name?: string;
     priority?: number;
     isActive?: boolean;
+    triggerConditions?: RecommendationCondition[];
   },
 ) {
   try {
@@ -197,12 +200,24 @@ export async function updateAdvisorRecommendationRule(
       return { success: false as const, error: "Rule not found" };
     }
 
+    let triggerConditionsJson: Prisma.InputJsonValue | undefined;
+    if (data.triggerConditions !== undefined) {
+      const parsed = parseRecommendationTriggerConditions(data.triggerConditions);
+      if (!parsed.success) {
+        return { success: false as const, error: parsed.error };
+      }
+      triggerConditionsJson = parsed.data as unknown as Prisma.InputJsonValue;
+    }
+
     await prisma.advisorRecommendationRule.update({
       where: { id: ruleId },
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.priority !== undefined ? { priority: data.priority } : {}),
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+        ...(triggerConditionsJson !== undefined
+          ? { triggerConditions: triggerConditionsJson }
+          : {}),
         version: { increment: 1 },
       },
     });
@@ -227,6 +242,7 @@ export async function createAdvisorRecommendationRule(
     name: string;
     serviceRecommendationId: string;
     priority?: number;
+    triggerConditions?: RecommendationCondition[];
   },
 ) {
   try {
@@ -250,14 +266,20 @@ export async function createAdvisorRecommendationRule(
       return { success: false as const, error: "Service recommendation not found" };
     }
 
-    const conditions = defaultCustomRecommendationConditions(slug);
+    const conditionsInput =
+      data.triggerConditions ?? defaultCustomRecommendationConditions(slug);
+    const parsed = parseRecommendationTriggerConditions(conditionsInput);
+    if (!parsed.success) {
+      return { success: false as const, error: parsed.error };
+    }
+
     const row = await prisma.advisorRecommendationRule.create({
       data: {
         advisorProfileId: profile.id,
         pillarId: pillar.id,
         sourceKind: AdvisorQuestionSource.CUSTOM,
         name,
-        triggerConditions: conditions as unknown as Prisma.InputJsonValue,
+        triggerConditions: parsed.data as unknown as Prisma.InputJsonValue,
         servicePayload: {
           serviceRecommendationId: service.id,
           serviceId: service.id,

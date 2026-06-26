@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { listQuestionsForRulePicker } from "@/lib/admin/recommendation-queries";
+import { serviceIdFromRulePayload } from "@/lib/admin/recommendation-rule-ui";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
-import { loadAdvisorRecommendationRules, loadActiveServiceRecommendations } from "@/lib/methodology/methodology-queries";
+import {
+  loadAdvisorRecommendationRules,
+  loadActiveServiceRecommendations,
+} from "@/lib/methodology/methodology-queries";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,8 +33,12 @@ export default async function MethodologyRecommendationsPage({
     redirect("/signin");
   }
 
-  const rules = await loadAdvisorRecommendationRules(profileId, slug);
-  const services = await loadActiveServiceRecommendations();
+  const [rules, services, questionOptions] = await Promise.all([
+    loadAdvisorRecommendationRules(profileId, slug),
+    loadActiveServiceRecommendations(),
+    listQuestionsForRulePicker(),
+  ]);
+  const serviceNameById = new Map(services.map((service) => [service.id, service.name]));
 
   return (
     <div className="space-y-6">
@@ -52,21 +61,26 @@ export default async function MethodologyRecommendationsPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {rules.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No rules for this pillar.</p>
-          ) : (
-            <RecommendationRulesEditor
-              pillarSlug={slug}
-              services={services}
-              rules={rules.map((rule) => ({
+          <RecommendationRulesEditor
+            pillarSlug={slug}
+            services={services}
+            questionOptions={questionOptions}
+            rules={rules.map((rule) => {
+              const serviceRecommendationId = serviceIdFromRulePayload(rule.servicePayload);
+              return {
                 id: rule.id,
                 sourceKind: rule.sourceKind,
                 name: rule.name,
                 priority: rule.priority,
                 isActive: rule.isActive,
-              }))}
-            />
-          )}
+                triggerConditions: rule.triggerConditions,
+                serviceRecommendationId,
+                serviceName: serviceRecommendationId
+                  ? (serviceNameById.get(serviceRecommendationId) ?? null)
+                  : null,
+              };
+            })}
+          />
         </CardContent>
       </Card>
       <div className="flex flex-wrap gap-2">

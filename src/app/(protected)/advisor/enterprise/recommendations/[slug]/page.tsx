@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
+import { listQuestionsForRulePicker } from "@/lib/admin/recommendation-queries";
+import { serviceIdFromRulePayload } from "@/lib/admin/recommendation-rule-ui";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { loadEnterpriseRecommendationRules } from "@/lib/methodology/enterprise-recommendation-queries";
@@ -32,8 +34,12 @@ export default async function EnterpriseRecommendationsPage({
     redirect("/signin");
   }
 
-  const rules = await loadEnterpriseRecommendationRules(enterpriseId, slug);
-  const services = await loadActiveServiceRecommendations();
+  const [rules, services, questionOptions] = await Promise.all([
+    loadEnterpriseRecommendationRules(enterpriseId, slug),
+    loadActiveServiceRecommendations(),
+    listQuestionsForRulePicker(),
+  ]);
+  const serviceNameById = new Map(services.map((service) => [service.id, service.name]));
 
   return (
     <div className="space-y-6">
@@ -56,21 +62,26 @@ export default async function EnterpriseRecommendationsPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {rules.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No rules for this pillar.</p>
-          ) : (
-            <EnterpriseRecommendationRulesEditor
-              pillarSlug={slug}
-              services={services}
-              rules={rules.map((rule) => ({
+          <EnterpriseRecommendationRulesEditor
+            pillarSlug={slug}
+            services={services}
+            questionOptions={questionOptions}
+            rules={rules.map((rule) => {
+              const serviceRecommendationId = serviceIdFromRulePayload(rule.servicePayload);
+              return {
                 id: rule.id,
                 sourceKind: rule.sourceKind,
                 name: rule.name,
                 priority: rule.priority,
                 isActive: rule.isActive,
-              }))}
-            />
-          )}
+                triggerConditions: rule.triggerConditions,
+                serviceRecommendationId,
+                serviceName: serviceRecommendationId
+                  ? (serviceNameById.get(serviceRecommendationId) ?? null)
+                  : null,
+              };
+            })}
+          />
         </CardContent>
       </Card>
       <div className="flex flex-wrap gap-2">

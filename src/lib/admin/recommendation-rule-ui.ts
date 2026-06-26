@@ -149,6 +149,19 @@ export function formatRulePickerQuestionLabel(question: RulePickerQuestion): str
   return question.text.length > 120 ? `${question.text.slice(0, 117)}…` : question.text;
 }
 
+/** Read service recommendation id from advisor/enterprise rule JSON payload. */
+export function serviceIdFromRulePayload(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const row = payload as { serviceRecommendationId?: unknown; serviceId?: unknown };
+  if (typeof row.serviceRecommendationId === "string" && row.serviceRecommendationId) {
+    return row.serviceRecommendationId;
+  }
+  if (typeof row.serviceId === "string" && row.serviceId) {
+    return row.serviceId;
+  }
+  return null;
+}
+
 export function riskLevelsFromValue(
   value: RecommendationCondition & { type: "risk_level" },
 ): RiskLevel[] {
