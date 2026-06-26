@@ -809,6 +809,7 @@ model IntakeResponse {
   id                  String              @id @default(cuid())
   interviewId         String
   questionId          String
+  textResponse        String?
   audioUrl            String?
   audioS3Key          String?
   audioContentType    String?

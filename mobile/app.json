@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "AkiliRisk",
+    "slug": "akilirisk-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "akilirisk",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ebilly.akilirisk",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "AkiliRisk uses Face ID to securely unlock your session.",
+        "NSMicrophoneUsageDescription": "AkiliRisk uses the microphone to record your spoken intake answers.",
+        "associatedDomains": ["applinks:app.akilirisk.com"]
+      }
+    },
+    "android": {
+      "package": "com.ebilly.akilirisk",
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1a2e"
+      },
+      "permissions": ["RECORD_AUDIO", "USE_BIOMETRIC", "USE_FINGERPRINT"],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "app.akilirisk.com", "pathPrefix": "/auth" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-local-authentication",
+      [
+        "expo-av",
+        { "microphonePermission": "AkiliRisk records your spoken intake answers." }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://app.akilirisk.com"
+    }
+  }
+}
