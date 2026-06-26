@@ -8,9 +8,10 @@ export type PlanPricesForUi = Record<
 
 export function emptyPlanPricesForUi(): PlanPricesForUi {
   return {
-    STARTER: { monthly: null, annual: null },
-    GROWTH: { monthly: null, annual: null },
+    ESSENTIALS: { monthly: null, annual: null },
     PROFESSIONAL: { monthly: null, annual: null },
+    BUSINESS: { monthly: null, annual: null },
+    PLATINUM: { monthly: null, annual: null },
     ENTERPRISE: { monthly: null, annual: null },
   };
 }

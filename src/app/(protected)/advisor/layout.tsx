@@ -1,9 +1,9 @@
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import {
-  ADVISOR_SUBSCRIPTION_BILLING_HREF,
   getAdvisorHubAccessForUserId,
 } from "@/lib/advisor/auth";
+import { resolveAdvisorCheckoutBillingHref } from "@/lib/advisor/checkout-billing-redirect";
 import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { canAccessAdvisorBilling } from "@/lib/enterprise/billing-details";
 import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
@@ -45,7 +45,7 @@ export default async function AdvisorLayout({
             ? "/settings?notice=advisor_portal_disabled"
             : hub.blockReason === "suspended"
               ? "/signin?notice=enterprise_suspended"
-              : ADVISOR_SUBSCRIPTION_BILLING_HREF
+              : await resolveAdvisorCheckoutBillingHref(userId)
         );
       }
     }

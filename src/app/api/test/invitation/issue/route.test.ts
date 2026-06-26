@@ -26,7 +26,7 @@ vi.mock("@/lib/subscription/validation", () => ({
     customSubdomainEnabled: false,
     advancedBrandingEnabled: true,
   })),
-  STARTER_SUBSCRIPTION_FEATURES: {},
+  ESSENTIALS_SUBSCRIPTION_FEATURES: {},
 }));
 
 vi.mock("@/lib/audit/audit-log", () => ({

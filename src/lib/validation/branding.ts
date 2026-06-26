@@ -183,7 +183,7 @@ export interface AdvisorBrandingData {
  * Interface for subscription feature access
  */
 export interface SubscriptionFeatures {
-  tier: 'STARTER' | 'GROWTH' | 'PROFESSIONAL' | 'ENTERPRISE';
+  tier: 'ESSENTIALS' | 'PROFESSIONAL' | 'BUSINESS' | 'PLATINUM' | 'ENTERPRISE';
   basicBrandingEnabled: boolean;
   advancedBrandingEnabled: boolean;
   customSubdomainEnabled: boolean;

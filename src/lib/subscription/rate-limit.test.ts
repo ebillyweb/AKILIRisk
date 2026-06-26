@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const dbState = vi.hoisted(() => ({
   advisor: null as null | {
     id: string;
-    user: { subscription: { tier: "STARTER" | "GROWTH" | "PROFESSIONAL" } | null };
+    user: { subscription: { tier: "ESSENTIALS" | "PROFESSIONAL" | "BUSINESS" } | null };
   },
   claimCount: 0,
 }));
@@ -25,7 +25,7 @@ describe("checkRateLimit subdomain_change", () => {
   beforeEach(() => {
     dbState.advisor = {
       id: "adv_1",
-      user: { subscription: { tier: "GROWTH" } },
+      user: { subscription: { tier: "PROFESSIONAL" } },
     };
     dbState.claimCount = 0;
   });

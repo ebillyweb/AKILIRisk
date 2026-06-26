@@ -105,9 +105,10 @@ model User {
 }
 
 enum SubscriptionTier {
-  STARTER
-  GROWTH
+  ESSENTIALS
   PROFESSIONAL
+  BUSINESS
+  PLATINUM
   ENTERPRISE
 }
 

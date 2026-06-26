@@ -56,8 +56,12 @@ export function ClientSignupInfoPanel() {
         <div className="pt-4 border-t border-border">
           <p className="text-xs text-muted-foreground">
             Are you an advisor?{" "}
+            <Link href="/signup/advisor" className="text-primary hover:underline">
+              Create an account
+            </Link>
+            {" · "}
             <Link href="/signin?portal=advisor" className="text-primary hover:underline">
-              Sign in here
+              Sign in
             </Link>
             .
           </p>

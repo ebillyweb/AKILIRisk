@@ -10,7 +10,7 @@ describe("getAdminAdvisorHubDisplay", () => {
       billingEnabled: true,
       subscription: {
         status: "GRACE_PERIOD",
-        tier: "GROWTH",
+        tier: "PROFESSIONAL",
         billingCycle: "MONTHLY",
         currentPeriodEnd: "2026-05-27T00:00:00.000Z",
         cancelAtPeriodEnd: false,

@@ -5,8 +5,10 @@ import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
 import { Button } from "@/components/ui/button";
 import { LandingHero } from "@/components/home/hero/LandingHero";
+import { LandingPricingPreview } from "@/components/home/LandingPricingPreview";
 import { parseHeroAudienceParam } from "@/components/home/hero/hero-audience-persistence";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
+import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
 
 type HomePageProps = {
   searchParams: Promise<{ audience?: string }>;
@@ -20,6 +22,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     session?.user?.id && isAdvisorHubNavRole(session.user.role)
       ? await resolveAdvisorWorkspaceTitleForUserId(session.user.id)
       : undefined;
+  const pricingPreview = await fetchPublicTierPricing();
 
   return (
     <>
@@ -123,6 +126,8 @@ export default async function Home({ searchParams }: HomePageProps) {
               </div>
             </div>
           </section>
+
+          <LandingPricingPreview pricing={pricingPreview} />
 
           <p className="mt-10 text-center text-sm text-muted-foreground">
             Built for the advisory process used by AKILI Risk Intelligence.

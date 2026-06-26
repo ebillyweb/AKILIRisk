@@ -66,7 +66,7 @@ describe("getAdvisorHubAccessForUserId — enterprise subscription", () => {
         cancelAtPeriodEnd: false,
         stripeSubscriptionId: null,
         createdAt: new Date("2026-01-01"),
-        tier: "STARTER",
+        tier: "ESSENTIALS",
         clientLimit: 25,
       },
     });

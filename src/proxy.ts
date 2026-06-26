@@ -191,7 +191,8 @@ export default async function proxy(req: NextRequest) {
   const isWorkspace = isWorkspacePath(pathname);
 
   if (isWorkspace && !isAuthenticated) {
-    const signInHref = buildSignInHref({ callbackUrl: pathname });
+    const callbackUrl = `${pathname}${req.nextUrl.search}`;
+    const signInHref = buildSignInHref({ callbackUrl });
     return NextResponse.redirect(new URL(signInHref, req.url));
   }
 

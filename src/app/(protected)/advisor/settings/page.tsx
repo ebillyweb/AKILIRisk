@@ -7,7 +7,7 @@ import {
 } from "@/lib/advisor/platform-subdomain";
 import {
   getSubscriptionFeatures,
-  STARTER_SUBSCRIPTION_FEATURES,
+  ESSENTIALS_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
@@ -47,7 +47,7 @@ export default async function AdvisorSettingsPage() {
 
   // Subscription flags gate premium tabs; missing Subscription row should not hide the full branding UI
   const features =
-    (await getSubscriptionFeatures(profile.userId)) ?? STARTER_SUBSCRIPTION_FEATURES;
+    (await getSubscriptionFeatures(profile.userId)) ?? ESSENTIALS_SUBSCRIPTION_FEATURES;
 
   const passwordChangeRequired = Boolean(session?.user?.passwordChangeRequired);
   const changePasswordHref = `/change-password?callbackUrl=${encodeURIComponent(ADVISOR_SETTINGS_CALLBACK)}`;
@@ -71,7 +71,7 @@ export default async function AdvisorSettingsPage() {
           description="Branding, profile, security, and practice policies for your firm."
         />
         <Badge
-          variant={features.tier === 'PROFESSIONAL' ? 'default' : 'secondary'}
+          variant={features.tier === 'BUSINESS' ? 'default' : 'secondary'}
           className="w-fit shrink-0 px-3 py-1 text-xs font-semibold uppercase tracking-wide"
         >
           {features.tier} plan

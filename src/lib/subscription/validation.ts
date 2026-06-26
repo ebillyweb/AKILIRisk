@@ -7,19 +7,25 @@ import { LOGO_MAX_BYTES, SubscriptionFeatures } from '@/lib/validation/branding'
  * Temporarily: all paid tiers get the full branding surface (UI, PDF, subdomain).
  */
 const TIER_FEATURES = {
-  STARTER: {
-    basicBrandingEnabled: true,
-    advancedBrandingEnabled: true,
-    customSubdomainEnabled: true,
-    whiteLabel: true,
-  },
-  GROWTH: {
+  ESSENTIALS: {
     basicBrandingEnabled: true,
     advancedBrandingEnabled: true,
     customSubdomainEnabled: true,
     whiteLabel: true,
   },
   PROFESSIONAL: {
+    basicBrandingEnabled: true,
+    advancedBrandingEnabled: true,
+    customSubdomainEnabled: true,
+    whiteLabel: true,
+  },
+  BUSINESS: {
+    basicBrandingEnabled: true,
+    advancedBrandingEnabled: true,
+    customSubdomainEnabled: true,
+    whiteLabel: true,
+  },
+  PLATINUM: {
     basicBrandingEnabled: true,
     advancedBrandingEnabled: true,
     customSubdomainEnabled: true,
@@ -36,16 +42,16 @@ const TIER_FEATURES = {
 /** Used when no billing row exists yet (e.g. local dev) so advisor branding UI still loads.
  *  Do NOT use directly as a fallback in production code paths — see
  *  `missingSubscriptionFallback` below, which fails closed in production. */
-export const STARTER_SUBSCRIPTION_FEATURES: SubscriptionFeatures = {
-  tier: 'STARTER',
-  ...TIER_FEATURES.STARTER,
+export const ESSENTIALS_SUBSCRIPTION_FEATURES: SubscriptionFeatures = {
+  tier: 'ESSENTIALS',
+  ...TIER_FEATURES.ESSENTIALS,
 };
 
 /** Fail-closed entitlement set: every paid feature off. Returned in production
  *  when no Subscription row is found (or `getSubscriptionFeatures` errored).
- *  `tier: 'STARTER'` is just a label so the type checks; every feature is false. */
+ *  `tier: 'ESSENTIALS'` is just a label so the type checks; every feature is false. */
 export const NO_SUBSCRIPTION_FEATURES: SubscriptionFeatures = {
-  tier: 'STARTER',
+  tier: 'ESSENTIALS',
   basicBrandingEnabled: false,
   advancedBrandingEnabled: false,
   customSubdomainEnabled: false,
@@ -59,7 +65,7 @@ export const NO_SUBSCRIPTION_FEATURES: SubscriptionFeatures = {
 function missingSubscriptionFallback(): SubscriptionFeatures {
   return process.env.NODE_ENV === 'production'
     ? NO_SUBSCRIPTION_FEATURES
-    : STARTER_SUBSCRIPTION_FEATURES;
+    : ESSENTIALS_SUBSCRIPTION_FEATURES;
 }
 
 type SubscriptionRow = {
@@ -76,7 +82,7 @@ type SubscriptionRow = {
 export function subscriptionFeaturesFromRow(
   subscription: SubscriptionRow
 ): SubscriptionFeatures {
-  const caps = TIER_FEATURES[subscription.tier] ?? TIER_FEATURES.STARTER;
+  const caps = TIER_FEATURES[subscription.tier] ?? TIER_FEATURES.ESSENTIALS;
   return {
     tier: subscription.tier,
     ...caps,
@@ -216,7 +222,7 @@ export async function requireSubdomainAccess(userId: string): Promise<{
 /**
  * Get feature limits based on subscription tier
  */
-export function getFeatureLimits(tier: 'STARTER' | 'GROWTH' | 'PROFESSIONAL') {
+export function getFeatureLimits(tier: 'ESSENTIALS' | 'PROFESSIONAL' | 'BUSINESS') {
   const professional = {
     logoMaxSize: LOGO_MAX_BYTES,
     customColors: 3,
@@ -236,9 +242,9 @@ export function getFeatureLimits(tier: 'STARTER' | 'GROWTH' | 'PROFESSIONAL') {
   } as const;
 
   const limits = {
-    STARTER: professional,
-    GROWTH: professional,
+    ESSENTIALS: professional,
     PROFESSIONAL: professional,
+    BUSINESS: professional,
   };
 
   return limits[tier];
@@ -261,11 +267,11 @@ export async function checkRateLimit(
   switch (operation) {
     case 'subdomain_change':
       actionType = 'CLAIM_SUBDOMAIN';
-      tierLimits = { STARTER: 3, GROWTH: 3, PROFESSIONAL: 3 };
+      tierLimits = { ESSENTIALS: 3, PROFESSIONAL: 3, BUSINESS: 3 };
       break;
     case 'logo_upload':
       actionType = 'UPLOAD_LOGO';
-      tierLimits = { STARTER: 20, GROWTH: 20, PROFESSIONAL: 20 };
+      tierLimits = { ESSENTIALS: 20, PROFESSIONAL: 20, BUSINESS: 20 };
       break;
     default:
       throw new Error(`Unknown operation: ${operation}`);
@@ -289,7 +295,7 @@ export async function checkRateLimit(
     return { allowed: false, remaining: 0, resetTime: new Date() };
   }
 
-  const tier = advisor.user.subscription?.tier ?? 'STARTER';
+  const tier = advisor.user.subscription?.tier ?? 'ESSENTIALS';
   const limit = tierLimits[tier];
 
   // Count recent actions
@@ -317,16 +323,16 @@ export async function checkRateLimit(
  * Upgrade path suggestions
  */
 export function getUpgradeRecommendations(
-  currentTier: 'STARTER' | 'GROWTH' | 'PROFESSIONAL',
+  currentTier: 'ESSENTIALS' | 'PROFESSIONAL' | 'BUSINESS',
   requestedFeature: string
 ): {
-  suggestedTier: 'GROWTH' | 'PROFESSIONAL' | null;
+  suggestedTier: 'PROFESSIONAL' | 'BUSINESS' | null;
   features: string[];
   message: string;
 } | null {
   const upgradePaths = {
-    STARTER: {
-      GROWTH: {
+    ESSENTIALS: {
+      PROFESSIONAL: {
         features: [
           'Custom brand colors',
           'Custom subdomain',
@@ -335,7 +341,7 @@ export function getUpgradeRecommendations(
         ],
         message: 'Upgrade to Growth to unlock advanced branding features and custom subdomain.'
       },
-      PROFESSIONAL: {
+      BUSINESS: {
         features: [
           'All Growth features',
           'White-label experience',
@@ -346,8 +352,8 @@ export function getUpgradeRecommendations(
         message: 'Upgrade to Professional for complete white-label branding control.'
       }
     },
-    GROWTH: {
-      PROFESSIONAL: {
+    PROFESSIONAL: {
+      BUSINESS: {
         features: [
           'White-label experience',
           'Accent color customization',
@@ -361,32 +367,32 @@ export function getUpgradeRecommendations(
   };
 
   const featureRequirements = {
-    'advancedBrandingEnabled': 'GROWTH',
-    'customSubdomainEnabled': 'GROWTH',
-    'whiteLabel': 'PROFESSIONAL',
+    'advancedBrandingEnabled': 'PROFESSIONAL',
+    'customSubdomainEnabled': 'PROFESSIONAL',
+    'whiteLabel': 'BUSINESS',
   };
 
   const requiredTier = featureRequirements[requestedFeature as keyof typeof featureRequirements];
   if (!requiredTier) return null;
 
-  if (currentTier === 'STARTER' && requiredTier === 'GROWTH') {
+  if (currentTier === 'ESSENTIALS' && requiredTier === 'PROFESSIONAL') {
     return {
-      suggestedTier: 'GROWTH',
-      ...upgradePaths.STARTER.GROWTH
+      suggestedTier: 'PROFESSIONAL',
+      ...upgradePaths.ESSENTIALS.PROFESSIONAL
     };
   }
 
-  if (currentTier === 'STARTER' && requiredTier === 'PROFESSIONAL') {
+  if (currentTier === 'ESSENTIALS' && requiredTier === 'BUSINESS') {
     return {
-      suggestedTier: 'PROFESSIONAL',
-      ...upgradePaths.STARTER.PROFESSIONAL
+      suggestedTier: 'BUSINESS',
+      ...upgradePaths.ESSENTIALS.BUSINESS
     };
   }
 
-  if (currentTier === 'GROWTH' && requiredTier === 'PROFESSIONAL') {
+  if (currentTier === 'PROFESSIONAL' && requiredTier === 'BUSINESS') {
     return {
-      suggestedTier: 'PROFESSIONAL',
-      ...upgradePaths.GROWTH.PROFESSIONAL
+      suggestedTier: 'BUSINESS',
+      ...upgradePaths.PROFESSIONAL.BUSINESS
     };
   }
 

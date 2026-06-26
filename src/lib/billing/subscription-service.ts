@@ -67,7 +67,7 @@ export async function countActiveClientsForAdvisor(
  * until the advisor completes Stripe Checkout (admin portal access still requires a qualifying subscription).
  */
 function defaultLimitWhenMissingSubscription(): number {
-  return TIER_LIMITS.STARTER;
+  return TIER_LIMITS.ESSENTIALS;
 }
 
 export async function checkClientLimitForAdvisorProfile(
@@ -264,9 +264,10 @@ function tierFromStripeSubscription(
   if (
     metaTier &&
     metaCycle &&
-    (metaTier === "STARTER" ||
-      metaTier === "GROWTH" ||
+    (metaTier === "ESSENTIALS" ||
       metaTier === "PROFESSIONAL" ||
+      metaTier === "BUSINESS" ||
+      metaTier === "PLATINUM" ||
       metaTier === "ENTERPRISE") &&
     (metaCycle === "MONTHLY" || metaCycle === "ANNUAL")
   ) {
@@ -287,7 +288,7 @@ function tierFromStripeSubscription(
     );
   }
   return {
-    tier: existingTier ?? "STARTER",
+    tier: existingTier ?? "ESSENTIALS",
     billingCycle: "MONTHLY",
     priceId,
   };
@@ -499,11 +500,10 @@ export async function upsertEnterpriseSubscriptionFromStripe(
   }
 
   const existing = await db.subscription.findUnique({ where: { enterpriseId } });
-  const { billingCycle, priceId } = tierFromStripeSubscription(
+  const { tier, billingCycle, priceId } = tierFromStripeSubscription(
     sub,
-    existing?.tier ?? "ENTERPRISE"
+    existing?.tier ?? "ESSENTIALS"
   );
-  const tier: SubscriptionTier = "ENTERPRISE";
   const clientLimit = enterprise.clientLimit;
   const status = mapStripeSubscriptionStatus(sub.status);
   const currentPeriodEnd = currentPeriodEndFromStripeSubscription(sub);

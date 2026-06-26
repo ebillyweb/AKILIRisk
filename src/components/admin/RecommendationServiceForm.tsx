@@ -166,7 +166,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             {errors.category ? <p className="mt-1 text-xs text-destructive">{errors.category}</p> : null}
           </div>
           <SelectField
-            label="Tier (BRD §4.4)"
+            label="Tier"
             name="tier"
             helpKey="service-tier"
             options={[...TIER_VALUES]}

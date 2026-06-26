@@ -4,7 +4,11 @@
  * `user-email.ts` wraps this with `import "server-only"` for app code. Do not
  * add `server-only` here: `npx tsx scripts/…` must be able to import this file.
  */
-import { decryptDeterministic, encryptDeterministic } from "@/lib/encryption";
+import {
+  decryptDeterministic,
+  encryptDeterministic,
+  isCiphertext,
+} from "@/lib/encryption";
 
 /** The deterministic-encryption fieldKey reserved for `User.email`. */
 export const USER_EMAIL_FIELD_KEY = "User.email";
@@ -53,4 +57,22 @@ export function userEmailCiphertext(email: string): string {
  *  hasn't been re-encrypted yet. */
 export function decryptUserEmail(ciphertext: string): string {
   return decryptDeterministic(ciphertext);
+}
+
+/** Tamper-resilient decrypt for list/report surfaces. Returns null + warns
+ *  when ciphertext was encrypted with a different ENCRYPTION_KEY. */
+export function safeDecryptUserEmail(
+  value: string | null | undefined,
+  context: { rowId: string }
+): string | null {
+  if (value == null || value === "") return null;
+  if (!isCiphertext(value)) return value;
+  try {
+    return decryptUserEmail(value);
+  } catch {
+    console.warn(
+      `[user-email] decrypt failed — User.email rowId=${context.rowId}`
+    );
+    return null;
+  }
 }

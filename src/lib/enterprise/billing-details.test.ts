@@ -105,6 +105,7 @@ describe("getEnterpriseBillingSummary", () => {
     });
     prismaSpies.subscription.findUnique.mockResolvedValue({
       status: "ACTIVE",
+      tier: "ENTERPRISE",
       billingCycle: "ANNUAL",
       currentPeriodEnd: new Date("2027-06-01"),
       cancelAtPeriodEnd: false,

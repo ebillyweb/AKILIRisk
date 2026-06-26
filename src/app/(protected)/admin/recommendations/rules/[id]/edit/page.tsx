@@ -46,7 +46,7 @@ export default async function EditRecommendationRulePage({
           href={`/admin/audit-log/entity/RecommendationRule/${id}`}
           className="text-sm text-muted-foreground hover:text-foreground hover:underline"
         >
-          View history (BRD §7.2)
+          View change history
         </Link>
       </div>
       <RecommendationRuleForm

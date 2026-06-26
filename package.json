@@ -47,6 +47,8 @@
     "env:vercel": "npx vercel env pull .env.local",
     "env:vercel:preview": "npx vercel env pull .env.local --environment preview",
     "env:vercel:production": "npx vercel env pull .env.local --environment production",
+    "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+    "env:stripe:provision-tiers": "node scripts/provision-stripe-tier-products.mjs",
     "env:vercel:sync-stripe": "node scripts/sync-vercel-stripe-env.mjs",
     "env:vercel:sync-stripe-live-production": "node scripts/sync-vercel-stripe-live-production.mjs"
   },

@@ -170,6 +170,11 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("Stripe webhook signature verification failed:", err);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(
+        "[stripe-webhook] Local dev: STRIPE_WEBHOOK_SECRET must match the whsec_… printed by `stripe listen` (not the Dashboard endpoint secret). Restart `npm run dev` after updating .env.local."
+      );
+    }
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -383,6 +388,10 @@ export async function POST(request: Request) {
       processedAt: new Date(),
     },
   });
+
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[stripe-webhook] ${event.type} ${event.id} → ${outcome}`);
+  }
 
   return NextResponse.json({ received: true });
 }

@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import {
-  ADVISOR_SUBSCRIPTION_BILLING_HREF,
   getAdvisorHubAccessForUserId,
 } from "@/lib/advisor/auth";
+import { resolveAdvisorCheckoutBillingHref } from "@/lib/advisor/checkout-billing-redirect";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { prisma } from "@/lib/db";
 import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
@@ -64,7 +64,7 @@ export default async function DashboardPage({
       redirect(
         hub.blockReason === "disabled"
           ? "/settings?notice=advisor_portal_disabled"
-          : ADVISOR_SUBSCRIPTION_BILLING_HREF
+          : await resolveAdvisorCheckoutBillingHref(session.user.id)
       );
     }
     redirect(`/advisor${errorSuffix}`);

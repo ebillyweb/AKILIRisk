@@ -75,6 +75,13 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     },
     helperLinks: [
       {
+        id: "pricing",
+        content: "link",
+        text: "Compare plans",
+        linkLabel: "View pricing",
+        href: "/pricing",
+      },
+      {
         id: "platform-admin",
         content: "link",
         text: "Platform administrator?",

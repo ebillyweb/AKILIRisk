@@ -5,7 +5,7 @@ import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
-import { decryptUserEmail, withDecryptedEmail } from "@/lib/auth/user-email";
+import { safeDecryptUserEmail, withDecryptedEmail } from "@/lib/auth/user-email";
 
 export type ClientsAdminScope = "active" | "all";
 
@@ -149,7 +149,7 @@ export async function getClientsForAdmin(opts?: {
           advisor: {
             select: {
               id: true,
-              user: { select: { emailCiphertext: true, name: true } },
+              user: { select: { id: true, emailCiphertext: true, name: true } },
               firmName: true,
             },
           },
@@ -183,7 +183,7 @@ export async function getClientsForAdmin(opts?: {
         : null;
     return {
       ...u,
-      email: decryptUserEmail(u.emailCiphertext),
+      email: safeDecryptUserEmail(u.emailCiphertext, { rowId: u.id }),
       latestScoredAssessmentId,
       clientAssignments: u.clientAssignments.map((a) => ({
         ...a,
@@ -191,7 +191,9 @@ export async function getClientsForAdmin(opts?: {
           ...a.advisor,
           user: {
             ...a.advisor.user,
-            email: decryptUserEmail(a.advisor.user.emailCiphertext),
+            email: safeDecryptUserEmail(a.advisor.user.emailCiphertext, {
+              rowId: a.advisor.user.id,
+            }),
           },
         },
       })),
@@ -232,7 +234,12 @@ export async function getIntakeForAdmin() {
         select: {
           id: true,
           status: true,
-          advisor: { select: { user: { select: { emailCiphertext: true } } } },
+          advisor: {
+            select: {
+              id: true,
+              user: { select: { emailCiphertext: true } },
+            },
+          },
         },
       },
       _count: { select: { responses: true } },
@@ -241,7 +248,10 @@ export async function getIntakeForAdmin() {
   });
   const interviews = interviewsRaw.map((i) => ({
     ...i,
-    user: { ...i.user, email: decryptUserEmail(i.user.emailCiphertext) },
+    user: {
+      ...i.user,
+      email: safeDecryptUserEmail(i.user.emailCiphertext, { rowId: i.user.id }),
+    },
     approval: i.approval
       ? {
           ...i.approval,
@@ -249,7 +259,10 @@ export async function getIntakeForAdmin() {
             ...i.approval.advisor,
             user: {
               ...i.approval.advisor.user,
-              email: decryptUserEmail(i.approval.advisor.user.emailCiphertext),
+              email: safeDecryptUserEmail(
+                i.approval.advisor.user.emailCiphertext,
+                { rowId: i.approval.advisor.id }
+              ),
             },
           },
         }
@@ -288,7 +301,10 @@ export async function getAssessmentsForAdmin() {
   });
   const assessments = assessmentsRaw.map((a) => ({
     ...a,
-    user: { ...a.user, email: decryptUserEmail(a.user.emailCiphertext) },
+    user: {
+      ...a.user,
+      email: safeDecryptUserEmail(a.user.emailCiphertext, { rowId: a.user.id }),
+    },
   }));
 
   void writeAudit({
@@ -312,7 +328,7 @@ export async function getGovernanceReviewLeadsForAdmin() {
         select: {
           id: true,
           firmName: true,
-          user: { select: { emailCiphertext: true, name: true } },
+          user: { select: { id: true, emailCiphertext: true, name: true } },
         },
       },
     },
@@ -324,7 +340,9 @@ export async function getGovernanceReviewLeadsForAdmin() {
           ...l.assignedAdvisor,
           user: {
             ...l.assignedAdvisor.user,
-            email: decryptUserEmail(l.assignedAdvisor.user.emailCiphertext),
+            email: safeDecryptUserEmail(l.assignedAdvisor.user.emailCiphertext, {
+              rowId: l.assignedAdvisor.id,
+            }),
           },
         }
       : null,
@@ -339,13 +357,16 @@ export async function getAdvisorProfilesForLeadAssignment() {
     select: {
       id: true,
       firmName: true,
-      user: { select: { emailCiphertext: true, name: true } },
+      user: { select: { id: true, emailCiphertext: true, name: true } },
     },
     orderBy: { id: "asc" },
   });
   return profiles.map((p) => ({
     ...p,
-    user: { ...p.user, email: decryptUserEmail(p.user.emailCiphertext) },
+    user: {
+      ...p.user,
+      email: safeDecryptUserEmail(p.user.emailCiphertext, { rowId: p.user.id }),
+    },
   }));
 }
 
@@ -409,7 +430,9 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
       subscriptionStatus: enterprise.subscription?.status ?? null,
       ownerName: owner?.name ?? null,
-      ownerEmail: owner ? decryptUserEmail(owner.emailCiphertext) : null,
+      ownerEmail: owner
+        ? safeDecryptUserEmail(owner.emailCiphertext, { rowId: owner.id })
+        : null,
     };
   });
 }
@@ -481,7 +504,9 @@ export async function getEnterpriseDetailForAdmin(
     seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
     subscriptionStatus: enterprise.subscription?.status ?? null,
     ownerName: owner?.name ?? null,
-    ownerEmail: owner ? decryptUserEmail(owner.emailCiphertext) : null,
+    ownerEmail: owner
+      ? safeDecryptUserEmail(owner.emailCiphertext, { rowId: owner.id })
+      : null,
     ownerUserId: owner?.id ?? null,
   };
 }
@@ -511,7 +536,7 @@ export async function getAdvisorsEligibleForEnterpriseOwner() {
     const { emailCiphertext, advisorProfile, ...rest } = advisor;
     return {
       ...rest,
-      email: decryptUserEmail(emailCiphertext),
+      email: safeDecryptUserEmail(emailCiphertext, { rowId: advisor.id }),
       advisorProfile,
     };
   });

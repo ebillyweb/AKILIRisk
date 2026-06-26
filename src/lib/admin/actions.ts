@@ -380,9 +380,9 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
       const sub = await tx.subscription.create({
         data: {
           userId: u.id,
-          tier: "GROWTH",
+          tier: "PROFESSIONAL",
           status: "GRACE_PERIOD",
-          clientLimit: TIER_LIMITS.GROWTH,
+          clientLimit: TIER_LIMITS.PROFESSIONAL,
           billingCycle: "MONTHLY",
           currentPeriodEnd: gracePeriodEnd,
         },
@@ -392,7 +392,7 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
         data: {
           subscriptionId: sub.id,
           action: "admin_new_advisor_grace",
-          newTier: "GROWTH",
+          newTier: "PROFESSIONAL",
           metadata: {
             gracePeriodEnd: gracePeriodEnd.toISOString(),
             paidSignupDeadline: paidSignupDeadline.toISOString(),

@@ -176,6 +176,8 @@ export const AUDIT_ACTIONS = {
    *  "expired" | "used" | "not_found" | "user_inactive" |
    *  "non_client_role_blocked". */
   AUTH_MAGIC_LINK_FAILURE: "auth.magic_link_failure",
+  /** Self-serve advisor signup: email verification link consumed. */
+  AUTH_ADVISOR_EMAIL_VERIFIED: "auth.advisor_email_verified",
   /** Round-11 commit 4 (BRD §5.1.AUTH): advisor reassigns the email on an
    *  assigned client account. beforeData.email + afterData.email capture
    *  the change; the audit redactor hashes both via the email-key rule. */

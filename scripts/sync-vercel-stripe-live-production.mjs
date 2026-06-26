@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 1) Calls Stripe CLI (`stripe prices list --live`) to discover live Price IDs
- *    for products named Starter, Growth, and Professional (monthly + annual).
+ *    for products named Essentials, Professional, Business, and Platinum (monthly + annual).
  * 2) Upserts those plus live API keys to Vercel **Production** only.
  *
  * Prerequisites:
@@ -28,9 +28,13 @@ import path from "node:path";
 import process from "node:process";
 
 const TIER_BY_PRODUCT = {
-  starter: "STARTER",
-  growth: "GROWTH",
+  essentials: "ESSENTIALS",
   professional: "PROFESSIONAL",
+  business: "BUSINESS",
+  platinum: "PLATINUM",
+  // Legacy product names during migration
+  starter: "ESSENTIALS",
+  growth: "PROFESSIONAL",
 };
 
 function usage() {
@@ -220,19 +224,21 @@ const listJson = fetchLivePricesJson(skLive);
 const priceEnv = pricesToStripePriceEnv(listJson);
 
 const requiredKeys = [
-  "STRIPE_PRICE_STARTER_MONTHLY",
-  "STRIPE_PRICE_STARTER_ANNUAL",
-  "STRIPE_PRICE_GROWTH_MONTHLY",
-  "STRIPE_PRICE_GROWTH_ANNUAL",
+  "STRIPE_PRICE_ESSENTIALS_MONTHLY",
+  "STRIPE_PRICE_ESSENTIALS_ANNUAL",
   "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
   "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
+  "STRIPE_PRICE_BUSINESS_MONTHLY",
+  "STRIPE_PRICE_BUSINESS_ANNUAL",
+  "STRIPE_PRICE_PLATINUM_MONTHLY",
+  "STRIPE_PRICE_PLATINUM_ANNUAL",
 ];
 const missing = requiredKeys.filter((k) => !priceEnv[k]);
 if (missing.length) {
   console.error(
     "Could not map live prices for:",
     missing.join(", "),
-    "\nEnsure Stripe live products are named Starter, Growth, and Professional (check Dashboard)."
+    "\nEnsure Stripe live products are named Essentials, Professional, Business, and Platinum (check Dashboard)."
   );
   process.exit(1);
 }

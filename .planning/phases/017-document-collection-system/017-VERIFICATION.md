@@ -29,7 +29,7 @@ score: 16/16 must-haves verified
 | 9   | Upload progress and success/error feedback is shown to the client | ✓ VERIFIED | DocumentUpload has requesting-url, uploading, confirming, success, error states |
 | 10  | Uploaded documents show file name, size, and upload date | ✓ VERIFIED | DocumentList displays fileName, fileSize (formatted), fulfilledAt |
 | 11  | PDF governance reports display advisor firm name and logo instead of hardcoded Belvedere branding | ✓ VERIFIED | ReportCover and AssessmentReport accept advisorBranding prop |
-| 12  | Advisors without branding configured still get a clean default report | ✓ VERIFIED | Fallback to "Belvedere Risk Management" when advisorBranding undefined |
+| 12  | Advisors without branding configured still get a clean default report | ✓ VERIFIED | Fallback to "AKILI Risk Management" when advisorBranding undefined |
 | 13  | Clients with overdue unfulfilled documents receive reminder emails | ✓ VERIFIED | processDocumentReminders queries unfulfilled documents >3 days old |
 | 14  | Reminder emails include advisor branding and list of missing documents | ✓ VERIFIED | renderDocumentReminderTemplate includes advisor logo, firmName, document list |
 | 15  | Reminders are not sent more than once per 7-day period per client | ✓ VERIFIED | Query filters lastReminderSentAt < 7 days ago or null |

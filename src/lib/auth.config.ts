@@ -80,6 +80,7 @@ export default {
             role: true,
             deletedAt: true,
             emailCiphertext: true,
+            emailVerified: true,
             name: true,
             image: true,
           },
@@ -172,6 +173,21 @@ export default {
             entityType: "User",
             entityId: user.id,
             metadata: { reason: "client_role_blocked" },
+          });
+          return null;
+        }
+
+        if (user.role === "ADVISOR" && !user.emailVerified) {
+          console.warn("Credentials authorize failed: advisor email not verified", {
+            userId: user.id,
+            emailHash: hashedEmail,
+          });
+          await writeAudit({
+            actor: { userId: user.id, role: user.role, emailCiphertext: user.emailCiphertext },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: user.id,
+            metadata: { reason: "email_not_verified" },
           });
           return null;
         }
@@ -374,6 +390,84 @@ export default {
         return {
           id: user.id,
           email: validation.email,
+          name: user.name,
+          image: user.image,
+        };
+      },
+    }),
+    Credentials({
+      id: "advisor-email-verify",
+      name: "Advisor Email Verification",
+      credentials: { token: { label: "Token", type: "text" } },
+      async authorize(credentials) {
+        const tokenInput = credentials?.token;
+        if (typeof tokenInput !== "string" || tokenInput.length === 0) {
+          await writeAudit({
+            actor: { userId: null, email: null },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: "advisor_email_verify_not_found" },
+          });
+          return null;
+        }
+
+        const { consumeAdvisorEmailVerificationToken } = await import(
+          "@/lib/auth/advisor-email-verification"
+        );
+        const consumption = await consumeAdvisorEmailVerificationToken(tokenInput);
+        if (!consumption.success) {
+          await writeAudit({
+            actor: { userId: null, email: null },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: `advisor_email_verify_${consumption.reason}` },
+          });
+          return null;
+        }
+
+        const user = await findUserByEmail(consumption.email, {
+          where: { deletedAt: null, role: "ADVISOR" },
+          select: {
+            id: true,
+            emailCiphertext: true,
+            emailVerified: true,
+            name: true,
+            image: true,
+            role: true,
+          },
+        });
+
+        if (!user) {
+          await writeAudit({
+            actor: { userId: null, email: consumption.email },
+            action: AUDIT_ACTIONS.AUTH_SIGNIN_FAILURE,
+            entityType: "User",
+            entityId: null,
+            metadata: { reason: "advisor_email_verify_user_missing" },
+          });
+          return null;
+        }
+
+        if (!user.emailVerified) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { emailVerified: new Date() },
+          });
+        }
+
+        await writeAudit({
+          actor: { userId: user.id, role: user.role, emailCiphertext: user.emailCiphertext },
+          action: AUDIT_ACTIONS.AUTH_ADVISOR_EMAIL_VERIFIED,
+          entityType: "User",
+          entityId: user.id,
+          metadata: { source: "self_serve_signup" },
+        });
+
+        return {
+          id: user.id,
+          email: consumption.email,
           name: user.name,
           image: user.image,
         };

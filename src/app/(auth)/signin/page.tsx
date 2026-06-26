@@ -65,7 +65,9 @@ function SignInForm() {
 
       if (result?.error || result?.ok === false) {
         setError(
-          "Invalid email or password. Platform administrators and advisors must sign in here with a password — client accounts use an email link instead."
+          isAdvisorPortal
+            ? "Invalid email or password, or your email may not be confirmed yet. Check your inbox for the confirmation link, or create an account if you're new."
+            : "Invalid email or password. Platform administrators and advisors must sign in here with a password — client accounts use an email link instead."
         );
         setIsLoading(false);
         return;
@@ -165,6 +167,21 @@ function SignInForm() {
             Sign in with an email link
           </Link>
         </p>
+        {isAdvisorPortal ? (
+          <p className="text-center text-sm text-muted-foreground">
+            New advisor?{" "}
+            <Link href="/signup/advisor" className="font-semibold text-foreground hover:underline">
+              Create an account
+            </Link>
+            {" · "}
+            <Link
+              href="/signup/advisor/check-email"
+              className="font-semibold text-foreground hover:underline"
+            >
+              Resend confirmation
+            </Link>
+          </p>
+        ) : null}
       </form>
     </AuthPanel>
   );

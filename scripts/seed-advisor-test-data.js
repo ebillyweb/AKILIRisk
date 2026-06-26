@@ -540,7 +540,7 @@ async function main() {
   await prisma.subscription.upsert({
     where: { userId: advisor2User.id },
     update: {
-      tier: 'STARTER',
+      tier: 'ESSENTIALS',
       status: 'GRACE_PERIOD',
       clientLimit: 10,
       billingCycle: 'MONTHLY',
@@ -549,7 +549,7 @@ async function main() {
     },
     create: {
       userId: advisor2User.id,
-      tier: 'STARTER',
+      tier: 'ESSENTIALS',
       status: 'GRACE_PERIOD',
       clientLimit: 10,
       billingCycle: 'MONTHLY',

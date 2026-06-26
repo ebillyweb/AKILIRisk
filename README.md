@@ -26,6 +26,8 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 Use these only in local/development. Ensure the app and database are running, then run the seed scripts as needed.
 
+**Troubleshooting local auth, encryption, or env sync:** [docs/LOCAL_DEVELOPMENT_TROUBLESHOOTING.md](docs/LOCAL_DEVELOPMENT_TROUBLESHOOTING.md)
+
 ### Seed scripts (run in order if starting fresh)
 
 | Script | Purpose |

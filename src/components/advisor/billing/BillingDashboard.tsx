@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Download, ExternalLink, AlertCircle } from "lucide-react";
 
@@ -13,6 +14,12 @@ import {
 } from "@/lib/actions/billing";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { TIER_LIMITS } from "@/lib/billing/constants";
+import {
+  SELF_SERVE_TIERS,
+  TIER_DISPLAY_NAME,
+  TIER_RANK,
+  type SelfServeTier,
+} from "@/lib/billing/tier-catalog";
 import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
 import type { EnterpriseBillingSummary } from "@/lib/enterprise/billing-details";
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
@@ -30,21 +37,9 @@ import {
 } from "@/components/ui/card";
 import { EnterpriseSalesContactDialog } from "@/components/advisor/billing/EnterpriseSalesContactDialog";
 
-const TIER_ORDER: SubscriptionTier[] = ["STARTER", "GROWTH", "PROFESSIONAL"];
+const TIER_ORDER = SELF_SERVE_TIERS;
 
-const TIER_RANK: Record<SubscriptionTier, number> = {
-  STARTER: 0,
-  GROWTH: 1,
-  PROFESSIONAL: 2,
-  ENTERPRISE: 3,
-};
-
-const TIER_LABEL: Record<SubscriptionTier, string> = {
-  STARTER: "Starter",
-  GROWTH: "Growth",
-  PROFESSIONAL: "Professional",
-  ENTERPRISE: "Enterprise",
-};
+const TIER_LABEL = TIER_DISPLAY_NAME;
 
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, {
@@ -273,7 +268,7 @@ function PlanSelector({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <CardContent className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {TIER_ORDER.map((tier) => {
           const hasCommitted = committedPlan !== null;
           const isSameTier = hasCommitted && tier === committedPlan!.tier;
@@ -540,6 +535,12 @@ export function EnterpriseBillingDashboard({
   const periodEnd = new Date(enterprise.currentPeriodEnd);
   const seatOverage = enterprise.seatOverage > 0;
   const isOwner = enterprise.role === "OWNER";
+  const needsCardCheckout =
+    isOwner &&
+    enterprise.paymentMethod === "CARD" &&
+    !enterprise.stripeSubscriptionId?.trim();
+  const planLabel =
+    TIER_DISPLAY_NAME[enterprise.tier] ?? enterprise.tier.replace(/_/g, " ");
 
   const onPortal = useCallback(() => {
     setPortalError(null);
@@ -575,24 +576,32 @@ export function EnterpriseBillingDashboard({
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">
-            {enterprise.enterpriseName} · Enterprise plan (sales-assisted)
+            {enterprise.enterpriseName} · {planLabel} module tier
           </p>
           <p className="max-w-prose text-sm text-muted-foreground">
-            Plan changes require contacting your account manager. Usage below reflects firm-wide
-            limits and your assigned clients.
+            {needsCardCheckout
+              ? "Your agreement is in place. Choose a module tier and complete checkout to activate firm billing."
+              : "Firm-wide usage, seats, and payment method. Plan changes after activation require your account manager."}
           </p>
         </div>
-        {enterprise.canManageStripePortal ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pending}
-            onClick={onPortal}
-            className="shrink-0"
-          >
-            Manage billing & receipts
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {needsCardCheckout ? (
+            <Button asChild className="shrink-0">
+              <Link href="/advisor/enterprise/pricing">Choose plan & subscribe</Link>
+            </Button>
+          ) : null}
+          {enterprise.canManageStripePortal ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onPortal}
+              className="shrink-0"
+            >
+              Manage billing & receipts
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {portalError ? (
@@ -616,7 +625,7 @@ export function EnterpriseBillingDashboard({
         <CardContent className="space-y-2 text-sm">
           <div className="flex flex-wrap justify-between gap-2">
             <span className="text-muted-foreground">Plan</span>
-            <span className="font-medium">Enterprise</span>
+            <span className="font-medium">{planLabel}</span>
           </div>
           <div className="flex flex-wrap justify-between gap-2">
             <span className="text-muted-foreground">Status</span>
@@ -701,6 +710,7 @@ export function BillingDashboard({
   billingEnabled,
   planPrices,
   debugBilling = isAdvisorBillingDebugEnabled(),
+  checkoutPlanIntent = null,
 }: {
   initialSubscription: SubscriptionDetailsDTO | null;
   initialInvoices: BillingInvoiceDTO[];
@@ -710,9 +720,13 @@ export function BillingDashboard({
   planPrices: PlanPricesForUi;
   /** Prefer pass-through from server page; falls back to env gate when omitted (e.g. Storybook). */
   debugBilling?: boolean;
+  checkoutPlanIntent?: { tier: SelfServeTier; billingCycle: BillingCycle } | null;
 }) {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
+    if (checkoutPlanIntent?.billingCycle) {
+      return checkoutPlanIntent.billingCycle;
+    }
     const sub = initialSubscription;
     if (sub && sub.status !== "NONE" && sub.status !== "CANCELLED") {
       return sub.billingCycle;
@@ -725,9 +739,9 @@ export function BillingDashboard({
   const data =
     initialSubscription ??
     ({
-      tier: "STARTER",
+      tier: "ESSENTIALS",
       status: "NONE",
-      clientLimit: TIER_LIMITS.STARTER,
+      clientLimit: TIER_LIMITS.ESSENTIALS,
       billingCycle: "MONTHLY",
       currentPeriodEnd: new Date().toISOString(),
       cancelAtPeriodEnd: false,
@@ -857,6 +871,19 @@ export function BillingDashboard({
     },
     [billingCycle, changePlanMode, router]
   );
+
+  const checkoutIntentStarted = useRef(false);
+
+  useEffect(() => {
+    if (!checkoutPlanIntent || !billingEnabled || checkoutIntentStarted.current) return;
+    checkoutIntentStarted.current = true;
+    if (changePlanMode === "stripe_update") {
+      router.replace("/advisor/billing", { scroll: false });
+      return;
+    }
+    onSelectPlan(checkoutPlanIntent.tier);
+    router.replace("/advisor/billing", { scroll: false });
+  }, [billingEnabled, changePlanMode, checkoutPlanIntent, onSelectPlan, router]);
 
   const onPortal = useCallback(() => {
     setCheckoutError(null);

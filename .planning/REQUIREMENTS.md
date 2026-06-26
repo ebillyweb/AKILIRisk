@@ -1,4 +1,4 @@
-# Requirements: Belvedere Risk Management v1.5
+# Requirements: AKILI Risk Management v1.5
 
 **Defined:** 2026-03-19
 **Core Value:** Prevent family wealth from becoming family conflict through systematic risk assessment and actionable governance recommendations

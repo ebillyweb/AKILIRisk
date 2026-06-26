@@ -2,7 +2,7 @@ import { clientPortalBrandingDisplayTitle } from '@/lib/client/client-portal-bra
 import { prisma } from '@/lib/db';
 import { AdvisorBrandingData } from '@/lib/validation/branding';
 import {
-  STARTER_SUBSCRIPTION_FEATURES,
+  ESSENTIALS_SUBSCRIPTION_FEATURES,
   subscriptionFeaturesFromRow,
 } from '@/lib/subscription/validation';
 
@@ -51,7 +51,7 @@ export async function getAdvisorBrandingForPDF(advisorId: string): Promise<Advis
     const subscription = advisor.user.subscription;
     const subFeatures = subscription
       ? subscriptionFeaturesFromRow(subscription)
-      : STARTER_SUBSCRIPTION_FEATURES;
+      : ESSENTIALS_SUBSCRIPTION_FEATURES;
 
     if (!subFeatures.basicBrandingEnabled) {
       return null;

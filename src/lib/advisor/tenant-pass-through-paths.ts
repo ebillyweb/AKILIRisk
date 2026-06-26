@@ -10,6 +10,7 @@ export const TENANT_PUBLIC_PREFIXES = [
   "/reset-password",
   "/request-review",
   "/start",
+  "/pricing",
   "/terms",
   "/privacy",
   "/about",

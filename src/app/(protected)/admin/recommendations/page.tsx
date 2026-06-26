@@ -54,10 +54,10 @@ export default async function AdminRecommendationsPage({
         <div>
           <h1 className="text-2xl font-bold">Recommendations</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            BRD §4.4: tiered service recommendations + matching rules. Rules
-            include the family-governance UI bank (dma-*, env-*, phys-*, …)
-            and legacy import IDs. Catalog entries surface when weighted
-            conditions exceed 50% on a scored assessment.
+            Manage the services clients may see in their action plan and the rules
+            that decide when each one applies. Use the Catalog tab for offerings;
+            use Rules to link services to assessment scores, risk levels, and
+            intake answers.
           </p>
         </div>
         <AdminRecommendationsTourButton view={view} />

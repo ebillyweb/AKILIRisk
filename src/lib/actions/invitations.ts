@@ -17,7 +17,7 @@ import { resolveInvitationEmailTheme } from "@/lib/invitations/invitation-email-
 import { sendInvitationEmail } from "@/lib/invitations/send-invitation-email";
 import {
   getSubscriptionFeatures,
-  STARTER_SUBSCRIPTION_FEATURES,
+  ESSENTIALS_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
 import {
   createInvitationSchema,
@@ -116,7 +116,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
 
     const features =
       (await getSubscriptionFeatures(profile.userId)) ??
-      STARTER_SUBSCRIPTION_FEATURES;
+      ESSENTIALS_SUBSCRIPTION_FEATURES;
     const emailTheme = invitationEmailThemeForProfile(profile, features);
 
     const invitation = await createAdvisorInvitation(profile.id, invitationInput, {
@@ -218,7 +218,7 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
     // Resend the invitation (this validates ownership and limits)
     const features =
       (await getSubscriptionFeatures(profile.userId)) ??
-      STARTER_SUBSCRIPTION_FEATURES;
+      ESSENTIALS_SUBSCRIPTION_FEATURES;
 
     const invitation = await resendInvitation(profile.id, invitationId, {
       subscriptionFeatures: {

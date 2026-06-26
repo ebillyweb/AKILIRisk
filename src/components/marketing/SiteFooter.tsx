@@ -25,6 +25,12 @@ export function SiteFooter({ className }: SiteFooterProps) {
           aria-label="Footer"
         >
           <Link
+            href="/pricing"
+            className="font-semibold text-foreground underline-offset-4 hover:underline"
+          >
+            Pricing
+          </Link>
+          <Link
             href="/about"
             className="font-semibold text-foreground underline-offset-4 hover:underline"
           >

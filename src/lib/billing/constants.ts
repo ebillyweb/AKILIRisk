@@ -13,8 +13,9 @@ import { ENTERPRISE_DEFAULT_CLIENT_LIMIT } from "@/lib/enterprise/constants";
  * `20260504200000_tier_limit_bump_brd_alignment` for the existing-rows update.
  */
 export const TIER_LIMITS: Record<SubscriptionTier, number> = {
-  STARTER: 25,
-  GROWTH: 50,
-  PROFESSIONAL: 100,
+  ESSENTIALS: 25,
+  PROFESSIONAL: 50,
+  BUSINESS: 100,
+  PLATINUM: 150,
   ENTERPRISE: ENTERPRISE_DEFAULT_CLIENT_LIMIT,
 };

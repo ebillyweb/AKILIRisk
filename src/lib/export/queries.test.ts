@@ -45,8 +45,8 @@ const { dataset, matches } = vi.hoisted(() => {
       { id: "cpB2", userId: "bB2", phone: "555-B2" },
     ],
     subscription: [
-      { id: "sub-uA", userId: "uA", tier: "PROFESSIONAL" },
-      { id: "sub-uB", userId: "uB", tier: "PROFESSIONAL" },
+      { id: "sub-uA", userId: "uA", tier: "BUSINESS" },
+      { id: "sub-uB", userId: "uB", tier: "BUSINESS" },
     ],
     clientAdvisorAssignment: [
       { id: "asg-A1", clientId: "aA1", advisorId: "adv-A" },
@@ -114,8 +114,8 @@ const { dataset, matches } = vi.hoisted(() => {
       { id: "al-B1", actorUserId: "bB1", actorRole: null, actorEmailHash: null, action: "intake.submit", entityType: "IntakeInterview", entityId: "int-B1", beforeData: null, afterData: null, metadata: null, ipAddress: null, userAgent: null, createdAt: new Date("2026-04-02") },
     ],
     subscriptionAuditLog: [
-      { id: "sal-uA", subscriptionId: "sub-uA", action: "created", timestamp: new Date("2026-01-01"), previousTier: null, newTier: "PROFESSIONAL", metadata: null, source: "stripe" },
-      { id: "sal-uB", subscriptionId: "sub-uB", action: "created", timestamp: new Date("2026-01-02"), previousTier: null, newTier: "PROFESSIONAL", metadata: null, source: "stripe" },
+      { id: "sal-uA", subscriptionId: "sub-uA", action: "created", timestamp: new Date("2026-01-01"), previousTier: null, newTier: "BUSINESS", metadata: null, source: "stripe" },
+      { id: "sal-uB", subscriptionId: "sub-uB", action: "created", timestamp: new Date("2026-01-02"), previousTier: null, newTier: "BUSINESS", metadata: null, source: "stripe" },
     ],
     advisorBrandingAuditLog: [
       { id: "bal-A", advisorId: "adv-A", userId: "uA", action: "branding_update", entityType: "AdvisorProfile", entityId: "adv-A", previousValues: {}, newValues: {}, metadata: null, timestamp: new Date("2026-02-01") },

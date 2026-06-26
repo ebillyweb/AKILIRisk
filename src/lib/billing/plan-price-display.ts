@@ -7,7 +7,9 @@ import { getStripe } from "@/lib/stripe";
 import { getPriceIdForTier } from "./config";
 import { emptyPlanPricesForUi, type PlanPricesForUi } from "./plan-prices-ui";
 
-const TIERS: SubscriptionTier[] = ["STARTER", "GROWTH", "PROFESSIONAL"];
+import { SELF_SERVE_TIERS } from "./tier-catalog";
+
+const TIERS = SELF_SERVE_TIERS;
 const CYCLES: BillingCycle[] = ["MONTHLY", "ANNUAL"];
 
 function formatCents(amount: number, currency: string): string {
