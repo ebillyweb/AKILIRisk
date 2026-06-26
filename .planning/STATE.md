@@ -21,8 +21,8 @@ Every one of the ten risk pillars independently generates platform recommendatio
 ## Performance Metrics
 
 ### Milestone Progress
-- **Phases:** 1/4 complete (Phase 21)
-- **Requirements:** 9 total, 2 completed (UNIFIED-01, UNIFIED-02)
+- **Phases:** 3/7 complete (Phases 19, 20, 21)
+- **Requirements:** 9 core + 4 lifecycle (LIFECYCLE-01 through 03, REPORT-01), 2 completed (UNIFIED-01, UNIFIED-02)
 - **Coverage:** 100% (all requirements mapped)
 
 ### Development Velocity
@@ -70,7 +70,10 @@ Every one of the ten risk pillars independently generates platform recommendatio
 1. Phase 19: No dependencies (builds on v1.4 foundation)
 2. Phase 20: Requires Phase 19 cyber risk foundation
 3. Phase 21: Requires Phase 20 identity assessment complete
-4. Phase 22: Requires Phase 21 unified scoring complete
+4. Phase 22: Requires Phase 21 recommendation engine complete
+5. Phase 23: Requires Phase 22 recommendation experience complete (opt-in layer)
+6. Phase 24: Requires Phase 23 execution tracking complete
+7. Phase 25: Requires Phase 24 continuous improvement complete
 
 ### Research Insights
 - **Foundation Strategy:** Must establish domain boundaries and data architecture before any implementation to prevent contamination
@@ -81,10 +84,13 @@ Every one of the ten risk pillars independently generates platform recommendatio
 ## Active TODOs
 
 ### Immediate
-- [ ] Plan Phase 22 - Advanced Reporting
+- [ ] Plan Phase 22 - Recommendation Experience
 
 ### Upcoming
 - [ ] Execute Phase 22
+- [ ] Plan Phase 23 - Optional Client Engagement & Implementation Tracking
+- [ ] Plan Phase 24 - Continuous Risk Improvement
+- [ ] Plan Phase 25 - Executive Reporting
 
 ### Phase 21 Complete
 - [x] UNIFIED-01: All 10 pillars have platform recommendation rules
@@ -102,17 +108,19 @@ None identified. Ready to proceed with Phase 19 planning.
 ## Research Flags
 
 **Phase 20:** Complex vendor integrations require API security research and threat intelligence provider evaluation during planning
-**Phase 22:** Social media analysis and FAIR methodology implementation need domain-specific research
+**Phase 22:** Recommendation UX across advisor/enterprise/client roles — requires mapping existing UI touchpoints before planning
+**Phase 24:** Reassessment versioning and score delta computation need schema design research
+**Phase 25:** Executive reporting with trend visualization needs domain-specific research
 
 **Phases 19, 21:** Follow established patterns, skip research-phase
 
 ## Session Continuity
 
-**Last Action:** Completed Phase 21 execution — all plans verified
-**Next Action:** Plan Phase 22 (Advanced Reporting)
+**Last Action:** Restructured roadmap phases 22-25 to close the full assessment-to-improvement lifecycle loop. Built Risk Solutions Library schema, composition engine, and lifecycle management (committed as 07f8771).
+**Next Action:** Plan Phase 22 (Recommendation Experience)
 
-**Context Preservation:** Phases 19-21 complete. Phase 21: 10-pillar recommendation coverage achieved. Plan 01 added 12 services, 12 legacy rules, 12 UI rules for liquidity-cash, tax-exposure, estate-succession, family-governance-behavioral. Plan 02 wired advisor rulesOverride into submission route and added 11 happy-path tests. Verification: 5/5 must-haves passed.
+**Context Preservation:** Phases 19-21 complete. Phase 21: 10-pillar recommendation coverage achieved. Post-phase: built Risk Solutions Library — compose-at-read layered system (EnterpriseSolutionCustomization, AdvisorSolutionCustomization, SolutionMilestone, SolutionActivity), lifecycle state machine, milestone hydration on ACCEPTED, sourceLayerSummary persistence. Roadmap restructured: phases 22 (Recommendation Experience), 23 (Execution & Progress), 24 (Continuous Risk Improvement), 25 (Executive Reporting) — closing the full assessment-to-improvement lifecycle loop.
 
 ---
 *State updated: 2026-06-25*
-*Stopped at: Completed 21-02-PLAN.md*
+*Stopped at: Roadmap restructured, ready to plan Phase 22*

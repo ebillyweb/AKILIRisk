@@ -1,14 +1,14 @@
 # Roadmap: v1.5 Cyber Risk Intelligence
 
-**Goal:** Expand beyond family governance into comprehensive family risk intelligence by adding cyber risk as a distinct, independently-scored pillar that feeds into a unified risk profile.
+**Goal:** Expand beyond family governance into comprehensive family risk intelligence by adding cyber risk as a distinct, independently-scored pillar that feeds into a unified risk profile — then close the full lifecycle loop from assessment through implementation to measurable risk reduction.
 
-**Phases:** 4
+**Phases:** 7
 **Depth:** Quick
-**Coverage:** 9/9 requirements mapped ✓
+**Coverage:** 9/9 requirements mapped + 5 lifecycle phases added
 
 ## Overview
 
-Builds cyber risk assessment capabilities as parallel pillar alongside existing governance system. Maintains strict domain separation while enabling unified family risk profiles that give advisors holistic visibility into both governance and cyber security posture.
+Builds cyber risk assessment capabilities as parallel pillar alongside existing governance system. Maintains strict domain separation while enabling unified family risk profiles that give advisors holistic visibility into both governance and cyber security posture. Phases 22-26 transform the platform from "here is your risk score" into a full lifecycle: Assessment, Recommendations, Implementation, Reassessment, Reporting.
 
 ## Phase Structure
 
@@ -60,34 +60,149 @@ Plans:
 - [x] 21-02-PLAN.md -- Wire advisor rulesOverride into submission route and extend 10-pillar test coverage
 
 **Success Criteria:**
-1. All 10 pillars (governance, cyber-digital, physical-security, insurance, geographic-environmental, reputational-social, liquidity-cash, tax-exposure, estate-succession, family-governance-behavioral) have platform recommendation rules in the DB
+1. All 10 pillars have platform recommendation rules in the DB
 2. RecommendationEngine generates pillar-specific recommendations triggered by score thresholds, risk levels, and answer conditions for each pillar
-3. AdvisorRecommendationRule overrides (enable/disable, re-prioritize, custom rules) are applied when generating recommendations for an advisor's clients
+3. AdvisorRecommendationRule overrides are applied when generating recommendations for an advisor's clients
 4. Assessment submission produces a fully prioritized, deduplicated recommendation set across all assessed pillars
 5. Existing governance recommendation rules continue to work unchanged
 
-### Phase 22: Advanced Reporting
-**Dependencies:** Phase 21 (unified scoring complete)
-**Requirements:** REPORT-01
+### Phase 22: Recommendation Experience
+**Dependencies:** Phase 21 (recommendation engine complete)
+**Requirements:** LIFECYCLE-01
 
-**Goal:** Deliver comprehensive risk reporting with client-friendly cyber insights
+**Goal:** Clients leave the assessment knowing exactly what to do next. Advisors can review, customize, and prioritize recommendations. Enterprises can layer their own playbooks and preferred vendors.
+
+**Advisor Experience:**
+- Recommendation review queue with accept/decline workflow
+- Decline reasons and advisor notes capture
+- Recommendation prioritization and bulk actions
+- Composed recommendation preview (platform + enterprise + advisor layers)
+
+**Enterprise Experience:**
+- Enterprise solution customization CRUD (cost, timeframe, provider overrides)
+- Custom playbook steps and internal resources
+- Preferred vendor management
+- Preview of final composed recommendation
+
+**Client Experience:**
+- Personalized Action Plan page with accepted recommendations
+- Milestone checklist with status indicators
+- Timeline view of implementation steps
+- Progress percentage per recommendation
+- Estimated impact display
 
 **Success Criteria:**
-1. Advisor can generate unified risk reports combining governance and cyber risk insights
-2. PDF reports include client-friendly cyber risk explanations and action steps
+1. Advisor can review, accept, or decline each recommendation with notes
+2. Enterprise admins can create solution overlays (cost/timeframe/provider/playbook)
+3. Composed recommendation preview shows all three layers clearly attributed
+4. Client sees a personalized action plan with milestones after advisor accepts
+5. Each recommendation shows estimated timeline and projected risk impact
+
+### Phase 23: Optional Client Engagement & Implementation Tracking
+**Dependencies:** Phase 22 (recommendation experience complete)
+**Requirements:** LIFECYCLE-02
+
+**Goal:** Advisors who want ongoing client engagement get a lightweight project-management layer. Advisors who don't can ignore it entirely — the platform works either way. This is opt-in infrastructure, not a mandatory workflow.
+
+**Design Philosophy:**
+- No feature in this phase should be required to complete an assessment or deliver a report.
+- Advisors choose their operating model: hand off a PDF and move on, or track implementation over months. The platform supports both without judgment.
+- Enterprise admins can enable/disable implementation tracking per firm. Individual advisors can opt out even if their firm enables it.
+- All UI defaults to the simplest path. Tracking surfaces only appear when explicitly activated.
+
+**Milestones (opt-in per recommendation):**
+- Status tracking: Not Started, In Progress, Completed, Blocked, Deferred, Skipped
+- Advisor can advance, block, or defer milestones
+- Client can mark milestones complete (if advisor enables client self-service)
+- Auto-completion detection (all milestones done = recommendation complete)
+
+**Activity Feed (appears when there is activity):**
+- Timeline of advisor comments, milestone completions, uploads, reminders, approvals
+- Think GitHub/Linear activity feed UX
+- Append-only, queryable by recommendation or client
+- Visible to both advisor and client (role-appropriate filtering)
+- Zero-state is clean — no empty feed, no "nothing to show" clutter
+
+**Dashboard (progressive disclosure):**
+- Default view remains assessment results for advisors not using tracking
+- When tracking is active: per-recommendation progress bars (e.g., "Cybersecurity Uplift — 72% Complete")
+- Next step callout with due date
+- Engagement status summary
+
+**Success Criteria:**
+1. Advisor and client can update milestone status when tracking is enabled
+2. Activity feed shows chronological history of all recommendation actions
+3. Client dashboard shows progress bars per active recommendation
+4. Engagement auto-completes when all milestones are done
+5. Advisor portfolio shows aggregate client progress
+6. An advisor who never touches implementation tracking experiences zero friction or UI noise from this phase
+
+### Phase 24: Continuous Risk Improvement
+**Dependencies:** Phase 23 (client engagement infrastructure available)
+**Requirements:** LIFECYCLE-03
+
+**Goal:** Close the assessment loop — clients can reassess, see score deltas, and measure the impact of completed solutions. This is where the platform becomes sticky.
+
+**Reassessment:**
+- Retake full assessment or individual pillars
+- Assessment versioning (previousAssessmentId link)
+- Scheduled reassessment reminders
+- Reminder engine (configurable cadence per advisor/enterprise)
+
+**Impact Measurement:**
+- Before/after pillar score comparison (e.g., Governance: 7.8 → 4.1, down 47%)
+- Recommendation effectiveness tracking (which solutions moved the needle)
+- Completed vs remaining solutions summary
+- Projected vs actual risk reduction
+
+**Risk Intelligence Timeline:**
+- Every meaningful event becomes part of a permanent, auditable timeline
+- Assessment completions, advisor actions, milestone completions, reassessments, score changes
+- Useful for: advisors, enterprises, compliance, insurers, legal discovery, board meetings
+
+**Success Criteria:**
+1. Client can retake full assessment or individual pillars
+2. System links new assessment to previous and computes score deltas
+3. Before/after comparison shows per-pillar risk improvement
+4. Advisor can schedule reassessment reminders
+5. Risk intelligence timeline renders chronological history of all risk events
+
+### Phase 25: Executive Reporting
+**Dependencies:** Phase 24 (continuous improvement complete)
+**Requirements:** REPORT-01
+
+**Goal:** Generate executive-grade reports that tell the full risk reduction story — not just "your score is 7.2" but "risk reduced 38%, 14 of 18 recommendations completed, estimated financial exposure reduced, top remaining risks, upcoming milestones, trend over six months."
+
+**Report Content:**
+- Executive summary with risk reduction percentage
+- Completed vs total recommendations
+- Estimated financial exposure reduction
+- Top remaining risks
+- Upcoming milestones
+- Advisor recommendations
+- Six-month trend visualization
+- Risk intelligence timeline excerpt
+
+**Success Criteria:**
+1. Advisor can generate reports combining scores, recommendations, progress, and trends
+2. PDF reports include before/after score comparisons and recommendation effectiveness
 3. Reports show risk domain interactions and compounding effects
-4. Automated report generation maintains existing branded template system
+4. Executive summary is board-presentation ready
+5. Automated report generation maintains existing branded template system
 
 ## Progress Tracking
 
-| Phase | Status | Plans | Tasks | Completion |
-|-------|--------|-------|-------|------------|
-| 19 - Cyber Foundation | Planned | 0/3 | 0/7 | ░░░░░░░░░░ 0% |
-| 20 - Identity Intelligence | Planned | 0/3 | 0/6 | ░░░░░░░░░░ 0% |
-| 21 - Recommendation Engine | Complete | 2/2 | 4/4 | ██████████ 100% |
-| 22 - Advanced Reporting | Pending | 0/0 | 0/0 | ░░░░░░░░░░ 0% |
+| Phase | Status | Plans | Completion |
+|-------|--------|-------|------------|
+| 19 - Cyber Foundation | Complete | 3/3 | ██████████ 100% |
+| 20 - Identity Intelligence | Complete | 3/3 | ██████████ 100% |
+| 21 - Recommendation Engine | Complete | 2/2 | ██████████ 100% |
+| 22 - Recommendation Experience | Pending | 0/0 | ░░░░░░░░░░ 0% |
+| 23 - Client Engagement & Tracking | Pending | 0/0 | ░░░░░░░░░░ 0% |
+| 24 - Continuous Risk Improvement | Pending | 0/0 | ░░░░░░░░░░ 0% |
+| 25 - Executive Reporting | Pending | 0/0 | ░░░░░░░░░░ 0% |
 
-**Overall:** ███░░░░░░░ 25% (1/4 phases complete)
+**Overall:** ████░░░░░░ 43% (3/7 phases complete)
 
 ## Architecture Notes
 
@@ -97,6 +212,11 @@ Plans:
 
 **Performance Strategy:** Async cyber risk processing with cached results, never blocking workflows on external threat intelligence APIs.
 
+**Recommendation Layers:** Platform ServiceRecommendation is canonical. Enterprise and advisor overlays are composed at read time (not cloned). Rules use clone-at-write for snapshot integrity.
+
+**Activity Architecture:** SolutionActivity is append-only. Risk Intelligence Timeline aggregates activities across assessments, recommendations, and milestones into a single chronological view per client.
+
 ---
 *Roadmap created: 2026-03-19*
-*Next phase: 19*
+*Roadmap updated: 2026-06-25 — restructured phases 22-25 to close the full assessment-to-improvement lifecycle loop*
+*Next phase: 22*
