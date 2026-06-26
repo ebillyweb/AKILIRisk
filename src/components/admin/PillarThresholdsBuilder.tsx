@@ -5,9 +5,9 @@ import {
   PILLAR_OPTIONS,
   type PillarThresholdRow,
 } from "@/lib/admin/recommendation-rule-ui";
+import { LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -40,7 +40,7 @@ export function PillarThresholdsBuilder({
   return (
     <div className="space-y-4">
       <div>
-        <Label>Pillar score ranges (optional)</Label>
+        <LabelWithHelp helpKey="rule-pillar-thresholds">Pillar score ranges (optional)</LabelWithHelp>
         <p className="mt-1 text-xs text-muted-foreground">
           Reference ranges for documentation. These do not change whether the rule fires today.
         </p>
@@ -55,7 +55,9 @@ export function PillarThresholdsBuilder({
           {value.map((row, index) => (
             <div key={index} className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
               <div className="space-y-2">
-                <Label htmlFor={`threshold-pillar-${index}`}>Pillar</Label>
+                <LabelWithHelp htmlFor={`threshold-pillar-${index}`} helpKey="threshold-pillar">
+                  Pillar
+                </LabelWithHelp>
                 <Select
                   value={row.pillarId}
                   onValueChange={(pillarId) =>
@@ -78,7 +80,9 @@ export function PillarThresholdsBuilder({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`threshold-min-${index}`}>Minimum score</Label>
+                <LabelWithHelp htmlFor={`threshold-min-${index}`} helpKey="threshold-min-max">
+                  Minimum score
+                </LabelWithHelp>
                 <Input
                   id={`threshold-min-${index}`}
                   type="number"
@@ -95,7 +99,9 @@ export function PillarThresholdsBuilder({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`threshold-max-${index}`}>Maximum score</Label>
+                <LabelWithHelp htmlFor={`threshold-max-${index}`} helpKey="threshold-min-max">
+                  Maximum score
+                </LabelWithHelp>
                 <Input
                   id={`threshold-max-${index}`}
                   type="number"

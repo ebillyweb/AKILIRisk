@@ -82,7 +82,7 @@ export default async function AdminQuestionBankEditPage({
         </Alert>
       ) : null}
 
-      <Card>
+      <Card data-tour="config-primary-form">
         <CardHeader>
           <CardTitle className="text-base">Edit question</CardTitle>
           <p className="text-sm text-muted-foreground">{area.name}</p>

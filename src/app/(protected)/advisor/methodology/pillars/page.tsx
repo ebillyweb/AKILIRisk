@@ -5,6 +5,7 @@ import { loadAdvisorMethodologyPillars } from "@/lib/methodology/methodology-que
 import { DEFAULT_RISK_THRESHOLDS } from "@/lib/assessment/governance-rubric";
 import { Button } from "@/components/ui/button";
 import { PillarManagerForm } from "@/components/advisor/methodology/PillarManagerForm";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 function coerceThreshold(
   raw: unknown,
@@ -47,13 +48,13 @@ export default async function MethodologyPillarsPage() {
           <Link href="/advisor/methodology">Methodology</Link>
         </Button>
       </div>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Pillar manager</h1>
-        <p className="text-sm text-muted-foreground">
-          Changes apply to new intakes only. Clients in progress keep their snapshotted config.
-        </p>
-      </div>
-      <PillarManagerForm
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-pillars"
+        title="Pillar manager"
+        description="Changes apply to new intakes only. Clients in progress keep their snapshotted config."
+      />
+      <div data-tour="config-primary-form">
+        <PillarManagerForm
         pillars={pillars.map((pillar) => ({
           pillarId: pillar.pillarId,
           slug: pillar.slug,
@@ -64,7 +65,8 @@ export default async function MethodologyPillarsPage() {
           displayOrder: pillar.displayOrder,
           threshold: coerceThreshold(pillar.threshold) ?? DEFAULT_RISK_THRESHOLDS,
         }))}
-      />
+        />
+      </div>
     </div>
   );
 }

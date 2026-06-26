@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 
 import { updatePlatformAdvisorFeatureFlags } from "@/lib/admin/platform-settings-actions";
+import { FieldHelp } from "@/components/ui/field-help";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -79,9 +80,12 @@ export function AdminAdvisorFeatureFlagsForm({
           }}
         />
         <div className="grid gap-1">
-          <Label htmlFor="flag-governance-dashboard" className="text-sm font-medium leading-none">
-            Advisor governance dashboard
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="flag-governance-dashboard" className="text-sm font-medium leading-none">
+              Advisor governance dashboard
+            </Label>
+            <FieldHelp helpKey="flag-governance-dashboard" triggerLabel="Governance dashboard" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Family Portfolio, metrics, and analytics under{" "}
             <code className="text-xs">/advisor/dashboard</code> and{" "}
@@ -102,9 +106,12 @@ export function AdminAdvisorFeatureFlagsForm({
           }}
         />
         <div className="grid gap-1">
-          <Label htmlFor="flag-risk-intelligence" className="text-sm font-medium leading-none">
-            Advisor risk intelligence
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="flag-risk-intelligence" className="text-sm font-medium leading-none">
+              Advisor risk intelligence
+            </Label>
+            <FieldHelp helpKey="flag-risk-intelligence" triggerLabel="Risk intelligence" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Portfolio risk views under <code className="text-xs">/advisor/intelligence</code>. When off, nav links are
             hidden and routes redirect to Clients.
@@ -123,9 +130,12 @@ export function AdminAdvisorFeatureFlagsForm({
           }}
         />
         <div className="grid gap-1">
-          <Label htmlFor="flag-workflow-tasks" className="text-sm font-medium leading-none">
-            Advisor workflow tasks
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="flag-workflow-tasks" className="text-sm font-medium leading-none">
+              Advisor workflow tasks
+            </Label>
+            <FieldHelp helpKey="flag-workflow-tasks" triggerLabel="Workflow tasks" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Shows <span className="font-medium text-foreground">Tasks</span> in the advisor Workflow nav. Leave off until
             the tasks workspace is ready.
@@ -144,9 +154,12 @@ export function AdminAdvisorFeatureFlagsForm({
           }}
         />
         <div className="grid gap-1">
-          <Label htmlFor="flag-workflow-follow-ups" className="text-sm font-medium leading-none">
-            Advisor workflow follow-ups
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="flag-workflow-follow-ups" className="text-sm font-medium leading-none">
+              Advisor workflow follow-ups
+            </Label>
+            <FieldHelp helpKey="flag-workflow-follow-ups" triggerLabel="Workflow follow-ups" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Shows <span className="font-medium text-foreground">Follow-ups</span> in the advisor Workflow nav. Leave off
             until the follow-ups workspace is ready.

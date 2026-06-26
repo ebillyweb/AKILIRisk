@@ -11,6 +11,7 @@ import {
 } from "@/lib/subscription/validation";
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
@@ -63,9 +64,12 @@ export default async function AdvisorSettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-     
-
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <ConfigurationPageHeader
+          tourId="advisor-settings"
+          title="Settings"
+          description="Branding, profile, security, and practice policies for your firm."
+        />
         <Badge
           variant={features.tier === 'PROFESSIONAL' ? 'default' : 'secondary'}
           className="w-fit shrink-0 px-3 py-1 text-xs font-semibold uppercase tracking-wide"
@@ -75,7 +79,7 @@ export default async function AdvisorSettingsPage() {
       </div>
 
       <div className="space-y-6">
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm" data-tour="config-methodology-link">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold tracking-tight">Risk methodology</h2>
@@ -91,6 +95,7 @@ export default async function AdvisorSettingsPage() {
         </div>
 
         {/* Branding Section (page title: sr-only "Settings" in advisor layout) */}
+        <div data-tour="config-primary-form">
         <EnhancedBrandingForm
           profile={{
             firmName: profile.firmName,
@@ -115,6 +120,7 @@ export default async function AdvisorSettingsPage() {
           tenantSubdomainSuffix={tenantSubdomainSuffix}
           platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
         />
+        </div>
 
         {/* Advisor profile — self-service except email */}
         <div className="rounded-xl border border-border/70 bg-card p-6 shadow-sm">

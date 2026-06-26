@@ -6,6 +6,7 @@ import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function EnterpriseRecommendationsIndexPage() {
   let enterpriseName: string;
@@ -31,17 +32,12 @@ export default async function EnterpriseRecommendationsIndexPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {enterpriseName} — Firm recommendation rules
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Manage recommendation rule defaults for all firm advisors. Changes are
-          automatically synced to member advisors. Individual advisors can
-          further customize their copies.
-        </p>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <ConfigurationPageHeader
+        tourId="enterprise-recommendation-rules-index"
+        title={`${enterpriseName} — Firm recommendation rules`}
+        description="Manage recommendation rule defaults for all firm advisors. Changes are automatically synced to member advisors. Individual advisors can further customize their copies."
+      />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-tour="config-primary-list">
         {pillars.map((pillar) => {
           const count = countByPillarId.get(pillar.id) ?? 0;
           return (

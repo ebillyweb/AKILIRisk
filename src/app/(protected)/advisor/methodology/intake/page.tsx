@@ -4,6 +4,7 @@ import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth
 import { loadAdvisorIntakeQuestions } from "@/lib/methodology/methodology-queries";
 import { Button } from "@/components/ui/button";
 import { IntakeScriptEditor } from "@/components/advisor/methodology/IntakeScriptEditor";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyIntakePage() {
   let profileId: string;
@@ -26,19 +27,19 @@ export default async function MethodologyIntakePage() {
         Edits apply to <strong>new intakes only</strong>. Clients already in progress keep the
         script snapshotted at intake start.
       </div>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Intake script</h1>
-        <p className="text-sm text-muted-foreground">
-          Edit or hide platform base questions, or add custom audio prompts for your clients.
-        </p>
-      </div>
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-intake"
+        title="Intake script"
+        description="Edit or hide platform base questions, or add custom audio prompts for your clients."
+      />
       {questions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
           Platform intake questions are loading. Refresh in a moment — if this persists, contact
           platform support.
         </div>
       ) : (
-        <IntakeScriptEditor
+        <div data-tour="config-primary-form">
+          <IntakeScriptEditor
           questions={questions.map((q) => ({
             id: q.id,
             sourceKind: q.sourceKind,
@@ -47,7 +48,8 @@ export default async function MethodologyIntakePage() {
             context: q.context,
             isVisible: q.isVisible,
           }))}
-        />
+          />
+        </div>
       )}
     </div>
   );

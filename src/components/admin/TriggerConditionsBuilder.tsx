@@ -17,10 +17,10 @@ import {
 } from "@/lib/admin/recommendation-rule-ui";
 import { AnswerValueField } from "@/components/admin/AnswerValueField";
 import { QuestionPicker } from "@/components/admin/QuestionPicker";
+import { LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -102,9 +102,9 @@ export function TriggerConditionsBuilder({
   error,
 }: TriggerConditionsBuilderProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-tour="rule-conditions">
       <div>
-        <Label>When should this rule fire?</Label>
+        <LabelWithHelp helpKey="rule-trigger-conditions">When should this rule fire?</LabelWithHelp>
         <p className="mt-1 text-xs text-muted-foreground">
           Add one or more checks below. The rule matches when more than half of the total
           importance weight is satisfied.
@@ -192,7 +192,9 @@ function ConditionCard({
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor={`condition-type-${index}`}>Check type</Label>
+          <LabelWithHelp htmlFor={`condition-type-${index}`} helpKey="condition-type">
+            Check type
+          </LabelWithHelp>
           <Select
             value={condition.type}
             onValueChange={(next) =>
@@ -222,7 +224,9 @@ function ConditionCard({
               onChange={(pillarId) => onChange({ ...condition, pillarId })}
             />
             <div className="space-y-2">
-              <Label htmlFor={`score-op-${index}`}>Comparison</Label>
+              <LabelWithHelp htmlFor={`score-op-${index}`} helpKey="condition-comparison">
+                Comparison
+              </LabelWithHelp>
               <Select
                 value={condition.operator}
                 onValueChange={(operator) =>
@@ -246,7 +250,9 @@ function ConditionCard({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`score-value-${index}`}>Score value</Label>
+              <LabelWithHelp htmlFor={`score-value-${index}`} helpKey="condition-score-value">
+                Score value
+              </LabelWithHelp>
               <Input
                 id={`score-value-${index}`}
                 type="number"
@@ -270,7 +276,9 @@ function ConditionCard({
               onChange={(pillarId) => onChange({ ...condition, pillarId })}
             />
             <div className="space-y-2">
-              <Label htmlFor={`risk-op-${index}`}>Comparison</Label>
+              <LabelWithHelp htmlFor={`risk-op-${index}`} helpKey="condition-comparison">
+                Comparison
+              </LabelWithHelp>
               <Select
                 value={condition.operator}
                 onValueChange={(operator) => {
@@ -299,7 +307,9 @@ function ConditionCard({
               </Select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Risk level{condition.operator === "in" ? "s" : ""}</Label>
+              <LabelWithHelp helpKey="condition-risk-levels">
+                Risk level{condition.operator === "in" ? "s" : ""}
+              </LabelWithHelp>
               {condition.operator === "in" ? (
                 <div className="flex flex-wrap gap-4">
                   {RISK_LEVEL_OPTIONS.map((level) => {
@@ -387,7 +397,9 @@ function ConditionCard({
         {condition.type === "profile_condition" ? (
           <>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor={`profile-field-${index}`}>Profile field</Label>
+              <LabelWithHelp htmlFor={`profile-field-${index}`} helpKey="condition-profile-field">
+                Profile field
+              </LabelWithHelp>
               <Input
                 id={`profile-field-${index}`}
                 value={condition.field}
@@ -397,7 +409,9 @@ function ConditionCard({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`profile-op-${index}`}>Comparison</Label>
+              <LabelWithHelp htmlFor={`profile-op-${index}`} helpKey="condition-comparison">
+                Comparison
+              </LabelWithHelp>
               <Select
                 value={condition.operator}
                 onValueChange={(operator) =>
@@ -421,7 +435,9 @@ function ConditionCard({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`profile-value-${index}`}>Value</Label>
+              <LabelWithHelp htmlFor={`profile-value-${index}`} helpKey="condition-answer">
+                Value
+              </LabelWithHelp>
               <Input
                 id={`profile-value-${index}`}
                 value={
@@ -452,7 +468,9 @@ function ConditionCard({
         ) : null}
 
         <div className="space-y-2">
-          <Label htmlFor={`weight-${index}`}>Importance</Label>
+          <LabelWithHelp htmlFor={`weight-${index}`} helpKey="condition-importance">
+            Importance
+          </LabelWithHelp>
           <Input
             id={`weight-${index}`}
             type="number"
@@ -484,7 +502,9 @@ function PillarSelect({
 }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>Pillar</Label>
+      <LabelWithHelp htmlFor={id} helpKey="condition-pillar">
+        Pillar
+      </LabelWithHelp>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger id={id}>
           <SelectValue placeholder="Choose a pillar" />

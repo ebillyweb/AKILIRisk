@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import {
   BookOpen,
@@ -73,15 +74,13 @@ export default async function MethodologyHubPage() {
 
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Methodology</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Configure your household risk methodology. Changes apply to new intakes only;
-          in-flight clients keep the configuration snapshotted at intake start.
-        </p>
-      </div>
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-hub"
+        title="Methodology"
+        description="Configure your household risk methodology. Changes apply to new intakes only; in-flight clients keep the configuration snapshotted at intake start."
+      />
 
-      <Card>
+      <Card data-tour="config-pillar-questions">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4" />
@@ -99,7 +98,7 @@ export default async function MethodologyHubPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2" data-tour="config-primary-list">
         {LINKS.map((item) => (
           <Card key={item.href} className="h-full">
             <CardHeader>

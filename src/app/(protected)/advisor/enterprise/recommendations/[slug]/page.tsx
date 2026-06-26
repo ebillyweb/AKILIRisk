@@ -11,6 +11,7 @@ import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EnterpriseRecommendationRulesEditor } from "@/components/advisor/enterprise/EnterpriseRecommendationRulesEditor";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function EnterpriseRecommendationsPage({
   params,
@@ -46,15 +47,11 @@ export default async function EnterpriseRecommendationsPage({
       <Button variant="outline" size="sm" asChild>
         <Link href="/advisor/enterprise/recommendations">Firm recommendations</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {enterpriseName} — Recommendation rules — {pillar.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Firm-wide recommendation defaults. Changes sync to all member advisors.
-          Individual advisors can further customize their own copies.
-        </p>
-      </div>
+      <ConfigurationPageHeader
+        tourId="enterprise-recommendation-rules"
+        title={`${enterpriseName} — Recommendation rules — ${pillar.name}`}
+        description="Firm-wide recommendation defaults. Changes sync to all member advisors. Individual advisors can further customize their own copies."
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">

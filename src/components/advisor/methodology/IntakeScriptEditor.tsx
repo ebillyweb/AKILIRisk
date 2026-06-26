@@ -7,6 +7,7 @@ import {
   deleteAdvisorIntakeQuestion,
   updateAdvisorIntakeQuestion,
 } from "@/lib/actions/methodology-actions";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,7 +56,7 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
             ) : null}
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Checkbox
                 defaultChecked={q.isVisible}
                 onCheckedChange={(checked) => {
@@ -67,6 +68,7 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
                 }}
               />
               <Label>Visible to clients</Label>
+              <FieldHelp helpKey="advisor-intake-visible" triggerLabel="Visible to clients" />
             </div>
             <form
               className="space-y-3"
@@ -79,13 +81,19 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
                 });
               }}
             >
-              <Textarea name="questionText" defaultValue={q.questionText} rows={3} />
-              <Textarea
-                name="context"
-                defaultValue={q.context ?? ""}
-                placeholder="Context / coaching prompt"
-                rows={2}
-              />
+              <div className="space-y-2">
+                <LabelWithHelp helpKey="advisor-intake-question-text">Question text</LabelWithHelp>
+                <Textarea name="questionText" defaultValue={q.questionText} rows={3} />
+              </div>
+              <div className="space-y-2">
+                <LabelWithHelp helpKey="advisor-intake-context">Context / coaching prompt</LabelWithHelp>
+                <Textarea
+                  name="context"
+                  defaultValue={q.context ?? ""}
+                  placeholder="Context / coaching prompt"
+                  rows={2}
+                />
+              </div>
               <Button type="submit" size="sm" disabled={pending}>
                 Save
               </Button>
@@ -114,8 +122,14 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
               });
             }}
           >
-            <Textarea name="questionText" placeholder="Question text" rows={3} required />
-            <Textarea name="context" placeholder="Context / coaching prompt (optional)" rows={2} />
+            <div className="space-y-2">
+              <LabelWithHelp helpKey="advisor-intake-question-text">Question text</LabelWithHelp>
+              <Textarea name="questionText" placeholder="Question text" rows={3} required />
+            </div>
+            <div className="space-y-2">
+              <LabelWithHelp helpKey="advisor-intake-context">Context / coaching prompt (optional)</LabelWithHelp>
+              <Textarea name="context" placeholder="Context / coaching prompt (optional)" rows={2} />
+            </div>
             <Button type="submit" size="sm" disabled={pending}>
               Add question
             </Button>

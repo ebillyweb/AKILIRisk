@@ -34,7 +34,7 @@ export default async function AdminSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="config-password-policy">
         <CardHeader>
           <CardTitle className="text-base">Password policy</CardTitle>
           <CardDescription>
@@ -72,7 +72,7 @@ export default async function AdminSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="config-feature-flags">
         <CardHeader>
           <CardTitle className="text-base">Advisor feature flags</CardTitle>
           <CardDescription>

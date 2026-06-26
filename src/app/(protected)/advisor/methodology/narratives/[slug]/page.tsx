@@ -7,6 +7,7 @@ import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { narrativeStarterForSlug } from "@/lib/methodology/narrative-starter";
 import { Button } from "@/components/ui/button";
 import { NarrativeEditor } from "@/components/advisor/methodology/NarrativeEditor";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyNarrativesPage({
   params,
@@ -45,20 +46,19 @@ export default async function MethodologyNarrativesPage({
       <Button variant="outline" size="sm" asChild>
         <Link href="/advisor/methodology">Methodology</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Pillar narratives — {pillar.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Outcome copy for score reports and PDFs. Snapshotted at intake start.
-        </p>
-      </div>
-      <NarrativeEditor
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-narratives"
+        title={`Pillar narratives — ${pillar.name}`}
+        description="Outcome copy for score reports and PDFs. Snapshotted at intake start."
+      />
+      <div data-tour="config-primary-form">
+        <NarrativeEditor
         pillarSlug={slug}
         allNegative={allNegative}
         allYes={allYes}
         midBand={midBand as { critical: string[]; high: string[]; medium: string[]; low: string[] }}
-      />
+        />
+      </div>
       <div className="flex flex-wrap gap-2">
         {pillars.map((p) => (
           <Button

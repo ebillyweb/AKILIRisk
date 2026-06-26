@@ -7,6 +7,7 @@ import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AssessmentQuestionsEditor } from "@/components/advisor/methodology/AssessmentQuestionsEditor";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyQuestionsPage({
   params,
@@ -35,22 +36,18 @@ export default async function MethodologyQuestionsPage({
       <Button variant="outline" size="sm" asChild>
         <Link href="/advisor/methodology">Methodology</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Assessment questions — {pillar.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Edit or hide platform base questions, or add custom questions for your clients. Changes
-          apply to new intakes only.
-        </p>
-      </div>
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-questions"
+        title={`Assessment questions — ${pillar.name}`}
+        description="Edit or hide platform base questions, or add custom questions for your clients. Changes apply to new intakes only."
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
             {questions.length} question{questions.length === 1 ? "" : "s"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent data-tour="config-primary-form">
           {questions.length === 0 ? (
             <p className="text-sm text-muted-foreground">No questions for this pillar yet.</p>
           ) : (

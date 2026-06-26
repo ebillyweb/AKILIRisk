@@ -21,6 +21,8 @@ import {
 import { FormOnCheckbox } from "@/components/admin/form-submission-checkbox";
 import { PillarThresholdsBuilder } from "@/components/admin/PillarThresholdsBuilder";
 import { TriggerConditionsBuilder } from "@/components/admin/TriggerConditionsBuilder";
+import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -128,8 +130,9 @@ export function RecommendationRuleForm({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
         <CardTitle>{isEdit ? "Edit rule" : "New rule"}</CardTitle>
+        <ProductTourButton tourId="admin-recommendation-rule-form" autoStart />
       </CardHeader>
       <CardContent>
         {topError && (
@@ -143,10 +146,10 @@ export function RecommendationRuleForm({
             name="serviceRecommendationId"
             value={serviceRecommendationId}
           />
-          <div>
-            <label htmlFor="serviceRecommendationId" className="mb-1 block text-sm font-medium">
+          <div data-tour="rule-service">
+            <LabelWithHelp htmlFor="serviceRecommendationId" helpKey="rule-service">
               Service recommendation
-            </label>
+            </LabelWithHelp>
             <Select
               value={
                 serviceRecommendationId === "" ? SERVICE_NONE : serviceRecommendationId
@@ -179,8 +182,10 @@ export function RecommendationRuleForm({
             )}
           </div>
 
-          <div>
-            <label htmlFor="ruleName" className="mb-1 block text-sm font-medium">Rule name</label>
+          <div data-tour="rule-name">
+            <LabelWithHelp htmlFor="ruleName" helpKey="rule-name">
+              Rule name
+            </LabelWithHelp>
             <Input
               id="ruleName"
               name="ruleName"
@@ -192,7 +197,9 @@ export function RecommendationRuleForm({
           </div>
 
           <div>
-            <label htmlFor="description" className="mb-1 block text-sm font-medium">Description (optional)</label>
+            <LabelWithHelp htmlFor="description" helpKey="rule-description">
+              Description (optional)
+            </LabelWithHelp>
             <Textarea
               id="description"
               name="description"
@@ -218,8 +225,10 @@ export function RecommendationRuleForm({
             error={errors.pillarThresholds ?? null}
           />
 
-          <div>
-            <label htmlFor="priority" className="mb-1 block text-sm font-medium">Priority (higher = surfaces first)</label>
+          <div data-tour="rule-priority">
+            <LabelWithHelp htmlFor="priority" helpKey="rule-priority">
+              Priority (higher = surfaces first)
+            </LabelWithHelp>
             <Input
               id="priority"
               name="priority"
@@ -231,13 +240,16 @@ export function RecommendationRuleForm({
             {errors.priority && <p className="mt-1 text-xs text-destructive">{errors.priority}</p>}
           </div>
 
-          <FormOnCheckbox
+          <div data-tour="rule-active" className="flex items-center gap-2">
+            <FormOnCheckbox
             name="isActive"
             id="rule-is-active"
             defaultChecked={existing?.isActive !== false}
             disabled={pending}
             label="Active (engine evaluates this rule)"
           />
+            <FieldHelp helpKey="rule-active" triggerLabel="Active" />
+          </div>
 
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={pending}>

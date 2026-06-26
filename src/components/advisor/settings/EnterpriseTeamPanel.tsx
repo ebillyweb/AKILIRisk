@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
 import { Loader2, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { LabelWithHelp } from "@/components/ui/field-help";
 import {
   Select,
   SelectContent,
@@ -100,7 +101,7 @@ export function EnterpriseTeamPanel({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-tour="config-page-header">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
           <p className="text-sm text-muted-foreground">
@@ -108,6 +109,7 @@ export function EnterpriseTeamPanel({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <ProductTourButton tourId="advisor-settings-team" autoStart />
           <Badge variant={overage ? "warning" : "secondary"}>
             {seatUsage.activeSeats} / {seatUsage.seatLimit} seats
           </Badge>
@@ -117,7 +119,7 @@ export function EnterpriseTeamPanel({
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm" data-tour="config-primary-action">
         <div className="mb-4 space-y-1">
           <h2 className="text-lg font-semibold tracking-tight">Invite teammate</h2>
           <p className="text-sm text-muted-foreground">
@@ -126,7 +128,9 @@ export function EnterpriseTeamPanel({
         </div>
         <form onSubmit={handleInvite} className="grid gap-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
           <div className="space-y-2">
-            <Label htmlFor="team-invite-email">Email</Label>
+            <LabelWithHelp htmlFor="team-invite-email" helpKey="team-invite-email">
+              Email
+            </LabelWithHelp>
             <Input
               id="team-invite-email"
               type="email"
@@ -137,7 +141,9 @@ export function EnterpriseTeamPanel({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="team-invite-role">Role</Label>
+            <LabelWithHelp htmlFor="team-invite-role" helpKey="team-invite-role">
+              Role
+            </LabelWithHelp>
             <Select value={inviteRole} onValueChange={(value) => setInviteRole(value as "ADMIN" | "ADVISOR")}>
               <SelectTrigger id="team-invite-role">
                 <SelectValue />
@@ -155,7 +161,7 @@ export function EnterpriseTeamPanel({
         </form>
       </div>
 
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden" data-tour="config-primary-list">
         <div className="border-b px-6 py-4">
           <h2 className="text-lg font-semibold tracking-tight">Members</h2>
         </div>

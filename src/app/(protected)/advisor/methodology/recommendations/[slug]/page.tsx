@@ -12,6 +12,7 @@ import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecommendationRulesEditor } from "@/components/advisor/methodology/RecommendationRulesEditor";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyRecommendationsPage({
   params,
@@ -45,15 +46,11 @@ export default async function MethodologyRecommendationsPage({
       <Button variant="outline" size="sm" asChild>
         <Link href="/advisor/methodology">Methodology</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Recommendation rules — {pillar.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Edit or deactivate platform base rules, or add custom triggers for your clients.
-          Snapshotted at intake start.
-        </p>
-      </div>
+      <ConfigurationPageHeader
+        tourId="advisor-recommendation-rules"
+        title={`Recommendation rules — ${pillar.name}`}
+        description="Edit or deactivate platform base rules, or add custom triggers for your clients. Snapshotted at intake start."
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">

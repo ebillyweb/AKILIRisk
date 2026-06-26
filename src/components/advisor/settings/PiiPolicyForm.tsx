@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2, Save } from "lucide-react";
 
+import { FieldHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -99,12 +100,19 @@ export function PiiPolicyForm({ initialPolicy }: PiiPolicyFormProps) {
                   data-pii-field={field}
                 >
                   <div className="min-w-0 flex-1">
-                    <Label
-                      htmlFor={switchId}
-                      className="text-base font-medium"
-                    >
-                      {meta.label}
-                    </Label>
+                    <div className="flex items-center gap-1">
+                      <Label
+                        htmlFor={switchId}
+                        className="text-base font-medium"
+                      >
+                        {meta.label}
+                      </Label>
+                      <FieldHelp
+                        title={meta.label}
+                        description={meta.description}
+                        triggerLabel={meta.label}
+                      />
+                    </div>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                       {meta.description}
                     </p>

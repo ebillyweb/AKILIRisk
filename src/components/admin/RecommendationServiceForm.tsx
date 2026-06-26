@@ -14,6 +14,9 @@ import {
   updateServiceRecommendation,
 } from "@/lib/actions/admin-recommendation-actions";
 import { FormOnCheckbox } from "@/components/admin/form-submission-checkbox";
+import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
+import type { FieldHelpKey } from "@/lib/field-help/content";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -103,8 +106,9 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
         <CardTitle>{isEdit ? "Edit recommendation" : "New recommendation"}</CardTitle>
+        <ProductTourButton tourId="admin-recommendation-service-form" autoStart />
       </CardHeader>
       <CardContent>
         {topError && (
@@ -112,11 +116,12 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             {topError}
           </div>
         )}
-        <form action={onSubmit} className="space-y-4">
-          <Field label="Name" name="name" defaultValue={existing?.name} error={errors.name} setField={setField} />
+        <form action={onSubmit} className="space-y-4" data-tour="config-primary-form">
+          <Field label="Name" name="name" helpKey="service-name" defaultValue={existing?.name} error={errors.name} setField={setField} />
           <Field
             label="Description"
             name="description"
+            helpKey="service-description"
             defaultValue={existing?.description}
             error={errors.description}
             setField={setField}
@@ -124,9 +129,9 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             rows={4}
           />
           <div>
-            <label htmlFor="category" className="mb-1 block text-sm font-medium">
+            <LabelWithHelp htmlFor="category" helpKey="service-category">
               Category
-            </label>
+            </LabelWithHelp>
             <Input
               ref={categoryInputRef}
               id="category"
@@ -163,6 +168,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
           <SelectField
             label="Tier (BRD §4.4)"
             name="tier"
+            helpKey="service-tier"
             options={[...TIER_VALUES]}
             defaultValue={existing?.tier ?? "BASELINE"}
             error={errors.tier}
@@ -171,6 +177,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
           <SelectField
             label="Complexity"
             name="complexity"
+            helpKey="service-complexity"
             options={["", ...COMPLEXITY_VALUES]}
             defaultValue={existing?.complexity ?? ""}
             error={errors.complexity}
@@ -180,6 +187,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
           <SelectField
             label="Implementation type"
             name="implementationType"
+            helpKey="service-implementation-type"
             options={["", ...IMPLEMENTATION_TYPE_VALUES]}
             defaultValue={existing?.implementationType ?? ""}
             error={errors.implementationType}
@@ -189,14 +197,16 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
           <Field
             label="Priority"
             name="priority"
+            helpKey="service-priority"
             type="number"
             defaultValue={String(existing?.priority ?? 0)}
             error={errors.priority}
             setField={setField}
           />
-          <Field label="Estimated cost (e.g. $5,000–$20,000)" name="estimatedCost" defaultValue={existing?.estimatedCost ?? ""} error={errors.estimatedCost} setField={setField} />
-          <Field label="Timeframe (e.g. 2–4 months)" name="timeframe" defaultValue={existing?.timeframe ?? ""} error={errors.timeframe} setField={setField} />
-          <Field label="Provider" name="provider" defaultValue={existing?.provider ?? ""} error={errors.provider} setField={setField} />
+          <Field label="Estimated cost (e.g. $5,000–$20,000)" name="estimatedCost" helpKey="service-estimated-cost" defaultValue={existing?.estimatedCost ?? ""} error={errors.estimatedCost} setField={setField} />
+          <Field label="Timeframe (e.g. 2–4 months)" name="timeframe" helpKey="service-timeframe" defaultValue={existing?.timeframe ?? ""} error={errors.timeframe} setField={setField} />
+          <Field label="Provider" name="provider" helpKey="service-provider" defaultValue={existing?.provider ?? ""} error={errors.provider} setField={setField} />
+          <div className="flex items-center gap-2">
           <FormOnCheckbox
             name="isActive"
             id="service-is-active"
@@ -204,6 +214,8 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
             disabled={pending}
             label="Active (visible to the recommendation engine)"
           />
+          <FieldHelp helpKey="service-active" triggerLabel="Active" />
+          </div>
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={pending}>
               {pending ? "Saving…" : isEdit ? "Save changes" : "Create"}
@@ -218,6 +230,7 @@ export function RecommendationServiceForm({ existing, knownCategories }: Service
 interface FieldProps {
   label: string;
   name: string;
+  helpKey?: FieldHelpKey;
   defaultValue?: string | null;
   error?: string;
   setField: (k: string, v: string) => void;
@@ -226,12 +239,18 @@ interface FieldProps {
   type?: string;
 }
 
-function Field({ label, name, defaultValue, error, setField, textarea, rows, type }: FieldProps) {
+function Field({ label, name, helpKey, defaultValue, error, setField, textarea, rows, type }: FieldProps) {
   return (
     <div>
-      <label htmlFor={name} className="mb-1 block text-sm font-medium">
-        {label}
-      </label>
+      {helpKey ? (
+        <LabelWithHelp htmlFor={name} helpKey={helpKey}>
+          {label}
+        </LabelWithHelp>
+      ) : (
+        <label htmlFor={name} className="mb-1 block text-sm font-medium">
+          {label}
+        </label>
+      )}
       {textarea ? (
         <Textarea
           id={name}
@@ -263,6 +282,7 @@ const EMPTY_SENTINEL = "__empty__";
 interface SelectFieldProps {
   label: string;
   name: string;
+  helpKey?: FieldHelpKey;
   options: string[];
   defaultValue?: string;
   error?: string;
@@ -273,6 +293,7 @@ interface SelectFieldProps {
 function SelectField({
   label,
   name,
+  helpKey,
   options,
   defaultValue,
   error,
@@ -295,9 +316,15 @@ function SelectField({
 
   return (
     <div>
-      <label htmlFor={`select-${name}`} className="mb-1 block text-sm font-medium">
-        {label}
-      </label>
+      {helpKey ? (
+        <LabelWithHelp htmlFor={`select-${name}`} helpKey={helpKey}>
+          {label}
+        </LabelWithHelp>
+      ) : (
+        <label htmlFor={`select-${name}`} className="mb-1 block text-sm font-medium">
+          {label}
+        </label>
+      )}
       <input type="hidden" name={name} value={submitted} />
       <Select value={selected} onValueChange={setSelected} disabled={disabled}>
         <SelectTrigger

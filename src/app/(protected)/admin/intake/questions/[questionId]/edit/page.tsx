@@ -7,10 +7,10 @@ import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalo
 import { FormHasCheckbox } from "@/components/admin/form-submission-checkbox";
 import { IntakeRelatedPillarsField } from "@/components/admin/IntakeRelatedPillarsField";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export default async function AdminIntakeQuestionEditPage({
@@ -52,7 +52,7 @@ export default async function AdminIntakeQuestionEditPage({
         </Alert>
       ) : null}
 
-      <Card>
+      <Card data-tour="config-primary-form">
         <CardHeader>
           <CardTitle className="text-base">Edit intake question</CardTitle>
           <p className="text-sm text-muted-foreground">{question.section.name}</p>
@@ -62,7 +62,9 @@ export default async function AdminIntakeQuestionEditPage({
             <input type="hidden" name="questionId" value={question.id} />
 
             <div className="space-y-2">
-              <Label htmlFor="questionText">Question text</Label>
+              <LabelWithHelp htmlFor="questionText" helpKey="intake-question-text">
+                Question text
+              </LabelWithHelp>
               <Textarea
                 id="questionText"
                 name="questionText"
@@ -76,7 +78,9 @@ export default async function AdminIntakeQuestionEditPage({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="whyThisMatters">Why we ask (optional)</Label>
+              <LabelWithHelp htmlFor="whyThisMatters" helpKey="intake-why-this-matters">
+                Why we ask (optional)
+              </LabelWithHelp>
               <Textarea
                 id="whyThisMatters"
                 name="whyThisMatters"
@@ -87,7 +91,9 @@ export default async function AdminIntakeQuestionEditPage({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="recordingTips">Recording tips (optional)</Label>
+              <LabelWithHelp htmlFor="recordingTips" helpKey="intake-recording-tips">
+                Recording tips (optional)
+              </LabelWithHelp>
               <Textarea
                 id="recordingTips"
                 name="recordingTips"
@@ -107,7 +113,9 @@ export default async function AdminIntakeQuestionEditPage({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="displayOrder">Order in script</Label>
+                <LabelWithHelp htmlFor="displayOrder" helpKey="intake-display-order">
+                  Order in script
+                </LabelWithHelp>
                 <Input
                   id="displayOrder"
                   name="displayOrder"
@@ -121,7 +129,10 @@ export default async function AdminIntakeQuestionEditPage({
                 </p>
               </div>
               <div className="space-y-2">
-                <span className="block text-sm font-medium leading-none">Interview visibility</span>
+                <div className="flex items-center gap-1">
+                  <span className="block text-sm font-medium leading-none">Interview visibility</span>
+                  <FieldHelp helpKey="intake-visible" triggerLabel="Interview visibility" />
+                </div>
                 <FormHasCheckbox
                   id="isVisible"
                   name="isVisible"

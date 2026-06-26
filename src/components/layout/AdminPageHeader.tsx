@@ -1,6 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { getAdminTourIdForPath } from "@/lib/product-tour/admin-path-tours";
+import type { TourId } from "@/lib/product-tour/types";
+import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
 import {
   Users,
   UserCircle,
@@ -167,10 +170,10 @@ export function shouldShowAdminPageHeader(pathname: string): boolean {
   return getHeaderConfig(pathname) !== null;
 }
 
-export function AdminPageHeader(props: AdminPageHeaderConfig) {
-  const { icon: Icon, kicker, title, subtitle } = props;
+export function AdminPageHeader(props: AdminPageHeaderConfig & { tourId?: TourId | null }) {
+  const { icon: Icon, kicker, title, subtitle, tourId } = props;
   return (
-    <header role="banner" className="admin-header professional-header space-y-3 sm:space-y-4">
+    <header role="banner" className="admin-header professional-header space-y-3 sm:space-y-4" data-tour="config-page-header">
       <div className="flex min-w-0 flex-wrap items-center gap-3 header-section-spacing">
         <div className="professional-icon shrink-0" role="img" aria-label={`${title} section icon`}>
           <Icon className="h-5 w-5" aria-hidden="true" />
@@ -178,6 +181,11 @@ export function AdminPageHeader(props: AdminPageHeaderConfig) {
         <p className="professional-kicker min-w-0" id="admin-section-context" role="doc-subtitle">
           {kicker}
         </p>
+        {tourId ? (
+          <div className="ml-auto shrink-0">
+            <ProductTourButton tourId={tourId} autoStart />
+          </div>
+        ) : null}
       </div>
       <div className="header-section-spacing">
         <h1
@@ -211,5 +219,6 @@ export function AdminPageHeaderFromPath() {
   const config = getHeaderConfig(pathname);
   if (!config) return null;
 
-  return <AdminPageHeader {...config} />;
+  const tourId = getAdminTourIdForPath(pathname);
+  return <AdminPageHeader {...config} tourId={tourId} />;
 }

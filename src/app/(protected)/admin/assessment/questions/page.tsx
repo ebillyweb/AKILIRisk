@@ -23,7 +23,7 @@ export default async function AdminAssessmentQuestionsIndexPage() {
       <Suspense fallback={null}>
         <QuestionBankRiskAreaFilter activeAreaId={null} pillars={catalog} />
       </Suspense>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-tour="config-primary-list">
         {pillars.map((area) => {
           const { total, visible } = countsByArea[area.id] ?? { total: 0, visible: 0 };
           return (

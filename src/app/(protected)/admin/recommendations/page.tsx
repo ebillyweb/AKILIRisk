@@ -7,6 +7,7 @@ import {
   listDistinctCategories,
 } from "@/lib/admin/recommendation-queries";
 import { RecommendationCatalogFilterForm } from "@/components/admin/RecommendationCatalogFilterForm";
+import { AdminRecommendationsTourButton } from "@/components/admin/AdminRecommendationsTourButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,7 +50,7 @@ export default async function AdminRecommendationsPage({
         </Link>
       </div>
 
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4" data-tour="config-page-header">
         <div>
           <h1 className="text-2xl font-bold">Recommendations</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -59,6 +60,7 @@ export default async function AdminRecommendationsPage({
             conditions exceed 50% on a scored assessment.
           </p>
         </div>
+        <AdminRecommendationsTourButton view={view} />
       </div>
 
       <div className="border-b border-border">
@@ -110,7 +112,7 @@ async function ServicesView({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <CardTitle className="text-base">Service catalog ({services.length})</CardTitle>
-          <Button asChild size="sm">
+          <Button asChild size="sm" data-tour="config-primary-action">
             <Link href="/admin/recommendations/services/new">
               <Plus className="h-4 w-4 mr-1" />
               New service
@@ -118,16 +120,18 @@ async function ServicesView({
           </Button>
         </CardHeader>
         <CardContent>
-          <RecommendationCatalogFilterForm
-            defaultQ={searchParams.q ?? ""}
-            defaultCategory={searchParams.category ?? ""}
-            defaultTier={searchParams.tier ?? ""}
-            defaultComplexity={searchParams.complexity ?? ""}
-            defaultActive={searchParams.active ?? "all"}
-            categories={categories}
-          />
+          <div data-tour="config-filters">
+            <RecommendationCatalogFilterForm
+              defaultQ={searchParams.q ?? ""}
+              defaultCategory={searchParams.category ?? ""}
+              defaultTier={searchParams.tier ?? ""}
+              defaultComplexity={searchParams.complexity ?? ""}
+              defaultActive={searchParams.active ?? "all"}
+              categories={categories}
+            />
+          </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" data-tour="config-primary-list">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
                 <tr>
@@ -191,15 +195,17 @@ async function RulesView({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <CardTitle className="text-base">Recommendation rules ({rules.length})</CardTitle>
-        <Button asChild size="sm">
-          <Link href="/admin/recommendations/rules/new">
-            <Plus className="h-4 w-4 mr-1" />
-            New rule
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" data-tour="config-primary-action">
+            <Link href="/admin/recommendations/rules/new">
+              <Plus className="h-4 w-4 mr-1" />
+              New rule
+            </Link>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" data-tour="config-primary-list">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
               <tr>

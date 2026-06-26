@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { toast } from "react-hot-toast";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { buildPasswordRequirementsMessage, type PasswordPolicy } from "@/lib/auth/password-policy";
 import { updatePasswordPolicy } from "@/lib/admin/platform-settings-actions";
@@ -17,11 +17,12 @@ type Props = {
 type RuleToggleProps = {
   id: string;
   label: string;
+import type { FieldHelpKey } from "@/lib/field-help/content";
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 };
 
-function RuleToggle({ id, label, checked, onCheckedChange }: RuleToggleProps) {
+function RuleToggle({ id, label, helpKey, checked, onCheckedChange }: RuleToggleProps) {
   return (
     <label
       htmlFor={id}
@@ -33,7 +34,10 @@ function RuleToggle({ id, label, checked, onCheckedChange }: RuleToggleProps) {
         onCheckedChange={(value) => onCheckedChange(value === true)}
         className="mt-0.5"
       />
-      <span className="text-sm font-medium leading-snug">{label}</span>
+      <span className="flex items-center gap-1 text-sm font-medium leading-snug">
+        {label}
+        <FieldHelp helpKey={helpKey} triggerLabel={label} />
+      </span>
     </label>
   );
 }
@@ -98,7 +102,9 @@ export function AdminPasswordPolicyForm({ initialPolicy }: Props) {
     <div className="space-y-6">
       <div className="space-y-4 rounded-lg border bg-muted/20 p-4 sm:p-5">
         <div className="space-y-2 max-w-xs">
-          <Label htmlFor="password-min-length">Minimum length</Label>
+          <LabelWithHelp htmlFor="password-min-length" helpKey="password-min-length">
+            Minimum length
+          </LabelWithHelp>
           <Input
             id="password-min-length"
             type="number"
@@ -116,18 +122,21 @@ export function AdminPasswordPolicyForm({ initialPolicy }: Props) {
             <RuleToggle
               id="password-uppercase"
               label="Require uppercase letter"
+              helpKey="password-uppercase"
               checked={requireUppercase}
               onCheckedChange={setRequireUppercase}
             />
             <RuleToggle
               id="password-number"
               label="Require number"
+              helpKey="password-number"
               checked={requireNumber}
               onCheckedChange={setRequireNumber}
             />
             <RuleToggle
               id="password-special"
               label="Require special character"
+              helpKey="password-special"
               checked={requireSpecialCharacter}
               onCheckedChange={setRequireSpecialCharacter}
             />
@@ -145,9 +154,9 @@ export function AdminPasswordPolicyForm({ initialPolicy }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password-compliance-notice">
+        <LabelWithHelp htmlFor="password-compliance-notice" helpKey="password-compliance-notice">
           Compliance notice (shown to users who must update)
-        </Label>
+        </LabelWithHelp>
         <Textarea
           id="password-compliance-notice"
           value={complianceNotice}

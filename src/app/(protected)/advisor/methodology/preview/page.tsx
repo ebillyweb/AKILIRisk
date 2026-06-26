@@ -5,6 +5,7 @@ import { buildAdvisorConfigSnapshot } from "@/lib/methodology/snapshot";
 import { riskAreasFromSnapshot, getPillarCountLabel } from "@/lib/methodology/snapshot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyPreviewPage() {
   let profileId: string;
@@ -24,13 +25,12 @@ export default async function MethodologyPreviewPage() {
       <Button variant="outline" size="sm" asChild>
         <Link href="/advisor/methodology">Methodology</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Preview as client</h1>
-        <p className="text-sm text-muted-foreground">
-          Live methodology dry run — not pinned to an intake snapshot.
-        </p>
-      </div>
-      <Card>
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-preview"
+        title="Preview as client"
+        description="Live methodology dry run — not pinned to an intake snapshot."
+      />
+      <Card data-tour="config-primary-list">
         <CardHeader>
           <CardTitle className="text-base">{getPillarCountLabel(snapshot)}</CardTitle>
         </CardHeader>

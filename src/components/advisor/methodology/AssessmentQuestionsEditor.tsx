@@ -7,6 +7,7 @@ import {
   deleteAdvisorPillarQuestion,
   updateAdvisorPillarQuestion,
 } from "@/lib/actions/methodology-actions";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,7 +65,7 @@ export function AssessmentQuestionsEditor({
             ) : null}
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Checkbox
                 defaultChecked={q.isVisible}
                 onCheckedChange={(checked) => {
@@ -76,6 +77,7 @@ export function AssessmentQuestionsEditor({
                 }}
               />
               <Label>Visible in assessments</Label>
+              <FieldHelp helpKey="advisor-assessment-visible" triggerLabel="Visible in assessments" />
             </div>
             <form
               className="space-y-3"
@@ -92,19 +94,28 @@ export function AssessmentQuestionsEditor({
                 });
               }}
             >
-              <Textarea name="questionText" defaultValue={q.questionText} rows={3} />
-              <Textarea
-                name="whyThisMatters"
-                defaultValue={q.whyThisMatters ?? ""}
-                placeholder="Why this matters"
-                rows={2}
-              />
-              <Textarea
-                name="recommendedActions"
-                defaultValue={q.recommendedActions ?? ""}
-                placeholder="Recommended actions"
-                rows={2}
-              />
+              <div className="space-y-2">
+                <LabelWithHelp helpKey="advisor-assessment-question-text">Question text</LabelWithHelp>
+                <Textarea name="questionText" defaultValue={q.questionText} rows={3} />
+              </div>
+              <div className="space-y-2">
+                <LabelWithHelp helpKey="advisor-assessment-why-matters">Why this matters</LabelWithHelp>
+                <Textarea
+                  name="whyThisMatters"
+                  defaultValue={q.whyThisMatters ?? ""}
+                  placeholder="Why this matters"
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <LabelWithHelp helpKey="advisor-assessment-actions">Recommended actions</LabelWithHelp>
+                <Textarea
+                  name="recommendedActions"
+                  defaultValue={q.recommendedActions ?? ""}
+                  placeholder="Recommended actions"
+                  rows={2}
+                />
+              </div>
               <Button type="submit" size="sm" disabled={pending}>
                 Save
               </Button>
@@ -136,13 +147,22 @@ export function AssessmentQuestionsEditor({
               });
             }}
           >
-            <Textarea name="questionText" placeholder="Question text" rows={3} required />
-            <Textarea name="whyThisMatters" placeholder="Why this matters (optional)" rows={2} />
-            <Textarea
-              name="recommendedActions"
-              placeholder="Recommended actions (optional)"
-              rows={2}
-            />
+            <div className="space-y-2">
+              <LabelWithHelp helpKey="advisor-assessment-question-text">Question text</LabelWithHelp>
+              <Textarea name="questionText" placeholder="Question text" rows={3} required />
+            </div>
+            <div className="space-y-2">
+              <LabelWithHelp helpKey="advisor-assessment-why-matters">Why this matters (optional)</LabelWithHelp>
+              <Textarea name="whyThisMatters" placeholder="Why this matters (optional)" rows={2} />
+            </div>
+            <div className="space-y-2">
+              <LabelWithHelp helpKey="advisor-assessment-actions">Recommended actions (optional)</LabelWithHelp>
+              <Textarea
+                name="recommendedActions"
+                placeholder="Recommended actions (optional)"
+                rows={2}
+              />
+            </div>
             <Button type="submit" size="sm" disabled={pending}>
               Add question
             </Button>

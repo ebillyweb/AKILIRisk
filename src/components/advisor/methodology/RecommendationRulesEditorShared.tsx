@@ -14,6 +14,7 @@ import {
   isPlatformAdvisorQuestion,
 } from "@/lib/methodology/advisor-question-policy";
 import { TriggerConditionsBuilder } from "@/components/admin/TriggerConditionsBuilder";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -157,7 +158,7 @@ function RuleCard({
         ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Checkbox
             defaultChecked={rule.isActive}
             disabled={pending}
@@ -166,6 +167,7 @@ function RuleCard({
             }}
           />
           <Label>Active for new intakes</Label>
+          <FieldHelp helpKey="advisor-rule-active" triggerLabel="Active for new intakes" />
         </div>
 
         {isPlatformAdvisorQuestion(rule.sourceKind) ? (
@@ -176,7 +178,9 @@ function RuleCard({
 
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor={`name-${rule.id}`}>Rule name</Label>
+            <LabelWithHelp htmlFor={`name-${rule.id}`} helpKey="rule-name">
+              Rule name
+            </LabelWithHelp>
             <Input
               id={`name-${rule.id}`}
               value={name}
@@ -185,7 +189,9 @@ function RuleCard({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`priority-${rule.id}`}>Priority</Label>
+            <LabelWithHelp htmlFor={`priority-${rule.id}`} helpKey="rule-priority">
+              Priority
+            </LabelWithHelp>
             <Input
               id={`priority-${rule.id}`}
               type="number"
@@ -267,7 +273,7 @@ function CreateRuleCard({
   }
 
   return (
-    <Card>
+    <Card data-tour="rule-create">
       <CardHeader>
         <CardTitle className="text-base">Add custom rule</CardTitle>
       </CardHeader>
@@ -276,7 +282,9 @@ function CreateRuleCard({
 
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="custom-rule-name">Rule name</Label>
+            <LabelWithHelp htmlFor="custom-rule-name" helpKey="rule-name">
+              Rule name
+            </LabelWithHelp>
             <Input
               id="custom-rule-name"
               value={name}
@@ -286,7 +294,9 @@ function CreateRuleCard({
             />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="custom-rule-service">Service recommendation</Label>
+            <LabelWithHelp htmlFor="custom-rule-service" helpKey="rule-service">
+              Service recommendation
+            </LabelWithHelp>
             <Select
               value={serviceId || undefined}
               onValueChange={setServiceId}
@@ -305,7 +315,9 @@ function CreateRuleCard({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="custom-rule-priority">Priority</Label>
+            <LabelWithHelp htmlFor="custom-rule-priority" helpKey="rule-priority">
+              Priority
+            </LabelWithHelp>
             <Input
               id="custom-rule-priority"
               type="number"
@@ -377,7 +389,7 @@ export function RecommendationRulesEditorShared({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-tour="rules-existing">
       {rules.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No rules for this pillar yet. Add a custom rule below, or check back after platform

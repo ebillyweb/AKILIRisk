@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 @import "shadcn/tailwind.css";
+@import "driver.js/dist/driver.css";
 
 /* Class on `html.dark` — matches Tailwind `darkMode: "class"` (see tailwind.config.ts). */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -895,4 +896,52 @@
       text-decoration: underline;
     }
   }
+}
+
+/* driver.js product tours — align with app theme */
+.driver-popover.akili-driver-popover {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.12);
+  max-width: min(22rem, calc(100vw - 2rem));
+}
+
+.driver-popover.akili-driver-popover .driver-popover-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.driver-popover.akili-driver-popover .driver-popover-description {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.driver-popover.akili-driver-popover .driver-popover-progress-text {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.driver-popover.akili-driver-popover button {
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 0.8125rem;
+  text-shadow: none;
+}
+
+.driver-popover.akili-driver-popover .driver-popover-next-btn,
+.driver-popover.akili-driver-popover .driver-popover-done-btn {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.driver-popover.akili-driver-popover .driver-popover-prev-btn {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.driver-popover.akili-driver-popover .driver-popover-close-btn {
+  color: var(--muted-foreground);
 }

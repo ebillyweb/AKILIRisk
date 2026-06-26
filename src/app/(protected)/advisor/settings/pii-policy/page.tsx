@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { parsePiiPolicy } from "@/lib/advisor/pii-policy";
 import { PiiPolicyForm } from "@/components/advisor/settings/PiiPolicyForm";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 /**
  * Option D session 1 commit 1.3 (BRD §5.1 amendment) — advisor PII
@@ -32,16 +33,15 @@ export default async function PiiPolicySettingsPage() {
         </Link>
       </div>
 
-      <div>
-        <h1 className="text-3xl font-bold">PII policy</h1>
-        <p className="mt-2 text-muted-foreground">
-          Choose which optional client PII fields your future clients are
-          asked for during intake. The default is opt-out — every field
-          is enabled until you change it.
-        </p>
-      </div>
+      <ConfigurationPageHeader
+        tourId="advisor-settings-pii-policy"
+        title="PII policy"
+        description="Choose which optional client PII fields your future clients are asked for during intake. The default is opt-out — every field is enabled until you change it."
+      />
 
-      <PiiPolicyForm initialPolicy={policy} />
+      <div data-tour="config-primary-form">
+        <PiiPolicyForm initialPolicy={policy} />
+      </div>
     </div>
   );
 }

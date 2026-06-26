@@ -14,6 +14,8 @@ import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { FieldHelpKey } from '@/lib/field-help/content';
+import { FieldHelp, LabelWithHelp } from '@/components/ui/field-help';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -140,11 +142,13 @@ function SettingsSection({
   title,
   description,
   icon: Icon,
+  helpKey,
   children,
 }: {
   title: string;
   description: string;
   icon: LucideIcon;
+  helpKey?: FieldHelpKey;
   children: React.ReactNode;
 }) {
   return (
@@ -153,6 +157,7 @@ function SettingsSection({
         <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
           <Icon className="size-4 text-muted-foreground" aria-hidden />
           {title}
+          {helpKey ? <FieldHelp helpKey={helpKey} triggerLabel={title} /> : null}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
@@ -456,7 +461,9 @@ export function EnhancedBrandingForm({
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="tagline">Tagline</Label>
+                    <LabelWithHelp htmlFor="tagline" helpKey="branding-tagline">
+                      Tagline
+                    </LabelWithHelp>
                     <Textarea
                       id="tagline"
                       {...register('tagline')}
@@ -469,7 +476,9 @@ export function EnhancedBrandingForm({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="websiteUrl">Website URL</Label>
+                    <LabelWithHelp htmlFor="websiteUrl" helpKey="branding-website">
+                      Website URL
+                    </LabelWithHelp>
                     <Input
                       id="websiteUrl"
                       type="url"
@@ -488,6 +497,7 @@ export function EnhancedBrandingForm({
                   title="Brand colors"
                   description="Primary, secondary, and accent colors on client portals and emails."
                   icon={Palette}
+                  helpKey="branding-colors"
                 >
                   {!features.advancedBrandingEnabled ? (
                     <Alert>
@@ -531,6 +541,7 @@ export function EnhancedBrandingForm({
                   title="Logo"
                   description="PNG, JPEG, or SVG — max 5MB. Shown on client portals and reports."
                   icon={ImageIcon}
+                  helpKey="branding-logo"
                 >
                   <FileUpload
                     accept="image/*"
@@ -548,7 +559,9 @@ export function EnhancedBrandingForm({
                   icon={Phone}
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="supportEmail">Support email</Label>
+                    <LabelWithHelp htmlFor="supportEmail" helpKey="branding-support-email">
+                      Support email
+                    </LabelWithHelp>
                     <Input
                       id="supportEmail"
                       type="email"
@@ -560,7 +573,9 @@ export function EnhancedBrandingForm({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="supportPhone">Support phone</Label>
+                    <LabelWithHelp htmlFor="supportPhone" helpKey="branding-support-phone">
+                      Support phone
+                    </LabelWithHelp>
                     <Input
                       id="supportPhone"
                       type="tel"
@@ -572,7 +587,9 @@ export function EnhancedBrandingForm({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="emailFooterText">Email footer text</Label>
+                    <LabelWithHelp htmlFor="emailFooterText" helpKey="branding-email-footer">
+                      Email footer text
+                    </LabelWithHelp>
                     <Textarea
                       id="emailFooterText"
                       {...register('emailFooterText')}

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyCatalogUpdatesPage() {
   let profile: Awaited<ReturnType<typeof getAdvisorProfileOrThrow>>;
@@ -30,13 +31,12 @@ export default async function MethodologyCatalogUpdatesPage() {
       <Button variant="outline" size="sm" asChild>
         <Link href="/advisor/methodology">Methodology</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Catalog updates</h1>
-        <p className="text-sm text-muted-foreground">
-          Platform pillar catalog version vs. what your profile has seen.
-        </p>
-      </div>
-      <Card>
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-catalog-updates"
+        title="Catalog updates"
+        description="Platform pillar catalog version vs. what your profile has seen."
+      />
+      <Card data-tour="config-primary-list">
         <CardHeader>
           <CardTitle className="text-base">Catalog sync</CardTitle>
         </CardHeader>

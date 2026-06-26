@@ -9,7 +9,7 @@ import {
 } from "@/lib/admin/recommendation-rule-ui";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { LabelWithHelp } from "@/components/ui/field-help";
 import {
   Select,
   SelectContent,
@@ -56,7 +56,9 @@ export function AnswerValueField({
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor={`answer-op-${index}`}>Comparison</Label>
+        <LabelWithHelp htmlFor={`answer-op-${index}`} helpKey="condition-comparison">
+          Comparison
+        </LabelWithHelp>
         <Select
           value={condition.operator}
           onValueChange={(operator) =>
@@ -113,7 +115,9 @@ function AnswerValueInput({
   if (hasOptions && condition.operator === "equals") {
     return (
       <div className="space-y-2">
-        <Label htmlFor={`answer-value-${index}`}>Expected answer</Label>
+        <LabelWithHelp htmlFor={`answer-value-${index}`} helpKey="condition-answer">
+          Expected answer
+        </LabelWithHelp>
         <Select
           value={String(condition.value ?? "")}
           onValueChange={(raw) =>
@@ -143,7 +147,7 @@ function AnswerValueInput({
     const selected = new Set(selectedValuesForInOperator(condition));
     return (
       <div className="space-y-2 md:col-span-2">
-        <Label>Accepted answers</Label>
+        <LabelWithHelp helpKey="condition-answer">Accepted answers</LabelWithHelp>
         <div className="flex flex-wrap gap-4">
           {options.map((option) => (
             <label key={option.value} className="flex items-center gap-2 text-sm">
@@ -170,9 +174,9 @@ function AnswerValueInput({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={`answer-value-${index}`}>
+      <LabelWithHelp htmlFor={`answer-value-${index}`} helpKey="condition-answer">
         {condition.operator === "in" ? "Accepted answers" : "Expected answer"}
-      </Label>
+      </LabelWithHelp>
       <Input
         id={`answer-value-${index}`}
         value={answerMatchListFromValue(condition)}

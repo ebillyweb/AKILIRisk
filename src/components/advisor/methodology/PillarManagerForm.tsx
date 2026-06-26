@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { updateAdvisorPillarOverride } from "@/lib/actions/methodology-actions";
 import { DEFAULT_RISK_THRESHOLDS } from "@/lib/assessment/governance-rubric";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,9 +59,12 @@ export function PillarManagerForm({ pillars }: { pillars: PillarRow[] }) {
                 }}
               />
               <Label htmlFor={`active-${pillar.slug}`}>Active for new intakes</Label>
+              <FieldHelp helpKey="pillar-active" triggerLabel="Active for new intakes" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`name-${pillar.slug}`}>Display name</Label>
+              <LabelWithHelp htmlFor={`name-${pillar.slug}`} helpKey="pillar-display-name">
+                Display name
+              </LabelWithHelp>
               <form
                 action={(formData) => {
                   startTransition(async () => {
@@ -82,7 +86,9 @@ export function PillarManagerForm({ pillars }: { pillars: PillarRow[] }) {
               </form>
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`weight-${pillar.slug}`}>Weight</Label>
+              <LabelWithHelp htmlFor={`weight-${pillar.slug}`} helpKey="pillar-weight">
+                Weight
+              </LabelWithHelp>
               <form
                 action={(formData) => {
                   startTransition(async () => {
@@ -105,7 +111,9 @@ export function PillarManagerForm({ pillars }: { pillars: PillarRow[] }) {
               </form>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Risk thresholds (0–100 resilience %)</Label>
+              <LabelWithHelp helpKey="pillar-thresholds">
+                Risk thresholds (0–100 resilience %)
+              </LabelWithHelp>
               <form
                 className="grid gap-3 sm:grid-cols-3"
                 action={(formData) => {
@@ -128,7 +136,9 @@ export function PillarManagerForm({ pillars }: { pillars: PillarRow[] }) {
               >
                 {(["lowMin", "mediumMin", "highMin"] as const).map((field) => (
                   <div key={field} className="space-y-1">
-                    <Label htmlFor={`${field}-${pillar.slug}`}>{field}</Label>
+                    <LabelWithHelp htmlFor={`${field}-${pillar.slug}`} helpKey="pillar-threshold-cutoff">
+                      {field}
+                    </LabelWithHelp>
                     <Input
                       id={`${field}-${pillar.slug}`}
                       name={field}

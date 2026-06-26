@@ -7,7 +7,7 @@ import { toast } from "react-hot-toast";
 import { updateRiskThresholds } from "@/lib/admin/platform-settings-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { LabelWithHelp } from "@/components/ui/field-help";
 
 interface AdminRiskThresholdsFormProps {
   initialLowMin: number;
@@ -100,7 +100,9 @@ export function AdminRiskThresholdsForm({
         <p className="text-sm font-medium">Score cutoffs</p>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor="lowMin">In good shape (low risk)</Label>
+            <LabelWithHelp htmlFor="lowMin" helpKey="threshold-low-min">
+              In good shape (low risk)
+            </LabelWithHelp>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground shrink-0">Score at least</span>
               <Input
@@ -117,7 +119,9 @@ export function AdminRiskThresholdsForm({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="mediumMin">Needs attention (medium)</Label>
+            <LabelWithHelp htmlFor="mediumMin" helpKey="threshold-medium-min">
+              Needs attention (medium)
+            </LabelWithHelp>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground shrink-0">Score at least</span>
               <Input
@@ -134,7 +138,9 @@ export function AdminRiskThresholdsForm({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="highMin">Concerning (high risk)</Label>
+            <LabelWithHelp htmlFor="highMin" helpKey="threshold-high-min">
+              Concerning (high risk)
+            </LabelWithHelp>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground shrink-0">Score at least</span>
               <Input

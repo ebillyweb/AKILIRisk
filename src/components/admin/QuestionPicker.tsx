@@ -10,7 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import type { FieldHelpKey } from "@/lib/field-help/content";
+import { LabelWithHelp } from "@/components/ui/field-help";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -31,6 +32,7 @@ type QuestionPickerProps = {
   onChange: (questionId: string) => void;
   disabled?: boolean;
   helperText?: string;
+  helpKey?: FieldHelpKey;
 };
 
 export function QuestionPicker({
@@ -41,6 +43,7 @@ export function QuestionPicker({
   onChange,
   disabled = false,
   helperText,
+  helpKey = "condition-question",
 }: QuestionPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -77,7 +80,9 @@ export function QuestionPicker({
 
   return (
     <div className="space-y-2 md:col-span-2">
-      <Label htmlFor={id}>{label}</Label>
+      <LabelWithHelp htmlFor={id} helpKey={helpKey}>
+        {label}
+      </LabelWithHelp>
 
       {!manualId ? (
         <Popover open={open} onOpenChange={setOpen}>
