@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { buildPasswordRequirementsMessage, type PasswordPolicy } from "@/lib/auth/password-policy";
+import type { FieldHelpKey } from "@/lib/field-help/content";
 import { updatePasswordPolicy } from "@/lib/admin/platform-settings-actions";
 
 type Props = {
@@ -17,7 +18,7 @@ type Props = {
 type RuleToggleProps = {
   id: string;
   label: string;
-import type { FieldHelpKey } from "@/lib/field-help/content";
+  helpKey: FieldHelpKey;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 };
