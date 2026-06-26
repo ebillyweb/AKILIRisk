@@ -181,8 +181,9 @@ model AdvisorEnterprise {
   subscription          Subscription?
   memberships           EnterpriseMembership[]
   advisorProfiles       AdvisorProfile[]
-  subdomain             AdvisorSubdomain?
-  recommendationRules   EnterpriseRecommendationRule[]
+  subdomain                     AdvisorSubdomain?
+  recommendationRules           EnterpriseRecommendationRule[]
+  solutionCustomizations        EnterpriseSolutionCustomization[]
 
   @@index([billingContactUserId])
   @@index([status])
@@ -1062,8 +1063,9 @@ model AdvisorProfile {
   pillarQuestions       AdvisorPillarQuestion[]
   intakeQuestions       AdvisorIntakeQuestion[]
   pillarNarratives      AdvisorPillarNarrative[]
-  recommendationRules   AdvisorRecommendationRule[]
-  intakeSnapshots       IntakeSnapshot[]
+  recommendationRules        AdvisorRecommendationRule[]
+  solutionCustomizations     AdvisorSolutionCustomization[]
+  intakeSnapshots            IntakeSnapshot[]
 
   @@index([userId])
   @@index([enterpriseId])
@@ -1399,11 +1401,27 @@ model ServiceRecommendation {
   complexity         RecommendationComplexity?
   /// C1 (BRD §4.4): nullable so existing rows render as "—" in admin filters.
   implementationType ImplementationType?
+
+  /// Risk Solutions Library (Phase 22): enriched catalog fields
+  slug               String?               @unique
+  shortDescription   String?               @db.VarChar(280)
+  icon               String?               @db.VarChar(60)
+  expectedOutcome    String?               @db.Text
+  tags               String[]              @default([])
+  /// Ordered list of implementation steps (platform playbook).
+  /// Shape: { steps: [{ title, description, estimatedDuration?, sortOrder }] }
+  playbook           Json?
+  externalUrl        String?
+  /// Comma-separated service IDs that should be completed first.
+  prerequisites      String[]              @default([])
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  recommendationRules         RecommendationRule[]
-  assessmentRecommendations AssessmentRecommendation[]
+  recommendationRules               RecommendationRule[]
+  assessmentRecommendations         AssessmentRecommendation[]
+  enterpriseSolutionCustomizations   EnterpriseSolutionCustomization[]
+  advisorSolutionCustomizations      AdvisorSolutionCustomization[]
 
   @@index([category, priority])
   @@index([isActive])
@@ -1464,11 +1482,30 @@ model AssessmentRecommendation {
   priority                Int
   status                  RecommendationStatus   @default(PENDING)
   advisorNotes            String?
+
+  /// Risk Solutions Library: lifecycle timestamp tracking
+  statusUpdatedAt         DateTime?
+  acceptedAt              DateTime?
+  startedAt               DateTime?
+  completedAt             DateTime?
+  declinedAt              DateTime?
+  declinedReason          String?               @db.Text
+  implementationNotes     String?               @db.Text
+  /// Engine-computed urgency (0-100) based on risk level and trigger severity.
+  urgencyScore            Float?
+  /// Expected risk-score improvement if this solution is implemented.
+  projectedImpact         Float?
+  /// Records which layers (platform/enterprise/advisor) contributed at match time.
+  /// Shape: { platform: bool, enterprise: { id, name } | null, advisor: { id, name } | null }
+  sourceLayerSummary      Json?                 @map("source_layer_summary")
+
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
   assessment            Assessment            @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id])
+  milestones            SolutionMilestone[]
+  activities            SolutionActivity[]
 
   @@unique([assessmentId, serviceRecommendationId])
   @@index([assessmentId])
@@ -1826,6 +1863,116 @@ model AdvisorRecommendationRule {
   @@index([advisorProfileId, sourceKind])
   @@index([enterpriseSourceId])
   @@map("advisor_recommendation_rules")
+}
+
+// ---------------------------------------------------------------------------
+// Risk Solutions Library: compose-at-read customization overlays
+// ---------------------------------------------------------------------------
+
+/// Enterprise-level overlay on a platform ServiceRecommendation.
+/// Additive only: can override cost/timeframe/provider and append playbook
+/// steps and notes, but cannot remove or hide platform content.
+model EnterpriseSolutionCustomization {
+  id                      String            @id @default(cuid())
+  enterpriseId            String            @map("enterprise_id")
+  serviceRecommendationId String            @map("service_recommendation_id")
+  /// Override fields (null = inherit platform value)
+  costOverride            String?           @map("cost_override")
+  timeframeOverride       String?           @map("timeframe_override")
+  providerOverride        String?           @map("provider_override")
+  /// Additional playbook steps appended after platform steps.
+  /// Shape: { steps: [{ title, description, estimatedDuration?, sortOrder }] }
+  additionalPlaybook      Json?             @map("additional_playbook")
+  /// Free-form notes visible to all advisors in the enterprise.
+  notes                   String?           @db.Text
+  isActive                Boolean           @default(true) @map("is_active")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+
+  enterprise            AdvisorEnterprise     @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([enterpriseId, serviceRecommendationId])
+  @@index([enterpriseId])
+  @@map("enterprise_solution_customizations")
+}
+
+/// Per-advisor overlay on a platform ServiceRecommendation.
+/// Same additive-only semantics as the enterprise layer.
+model AdvisorSolutionCustomization {
+  id                      String            @id @default(cuid())
+  advisorProfileId        String            @map("advisor_profile_id")
+  serviceRecommendationId String            @map("service_recommendation_id")
+  /// Override fields (null = inherit from enterprise or platform)
+  costOverride            String?           @map("cost_override")
+  timeframeOverride       String?           @map("timeframe_override")
+  providerOverride        String?           @map("provider_override")
+  /// Additional playbook steps appended after enterprise steps.
+  additionalPlaybook      Json?             @map("additional_playbook")
+  notes                   String?           @db.Text
+  isActive                Boolean           @default(true) @map("is_active")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+
+  advisorProfile        AdvisorProfile        @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([advisorProfileId, serviceRecommendationId])
+  @@index([advisorProfileId])
+  @@map("advisor_solution_customizations")
+}
+
+enum MilestoneSource {
+  PLATFORM
+  ENTERPRISE
+  ADVISOR
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+/// Materialized playbook step for an accepted recommendation.
+/// Created when status transitions to ACCEPTED; each row is tagged
+/// with the source layer that contributed it.
+model SolutionMilestone {
+  id                         String          @id @default(cuid())
+  assessmentRecommendationId String          @map("assessment_recommendation_id")
+  title                      String          @db.VarChar(200)
+  description                String?         @db.Text
+  estimatedDuration          String?         @map("estimated_duration") @db.VarChar(60)
+  sortOrder                  Int             @default(0) @map("sort_order")
+  source                     MilestoneSource @default(PLATFORM)
+  status                     MilestoneStatus @default(NOT_STARTED)
+  completedAt                DateTime?       @map("completed_at")
+  createdAt                  DateTime        @default(now()) @map("created_at")
+  updatedAt                  DateTime        @updatedAt @map("updated_at")
+
+  assessmentRecommendation AssessmentRecommendation @relation(fields: [assessmentRecommendationId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentRecommendationId])
+  @@index([assessmentRecommendationId, sortOrder])
+  @@map("solution_milestones")
+}
+
+/// Activity log entry for recommendation lifecycle events (status changes,
+/// notes, milestone completions). Append-only — never updated or deleted.
+model SolutionActivity {
+  id                         String   @id @default(cuid())
+  assessmentRecommendationId String   @map("assessment_recommendation_id")
+  actorId                    String?  @map("actor_id")
+  action                     String   @db.VarChar(60)
+  detail                     Json?
+  createdAt                  DateTime @default(now()) @map("created_at")
+
+  assessmentRecommendation AssessmentRecommendation @relation(fields: [assessmentRecommendationId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentRecommendationId])
+  @@index([assessmentRecommendationId, createdAt])
+  @@map("solution_activities")
 }
 
 /// Immutable advisor methodology frozen at intake start.
