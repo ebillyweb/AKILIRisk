@@ -19,3 +19,6 @@ export const TIER_LIMITS: Record<SubscriptionTier, number> = {
   PLATINUM: 150,
   ENTERPRISE: ENTERPRISE_DEFAULT_CLIENT_LIMIT,
 };
+
+/** Annual billing promo shown on pricing and advisor billing toggles. */
+export const ANNUAL_BILLING_SAVINGS_LABEL = "2 months free";

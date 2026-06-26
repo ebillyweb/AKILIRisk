@@ -1,7 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Send, UserPlus } from "lucide-react";
 
+import { ClientLimitBanner } from "@/components/advisor/billing/ClientLimitGate";
+import { PipelineClientActions } from "@/components/advisor/pipeline/PipelineClientActions";
+import { TierFeatureLockedPage } from "@/components/advisor/billing/TierFeatureLockedPage";
+import { requireAdvisorTierFeatureAccess } from "@/lib/advisor/tier-feature-guard.server";
+import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
+import { auth } from "@/lib/auth";
 import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
 import {
   parsePipelineFiltersFromSearchParams,
@@ -9,7 +14,6 @@ import {
 } from "@/lib/pipeline/parse-pipeline-filters";
 import type { PipelineFilters } from "@/lib/pipeline/types";
 import { MetricCard } from "@/components/advisor/workspace/MetricCard";
-import { Button } from "@/components/ui/button";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
 
@@ -108,25 +112,6 @@ function MetricsSummary({ metrics }: { metrics: any }) {
   );
 }
 
-function PipelineClientActions() {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Button asChild size="sm">
-        <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
-          <UserPlus className="size-4" />
-          Create New Client
-        </Link>
-      </Button>
-      <Button asChild variant="outline" size="sm">
-        <Link href="/advisor/invitations" className="inline-flex items-center gap-2">
-          <Send className="size-4" />
-          Send New Invitation
-        </Link>
-      </Button>
-    </div>
-  );
-}
-
 // Async component for data-dependent content
 async function PipelineContent({
   initialFilters,
@@ -182,11 +167,31 @@ export default async function PipelinePage({
   const resolvedSearchParams = await searchParams;
   const initialFilters = parsePipelineFiltersFromSearchParams(resolvedSearchParams);
   const initialPage = parsePipelinePageFromSearchParams(resolvedSearchParams);
+
+  if (initialFilters.needsRescore) {
+    const access = await requireAdvisorTierFeatureAccess("REASSESSMENT_WORKFLOW");
+    if (!access.allowed) {
+      return (
+        <TierFeatureLockedPage
+          feature="REASSESSMENT_WORKFLOW"
+          currentTier={access.currentTier}
+        />
+      );
+    }
+  }
+
   const workflowHeading = pipelineWorkflowHeading(initialFilters);
+  const session = await auth();
+  const clientLimitStatus = session?.user?.id
+    ? await getAdvisorClientLimitStatus(session.user.id)
+    : null;
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <PipelineClientActions />
+      {clientLimitStatus ? <ClientLimitBanner status={clientLimitStatus} /> : null}
+      {clientLimitStatus ? (
+        <PipelineClientActions clientLimitStatus={clientLimitStatus} />
+      ) : null}
 
       {workflowHeading ? (
         <header className="space-y-1 border-b border-border/50 pb-5">

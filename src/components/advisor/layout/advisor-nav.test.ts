@@ -4,6 +4,9 @@ import {
   getActiveAdvisorNavHref,
   getAdvisorNavSectionForHref,
   getVisibleAdvisorNavSections,
+  isAdvisorNavItemTierLocked,
+  isAdvisorNavItemClientLimitLocked,
+  getAdvisorNavItemLockReason,
 } from "./advisor-nav";
 
 const flags = {
@@ -132,5 +135,36 @@ describe("getActiveAdvisorNavHref", () => {
     expect(
       withoutBilling.flatMap((section) => section.items).some((item) => item.href === "/advisor/billing")
     ).toBe(false);
+  });
+
+  it("marks tier-gated nav items as locked below the required module tier", () => {
+    const methodology = ADVISOR_NAV_SECTIONS.find((s) => s.id === "configuration")
+      ?.items.find((item) => item.href === "/advisor/methodology");
+    expect(methodology?.requiresTierFeature).toBe("METHODOLOGY_CUSTOMIZATION");
+    expect(isAdvisorNavItemTierLocked(methodology!, "ESSENTIALS")).toBe(true);
+    expect(isAdvisorNavItemTierLocked(methodology!, "PROFESSIONAL")).toBe(false);
+
+    const engagements = ADVISOR_NAV_SECTIONS.find((s) => s.id === "workflows")
+      ?.items.find((item) => item.href === "/advisor/engagements");
+    expect(isAdvisorNavItemTierLocked(engagements!, "PROFESSIONAL")).toBe(true);
+    expect(isAdvisorNavItemTierLocked(engagements!, "BUSINESS")).toBe(false);
+  });
+
+  it("locks invitations when the advisor is at their client cap", () => {
+    const invitations = ADVISOR_NAV_SECTIONS.find((s) => s.id === "clients")
+      ?.items.find((item) => item.href === "/advisor/invitations");
+    const status = {
+      canAddClient: false,
+      currentCount: 25,
+      limit: 25,
+      currentTier: "ESSENTIALS" as const,
+      suggestedUpgradeTier: "PROFESSIONAL" as const,
+      isEnterprise: false,
+      canSelfServeUpgrade: true,
+    };
+    expect(isAdvisorNavItemClientLimitLocked(invitations!, status)).toBe(true);
+    expect(
+      getAdvisorNavItemLockReason(invitations!, "ESSENTIALS", status)
+    ).toEqual({ type: "client-limit" });
   });
 });

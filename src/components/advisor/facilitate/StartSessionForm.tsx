@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, PlayCircle, UserPlus } from "lucide-react";
+import { Loader2, Lock, PlayCircle, UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
@@ -23,18 +23,23 @@ import {
   startFacilitatedSessionForClient,
 } from "@/lib/actions/facilitated-session-actions";
 import type { FacilitatedLauncherData } from "@/lib/actions/facilitated-session-actions";
+import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
+import { clientLimitUpgradeMessage } from "@/lib/billing/client-limit";
+import { ClientLimitUpgradeDialog } from "@/components/advisor/billing/ClientLimitGate";
 import { facilitatedSessionResumePath } from "@/lib/facilitated/paths";
 
 interface StartSessionFormProps {
   data: FacilitatedLauncherData;
+  clientLimitStatus: ClientLimitSnapshot | null;
 }
 
 function formatSessionStatus(status: string): string {
   return status.replaceAll("_", " ");
 }
 
-export function StartSessionForm({ data }: StartSessionFormProps) {
+export function StartSessionForm({ data, clientLimitStatus }: StartSessionFormProps) {
   const router = useRouter();
+  const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false);
   const [isStartingExisting, startExistingTransition] = useTransition();
   const [isCreatingClient, startCreateTransition] = useTransition();
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -65,7 +70,13 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
     });
   };
 
+  const atClientLimit = clientLimitStatus ? !clientLimitStatus.canAddClient : false;
+
   const handleCreateAndStart = () => {
+    if (atClientLimit) {
+      setClientLimitDialogOpen(true);
+      return;
+    }
     startCreateTransition(async () => {
       const result = await createClientAndStartFacilitatedSession({
         clientName: newClientName,
@@ -145,6 +156,25 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {atClientLimit && clientLimitStatus ? (
+            <div className="rounded-lg border border-dashed border-border/80 bg-muted/20 p-4 text-sm text-muted-foreground">
+              <div className="mb-2 flex items-center gap-2 font-medium text-foreground">
+                <Lock className="size-4" aria-hidden />
+                Client limit reached
+              </div>
+              <p>{clientLimitUpgradeMessage(clientLimitStatus)}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setClientLimitDialogOpen(true)}
+              >
+                Upgrade plan
+              </Button>
+            </div>
+          ) : (
+          <>
           <div className="space-y-2">
             <Label htmlFor="facilitate-name">Full name</Label>
             <Input
@@ -187,8 +217,18 @@ export function StartSessionForm({ data }: StartSessionFormProps) {
               </>
             )}
           </Button>
+          </>
+          )}
         </CardContent>
       </Card>
+
+      {clientLimitStatus ? (
+        <ClientLimitUpgradeDialog
+          status={clientLimitStatus}
+          open={clientLimitDialogOpen}
+          onOpenChange={setClientLimitDialogOpen}
+        />
+      ) : null}
 
       {data.openSessions.length > 0 && (
         <Card className="border-border/70 shadow-sm lg:col-span-2">

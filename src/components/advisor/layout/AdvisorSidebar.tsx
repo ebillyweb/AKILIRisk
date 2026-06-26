@@ -1,4 +1,8 @@
+import type { SubscriptionTier } from "@prisma/client";
 import { Briefcase } from "lucide-react";
+
+import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
+import { ClientLimitUsageMeter } from "@/components/advisor/billing/ClientLimitGate";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/advisor/NotificationBell";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
@@ -6,6 +10,8 @@ import { AdvisorSidebarNav } from "./AdvisorSidebarNav";
 
 interface AdvisorSidebarProps {
   featureFlags: AdvisorPlatformFeatureFlags;
+  subscriptionTier: SubscriptionTier;
+  clientLimitStatus: ClientLimitSnapshot | null;
   unreadNotificationCount: number;
   workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
@@ -15,6 +21,8 @@ interface AdvisorSidebarProps {
 
 export function AdvisorSidebar({
   featureFlags,
+  subscriptionTier,
+  clientLimitStatus,
   unreadNotificationCount,
   workspaceTitle,
   enterpriseTeamEnabled = false,
@@ -41,11 +49,16 @@ export function AdvisorSidebar({
 
       <AdvisorSidebarNav
         featureFlags={featureFlags}
+        subscriptionTier={subscriptionTier}
+        clientLimitStatus={clientLimitStatus}
         enterpriseTeamEnabled={enterpriseTeamEnabled}
         billingNavEnabled={billingNavEnabled}
       />
 
-      <div className="mt-auto border-t border-border/60 p-4">
+      <div className="mt-auto border-t border-border/60 p-4 space-y-3">
+        {clientLimitStatus ? (
+          <ClientLimitUsageMeter status={clientLimitStatus} compact />
+        ) : null}
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">Alerts</p>
           <NotificationBell initialCount={unreadNotificationCount} />

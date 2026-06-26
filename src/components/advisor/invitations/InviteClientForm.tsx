@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AssessmentDomainsSelector } from '@/components/advisor/AssessmentDomainsSelector';
 import { EmphasisAreasSelector } from '@/components/advisor/EmphasisAreasSelector';
 import type { AdvisorAssessmentDomainPickerData } from '@/lib/advisor/assessment-domain-option';
+import type { ClientLimitSnapshot } from '@/lib/billing/client-limit';
 import { resolveDefaultAssessmentDomainSelection } from '@/lib/advisor/assessment-domain-option';
 import { sendInvitation } from '@/lib/actions/invitations';
 import { buildDefaultInvitationPersonalMessage } from '@/lib/schemas/invitation';
@@ -43,9 +44,14 @@ type FormData = z.infer<typeof formSchema>;
 interface InviteClientFormProps {
   firmName: string | null;
   assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
+  clientLimitStatus: ClientLimitSnapshot | null;
 }
 
-export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteClientFormProps) {
+export function InviteClientForm({
+  firmName,
+  assessmentDomainPicker,
+  clientLimitStatus,
+}: InviteClientFormProps) {
   const assessmentDomains = assessmentDomainPicker.domains;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string; emailSent: boolean; reason?: string } | null>(null);
@@ -177,6 +183,8 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
   const fieldHintClassName = 'text-xs leading-5 text-muted-foreground';
   const errorClassName = 'text-sm text-destructive';
 
+  const atClientLimit = clientLimitStatus ? !clientLimitStatus.canAddClient : false;
+
   return (
     <div className="rounded-lg border bg-card p-6">
       <div className="space-y-2 mb-6">
@@ -186,6 +194,12 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
         </p>
       </div>
 
+      {atClientLimit ? (
+        <p className="text-sm text-muted-foreground">
+          New invitations are unavailable until you upgrade or free up an active client slot.
+        </p>
+      ) : (
+      <>
       {createdLink && !createdLink.emailSent && (
         <ShareableInvitationLinkAlert
           url={createdLink.url}
@@ -313,6 +327,8 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
           </Button>
         </div>
       </form>
+      </>
+      )}
     </div>
   );
 }

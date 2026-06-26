@@ -23,6 +23,7 @@ import ColorPicker from '@/components/ui/color-picker';
 import { FileUpload } from '@/components/ui/file-upload';
 import { BrandingSidebarPreview } from '@/components/advisor/settings/BrandingSidebarPreview';
 import { PreviewContainer } from '@/components/advisor/settings/BrandingPreview';
+import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
 import { SubdomainManager } from '@/components/advisor/settings/SubdomainManager';
 import {
   brandingUpdateSchema,
@@ -42,7 +43,7 @@ import {
   Phone,
   Globe,
   Eye,
-  Crown,
+  Lock,
   Loader2,
   Check,
 } from 'lucide-react';
@@ -333,11 +334,11 @@ export function EnhancedBrandingForm({
   const getUpgradeMessage = (sectionId: string): string => {
     switch (sectionId) {
       case 'colors':
-        return 'Upgrade to Growth or Professional to customize brand colors';
+        return 'Custom brand colors are available on Professional and higher plans.';
       case 'domain':
-        return 'Upgrade to Growth or Professional to claim a custom subdomain';
+        return 'Custom subdomains are available on Professional and higher plans.';
       default:
-        return 'This feature requires a subscription upgrade';
+        return 'This feature requires a subscription upgrade.';
     }
   };
 
@@ -412,9 +413,9 @@ export function EnhancedBrandingForm({
                         {xlSidebar ? section.title : section.shortTitle}
                       </span>
                       {showUpgradeHint ? (
-                        <Crown
-                          className="ml-auto size-3.5 shrink-0 !opacity-100 text-amber-600 dark:text-amber-500"
-                          aria-label="Requires plan upgrade"
+                        <TierFeatureLockIcon
+                          className="ml-auto !opacity-100"
+                          label="Requires plan upgrade"
                         />
                       ) : null}
                     </span>
@@ -501,8 +502,11 @@ export function EnhancedBrandingForm({
                 >
                   {!features.advancedBrandingEnabled ? (
                     <Alert>
-                      <Crown className="h-4 w-4 text-amber-600" aria-hidden />
-                      <AlertDescription>{getUpgradeMessage('colors')}</AlertDescription>
+                      <Lock className="h-4 w-4" aria-hidden />
+                      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span>{getUpgradeMessage('colors')}</span>
+                        <TierFeatureUpgradeButton feature="ADVANCED_BRANDING" size="sm" />
+                      </AlertDescription>
                     </Alert>
                   ) : (
                     <>

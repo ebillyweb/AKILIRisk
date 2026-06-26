@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { SubscriptionTier } from "@prisma/client";
 import {
   BarChart3,
   Bell,
@@ -21,6 +22,9 @@ import {
   Users,
 } from "lucide-react";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
+import type { AdvisorTierFeatureKey } from "@/lib/billing/tier-features";
+import { tierIncludesFeature } from "@/lib/billing/tier-features";
+import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
 
 export const ADVISOR_COMING_SOON_TOOLTIP =
   "Coming soon — this workspace area is not available yet.";
@@ -37,6 +41,10 @@ export type AdvisorNavItem = {
   requiresEnterpriseTeam?: boolean;
   /** When true, item is shown only when the advisor can access billing (solo or enterprise OWNER/ADMIN). */
   requiresBillingAccess?: boolean;
+  /** Minimum module tier required; item stays visible but locked when tier is insufficient. */
+  requiresTierFeature?: AdvisorTierFeatureKey;
+  /** When true, item is locked if the advisor is at their active client cap. */
+  requiresClientCapacity?: boolean;
 };
 
 export type AdvisorNavSection = {
@@ -56,6 +64,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         label: "Risk Profile Portfolio",
         icon: BarChart3,
         requiresFlag: "governanceDashboardEnabled",
+        requiresTierFeature: "PORTFOLIO_ANALYTICS",
       },
     ],
   },
@@ -64,7 +73,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Clients",
     items: [
       { href: "/advisor/pipeline", label: "All Clients", icon: Users },
-      { href: "/advisor/invitations", label: "Invitations", icon: UserPlus },
+      { href: "/advisor/invitations", label: "Invitations", icon: UserPlus, requiresClientCapacity: true },
     ],
   },
   {
@@ -76,6 +85,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         label: "Risk intelligence",
         icon: Shield,
         requiresFlag: "riskIntelligenceEnabled",
+        requiresTierFeature: "RISK_INTELLIGENCE",
       },
       {
         href: "/advisor/recommendations",
@@ -94,6 +104,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         label: "Signals",
         icon: Radio,
         requiresFlag: "riskIntelligenceEnabled",
+        requiresTierFeature: "CONTINUOUS_MONITORING",
       },
     ],
   },
@@ -120,8 +131,14 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         href: "/advisor/pipeline?needsRescore=1",
         label: "Reassessment",
         icon: BarChart3,
+        requiresTierFeature: "REASSESSMENT_WORKFLOW",
       },
-      { href: "/advisor/engagements", label: "Engagements", icon: Briefcase },
+      {
+        href: "/advisor/engagements",
+        label: "Engagements",
+        icon: Briefcase,
+        requiresTierFeature: "IMPLEMENTATION_ENGAGEMENTS",
+      },
       {
         label: "Tasks",
         icon: ListTodo,
@@ -146,6 +163,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         href: "/advisor/methodology",
         label: "Methodology",
         icon: BookOpen,
+        requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
       },
       { href: "/advisor/settings", label: "Settings", icon: Settings },
       {
@@ -170,6 +188,41 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     ],
   },
 ];
+
+export function isAdvisorNavItemTierLocked(
+  item: AdvisorNavItem,
+  subscriptionTier: SubscriptionTier
+): boolean {
+  if (!item.requiresTierFeature) return false;
+  return !tierIncludesFeature(subscriptionTier, item.requiresTierFeature);
+}
+
+export function isAdvisorNavItemClientLimitLocked(
+  item: AdvisorNavItem,
+  clientLimitStatus: ClientLimitSnapshot | null
+): boolean {
+  if (!item.requiresClientCapacity || !clientLimitStatus) return false;
+  return !clientLimitStatus.canAddClient;
+}
+
+export type AdvisorNavLockReason =
+  | { type: "tier"; feature: AdvisorTierFeatureKey }
+  | { type: "client-limit" }
+  | null;
+
+export function getAdvisorNavItemLockReason(
+  item: AdvisorNavItem,
+  subscriptionTier: SubscriptionTier,
+  clientLimitStatus: ClientLimitSnapshot | null
+): AdvisorNavLockReason {
+  if (isAdvisorNavItemTierLocked(item, subscriptionTier) && item.requiresTierFeature) {
+    return { type: "tier", feature: item.requiresTierFeature };
+  }
+  if (isAdvisorNavItemClientLimitLocked(item, clientLimitStatus)) {
+    return { type: "client-limit" };
+  }
+  return null;
+}
 
 export function getVisibleAdvisorNavSections(
   flags: AdvisorPlatformFeatureFlags,

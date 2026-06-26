@@ -13,6 +13,7 @@ import {
 } from "@/lib/actions/billing";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
+import { ANNUAL_BILLING_SAVINGS_LABEL } from "@/lib/billing/constants";
 import {
   advisorBillingDeepLink,
   advisorSignupHref,
@@ -313,7 +314,9 @@ export function PricingTierGrid({
             onClick={() => setBillingCycle("ANNUAL")}
           >
             Annual
-            <span className="ml-1.5 text-xs font-semibold text-brand">2 months free</span>
+            <span className="ml-1.5 text-xs font-semibold text-brand">
+              {ANNUAL_BILLING_SAVINGS_LABEL}
+            </span>
           </button>
         </div>
       </div>

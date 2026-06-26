@@ -4,14 +4,14 @@ import { LOGO_MAX_BYTES, SubscriptionFeatures } from '@/lib/validation/branding'
 
 /**
  * Feature mapping by subscription tier.
- * Temporarily: all paid tiers get the full branding surface (UI, PDF, subdomain).
+ * Essentials: logo and basic identity. Professional+: full branding surface.
  */
 const TIER_FEATURES = {
   ESSENTIALS: {
     basicBrandingEnabled: true,
-    advancedBrandingEnabled: true,
-    customSubdomainEnabled: true,
-    whiteLabel: true,
+    advancedBrandingEnabled: false,
+    customSubdomainEnabled: false,
+    whiteLabel: false,
   },
   PROFESSIONAL: {
     basicBrandingEnabled: true,

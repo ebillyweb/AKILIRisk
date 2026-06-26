@@ -1,16 +1,20 @@
 import { ReactNode } from "react";
+import type { SubscriptionTier } from "@prisma/client";
 import {
   WorkspaceMainPadding,
   WorkspaceSiteFooterRow,
 } from "@/components/layout/WorkspaceMainContent";
 import { cn } from "@/lib/utils";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
+import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
 import { AdvisorSidebar } from "./AdvisorSidebar";
 import { AdvisorMobileNav } from "./AdvisorMobileNav";
 
 interface AdvisorControlCenterLayoutProps {
   children: ReactNode;
   featureFlags: AdvisorPlatformFeatureFlags;
+  subscriptionTier: SubscriptionTier;
+  clientLimitStatus: ClientLimitSnapshot | null;
   unreadNotificationCount: number;
   workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
@@ -21,6 +25,8 @@ interface AdvisorControlCenterLayoutProps {
 export function AdvisorControlCenterLayout({
   children,
   featureFlags,
+  subscriptionTier,
+  clientLimitStatus,
   unreadNotificationCount,
   workspaceTitle,
   enterpriseTeamEnabled = false,
@@ -37,6 +43,8 @@ export function AdvisorControlCenterLayout({
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <AdvisorSidebar
           featureFlags={featureFlags}
+          subscriptionTier={subscriptionTier}
+          clientLimitStatus={clientLimitStatus}
           unreadNotificationCount={unreadNotificationCount}
           workspaceTitle={workspaceTitle}
           enterpriseTeamEnabled={enterpriseTeamEnabled}
@@ -47,6 +55,8 @@ export function AdvisorControlCenterLayout({
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <AdvisorMobileNav
             featureFlags={featureFlags}
+            subscriptionTier={subscriptionTier}
+            clientLimitStatus={clientLimitStatus}
             unreadNotificationCount={unreadNotificationCount}
             workspaceTitle={workspaceTitle}
             enterpriseTeamEnabled={enterpriseTeamEnabled}

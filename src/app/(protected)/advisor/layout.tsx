@@ -4,6 +4,8 @@ import {
   getAdvisorHubAccessForUserId,
 } from "@/lib/advisor/auth";
 import { resolveAdvisorCheckoutBillingHref } from "@/lib/advisor/checkout-billing-redirect";
+import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
+import { getAdvisorSubscriptionTier } from "@/lib/advisor/subscription-tier.server";
 import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { canAccessAdvisorBilling } from "@/lib/enterprise/billing-details";
 import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
@@ -51,7 +53,7 @@ export default async function AdvisorLayout({
     }
   }
 
-  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, workspaceTitle] =
+  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, workspaceTitle, subscriptionTier, clientLimitStatus] =
     await Promise.all([
     getPlatformFeatureFlags(),
     onBillingPage
@@ -63,6 +65,8 @@ export default async function AdvisorLayout({
     userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
     userId ? canAccessAdvisorBilling(userId) : Promise.resolve(true),
     resolveAdvisorWorkspaceTitleForUserId(userId),
+    userId ? getAdvisorSubscriptionTier(userId) : Promise.resolve("ESSENTIALS" as const),
+    userId ? getAdvisorClientLimitStatus(userId) : Promise.resolve(null),
   ]);
 
   const unreadNotificationCount = dash.success
@@ -72,6 +76,8 @@ export default async function AdvisorLayout({
   return (
     <AdvisorControlCenterLayout
       featureFlags={featureFlags}
+      subscriptionTier={subscriptionTier}
+      clientLimitStatus={clientLimitStatus}
       unreadNotificationCount={unreadNotificationCount}
       workspaceTitle={workspaceTitle}
       enterpriseTeamEnabled={enterpriseTeamEnabled}

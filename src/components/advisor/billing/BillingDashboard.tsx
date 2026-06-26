@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Download, ExternalLink, AlertCircle } from "lucide-react";
@@ -13,7 +14,13 @@ import {
   type SubscriptionDetailsDTO,
 } from "@/lib/actions/billing";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
-import { TIER_LIMITS } from "@/lib/billing/constants";
+import { ANNUAL_BILLING_SAVINGS_LABEL, TIER_LIMITS } from "@/lib/billing/constants";
+import {
+  clientLimitBillingHref,
+  clientLimitUpgradeMessage,
+  suggestedTierForMoreClients,
+  type ClientLimitSnapshot,
+} from "@/lib/billing/client-limit";
 import {
   SELF_SERVE_TIERS,
   TIER_DISPLAY_NAME,
@@ -125,18 +132,36 @@ function UsageBar({
   limit,
   description,
   atLimit,
+  currentTier,
 }: {
   label: string;
   current: number;
   limit: number;
   description?: string;
   atLimit?: boolean;
+  currentTier?: SubscriptionTier;
 }) {
   const pct = Math.min(100, limit > 0 ? (current / limit) * 100 : 0);
+  const upgradeStatus: ClientLimitSnapshot | null =
+    atLimit && currentTier
+      ? {
+          canAddClient: false,
+          currentCount: current,
+          limit,
+          currentTier,
+          suggestedUpgradeTier: suggestedTierForMoreClients(currentTier),
+          isEnterprise: false,
+          canSelfServeUpgrade: true,
+        }
+      : null;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{label}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          {label}
+          {atLimit ? <Lock className="size-4 text-destructive" aria-hidden /> : null}
+        </CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
       <CardContent className="space-y-3">
@@ -146,7 +171,7 @@ function UsageBar({
             <span className="text-muted-foreground"> / {limit}</span>
           </span>
           {atLimit ? (
-            <span className="text-destructive font-medium">At limit</span>
+            <span className="font-medium text-destructive">At limit</span>
           ) : (
             <span className="text-muted-foreground">Room available</span>
           )}
@@ -159,8 +184,27 @@ function UsageBar({
           aria-valuemax={limit}
           aria-label={label}
         >
-          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          <div
+            className={cn("h-full transition-all", atLimit ? "bg-destructive" : "bg-primary")}
+            style={{ width: `${pct}%` }}
+          />
         </div>
+        {upgradeStatus ? (
+          <div className="space-y-3 rounded-lg border border-dashed border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-sm text-muted-foreground">
+              {clientLimitUpgradeMessage(upgradeStatus)}
+            </p>
+            {upgradeStatus.suggestedUpgradeTier ? (
+              <Button asChild size="sm">
+                <Link href={clientLimitBillingHref(upgradeStatus)}>
+                  Upgrade to {TIER_LABEL[upgradeStatus.suggestedUpgradeTier]}
+                </Link>
+              </Button>
+            ) : (
+              <EnterpriseSalesContactDialog />
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -174,35 +218,38 @@ function UsageMonitor({ data }: { data: SubscriptionDetailsDTO }) {
       limit={data.clientLimit}
       description="Active clients linked to your practice versus your plan limit."
       atLimit={!data.canAddClient}
+      currentTier={data.tier}
     />
   );
 }
 
 function EnterpriseContactSalesCard() {
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-card/50 p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold">{TIER_LABEL.ENTERPRISE}</h3>
-        <Badge
-          variant="outline"
-          className="shrink-0 text-[0.65rem] font-semibold normal-case tracking-normal"
-        >
-          Sales only
-        </Badge>
+    <section
+      className="mt-2 flex flex-col gap-4 rounded-[1.25rem] border border-border/70 bg-muted/15 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+      aria-labelledby="billing-enterprise-heading"
+    >
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 id="billing-enterprise-heading" className="font-semibold text-foreground">
+            {TIER_LABEL.ENTERPRISE}
+          </h3>
+          <Badge
+            variant="outline"
+            className="text-[0.65rem] font-semibold normal-case tracking-normal"
+          >
+            Firms
+          </Badge>
+        </div>
+        <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+          Same Essentials–Platinum modules with shared branding, multiple advisor seats, and
+          centralized billing. Talk to sales for firm pricing.
+        </p>
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Up to {TIER_LIMITS.ENTERPRISE} firm clients
-      </p>
-      <p className="mt-3 text-lg font-semibold tracking-tight text-foreground">
-        Custom pricing
-      </p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Multi-advisor firms with shared branding and custom contracts.
-      </p>
-      <div className="mt-auto flex min-h-10 items-end pt-4">
+      <div className="shrink-0">
         <EnterpriseSalesContactDialog />
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -239,36 +286,54 @@ function PlanSelector({
 
   const description =
     changePlanMode === "stripe_update"
-      ? "Higher tiers show Upgrade. Your active tier and interval is marked Current plan and is not selectable. Use other cards to change tier or monthly/annual billing (Stripe proration). Download receipts below or in Manage billing."
+      ? "Your active plan is highlighted. Change tier or billing interval below—Stripe applies proration on upgrades and downgrades."
       : awaitingCheckoutOnly
-        ? `You have a plan on file (${TIER_LABEL[committedPlan!.tier]}, ${committedPlan!.billingCycle === "ANNUAL" ? "annual" : "monthly"} billing) but payment is not linked yet. Pick any tier or interval, then complete Checkout—you can downgrade before paying.`
-        : "Choose a tier and billing interval. You will complete payment securely on Stripe Checkout.";
+        ? `Plan on file: ${TIER_LABEL[committedPlan!.tier]} (${committedPlan!.billingCycle === "ANNUAL" ? "annual" : "monthly"}). Complete checkout to activate, or pick a different tier first.`
+        : "Choose a tier and billing interval, then complete payment on Stripe Checkout.";
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Plans</CardTitle>
-        <CardDescription>{description}</CardDescription>
-        <div className="flex gap-2 pt-2">
-          <Button
+      <CardHeader className="space-y-4">
+        <div className="space-y-1.5">
+          <CardTitle className="text-lg">Plans</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        <div
+          className="inline-flex w-fit rounded-full border border-border/80 bg-card/90 p-1 shadow-sm"
+          role="group"
+          aria-label="Billing interval"
+        >
+          <button
             type="button"
-            size="sm"
-            variant={billingCycle === "MONTHLY" ? "default" : "outline"}
+            className={cn(
+              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
+              billingCycle === "MONTHLY"
+                ? "bg-foreground text-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
             onClick={() => onBillingCycleChange("MONTHLY")}
           >
             Monthly
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            size="sm"
-            variant={billingCycle === "ANNUAL" ? "default" : "outline"}
+            className={cn(
+              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
+              billingCycle === "ANNUAL"
+                ? "bg-foreground text-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
             onClick={() => onBillingCycleChange("ANNUAL")}
           >
-            Annual (1 month free)
-          </Button>
+            Annual
+            <span className="ml-1.5 text-xs font-semibold text-brand">
+              {ANNUAL_BILLING_SAVINGS_LABEL}
+            </span>
+          </button>
         </div>
       </CardHeader>
-      <CardContent className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <CardContent className="space-y-6">
+        <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {TIER_ORDER.map((tier) => {
           const hasCommitted = committedPlan !== null;
           const isSameTier = hasCommitted && tier === committedPlan!.tier;
@@ -350,21 +415,21 @@ function PlanSelector({
               : planPrices[tier].annual;
 
           return (
-            <div
+            <article
               key={tier}
               className={cn(
-                "flex h-full flex-col rounded-lg border bg-card/50 p-4 shadow-sm",
-                isCurrentSelection &&
-                  "border-primary/35 bg-muted/25 ring-1 ring-primary/25 shadow-none"
+                "flex h-full flex-col rounded-[1.25rem] border bg-card/85 p-5 shadow-sm",
+                isCurrentSelection
+                  ? "border-primary/35 ring-1 ring-primary/20"
+                  : "border-border/70"
               )}
               aria-current={isCurrentSelection ? "true" : undefined}
             >
-              <div className="space-y-2">
-                <h3 className="font-semibold">{TIER_LABEL[tier]}</h3>
+              <div className="mb-3 flex h-6 items-center">
                 {isCurrentSelection ? (
                   <Badge
                     variant="secondary"
-                    className="w-fit text-[0.65rem] font-semibold normal-case tracking-normal"
+                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
                   >
                     Current plan
                   </Badge>
@@ -374,35 +439,48 @@ function PlanSelector({
                   !isSamePlan ? (
                   <Badge
                     variant="outline"
-                    className="w-fit text-[0.65rem] font-semibold normal-case tracking-normal"
+                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
                   >
                     Other interval
                   </Badge>
                 ) : isSameTier && hasCommitted && awaitingCheckoutOnly ? (
-                  <span className="inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  <Badge
+                    variant="outline"
+                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
+                  >
                     Your plan
-                  </span>
+                  </Badge>
                 ) : null}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Up to {TIER_LIMITS[tier]} clients
+
+              <h3 className="font-display text-lg font-semibold leading-tight text-foreground">
+                {TIER_LABEL[tier]}
+              </h3>
+              <p className="mt-1 min-h-10 text-sm leading-5 text-muted-foreground">
+                Up to {TIER_LIMITS[tier]} active clients
               </p>
-              {priceLine ? (
-                <p className="mt-3 text-lg font-semibold tabular-nums tracking-tight">
-                  {priceLine}
-                </p>
-              ) : (
-                <p className="mt-3 text-lg font-semibold tracking-tight text-muted-foreground">
-                  Price unavailable
-                </p>
-              )}
-              <div className="mt-auto flex min-h-10 items-end pt-4">
+
+              <div className="mt-4 min-h-[3.25rem]">
+                {priceLine ? (
+                  <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+                    {priceLine}
+                  </p>
+                ) : (
+                  <p className="text-sm font-medium text-muted-foreground">Price unavailable</p>
+                )}
+              </div>
+
+              <div className="mt-auto pt-5">
                 {isCurrentSelection ? (
-                  <div className="w-full rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2.5">
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      Your current plan. Pick another tier or switch monthly/annual above to change.
-                    </p>
-                  </div>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    variant="billingCurrent"
+                    disabled
+                    aria-disabled
+                  >
+                    Current plan
+                  </Button>
                 ) : (
                   <Button
                     className="w-full"
@@ -415,9 +493,10 @@ function PlanSelector({
                   </Button>
                 )}
               </div>
-            </div>
+            </article>
           );
         })}
+        </div>
         <EnterpriseContactSalesCard />
       </CardContent>
       {error ? (

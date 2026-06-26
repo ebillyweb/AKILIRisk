@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { InviteClientForm } from "@/components/advisor/invitations/InviteClientForm";
+import { ClientLimitBanner } from "@/components/advisor/billing/ClientLimitGate";
 import { InvitationTable } from "@/components/advisor/invitations/InvitationTable";
 import { InvitationListFilters } from "@/components/advisor/invitations/InvitationListFilters";
 import { InvitationListPagination } from "@/components/advisor/invitations/InvitationListPagination";
@@ -8,6 +9,7 @@ import { getInvitationsAction } from "@/lib/actions/invitations";
 import { parseInvitationListParams } from "@/lib/invitations/parse-invitation-list-params";
 import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
 
 export default async function InvitationsPage({
   searchParams,
@@ -26,7 +28,10 @@ export default async function InvitationsPage({
     requireAdvisorRole(),
     getInvitationsAction(filters, { page, pageSize }),
   ]);
-  const profile = await getAdvisorProfileOrThrow(userId);
+  const [profile, clientLimitStatus] = await Promise.all([
+    getAdvisorProfileOrThrow(userId),
+    getAdvisorClientLimitStatus(userId),
+  ]);
   const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(profile.id);
 
   if (!result.success) {
@@ -45,7 +50,12 @@ export default async function InvitationsPage({
 
   return (
     <div className="space-y-8">
-      <InviteClientForm firmName={profile.firmName} assessmentDomainPicker={assessmentDomainPicker} />
+      {clientLimitStatus ? <ClientLimitBanner status={clientLimitStatus} /> : null}
+      <InviteClientForm
+        firmName={profile.firmName}
+        assessmentDomainPicker={assessmentDomainPicker}
+        clientLimitStatus={clientLimitStatus}
+      />
 
       <div className="border-t section-divider" />
 

@@ -1,18 +1,16 @@
 import { TierFeatureLockedPage } from "@/components/advisor/billing/TierFeatureLockedPage";
 import { requireAdvisorTierFeatureAccess } from "@/lib/advisor/tier-feature-guard.server";
-import { requireAdvisorRiskIntelligenceEnabled } from "@/lib/platform/advisor-feature-guards";
 
-export default async function AdvisorSignalsLayout({
+export default async function AdvisorEngagementsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireAdvisorRiskIntelligenceEnabled();
-  const access = await requireAdvisorTierFeatureAccess("CONTINUOUS_MONITORING");
+  const access = await requireAdvisorTierFeatureAccess("IMPLEMENTATION_ENGAGEMENTS");
   if (!access.allowed) {
     return (
       <TierFeatureLockedPage
-        feature="CONTINUOUS_MONITORING"
+        feature="IMPLEMENTATION_ENGAGEMENTS"
         currentTier={access.currentTier}
       />
     );

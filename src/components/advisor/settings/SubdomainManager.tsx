@@ -15,11 +15,12 @@ import {
   Clock,
   ExternalLink,
   Info,
-  Crown,
+  Lock,
   Loader2,
   Copy,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
 import { SubscriptionFeatures } from '@/lib/validation/branding';
 import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
 
@@ -195,7 +196,7 @@ export function SubdomainManager({
           <Globe className="h-5 w-5" />
           Custom Subdomain
           {!features.customSubdomainEnabled && (
-            <Crown className="h-4 w-4 text-amber-500" />
+            <TierFeatureLockIcon className="h-4 w-4" />
           )}
         </CardTitle>
         <CardDescription>
@@ -205,15 +206,10 @@ export function SubdomainManager({
       <CardContent className="space-y-6">
         {!features.customSubdomainEnabled ? (
           <Alert>
-            <Crown className="h-4 w-4 text-amber-500" />
-            <AlertDescription>
-              Custom subdomains are available on Growth and Professional plans.
-              <Button
-                variant="link"
-                className="h-auto p-0 ml-1 text-amber-600 hover:text-amber-700"
-              >
-                Upgrade your plan
-              </Button>
+            <Lock className="h-4 w-4" aria-hidden />
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>Custom subdomains are available on Professional and higher plans.</span>
+              <TierFeatureUpgradeButton feature="CUSTOM_SUBDOMAIN" size="sm" />
             </AlertDescription>
           </Alert>
         ) : currentSubdomain ? (

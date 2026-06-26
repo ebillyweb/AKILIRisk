@@ -12,17 +12,24 @@ import {
   deriveIntelligenceHighlights,
   mapNotificationsToActivity,
 } from "@/lib/advisor/workspace-data";
+import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
+import { getAdvisorSubscriptionTier } from "@/lib/advisor/subscription-tier.server";
+import { requireAdvisorRole } from "@/lib/advisor/auth";
 
 export async function getAdvisorWorkspaceHomeData() {
   const flags = await getPlatformFeatureFlags();
+  const { userId } = await requireAdvisorRole();
 
-  const [dash, pipelineRes, notificationsRes, intelligenceRes] = await Promise.all([
+  const [dash, pipelineRes, notificationsRes, intelligenceRes, clientLimitStatus, subscriptionTier] =
+    await Promise.all([
     getAdvisorDashboardData(),
     getClientPipelineData(),
     getAdvisorNotificationsAction(),
     flags.riskIntelligenceEnabled
       ? getPortfolioIntelligenceData()
       : Promise.resolve({ success: false as const, error: "disabled" }),
+    getAdvisorClientLimitStatus(userId),
+    getAdvisorSubscriptionTier(userId),
   ]);
 
   if (!dash.success) {
@@ -63,6 +70,8 @@ export async function getAdvisorWorkspaceHomeData() {
       activity,
       intelligenceHighlights,
       flags,
+      clientLimitStatus,
+      subscriptionTier,
     },
   };
 }

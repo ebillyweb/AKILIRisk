@@ -1,16 +1,14 @@
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   ArrowRight,
-  Briefcase,
-  ClipboardList,
   GitBranch,
-  Mail,
   PlayCircle,
   Radio,
   UserPlus,
 } from "lucide-react";
 import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
+import { GatedClientAddButton } from "@/components/advisor/billing/ClientLimitGate";
+import { AdvisorQuickActions } from "@/components/advisor/workspace/AdvisorQuickActions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -111,37 +109,22 @@ function PipelineSnapshot({ metrics, pendingInvitations }: { metrics: PipelineMe
   );
 }
 
-function QuickActionButton({
-  href,
-  label,
-  description,
-  icon: Icon,
-}: {
-  href: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Button asChild variant="outline" className="h-auto min-h-[4.5rem] justify-start px-4 py-3">
-      <Link href={href} className="flex w-full items-start gap-3 text-left">
-        <Icon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-        <span className="min-w-0">
-          <span className="block text-sm font-medium">{label}</span>
-          <span className="block text-xs font-normal text-muted-foreground">{description}</span>
-        </span>
-      </Link>
-    </Button>
-  );
-}
-
 interface AdvisorWorkspaceHomeProps {
   data: WorkspaceData;
   error?: string;
 }
 
 export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps) {
-  const { profile, metrics, priorities, activity, intelligenceHighlights, flags } = data;
+  const {
+    profile,
+    metrics,
+    priorities,
+    activity,
+    intelligenceHighlights,
+    flags,
+    clientLimitStatus,
+    subscriptionTier,
+  } = data;
   const firstName = profile.user.firstName;
   const firmName = profile.firmName;
   const workspaceTitle = advisorWorkspaceTitle(profile.user);
@@ -172,17 +155,30 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href="/advisor/invitations" className="inline-flex items-center gap-2">
-              <UserPlus className="size-4" />
-              Invite client
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
             <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
               <PlayCircle className="size-4" />
               Start client session
             </Link>
           </Button>
+          {clientLimitStatus ? (
+            <GatedClientAddButton
+              status={clientLimitStatus}
+              href="/advisor/invitations"
+              variant="outline"
+              size="sm"
+              className="inline-flex items-center gap-2"
+            >
+              <UserPlus className="size-4" />
+              Invite client
+            </GatedClientAddButton>
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/advisor/invitations" className="inline-flex items-center gap-2">
+                <UserPlus className="size-4" />
+                Invite client
+              </Link>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -285,31 +281,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
         </Card>
       )}
 
-      <Card className="border-border/70 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quick actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <QuickActionButton
-            href="/advisor/pipeline?awaitingReview=1"
-            label="Intake queue"
-            description="Review submitted client intakes"
-            icon={ClipboardList}
-          />
-          <QuickActionButton
-            href="/advisor/pipeline?documentsNeeded=1"
-            label="Document Requests"
-            description="Outstanding mandatory uploads"
-            icon={Mail}
-          />
-          <QuickActionButton
-            href="/advisor/engagements"
-            label="Engagements"
-            description="Accepted recommendations in progress"
-            icon={Briefcase}
-          />
-        </CardContent>
-      </Card>
+      <AdvisorQuickActions subscriptionTier={subscriptionTier} />
     </div>
   );
 }

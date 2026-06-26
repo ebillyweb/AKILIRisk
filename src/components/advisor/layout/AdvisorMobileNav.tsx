@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Briefcase, Menu, X } from "lucide-react";
+import type { SubscriptionTier } from "@prisma/client";
+
+import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/advisor/NotificationBell";
@@ -10,6 +13,8 @@ import { AdvisorSidebarNav } from "./AdvisorSidebarNav";
 
 interface AdvisorMobileNavProps {
   featureFlags: AdvisorPlatformFeatureFlags;
+  subscriptionTier: SubscriptionTier;
+  clientLimitStatus: ClientLimitSnapshot | null;
   unreadNotificationCount: number;
   workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
@@ -18,6 +23,8 @@ interface AdvisorMobileNavProps {
 
 export function AdvisorMobileNav({
   featureFlags,
+  subscriptionTier,
+  clientLimitStatus,
   unreadNotificationCount,
   workspaceTitle,
   enterpriseTeamEnabled = false,
@@ -124,6 +131,8 @@ export function AdvisorMobileNav({
 
             <AdvisorSidebarNav
               featureFlags={featureFlags}
+              subscriptionTier={subscriptionTier}
+              clientLimitStatus={clientLimitStatus}
               enterpriseTeamEnabled={enterpriseTeamEnabled}
               billingNavEnabled={billingNavEnabled}
               collapsibleSections
