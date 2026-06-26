@@ -119,7 +119,7 @@ export default async function AdminClientsPage({
                           </Button>
                           <DownloadReportButton
                             assessmentId={c.latestScoredAssessmentId}
-                            clientLabel={c.name || c.email}
+                            clientLabel={c.name ?? c.email ?? undefined}
                             label="Download"
                             variant="ghost"
                             size="sm"
