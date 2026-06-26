@@ -26,7 +26,6 @@ export default defineConfig({
       "**/dist/**",
       "**/.next/**",
       "tests/**",
-      "mobile/**",
     ],
     globals: true,
     env: {
