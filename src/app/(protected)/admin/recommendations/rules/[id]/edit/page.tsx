@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { requireAdminRole } from "@/lib/admin/auth";
 import {
   getRecommendationRule,
+  listQuestionsForRulePicker,
   listServiceRecommendationsForRulePicker,
 } from "@/lib/admin/recommendation-queries";
 import { RecommendationRuleForm } from "@/components/admin/RecommendationRuleForm";
@@ -15,9 +16,10 @@ export default async function EditRecommendationRulePage({
 }) {
   await requireAdminRole();
   const { id } = await params;
-  const [row, serviceOptions] = await Promise.all([
+  const [row, serviceOptions, questionOptions] = await Promise.all([
     getRecommendationRule(id),
     listServiceRecommendationsForRulePicker(),
+    listQuestionsForRulePicker(),
   ]);
   if (!row) notFound();
 
@@ -47,7 +49,11 @@ export default async function EditRecommendationRulePage({
           View history (BRD §7.2)
         </Link>
       </div>
-      <RecommendationRuleForm existing={existing} serviceOptions={serviceOptions} />
+      <RecommendationRuleForm
+        existing={existing}
+        serviceOptions={serviceOptions}
+        questionOptions={questionOptions}
+      />
     </div>
   );
 }

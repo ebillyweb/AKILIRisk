@@ -276,7 +276,11 @@ test.describe("Epic 5.5 platform administration", () => {
 
       await page.goto("/admin/recommendations/rules/new");
       await expect(page.getByText("New rule")).toBeVisible();
-      await expect(page.locator("#triggerConditions")).toBeVisible();
+      await expect(page.getByText("When should this rule fire?")).toBeVisible();
+      await page.locator("#condition-type-0").click();
+      await page.getByRole("option", { name: "Intake answer" }).click();
+      await expect(page.getByRole("button", { name: /choose a question/i })).toBeVisible();
+      await expect(page.getByRole("button", { name: /add another check/i })).toBeVisible();
       await expect(page.getByRole("button", { name: /create rule/i })).toBeVisible();
     });
   });
