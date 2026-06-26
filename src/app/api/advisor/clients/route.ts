@@ -1,0 +1,54 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { resolveUser } from "@/lib/mobile/token";
+
+/** GET /api/advisor/clients — assigned clients with intake status (plan §4.3). */
+export async function GET(request: NextRequest) {
+  const user = await resolveUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+  if (user.role !== "ADVISOR") {
+    return NextResponse.json({ error: "Advisor access required" }, { status: 403 });
+  }
+
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId: user.id },
+    select: { id: true },
+  });
+  if (!profile) {
+    return NextResponse.json([]);
+  }
+
+  const assignments = await prisma.clientAdvisorAssignment.findMany({
+    where: { advisorId: profile.id, status: "ACTIVE" },
+    select: {
+      client: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          intakeInterviews: {
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+            select: { id: true, status: true, submittedAt: true },
+          },
+        },
+      },
+    },
+  });
+
+  const clients = assignments.map(({ client }) => {
+    const interview = client.intakeInterviews[0];
+    return {
+      id: client.id,
+      name: client.name,
+      email: client.email,
+      intakeStatus: interview?.status ?? "NOT_STARTED",
+      submittedAt: interview?.submittedAt?.toISOString() ?? null,
+      interviewId: interview?.id ?? null,
+    };
+  });
+
+  return NextResponse.json(clients);
+}
