@@ -52,3 +52,12 @@ next-env.d.ts
 
 # Uploaded files
 public/uploads/
+
+# Playwright
+/playwright-report
+.playwright-browsers
+.playwright-mcp
+
+# Vercel created
+/staging
+STAGING.md

@@ -1,0 +1,22 @@
+---
+description: GitHub identity for non-Habits repo commits and CLI operations
+alwaysApply: true
+---
+
+# GitHub identity (non-Habits)
+
+All git commits and GitHub CLI operations outside Habits repositories must use the **buddywood** account.
+
+## Before committing or pushing
+
+1. Switch GitHub CLI to the correct account:
+   ```bash
+   gh auth switch --user buddywood
+   ```
+2. Verify repo-local git author (set in each repo's `.git/config`):
+   - **name:** `buddywood`
+   - **email:** `buddy@ebilly.com`
+
+## Do not use
+
+- `buddy-habits` or `buddy@usehabits.com` for commits or pushes in non-Habits repos.

@@ -10,7 +10,7 @@ import { RiskDistributionChart } from "@/components/intelligence/RiskDistributio
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import IntelligenceLoading from "./loading";
 
-const RISK_AREA_IDS = new Set(RISK_AREAS.map((a) => a.id));
+const RISK_AREA_IDS = new Set<string>(RISK_AREAS.map((a) => a.id));
 
 function resolveCategoryFilter(raw: string | undefined) {
   if (!raw) return { categoryFilter: undefined as string | undefined, categoryLabel: undefined as string | undefined };
