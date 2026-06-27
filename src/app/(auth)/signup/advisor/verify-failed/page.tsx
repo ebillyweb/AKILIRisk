@@ -36,7 +36,7 @@ export default async function AdvisorVerifyFailedPage({
             <Link href="/signup/advisor">Create account</Link>
           </Button>
           <Button asChild variant="outline" className="sm:flex-1">
-            <Link href="/signin?portal=advisor">Sign in</Link>
+            <Link href="/signin?role=advisor">Sign in</Link>
           </Button>
         </div>
       </div>

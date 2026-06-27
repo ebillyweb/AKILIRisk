@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { SiteFooter } from "@/components/marketing/SiteFooter";
-import { SiteHeader } from "@/components/marketing/SiteHeader";
+import { MarketingPageHero } from "@/components/marketing/MarketingPageHero";
+import { MarketingProseSections } from "@/components/marketing/MarketingProseSections";
+import { PublicPageShell } from "@/components/marketing/PublicPageShell";
 import type { LegalSection } from "@/lib/legal/documents";
-import { cn } from "@/lib/utils";
 
 interface MarketingPageProps {
   title: string;
   sections: LegalSection[];
   kicker?: string;
+  heroDescription?: string;
+  /** Default stacks content; split places children beside prose (contact form) */
+  layout?: "default" | "split";
+  /** Cards render sections in a responsive grid; plain uses stacked prose */
+  sectionsVariant?: "plain" | "cards";
   className?: string;
   children?: ReactNode;
 }
@@ -17,65 +21,36 @@ export function MarketingPage({
   title,
   sections,
   kicker = "Company",
+  heroDescription,
+  layout = "default",
+  sectionsVariant = "plain",
   className,
   children,
 }: MarketingPageProps) {
+  const maxWidth = layout === "split" || sectionsVariant === "cards" ? "wide" : "narrow";
+
   return (
-    <>
-      <a href="#main-content" className="skip-to-content">
-        Skip to main content
-      </a>
-      <main id="main-content" className="min-h-screen pb-10 pt-2 sm:pb-12" tabIndex={-1}>
-      <div className="page-shell space-y-10">
-        <SiteHeader />
-        <div className={cn("mx-auto max-w-3xl space-y-10", className)}>
-          <header className="space-y-6">
-            <div className="space-y-2">
-              <p className="editorial-kicker">{kicker}</p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                {title}
-              </h1>
-            </div>
-          </header>
+    <PublicPageShell maxWidth={maxWidth} className={className}>
+      <MarketingPageHero
+        kicker={kicker}
+        title={title}
+        description={heroDescription}
+      />
 
-          <div className="space-y-10">
-            {sections.map((section) => (
-              <section
-                key={section.id}
-                id={section.id}
-                className="scroll-mt-8 space-y-3"
-              >
-                <h2 className="text-xl font-semibold text-foreground">
-                  {section.title}
-                </h2>
-                <div className="space-y-3">
-                  {section.paragraphs.map((paragraph, index) => (
-                    <p
-                      key={`${section.id}-${index}`}
-                      className="text-sm leading-7 text-muted-foreground"
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-
-          {children}
-
-          <div className="space-y-8">
-            <Link
-              href="/"
-              className="inline-block text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-            >
-              Back to home
-            </Link>
-            <SiteFooter />
-          </div>
+      {layout === "split" && children ? (
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start lg:gap-12">
+          <MarketingProseSections sections={sections} />
+          <div className="lg:sticky lg:top-28">{children}</div>
         </div>
-      </div>
-    </main>
-    </>
+      ) : (
+        <>
+          <MarketingProseSections
+            sections={sections}
+            variant={sectionsVariant}
+          />
+          {children}
+        </>
+      )}
+    </PublicPageShell>
   );
 }

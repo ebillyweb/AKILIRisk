@@ -48,16 +48,10 @@ export function SiteFooter({ className }: SiteFooterProps) {
               Start assessment
             </Link>
             <Link
-              href="/signin/magic-link"
+              href="/signin"
               className="font-medium text-foreground/90 underline-offset-4 hover:text-foreground hover:underline"
             >
-              Client sign in
-            </Link>
-            <Link
-              href="/signin?portal=advisor"
-              className="font-medium text-foreground/90 underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Advisor sign in
+              Sign in
             </Link>
           </nav>
         </div>

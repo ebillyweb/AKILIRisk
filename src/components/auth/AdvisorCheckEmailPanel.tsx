@@ -108,7 +108,7 @@ export function AdvisorCheckEmailPanel() {
             {status === "sending" ? "Sending…" : "Resend email"}
           </Button>
           <Button asChild className="sm:flex-1">
-            <Link href="/signin?portal=advisor">Back to sign in</Link>
+            <Link href="/signin?role=advisor">Back to sign in</Link>
           </Button>
         </div>
       </div>

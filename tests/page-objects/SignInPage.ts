@@ -35,8 +35,8 @@ function isClientRole(role: Role): boolean {
 export class SignInPage {
   constructor(private readonly page: Page) {}
 
-  async goto() {
-    await this.page.goto("/signin");
+  async goto(role: "advisor" | "admin" = "advisor") {
+    await this.page.goto(`/signin?role=${role}`);
     await expect(this.page.locator("#email")).toBeVisible();
   }
 

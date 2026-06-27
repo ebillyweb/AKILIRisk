@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import { LandingSectionBand } from "@/components/marketing/LandingSectionBand";
 import { MarketingSection } from "@/components/marketing/MarketingSection";
 import { SELF_SERVE_TIERS, TIER_CATALOG } from "@/lib/billing/tier-catalog";
 import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
@@ -8,20 +9,23 @@ import { Button } from "@/components/ui/button";
 import { MarketingSurfaceCard } from "@/components/marketing/MarketingSurfaceCard";
 
 type LandingPricingPreviewProps = {
-  pricing: PublicTierPricing[];
+  pricing?: PublicTierPricing[];
 };
 
-export function LandingPricingPreview({ pricing }: LandingPricingPreviewProps) {
-  const essentials = pricing.find((row) => row.tier === "ESSENTIALS");
+export function LandingPricingPreview({ pricing = [] }: LandingPricingPreviewProps) {
+  const rows = pricing ?? [];
+  const essentials = rows.find((row) => row.tier === "ESSENTIALS");
   const startingMonthly = essentials?.monthly?.display ?? null;
 
   return (
-    <MarketingSection
-      id="pricing"
-      kicker="Pricing"
-      title="Modular tiers that grow with your practice"
-      description="Essentials through Platinum — the same module ladder for solo advisors and enterprise firms. Subscribe self-serve or talk to sales for multi-seat firms."
-    >
+    <LandingSectionBand variant="inset">
+      <MarketingSection
+        id="pricing"
+        kicker="Pricing"
+        title="Modular tiers that grow with your practice"
+        description="Essentials through Platinum for solo advisors and enterprise firms."
+        className="!space-y-8"
+      >
       {startingMonthly ? (
         <p className="-mt-4 text-sm text-muted-foreground">
           From{" "}
@@ -61,5 +65,6 @@ export function LandingPricingPreview({ pricing }: LandingPricingPreviewProps) {
         </Button>
       </div>
     </MarketingSection>
+    </LandingSectionBand>
   );
 }

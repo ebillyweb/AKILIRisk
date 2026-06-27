@@ -58,7 +58,7 @@ export function MarketingNavAuthActions({
         asChild
         className={stacked ? "w-full" : undefined}
       >
-        <Link href="/signin/magic-link">Sign In</Link>
+        <Link href="/signin">Sign In</Link>
       </Button>
       <Button size={stacked ? "lg" : "sm"} asChild className={stacked ? "w-full" : undefined}>
         <Link href="/start">

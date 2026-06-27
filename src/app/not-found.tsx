@@ -66,17 +66,10 @@ export default function NotFound() {
                     your authenticated session.
                   </p>
                   <Link
-                    href="/signin/magic-link"
+                    href="/signin"
                     className="inline-flex text-sm font-semibold text-foreground underline-offset-4 hover:underline"
                   >
-                    Client sign in (email link)
-                  </Link>
-                  <span className="mx-2 text-muted-foreground">·</span>
-                  <Link
-                    href="/signin?portal=advisor"
-                    className="inline-flex text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-                  >
-                    Advisor sign in
+                    Sign in
                   </Link>
                 </CardContent>
               </Card>

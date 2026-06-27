@@ -12,7 +12,7 @@ test.describe("auth edge cases", () => {
     // ADVISOR path — the "wrong password" failure shape is a real
     // invariant on the advisor flow, which is the only one that still
     // exercises credentials.
-    await page.goto("/signin");
+    await page.goto("/signin?role=advisor");
     await page.locator("#email").fill(USERS.advisor.email);
     await page.locator("#password").fill("not-the-real-password");
     await page.getByRole("button", { name: /^sign in$/i }).click();
@@ -30,7 +30,8 @@ test.describe("auth edge cases", () => {
   test("unauthenticated user hitting /dashboard is sent to magic-link sign-in with callbackUrl", async ({ page }) => {
     await page.goto("/dashboard");
     const url = new URL(page.url());
-    expect(url.pathname).toBe("/signin/magic-link");
+    expect(url.pathname).toBe("/signin");
+    expect(url.searchParams.get("role")).toBe("client");
     expect(url.searchParams.get("callbackUrl")).toBe("/dashboard");
   });
 

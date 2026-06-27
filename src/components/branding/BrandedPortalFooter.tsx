@@ -85,10 +85,10 @@ export function BrandedPortalFooter({ branding, className }: BrandedPortalFooter
           aria-label="Portal footer links"
         >
           <Link
-            href="/signin/magic-link"
+            href="/signin"
             className="font-medium text-foreground/90 underline-offset-4 hover:text-foreground hover:underline"
           >
-            Client sign in
+            Sign in
           </Link>
           <Link
             href="/privacy"

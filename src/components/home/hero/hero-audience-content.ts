@@ -26,11 +26,11 @@ export type HeroAudienceCopy = {
 
 export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
   families: {
-    kicker: "Governance intelligence",
+    kicker: "For families",
     headline:
       "The governance intelligence platform for modern family wealth.",
     supporting:
-      "Surface profile insights, identify structural risks, and receive tailored recommendations — through a discreet personal risk profile your advisor can act on.",
+      "A discreet personal risk profile that surfaces structural gaps and gives your advisor clear, actionable guidance.",
     subtext: "12–15 minute structured assessment",
     primaryCta: {
       label: "Start Assessment",
@@ -38,9 +38,9 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
       title: "Start your personal risk profile",
     },
     secondaryCta: {
-      label: "Sign In with Email Link",
-      href: "/signin/magic-link",
-      title: "Request a one-time sign-in link by email",
+      label: "Sign In",
+      href: "/signin?role=client",
+      title: "Sign in to your client account",
     },
     helperLinks: [
       {
@@ -58,14 +58,14 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     ],
   },
   advisors: {
-    kicker: "Advisor workspace",
+    kicker: "For advisors",
     headline:
       "Governance intelligence for modern advisory firms.",
     supporting:
-      "Manage client governance profiles, assessment progress, risk scoring, and structured recommendations from one secure advisor workspace.",
+      "One workspace for client profiles, assessment progress, risk scoring, and structured recommendations your clients can trust.",
     primaryCta: {
       label: "Advisor Sign In",
-      href: "/signin?portal=advisor",
+      href: "/signin?role=advisor",
       title: "Sign in to your advisor workspace",
     },
     secondaryCta: {

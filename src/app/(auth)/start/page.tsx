@@ -15,7 +15,7 @@ export default function StartAssessmentPage() {
           <span>
             Already have an account?{" "}
             <a
-              href="/signin/magic-link"
+              href="/signin?role=client"
               className="font-semibold text-foreground hover:underline"
             >
               Sign in

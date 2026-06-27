@@ -6,6 +6,11 @@ import {
 
 export const CONTACT_EMAIL = "hello@akilirisk.com";
 
+export const aboutUsHeroDescription =
+  "We help modern family wealth operate with clearer governance—before informal structures become costly disputes.";
+
+export const contactUsHeroDescription = `Use the form to reach our team, or email us at ${CONTACT_EMAIL}. We typically respond within two business days.`;
+
 export const aboutUsSections: LegalSection[] = [
   {
     id: "mission",
@@ -35,14 +40,6 @@ export const aboutUsSections: LegalSection[] = [
 ];
 
 export const contactUsSections: LegalSection[] = [
-  {
-    id: "overview",
-    title: "Get in touch",
-    paragraphs: [
-      `Use the form below to send a message to the ${LEGAL_ENTITY_NAME} team. We typically respond within two business days.`,
-      `You can also email us directly at ${CONTACT_EMAIL}.`,
-    ],
-  },
   {
     id: "clients",
     title: "Clients and assessments",

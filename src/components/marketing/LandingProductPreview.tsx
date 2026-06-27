@@ -1,70 +1,261 @@
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { GovernanceRadarPreview } from "@/components/home/GovernanceRadarPreview";
+import { LandingSectionBand } from "@/components/marketing/LandingSectionBand";
 import { MarketingSection } from "@/components/marketing/MarketingSection";
-import { MarketingSurfaceCard } from "@/components/marketing/MarketingSurfaceCard";
+import { Badge } from "@/components/ui/badge";
+import {
+  maturityHeatLevel,
+  maturityScoreToPercent,
+} from "@/lib/assessment/governance-rubric";
+import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
+import { RISK_LEVEL_PALETTE } from "@/lib/assessment/risk-color-palette";
+import type { RiskLevel } from "@/lib/assessment/types";
+import { cn } from "@/lib/utils";
 
-const SAMPLE_RISKS = [
-  "No defined succession triggers",
-  "Informal authority structure",
-  "Undocumented governance framework",
+const SAMPLE_HOUSEHOLD = "Chen Family Office";
+const SAMPLE_COMPLETED = "Mar 12, 2026";
+const SAMPLE_MATURITY = 2.2;
+const SAMPLE_RESILIENCE = maturityScoreToPercent(SAMPLE_MATURITY);
+
+const SAMPLE_PILLARS = [
+  { name: "Governance & decision-making", maturity: 2.0, emphasized: false },
+  { name: "Succession & continuity", maturity: 1.6, emphasized: true },
+  { name: "Financial discipline", maturity: 2.3, emphasized: false },
+  { name: "Reputation & conduct", maturity: 2.1, emphasized: false },
+  { name: "Marital governance", maturity: 1.9, emphasized: false },
 ] as const;
+
+const RADAR_VALUES = SAMPLE_PILLARS.map((pillar) => pillar.maturity / MATURITY_SCALE_MAX);
+
+type SampleRisk = {
+  level: RiskLevel;
+  pillar: string;
+  title: string;
+  detail: string;
+};
+
+const SAMPLE_RISKS: SampleRisk[] = [
+  {
+    level: "high",
+    pillar: "Succession & continuity",
+    title: "No defined succession triggers",
+    detail:
+      "Leadership transition criteria are informal — no documented events or timelines that would activate a handoff plan.",
+  },
+  {
+    level: "high",
+    pillar: "Governance & decision-making",
+    title: "Informal authority structure",
+    detail:
+      "Major spending and investment decisions route through one family member without a shared decision framework.",
+  },
+  {
+    level: "medium",
+    pillar: "Governance & decision-making",
+    title: "Undocumented governance framework",
+    detail:
+      "Family council practices exist but are not captured in a charter reviewed within the last 24 months.",
+  },
+];
+
+const SAMPLE_NEXT_STEP =
+  "Facilitate a succession planning workshop with the family council — prioritize trigger definitions and authority documentation.";
+
+function heatBarClass(maturity: number): string {
+  const heat = maturityHeatLevel(maturity);
+  if (heat === "strong") return RISK_LEVEL_PALETTE.low.bg;
+  if (heat === "fair") return RISK_LEVEL_PALETTE.medium.bg;
+  if (heat === "weak") return RISK_LEVEL_PALETTE.high.bg;
+  return RISK_LEVEL_PALETTE.critical.bg;
+}
+
+function PillarBar({
+  name,
+  maturity,
+  emphasized,
+}: {
+  name: string;
+  maturity: number;
+  emphasized: boolean;
+}) {
+  const percent = maturityScoreToPercent(maturity);
+
+  return (
+    <div
+      className={cn(
+        "space-y-2 rounded-xl px-3 py-2.5",
+        emphasized && "border border-amber-200/80 bg-amber-50/40",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-medium leading-snug text-foreground">{name}</p>
+        <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+          {percent}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-secondary/90">
+        <div
+          className={cn("h-full rounded-full transition-all", heatBarClass(maturity))}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Maturity {maturity.toFixed(1)} / {MATURITY_SCALE_MAX}
+        {emphasized ? " · Advisor focus area" : null}
+      </p>
+    </div>
+  );
+}
 
 export function LandingProductPreview() {
   return (
-    <MarketingSection
-      id="platform-preview"
-      kicker="Platform preview"
-      title="Governance intelligence at a glance"
-      description="Sample output from the AKILI assessment engine — structured scoring, prioritized risks, and advisor-ready context."
-    >
-      <MarketingSurfaceCard className="overflow-hidden p-0">
-        <div className="grid lg:grid-cols-[1fr_1.1fr]">
-          <div className="border-b border-border/60 p-6 sm:p-8 lg:border-b-0 lg:border-r">
-            <p className="editorial-kicker">AKILI Governance Score</p>
-            <p className="mt-3 font-display text-4xl font-semibold tabular-nums text-foreground sm:text-5xl">
-              7.2
-              <span className="ml-2 text-xl font-normal text-muted-foreground sm:text-2xl">
-                / 10
+    <LandingSectionBand>
+      <MarketingSection
+        id="platform-preview"
+        kicker="Platform output"
+        title="Governance intelligence at a glance"
+        description="A sample household report — composite resilience scoring, pillar-level maturity, and prioritized risks advisors can review with clients."
+        className="!space-y-8"
+      >
+        <div
+          className="marketing-card overflow-hidden rounded-[1.25rem] border border-border/70 bg-card/90 shadow-[0_24px_60px_-40px_rgba(26,24,20,0.35)]"
+          data-testid="landing-product-preview"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-muted/25 px-5 py-3.5 sm:px-6">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge variant="secondary" className="font-medium">
+                Sample report
+              </Badge>
+              <span className="font-medium text-foreground">{SAMPLE_HOUSEHOLD}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="size-3.5 text-emerald-600" aria-hidden />
+                Assessment complete
               </span>
-            </p>
-            <p className="mt-2 text-sm font-medium text-trust-accent">
-              Moderate governance exposure
-            </p>
-            <p className="mt-4 max-w-md text-sm leading-6 text-muted-foreground">
-              Composite score across succession, authority, communication, structure,
-              and continuity — with pillar-level detail for advisor review.
-            </p>
-            <div className="mt-8 flex h-40 items-center justify-center sm:h-48">
-              <GovernanceRadarPreview className="h-full w-full max-w-[220px] text-brand" />
+              <span>{SAMPLE_COMPLETED}</span>
+              <span>47 questions · 5 domains</span>
             </div>
           </div>
 
-          <div className="space-y-6 p-6 sm:p-8">
-            <div>
-              <p className="editorial-kicker">Top identified risks</p>
-              <ul className="mt-4 space-y-3">
-                {SAMPLE_RISKS.map((risk, index) => (
-                  <li
-                    key={risk}
-                    className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3 text-sm leading-6 text-muted-foreground"
-                  >
-                    <span
-                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-trust-accent/15 text-xs font-semibold tabular-nums text-trust-accent"
-                      aria-hidden
-                    >
-                      {index + 1}
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,1fr)] lg:items-start">
+            <div className="space-y-6 border-b border-border/60 p-6 sm:p-8 lg:border-b-0 lg:border-r">
+              <div className="space-y-4">
+                <p className="editorial-kicker">Governance resilience</p>
+                <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+                  <p className="font-display text-5xl font-semibold tabular-nums text-foreground sm:text-6xl">
+                    {SAMPLE_RESILIENCE}
+                    <span className="ml-1 text-2xl font-normal text-muted-foreground sm:text-3xl">
+                      / 100
                     </span>
-                    <span>{risk}</span>
-                  </li>
-                ))}
-              </ul>
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "mb-1",
+                      RISK_LEVEL_PALETTE.medium.border,
+                      RISK_LEVEL_PALETTE.medium.bg,
+                      RISK_LEVEL_PALETTE.medium.text,
+                    )}
+                  >
+                    Moderate risk
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Aggregate maturity {SAMPLE_MATURITY.toFixed(1)} / {MATURITY_SCALE_MAX} ·
+                  gaps exist; manageable with targeted controls
+                </p>
+                <div className="h-2.5 overflow-hidden rounded-full bg-secondary/90">
+                  <div
+                    className={cn("h-full rounded-full", RISK_LEVEL_PALETTE.medium.bg)}
+                    style={{ width: `${SAMPLE_RESILIENCE}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="editorial-kicker">Pillar breakdown</p>
+                <div className="space-y-2">
+                  {SAMPLE_PILLARS.map((pillar) => (
+                    <PillarBar key={pillar.name} {...pillar} />
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="text-xs leading-5 text-muted-foreground">
-              Illustrative sample data. Actual scores and recommendations are generated
-              from each household&apos;s assessment responses.
-            </p>
+
+            <div className="flex flex-col border-b border-border/60 bg-muted/10 p-6 sm:p-8 lg:border-b-0 lg:border-r">
+              <div className="space-y-2">
+                <p className="editorial-kicker">Domain profile</p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Relative strength across succession, authority, communication, structure,
+                  and continuity — the same dimensions advisors see in review.
+                </p>
+              </div>
+              <div className="mt-4 flex min-h-[280px] w-full flex-1 items-center justify-center sm:min-h-[320px] lg:min-h-[360px]">
+                <GovernanceRadarPreview
+                  className="h-full w-full max-h-[360px] max-w-[360px] text-brand"
+                  variant="illustrative"
+                  values={[...RADAR_VALUES]}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
+              <div className="space-y-4">
+                <p className="editorial-kicker">Priority remediations</p>
+                <ul className="space-y-3">
+                  {SAMPLE_RISKS.map((risk) => {
+                    const palette = RISK_LEVEL_PALETTE[risk.level];
+                    return (
+                      <li
+                        key={risk.title}
+                        className="rounded-xl border border-border/60 bg-background/60 px-4 py-3.5"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] uppercase tracking-wide",
+                              palette.border,
+                              palette.bg,
+                              palette.text,
+                            )}
+                          >
+                            {palette.label}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{risk.pillar}</span>
+                        </div>
+                        <p className="mt-2 text-sm font-medium leading-snug text-foreground">
+                          {risk.title}
+                        </p>
+                        <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                          {risk.detail}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3.5">
+                <p className="editorial-kicker">Recommended next step</p>
+                <p className="mt-2 flex items-start gap-2 text-sm leading-6 text-foreground">
+                  <ArrowRight
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    aria-hidden
+                  />
+                  {SAMPLE_NEXT_STEP}
+                </p>
+              </div>
+
+              <p className="text-xs leading-5 text-muted-foreground">
+                Illustrative sample. Actual output is generated from each household&apos;s
+                assessment responses and advisor methodology settings.
+              </p>
+            </div>
           </div>
         </div>
-      </MarketingSurfaceCard>
-    </MarketingSection>
+      </MarketingSection>
+    </LandingSectionBand>
   );
 }

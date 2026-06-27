@@ -67,13 +67,13 @@ test.describe("subdomain routing", () => {
     await expect(page.getByText(/Powered by AkiliRisk Platform/i)).toBeVisible();
 
     const signInLink = page.getByRole("link", { name: /^Sign In$/i });
-    await expect(signInLink.first()).toHaveAttribute("href", "/signin/magic-link");
+    await expect(signInLink.first()).toHaveAttribute("href", "/signin");
   });
 
   test("advisor credentials sign-in on tenant host reaches /advisor workspace", async ({
     page,
   }) => {
-    const signInUrl = `${tenantHostOrigin("independent-wealth")}/signin?portal=advisor&callbackUrl=%2Fadvisor`;
+    const signInUrl = `${tenantHostOrigin("independent-wealth")}/signin?role=advisor&callbackUrl=%2Fadvisor`;
     await page.goto(signInUrl);
 
     const user = USERS.advisor2;

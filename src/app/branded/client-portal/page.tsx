@@ -78,10 +78,10 @@ export default async function BrandedClientPortalPage() {
               <span>
                 Already have an account?{" "}
                 <Link
-                  href="/signin/magic-link"
+                  href="/signin?role=client"
                   className="font-semibold text-foreground hover:underline"
                 >
-                  Sign in with email link
+                  Sign in
                 </Link>
               </span>
             }
@@ -113,7 +113,7 @@ export default async function BrandedClientPortalPage() {
           <p className="text-sm leading-6 text-muted-foreground">
             Questions before you begin? Contact {brandTitle} using the details in the
             footer, or{" "}
-            <Link href="/signin/magic-link" className="font-semibold text-foreground hover:underline">
+            <Link href="/signin?role=client" className="font-semibold text-foreground hover:underline">
               sign in
             </Link>{" "}
             if you already have an account.

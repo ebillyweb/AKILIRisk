@@ -18,8 +18,8 @@ test.describe("landing hero audience paths", () => {
     await expect(primary).toHaveAttribute("href", "/start");
 
     const secondary = page.getByTestId("landing-hero-secondary-cta");
-    await expect(secondary).toHaveText(/Sign In with Email Link/i);
-    await expect(secondary).toHaveAttribute("href", "/signin/magic-link");
+    await expect(secondary).toHaveText(/Sign In/i);
+    await expect(secondary).toHaveAttribute("href", "/signin?role=client");
   });
 
   test("advisors tab shows advisor workspace copy and CTAs", async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe("landing hero audience paths", () => {
 
     const primary = page.getByTestId("landing-hero-primary-cta");
     await expect(primary).toHaveText(/Advisor Sign In/i);
-    await expect(primary).toHaveAttribute("href", "/signin?portal=advisor");
+    await expect(primary).toHaveAttribute("href", "/signin?role=advisor");
 
     const secondary = page.getByTestId("landing-hero-secondary-cta");
     await expect(secondary).toHaveText(/Request Demo/i);

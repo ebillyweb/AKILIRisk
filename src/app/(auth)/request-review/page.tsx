@@ -79,7 +79,7 @@ export default function RequestGovernanceReviewPage() {
         <span>
           Already have an account?{" "}
           <Link
-            href="/signin/magic-link"
+            href="/signin?role=client"
             className="font-semibold text-foreground hover:underline"
           >
             Sign in
