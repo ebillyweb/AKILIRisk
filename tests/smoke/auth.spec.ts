@@ -20,7 +20,7 @@ const DASHBOARDS: DashboardAssertion[] = [
     role: "client",
     expectedUrlPath: "/dashboard",
     heading: /Dashboard/i,
-    secondarySignal: /Your Assessments/i,
+    secondarySignal: /Explore your portal/i,
   },
   {
     role: "admin",

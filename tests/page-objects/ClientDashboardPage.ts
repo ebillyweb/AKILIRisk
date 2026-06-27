@@ -7,6 +7,14 @@ export class ClientDashboardPage {
   async goto() {
     await this.page.goto("/dashboard");
     await expect(
+      this.page.getByRole("heading", { name: /Explore your portal/i })
+    ).toBeVisible({ timeout: 45_000 });
+  }
+
+  /** Heat map detail lives on Risk Preview—not the dashboard hub. */
+  async gotoRiskPreview() {
+    await this.page.goto("/assessment/risk-preview");
+    await expect(
       this.page.getByRole("heading", { name: /risk by domain/i })
     ).toBeVisible({ timeout: 45_000 });
   }
@@ -28,7 +36,7 @@ export class ClientDashboardPage {
   }
 
   async expectTopRisksVisible() {
-    const list = this.page.getByTestId("top-risks");
+    const list = this.page.getByTestId("risk-preview-top-risks");
     await expect(list).toBeVisible();
     await expect(list.locator("li").first()).toBeVisible();
   }

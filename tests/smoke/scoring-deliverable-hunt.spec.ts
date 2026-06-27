@@ -137,14 +137,6 @@ test.describe("scoring + deliverable-phase hunt", () => {
     page,
     request,
   }) => {
-    // The contradiction we fixed: when intake approval is regressed (so
-    // `assessmentUnlocked=false`) but PillarScore rows still exist from
-    // a prior approval cycle, the hero used to render the score number
-    // while the body card said "Assessment unlocks after your advisor
-    // reviews and approves your intake." Both pieces now respect the
-    // same `assessmentUnlocked` gate: the hero falls back to the
-    // "Complete your assessment to see your overall risk score."
-    // placeholder when the gate is closed.
     await request.post("/api/test/assessment/prepare", {
       data: { clientEmail: "client@test.com", reset: true, complete: true },
     });
@@ -153,19 +145,13 @@ test.describe("scoring + deliverable-phase hunt", () => {
     await page.goto("/dashboard");
     const main = await page.locator("main").innerText();
 
-    const bodyLocked = /Assessment unlocks after your advisor reviews/i.test(
+    const bodyLocked = /Unlocks after your advisor approves intake/i.test(
       main
     );
 
     if (bodyLocked) {
-      // When the body says "unlock after approval", the hero must NOT show
-      // a numeric overall-risk score (which would contradict the lock).
-      // Look for `<number>.<number> / 10` inside the Overall Risk box.
-      const heroBox = page.getByTestId("hero-overall-risk");
-      await expect(heroBox).toContainText(
-        /Complete your assessment to see your overall risk score/i
-      );
-      await expect(heroBox).not.toContainText(/\d+\.\d+\s*\/\s*10/);
+      await expect(page.getByTestId("dashboard-journey")).toBeVisible();
+      await expect(main).not.toMatch(/\d+\.\d+\s*\/\s*10/);
     }
   });
 });

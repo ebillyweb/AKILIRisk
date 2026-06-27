@@ -28,7 +28,7 @@ const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] =
       kicker: "Client Portal",
       title: "Dashboard",
       subtitle:
-        "Assessment progress, results, and secure account management",
+        "Your home base for intake status, next steps, and links to detailed work areas",
     },
   },
   {
