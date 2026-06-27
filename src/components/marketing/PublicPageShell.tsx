@@ -30,7 +30,7 @@ export function PublicPageShell({
       </a>
       <main
         id="main-content"
-        className="min-h-screen pb-12 pt-2 sm:pb-16"
+        className="app-grid relative min-h-screen pb-12 pt-2 sm:pb-16"
         tabIndex={-1}
       >
         <div className="page-shell flex flex-col gap-14 sm:gap-20 lg:gap-24">

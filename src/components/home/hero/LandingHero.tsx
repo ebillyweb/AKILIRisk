@@ -64,7 +64,7 @@ export function LandingHero({
   return (
     <section
       className={cn(
-        "hero-surface overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-14 lg:px-14 lg:py-16",
+        "hero-surface app-grid overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-14 lg:px-14 lg:py-16",
         className,
       )}
     >
