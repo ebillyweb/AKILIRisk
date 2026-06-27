@@ -30,6 +30,35 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+/** Fixture advisors must verify email before credentials sign-in (auth.config.ts). */
+const VERIFIED_EMAIL = { emailVerified: new Date() };
+
+function gracePeriodEnd() {
+  const end = new Date();
+  end.setDate(end.getDate() + 30);
+  return end;
+}
+
+function graceSubscriptionPayload(tier) {
+  return {
+    tier,
+    status: 'GRACE_PERIOD',
+    clientLimit: 10,
+    billingCycle: 'MONTHLY',
+    currentPeriodEnd: gracePeriodEnd(),
+    cancelAtPeriodEnd: false,
+  };
+}
+
+async function upsertGraceSubscription(userId, tier = 'ESSENTIALS') {
+  const data = graceSubscriptionPayload(tier);
+  await prisma.subscription.upsert({
+    where: { userId },
+    update: data,
+    create: { userId, ...data },
+  });
+}
+
 async function main() {
   console.log('🌱 Seeding advisor portal test data...');
 
@@ -48,6 +77,7 @@ async function main() {
       firstName: 'Test',
       lastName: 'Advisor',
       role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
       ...MFA_OFF_FIELDS,
     },
     create: {
@@ -56,7 +86,9 @@ async function main() {
       name: 'Test Advisor',
       firstName: 'Test',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     }
   });
 
@@ -81,6 +113,9 @@ async function main() {
   });
 
   console.log('✅ Created advisor profile for:', advisorUser.name);
+
+  await upsertGraceSubscription(advisorUser.id);
+  console.log('✅ Grace-period subscription for primary advisor (billing gate)');
 
   // Create client user with submitted intake.
   // Round-11 commit 3 (BRD §5.1.AUTH): clients sign in via magic link;
@@ -492,7 +527,9 @@ async function main() {
       name: 'Test Advisor Two',
       firstName: 'Second',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     },
     create: {
       emailCiphertext: advisor2Ct,
@@ -500,7 +537,9 @@ async function main() {
       name: 'Test Advisor Two',
       firstName: 'Second',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     }
   });
 
@@ -532,31 +571,9 @@ async function main() {
     }
   });
 
-  // Grace-period subscription so the advisor portal layout doesn't redirect
-  // them to /advisor/billing before tenant-isolation logic runs. Mirrors the
-  // pattern used in scripts/migrate-advisor-subscriptions.js (no Stripe id).
-  const advisor2PeriodEnd = new Date();
-  advisor2PeriodEnd.setDate(advisor2PeriodEnd.getDate() + 30);
-  await prisma.subscription.upsert({
-    where: { userId: advisor2User.id },
-    update: {
-      tier: 'ESSENTIALS',
-      status: 'GRACE_PERIOD',
-      clientLimit: 10,
-      billingCycle: 'MONTHLY',
-      currentPeriodEnd: advisor2PeriodEnd,
-      cancelAtPeriodEnd: false
-    },
-    create: {
-      userId: advisor2User.id,
-      tier: 'ESSENTIALS',
-      status: 'GRACE_PERIOD',
-      clientLimit: 10,
-      billingCycle: 'MONTHLY',
-      currentPeriodEnd: advisor2PeriodEnd,
-      cancelAtPeriodEnd: false
-    }
-  });
+  // Grace-period subscription — PROFESSIONAL tier enables customSubdomainEnabled
+  // for branded tenant invitation URLs (invited-tenant-branding.spec.ts).
+  await upsertGraceSubscription(advisor2User.id, 'PROFESSIONAL');
 
   console.log(`✅ Created second advisor (no client assignments): ${advisor2Email}`);
 
@@ -592,7 +609,9 @@ async function main() {
       name: 'Test Advisor Three',
       firstName: 'Third',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     },
     create: {
       emailCiphertext: advisor3Ct,
@@ -600,7 +619,9 @@ async function main() {
       name: 'Test Advisor Three',
       firstName: 'Third',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     }
   });
   const advisor3Profile = await prisma.advisorProfile.upsert({
@@ -642,7 +663,9 @@ async function main() {
       name: 'Test Advisor Four',
       firstName: 'Fourth',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     },
     create: {
       emailCiphertext: advisor4Ct,
@@ -650,7 +673,9 @@ async function main() {
       name: 'Test Advisor Four',
       firstName: 'Fourth',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     }
   });
   const advisor4Profile = await prisma.advisorProfile.upsert({
@@ -681,6 +706,9 @@ async function main() {
   });
   console.log("✅ Created advisor4 + AdvisorSubdomain 'disabled-tenant' (verified, NOT active)");
 
+  await upsertGraceSubscription(advisor4User.id);
+  console.log('✅ Grace-period subscription for advisor4');
+
   // Fifth advisor with brandingEnabled=false, plus a client assigned to them.
   // Used by the "default Akili branding fallback" test - the protected layout
   // renders AkiliLogoLockup + the platform-name kicker when
@@ -696,7 +724,9 @@ async function main() {
       name: 'Test Advisor Unbranded',
       firstName: 'Unbranded',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     },
     create: {
       emailCiphertext: advisorUnbrandedCt,
@@ -704,7 +734,9 @@ async function main() {
       name: 'Test Advisor Unbranded',
       firstName: 'Unbranded',
       lastName: 'Advisor',
-      role: 'ADVISOR'
+      role: 'ADVISOR',
+      ...VERIFIED_EMAIL,
+      ...MFA_OFF_FIELDS,
     }
   });
   const advisorUnbrandedProfile = await prisma.advisorProfile.upsert({
@@ -721,6 +753,9 @@ async function main() {
       brandingEnabled: false
     }
   });
+
+  await upsertGraceSubscription(advisorUnbrandedUser.id);
+  console.log('✅ Grace-period subscription for unbranded advisor');
 
   const clientUnbrandedEmail = 'client-unbranded@test.com';
   const clientUnbrandedCt = userEmailCiphertext(clientUnbrandedEmail);

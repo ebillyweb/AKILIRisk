@@ -1,7 +1,7 @@
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { LandingSectionBand } from "@/components/marketing/LandingSectionBand";
 import { MarketingSection } from "@/components/marketing/MarketingSection";
-import { SamplePillarCoverageGrid } from "@/components/marketing/SamplePillarCoverageGrid";
+import { PlatformPillarRadarPreview } from "@/components/marketing/PlatformPillarRadarPreview";
 import { Badge } from "@/components/ui/badge";
 import {
   maturityHeatLevel,
@@ -199,8 +199,8 @@ export function LandingProductPreview() {
                   domains marked not in scope for this advisor-configured engagement.
                 </p>
               </div>
-              <div className="mt-4 w-full">
-                <SamplePillarCoverageGrid pillars={SAMPLE_PILLAR_SCORES} />
+              <div className="mt-4 flex w-full flex-1 items-center justify-center">
+                <PlatformPillarRadarPreview pillars={SAMPLE_PILLAR_SCORES} />
               </div>
             </div>
 

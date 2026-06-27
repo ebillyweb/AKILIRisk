@@ -68,6 +68,8 @@ You control the `akilirisk.com` zone. Typical setup:
 | Advisor | Slug | DB flags | Staging URL (with `-staging`) |
 |---------|------|----------|-------------------------------|
 | advisor2 | `independent-wealth` | active + verified | `https://independent-wealth-staging.akilirisk.com` |
+
+**Branded invitation URLs** (tenant signup links) also require a subscription tier with `customSubdomainEnabled` (e.g. `PROFESSIONAL` or above). The seed script sets advisor2 to `PROFESSIONAL`; `ESSENTIALS` alone is not enough even when the subdomain row is verified.
 | advisor3 | `inactive-tenant` | active, not DNS-verified | `https://inactive-tenant-staging.akilirisk.com` → "Subdomain Not Available" |
 | advisor4 | `disabled-tenant` | verified, not active | `https://disabled-tenant-staging.akilirisk.com` → "Subdomain Not Available" |
 
