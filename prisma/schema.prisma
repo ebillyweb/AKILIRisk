@@ -1416,6 +1416,9 @@ model ServiceRecommendation {
   externalUrl        String?
   /// Comma-separated service IDs that should be completed first.
   prerequisites      String[]              @default([])
+  /// Phase 22 (D-09/D-11): per-field override policy declarations.
+  /// Shape: [{ field: string, tier: "PROTECTED" | "CONFIGURABLE" | "ADDITION" }]
+  overridePolicies   Json?
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1473,6 +1476,34 @@ enum RecommendationStatus {
   ACCEPTED
   DECLINED
   COMPLETED
+  /// Phase 22: implementation-focused lifecycle states
+  GENERATED
+  INCLUDED
+  DEFERRED
+  IN_PROGRESS
+}
+
+/// Phase 22 (D-21): client-managed task progress
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  WAITING
+  READY_FOR_REVIEW
+  COMPLETED
+}
+
+/// Phase 22 (D-21): advisor-managed validation
+enum ValidationStatus {
+  PENDING_REVIEW
+  VERIFIED
+  NEEDS_FOLLOWUP
+}
+
+/// Phase 22 (D-06): advisor priority override
+enum AdvisorPriority {
+  HIGH
+  MEDIUM
+  LOW
 }
 
 model AssessmentRecommendation {
@@ -1501,6 +1532,29 @@ model AssessmentRecommendation {
   /// Shape: { platform: bool, enterprise: { id, name } | null, advisor: { id, name } | null }
   sourceLayerSummary      Json?                 @map("source_layer_summary")
 
+  /// Phase 22 (D-21): client-managed task progress
+  taskStatus              TaskStatus             @default(NOT_STARTED)
+  /// Phase 22 (D-21): advisor-managed validation
+  validationStatus        ValidationStatus       @default(PENDING_REVIEW)
+  /// Phase 22 (D-22): whether this action requires advisor validation
+  requiresValidation      Boolean                @default(false)
+  /// Phase 22 (D-06): advisor override of urgencyScore priority
+  advisorPriority         AdvisorPriority?
+  /// Phase 22 (D-05): hide recommendation from client view
+  hiddenFromClient        Boolean                @default(false)
+  /// Phase 22 (D-08): reason for deferring
+  deferredReason          String?                @db.Text
+  /// Phase 22 (D-08): optional revisit date for deferred items
+  deferredRevisitDate     DateTime?
+  /// Phase 22 (D-08): trigger event for deferred items (e.g., "After business valuation")
+  deferredTriggerEvent    String?                @db.Text
+  /// Phase 22 (D-20): platform-defined responsible roles
+  responsibleRoles        String[]               @default([])
+  /// Phase 22 (D-20): freeform assignee list. Shape: [{ name, role, org }]
+  assignees               Json?
+  /// Phase 22: time horizon for SAP grouping: "immediate", "strategic", "ongoing"
+  timeHorizon             String?                @db.VarChar(20)
+
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
@@ -1512,6 +1566,7 @@ model AssessmentRecommendation {
   @@unique([assessmentId, serviceRecommendationId])
   @@index([assessmentId])
   @@index([status])
+  @@index([taskStatus, hiddenFromClient])
 }
 
 /// §4.5 commit 3 (BRD §4.5): Reporting Engine — choice of cover layout
@@ -1888,6 +1943,16 @@ model EnterpriseSolutionCustomization {
   /// Free-form notes visible to all advisors in the enterprise.
   notes                   String?           @db.Text
   isActive                Boolean           @default(true) @map("is_active")
+  /// Phase 22 (D-14): whether this recommendation is required for the enterprise
+  isRequired              Boolean           @default(false) @map("is_required")
+  /// Phase 22 (D-14): enterprise priority adjustment (-N to +N relative to platform priority)
+  priorityAdjustment      Int?              @map("priority_adjustment")
+  /// Phase 22 (D-14): enterprise-specific compliance disclosures
+  complianceDisclosures   String?           @db.Text @map("compliance_disclosures")
+  /// Phase 22 (D-14): enterprise-specific implementation guidance
+  customGuidance          String?           @db.Text @map("custom_guidance")
+  /// Phase 22 (D-14): enterprise internal links. Shape: [{ url, label }]
+  internalLinks           Json?             @map("internal_links")
   createdAt               DateTime          @default(now()) @map("created_at")
   updatedAt               DateTime          @updatedAt @map("updated_at")
 
