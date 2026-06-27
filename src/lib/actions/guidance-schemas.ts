@@ -85,6 +85,34 @@ export const updateAssigneesSchema = z.object({
 export type UpdateAssigneesInput = z.infer<typeof updateAssigneesSchema>;
 
 // ---------------------------------------------------------------------------
+// Milestone management (Phase 23)
+// ---------------------------------------------------------------------------
+
+export const milestoneBlockSchema = z.object({
+  milestoneId: z.string().cuid(),
+  reason: z.string().min(10).max(500),
+});
+export type MilestoneBlockInput = z.infer<typeof milestoneBlockSchema>;
+
+export const milestoneDeferSchema = z.object({
+  milestoneId: z.string().cuid(),
+  reason: z.string().min(1).max(500),
+  revisitDate: z.string().datetime().optional(),
+});
+export type MilestoneDeferInput = z.infer<typeof milestoneDeferSchema>;
+
+export const publishActionPlanSchema = z.object({
+  assessmentId: z.string().cuid(),
+});
+export type PublishActionPlanInput = z.infer<typeof publishActionPlanSchema>;
+
+export const milestoneStatusSchema = z.object({
+  milestoneId: z.string().cuid(),
+  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED", "SKIPPED"]),
+});
+export type MilestoneStatusInput = z.infer<typeof milestoneStatusSchema>;
+
+// ---------------------------------------------------------------------------
 // Enterprise schema
 // ---------------------------------------------------------------------------
 

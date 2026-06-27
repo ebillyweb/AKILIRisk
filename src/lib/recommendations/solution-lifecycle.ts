@@ -49,6 +49,10 @@ export const SOLUTION_ACTIONS = {
   STATUS_DEFERRED: "status_deferred",
   STATUS_IN_PROGRESS: "status_in_progress",
   MILESTONE_UPDATE: "milestone_update",
+  // Phase 23: engagement tracking
+  AUTO_COMPLETED: "auto_completed",
+  MILESTONE_BLOCKED: "milestone_blocked",
+  MILESTONE_DEFERRED: "milestone_deferred",
 } as const;
 
 const STATUS_ACTION_MAP: Record<RecommendationStatus, string> = {
@@ -277,35 +281,126 @@ async function hydrateMilestones(
 
 /**
  * Update a single milestone's status (transactional with activity log).
+ * Phase 23: supports BLOCKED/DEFERRED with reason fields and auto-completion.
  */
 export async function updateMilestoneStatus(input: {
   milestoneId: string;
-  status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
+  status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED" | "BLOCKED" | "DEFERRED";
   actorId: string;
+  reason?: string;
+  revisitDate?: Date;
 }): Promise<void> {
-  const { milestoneId, status, actorId } = input;
+  const { milestoneId, status, actorId, reason, revisitDate } = input;
   const now = new Date();
 
   await prisma.$transaction(async (tx) => {
+    // Build update data based on target status
+    const data: Record<string, unknown> = {
+      status,
+      completedAt: status === "COMPLETED" ? now : null,
+    };
+
+    if (status === "BLOCKED") {
+      data.blockedReason = reason ?? null;
+      data.deferredReason = null;
+      data.deferredRevisitDate = null;
+    } else if (status === "DEFERRED") {
+      data.deferredReason = reason ?? null;
+      data.deferredRevisitDate = revisitDate ?? null;
+      data.blockedReason = null;
+    } else {
+      // Transitioning away from BLOCKED/DEFERRED -- clear reason fields
+      data.blockedReason = null;
+      data.deferredReason = null;
+      data.deferredRevisitDate = null;
+    }
+
     const milestone = await tx.solutionMilestone.update({
       where: { id: milestoneId },
-      data: {
-        status,
-        completedAt: status === "COMPLETED" ? now : null,
-      },
+      data,
     });
+
+    // Determine activity action
+    let action = SOLUTION_ACTIONS.MILESTONE_UPDATE;
+    if (status === "BLOCKED") action = SOLUTION_ACTIONS.MILESTONE_BLOCKED;
+    if (status === "DEFERRED") action = SOLUTION_ACTIONS.MILESTONE_DEFERRED;
 
     await tx.solutionActivity.create({
       data: {
         assessmentRecommendationId: milestone.assessmentRecommendationId,
         actorId,
-        action: SOLUTION_ACTIONS.MILESTONE_UPDATE,
+        action,
         detail: {
           milestoneId,
           title: milestone.title,
           status,
+          ...(reason ? { reason } : {}),
+          ...(revisitDate ? { revisitDate: revisitDate.toISOString() } : {}),
         },
       },
     });
+
+    // Check auto-completion after every milestone status change
+    await checkAutoCompletion(tx, milestone.assessmentRecommendationId, actorId);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Auto-completion detection (Phase 23)
+// ---------------------------------------------------------------------------
+
+const TERMINAL_MILESTONE_STATUSES = ["COMPLETED", "SKIPPED", "DEFERRED"];
+
+/**
+ * Check if all milestones for a recommendation have reached terminal status.
+ * If so, auto-transition the parent recommendation to COMPLETED.
+ * A BLOCKED milestone prevents auto-completion.
+ */
+async function checkAutoCompletion(
+  tx: TxClient,
+  recommendationId: string,
+  actorId: string,
+): Promise<void> {
+  const milestones = await tx.solutionMilestone.findMany({
+    where: { assessmentRecommendationId: recommendationId },
+    select: { status: true },
+  });
+
+  // No milestones = nothing to auto-complete
+  if (milestones.length === 0) return;
+
+  // Any BLOCKED milestone prevents auto-completion
+  if (milestones.some((m) => m.status === "BLOCKED")) return;
+
+  // All must be in terminal status
+  const allTerminal = milestones.every((m) =>
+    TERMINAL_MILESTONE_STATUSES.includes(m.status),
+  );
+  if (!allTerminal) return;
+
+  // Check current recommendation status -- only auto-complete from IN_PROGRESS
+  const rec = await tx.assessmentRecommendation.findUnique({
+    where: { id: recommendationId },
+    select: { status: true },
+  });
+  if (!rec || rec.status !== "IN_PROGRESS") return;
+
+  const now = new Date();
+  await tx.assessmentRecommendation.update({
+    where: { id: recommendationId },
+    data: {
+      status: "COMPLETED",
+      completedAt: now,
+      statusUpdatedAt: now,
+    },
+  });
+
+  await tx.solutionActivity.create({
+    data: {
+      assessmentRecommendationId: recommendationId,
+      actorId,
+      action: SOLUTION_ACTIONS.AUTO_COMPLETED,
+      detail: { reason: "all_milestones_terminal" },
+    },
   });
 }

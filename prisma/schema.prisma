@@ -174,8 +174,9 @@ model AdvisorEnterprise {
   logoContentType       String?
   logoFileSize          Int?
   logoUploadedAt        DateTime?
-  brandingEnabled       Boolean                 @default(true)
-  customDomainEnabled   Boolean                 @default(false)
+  brandingEnabled                Boolean                 @default(true)
+  implementationTrackingEnabled  Boolean                 @default(true)
+  customDomainEnabled            Boolean                 @default(false)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 
@@ -439,7 +440,8 @@ model Assessment {
   /// time the assessment was scored / re-scored. Array of typed codes such
   /// as `"score_threshold:overall"`, `"domain_flag:cyber-digital"`, or
   /// `"kri:<questionId>"`.
-  upsellTriggersFired Json?
+  upsellTriggersFired    Json?
+  actionPlanPublishedAt  DateTime? @map("action_plan_published_at")
 
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   responses     AssessmentResponse[]
@@ -2000,6 +2002,8 @@ enum MilestoneStatus {
   IN_PROGRESS
   COMPLETED
   SKIPPED
+  BLOCKED
+  DEFERRED
 }
 
 /// Materialized playbook step for an accepted recommendation.
@@ -2015,6 +2019,10 @@ model SolutionMilestone {
   source                     MilestoneSource @default(PLATFORM)
   status                     MilestoneStatus @default(NOT_STARTED)
   completedAt                DateTime?       @map("completed_at")
+  dueDate                    DateTime?       @map("due_date")
+  blockedReason              String?         @map("blocked_reason") @db.VarChar(500)
+  deferredReason             String?         @map("deferred_reason") @db.VarChar(500)
+  deferredRevisitDate        DateTime?       @map("deferred_revisit_date")
   createdAt                  DateTime        @default(now()) @map("created_at")
   updatedAt                  DateTime        @updatedAt @map("updated_at")
 

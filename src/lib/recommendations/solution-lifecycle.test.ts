@@ -10,6 +10,8 @@ const mockUpdate = vi.fn();
 const mockActivityCreate = vi.fn();
 const mockMilestoneCount = vi.fn().mockResolvedValue(0);
 const mockMilestoneCreateMany = vi.fn();
+const mockMilestoneUpdate = vi.fn();
+const mockMilestoneFindMany = vi.fn().mockResolvedValue([]);
 const mockFindUnique = vi.fn().mockResolvedValue(null);
 const mockFindFirst = vi.fn().mockResolvedValue(null);
 const mockEnterpriseFindUnique = vi.fn().mockResolvedValue(null);
@@ -26,6 +28,8 @@ const txClient = {
   solutionMilestone: {
     count: mockMilestoneCount,
     createMany: mockMilestoneCreateMany,
+    update: mockMilestoneUpdate,
+    findMany: mockMilestoneFindMany,
   },
   clientAdvisorAssignment: { findFirst: mockFindFirst },
   enterpriseSolutionCustomization: { findUnique: mockEnterpriseFindUnique },
@@ -66,6 +70,7 @@ vi.mock("@/lib/recommendations/compose-solution", () => ({
 
 import {
   transitionRecommendationStatus,
+  updateMilestoneStatus,
   InvalidTransitionError,
   SOLUTION_ACTIONS,
 } from "./solution-lifecycle";
@@ -304,5 +309,214 @@ describe("transitionRecommendationStatus", () => {
         newStatus: "REVIEWED",
       })
     ).rejects.toThrow(InvalidTransitionError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Phase 23 -- updateMilestoneStatus BLOCKED/DEFERRED + auto-completion
+// ---------------------------------------------------------------------------
+
+describe("updateMilestoneStatus (Phase 23)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMilestoneFindMany.mockResolvedValue([]);
+  });
+
+  it("sets blockedReason and logs MILESTONE_BLOCKED when status is BLOCKED", async () => {
+    mockMilestoneUpdate.mockResolvedValue({
+      id: "ms1",
+      assessmentRecommendationId: "rec1",
+      title: "Test Milestone",
+    });
+
+    await updateMilestoneStatus({
+      milestoneId: "ms1",
+      status: "BLOCKED",
+      actorId: "actor1",
+      reason: "Waiting on third-party vendor",
+    });
+
+    expect(mockMilestoneUpdate).toHaveBeenCalledWith({
+      where: { id: "ms1" },
+      data: expect.objectContaining({
+        status: "BLOCKED",
+        blockedReason: "Waiting on third-party vendor",
+        deferredReason: null,
+        deferredRevisitDate: null,
+        completedAt: null,
+      }),
+    });
+
+    expect(mockActivityCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        assessmentRecommendationId: "rec1",
+        actorId: "actor1",
+        action: SOLUTION_ACTIONS.MILESTONE_BLOCKED,
+        detail: expect.objectContaining({
+          milestoneId: "ms1",
+          status: "BLOCKED",
+          reason: "Waiting on third-party vendor",
+        }),
+      }),
+    });
+  });
+
+  it("sets deferredReason and deferredRevisitDate when status is DEFERRED", async () => {
+    const revisitDate = new Date("2026-09-01T00:00:00Z");
+    mockMilestoneUpdate.mockResolvedValue({
+      id: "ms2",
+      assessmentRecommendationId: "rec2",
+      title: "Deferred Milestone",
+    });
+
+    await updateMilestoneStatus({
+      milestoneId: "ms2",
+      status: "DEFERRED",
+      actorId: "actor1",
+      reason: "Low priority for now",
+      revisitDate,
+    });
+
+    expect(mockMilestoneUpdate).toHaveBeenCalledWith({
+      where: { id: "ms2" },
+      data: expect.objectContaining({
+        status: "DEFERRED",
+        deferredReason: "Low priority for now",
+        deferredRevisitDate: revisitDate,
+        blockedReason: null,
+        completedAt: null,
+      }),
+    });
+
+    expect(mockActivityCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: SOLUTION_ACTIONS.MILESTONE_DEFERRED,
+        detail: expect.objectContaining({
+          status: "DEFERRED",
+          reason: "Low priority for now",
+          revisitDate: revisitDate.toISOString(),
+        }),
+      }),
+    });
+  });
+
+  it("auto-completes recommendation when all milestones reach terminal status", async () => {
+    mockMilestoneUpdate.mockResolvedValue({
+      id: "ms3",
+      assessmentRecommendationId: "rec3",
+      title: "Final Milestone",
+    });
+
+    // All milestones are terminal
+    mockMilestoneFindMany.mockResolvedValue([
+      { status: "COMPLETED" },
+      { status: "SKIPPED" },
+      { status: "DEFERRED" },
+    ]);
+
+    // Recommendation is IN_PROGRESS
+    mockFindUnique.mockResolvedValue({ status: "IN_PROGRESS" });
+
+    await updateMilestoneStatus({
+      milestoneId: "ms3",
+      status: "COMPLETED",
+      actorId: "actor1",
+    });
+
+    // Recommendation should be auto-completed
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: "rec3" },
+      data: expect.objectContaining({
+        status: "COMPLETED",
+        completedAt: expect.any(Date),
+        statusUpdatedAt: expect.any(Date),
+      }),
+    });
+
+    // Auto-completed activity should be logged
+    expect(mockActivityCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: SOLUTION_ACTIONS.AUTO_COMPLETED,
+        detail: { reason: "all_milestones_terminal" },
+      }),
+    });
+  });
+
+  it("does NOT auto-complete when any milestone is BLOCKED", async () => {
+    mockMilestoneUpdate.mockResolvedValue({
+      id: "ms4",
+      assessmentRecommendationId: "rec4",
+      title: "Some Milestone",
+    });
+
+    mockMilestoneFindMany.mockResolvedValue([
+      { status: "COMPLETED" },
+      { status: "BLOCKED" },
+      { status: "DEFERRED" },
+    ]);
+
+    await updateMilestoneStatus({
+      milestoneId: "ms4",
+      status: "COMPLETED",
+      actorId: "actor1",
+    });
+
+    // Recommendation should NOT be updated (only milestone update call)
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("does NOT auto-complete when any milestone is NOT_STARTED or IN_PROGRESS", async () => {
+    mockMilestoneUpdate.mockResolvedValue({
+      id: "ms5",
+      assessmentRecommendationId: "rec5",
+      title: "Another Milestone",
+    });
+
+    mockMilestoneFindMany.mockResolvedValue([
+      { status: "COMPLETED" },
+      { status: "IN_PROGRESS" },
+      { status: "SKIPPED" },
+    ]);
+
+    await updateMilestoneStatus({
+      milestoneId: "ms5",
+      status: "COMPLETED",
+      actorId: "actor1",
+    });
+
+    // Recommendation should NOT be updated
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("clears reason fields when transitioning away from BLOCKED/DEFERRED", async () => {
+    mockMilestoneUpdate.mockResolvedValue({
+      id: "ms6",
+      assessmentRecommendationId: "rec6",
+      title: "Unblocked Milestone",
+    });
+
+    await updateMilestoneStatus({
+      milestoneId: "ms6",
+      status: "IN_PROGRESS",
+      actorId: "actor1",
+    });
+
+    expect(mockMilestoneUpdate).toHaveBeenCalledWith({
+      where: { id: "ms6" },
+      data: expect.objectContaining({
+        status: "IN_PROGRESS",
+        blockedReason: null,
+        deferredReason: null,
+        deferredRevisitDate: null,
+      }),
+    });
+  });
+});
+
+describe("SOLUTION_ACTIONS Phase 23 constants", () => {
+  it("includes Phase 23 action constants", () => {
+    expect(SOLUTION_ACTIONS.AUTO_COMPLETED).toBe("auto_completed");
+    expect(SOLUTION_ACTIONS.MILESTONE_BLOCKED).toBe("milestone_blocked");
+    expect(SOLUTION_ACTIONS.MILESTONE_DEFERRED).toBe("milestone_deferred");
   });
 });
