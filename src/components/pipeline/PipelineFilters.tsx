@@ -168,7 +168,10 @@ export function PipelineFilters({
   if (filters.inactive) activeFilterLabels.push("Inactive");
 
   return (
-    <div className="space-y-4 rounded-lg border border-border/70 bg-card p-4 shadow-sm">
+    <div
+      className="space-y-4 rounded-lg border border-border/70 bg-card p-4 shadow-sm"
+      data-tour="pipeline-filters"
+    >
       {/* Toolbar: search, active/inactive, stage */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative min-w-0 flex-1">

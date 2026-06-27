@@ -89,7 +89,7 @@ export default async function AdvisorClientGuidancePage({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="rounded-xl border border-border/70 bg-card/60 p-4 shadow-sm ring-1 ring-border/30 sm:p-5">
         <div className="flex min-w-0 items-start gap-3 sm:items-center">
           <div

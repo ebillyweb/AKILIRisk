@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 
 import { ClientLimitBanner } from "@/components/advisor/billing/ClientLimitGate";
-import { PipelineClientActions } from "@/components/advisor/pipeline/PipelineClientActions";
+import { PipelinePageToolbar } from "@/components/advisor/pipeline/PipelinePageToolbar";
 import { TierFeatureLockedPage } from "@/components/advisor/billing/TierFeatureLockedPage";
 import { requireAdvisorTierFeatureAccess } from "@/lib/advisor/tier-feature-guard.server";
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
@@ -141,7 +141,7 @@ async function PipelineContent({
   return (
     <div className="space-y-6">
       {/* Metrics summary */}
-      <div className="rounded-lg border bg-card p-4">
+      <div className="rounded-lg border bg-card p-4" data-tour="pipeline-overview">
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">
           Pipeline Overview
         </h2>
@@ -189,9 +189,7 @@ export default async function PipelinePage({
   return (
     <div className="space-y-6 sm:space-y-8">
       {clientLimitStatus ? <ClientLimitBanner status={clientLimitStatus} /> : null}
-      {clientLimitStatus ? (
-        <PipelineClientActions clientLimitStatus={clientLimitStatus} />
-      ) : null}
+      {clientLimitStatus ? <PipelinePageToolbar clientLimitStatus={clientLimitStatus} /> : null}
 
       {workflowHeading ? (
         <header className="space-y-1 border-b border-border/50 pb-5">

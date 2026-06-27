@@ -24,6 +24,8 @@ export const TOUR_IDS = [
   "advisor-settings-team",
   "enterprise-recommendation-rules-index",
   "enterprise-recommendation-rules",
+  "advisor-pipeline",
+  "advisor-pipeline-client",
 ] as const;
 
 export type TourId = (typeof TOUR_IDS)[number];
