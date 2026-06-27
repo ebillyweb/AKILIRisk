@@ -13,17 +13,17 @@ import {
 // ---------------------------------------------------------------------------
 
 const ALLOWED_TRANSITIONS: Record<RecommendationStatus, RecommendationStatus[]> = {
-  // Backward-compatible transitions
+  // Legacy states (kept for backward compat)
   PENDING: ["REVIEWED", "DECLINED", "GENERATED"],
   REVIEWED: ["ACCEPTED", "DECLINED", "INCLUDED", "DEFERRED"],
   ACCEPTED: ["COMPLETED"],
   DECLINED: [],
   COMPLETED: [],
-  // Phase 22: implementation-focused lifecycle (D-07, D-08)
+  // Phase 22: implementation-focused lifecycle states
   GENERATED: ["REVIEWED", "DEFERRED"],
   INCLUDED: ["IN_PROGRESS", "DEFERRED"],
-  IN_PROGRESS: ["COMPLETED"],
   DEFERRED: ["REVIEWED"],
+  IN_PROGRESS: ["COMPLETED"],
 };
 
 export class InvalidTransitionError extends Error {
@@ -43,6 +43,7 @@ export const SOLUTION_ACTIONS = {
   STATUS_ACCEPTED: "status_accepted",
   STATUS_DECLINED: "status_declined",
   STATUS_COMPLETED: "status_completed",
+  // Phase 22 new states
   STATUS_GENERATED: "status_generated",
   STATUS_INCLUDED: "status_included",
   STATUS_DEFERRED: "status_deferred",
@@ -77,7 +78,7 @@ type TxClient = Prisma.TransactionClient;
  *
  * Validates against the state machine, updates lifecycle timestamps,
  * logs an activity entry, persists sourceLayerSummary, and hydrates
- * milestones on ACCEPTED or INCLUDED. All within a single transaction.
+ * milestones on ACCEPTED. All within a single transaction.
  */
 export async function transitionRecommendationStatus(input: {
   recommendationId: string;
@@ -85,20 +86,11 @@ export async function transitionRecommendationStatus(input: {
   actorId: string;
   reason?: string;
   notes?: string;
-  /** Phase 22 (D-08): optional revisit date for DEFERRED transition */
   deferredRevisitDate?: Date;
-  /** Phase 22 (D-08): optional trigger event for DEFERRED transition */
   deferredTriggerEvent?: string;
 }): Promise<void> {
-  const {
-    recommendationId,
-    newStatus,
-    actorId,
-    reason,
-    notes,
-    deferredRevisitDate,
-    deferredTriggerEvent,
-  } = input;
+  const { recommendationId, newStatus, actorId, reason, notes,
+    deferredRevisitDate, deferredTriggerEvent } = input;
   const now = new Date();
 
   await prisma.$transaction(async (tx) => {
@@ -123,10 +115,6 @@ export async function transitionRecommendationStatus(input: {
       case "ACCEPTED":
         data.acceptedAt = now;
         break;
-      case "INCLUDED":
-        // INCLUDED mirrors ACCEPTED behavior: compose + milestones
-        data.acceptedAt = now;
-        break;
       case "DECLINED":
         data.declinedAt = now;
         if (reason) data.declinedReason = reason;
@@ -134,17 +122,16 @@ export async function transitionRecommendationStatus(input: {
       case "COMPLETED":
         data.completedAt = now;
         break;
+      case "INCLUDED":
+        data.acceptedAt = now;
+        break;
       case "DEFERRED":
-        // D-08: store deferral metadata (reason is required, others optional)
         if (reason) data.deferredReason = reason;
         if (deferredRevisitDate) data.deferredRevisitDate = deferredRevisitDate;
         if (deferredTriggerEvent) data.deferredTriggerEvent = deferredTriggerEvent;
         break;
       case "IN_PROGRESS":
         data.startedAt = now;
-        break;
-      case "GENERATED":
-        // No special handling -- initial state from engine
         break;
     }
 
@@ -179,7 +166,7 @@ export async function transitionRecommendationStatus(input: {
       },
     });
 
-    // Hydrate milestones on ACCEPTED or INCLUDED
+    // Hydrate milestones on ACCEPTED or INCLUDED (uses tx, not global prisma)
     if (newStatus === "ACCEPTED" || newStatus === "INCLUDED") {
       await hydrateMilestones(tx, recommendationId);
     }
