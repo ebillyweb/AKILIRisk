@@ -1,31 +1,28 @@
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { GovernanceRadarPreview } from "@/components/home/GovernanceRadarPreview";
 import { LandingSectionBand } from "@/components/marketing/LandingSectionBand";
 import { MarketingSection } from "@/components/marketing/MarketingSection";
+import { SamplePillarCoverageGrid } from "@/components/marketing/SamplePillarCoverageGrid";
 import { Badge } from "@/components/ui/badge";
 import {
   maturityHeatLevel,
   maturityScoreToPercent,
 } from "@/lib/assessment/governance-rubric";
 import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
+import {
+  PLATFORM_PILLAR_COUNT,
+  SAMPLE_COMPLETED,
+  SAMPLE_HOUSEHOLD,
+  SAMPLE_MATURITY,
+  SAMPLE_NEXT_STEP,
+  SAMPLE_PILLAR_SCORES,
+  SAMPLE_PILLARS_IN_SCOPE,
+  SAMPLE_QUESTION_COUNT,
+} from "@/lib/marketing/sample-report-preview";
 import { RISK_LEVEL_PALETTE } from "@/lib/assessment/risk-color-palette";
 import type { RiskLevel } from "@/lib/assessment/types";
 import { cn } from "@/lib/utils";
 
-const SAMPLE_HOUSEHOLD = "Chen Family Office";
-const SAMPLE_COMPLETED = "Mar 12, 2026";
-const SAMPLE_MATURITY = 2.2;
 const SAMPLE_RESILIENCE = maturityScoreToPercent(SAMPLE_MATURITY);
-
-const SAMPLE_PILLARS = [
-  { name: "Governance & decision-making", maturity: 2.0, emphasized: false },
-  { name: "Succession & continuity", maturity: 1.6, emphasized: true },
-  { name: "Financial discipline", maturity: 2.3, emphasized: false },
-  { name: "Reputation & conduct", maturity: 2.1, emphasized: false },
-  { name: "Marital governance", maturity: 1.9, emphasized: false },
-] as const;
-
-const RADAR_VALUES = SAMPLE_PILLARS.map((pillar) => pillar.maturity / MATURITY_SCALE_MAX);
 
 type SampleRisk = {
   level: RiskLevel;
@@ -37,29 +34,26 @@ type SampleRisk = {
 const SAMPLE_RISKS: SampleRisk[] = [
   {
     level: "high",
-    pillar: "Succession & continuity",
+    pillar: "Estate & Succession",
     title: "No defined succession triggers",
     detail:
       "Leadership transition criteria are informal — no documented events or timelines that would activate a handoff plan.",
   },
   {
     level: "high",
-    pillar: "Governance & decision-making",
+    pillar: "Governance & Decision-Making",
     title: "Informal authority structure",
     detail:
       "Major spending and investment decisions route through one family member without a shared decision framework.",
   },
   {
     level: "medium",
-    pillar: "Governance & decision-making",
+    pillar: "Governance & Decision-Making",
     title: "Undocumented governance framework",
     detail:
       "Family council practices exist but are not captured in a charter reviewed within the last 24 months.",
   },
 ];
-
-const SAMPLE_NEXT_STEP =
-  "Facilitate a succession planning workshop with the family council — prioritize trigger definitions and authority documentation.";
 
 function heatBarClass(maturity: number): string {
   const heat = maturityHeatLevel(maturity);
@@ -76,7 +70,7 @@ function PillarBar({
 }: {
   name: string;
   maturity: number;
-  emphasized: boolean;
+  emphasized?: boolean;
 }) {
   const percent = maturityScoreToPercent(maturity);
 
@@ -114,7 +108,7 @@ export function LandingProductPreview() {
         id="platform-preview"
         kicker="Platform output"
         title="Governance intelligence at a glance"
-        description="A sample household report — composite resilience scoring, pillar-level maturity, and prioritized risks advisors can review with clients."
+        description={`A sample household report from a ${SAMPLE_PILLARS_IN_SCOPE.length}-pillar engagement — composite scoring, maturity across the ${PLATFORM_PILLAR_COUNT}-domain catalog, and prioritized risks advisors can review with clients.`}
         className="!space-y-8"
       >
         <div
@@ -134,7 +128,10 @@ export function LandingProductPreview() {
                 Assessment complete
               </span>
               <span>{SAMPLE_COMPLETED}</span>
-              <span>47 questions · 5 domains</span>
+              <span>
+                {SAMPLE_QUESTION_COUNT} questions · {SAMPLE_PILLARS_IN_SCOPE.length} of{" "}
+                {PLATFORM_PILLAR_COUNT} pillars in scope
+              </span>
             </div>
           </div>
 
@@ -163,7 +160,7 @@ export function LandingProductPreview() {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Aggregate maturity {SAMPLE_MATURITY.toFixed(1)} / {MATURITY_SCALE_MAX} ·
-                  gaps exist; manageable with targeted controls
+                  scored across active pillars with advisor-customized weights
                 </p>
                 <div className="h-2.5 overflow-hidden rounded-full bg-secondary/90">
                   <div
@@ -174,10 +171,21 @@ export function LandingProductPreview() {
               </div>
 
               <div className="space-y-3">
-                <p className="editorial-kicker">Pillar breakdown</p>
-                <div className="space-y-2">
-                  {SAMPLE_PILLARS.map((pillar) => (
-                    <PillarBar key={pillar.name} {...pillar} />
+                <div className="space-y-1">
+                  <p className="editorial-kicker">Active pillar breakdown</p>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {SAMPLE_PILLARS_IN_SCOPE.length} pillars selected for this engagement from
+                    the {PLATFORM_PILLAR_COUNT}-pillar platform catalog.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {SAMPLE_PILLARS_IN_SCOPE.map((pillar) => (
+                    <PillarBar
+                      key={pillar.slug}
+                      name={pillar.name}
+                      maturity={pillar.maturity}
+                      emphasized={pillar.emphasized}
+                    />
                   ))}
                 </div>
               </div>
@@ -185,18 +193,14 @@ export function LandingProductPreview() {
 
             <div className="flex flex-col border-b border-border/60 bg-muted/10 p-6 sm:p-8 lg:border-b-0 lg:border-r">
               <div className="space-y-2">
-                <p className="editorial-kicker">Domain profile</p>
+                <p className="editorial-kicker">Pillar coverage</p>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  Relative strength across succession, authority, communication, structure,
-                  and continuity — the same dimensions advisors see in review.
+                  All {PLATFORM_PILLAR_COUNT} platform pillars — active domains scored, inactive
+                  domains marked not in scope for this advisor-configured engagement.
                 </p>
               </div>
-              <div className="mt-4 flex min-h-[280px] w-full flex-1 items-center justify-center sm:min-h-[320px] lg:min-h-[360px]">
-                <GovernanceRadarPreview
-                  className="h-full w-full max-h-[360px] max-w-[360px] text-brand"
-                  variant="illustrative"
-                  values={[...RADAR_VALUES]}
-                />
+              <div className="mt-4 w-full">
+                <SamplePillarCoverageGrid pillars={SAMPLE_PILLAR_SCORES} />
               </div>
             </div>
 
@@ -249,8 +253,8 @@ export function LandingProductPreview() {
               </div>
 
               <p className="text-xs leading-5 text-muted-foreground">
-                Illustrative sample. Actual output is generated from each household&apos;s
-                assessment responses and advisor methodology settings.
+                Illustrative sample. Actual output reflects each household&apos;s responses,
+                advisor pillar selection, and methodology settings.
               </p>
             </div>
           </div>

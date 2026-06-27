@@ -20,6 +20,10 @@ test.describe("landing hero audience paths", () => {
     const secondary = page.getByTestId("landing-hero-secondary-cta");
     await expect(secondary).toHaveText(/Sign In/i);
     await expect(secondary).toHaveAttribute("href", "/signin?role=client");
+
+    await expect(page.getByTestId("landing-hero-feature-cards")).toBeVisible();
+    await expect(page.getByText("Advisor Led")).toBeVisible();
+    await expect(page.getByText("Risk Identification")).toBeVisible();
   });
 
   test("advisors tab shows advisor workspace copy and CTAs", async ({ page }) => {
@@ -43,6 +47,11 @@ test.describe("landing hero audience paths", () => {
     const secondary = page.getByTestId("landing-hero-secondary-cta");
     await expect(secondary).toHaveText(/Request Demo/i);
     await expect(secondary).toHaveAttribute("href", "/contact?intent=demo");
+
+    await expect(page.getByTestId("landing-hero-feature-cards")).toBeVisible();
+    await expect(page.getByText("Client Governance Profiles")).toBeVisible();
+    await expect(page.getByText("Risk Scoring & Recommendations")).toBeVisible();
+    await expect(page.getByText("Family Continuity Planning")).toBeVisible();
   });
 
   test("overview tab shows workflow copy and dual-path CTAs", async ({ page }) => {

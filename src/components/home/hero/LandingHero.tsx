@@ -5,6 +5,11 @@ import { useId } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { HeroAudienceSwitcher } from "@/components/home/hero/HeroAudienceSwitcher";
+import { HeroFeatureCard } from "@/components/home/hero/HeroFeatureCard";
+import {
+  ADVISOR_HERO_FEATURES,
+  HOME_HERO_FEATURES,
+} from "@/components/home/hero/home-hero-features";
 import {
   HERO_AUDIENCE_CONTENT,
   type HeroAudience,
@@ -27,6 +32,13 @@ const contentMotion = {
   exit: { opacity: 0, y: -8 },
 };
 
+const HERO_FEATURE_CARDS: Partial<
+  Record<HeroAudience, typeof HOME_HERO_FEATURES>
+> = {
+  families: HOME_HERO_FEATURES,
+  advisors: ADVISOR_HERO_FEATURES,
+};
+
 export function LandingHero({
   initialAudience = "families",
   authenticated,
@@ -38,6 +50,7 @@ export function LandingHero({
   const prefersReducedMotion = useReducedMotion();
   const { audience, setAudience } = useHeroAudience(initialAudience);
   const copy = HERO_AUDIENCE_CONTENT[audience];
+  const featureCards = HERO_FEATURE_CARDS[audience];
   const kicker =
     audience === "advisors" && advisorWorkspaceTitle
       ? advisorWorkspaceTitle
@@ -55,7 +68,12 @@ export function LandingHero({
         className,
       )}
     >
-      <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+      <div
+        className={cn(
+          "mx-auto flex flex-col items-center text-center",
+          featureCards ? "max-w-5xl" : "max-w-3xl",
+        )}
+      >
         <HeroAudienceSwitcher
           idPrefix={baseId}
           value={audience}
@@ -181,6 +199,25 @@ export function LandingHero({
                 </ul>
               </div>
             )}
+
+            {featureCards?.length ? (
+              <ul
+                className="grid w-full gap-4 text-left sm:grid-cols-3"
+                data-testid="landing-hero-feature-cards"
+                aria-label="Platform capabilities"
+              >
+                {featureCards.map((feature) => (
+                  <li key={feature.title}>
+                    <HeroFeatureCard
+                      title={feature.title}
+                      description={feature.description}
+                      icon={feature.icon}
+                      className="h-full"
+                    />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
 
             {authenticated ? (
               <p className="text-sm text-muted-foreground">

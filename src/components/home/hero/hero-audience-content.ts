@@ -109,19 +109,19 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     kicker: "How it works",
     headline: "Assess. Analyze. Act.",
     supporting:
-      "Structured intake, pillar-level scoring, and prioritized recommendations — one workflow for families and the advisors who guide them.",
+      "Structured intake across up to ten modular pillars — scoped and weighted per engagement — with prioritized recommendations for families and the advisors who guide them.",
     overviewSteps: [
       {
         step: "1",
         title: "Assess",
         description:
-          "Families complete a guided profile. Advisors manage intake and progress from one workspace.",
+          "Families complete a guided profile. Advisors choose which pillars are in scope and manage intake from one workspace.",
       },
       {
         step: "2",
         title: "Analyze",
         description:
-          "Scores and pillar insights surface succession, authority, and continuity gaps.",
+          "Scores across the advisor's active pillars surface succession, authority, cyber, and continuity gaps.",
       },
       {
         step: "3",
