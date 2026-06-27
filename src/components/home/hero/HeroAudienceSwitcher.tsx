@@ -63,10 +63,10 @@ export function HeroAudienceSwitcher({
     <LayoutGroup id={`${idPrefix}-layout`}>
       <div
         role="tablist"
-        aria-label="Choose your path"
+        aria-label="Choose your path or learn how it works"
         data-testid="landing-hero-audience-switcher"
         className={cn(
-          "relative inline-flex w-full max-w-md rounded-full border border-border/70 bg-muted/40 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-sm sm:w-auto",
+          "relative inline-flex w-full max-w-xl rounded-full border border-border/70 bg-muted/40 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-sm sm:w-auto",
           className
         )}
       >
@@ -91,7 +91,7 @@ export function HeroAudienceSwitcher({
               onClick={() => onChange(option.id)}
               onKeyDown={(event) => handleKeyDown(event, index)}
               className={cn(
-                "relative z-10 flex min-h-11 flex-1 items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium tracking-tight transition-colors duration-200 sm:min-w-[9.5rem] sm:px-6",
+                "relative z-10 flex min-h-11 flex-1 items-center justify-center rounded-full px-3 py-2.5 text-sm font-medium tracking-tight transition-colors duration-200 sm:min-w-[7.5rem] sm:px-4 lg:min-w-[8.5rem] lg:px-5",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 isActive
                   ? "text-foreground"

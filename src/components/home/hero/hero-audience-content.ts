@@ -1,4 +1,4 @@
-export type HeroAudience = "families" | "advisors";
+export type HeroAudience = "families" | "advisors" | "overview";
 
 export const HERO_AUDIENCE_OPTIONS: ReadonlyArray<{
   id: HeroAudience;
@@ -6,13 +6,21 @@ export const HERO_AUDIENCE_OPTIONS: ReadonlyArray<{
 }> = [
   { id: "families", label: "For Families" },
   { id: "advisors", label: "For Advisors" },
+  { id: "overview", label: "Overview" },
 ] as const;
+
+export type HeroOverviewStep = {
+  step: string;
+  title: string;
+  description: string;
+};
 
 export type HeroAudienceCopy = {
   kicker: string;
   headline: string;
   supporting: string;
   subtext?: string;
+  overviewSteps?: ReadonlyArray<HeroOverviewStep>;
   primaryCta: { label: string; href: string; title: string };
   secondaryCta: { label: string; href: string; title: string };
   helperLinks: ReadonlyArray<{
@@ -94,6 +102,58 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
         text: "Assessing as a family?",
         linkLabel: "Start assessment",
         href: "/start",
+      },
+    ],
+  },
+  overview: {
+    kicker: "How it works",
+    headline: "Assess. Analyze. Act.",
+    supporting:
+      "Structured intake, pillar-level scoring, and prioritized recommendations — one workflow for families and the advisors who guide them.",
+    overviewSteps: [
+      {
+        step: "1",
+        title: "Assess",
+        description:
+          "Families complete a guided profile. Advisors manage intake and progress from one workspace.",
+      },
+      {
+        step: "2",
+        title: "Analyze",
+        description:
+          "Scores and pillar insights surface succession, authority, and continuity gaps.",
+      },
+      {
+        step: "3",
+        title: "Act",
+        description:
+          "Structured recommendations help advisors and families address risks before they escalate.",
+      },
+    ],
+    primaryCta: {
+      label: "Start Assessment",
+      href: "/start",
+      title: "Start your personal risk profile",
+    },
+    secondaryCta: {
+      label: "Advisor Sign In",
+      href: "/signin?role=advisor",
+      title: "Sign in to your advisor workspace",
+    },
+    helperLinks: [
+      {
+        id: "pricing",
+        content: "link",
+        text: "Evaluating for your firm?",
+        linkLabel: "View pricing",
+        href: "/pricing",
+      },
+      {
+        id: "demo",
+        content: "link",
+        text: "Want a walkthrough?",
+        linkLabel: "Request a demo",
+        href: "/contact?intent=demo",
       },
     ],
   },

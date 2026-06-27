@@ -45,6 +45,45 @@ test.describe("landing hero audience paths", () => {
     await expect(secondary).toHaveAttribute("href", "/contact?intent=demo");
   });
 
+  test("overview tab shows workflow copy and dual-path CTAs", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByTestId("landing-hero-tab-overview").click();
+
+    const panel = page.getByTestId("landing-hero-panel");
+    await expect(panel).toHaveAttribute("data-audience", "overview");
+    await expect(
+      page.getByRole("heading", { level: 1, name: /Assess\. Analyze\. Act\./i })
+    ).toBeVisible();
+    await expect(page.getByTestId("landing-hero-overview-steps")).toBeVisible();
+
+    const primary = page.getByTestId("landing-hero-primary-cta");
+    await expect(primary).toHaveText(/Start Assessment/i);
+    await expect(primary).toHaveAttribute("href", "/start");
+
+    const secondary = page.getByTestId("landing-hero-secondary-cta");
+    await expect(secondary).toHaveText(/Advisor Sign In/i);
+    await expect(secondary).toHaveAttribute("href", "/signin?role=advisor");
+
+    await expect(page.getByTestId("landing-hero-workflow-link")).toHaveAttribute(
+      "href",
+      "#how-it-works"
+    );
+  });
+
+  test("?audience=overview deep-links the overview tab", async ({ page }) => {
+    await page.goto("/?audience=overview");
+
+    await expect(page.getByTestId("landing-hero-panel")).toHaveAttribute(
+      "data-audience",
+      "overview"
+    );
+    await expect(page).toHaveURL(/audience=overview/);
+    await expect(
+      page.getByRole("tab", { name: /Overview/i, selected: true })
+    ).toBeVisible();
+  });
+
   test("?audience=advisors deep-links the advisor tab", async ({ page }) => {
     await page.goto("/?audience=advisors");
 

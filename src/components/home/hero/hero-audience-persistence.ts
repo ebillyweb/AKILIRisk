@@ -6,6 +6,7 @@ export const HERO_AUDIENCE_QUERY_KEY = "audience";
 const VALID_AUDIENCES: ReadonlySet<HeroAudience> = new Set([
   "families",
   "advisors",
+  "overview",
 ]);
 
 export function isHeroAudience(value: string): value is HeroAudience {

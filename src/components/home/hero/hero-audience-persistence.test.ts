@@ -12,6 +12,7 @@ describe("parseHeroAudienceParam", () => {
     expect(parseHeroAudienceParam("consumer")).toBe("families");
     expect(parseHeroAudienceParam("advisors")).toBe("advisors");
     expect(parseHeroAudienceParam("advisor")).toBe("advisors");
+    expect(parseHeroAudienceParam("overview")).toBe("overview");
   });
 
   it("rejects unknown values", () => {
@@ -24,6 +25,7 @@ describe("parseHeroAudienceHash", () => {
   it("parses hash fragments", () => {
     expect(parseHeroAudienceHash("#advisors")).toBe("advisors");
     expect(parseHeroAudienceHash("families")).toBe("families");
+    expect(parseHeroAudienceHash("#overview")).toBe("overview");
   });
 });
 

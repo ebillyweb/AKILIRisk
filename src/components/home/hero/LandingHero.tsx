@@ -90,6 +90,28 @@ export function LandingHero({
               ) : null}
             </div>
 
+            {copy.overviewSteps?.length ? (
+              <ol
+                className="grid w-full max-w-2xl gap-4 text-left sm:grid-cols-3 sm:gap-5"
+                data-testid="landing-hero-overview-steps"
+              >
+                {copy.overviewSteps.map(({ step, title, description }) => (
+                  <li
+                    key={step}
+                    className="rounded-xl border border-border/60 bg-background/50 px-4 py-3.5"
+                  >
+                    <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full border border-border/70 bg-card text-xs font-semibold tabular-nums">
+                      {step}
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">{title}</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      {description}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+
             {authenticated ? (
               <div className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
                 <Button asChild size="lg" className="min-h-12 w-full sm:w-auto sm:min-w-[12rem]">
@@ -166,12 +188,25 @@ export function LandingHero({
                 <span className="font-semibold text-foreground">{userEmail}</span>
               </p>
             ) : (
-              <Link
-                href="#platform-preview"
-                className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-              >
-                See sample governance output ↓
-              </Link>
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+                {audience === "overview" ? (
+                  <Link
+                    href="#how-it-works"
+                    className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                    data-testid="landing-hero-workflow-link"
+                  >
+                    See full workflow ↓
+                  </Link>
+                ) : (
+                  <Link
+                    href="#platform-preview"
+                    className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                    data-testid="landing-hero-sample-link"
+                  >
+                    See sample governance output ↓
+                  </Link>
+                )}
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
