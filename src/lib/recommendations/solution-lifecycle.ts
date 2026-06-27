@@ -321,7 +321,7 @@ export async function updateMilestoneStatus(input: {
     });
 
     // Determine activity action
-    let action = SOLUTION_ACTIONS.MILESTONE_UPDATE;
+    let action: string = SOLUTION_ACTIONS.MILESTONE_UPDATE;
     if (status === "BLOCKED") action = SOLUTION_ACTIONS.MILESTONE_BLOCKED;
     if (status === "DEFERRED") action = SOLUTION_ACTIONS.MILESTONE_DEFERRED;
 
