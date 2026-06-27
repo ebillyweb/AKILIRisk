@@ -12,6 +12,7 @@ import {
   startIntakeInterview,
 } from "@/lib/actions/intake-actions";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
+import { hasClientAssessmentStarted } from "@/lib/client/intake-edit-gate";
 import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { prisma } from "@/lib/db";
 import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
@@ -31,6 +32,10 @@ export default async function IntakePage() {
   }
 
   const gate = await getClientIntakeGateState(session.user.id);
+
+  if (await hasClientAssessmentStarted(session.user.id)) {
+    redirect("/intake/review");
+  }
 
   // Check for existing active interview
   const activeResult = await getActiveIntakeInterviewAction();

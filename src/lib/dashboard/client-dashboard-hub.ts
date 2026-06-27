@@ -15,8 +15,12 @@ import {
 type BuildHubInput = {
   intakeHeroLabel: string;
   intakeWaived: boolean;
+  hasSubmittedInterview: boolean;
+  intakeAnswersLocked: boolean;
   restrictNavToIntake: boolean;
   assessmentUnlocked: boolean;
+  /** Waived intake but advisor has not selected assessment domains yet. */
+  assessmentScopePending: boolean;
   assessmentInProgress: boolean;
   assessmentComplete: boolean;
   canViewRiskPreview: boolean;
@@ -61,6 +65,57 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
   headline: string;
   subheadline: string;
 } {
+  if (input.intakeWaived) {
+    if (input.assessmentScopePending) {
+      return {
+        headline: "Your advisor skipped the intake interview",
+        subheadline:
+          "The family governance intake was bypassed for your household. Your advisor is finishing assessment setup—you will be able to start your personal risk profile once domains are selected.",
+      };
+    }
+
+    if (!input.assessmentUnlocked) {
+      return {
+        headline: "Your advisor skipped the intake interview",
+        subheadline:
+          "The family governance intake was bypassed for your household. Your advisor will unlock your personal risk profile when setup is complete.",
+      };
+    }
+
+    if (input.assessmentComplete && input.canViewSummary) {
+      return {
+        headline: "Your risk profile is ready to review",
+        subheadline:
+          "Your advisor waived the intake interview, so you went straight to the personal risk profile. Open Assessment Results for scores, heat maps, and reports.",
+      };
+    }
+
+    if (input.assessmentComplete && input.canViewRiskPreview) {
+      return {
+        headline: "Your assessment is scored—preview is available",
+        subheadline:
+          "Your advisor waived the intake interview. View your risk preview on the results pages while your advisor finalizes the full profile.",
+      };
+    }
+
+    if (input.assessmentInProgress) {
+      const pct =
+        input.totalQuestions > 0
+          ? Math.round((input.responseCount / input.totalQuestions) * 100)
+          : 0;
+      return {
+        headline: "Continue your personal risk profile",
+        subheadline: `Your advisor skipped the intake interview—you're about ${pct}% through the assessment. Open Personal Risk Profile below to pick up where you left off.`,
+      };
+    }
+
+    return {
+      headline: "Your advisor skipped the intake interview",
+      subheadline:
+        "The family governance intake was bypassed for your household. You can begin your personal risk profile directly—open Personal Risk Profile below when you're ready.",
+    };
+  }
+
   if (input.restrictNavToIntake) {
     return {
       headline: "Start with your family governance intake",
@@ -141,7 +196,9 @@ export function buildClientDashboardJourney(
       state: assessmentState,
       detail:
         assessmentState === "locked"
-          ? "Unlocks after your advisor approves intake and sets assessment scope."
+          ? input.intakeWaived || input.assessmentScopePending
+            ? "Unlocks after your advisor sets assessment scope."
+            : "Unlocks after your advisor approves intake and sets assessment scope."
           : assessmentState === "complete"
             ? "All selected domains are scored. Open the assessment hub for details."
             : assessmentState === "current"
@@ -178,11 +235,27 @@ export function buildClientDashboardJourney(
 export function buildClientDashboardDestinations(
   input: BuildHubInput,
 ): DashboardDestination[] {
-  const intakeHref = input.restrictNavToIntake
-    ? "/intake"
-    : input.intakeWaived || /approved|complete/i.test(input.intakeHeroLabel)
-      ? "/intake/complete"
-      : "/intake";
+  const intakeHref = input.intakeAnswersLocked
+    ? "/intake/review"
+    : input.restrictNavToIntake
+      ? "/intake"
+      : input.intakeWaived || /approved|complete/i.test(input.intakeHeroLabel)
+        ? "/intake/complete"
+        : "/intake";
+
+  const intakeDescription = input.intakeAnswersLocked
+    ? "Your submitted answers are read-only now that your assessment has started."
+    : input.intakeWaived
+      ? "Your advisor bypassed the family governance intake interview for your household. You can go straight to your personal risk profile."
+      : "Confidential interview about household structure and governance. Start or review your submission here.";
+
+  const intakeCta = input.intakeAnswersLocked
+    ? "View intake answers"
+    : input.restrictNavToIntake
+      ? "Continue intake"
+      : input.intakeWaived
+        ? "Learn more"
+        : "Open intake";
 
   let resultsHref = "/assessment/results";
   let resultsDisabled = !input.assessmentUnlocked || !input.assessmentComplete;
@@ -232,17 +305,18 @@ export function buildClientDashboardDestinations(
     {
       id: "intake",
       title: "Family Governance Intake",
-      description:
-        "Confidential interview about household structure and governance. Start or review your submission here.",
+      description: intakeDescription,
       href: intakeHref,
-      statusLabel: input.intakeHeroLabel,
+      statusLabel: input.intakeWaived
+        ? "Bypassed"
+        : input.intakeHeroLabel,
       statusVariant:
-        /approved|complete|waived/i.test(input.intakeHeroLabel)
+        input.intakeWaived || /approved|complete|waived/i.test(input.intakeHeroLabel)
           ? "success"
           : "secondary",
       icon: FileText,
       disabled: false,
-      cta: input.restrictNavToIntake ? "Continue intake" : "Open intake",
+      cta: intakeCta,
     },
     {
       id: "assessment",
@@ -258,8 +332,11 @@ export function buildClientDashboardDestinations(
           : "secondary",
       icon: ClipboardCheck,
       disabled: assessmentDisabled,
-      disabledReason:
-        "Your advisor must approve intake and set assessment scope before you can begin.",
+      disabledReason: input.assessmentScopePending
+        ? "Your advisor is selecting assessment domains before you can begin."
+        : input.intakeWaived
+          ? "Your advisor is finishing assessment setup before you can begin."
+          : "Your advisor must approve intake and set assessment scope before you can begin.",
       cta: input.assessmentInProgress
         ? "Continue assessment"
         : "Open assessment hub",

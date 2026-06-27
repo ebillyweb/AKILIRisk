@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/mobile/token";
+import { assertClientIntakeAnswersEditable } from "@/lib/client/intake-edit-gate";
 import { isStaleWrite } from "@/lib/intake/conflict";
 import { isOwnedIntakeAudioKey } from "@/lib/intake/audio-key";
 
@@ -53,6 +54,11 @@ export async function POST(request: NextRequest) {
   }
   if (interview.status === "SUBMITTED") {
     return NextResponse.json({ error: "Intake already submitted." }, { status: 409 });
+  }
+
+  const editable = await assertClientIntakeAnswersEditable(user.id);
+  if (!editable.ok) {
+    return NextResponse.json({ error: editable.error }, { status: 409 });
   }
 
   const existing = await prisma.intakeResponse.findUnique({

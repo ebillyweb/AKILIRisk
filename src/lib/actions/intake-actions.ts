@@ -26,6 +26,10 @@ import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
 import { syncInvitationStatusForClientEmail } from '@/lib/invitations/redeem-invitation';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 import { requireClientUserRole } from '@/lib/client/require-client-role';
+import {
+  assertClientIntakeAnswersEditable,
+  hasClientAssessmentStarted,
+} from '@/lib/client/intake-edit-gate';
 import type { UserRole } from '@prisma/client';
 
 // Helper function to get authenticated client user ID
@@ -56,6 +60,11 @@ async function getAuthActor() {
 export async function startIntakeInterview() {
   try {
     const userId = await getAuthUserId();
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
+    }
 
     const submittedInterview = await prisma.intakeInterview.findFirst({
       where: {
@@ -102,6 +111,15 @@ export async function saveResponse(interviewId: string, data: unknown) {
       return { success: false, error: 'Interview not found' };
     }
 
+    if (interview.status === 'SUBMITTED') {
+      return { success: false, error: 'Intake already submitted.' };
+    }
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
+    }
+
     const response = await saveIntakeResponse(
       interviewId,
       validatedFields.data.questionId,
@@ -130,6 +148,15 @@ export async function updateProgress(interviewId: string, questionIndex: number)
     const interview = await getIntakeInterview(userId, interviewId);
     if (!interview) {
       return { success: false, error: 'Interview not found' };
+    }
+
+    if (interview.status === 'SUBMITTED') {
+      return { success: false, error: 'Intake already submitted.' };
+    }
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
     }
 
     // Determine status based on progress
@@ -174,6 +201,15 @@ export async function submitIntakeInterviewAction(interviewId: string) {
     const interview = await getIntakeInterview(userId, interviewId);
     if (!interview) {
       return { success: false, error: 'Interview not found' };
+    }
+
+    if (interview.status === 'SUBMITTED') {
+      return { success: false, error: 'Intake already submitted.' };
+    }
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
     }
 
     const script = await loadIntakeScriptForInterview(interviewId);
@@ -285,6 +321,18 @@ export async function getLatestIntakeInterviewAction() {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get latest interview';
     return { success: false as const, error: message, interview: null };
+  }
+}
+
+export async function getClientIntakeAnswersLockedAction() {
+  try {
+    const userId = await getAuthUserId();
+    const locked = await hasClientAssessmentStarted(userId);
+    return { success: true as const, locked };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to check intake lock state';
+    return { success: false as const, error: message, locked: false };
   }
 }
 

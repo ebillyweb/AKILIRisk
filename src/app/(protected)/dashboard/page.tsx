@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
 import { resolveAdvisorCheckoutBillingHref } from "@/lib/advisor/checkout-billing-redirect";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
+import { hasClientAssessmentStarted } from "@/lib/client/intake-edit-gate";
 import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { prisma } from "@/lib/db";
 import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
@@ -54,7 +55,7 @@ export default async function DashboardPage({
 
   let intakeHeroLabel = "Not started";
 
-  const [latestIntake, intakeGate, summaryAccess, assessments, totalQuestions] =
+  const [latestIntake, intakeGate, summaryAccess, assessments, totalQuestions, intakeAnswersLocked] =
     await Promise.all([
       prisma.intakeInterview.findFirst({
         where: { userId: session.user.id },
@@ -86,12 +87,15 @@ export default async function DashboardPage({
         take: 1,
       }),
       countVisibleGovernanceQuestions(),
+      hasClientAssessmentStarted(session.user.id),
     ]);
 
   const assessmentUnlocked = intakeGate.assessmentUnlocked;
   const latestAssessment = assessments[0] ?? null;
 
-  if (latestIntake) {
+  if (intakeGate.intakeWaived) {
+    intakeHeroLabel = "Bypassed by advisor";
+  } else if (latestIntake) {
     if (latestIntake.status === "NOT_STARTED") {
       intakeHeroLabel = "Not started";
     } else if (latestIntake.status === "IN_PROGRESS") {
@@ -115,10 +119,6 @@ export default async function DashboardPage({
     }
   }
 
-  if (intakeGate.intakeWaived && !intakeGate.intakeApproved) {
-    intakeHeroLabel = "Waived by advisor";
-  }
-
   const assessmentComplete = latestAssessment?.status === "COMPLETED";
   const assessmentInProgress =
     !!latestAssessment && latestAssessment.status !== "COMPLETED";
@@ -127,8 +127,11 @@ export default async function DashboardPage({
   const hubInput = {
     intakeHeroLabel,
     intakeWaived: intakeGate.intakeWaived,
+    hasSubmittedInterview: intakeGate.hasSubmittedInterview,
+    intakeAnswersLocked,
     restrictNavToIntake: intakeGate.restrictNavToIntake,
     assessmentUnlocked,
+    assessmentScopePending: intakeGate.assessmentScopePending,
     assessmentInProgress,
     assessmentComplete,
     canViewRiskPreview: summaryAccess.canViewRiskPreview,

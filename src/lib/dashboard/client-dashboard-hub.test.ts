@@ -8,8 +8,11 @@ import {
 const baseInput = {
   intakeHeroLabel: "Approved",
   intakeWaived: false,
+  hasSubmittedInterview: true,
+  intakeAnswersLocked: false,
   restrictNavToIntake: false,
   assessmentUnlocked: true,
+  assessmentScopePending: false,
   assessmentInProgress: true,
   assessmentComplete: false,
   canViewRiskPreview: false,
@@ -35,6 +38,17 @@ describe("buildClientDashboardHeadline", () => {
       assessmentUnlocked: false,
     });
     expect(copy.subheadline).toMatch(/dedicated pages/i);
+  });
+
+  it("explains when intake was bypassed by the advisor", () => {
+    const copy = buildClientDashboardHeadline({
+      ...baseInput,
+      intakeWaived: true,
+      assessmentScopePending: true,
+      assessmentUnlocked: false,
+    });
+    expect(copy.headline).toMatch(/skipped the intake interview/i);
+    expect(copy.subheadline).toMatch(/bypassed/i);
   });
 });
 
@@ -91,5 +105,27 @@ describe("buildClientDashboardDestinations", () => {
       assessmentUnlocked: false,
     });
     expect(destinations.find((d) => d.id === "assessment")?.disabled).toBe(true);
+  });
+
+  it("routes locked intake answers to the read-only review page", () => {
+    const destinations = buildClientDashboardDestinations({
+      ...baseInput,
+      intakeAnswersLocked: true,
+    });
+    const intake = destinations.find((d) => d.id === "intake");
+    expect(intake?.href).toBe("/intake/review");
+    expect(intake?.cta).toBe("View intake answers");
+    expect(intake?.description).toMatch(/read-only/i);
+  });
+
+  it("marks waived intake as bypassed on the destination card", () => {
+    const destinations = buildClientDashboardDestinations({
+      ...baseInput,
+      intakeWaived: true,
+    });
+    const intake = destinations.find((d) => d.id === "intake");
+    expect(intake?.statusLabel).toBe("Bypassed");
+    expect(intake?.description).toMatch(/bypassed/i);
+    expect(intake?.cta).toBe("Learn more");
   });
 });

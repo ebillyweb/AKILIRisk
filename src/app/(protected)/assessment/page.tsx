@@ -423,8 +423,8 @@ function AssessmentHubPageContent() {
                   <p className="text-base leading-7 text-muted-foreground">
                     {summaryAccess?.canViewSummary
                       ? narrowScope
-                        ? `All ${includedPillars.length} selected domains are scored. Review your results and download your report.`
-                        : "All six pillars are scored. Review your results and download your report."
+                        ? `All ${includedPillars.length} selected domains are scored. Review your results and action plan, or download your report.`
+                        : "All six pillars are scored. Review your results and action plan, or download your report."
                       : narrowScope
                         ? `All ${includedPillars.length} selected domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it.`
                         : "All six pillars are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."}
@@ -446,9 +446,18 @@ function AssessmentHubPageContent() {
                 {allPillarsComplete ? (
                   <>
                     {summaryAccess?.canViewSummary ? (
-                      <Button size="lg" onClick={() => router.push("/assessment/results")}>
-                        View results
-                      </Button>
+                      <>
+                        <Button size="lg" onClick={() => router.push("/assessment/results")}>
+                          View results
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          onClick={() => router.push("/dashboard/action-plan")}
+                        >
+                          View action plan
+                        </Button>
+                      </>
                     ) : summaryAccess?.canViewRiskPreview ? (
                       <Button size="lg" onClick={() => router.push("/assessment/risk-preview")}>
                         View risk preview

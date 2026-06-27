@@ -24,6 +24,7 @@ import {
   submitIntakeInterviewAction,
   getActiveIntakeInterviewAction,
   getLatestIntakeInterviewAction,
+  getClientIntakeAnswersLockedAction,
   saveResponse,
 } from "@/lib/actions/intake-actions";
 
@@ -104,6 +105,12 @@ export default function InterviewPage() {
   useEffect(() => {
     async function loadInterview() {
       try {
+        const lockResult = await getClientIntakeAnswersLockedAction();
+        if (lockResult.success && lockResult.locked) {
+          router.push("/intake/review");
+          return;
+        }
+
         const activeInterviewResult = await getActiveIntakeInterviewAction();
 
         if (activeInterviewResult.success && activeInterviewResult.interview) {
