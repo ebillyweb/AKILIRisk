@@ -25,11 +25,19 @@ function gracePeriodEnd() {
   return end;
 }
 
+const TIER_CLIENT_LIMITS = {
+  ESSENTIALS: 25,
+  PROFESSIONAL: 50,
+  BUSINESS: 100,
+  PLATINUM: 150,
+  ENTERPRISE: 100,
+} as const;
+
 function graceSubscriptionPayload(tier: "ESSENTIALS" | "PROFESSIONAL") {
   return {
     tier,
     status: "GRACE_PERIOD" as const,
-    clientLimit: 10,
+    clientLimit: TIER_CLIENT_LIMITS[tier],
     billingCycle: "MONTHLY" as const,
     currentPeriodEnd: gracePeriodEnd(),
     cancelAtPeriodEnd: false,

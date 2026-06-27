@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { requireAdvisorSession, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { isBillingEnabled } from "@/lib/billing/config";
-import { TIER_LIMITS } from "@/lib/billing/constants";
+import { clientLimitForTier, TIER_LIMITS } from "@/lib/billing/constants";
 import { planTierCapacityBlockReason } from "@/lib/billing/client-limit";
 import {
   checkClientLimitForAdvisorProfile,
@@ -533,7 +533,7 @@ export async function getSubscriptionDetails(): Promise<
       data: {
         tier: reconciled.tier,
         status: reconciled.status,
-        clientLimit: reconciled.clientLimit,
+        clientLimit: clientLimitForTier(reconciled.tier),
         billingCycle: reconciled.billingCycle,
         currentPeriodEnd: reconciled.currentPeriodEnd.toISOString(),
         cancelAtPeriodEnd: reconciled.cancelAtPeriodEnd,

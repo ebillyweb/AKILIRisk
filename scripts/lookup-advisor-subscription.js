@@ -136,7 +136,7 @@ async function main() {
         update: {
           tier: "ESSENTIALS",
           status: "GRACE_PERIOD",
-          clientLimit: 10,
+          clientLimit: 25,
           billingCycle: "MONTHLY",
           currentPeriodEnd: periodEnd,
           cancelAtPeriodEnd: false,
@@ -145,7 +145,7 @@ async function main() {
           userId: user.id,
           tier: "ESSENTIALS",
           status: "GRACE_PERIOD",
-          clientLimit: 10,
+          clientLimit: 25,
           billingCycle: "MONTHLY",
           currentPeriodEnd: periodEnd,
           cancelAtPeriodEnd: false,

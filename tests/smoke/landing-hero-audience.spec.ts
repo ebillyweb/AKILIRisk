@@ -140,4 +140,11 @@ test.describe("landing hero audience paths", () => {
       "advisors"
     );
   });
+
+  test("platform product preview renders the pillar radar", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.getByTestId("landing-product-preview")).toBeVisible();
+    await expect(page.getByTestId("platform-pillar-radar-preview")).toBeVisible();
+  });
 });

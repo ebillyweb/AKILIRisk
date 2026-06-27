@@ -11,7 +11,7 @@ import type Stripe from "stripe";
 
 import { prisma } from "@/lib/db";
 
-import { TIER_LIMITS } from "./constants";
+import { clientLimitForTier, TIER_LIMITS } from "./constants";
 import {
   getPriceIdForTier,
   getPriceIdPlanMap,
@@ -67,7 +67,7 @@ export async function countActiveClientsForAdvisor(
  * until the advisor completes Stripe Checkout (admin portal access still requires a qualifying subscription).
  */
 function defaultLimitWhenMissingSubscription(): number {
-  return TIER_LIMITS.ESSENTIALS;
+  return clientLimitForTier("ESSENTIALS");
 }
 
 export async function checkClientLimitForAdvisorProfile(
@@ -147,7 +147,9 @@ export async function checkClientLimitForAdvisorProfile(
     where: { userId: profile.userId },
   });
 
-  const limit = subscription?.clientLimit ?? defaultLimitWhenMissingSubscription();
+  const limit = subscription
+    ? clientLimitForTier(subscription.tier)
+    : defaultLimitWhenMissingSubscription();
 
   if (!subscription) {
     const canAdd = currentCount < limit;

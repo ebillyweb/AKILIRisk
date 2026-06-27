@@ -3,10 +3,10 @@ import type { SubscriptionTier } from "@prisma/client";
 import { ENTERPRISE_DEFAULT_CLIENT_LIMIT } from "@/lib/enterprise/constants";
 
 /**
- * Per-tier client limit. Single source of truth at write time — populates
- * Subscription.clientLimit on row create/update. Read enforcement uses the
- * row column (denormalized) so a constant change must be paired with a
- * migration that bumps existing rows.
+ * Per-tier client limit. Authoritative cap for enforcement and UI — also
+ * populates Subscription.clientLimit on row create/update. Reads resolve
+ * from tier via `clientLimitForTier()` so stale denormalized rows (e.g.
+ * legacy 10-cap Essentials fixtures) cannot under-report capacity.
  *
  * Round-9: aligned with BRD §10.1 (25 / 50 / 100). Was 10 / 25 / 75 from
  * STRIPE-SPEC.md's original rollout. See migration
@@ -19,6 +19,11 @@ export const TIER_LIMITS: Record<SubscriptionTier, number> = {
   PLATINUM: 150,
   ENTERPRISE: ENTERPRISE_DEFAULT_CLIENT_LIMIT,
 };
+
+/** Effective client cap for a subscription tier (authoritative at read time). */
+export function clientLimitForTier(tier: SubscriptionTier): number {
+  return TIER_LIMITS[tier] ?? TIER_LIMITS.ESSENTIALS;
+}
 
 /** Annual billing promo shown on pricing and advisor billing toggles. */
 export const ANNUAL_BILLING_SAVINGS_LABEL = "2 months free";

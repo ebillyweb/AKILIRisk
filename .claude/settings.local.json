@@ -28,7 +28,8 @@
       "Bash(npx prisma *)",
       "Bash(git add:*)",
       "Bash(ls -la /Users/bwoodtalton/Projects/AkiliRisk/src/app/\\\\\\(protected\\\\\\)/dashboard/)",
-      "Bash(ls -la /Users/bwoodtalton/Projects/AkiliRisk/src/app/\\\\\\(protected\\\\\\)/admin/recommendations/)"
+      "Bash(ls -la /Users/bwoodtalton/Projects/AkiliRisk/src/app/\\\\\\(protected\\\\\\)/admin/recommendations/)",
+      "Bash(node ~/.claude/get-shit-done/bin/gsd-tools.cjs state record-session --stopped-at \"Phase 22 context gathered\" --resume-file \".planning/phases/22-recommendation-experience/22-CONTEXT.md\" 2>&1)"
     ]
   }
 }
