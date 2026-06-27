@@ -20,7 +20,7 @@ const ALLOWED_TRANSITIONS: Record<RecommendationStatus, RecommendationStatus[]> 
   DECLINED: [],
   COMPLETED: [],
   // Phase 22: implementation-focused lifecycle states
-  GENERATED: ["REVIEWED", "DEFERRED"],
+  GENERATED: ["REVIEWED", "INCLUDED", "DEFERRED"],
   INCLUDED: ["IN_PROGRESS", "DEFERRED"],
   DEFERRED: ["REVIEWED"],
   IN_PROGRESS: ["COMPLETED"],

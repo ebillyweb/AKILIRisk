@@ -562,8 +562,8 @@ export default async function DashboardPage({
                                         </a>
                                       </Button>
                                       <Button asChild size="lg" variant="outline">
-                                        <Link href="/assessment/results">
-                                          Get Templates
+                                        <Link href="/dashboard/action-plan">
+                                          Action Plan
                                         </Link>
                                       </Button>
                                       <Button asChild size="lg" variant="outline">

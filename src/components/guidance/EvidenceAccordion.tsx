@@ -6,7 +6,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { formatTriggerSummary } from "@/lib/recommendations/format-trigger";
 
 type Props = {
   mergedEvidence: unknown[];
@@ -34,7 +33,9 @@ export function EvidenceAccordion({ mergedEvidence, assessmentSources }: Props) 
                 className="rounded-md border border-border/40 bg-muted/20 px-3 py-2"
               >
                 <p className="text-sm text-muted-foreground">
-                  {formatTriggerSummary(evidence)}
+                  {typeof evidence === "string"
+                    ? evidence
+                    : JSON.stringify(evidence)}
                 </p>
                 {assessmentSources.length > 1 && assessmentSources[idx] && (
                   <p className="mt-1 text-xs text-muted-foreground/70">

@@ -15,6 +15,7 @@ export const CLIENT_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/intake", label: "Intake" },
   { href: "/assessment", label: "Assessment" },
+  { href: "/dashboard/action-plan", label: "Action Plan" },
   { href: "/documents", label: "Documents" },
   { href: "/profiles", label: "Profiles & Roles" },
   { href: "/settings", label: "Settings" },

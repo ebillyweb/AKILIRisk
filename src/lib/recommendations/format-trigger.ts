@@ -5,7 +5,10 @@ export function formatTriggerSummary(triggerReason: unknown): string {
   if (!triggerReason || typeof triggerReason !== "object") {
     return "Matched assessment rules";
   }
-  const reasons = (triggerReason as { reasons?: unknown }).reasons;
+  // Handle both { reasons: [...] } and plain [...] formats
+  const reasons = Array.isArray(triggerReason)
+    ? triggerReason
+    : (triggerReason as { reasons?: unknown }).reasons;
   if (!Array.isArray(reasons) || reasons.length === 0) {
     return "Matched assessment rules";
   }

@@ -13,4 +13,10 @@ describe("formatTriggerSummary", () => {
       })
     ).toContain("governance");
   });
+
+  it("handles plain array format", () => {
+    expect(
+      formatTriggerSummary(["Cyber risk score 8.2 (critical)", "MFA not enabled"])
+    ).toContain("Cyber risk score");
+  });
 });

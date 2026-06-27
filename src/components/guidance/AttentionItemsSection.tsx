@@ -57,9 +57,16 @@ function priorityLabel(item: GuidancePackageItem): { label: string; variant: "de
   }
 }
 
+function priorityOrder(item: GuidancePackageItem): number {
+  const priority = item.advisorPriority ?? (item.priority <= 2 ? "HIGH" : item.priority <= 4 ? "MEDIUM" : "LOW");
+  return priority === "HIGH" ? 0 : priority === "MEDIUM" ? 1 : 2;
+}
+
 export function AttentionItemsSection({ items, onNavigateToItem }: Props) {
   const domainGroups = ATTENTION_DOMAINS.map((domain) => {
-    const matched = items.filter((item) => matchesDomain(item, domain));
+    const matched = items
+      .filter((item) => matchesDomain(item, domain))
+      .sort((a, b) => priorityOrder(a) - priorityOrder(b));
     return { ...domain, items: matched };
   }).filter((group) => group.items.length > 0);
 

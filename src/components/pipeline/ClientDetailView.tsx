@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle, ClipboardList } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
 import { IntakeWaiverScopePanel } from "@/components/pipeline/IntakeWaiverScopePanel";
 import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
 import { ExportAssessmentPdfButton } from "@/components/advisor/ExportAssessmentPdfButton";
@@ -106,9 +107,9 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
       ) : null}
 
       {/* Client Header */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
+      <div className="mb-8" data-tour="pipeline-client-header">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2 min-w-0 flex-1">
             <h1 className="text-3xl font-bold">{displayName}</h1>
             <div className="flex items-center gap-4 text-muted-foreground">
               <div className="flex items-center gap-1">
@@ -122,7 +123,8 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
             </div>
           </div>
 
-          <div className="text-right space-y-2">
+          <div className="text-right space-y-2 shrink-0">
+            <ProductTourButton tourId="advisor-pipeline-client" autoStart />
             <Badge variant={getStageBadgeVariant(client.stage)} className="text-sm">
               {getStageLabel(client.stage)}
             </Badge>
@@ -147,7 +149,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Workflow Timeline */}
-          <Card>
+          <Card data-tour="pipeline-workflow-timeline">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
@@ -159,7 +161,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-tour="pipeline-intake">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
@@ -283,7 +285,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
 
           {/* Assessment Summary */}
           {assessmentDetails && (
-            <Card>
+            <Card data-tour="pipeline-assessment">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" />
@@ -425,11 +427,13 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
 
           {/* Document Requirements */}
           {assignmentActive ? (
-            <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
+            <div data-tour="pipeline-documents">
+              <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
+            </div>
           ) : null}
 
           {/* Quick Actions */}
-          <Card>
+          <Card data-tour="pipeline-quick-actions">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
@@ -451,6 +455,15 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   <Link href={`/advisor/analytics/${client.id}`}>
                     <BarChart3 className="w-4 h-4 mr-2" />
                     Client Analytics
+                  </Link>
+                </Button>
+              )}
+
+              {assessmentDetails?.completedAt && (
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link href={`/advisor/clients/${client.id}/guidance`}>
+                    <ClipboardList className="w-4 h-4 mr-2" />
+                    Client Guidance
                   </Link>
                 </Button>
               )}
