@@ -77,7 +77,7 @@ async function verifyMilestoneOwnership(
   const assignment = await prisma.clientAdvisorAssignment.findFirst({
     where: {
       clientId,
-      advisorProfile: { userId },
+      advisor: { userId },
       status: "ACTIVE",
     },
   });
@@ -108,7 +108,7 @@ async function verifyAssessmentOwnership(
   const assignment = await prisma.clientAdvisorAssignment.findFirst({
     where: {
       clientId: assessment.userId,
-      advisorProfile: { userId },
+      advisor: { userId },
       status: "ACTIVE",
     },
   });

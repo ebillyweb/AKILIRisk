@@ -53,7 +53,7 @@ export async function getEngagementMetrics(
   // Get all active client assignments for this advisor
   const assignments = await prisma.clientAdvisorAssignment.findMany({
     where: {
-      advisorProfileId,
+      advisorId: advisorProfileId,
       status: "ACTIVE",
     },
     select: {
@@ -195,7 +195,7 @@ export async function getEngagementClients(
 
   const assignments = await prisma.clientAdvisorAssignment.findMany({
     where: {
-      advisorProfileId,
+      advisorId: advisorProfileId,
       status: "ACTIVE",
     },
     select: {
@@ -203,7 +203,6 @@ export async function getEngagementClients(
       client: {
         select: {
           name: true,
-          email: true,
           assessments: {
             where: { actionPlanPublishedAt: { not: null } },
             select: {
@@ -270,7 +269,7 @@ export async function getEngagementClients(
     rows.push({
       clientId: assign.clientId,
       clientName: client.name ?? "Unknown",
-      clientEmail: client.email ?? "",
+      clientEmail: "",
       completionPct:
         totalMs > 0 ? Math.round((completedMs / totalMs) * 100) : 0,
       completedCount: completedMs,
@@ -303,9 +302,9 @@ export async function getUpcomingMilestones(
         assessment: {
           actionPlanPublishedAt: { not: null },
           user: {
-            clientAdvisorAssignments: {
+            clientAssignments: {
               some: {
-                advisorProfileId,
+                advisorId: advisorProfileId,
                 status: "ACTIVE",
               },
             },
@@ -356,7 +355,7 @@ export async function getPortfolioEngagementData(
 ): Promise<Map<string, { completedCount: number; totalCount: number; blockedCount: number }>> {
   const assignments = await prisma.clientAdvisorAssignment.findMany({
     where: {
-      advisorProfileId,
+      advisorId: advisorProfileId,
       status: "ACTIVE",
     },
     select: {

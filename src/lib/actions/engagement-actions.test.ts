@@ -87,7 +87,9 @@ describe("engagement-actions", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Unauthorized: Advisor access required");
+      if (!result.success) {
+        expect(result.error).toBe("Unauthorized: Advisor access required");
+      }
     });
 
     it("calls updateMilestoneStatus with BLOCKED and reason", async () => {
@@ -124,7 +126,9 @@ describe("engagement-actions", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Not authorized to manage this milestone");
+      if (!result.success) {
+        expect(result.error).toBe("Not authorized to manage this milestone");
+      }
     });
   });
 
@@ -201,7 +205,9 @@ describe("engagement-actions", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Not authorized to manage this assessment");
+      if (!result.success) {
+        expect(result.error).toBe("Not authorized to manage this assessment");
+      }
     });
   });
 });

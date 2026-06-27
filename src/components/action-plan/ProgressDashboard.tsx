@@ -1,6 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { MilestoneStatusBadge } from "@/components/engagement/MilestoneStatusBadge";
 import type { ActionPlanItem } from "@/lib/actions/client-action-plan-actions";
 
 type ProgressDashboardProps = {
@@ -22,6 +30,50 @@ function taskProgress(status: string): number {
     default:
       return 0;
   }
+}
+
+function MilestoneChecklist({ item }: { item: ActionPlanItem }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!item.milestones || item.milestones.length === 0) return null;
+
+  const completedCount = item.milestones.filter((m) =>
+    ["COMPLETED", "SKIPPED", "DEFERRED"].includes(m.status)
+  ).length;
+
+  return (
+    <div className="mt-1.5 space-y-1.5">
+      <Progress
+        value={item.milestoneCompletionPct}
+        className="h-1.5"
+        role="progressbar"
+        aria-valuenow={item.milestoneCompletionPct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${item.name} milestone progress`}
+      />
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground/80">
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`}
+          />
+          {completedCount}/{item.milestones.length} milestones
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-1 space-y-1 pl-4">
+            {item.milestones.map((ms) => (
+              <div key={ms.id} className="flex items-center gap-2">
+                <MilestoneStatusBadge status={ms.status} />
+                <span className="text-sm text-foreground truncate">
+                  {ms.title}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
 }
 
 export function ProgressDashboard({ items }: ProgressDashboardProps) {
@@ -88,6 +140,7 @@ export function ProgressDashboard({ items }: ProgressDashboardProps) {
                     aria-valuemax={100}
                     aria-label={`Progress for ${item.name}`}
                   />
+                  <MilestoneChecklist item={item} />
                 </div>
               );
             })}

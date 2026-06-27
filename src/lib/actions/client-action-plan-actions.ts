@@ -17,6 +17,9 @@ import {
   taskStatusSchema,
   type TaskStatusInput,
 } from "./guidance-schemas";
+import { getClientActivityFeed, type ActivityFeedItem } from "@/lib/engagement/activity-feed";
+import { isTrackingActiveForAssessment } from "@/lib/engagement/feature-flags";
+import type { MilestoneInfo } from "@/components/action-plan/NextStepCallout";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -112,6 +115,14 @@ export async function updateTaskStatus(
   }
 }
 
+export type MilestoneItem = {
+  id: string;
+  title: string;
+  status: string;
+  dueDate: Date | null;
+  completedAt: Date | null;
+};
+
 export type ActionPlanItem = {
   id: string;
   name: string;
@@ -135,6 +146,8 @@ export type ActionPlanItem = {
   urgencyScore: number;
   timeHorizon: "immediate" | "strategic" | "ongoing";
   deferredRevisitDate: string | null;
+  milestones: MilestoneItem[];
+  milestoneCompletionPct: number;
 };
 
 export type ClientActionPlanData = {
@@ -182,10 +195,14 @@ export async function getClientActionPlan(): Promise<
         },
         milestones: {
           select: {
+            id: true,
             title: true,
             description: true,
             estimatedDuration: true,
             source: true,
+            status: true,
+            dueDate: true,
+            completedAt: true,
           },
           orderBy: { sortOrder: "asc" },
         },
@@ -237,6 +254,23 @@ export async function getClientActionPlan(): Promise<
         urgencyScore: rec.urgencyScore ?? 5,
         timeHorizon: horizon,
         deferredRevisitDate: rec.deferredRevisitDate?.toISOString() ?? null,
+        milestones: rec.milestones.map((m) => ({
+          id: m.id,
+          title: m.title,
+          status: m.status,
+          dueDate: m.dueDate,
+          completedAt: m.completedAt,
+        })),
+        milestoneCompletionPct:
+          rec.milestones.length > 0
+            ? Math.round(
+                (rec.milestones.filter((m) =>
+                  ["COMPLETED", "SKIPPED", "DEFERRED"].includes(m.status)
+                ).length /
+                  rec.milestones.length) *
+                  100
+              )
+            : 0,
       };
     });
 
@@ -256,5 +290,88 @@ export async function getClientActionPlan(): Promise<
   } catch (err) {
     logSafeError("getClientActionPlan", err);
     return fail(safeErrorMessage(err, "Failed to load action plan"));
+  }
+}
+
+// ── Tracking context ────────────────────────────────────────────────────
+
+export type TrackingContext = {
+  isTrackingActive: boolean;
+  activities: ActivityFeedItem[];
+  allMilestones: MilestoneInfo[];
+};
+
+/**
+ * Get tracking context for the action plan page.
+ * Returns inactive if the assessment's action plan is not published.
+ */
+export async function getActionPlanTrackingContext(): Promise<TrackingContext> {
+  const inactive: TrackingContext = {
+    isTrackingActive: false,
+    activities: [],
+    allMilestones: [],
+  };
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return inactive;
+
+    // Find the client's completed assessment
+    const assessment = await prisma.assessment.findFirst({
+      where: {
+        userId: session.user.id,
+        status: "COMPLETED",
+      },
+      select: { id: true },
+      orderBy: { completedAt: "desc" },
+    });
+
+    if (!assessment) return inactive;
+
+    const isActive = await isTrackingActiveForAssessment(assessment.id);
+    if (!isActive) return inactive;
+
+    // Load activities and milestones
+    const [activities, milestones] = await Promise.all([
+      getClientActivityFeed({
+        clientId: session.user.id,
+        role: "CLIENT",
+        limit: 20,
+      }),
+      prisma.solutionMilestone.findMany({
+        where: {
+          assessmentRecommendation: {
+            assessmentId: assessment.id,
+            hiddenFromClient: false,
+            status: { in: ["INCLUDED", "IN_PROGRESS", "COMPLETED"] },
+          },
+        },
+        select: {
+          title: true,
+          status: true,
+          dueDate: true,
+          assessmentRecommendation: {
+            select: {
+              serviceRecommendation: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: [{ dueDate: "asc" }, { sortOrder: "asc" }],
+      }),
+    ]);
+
+    return {
+      isTrackingActive: true,
+      activities,
+      allMilestones: milestones.map((m) => ({
+        title: m.title,
+        dueDate: m.dueDate,
+        recommendationName:
+          m.assessmentRecommendation.serviceRecommendation?.name ?? "Unknown",
+      })),
+    };
+  } catch (err) {
+    logSafeError("getActionPlanTrackingContext", err);
+    return inactive;
   }
 }

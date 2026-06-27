@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getClientActionPlan } from "@/lib/actions/client-action-plan-actions";
+import { getClientActionPlan, getActionPlanTrackingContext } from "@/lib/actions/client-action-plan-actions";
 import { StrategicActionPlan } from "@/components/action-plan/StrategicActionPlan";
 
 export default async function ActionPlanPage() {
@@ -20,7 +20,10 @@ export default async function ActionPlanPage() {
     redirect("/admin");
   }
 
-  const result = await getClientActionPlan();
+  const [result, trackingContext] = await Promise.all([
+    getClientActionPlan(),
+    getActionPlanTrackingContext(),
+  ]);
 
   // Error state
   if (!result.success) {
@@ -72,7 +75,7 @@ export default async function ActionPlanPage() {
         Your Strategic Action Plan
       </h1>
       <div className="mt-6">
-        <StrategicActionPlan data={data} />
+        <StrategicActionPlan data={data} trackingContext={trackingContext} />
       </div>
     </div>
   );
