@@ -6,6 +6,8 @@ import type {
   AdvisorSolutionCustomization,
   MilestoneSource,
 } from "@prisma/client";
+import type { FieldOverridePolicy } from "@/lib/asset-catalog/types";
+import { composeAsset } from "@/lib/asset-catalog/inheritance-engine";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,6 +77,8 @@ type ComposeInput = {
   advisorCustomization?: AdvisorSolutionCustomization | null;
   enterpriseName?: string | null;
   advisorName?: string | null;
+  /** When provided, use the generic inheritance engine for scalar override enforcement. */
+  overridePolicies?: FieldOverridePolicy[];
 };
 
 /**
@@ -92,6 +96,7 @@ export function composeSolution(input: ComposeInput): ComposedSolution {
     service,
     enterpriseName,
     advisorName,
+    overridePolicies,
   } = input;
 
   // Gate all overlay logic on isActive — inactive overlays are invisible
@@ -102,13 +107,52 @@ export function composeSolution(input: ComposeInput): ComposedSolution {
     ? input.advisorCustomization
     : null;
 
-  // --- Scalar overrides (last non-null wins) ---
-  const estimatedCost =
-    ac?.costOverride ?? ec?.costOverride ?? service.estimatedCost;
-  const timeframe =
-    ac?.timeframeOverride ?? ec?.timeframeOverride ?? service.timeframe;
-  const provider =
-    ac?.providerOverride ?? ec?.providerOverride ?? service.provider;
+  // --- Scalar overrides ---
+  // When overridePolicies provided, use the generic inheritance engine for
+  // policy enforcement (PROTECTED fields stay platform, CONFIGURABLE uses
+  // last-writer-wins, ADDITION concatenates). Otherwise use current behavior.
+  let estimatedCost: string | null;
+  let timeframe: string | null;
+  let provider: string | null;
+
+  if (overridePolicies && overridePolicies.length > 0) {
+    const scalarFields = {
+      estimatedCost: service.estimatedCost,
+      timeframe: service.timeframe,
+      provider: service.provider,
+    };
+    const composed = composeAsset(
+      {
+        platform: scalarFields,
+        enterprise: ec
+          ? {
+              estimatedCost: ec.costOverride ?? undefined,
+              timeframe: ec.timeframeOverride ?? undefined,
+              provider: ec.providerOverride ?? undefined,
+            }
+          : null,
+        advisor: ac
+          ? {
+              estimatedCost: ac.costOverride ?? undefined,
+              timeframe: ac.timeframeOverride ?? undefined,
+              provider: ac.providerOverride ?? undefined,
+            }
+          : null,
+      },
+      overridePolicies
+    );
+    estimatedCost = (composed.estimatedCost as string | null) ?? null;
+    timeframe = (composed.timeframe as string | null) ?? null;
+    provider = (composed.provider as string | null) ?? null;
+  } else {
+    // Default last-writer-wins (backward compatible)
+    estimatedCost =
+      ac?.costOverride ?? ec?.costOverride ?? service.estimatedCost;
+    timeframe =
+      ac?.timeframeOverride ?? ec?.timeframeOverride ?? service.timeframe;
+    provider =
+      ac?.providerOverride ?? ec?.providerOverride ?? service.provider;
+  }
 
   // --- Compose playbook (additive) ---
   const platformSteps = parsePlaybookSteps(service.playbook);
