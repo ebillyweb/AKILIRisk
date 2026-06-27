@@ -403,7 +403,7 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
         select: {
-          user: { select: { name: true, emailCiphertext: true } },
+          user: { select: { id: true, name: true, emailCiphertext: true } },
         },
       },
       _count: {

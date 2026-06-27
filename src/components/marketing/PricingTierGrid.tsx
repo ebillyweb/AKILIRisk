@@ -139,7 +139,7 @@ function PricingTierActionButton({
   const sessionReady = status !== "loading";
   const isAdvisorSession =
     sessionReady &&
-    Boolean(session?.user?.id) &&
+    session?.user != null &&
     isAdvisorHubNavRole(session.user.role);
 
   const changePlanMode = resolvePricingPlanChangeMode(advisorSubscription);

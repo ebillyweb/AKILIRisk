@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { withDecryptedEmail } from "@/lib/auth/user-email";
 
 /**
  * Verifies the advisor (by user id) is actively assigned to the client and
@@ -25,7 +26,7 @@ export async function getAssignedClientIntake(advisorUserId: string, clientId: s
     select: {
       id: true,
       name: true,
-      email: true,
+      emailCiphertext: true,
       intakeInterviews: {
         orderBy: { updatedAt: "desc" },
         take: 1,
@@ -33,12 +34,25 @@ export async function getAssignedClientIntake(advisorUserId: string, clientId: s
           id: true,
           status: true,
           submittedAt: true,
-          responses: true,
+          responses: {
+            select: {
+              questionId: true,
+              textResponse: true,
+              audioUrl: true,
+              transcription: true,
+              transcriptionStatus: true,
+              updatedAt: true,
+            },
+          },
         },
       },
     },
   });
   if (!client) return null;
 
-  return { client, interview: client.intakeInterviews[0] ?? null };
+  const { intakeInterviews, ...clientRow } = client;
+  return {
+    client: withDecryptedEmail(clientRow),
+    interview: intakeInterviews[0] ?? null,
+  };
 }

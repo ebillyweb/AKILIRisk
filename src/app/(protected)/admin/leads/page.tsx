@@ -14,11 +14,12 @@ import {
 
 function advisorOptionLabel(a: {
   firmName: string | null;
-  user: { email: string; name: string | null };
+  user: { email: string | null; name: string | null };
 }) {
+  const email = a.user.email ?? "No email";
   const parts = [a.firmName, a.user.name].filter(Boolean) as string[];
-  if (parts.length === 0) return a.user.email;
-  return `${parts.join(" · ")} (${a.user.email})`;
+  if (parts.length === 0) return email;
+  return `${parts.join(" · ")} (${email})`;
 }
 
 function formatComplexity(c: string) {

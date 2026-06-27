@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { findUserByEmail, withDecryptedEmail } from "@/lib/auth/user-email";
 
 const MOBILE_TOKEN_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 
@@ -78,7 +79,7 @@ export async function projectUser(userId: string): Promise<ResolvedUser | null> 
     where: { id: userId },
     select: {
       id: true,
-      email: true,
+      emailCiphertext: true,
       name: true,
       firstName: true,
       role: true,
@@ -92,30 +93,29 @@ export async function projectUser(userId: string): Promise<ResolvedUser | null> 
   });
   if (!user) return null;
 
+  const decrypted = withDecryptedEmail(user);
+
   // ADMIN is only honored for the designated admin account (mirrors auth.ts).
-  let role = user.role as ResolvedUser["role"];
-  if (role === "ADMIN" && user.email !== ADMIN_EMAIL) role = "USER";
+  let role = decrypted.role as ResolvedUser["role"];
+  if (role === "ADMIN" && decrypted.email !== ADMIN_EMAIL) role = "USER";
 
   const advisorFirmName =
-    user.advisorProfile?.firmName ??
-    user.clientAssignments[0]?.advisor.firmName ??
+    decrypted.advisorProfile?.firmName ??
+    decrypted.clientAssignments[0]?.advisor.firmName ??
     null;
 
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    firstName: user.firstName,
+    id: decrypted.id,
+    email: decrypted.email,
+    name: decrypted.name,
+    firstName: decrypted.firstName,
     role,
     advisorFirmName,
   };
 }
 
 export async function projectUserByEmail(email: string): Promise<ResolvedUser | null> {
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-    select: { id: true },
-  });
+  const user = await findUserByEmail(email, { select: { id: true } });
   if (!user) return null;
   return projectUser(user.id);
 }

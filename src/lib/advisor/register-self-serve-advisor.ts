@@ -35,7 +35,7 @@ export const advisorSelfServeSignupSchema = z
     name: z.string().min(1, "Name is required").max(200),
     firmName: z.string().min(1, "Firm name is required").max(200),
     acceptTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the terms to continue" }),
+      message: "You must accept the terms to continue",
     }),
     checkoutPlan: checkoutPlanSchema.optional(),
     checkoutCycle: checkoutCycleSchema.optional(),

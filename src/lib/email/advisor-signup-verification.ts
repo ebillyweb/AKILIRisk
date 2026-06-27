@@ -80,6 +80,6 @@ export async function sendAdvisorSignupVerificationEmail(opts: {
     })
   );
 
-  logResendResult("advisor-signup-verification", result, opts.to);
-  return { sent: !result.error };
+  const sent = logResendResult("advisor-signup-verification", result);
+  return { sent };
 }

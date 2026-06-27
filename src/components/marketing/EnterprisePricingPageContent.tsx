@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { PricingTierGrid } from "@/components/marketing/PricingTierGrid";
+import { SELF_SERVE_TIERS } from "@/lib/billing/tier-catalog";
 import { isBillingEnabled } from "@/lib/billing/config";
 import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import type { EnterprisePricingFirmContext } from "@/lib/enterprise/pricing-page-access";

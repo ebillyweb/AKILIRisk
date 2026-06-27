@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { findUserByEmail } from "@/lib/auth/user-email";
 import { createMagicLink } from "@/lib/mobile/magic-link";
 import { sendMobileMagicLinkEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const user = await findUserByEmail(email, { select: { id: true } });
     if (user) {
       const { linkToken, code } = await createMagicLink(email);
       const url = `${linkBaseUrl()}/auth/verify?token=${encodeURIComponent(linkToken)}`;

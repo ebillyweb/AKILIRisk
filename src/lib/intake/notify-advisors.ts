@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { userEmailForDisplay } from "@/lib/auth/user-email";
 import { sendAdvisorIntakeNotification } from "@/lib/email";
 import { createNotification } from "@/lib/data/advisor";
 import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
@@ -18,7 +19,7 @@ export async function notifyAdvisorsOfIntakeSubmission(
 ): Promise<number> {
   const interview = await prisma.intakeInterview.findUnique({
     where: { id: interviewId },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: { user: { select: { id: true, name: true, emailCiphertext: true } } },
   });
   if (!interview) return 0;
 
@@ -26,7 +27,7 @@ export async function notifyAdvisorsOfIntakeSubmission(
     where: { clientId: interview.userId, status: "ACTIVE" },
     include: {
       advisor: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true, emailCiphertext: true } } },
       },
     },
   });
@@ -47,10 +48,10 @@ export async function notifyAdvisorsOfIntakeSubmission(
 
       const reviewUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/advisor/review/${interviewId}`;
       await sendAdvisorIntakeNotification(
-        advisor.user.email,
+        userEmailForDisplay(advisor.user),
         advisor.user.name || "Advisor",
         clientName,
-        interview.user.email,
+        userEmailForDisplay(interview.user),
         reviewUrl,
       );
       notified += 1;

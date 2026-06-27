@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withDecryptedEmail } from "@/lib/auth/user-email";
 import { resolveUser } from "@/lib/mobile/token";
 
 /** GET /api/advisor/clients — assigned clients with intake status (plan §4.3). */
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           name: true,
-          email: true,
+          emailCiphertext: true,
           intakeInterviews: {
             orderBy: { updatedAt: "desc" },
             take: 1,
@@ -39,11 +40,12 @@ export async function GET(request: NextRequest) {
   });
 
   const clients = assignments.map(({ client }) => {
-    const interview = client.intakeInterviews[0];
+    const decrypted = withDecryptedEmail(client);
+    const interview = decrypted.intakeInterviews[0];
     return {
-      id: client.id,
-      name: client.name,
-      email: client.email,
+      id: decrypted.id,
+      name: decrypted.name,
+      email: decrypted.email,
       intakeStatus: interview?.status ?? "NOT_STARTED",
       submittedAt: interview?.submittedAt?.toISOString() ?? null,
       interviewId: interview?.id ?? null,
