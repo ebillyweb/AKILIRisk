@@ -188,6 +188,8 @@ src/
 ├── components/
 │   ├── guidance/
 │   │   ├── GuidanceReviewPage.tsx       # Advisor: main guidance review
+│   │   ├── ProfileInsightsSection.tsx   # Cross-assessment synthesized insights
+│   │   ├── AttentionItemsSection.tsx    # Family/ownership/governance/succession
 │   │   ├── RecommendationCard.tsx       # Single recommendation with controls
 │   │   ├── EvidenceAccordion.tsx         # Collapsible evidence panel
 │   │   ├── DeferDialog.tsx              # Defer reason/date/trigger dialog
@@ -526,22 +528,19 @@ HIGH | MEDIUM | LOW
 | A5 | Cross-assessment dedup algorithm sketch (group by serviceRecommendationId, keep highest urgency) | Code Examples | Rule-based dedup may miss semantic duplicates where different ServiceRecommendations address the same underlying issue |
 | A6 | Client Strategic Action Plan route at `/dashboard/action-plan` | Project Structure | Might need different path based on existing client routing conventions |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Existing DECLINED data migration**
+1. **Existing DECLINED data migration** (RESOLVED)
    - What we know: Current enum has DECLINED with `declinedAt` and `declinedReason` columns. Phase 22 introduces DEFERRED (similar but with revisit semantics).
-   - What's unclear: Whether any existing DECLINED rows exist in production and whether they should become DEFERRED or remain a separate terminal state.
-   - Recommendation: Check production data. If no DECLINED rows exist, drop the value. If rows exist, keep both DECLINED (terminal, legacy) and DEFERRED (non-terminal, with revisit).
+   - Resolution: Plan 01 keeps DECLINED in the enum for backward compatibility alongside DEFERRED. Existing DECLINED rows remain terminal (no re-review). New lifecycle uses DEFERRED for "not now" semantics with revisit. No data migration needed -- old values coexist with new ones.
 
-2. **Guidance package data freshness on reassessment**
+2. **Guidance package data freshness on reassessment** (RESOLVED)
    - What we know: D-02 says guidance package is cumulative. New assessments enrich the existing package.
-   - What's unclear: When a client reassesses, should old recommendations from prior assessments be automatically re-evaluated, or only new ones added?
-   - Recommendation: Phase 22 handles the initial aggregation. Phase 24 (Continuous Risk Improvement) handles reassessment-driven re-evaluation. Keep the scope clean.
+   - Resolution: Phase 22 handles initial aggregation only. Phase 24 (Continuous Risk Improvement) handles reassessment-driven re-evaluation per research recommendation. Scope kept clean.
 
-3. **Enterprise overlay editor: one recommendation at a time or batch?**
+3. **Enterprise overlay editor: one recommendation at a time or batch?** (RESOLVED)
    - What we know: D-13/D-14 describe per-recommendation overlay fields. D-15 shows side-by-side UI.
-   - What's unclear: Whether enterprise admins configure one recommendation at a time (detail view) or see a table of all recommendations with inline editing.
-   - Recommendation: List view for browsing + click-through detail view for editing. Matches the "browse catalog and create overlays" language in D-13.
+   - Resolution: Plan 05 implements list+detail pattern -- left panel for browsing catalog, right panel for editing one recommendation's overlay at a time. Matches "browse catalog and create overlays" language in D-13.
 
 ## Validation Architecture
 
@@ -621,7 +620,7 @@ HIGH | MEDIUM | LOW
 - Standard stack: HIGH -- all libraries already installed and verified in codebase
 - Architecture: HIGH -- extends existing proven patterns with clear schema evolution path
 - Pitfalls: HIGH -- identified from actual code analysis of existing composition/query patterns
-- Schema evolution: MEDIUM -- enum migration strategy needs production data validation (Open Question 1)
+- Schema evolution: MEDIUM -- enum migration strategy needs production data validation (Open Question 1, now resolved)
 - Dedup algorithm: LOW -- rule-based approach sketched but not validated against real multi-assessment data
 
 **Research date:** 2026-06-26
