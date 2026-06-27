@@ -21,6 +21,16 @@ export const aboutUsSections: LegalSection[] = [
     ],
   },
   {
+    id: "ethos",
+    title: "Our ethos",
+    paragraphs: [
+      "Governance requires clarity, not assumption.",
+      "Wealth grows through investment. Legacy survives through governance.",
+      "Families often operate with informal decision structures that work — until they don't.",
+      "This assessment identifies governance gaps across succession planning, authority structure, and family decision frameworks so they can be addressed proactively.",
+    ],
+  },
+  {
     id: "what-we-do",
     title: "What we do",
     paragraphs: [
