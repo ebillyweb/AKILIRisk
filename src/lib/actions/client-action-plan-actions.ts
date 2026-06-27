@@ -9,6 +9,7 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { extractRecommendationReasons } from "@/lib/recommendations/format-trigger";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
@@ -120,8 +121,11 @@ export type ActionPlanItem = {
   estimatedCost: string | null;
   timeframe: string | null;
   provider: string | null;
+  /** @deprecated Prefer recommendationReasons; kept for legacy rows */
   triggerReason: string;
+  /** @deprecated Prefer recommendationReasons */
   mergedEvidence: string | null;
+  recommendationReasons: string[];
   playbookSteps: PlaybookStep[];
   taskStatus: TaskStatus;
   validationStatus: string | null;
@@ -191,16 +195,14 @@ export async function getClientActionPlan(): Promise<
 
     // Map to ActionPlanItem
     const items: ActionPlanItem[] = recs.map((rec) => {
-      const triggerData = rec.triggerReason as
-        | Record<string, unknown>
-        | string
-        | null;
-      const triggerText =
-        typeof triggerData === "string"
-          ? triggerData
-          : triggerData
-            ? JSON.stringify(triggerData)
-            : "";
+      const recommendationReasons = [
+        ...extractRecommendationReasons(rec.triggerReason),
+      ];
+      const advisorNote = rec.advisorNotes?.trim();
+      if (advisorNote && !recommendationReasons.includes(advisorNote)) {
+        recommendationReasons.push(advisorNote);
+      }
+
       const assigneesRaw = rec.assignees as
         | Array<{ name: string }>
         | null;
@@ -218,8 +220,9 @@ export async function getClientActionPlan(): Promise<
         estimatedCost: rec.serviceRecommendation.estimatedCost ?? null,
         timeframe: rec.serviceRecommendation.timeframe ?? null,
         provider: rec.serviceRecommendation.provider ?? null,
-        triggerReason: triggerText,
+        triggerReason: recommendationReasons.join(" "),
         mergedEvidence: rec.advisorNotes,
+        recommendationReasons,
         playbookSteps: rec.milestones.map((m) => ({
           title: m.title,
           description: m.description ?? "",

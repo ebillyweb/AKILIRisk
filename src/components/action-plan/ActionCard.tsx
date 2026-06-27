@@ -23,6 +23,7 @@ import {
   ChevronDown,
   CheckCircle2,
 } from "lucide-react";
+import { extractRecommendationReasons } from "@/lib/recommendations/format-trigger";
 import type {
   ActionPlanItem,
   TaskStatus,
@@ -90,6 +91,12 @@ export function ActionCard({ item, showCadence }: ActionCardProps) {
     ? validationBadge(item.validationStatus)
     : null;
 
+  const recommendationReasons =
+    item.recommendationReasons.length > 0
+      ? item.recommendationReasons
+      : extractRecommendationReasons(item.triggerReason);
+  const reasonsPreview = recommendationReasons.join(" ");
+
   return (
     <Card className="bg-background/60">
       <CardContent className="space-y-4 pt-6">
@@ -155,19 +162,27 @@ export function ActionCard({ item, showCadence }: ActionCardProps) {
         {/* --- Reasoning Chain (D-19) --- */}
 
         {/* Why this was recommended */}
-        {(item.mergedEvidence || item.triggerReason) && (
-          <div className="space-y-1">
+        {recommendationReasons.length > 0 && (
+          <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Why this was recommended
             </p>
             <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
-              <div className="text-sm text-foreground/90 leading-relaxed">
-                <p className={evidenceOpen ? "" : "line-clamp-2"}>
-                  {item.mergedEvidence || item.triggerReason}
-                </p>
-              </div>
-              {(item.mergedEvidence || item.triggerReason || "").length >
-                120 && (
+              <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90 leading-relaxed">
+                {(evidenceOpen
+                  ? recommendationReasons
+                  : recommendationReasons.slice(0, 2)
+                ).map((reason, index) => (
+                  <li
+                    key={`${index}-${reason}`}
+                    className={!evidenceOpen && index === 0 ? "line-clamp-2" : undefined}
+                  >
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+              {(reasonsPreview.length > 120 ||
+                recommendationReasons.length > 2) && (
                 <CollapsibleTrigger className="mt-1 text-xs text-muted-foreground hover:text-foreground">
                   {evidenceOpen ? "Show less" : "Show more"}
                 </CollapsibleTrigger>

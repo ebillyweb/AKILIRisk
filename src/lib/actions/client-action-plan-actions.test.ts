@@ -204,6 +204,53 @@ describe("getClientActionPlan", () => {
       expect(result.data.immediate).toHaveLength(1);
       expect(result.data.strategic).toHaveLength(1);
       expect(result.data.ongoing).toHaveLength(0);
+      expect(result.data.immediate[0]?.recommendationReasons).toEqual([]);
+    }
+  });
+
+  it("formats trigger reasons as plain English lines", async () => {
+    mockPrisma.assessmentRecommendation.findMany.mockResolvedValue([
+      {
+        id: "rec-1",
+        serviceRecommendationId: "svc-1",
+        status: "INCLUDED",
+        taskStatus: "NOT_STARTED",
+        validationStatus: "PENDING_REVIEW",
+        requiresValidation: false,
+        advisorPriority: null,
+        advisorNotes: null,
+        urgencyScore: 80,
+        timeHorizon: "immediate",
+        responsibleRoles: [],
+        assignees: null,
+        triggerReason: {
+          reasons: [
+            "Governance score 7.8 exceeds high-risk threshold",
+            "No formal family charter documented",
+          ],
+        },
+        deferredRevisitDate: null,
+        milestones: [],
+        serviceRecommendation: {
+          id: "svc-1",
+          name: "Family Governance Charter Development",
+          description: "Create charter",
+          category: "Governance",
+          expectedOutcome: null,
+          estimatedCost: null,
+          timeframe: null,
+          provider: null,
+        },
+      },
+    ] as never);
+
+    const result = await getClientActionPlan();
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.immediate[0]?.recommendationReasons).toEqual([
+        "Governance score 7.8 exceeds high-risk threshold",
+        "No formal family charter documented",
+      ]);
     }
   });
 });
