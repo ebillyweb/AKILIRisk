@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getGuidancePackageForClient } from "@/lib/recommendations/guidance-package";
 import { GuidanceReviewPage } from "@/components/guidance/GuidanceReviewPage";
 import { GuidanceSummaryStrip } from "@/components/guidance/GuidanceSummaryStrip";
+import { PublishActionPlanButton } from "@/components/engagement/PublishActionPlanButton";
 
 export default async function AdvisorClientGuidancePage({
   params,
@@ -49,6 +50,13 @@ export default async function AdvisorClientGuidancePage({
     clientId,
     advisorProfileId
   );
+
+  // Query latest assessment for publish state
+  const latestAssessment = await prisma.assessment.findFirst({
+    where: { userId: clientId },
+    orderBy: { startedAt: "desc" },
+    select: { id: true, actionPlanPublishedAt: true },
+  });
 
   if (!guidancePackage || guidancePackage.items.length === 0) {
     return (
@@ -98,7 +106,7 @@ export default async function AdvisorClientGuidancePage({
           >
             <Compass className="h-5 w-5 text-muted-foreground" />
           </div>
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 flex-1 space-y-1">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Client Guidance
             </p>
@@ -110,6 +118,15 @@ export default async function AdvisorClientGuidancePage({
               assessments
             </p>
           </div>
+          {latestAssessment && (
+            <div className="shrink-0 self-start">
+              <PublishActionPlanButton
+                assessmentId={latestAssessment.id}
+                clientName={guidancePackage.clientName}
+                publishedAt={latestAssessment.actionPlanPublishedAt}
+              />
+            </div>
+          )}
         </div>
         <div className="mt-4 pt-4 border-t border-border/50">
           <GuidanceSummaryStrip summary={guidancePackage.summary} />
