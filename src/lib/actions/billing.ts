@@ -8,6 +8,7 @@ import { z } from "zod";
 import { requireAdvisorSession, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { TIER_LIMITS } from "@/lib/billing/constants";
+import { planTierCapacityBlockReason } from "@/lib/billing/client-limit";
 import {
   checkClientLimitForAdvisorProfile,
   reconcileAdvisorSubscriptionWithStripe,
@@ -39,6 +40,19 @@ export type BillingPortalResult =
 
 export type SwitchPlanResult = { success: true } | BillingActionError;
 
+async function assertPlanTierClientCapacity(
+  advisorProfileId: string,
+  tier: SubscriptionTier
+): Promise<BillingActionError | null> {
+  const check = await checkClientLimitForAdvisorProfile(advisorProfileId);
+  const reason = planTierCapacityBlockReason({
+    currentClientCount: check.currentCount,
+    targetTier: tier,
+  });
+  if (!reason) return null;
+  return { success: false, error: reason };
+}
+
 /**
  * Change an existing Stripe subscription's price (upgrade, downgrade, or monthly/annual switch).
  * Uses proration; does not apply when there is no active Stripe subscription (use Checkout instead).
@@ -51,7 +65,7 @@ export async function switchSubscriptionPlan(
       return { success: false, error: "Billing is disabled." };
     }
     const { userId } = await requireAdvisorSession();
-    await getAdvisorProfileOrThrow(userId);
+    const profile = await getAdvisorProfileOrThrow(userId);
 
     const parsed = checkoutSchema.safeParse(input);
     if (!parsed.success) {
@@ -61,6 +75,9 @@ export async function switchSubscriptionPlan(
     const { tier, billingCycle } = parsed.data;
     const tierEnum = tier as SubscriptionTier;
     const cycleEnum = billingCycle as BillingCycle;
+
+    const capacityError = await assertPlanTierClientCapacity(profile.id, tierEnum);
+    if (capacityError) return capacityError;
 
     const row = await prisma.subscription.findUnique({
       where: { userId },
@@ -133,6 +150,12 @@ export async function createCheckoutSession(
       tier as SubscriptionTier,
       billingCycle as BillingCycle
     );
+
+    const capacityError = await assertPlanTierClientCapacity(
+      profile.id,
+      tier as SubscriptionTier
+    );
+    if (capacityError) return capacityError;
 
     const existing = await prisma.subscription.findUnique({
       where: { userId },

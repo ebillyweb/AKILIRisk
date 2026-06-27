@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
+import { SiteHeader } from "@/components/marketing/SiteHeader";
 import type { LegalSection } from "@/lib/legal/documents";
 import { cn } from "@/lib/utils";
 
@@ -21,13 +21,15 @@ export function MarketingPage({
   children,
 }: MarketingPageProps) {
   return (
-    <main id="main-content" className="min-h-screen py-6 sm:py-8" tabIndex={-1}>
-      <div className="page-shell">
+    <>
+      <a href="#main-content" className="skip-to-content">
+        Skip to main content
+      </a>
+      <main id="main-content" className="min-h-screen pb-10 pt-2 sm:pb-12" tabIndex={-1}>
+      <div className="page-shell space-y-10">
+        <SiteHeader />
         <div className={cn("mx-auto max-w-3xl space-y-10", className)}>
           <header className="space-y-6">
-            <Link href="/" className="inline-block text-foreground" aria-label="AKILI home">
-              <AkiliLogoLockup className="h-auto w-full max-w-[220px]" />
-            </Link>
             <div className="space-y-2">
               <p className="editorial-kicker">{kicker}</p>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -74,5 +76,6 @@ export function MarketingPage({
         </div>
       </div>
     </main>
+    </>
   );
 }

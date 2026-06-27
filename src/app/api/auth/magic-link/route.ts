@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createMagicLink } from "@/lib/mobile/magic-link";
-import { sendMagicLinkEmail } from "@/lib/email";
+import { sendMobileMagicLinkEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().email() });
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (user) {
       const { linkToken, code } = await createMagicLink(email);
       const url = `${linkBaseUrl()}/auth/verify?token=${encodeURIComponent(linkToken)}`;
-      await sendMagicLinkEmail(email, url, code);
+      await sendMobileMagicLinkEmail(email, url, code);
     }
   } catch (error) {
     console.error("magic-link error:", error);

@@ -157,31 +157,43 @@ function SignInForm() {
           </Alert>
         ) : null}
 
-        <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+        <Button type="submit" size="lg" className="min-h-12 w-full" disabled={isLoading}>
           {isLoading ? "Signing in..." : "Sign In"}
         </Button>
 
-        <p className="text-center text-sm text-muted-foreground pt-2">
-          Client account?{" "}
-          <Link href={magicLinkHref} className="font-semibold text-foreground hover:underline">
-            Sign in with an email link
-          </Link>
-        </p>
-        {isAdvisorPortal ? (
-          <p className="text-center text-sm text-muted-foreground">
-            New advisor?{" "}
-            <Link href="/signup/advisor" className="font-semibold text-foreground hover:underline">
-              Create an account
-            </Link>
-            {" · "}
-            <Link
-              href="/signup/advisor/check-email"
-              className="font-semibold text-foreground hover:underline"
-            >
-              Resend confirmation
+        <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground">
+          <p>
+            Client account?{" "}
+            <Link href={magicLinkHref} className="font-semibold text-foreground hover:underline">
+              Sign in with an email link
             </Link>
           </p>
-        ) : null}
+          {isAdvisorPortal ? (
+            <p className="mt-2 border-t border-border/50 pt-2">
+              New advisor?{" "}
+              <Link href="/signup/advisor" className="font-semibold text-foreground hover:underline">
+                Create an account
+              </Link>
+              {" · "}
+              <Link
+                href="/signup/advisor/check-email"
+                className="font-semibold text-foreground hover:underline"
+              >
+                Resend confirmation
+              </Link>
+            </p>
+          ) : (
+            <p className="mt-2 border-t border-border/50 pt-2">
+              Advisor or administrator?{" "}
+              <Link
+                href="/signin?portal=advisor"
+                className="font-semibold text-foreground hover:underline"
+              >
+                Use advisor sign in
+              </Link>
+            </p>
+          )}
+        </div>
       </form>
     </AuthPanel>
   );

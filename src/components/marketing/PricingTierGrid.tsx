@@ -10,18 +10,29 @@ import { useSession } from "next-auth/react";
 import {
   createCheckoutSession,
   createEnterpriseCheckoutSession,
+  switchSubscriptionPlan,
 } from "@/lib/actions/billing";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { ANNUAL_BILLING_SAVINGS_LABEL } from "@/lib/billing/constants";
+import { ADVISOR_PIPELINE_HREF } from "@/lib/billing/client-limit";
 import {
   advisorBillingDeepLink,
   advisorSignupHref,
   enterprisePricingDeepLink,
-  TIER_CATALOG,
   SELF_SERVE_TIERS,
+  TIER_CATALOG,
   type SelfServeTier,
 } from "@/lib/billing/tier-catalog";
+import type { SubscriptionDetailsDTO } from "@/lib/actions/billing";
+import {
+  nextSelfServeTier,
+  resolveCommittedPlan,
+  resolvePricingPlanChangeMode,
+  resolvePricingTierButtonLabel,
+  resolvePricingTierButtonVariant,
+  resolvePricingTierCapacityBlock,
+} from "@/lib/marketing/pricing-tier-actions";
 import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import type { EnterprisePricingFirmContext } from "@/lib/enterprise/pricing-page-access";
 import {
@@ -29,6 +40,7 @@ import {
   SOLO_ADVISOR_PRICING_POINTS,
 } from "@/lib/marketing/pricing-tiers";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export type PricingAudience = "solo" | "enterprise";
@@ -40,6 +52,8 @@ type PricingTierGridProps = {
   audience?: PricingAudience;
   firm?: EnterprisePricingFirmContext;
   checkoutPlanIntent?: { tier: SelfServeTier; billingCycle: BillingCycle } | null;
+  advisorSubscription?: SubscriptionDetailsDTO | null;
+  initialBillingCycle?: BillingCycle;
 };
 
 function formatMoney(cents: number, currency: string): string {
@@ -85,13 +99,14 @@ function priceForCycle(
   };
 }
 
-function GetStartedButton({
+function PricingTierActionButton({
   tier,
   billingCycle,
   billingEnabled,
   canSubscribe,
   featured,
   audience,
+  advisorSubscription,
 }: {
   tier: SelfServeTier;
   billingCycle: BillingCycle;
@@ -99,6 +114,7 @@ function GetStartedButton({
   canSubscribe: boolean;
   featured?: boolean;
   audience: PricingAudience;
+  advisorSubscription?: SubscriptionDetailsDTO | null;
 }) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -126,26 +142,73 @@ function GetStartedButton({
     Boolean(session?.user?.id) &&
     isAdvisorHubNavRole(session.user.role);
 
-  const onSubscribe = useCallback(() => {
-    setError(null);
-    startTransition(async () => {
-      const action =
-        audience === "enterprise"
-          ? createEnterpriseCheckoutSession
-          : createCheckoutSession;
-      const res = await action({ tier, billingCycle });
-      if (!res.success) {
-        setError(res.error);
-        return;
-      }
-      window.location.href = res.url;
-    });
-  }, [audience, tier, billingCycle]);
+  const changePlanMode = resolvePricingPlanChangeMode(advisorSubscription);
+  const committedPlan = resolveCommittedPlan(advisorSubscription);
+  const subscriptionStatus = advisorSubscription?.status ?? "NONE";
+  const awaitingCheckoutOnly =
+    changePlanMode === "checkout" &&
+    committedPlan !== null &&
+    subscriptionStatus !== "CANCELLED" &&
+    subscriptionStatus !== "NONE";
+  const hasCommitted = committedPlan !== null;
+  const isSameTier = hasCommitted && tier === committedPlan.tier;
+  const isSamePlan =
+    hasCommitted &&
+    tier === committedPlan.tier &&
+    billingCycle === committedPlan.billingCycle;
+  const isCurrentSelection = changePlanMode === "stripe_update" && isSamePlan;
+  const nextTier =
+    isCurrentSelection && committedPlan ? nextSelfServeTier(committedPlan.tier) : null;
+
+  const onSelectPlan = useCallback(
+    (selectedTier: SelfServeTier) => {
+      setError(null);
+      startTransition(async () => {
+        if (changePlanMode === "stripe_update") {
+          const res = await switchSubscriptionPlan({ tier: selectedTier, billingCycle });
+          if (!res.success) {
+            setError(res.error);
+            return;
+          }
+          router.refresh();
+          return;
+        }
+        const action =
+          audience === "enterprise"
+            ? createEnterpriseCheckoutSession
+            : createCheckoutSession;
+        const res = await action({ tier: selectedTier, billingCycle });
+        if (!res.success) {
+          setError(res.error);
+          return;
+        }
+        window.location.href = res.url;
+      });
+    },
+    [audience, billingCycle, changePlanMode, router],
+  );
 
   const onSoloAdvisorGetStarted = useCallback(() => {
     setError(null);
     router.push(billingDestination);
   }, [billingDestination, router]);
+
+  const buttonLabel = resolvePricingTierButtonLabel({
+    tier,
+    billingCycle,
+    committedPlan,
+    subscriptionStatus,
+    awaitingCheckoutOnly,
+  });
+  const planButtonVariant = resolvePricingTierButtonVariant({ tier, committedPlan });
+  const currentClientCount = advisorSubscription?.currentClientCount ?? 0;
+  const capacityBlock = resolvePricingTierCapacityBlock({
+    tier,
+    currentClientCount,
+    committedPlan,
+    billingCycle,
+  });
+  const busyLabel = changePlanMode === "stripe_update" ? "Updating…" : "Redirecting…";
 
   if (!billingEnabled) {
     return (
@@ -164,6 +227,60 @@ function GetStartedButton({
         <Loader2 className="size-4 animate-spin" aria-hidden />
         Loading…
       </Button>
+    );
+  }
+
+  if (audience === "solo" && isAdvisorSession && isCurrentSelection) {
+    if (!nextTier) {
+      return null;
+    }
+
+    return (
+      <div className="space-y-2">
+        <Button
+          type="button"
+          className="w-full"
+          variant="billingUpgrade"
+          disabled={pending}
+          onClick={() => onSelectPlan(nextTier)}
+        >
+          {pending ? busyLabel : "Upgrade"}
+        </Button>
+        {error ? (
+          <p className="text-xs text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (audience === "solo" && isAdvisorSession && changePlanMode === "stripe_update" && hasCommitted) {
+    return (
+      <div className="space-y-2">
+        <Button
+          type="button"
+          className="w-full"
+          variant={planButtonVariant}
+          disabled={pending || capacityBlock.blocked}
+          onClick={() => onSelectPlan(tier)}
+        >
+          {pending ? busyLabel : buttonLabel}
+        </Button>
+        {capacityBlock.blocked ? (
+          <p className="text-xs leading-5 text-muted-foreground">
+            {capacityBlock.reason}{" "}
+            <Link href={ADVISOR_PIPELINE_HREF} className="font-medium text-primary hover:underline">
+              Open Pipeline
+            </Link>
+          </p>
+        ) : null}
+        {error ? (
+          <p className="text-xs text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     );
   }
 
@@ -213,7 +330,7 @@ function GetStartedButton({
         className="w-full"
         variant={featured ? "default" : "outline"}
         disabled={pending}
-        onClick={onSubscribe}
+        onClick={() => onSelectPlan(tier)}
       >
         {pending ? (
           <>
@@ -243,11 +360,28 @@ export function PricingTierGrid({
   audience = "solo",
   firm,
   checkoutPlanIntent = null,
+  advisorSubscription = null,
+  initialBillingCycle,
 }: PricingTierGridProps) {
   const router = useRouter();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>(
-    () => checkoutPlanIntent?.billingCycle ?? "MONTHLY"
-  );
+  const changePlanMode = resolvePricingPlanChangeMode(advisorSubscription);
+  const committedPlan = resolveCommittedPlan(advisorSubscription);
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
+    if (checkoutPlanIntent?.billingCycle) {
+      return checkoutPlanIntent.billingCycle;
+    }
+    if (initialBillingCycle) {
+      return initialBillingCycle;
+    }
+    if (
+      advisorSubscription &&
+      advisorSubscription.status !== "NONE" &&
+      advisorSubscription.status !== "CANCELLED"
+    ) {
+      return advisorSubscription.billingCycle;
+    }
+    return "MONTHLY";
+  });
   const checkoutStarted = useRef(false);
   const pricingByTier = Object.fromEntries(pricing.map((row) => [row.tier, row])) as Record<
     SelfServeTier,
@@ -339,23 +473,49 @@ export function PricingTierGrid({
             firm?.seatLimit
           );
           const featured = catalog.featured;
+          const isSamePlan =
+            committedPlan !== null &&
+            tier === committedPlan.tier &&
+            billingCycle === committedPlan.billingCycle;
+          const isCurrentSelection = changePlanMode === "stripe_update" && isSamePlan;
+          const isSameTier = committedPlan !== null && tier === committedPlan.tier;
 
           return (
             <article
               key={tier}
               className={cn(
                 "relative flex h-full flex-col rounded-[1.5rem] border bg-card/85 p-6 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
-                featured
-                  ? "border-brand/40 ring-1 ring-brand/25"
-                  : "border-border/70",
+                isCurrentSelection
+                  ? "border-primary/35 ring-1 ring-primary/20"
+                  : featured
+                    ? "border-brand/40 ring-1 ring-brand/25"
+                    : "border-border/70",
               )}
+              aria-current={isCurrentSelection ? "true" : undefined}
             >
               {featured ? (
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand/20 via-brand to-brand/20" />
               ) : null}
 
               <div className="mb-3 flex h-6 items-center">
-                {featured ? (
+                {isCurrentSelection ? (
+                  <Badge
+                    variant="secondary"
+                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
+                  >
+                    Current plan
+                  </Badge>
+                ) : isSameTier &&
+                  committedPlan !== null &&
+                  changePlanMode === "stripe_update" &&
+                  !isSamePlan ? (
+                  <Badge
+                    variant="outline"
+                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
+                  >
+                    Other interval
+                  </Badge>
+                ) : featured ? (
                   <p className="inline-flex w-fit items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand">
                     <Sparkles className="size-3" aria-hidden />
                     Most popular
@@ -414,13 +574,14 @@ export function PricingTierGrid({
               </ul>
 
               <div className="mt-6 pt-0">
-                <GetStartedButton
+                <PricingTierActionButton
                   tier={tier}
                   billingCycle={billingCycle}
                   billingEnabled={billingEnabled}
                   canSubscribe={canSubscribe}
                   featured={featured}
                   audience={audience}
+                  advisorSubscription={advisorSubscription}
                 />
               </div>
             </article>

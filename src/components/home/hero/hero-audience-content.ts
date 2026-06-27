@@ -26,12 +26,12 @@ export type HeroAudienceCopy = {
 
 export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
   families: {
-    kicker: "Personal Risk Profile",
+    kicker: "Governance intelligence",
     headline:
       "The governance intelligence platform for modern family wealth.",
     supporting:
-      "A discreet digital personal risk profile designed to identify structural risks and strengthen family decision frameworks.",
-    subtext: "12–15 minute personal risk profile",
+      "Surface profile insights, identify structural risks, and receive tailored recommendations — through a discreet personal risk profile your advisor can act on.",
+    subtext: "12–15 minute structured assessment",
     primaryCta: {
       label: "Start Assessment",
       href: "/start",
@@ -46,23 +46,23 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
       {
         id: "advisor-review",
         content: "link",
-        text: "Looking for an advisor?",
+        text: "Don't have an invite code?",
         linkLabel: "Request a review",
         href: "/request-review",
       },
       {
         id: "privacy",
         content: "text",
-        text: "Private and encrypted. Responses visible only to your advisor.",
+        text: "Private and encrypted. Responses visible only to your assigned advisor.",
       },
     ],
   },
   advisors: {
-    kicker: "Advisor's Workspace",
+    kicker: "Advisor workspace",
     headline:
-      "A personal and intentional way to assess your clients' vulnerabilities.",
+      "Governance intelligence for modern advisory firms.",
     supporting:
-      "Manage personal risk profiles, client intelligence, succession planning, and structured recommendations from a unified advisor workspace.",
+      "Manage client governance profiles, assessment progress, risk scoring, and structured recommendations from one secure advisor workspace.",
     primaryCta: {
       label: "Advisor Sign In",
       href: "/signin?portal=advisor",
@@ -77,16 +77,16 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
       {
         id: "pricing",
         content: "link",
-        text: "Compare plans",
+        text: "New to AKILI?",
         linkLabel: "View pricing",
         href: "/pricing",
       },
       {
-        id: "platform-admin",
+        id: "signup",
         content: "link",
-        text: "Platform administrator?",
-        linkLabel: "Sign in with password",
-        href: "/signin",
+        text: "Ready to subscribe?",
+        linkLabel: "Create advisor account",
+        href: "/signup/advisor",
       },
       {
         id: "family-path",
@@ -94,11 +94,6 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
         text: "Assessing as a family?",
         linkLabel: "Start assessment",
         href: "/start",
-      },
-      {
-        id: "workspace",
-        content: "text",
-        text: "Secure workspace for client governance profiles, scoring, and continuity planning.",
       },
     ],
   },

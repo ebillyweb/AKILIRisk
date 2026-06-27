@@ -101,18 +101,23 @@ export default function MagicLinkRequestPage() {
             autoComplete="email"
           />
         </div>
-        <Button type="submit" disabled={isLoading} className="w-full">
+        <Button type="submit" disabled={isLoading} size="lg" className="min-h-12 w-full">
           {isLoading ? "Sending…" : "Send me a sign-in link"}
         </Button>
-        <Alert className="mt-2" variant="info">
-          <AlertDescription>
-            <strong>Advisors and platform administrators</strong> must use{" "}
-            <Link href="/signin" className="font-semibold text-foreground hover:underline">
-              email and password sign-in
-            </Link>
-            . Email links work for client accounts only.
-          </AlertDescription>
-        </Alert>
+        <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground">
+          <strong className="font-semibold text-foreground">Advisors and platform administrators</strong>{" "}
+          must use{" "}
+          <Link href="/signin?portal=advisor" className="font-semibold text-foreground hover:underline">
+            email and password sign-in
+          </Link>
+          . Email links work for client accounts only.
+        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          New family client?{" "}
+          <Link href="/start" className="font-semibold text-foreground hover:underline">
+            Start with your invite code
+          </Link>
+        </p>
       </form>
     </AuthPanel>
   );

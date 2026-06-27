@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import type { BillingCycle } from "@prisma/client";
 
 import { PricingPageContent } from "@/components/marketing/PricingPageContent";
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { getSubscriptionDetails } from "@/lib/actions/billing";
 import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
 
 export const metadata: Metadata = {
@@ -19,5 +21,29 @@ export default async function PricingPage() {
     session?.user?.id && isAdvisorHubNavRole(session.user.role),
   );
 
-  return <PricingPageContent pricing={pricing} canSubscribe={canSubscribe} />;
+  let advisorSubscription = null;
+  let initialBillingCycle: BillingCycle | undefined;
+
+  if (canSubscribe) {
+    const subRes = await getSubscriptionDetails();
+    if (subRes.success) {
+      advisorSubscription = subRes.data;
+      if (
+        advisorSubscription &&
+        advisorSubscription.status !== "NONE" &&
+        advisorSubscription.status !== "CANCELLED"
+      ) {
+        initialBillingCycle = advisorSubscription.billingCycle;
+      }
+    }
+  }
+
+  return (
+    <PricingPageContent
+      pricing={pricing}
+      canSubscribe={canSubscribe}
+      advisorSubscription={advisorSubscription}
+      initialBillingCycle={initialBillingCycle}
+    />
+  );
 }

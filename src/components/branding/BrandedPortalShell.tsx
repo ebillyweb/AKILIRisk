@@ -1,13 +1,7 @@
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
+import { BrandedPortalAuthSupplement } from "@/components/branding/BrandedPortalAuthSupplement";
 import { BrandedPortalFooter } from "@/components/branding/BrandedPortalFooter";
-import {
-  clientPortalBrandingDisplayTitle,
-  clientPortalLogoImgSrc,
-} from "@/lib/client/client-portal-branding";
+import { BrandedPortalHeader } from "@/components/branding/BrandedPortalHeader";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
-import { Button } from "@/components/ui/button";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +17,7 @@ type BrandedPortalShellProps = {
 
 /**
  * Shared white-label shell for tenant landing and auth routes.
- * Header nav and footer are always shown so public pages stay consistent.
+ * Mirrors platform marketing layout: sticky header, hero surface, marketing cards.
  */
 export function BrandedPortalShell({
   branding,
@@ -32,13 +26,11 @@ export function BrandedPortalShell({
   variant = "auth",
   titleAsHeading = false,
 }: BrandedPortalShellProps) {
-  const brandTitle = clientPortalBrandingDisplayTitle(branding);
-  const logoSrc = clientPortalLogoImgSrc(branding);
   const previewHex = getPreviewBrandHex(branding);
 
   return (
     <div
-      className={cn("min-h-screen py-6 sm:py-8", previewHex && "branded-portal-shell")}
+      className={cn("min-h-screen pb-10 pt-2 sm:pb-12", previewHex && "branded-portal-shell")}
       style={
         previewHex
           ? ({
@@ -48,65 +40,59 @@ export function BrandedPortalShell({
           : undefined
       }
     >
-      <div className="page-shell">
-        <div
-          className="hero-surface overflow-hidden rounded-[2rem] px-4 py-6 sm:px-8 sm:py-10"
-          style={
-            previewHex
-              ? {
-                  borderColor: `${previewHex.primary}22`,
-                }
-              : undefined
-          }
-        >
-          <header className="mb-8 flex flex-col gap-4 border-b border-border/60 pb-6 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
-              <ClientPortalBrandedHeaderMark
-                brandTitle={brandTitle}
-                logoSrc={logoSrc}
-                primaryHex={previewHex?.primary}
-                homeHref={homeHref}
-                titleAsHeading={titleAsHeading}
-              />
-              <p
-                className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                style={previewHex ? { color: previewHex.primary, opacity: 0.72 } : undefined}
-              >
-                Brought to you by AKILI Risk Intelligence
-              </p>
-            </div>
+      <a href="#main-content" className="skip-to-content">
+        Skip to main content
+      </a>
+      <div className="page-shell space-y-6 sm:space-y-8">
+        <BrandedPortalHeader
+          branding={branding}
+          homeHref={homeHref}
+          titleAsHeading={titleAsHeading}
+        />
 
-            <nav
-              className="flex flex-wrap items-center gap-2 sm:justify-end"
-              aria-label="Portal"
-            >
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/signin/magic-link">Sign In</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link href="/start">
-                  Get started
-                  <ArrowRight className="ml-1 size-4" aria-hidden />
-                </Link>
-              </Button>
-            </nav>
-          </header>
-
+        {variant === "landing" ? (
           <div
-            id="main-content"
-            className={cn(
-              "mx-auto w-full min-w-0",
-              variant === "auth" ? "max-w-xl" : "max-w-4xl",
-            )}
-            tabIndex={-1}
+            className="hero-surface app-grid overflow-hidden rounded-[2rem] px-6 py-8 sm:px-8 sm:py-10"
+            style={
+              previewHex
+                ? {
+                    borderColor: `${previewHex.primary}22`,
+                  }
+                : undefined
+            }
           >
-            {children}
+            <div id="main-content" className="mx-auto w-full min-w-0 max-w-4xl" tabIndex={-1}>
+              {children}
+            </div>
           </div>
+        ) : (
+          <div
+            className="hero-surface app-grid grid overflow-hidden rounded-[2rem] lg:grid-cols-[1.05fr_0.95fr]"
+            style={
+              previewHex
+                ? {
+                    borderColor: `${previewHex.primary}22`,
+                  }
+                : undefined
+            }
+          >
+            <section className="order-2 flex flex-col justify-between gap-8 border-t section-divider px-6 py-8 sm:px-8 lg:order-1 lg:border-t-0 lg:border-r lg:px-12 lg:py-12">
+              <BrandedPortalAuthSupplement branding={branding} />
+            </section>
 
-          <div className="mt-10 border-t border-border/60 pt-8">
-            <BrandedPortalFooter branding={branding} />
+            <section className="order-1 flex flex-col gap-6 px-4 py-6 sm:px-8 lg:order-2 lg:px-12 lg:py-10">
+              <div
+                id="main-content"
+                className="flex w-full min-w-0 max-w-xl flex-1 items-center justify-center lg:mx-auto"
+                tabIndex={-1}
+              >
+                {children}
+              </div>
+            </section>
           </div>
-        </div>
+        )}
+
+        <BrandedPortalFooter branding={branding} />
       </div>
     </div>
   );

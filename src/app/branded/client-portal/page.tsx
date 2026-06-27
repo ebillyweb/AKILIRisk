@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { headers } from "next/headers";
 import { getAdvisorBrandingBySubdomain } from "@/lib/advisor/subdomain";
 import { AuthPanel } from "@/components/auth/AuthPanel";
@@ -6,7 +7,16 @@ import { InviteCodeForm } from "@/components/auth/InviteCodeForm";
 import { BrandedPortalShell } from "@/components/branding/BrandedPortalShell";
 import { HeroFeatureCard } from "@/components/home/hero/HeroFeatureCard";
 import { HOME_HERO_FEATURES } from "@/components/home/hero/home-hero-features";
+import { MarketingSection } from "@/components/marketing/MarketingSection";
+import { MarketingSurfaceCard } from "@/components/marketing/MarketingSurfaceCard";
 import { withClientPortalLogoSrc } from "@/lib/client/resolve-client-portal-branding";
+import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
+
+const TRUST_SIGNALS = [
+  { label: "Encrypted & private", icon: Lock },
+  { label: "Advisor-led process", icon: ShieldCheck },
+  { label: "Tailored recommendations", icon: Sparkles },
+] as const;
 
 export default async function BrandedClientPortalPage() {
   const headersList = await headers();
@@ -23,6 +33,7 @@ export default async function BrandedClientPortalPage() {
   }
 
   const branding = withClientPortalLogoSrc(brandingRaw, true);
+  const brandTitle = clientPortalBrandingDisplayTitle(branding);
   const kicker = branding.tagline?.trim() || "Personal Risk Profile";
 
   return (
@@ -32,16 +43,30 @@ export default async function BrandedClientPortalPage() {
       variant="landing"
       titleAsHeading
     >
-      <div className="space-y-10">
-        <div className="space-y-3 text-center">
+      <div className="space-y-12 sm:space-y-14">
+        <div className="mx-auto max-w-3xl space-y-5 text-center">
           <p className="editorial-kicker">{kicker}</p>
-          <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Comprehensive Family Risk Assessment
+          <h2 className="font-display text-3xl font-semibold leading-tight text-balance sm:text-4xl lg:text-5xl">
+            Comprehensive family risk assessment through {brandTitle}
           </h2>
-          <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">
-            Protect what matters most with a professional risk analysis and governance
-            recommendations tailored to your family&apos;s unique situation.
+          <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+            Protect what matters most with a professional governance analysis and
+            structured recommendations tailored to your family&apos;s unique situation.
           </p>
+          <ul
+            className="flex flex-wrap items-center justify-center gap-2"
+            aria-label="Trust signals"
+          >
+            {TRUST_SIGNALS.map(({ label, icon: Icon }) => (
+              <li
+                key={label}
+                className="branded-trust-badge inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/45 px-3 py-1.5 text-xs font-medium text-muted-foreground"
+              >
+                <Icon className="size-3.5 text-brand" aria-hidden />
+                {label}
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="mx-auto w-full max-w-md">
@@ -56,7 +81,7 @@ export default async function BrandedClientPortalPage() {
                   href="/signin/magic-link"
                   className="font-semibold text-foreground hover:underline"
                 >
-                  Sign in
+                  Sign in with email link
                 </Link>
               </span>
             }
@@ -65,10 +90,13 @@ export default async function BrandedClientPortalPage() {
           </AuthPanel>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-center text-lg font-semibold tracking-tight">
-            What to expect
-          </h3>
+        <MarketingSection
+          kicker="What to expect"
+          title="A structured path from assessment to action"
+          description="Your advisor guides the process — AKILI provides the governance intelligence behind it."
+          align="center"
+          className="!space-y-6"
+        >
           <div className="grid gap-4 sm:grid-cols-3">
             {HOME_HERO_FEATURES.map((feature) => (
               <HeroFeatureCard
@@ -79,7 +107,18 @@ export default async function BrandedClientPortalPage() {
               />
             ))}
           </div>
-        </div>
+        </MarketingSection>
+
+        <MarketingSurfaceCard className="mx-auto max-w-2xl text-center">
+          <p className="text-sm leading-6 text-muted-foreground">
+            Questions before you begin? Contact {brandTitle} using the details in the
+            footer, or{" "}
+            <Link href="/signin/magic-link" className="font-semibold text-foreground hover:underline">
+              sign in
+            </Link>{" "}
+            if you already have an account.
+          </p>
+        </MarketingSurfaceCard>
       </div>
     </BrandedPortalShell>
   );

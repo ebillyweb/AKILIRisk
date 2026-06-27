@@ -17,7 +17,7 @@ export function BrandedAuthShell({
 }: BrandedAuthShellProps) {
   return (
     <BrandedPortalShell branding={branding} homeHref="/" variant="auth">
-        <div className="flex w-full flex-col items-center justify-center">{children}</div>
+      <div className="flex w-full flex-col items-center justify-center">{children}</div>
     </BrandedPortalShell>
   );
 }

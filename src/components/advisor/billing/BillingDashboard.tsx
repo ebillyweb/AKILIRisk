@@ -16,10 +16,14 @@ import {
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { ANNUAL_BILLING_SAVINGS_LABEL, TIER_LIMITS } from "@/lib/billing/constants";
 import {
+  ADVISOR_PIPELINE_HREF,
+  analyzeDowngradeCapacity,
   clientLimitBillingHref,
   clientLimitUpgradeMessage,
+  downgradeCapacityBannerMessage,
   suggestedTierForMoreClients,
   type ClientLimitSnapshot,
+  type DowngradeCapacityStatus,
 } from "@/lib/billing/client-limit";
 import {
   SELF_SERVE_TIERS,
@@ -223,6 +227,24 @@ function UsageMonitor({ data }: { data: SubscriptionDetailsDTO }) {
   );
 }
 
+function DowngradeCapacityBanner({ status }: { status: DowngradeCapacityStatus }) {
+  const message = downgradeCapacityBannerMessage(status);
+  if (!message) return null;
+
+  return (
+    <Alert variant="warning">
+      <AlertCircle className="size-4" />
+      <AlertTitle>Downgrade requires fewer active clients</AlertTitle>
+      <AlertDescription className="space-y-3">
+        <p>{message}</p>
+        <Button asChild size="sm" variant="outline">
+          <Link href={ADVISOR_PIPELINE_HREF}>Open Pipeline</Link>
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 function EnterpriseContactSalesCard() {
   return (
     <section
@@ -265,6 +287,7 @@ function PlanSelector({
   changePlanMode,
   committedPlan,
   subscriptionStatus,
+  currentClientCount,
   debugBilling,
 }: {
   billingCycle: BillingCycle;
@@ -276,6 +299,7 @@ function PlanSelector({
   changePlanMode: "checkout" | "stripe_update";
   committedPlan: CommittedPlan | null;
   subscriptionStatus: string;
+  currentClientCount: number;
   debugBilling: boolean;
 }) {
   const awaitingCheckoutOnly =
@@ -286,7 +310,7 @@ function PlanSelector({
 
   const description =
     changePlanMode === "stripe_update"
-      ? "Your active plan is highlighted. Change tier or billing interval below—Stripe applies proration on upgrades and downgrades."
+      ? "Your active plan is highlighted. Change tier or billing interval below—Stripe applies proration on upgrades and downgrades. To downgrade, active clients must fit the new plan limit—end workflows in Pipeline first."
       : awaitingCheckoutOnly
         ? `Plan on file: ${TIER_LABEL[committedPlan!.tier]} (${committedPlan!.billingCycle === "ANNUAL" ? "annual" : "monthly"}). Complete checkout to activate, or pick a different tier first.`
         : "Choose a tier and billing interval, then complete payment on Stripe Checkout.";
@@ -370,7 +394,21 @@ function PlanSelector({
             return "default";
           })();
 
-          const disabled = busy;
+          const isSameTierBillingSwitch =
+            hasCommitted && isSameTier && !isSamePlan;
+
+          const capacityBlocked =
+            !isSamePlan &&
+            currentClientCount > TIER_LIMITS[tier];
+
+          const capacityActionLabel =
+            hasCommitted && tierRank < committedRank
+              ? "downgrading"
+              : isSameTierBillingSwitch
+                ? "switching billing"
+                : "selecting this plan";
+
+          const disabled = busy || capacityBlocked;
 
           const busyLabel =
             changePlanMode === "stripe_update" ? "Updating…" : "Redirecting…";
@@ -470,7 +508,7 @@ function PlanSelector({
                 )}
               </div>
 
-              <div className="mt-auto pt-5">
+              <div className="mt-auto space-y-2 pt-5">
                 {isCurrentSelection ? (
                   <Button
                     type="button"
@@ -492,6 +530,16 @@ function PlanSelector({
                     {busy ? busyLabel : buttonLabel}
                   </Button>
                 )}
+                {capacityBlocked ? (
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {currentClientCount} active clients exceed the {TIER_LIMITS[tier]}-client cap.
+                    End workflows in{" "}
+                    <Link href={ADVISOR_PIPELINE_HREF} className="font-medium text-primary hover:underline">
+                      Pipeline
+                    </Link>{" "}
+                    before {capacityActionLabel}.
+                  </p>
+                ) : null}
               </div>
             </article>
           );
@@ -861,6 +909,14 @@ export function BillingDashboard({
     [data.status, data.tier, data.billingCycle]
   );
 
+  const downgradeCapacity = useMemo(() => {
+    if (data.status === "NONE" || data.status === "CANCELLED") return null;
+    return analyzeDowngradeCapacity({
+      currentTier: data.tier,
+      currentClientCount: data.currentClientCount,
+    });
+  }, [data.status, data.tier, data.currentClientCount]);
+
   useEffect(() => {
     if (!debugBilling) return;
     const raw = initialSubscription;
@@ -1062,6 +1118,10 @@ export function BillingDashboard({
         <UsageMonitor data={data} />
       </div>
 
+      {downgradeCapacity?.showBanner ? (
+        <DowngradeCapacityBanner status={downgradeCapacity} />
+      ) : null}
+
       <PlanSelector
         billingCycle={billingCycle}
         onBillingCycleChange={setBillingCycle}
@@ -1072,6 +1132,7 @@ export function BillingDashboard({
         changePlanMode={changePlanMode}
         committedPlan={committedPlan}
         subscriptionStatus={data.status}
+        currentClientCount={data.currentClientCount}
         debugBilling={debugBilling}
       />
 
