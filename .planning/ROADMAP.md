@@ -69,8 +69,17 @@ Plans:
 ### Phase 22: Recommendation Experience
 **Dependencies:** Phase 21 (recommendation engine complete)
 **Requirements:** LIFECYCLE-01
+**Plans:** 6 plans
 
 **Goal:** Clients leave the assessment knowing exactly what to do next. Advisors can review, customize, and prioritize recommendations. Enterprises can layer their own playbooks and preferred vendors.
+
+Plans:
+- [ ] 22-01-PLAN.md -- Schema evolution, asset catalog inheritance engine, override policy
+- [ ] 22-02-PLAN.md -- Lifecycle state machine extension, per-client guidance package aggregation
+- [ ] 22-03-PLAN.md -- Server actions for advisor guidance, enterprise overlays, client action plan
+- [ ] 22-04-PLAN.md -- Advisor Guidance Review UI
+- [ ] 22-05-PLAN.md -- Enterprise Guidance Customization UI
+- [ ] 22-06-PLAN.md -- Client Strategic Action Plan UI
 
 **Advisor Experience:**
 - Recommendation review queue with accept/decline workflow
@@ -197,7 +206,7 @@ Plans:
 | 19 - Cyber Foundation | Complete | 3/3 | ██████████ 100% |
 | 20 - Identity Intelligence | Complete | 3/3 | ██████████ 100% |
 | 21 - Recommendation Engine | Complete | 2/2 | ██████████ 100% |
-| 22 - Recommendation Experience | Pending | 0/0 | ░░░░░░░░░░ 0% |
+| 22 - Recommendation Experience | Planning | 0/6 | ░░░░░░░░░░ 0% |
 | 23 - Client Engagement & Tracking | Pending | 0/0 | ░░░░░░░░░░ 0% |
 | 24 - Continuous Risk Improvement | Pending | 0/0 | ░░░░░░░░░░ 0% |
 | 25 - Executive Reporting | Pending | 0/0 | ░░░░░░░░░░ 0% |
@@ -218,5 +227,5 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-19*
-*Roadmap updated: 2026-06-25 — restructured phases 22-25 to close the full assessment-to-improvement lifecycle loop*
+*Roadmap updated: 2026-06-26 — Phase 22 planned: 6 plans across 3 waves*
 *Next phase: 22*
