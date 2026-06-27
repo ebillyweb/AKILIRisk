@@ -34,6 +34,7 @@ Requirements for cyber risk intelligence milestone. Each maps to roadmap phases.
 ### Recommendation Lifecycle
 
 - [ ] **LIFECYCLE-01**: Recommendation experience: advisor review/curation, enterprise overlays, client action plan with full lifecycle from generated through completed
+- [ ] **LIFECYCLE-02**: Optional client engagement and implementation tracking with milestone management (BLOCKED/DEFERRED statuses, auto-completion), activity feed, enterprise feature flag gating, and advisor engagement dashboard
 
 ## v2 Requirements
 
@@ -82,12 +83,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UNIFIED-02 | Phase 21 | Pending |
 | REPORT-01 | Phase 22 | Pending |
 | LIFECYCLE-01 | Phase 22 | Pending |
+| LIFECYCLE-02 | Phase 23 | Pending |
 
 **Coverage:**
-- v1.5 requirements: 10 total
-- Mapped to phases: 10
+- v1.5 requirements: 11 total
+- Mapped to phases: 11
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-06-27 after Phase 22 planning*
+*Last updated: 2026-06-27 after Phase 23 planning*

@@ -110,8 +110,16 @@ Plans:
 ### Phase 23: Optional Client Engagement & Implementation Tracking
 **Dependencies:** Phase 22 (recommendation experience complete)
 **Requirements:** LIFECYCLE-02
+**Plans:** 5 plans
 
 **Goal:** Advisors who want ongoing client engagement get a lightweight project-management layer. Advisors who don't can ignore it entirely — the platform works either way. This is opt-in infrastructure, not a mandatory workflow.
+
+Plans:
+- [ ] 23-01-PLAN.md -- Schema extension (BLOCKED/DEFERRED enum, feature flag, publish field, due dates) + lifecycle logic + Zod schemas
+- [ ] 23-02-PLAN.md -- Feature flag helper, activity feed query, publish mechanism services
+- [ ] 23-03-PLAN.md -- Server actions for milestone management and publish + engagement metrics aggregation
+- [ ] 23-04-PLAN.md -- Client UI: activity feed, next step callout, milestone progress bars, StrategicActionPlan integration
+- [ ] 23-05-PLAN.md -- Advisor UI: engagement dashboard page, portfolio engagement column, publish button, block/defer dialogs
 
 **Design Philosophy:**
 - No feature in this phase should be required to complete an assessment or deliver a report.
@@ -207,7 +215,7 @@ Plans:
 | 20 - Identity Intelligence | Complete | 3/3 | ██████████ 100% |
 | 21 - Recommendation Engine | Complete | 2/2 | ██████████ 100% |
 | 22 - Recommendation Experience | Complete | 6/6 | ██████████ 100% |
-| 23 - Client Engagement & Tracking | Pending | 0/0 | ░░░░░░░░░░ 0% |
+| 23 - Client Engagement & Tracking | Planned | 0/5 | ░░░░░░░░░░ 0% |
 | 24 - Continuous Risk Improvement | Pending | 0/0 | ░░░░░░░░░░ 0% |
 | 25 - Executive Reporting | Pending | 0/0 | ░░░░░░░░░░ 0% |
 
@@ -227,5 +235,5 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-19*
-*Roadmap updated: 2026-06-26 — Phase 22 planned: 6 plans across 3 waves*
-*Next phase: 22*
+*Roadmap updated: 2026-06-27 — Phase 23 planned: 5 plans across 3 waves*
+*Next phase: 23*
