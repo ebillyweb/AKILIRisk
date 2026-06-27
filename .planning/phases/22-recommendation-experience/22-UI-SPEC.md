@@ -45,7 +45,7 @@ Declared values (multiples of 4):
 
 Exceptions:
 - Touch targets for Accept/Defer/Decline action buttons: minimum 44px height (use `min-h-11` / `min-h-9 px-4`)
-- Inline layer attribution chips: 20px height (`h-5 text-[10px]`) — established pattern from existing `Badge` usage
+- Inline layer attribution chips: 20px height (`h-5 text-xs`) — established pattern from existing `Badge` usage
 
 ---
 
@@ -54,14 +54,14 @@ Exceptions:
 | Role | Size | Weight | Line Height | Font |
 |------|------|--------|-------------|------|
 | Body | 14px (text-sm) | 400 (regular) | 1.5 | Manrope |
-| Label / Metadata | 12px (text-xs) | 500 (medium) | 1.4 | Manrope |
-| Heading (card/section) | 18px (text-lg) or 20px (text-xl) | 600 (semibold) | 1.3 | Cormorant |
+| Label / Metadata | 12px (text-xs) | 400 (regular) | 1.4 | Manrope |
+| Heading (card/section) | 20px (text-xl) | 600 (semibold) | 1.3 | Cormorant |
 | Display (page title) | 24px (text-2xl) | 600 (semibold) | 1.2 | Cormorant |
 
 Notes:
 - Page-level headings use Cormorant (`font-display`) per `globals.css` base style.
-- Card headings and section titles follow existing `text-lg font-semibold` or `text-2xl font-semibold` pattern seen in `RecommendationsPortfolio.tsx` and `FacilitatedRecommendations.tsx`.
-- Labels/metadata (badges, timestamps, layer attribution chips) use Manrope at 10-12px / medium weight.
+- Card headings and section titles use `text-xl font-semibold` uniformly. Do not mix `text-lg` into heading contexts.
+- Labels, metadata, badges, timestamps, and layer attribution chips all use `text-xs` (12px) at regular weight.
 - Maximum 4 distinct sizes in any single view — do not introduce additional sizes beyond this table.
 
 ---
@@ -235,7 +235,7 @@ Priority badge colors (maps D-06):
 | Trigger event label | "Trigger event (optional)" |
 | Trigger event placeholder | "e.g. After business valuation is complete" |
 | Confirm button | "Confirm Defer" |
-| Cancel button | "Cancel" |
+| Cancel button | "Back to recommendation" |
 
 ### Hide from Client Dialog (Destructive)
 
