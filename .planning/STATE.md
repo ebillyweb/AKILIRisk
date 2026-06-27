@@ -23,15 +23,15 @@ progress:
 ## Current Position
 
 **Milestone:** v1.5 Cyber Risk Intelligence
-**Phase:** 22 - Recommendation Experience (PLANNED)
-**Plan:** 0 of 6 (ready to execute)
-**Status:** Ready to execute — 6 plans in 3 waves
+**Phase:** 23 - Optional Client Engagement & Implementation Tracking (PLANNED)
+**Plan:** 0 of 5 (ready to execute)
+**Status:** Ready to execute — 5 plans in 3 waves
 
-### Phase 21 Goal
+### Phase 23 Goal
 
-Every one of the ten risk pillars independently generates platform recommendations, advisor customizations are honored, and the recommendation engine produces a fully prioritized recommendation set for every completed assessment.
+Advisors who want ongoing client engagement get a lightweight project-management layer. Advisors who don't can ignore it entirely — the platform works either way. This is opt-in infrastructure, not a mandatory workflow.
 
-**Requirements:** UNIFIED-01, UNIFIED-02
+**Requirements:** LIFECYCLE-02
 
 ## Performance Metrics
 
@@ -144,8 +144,8 @@ None identified. Ready to proceed with Phase 19 planning.
 
 ## Session Continuity
 
-**Last Action:** Phase 22 planned -- 6 plans in 3 waves (schema+engine, lifecycle+actions, 3 UI surfaces). Verification passed iteration 2.
-**Next Action:** Execute Phase 22 (Recommendation Experience)
+**Last Action:** Phase 23 planned -- 5 plans in 3 waves (schema+lifecycle, services, server actions+metrics, client UI, advisor UI). Verification passed first iteration.
+**Next Action:** Execute Phase 23 (Optional Client Engagement & Implementation Tracking)
 
 **Context Preservation:** Phases 19-21 complete. Phase 21: 10-pillar recommendation coverage achieved. Post-phase: built Risk Solutions Library -- compose-at-read layered system (EnterpriseSolutionCustomization, AdvisorSolutionCustomization, SolutionMilestone, SolutionActivity), lifecycle state machine, milestone hydration on ACCEPTED, sourceLayerSummary persistence. Phase 22 context gathered: Strategic Action Plan (renamed from Family Roadmap), per-client holistic Guidance Package (cumulative across assessments), generic Platform Asset Catalog inheritance engine (recommendations first consumer), three-tier override policy (Protected/Configurable/Additions), implementation-focused lifecycle (Generated->Reviewed->Included->InProgress->Completed), Defer = "not now" with trigger events, shared ownership (task status + validation status), Role vs Assignee separation.
 
