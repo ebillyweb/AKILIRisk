@@ -155,11 +155,15 @@ describe("getClientActionPlan", () => {
         timeHorizon: "immediate",
         responsibleRoles: [],
         assignees: null,
+        triggerReason: null,
+        deferredRevisitDate: null,
+        milestones: [],
         serviceRecommendation: {
           id: "svc-1",
           name: "Cyber Insurance",
           description: "Review cyber insurance",
           category: "Cyber",
+          expectedOutcome: null,
           estimatedCost: "$5,000",
           timeframe: "30 days",
           provider: null,
@@ -178,11 +182,15 @@ describe("getClientActionPlan", () => {
         timeHorizon: null, // should default to "strategic"
         responsibleRoles: [],
         assignees: null,
+        triggerReason: null,
+        deferredRevisitDate: null,
+        milestones: [],
         serviceRecommendation: {
           id: "svc-2",
           name: "Estate Planning",
           description: null,
           category: "Governance",
+          expectedOutcome: null,
           estimatedCost: null,
           timeframe: null,
           provider: null,
@@ -193,12 +201,9 @@ describe("getClientActionPlan", () => {
     const result = await getClientActionPlan();
     expect(result.success).toBe(true);
     if (result.success) {
-      const { groups } = result.data;
-      expect(groups).toHaveLength(2);
-      expect(groups[0].timeHorizon).toBe("immediate");
-      expect(groups[0].items).toHaveLength(1);
-      expect(groups[1].timeHorizon).toBe("strategic");
-      expect(groups[1].items).toHaveLength(1);
+      expect(result.data.immediate).toHaveLength(1);
+      expect(result.data.strategic).toHaveLength(1);
+      expect(result.data.ongoing).toHaveLength(0);
     }
   });
 });

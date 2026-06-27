@@ -17,7 +17,21 @@ import {
   type TaskStatusInput,
 } from "./guidance-schemas";
 
-// ── Result types ─────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────
+
+export type TaskStatus =
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
+  | "WAITING"
+  | "READY_FOR_REVIEW"
+  | "COMPLETED";
+
+export type PlaybookStep = {
+  title: string;
+  description: string;
+  estimatedDuration?: string;
+  source?: "PLATFORM" | "ENTERPRISE" | "ADVISOR";
+};
 
 export type ActionResult<T = void> =
   | { success: true; data: T }
@@ -97,33 +111,32 @@ export async function updateTaskStatus(
   }
 }
 
-/**
- * Grouped action plan item for client display.
- */
 export type ActionPlanItem = {
   id: string;
-  serviceRecommendationId: string;
-  serviceName: string;
-  serviceDescription: string | null;
-  serviceCategory: string | null;
-  status: string;
-  taskStatus: string;
-  validationStatus: string;
-  requiresValidation: boolean;
-  advisorPriority: string | null;
-  advisorNotes: string | null;
-  urgencyScore: number | null;
-  timeHorizon: string | null;
-  responsibleRoles: string[];
-  assignees: unknown;
+  name: string;
+  description: string;
+  category: string;
+  expectedOutcome: string | null;
   estimatedCost: string | null;
   timeframe: string | null;
   provider: string | null;
+  triggerReason: string;
+  mergedEvidence: string | null;
+  playbookSteps: PlaybookStep[];
+  taskStatus: TaskStatus;
+  validationStatus: string | null;
+  requiresValidation: boolean;
+  responsibleRoles: string[];
+  assignees: string[];
+  urgencyScore: number;
+  timeHorizon: "immediate" | "strategic" | "ongoing";
+  deferredRevisitDate: string | null;
 };
 
-export type ActionPlanGroup = {
-  timeHorizon: string;
-  items: ActionPlanItem[];
+export type ClientActionPlanData = {
+  immediate: ActionPlanItem[];
+  strategic: ActionPlanItem[];
+  ongoing: ActionPlanItem[];
 };
 
 /**
@@ -133,7 +146,7 @@ export type ActionPlanGroup = {
  * where hiddenFromClient is false, grouped by timeHorizon.
  */
 export async function getClientActionPlan(): Promise<
-  ActionResult<{ groups: ActionPlanGroup[] }>
+  ActionResult<ClientActionPlanData>
 > {
   try {
     const session = await auth();
@@ -157,59 +170,86 @@ export async function getClientActionPlan(): Promise<
             name: true,
             description: true,
             category: true,
+            expectedOutcome: true,
             estimatedCost: true,
             timeframe: true,
             provider: true,
           },
+        },
+        milestones: {
+          select: {
+            title: true,
+            description: true,
+            estimatedDuration: true,
+            source: true,
+          },
+          orderBy: { sortOrder: "asc" },
         },
       },
       orderBy: [{ urgencyScore: "desc" }, { priority: "asc" }],
     });
 
     // Map to ActionPlanItem
-    const items: ActionPlanItem[] = recs.map((rec) => ({
-      id: rec.id,
-      serviceRecommendationId: rec.serviceRecommendationId,
-      serviceName: rec.serviceRecommendation.name,
-      serviceDescription: rec.serviceRecommendation.description,
-      serviceCategory: rec.serviceRecommendation.category,
-      status: rec.status,
-      taskStatus: rec.taskStatus,
-      validationStatus: rec.validationStatus,
-      requiresValidation: rec.requiresValidation,
-      advisorPriority: rec.advisorPriority,
-      advisorNotes: rec.advisorNotes,
-      urgencyScore: rec.urgencyScore,
-      timeHorizon: rec.timeHorizon,
-      responsibleRoles: rec.responsibleRoles,
-      assignees: rec.assignees,
-      estimatedCost: rec.serviceRecommendation.estimatedCost,
-      timeframe: rec.serviceRecommendation.timeframe,
-      provider: rec.serviceRecommendation.provider,
-    }));
+    const items: ActionPlanItem[] = recs.map((rec) => {
+      const triggerData = rec.triggerReason as
+        | Record<string, unknown>
+        | string
+        | null;
+      const triggerText =
+        typeof triggerData === "string"
+          ? triggerData
+          : triggerData
+            ? JSON.stringify(triggerData)
+            : "";
+      const assigneesRaw = rec.assignees as
+        | Array<{ name: string }>
+        | null;
+      const horizon = (rec.timeHorizon ?? "strategic") as
+        | "immediate"
+        | "strategic"
+        | "ongoing";
 
-    // Group by timeHorizon (null defaults to "strategic")
-    const grouped = new Map<string, ActionPlanItem[]>();
-    for (const item of items) {
-      const horizon = item.timeHorizon ?? "strategic";
-      if (!grouped.has(horizon)) grouped.set(horizon, []);
-      grouped.get(horizon)!.push(item);
-    }
+      return {
+        id: rec.id,
+        name: rec.serviceRecommendation.name,
+        description: rec.serviceRecommendation.description ?? "",
+        category: rec.serviceRecommendation.category ?? "",
+        expectedOutcome: rec.serviceRecommendation.expectedOutcome ?? null,
+        estimatedCost: rec.serviceRecommendation.estimatedCost ?? null,
+        timeframe: rec.serviceRecommendation.timeframe ?? null,
+        provider: rec.serviceRecommendation.provider ?? null,
+        triggerReason: triggerText,
+        mergedEvidence: rec.advisorNotes,
+        playbookSteps: rec.milestones.map((m) => ({
+          title: m.title,
+          description: m.description ?? "",
+          estimatedDuration: m.estimatedDuration ?? undefined,
+          source: (m.source ?? "PLATFORM") as PlaybookStep["source"],
+        })),
+        taskStatus: rec.taskStatus as TaskStatus,
+        validationStatus: rec.validationStatus,
+        requiresValidation: rec.requiresValidation,
+        responsibleRoles: rec.responsibleRoles,
+        assignees: assigneesRaw?.map((a) => a.name) ?? [],
+        urgencyScore: rec.urgencyScore ?? 5,
+        timeHorizon: horizon,
+        deferredRevisitDate: rec.deferredRevisitDate?.toISOString() ?? null,
+      };
+    });
 
-    // Order: immediate, strategic, ongoing
-    const horizonOrder = ["immediate", "strategic", "ongoing"];
-    const groups: ActionPlanGroup[] = horizonOrder
-      .filter((h) => grouped.has(h))
-      .map((h) => ({ timeHorizon: h, items: grouped.get(h)! }));
+    const result: ClientActionPlanData = {
+      immediate: items
+        .filter((i) => i.timeHorizon === "immediate")
+        .sort((a, b) => b.urgencyScore - a.urgencyScore),
+      strategic: items
+        .filter((i) => i.timeHorizon === "strategic")
+        .sort((a, b) => b.urgencyScore - a.urgencyScore),
+      ongoing: items
+        .filter((i) => i.timeHorizon === "ongoing")
+        .sort((a, b) => b.urgencyScore - a.urgencyScore),
+    };
 
-    // Add any custom horizons not in the standard list
-    for (const [horizon, groupItems] of grouped) {
-      if (!horizonOrder.includes(horizon)) {
-        groups.push({ timeHorizon: horizon, items: groupItems });
-      }
-    }
-
-    return ok({ groups });
+    return ok(result);
   } catch (err) {
     logSafeError("getClientActionPlan", err);
     return fail(safeErrorMessage(err, "Failed to load action plan"));
