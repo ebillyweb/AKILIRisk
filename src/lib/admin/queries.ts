@@ -60,8 +60,15 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
           primaryColor: true,
           secondaryColor: true,
           accentColor: true,
+          enterpriseId: true,
+          enterprise: {
+            select: { name: true, status: true },
+          },
           _count: { select: { clientAssignments: true } },
         },
+      },
+      enterpriseMembership: {
+        select: { status: true },
       },
     },
     orderBy: { createdAt: "asc" },

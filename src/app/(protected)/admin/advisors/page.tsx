@@ -48,6 +48,10 @@ export default async function AdminAdvisorsPage({
       deletedAt: a.deletedAt,
       advisorPortalAccessEnabled: a.advisorPortalAccessEnabled,
       billingEnabled,
+      enterpriseId: a.advisorProfile?.enterpriseId ?? null,
+      enterpriseName: a.advisorProfile?.enterprise?.name ?? null,
+      enterpriseStatus: a.advisorProfile?.enterprise?.status ?? null,
+      enterpriseMembershipStatus: a.enterpriseMembership?.status ?? null,
       subscription: a.subscription,
     }),
   }));
@@ -311,13 +315,13 @@ export default async function AdminAdvisorsPage({
                         <AlertTriangle
                           className={cn(
                             "size-3 shrink-0 opacity-80",
-                            hub.hubAllowed && "hidden"
+                            (hub.hubAllowed || !hub.showSubscriptionBadges) && "hidden"
                           )}
                           aria-hidden
                         />
                         <span className="truncate">{hub.hubLabel}</span>
                       </Badge>
-                      {a.subscription ? (
+                      {hub.showSubscriptionBadges && a.subscription ? (
                         <Badge
                           variant="outline"
                           className="inline-flex max-w-[min(100%,16rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
@@ -332,14 +336,16 @@ export default async function AdminAdvisorsPage({
                           </span>
                         </Badge>
                       ) : null}
-                      <Badge
-                        variant={hub.subscriptionStatusVariant}
-                        className="inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
-                        title={hub.hubDetail ?? "Subscription status"}
-                      >
-                        <CreditCard className="size-3 shrink-0 opacity-80" aria-hidden />
-                        <span className="truncate">{hub.subscriptionStatusLabel}</span>
-                      </Badge>
+                      {hub.showSubscriptionBadges ? (
+                        <Badge
+                          variant={hub.subscriptionStatusVariant}
+                          className="inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
+                          title={hub.hubDetail ?? "Subscription status"}
+                        >
+                          <CreditCard className="size-3 shrink-0 opacity-80" aria-hidden />
+                          <span className="truncate">{hub.subscriptionStatusLabel}</span>
+                        </Badge>
+                      ) : null}
                     </div>
                     <Button variant="outline" size="icon" className="h-9 w-9" asChild>
                       <Link href={`/admin/advisors/${a.id}/edit`} aria-label={`Edit ${a.name ?? a.email}`}>

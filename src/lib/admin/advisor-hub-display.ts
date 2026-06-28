@@ -15,6 +15,8 @@ export type AdminAdvisorHubDisplay = {
   hubDetail?: string;
   subscriptionStatusLabel: string;
   subscriptionStatusVariant: AdminAdvisorHubBadgeVariant;
+  /** Solo subscription/plan badges hidden for firm enterprise members. */
+  showSubscriptionBadges: boolean;
 };
 
 type SubscriptionSnapshot = {
@@ -98,6 +100,10 @@ export function getAdminAdvisorHubDisplay(input: {
   deletedAt: Date | string | null;
   advisorPortalAccessEnabled: boolean;
   billingEnabled: boolean;
+  enterpriseId?: string | null;
+  enterpriseName?: string | null;
+  enterpriseStatus?: string | null;
+  enterpriseMembershipStatus?: string | null;
   subscription: {
     status: string;
     currentPeriodEnd: Date | string;
@@ -106,6 +112,67 @@ export function getAdminAdvisorHubDisplay(input: {
     createdAt?: Date | string;
   } | null;
 }): AdminAdvisorHubDisplay {
+  const enterpriseBilling = Boolean(input.enterpriseId?.trim());
+
+  if (enterpriseBilling) {
+    const firmSuspended =
+      input.enterpriseMembershipStatus === "SUSPENDED" ||
+      input.enterpriseStatus === "SUSPENDED";
+    const enterpriseDetail = input.enterpriseName?.trim()
+      ? `Billing via ${input.enterpriseName.trim()}`
+      : "Billing via firm enterprise subscription";
+
+    if (input.deletedAt) {
+      return {
+        hubAllowed: false,
+        needsAttention: true,
+        hubLabel: "Enterprise",
+        hubBadgeVariant: "secondary",
+        hubDetail: "Account is deactivated.",
+        subscriptionStatusLabel: "",
+        subscriptionStatusVariant: "secondary",
+        showSubscriptionBadges: false,
+      };
+    }
+
+    if (input.advisorPortalAccessEnabled === false) {
+      return {
+        hubAllowed: false,
+        needsAttention: true,
+        hubLabel: "Enterprise",
+        hubBadgeVariant: "warning",
+        hubDetail: "Portal access is disabled for this advisor.",
+        subscriptionStatusLabel: "",
+        subscriptionStatusVariant: "secondary",
+        showSubscriptionBadges: false,
+      };
+    }
+
+    if (firmSuspended) {
+      return {
+        hubAllowed: false,
+        needsAttention: true,
+        hubLabel: "Enterprise",
+        hubBadgeVariant: "warning",
+        hubDetail: "Firm access is suspended.",
+        subscriptionStatusLabel: "",
+        subscriptionStatusVariant: "secondary",
+        showSubscriptionBadges: false,
+      };
+    }
+
+    return {
+      hubAllowed: true,
+      needsAttention: false,
+      hubLabel: "Enterprise",
+      hubBadgeVariant: "success",
+      hubDetail: enterpriseDetail,
+      subscriptionStatusLabel: "",
+      subscriptionStatusVariant: "outline",
+      showSubscriptionBadges: false,
+    };
+  }
+
   const sub = subscriptionSnapshot(input.subscription);
   const subscriptionBadge = subscriptionStatusPresentation(sub);
 
@@ -116,6 +183,7 @@ export function getAdminAdvisorHubDisplay(input: {
       hubLabel: "Deactivated",
       hubBadgeVariant: "secondary",
       hubDetail: "Account is deactivated.",
+      showSubscriptionBadges: true,
       ...subscriptionBadge,
     };
   }
@@ -127,6 +195,7 @@ export function getAdminAdvisorHubDisplay(input: {
       hubLabel: "Portal off",
       hubBadgeVariant: "warning",
       hubDetail: "Portal access is disabled for this advisor.",
+      showSubscriptionBadges: true,
       ...subscriptionBadge,
     };
   }
@@ -138,6 +207,7 @@ export function getAdminAdvisorHubDisplay(input: {
       hubLabel: "Subscribe required",
       hubBadgeVariant: "warning",
       hubDetail: "No subscription row — advisor hub is blocked until checkout.",
+      showSubscriptionBadges: true,
       ...subscriptionBadge,
     };
   }
@@ -162,6 +232,7 @@ export function getAdminAdvisorHubDisplay(input: {
         : needsStripe
           ? "Paid Stripe subscription required to restore hub access."
           : "Subscription does not qualify for advisor hub access.",
+      showSubscriptionBadges: true,
       ...subscriptionBadge,
     };
   }
@@ -173,6 +244,7 @@ export function getAdminAdvisorHubDisplay(input: {
       hubLabel: "Grace access",
       hubBadgeVariant: "warning",
       hubDetail: `Grace ends ${sub.currentPeriodEnd.toLocaleDateString()}.`,
+      showSubscriptionBadges: true,
       ...subscriptionBadge,
     };
   }
@@ -184,6 +256,7 @@ export function getAdminAdvisorHubDisplay(input: {
       hubLabel: "Hub active",
       hubBadgeVariant: "warning",
       hubDetail: "Subscription is past due — advisor still has hub access during dunning.",
+      showSubscriptionBadges: true,
       ...subscriptionBadge,
     };
   }
@@ -193,6 +266,7 @@ export function getAdminAdvisorHubDisplay(input: {
     needsAttention: false,
     hubLabel: "Hub active",
     hubBadgeVariant: "success",
+    showSubscriptionBadges: true,
     ...subscriptionBadge,
   };
 }

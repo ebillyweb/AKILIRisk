@@ -34,8 +34,19 @@ const TIER_BY_PRODUCT = {
   platinum: "PLATINUM",
   // Legacy product names during migration
   starter: "ESSENTIALS",
-  growth: "PROFESSIONAL",
 };
+
+/** @param {string} rawName lowercased Stripe Product.name */
+function resolveTierFromProductName(rawName) {
+  const n = rawName.trim().toLowerCase();
+  if (!n || n === "growth" || n.includes("growth")) return null;
+  if (TIER_BY_PRODUCT[n]) return TIER_BY_PRODUCT[n];
+  if (n.includes("essentials")) return "ESSENTIALS";
+  if (n.includes("professional")) return "PROFESSIONAL";
+  if (n.includes("business")) return "BUSINESS";
+  if (n.includes("platinum")) return "PLATINUM";
+  return null;
+}
 
 /** Pre–modular-tier-rename Stripe price env vars; app no longer reads these. */
 const LEGACY_STRIPE_ENV_KEYS = [
@@ -139,11 +150,12 @@ function pricesToStripePriceEnv(listJson) {
       continue;
     }
     const product = row.product;
+    if (typeof product === "object" && product && product.active === false) continue;
     const rawName =
       typeof product === "object" && product && "name" in product
         ? String(product.name || "").trim().toLowerCase()
         : "";
-    const tier = TIER_BY_PRODUCT[rawName];
+    const tier = resolveTierFromProductName(rawName);
     if (!tier) continue;
     const interval = row.recurring?.interval;
     const cycle =
