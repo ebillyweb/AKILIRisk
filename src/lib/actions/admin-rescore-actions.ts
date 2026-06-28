@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
@@ -60,7 +60,7 @@ export async function rescoreAssessment(
       actor: {
         userId: actor.userId,
         email: actor.email ?? null,
-        role: actor.role,
+        role: actor.role as UserRole,
       },
     });
   } catch (err) {

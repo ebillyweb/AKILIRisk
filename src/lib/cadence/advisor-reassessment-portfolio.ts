@@ -56,12 +56,14 @@ export async function listReassessmentCadenceClients(
     const cadence = await getCadenceForClient(assignment.clientId, advisorProfileId);
     const targetedQuestionCount = await getTargetedQuestionCount(latestAssessment.id);
     const clientName = formatPipelineClientRowTitle({
+      id: assignment.client.id,
       name: assignment.client.name,
       firstName: assignment.client.firstName,
       lastName: assignment.client.lastName,
-      email: safeDecryptUserEmail(assignment.client.emailCiphertext, {
-        rowId: assignment.client.id,
-      }),
+      email:
+        safeDecryptUserEmail(assignment.client.emailCiphertext, {
+          rowId: assignment.client.id,
+        }) ?? "",
     });
 
     rows.push({
