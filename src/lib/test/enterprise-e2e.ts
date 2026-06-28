@@ -253,8 +253,8 @@ export async function inspectEnterpriseScenario(
       slug: true,
       tagline: true,
       primaryColor: true,
-      enterpriseIntakeQuestion: { select: { questionText: true } },
-      enterpriseRecommendationRule: { select: { name: true } },
+      intakeQuestions: { select: { questionText: true } },
+      recommendationRules: { select: { name: true } },
     },
   });
   if (!enterprise) {
@@ -293,8 +293,8 @@ export async function inspectEnterpriseScenario(
     enterprise: {
       tagline: enterprise.tagline,
       primaryColor: enterprise.primaryColor,
-      intakeQuestionTexts: enterprise.enterpriseIntakeQuestion.map((q) => q.questionText),
-      recommendationRuleNames: enterprise.enterpriseRecommendationRule.map((r) => r.name),
+      intakeQuestionTexts: enterprise.intakeQuestions.map((q) => q.questionText),
+      recommendationRuleNames: enterprise.recommendationRules.map((r) => r.name),
     },
     owner: {
       profileId: ownerMembership?.advisorProfileId ?? "",

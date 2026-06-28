@@ -81,29 +81,35 @@ test.describe("enterprise asset transfer and member sync", () => {
     expect(state.member.recommendationRuleNames).toContain(scenario.marker.recommendationRuleName);
   });
 
-  test("enterprise advisor can view firm branding but cannot save profile edits", async ({
+  test("enterprise advisor sees firm branding read-only in settings", async ({ page }) => {
+    await new SignInPage(page).signInAs("advisor4");
+    const settings = new AdvisorBrandingSettingsPage(page);
+    await settings.goto();
+    await settings.openTab("identity");
+
+    await expect(page.getByText(/managed by your firm owner or administrators/i)).toBeVisible();
+    await expect(settings.taglineInput()).toHaveValue(scenario.marker.tagline);
+    await expect(settings.taglineInput()).toBeDisabled();
+    await expect(settings.saveButton()).toHaveCount(0);
+  });
+
+  test("enterprise advisor cannot override firm canonical branding", async ({
     page,
+    request,
   }) => {
     await new SignInPage(page).signInAs("advisor4");
     const settings = new AdvisorBrandingSettingsPage(page);
     await settings.goto();
     await settings.openTab("identity");
 
-    await expect(settings.taglineInput()).toHaveValue(scenario.marker.tagline);
+    await expect(settings.taglineInput()).toBeDisabled();
 
-    const attemptedTagline = `Should not persist ${scenario.runId}`;
-    await settings.taglineInput().fill(attemptedTagline);
-    await settings.openTab("colors");
-    await settings.primaryColorInput().fill("#112233");
-
-    const save = settings.saveButton();
-    if (await save.isEnabled()) {
-      await save.click();
-      await page.reload();
-      await settings.openTab("identity");
-    }
-
-    await expect(settings.taglineInput()).toHaveValue(scenario.marker.tagline);
+    const state = await inspectEnterpriseScenario(request, {
+      enterpriseId: scenario.enterpriseId,
+      memberEmail: USERS.advisor4.email,
+    });
+    expect(state.enterprise.tagline).toBe(scenario.marker.tagline);
+    expect(state.member.resolvedBranding?.tagline).toBe(scenario.marker.tagline);
   });
 
   test("clients of owner and member advisors see the same firm branding", async ({

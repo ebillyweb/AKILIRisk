@@ -81,6 +81,9 @@ interface EnhancedBrandingFormProps {
     logoFileSize?: number | null;
     logoUploadedAt?: Date | null;
   };
+  /** Firm advisors view canonical enterprise branding without editing. */
+  readOnly?: boolean;
+  readOnlyNotice?: string;
   features: SubscriptionFeatures;
   currentSubdomain?: AdvisorSubdomainSettings | null;
   productionDomain: string;
@@ -169,6 +172,8 @@ function SettingsSection({
 
 export function EnhancedBrandingForm({
   profile,
+  readOnly = false,
+  readOnlyNotice,
   features,
   currentSubdomain = null,
   productionDomain,
@@ -176,6 +181,9 @@ export function EnhancedBrandingForm({
   platformSubdomainsAutoActivate = true,
 }: EnhancedBrandingFormProps) {
   const xlSidebar = useXlSidebarNav();
+  const visibleSections = readOnly
+    ? FORM_SECTIONS.filter((section) => section.id !== 'domain')
+    : FORM_SECTIONS;
 
   const brandNameFromFirm =
     profile.firmName?.trim() || profile.brandName?.trim() || '';
@@ -276,6 +284,7 @@ export function EnhancedBrandingForm({
   }, []);
 
   const onSubmit = async (data: BrandingFormData) => {
+    if (readOnly) return;
     setIsSubmitting(true);
     setShowSavedFlash(false);
     try {
@@ -303,6 +312,9 @@ export function EnhancedBrandingForm({
 
   // Handle logo upload
   const handleLogoUpload = useCallback(async (file: File): Promise<string> => {
+    if (readOnly) {
+      throw new Error('Firm branding is read-only for your role.');
+    }
     try {
       // Same-origin upload — server writes to S3 (no browser CORS to the bucket)
       const formData = new FormData();
@@ -328,7 +340,7 @@ export function EnhancedBrandingForm({
       console.error('Logo upload error:', error);
       throw new Error(error instanceof Error ? error.message : 'Upload failed');
     }
-  }, [setValue]);
+  }, [readOnly, setValue]);
 
   // Get upgrade message for restricted features
   const getUpgradeMessage = (sectionId: string): string => {
@@ -375,7 +387,7 @@ export function EnhancedBrandingForm({
                 : 'grid w-full grid-cols-3 gap-1 border-b'
             )}
           >
-              {FORM_SECTIONS.map((section) => {
+              {visibleSections.map((section) => {
                 const showUpgradeHint =
                   (section.id === 'colors' &&
                     section.premium &&
@@ -434,6 +446,12 @@ export function EnhancedBrandingForm({
               className="flex min-w-0 flex-1 flex-col"
             >
               <div className="min-w-0 flex-1 space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+              {readOnly && readOnlyNotice ? (
+                <Alert>
+                  <Lock className="h-4 w-4" aria-hidden />
+                  <AlertDescription>{readOnlyNotice}</AlertDescription>
+                </Alert>
+              ) : null}
               {/* RHF only submits registered fields; ColorPickers use setValue only */}
               <input type="hidden" {...register('brandName')} />
               <input type="hidden" {...register('primaryColor')} />
@@ -456,9 +474,15 @@ export function EnhancedBrandingForm({
                       className="bg-muted/40"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Matches your firm name from{' '}
-                      <span className="font-medium text-foreground">Your profile</span> below.
-                      Contact your administrator to change it.
+                      {readOnly
+                        ? 'Managed centrally for your firm. Contact a firm owner or administrator to change it.'
+                        : (
+                          <>
+                            Matches your firm name from{' '}
+                            <span className="font-medium text-foreground">Your profile</span> below.
+                            Contact your administrator to change it.
+                          </>
+                        )}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -471,6 +495,9 @@ export function EnhancedBrandingForm({
                       placeholder="Your brand tagline or mission statement"
                       maxLength={150}
                       rows={3}
+                      readOnly={readOnly}
+                      disabled={readOnly}
+                      className={readOnly ? 'bg-muted/40' : undefined}
                     />
                     {errors.tagline && (
                       <p className="text-sm text-destructive">{errors.tagline.message}</p>
@@ -485,6 +512,9 @@ export function EnhancedBrandingForm({
                       type="url"
                       {...register('websiteUrl')}
                       placeholder="https://your-website.com"
+                      readOnly={readOnly}
+                      disabled={readOnly}
+                      className={readOnly ? 'bg-muted/40' : undefined}
                     />
                     {errors.websiteUrl && (
                       <p className="text-sm text-destructive">{errors.websiteUrl.message}</p>
@@ -518,6 +548,7 @@ export function EnhancedBrandingForm({
                         }
                         error={errors.primaryColor?.message}
                         showHarmony
+                        disabled={readOnly}
                       />
                       <ColorPicker
                         label="Secondary Color"
@@ -526,6 +557,7 @@ export function EnhancedBrandingForm({
                           setValue('secondaryColor', color, { shouldDirty: true })
                         }
                         error={errors.secondaryColor?.message}
+                        disabled={readOnly}
                       />
                       <ColorPicker
                         label="Accent Color"
@@ -534,6 +566,7 @@ export function EnhancedBrandingForm({
                           setValue('accentColor', color, { shouldDirty: true })
                         }
                         error={errors.accentColor?.message}
+                        disabled={readOnly}
                       />
                     </>
                   )}
@@ -552,6 +585,7 @@ export function EnhancedBrandingForm({
                     maxSize={LOGO_MAX_BYTES}
                     onUpload={handleLogoUpload}
                     currentFile={watchedValues.logoUrl || profile.logoUrl || null}
+                    disabled={readOnly}
                   />
                 </SettingsSection>
               </TabsContent>
@@ -571,6 +605,9 @@ export function EnhancedBrandingForm({
                       type="email"
                       {...register('supportEmail')}
                       placeholder="support@yourcompany.com"
+                      readOnly={readOnly}
+                      disabled={readOnly}
+                      className={readOnly ? 'bg-muted/40' : undefined}
                     />
                     {errors.supportEmail && (
                       <p className="text-sm text-destructive">{errors.supportEmail.message}</p>
@@ -585,6 +622,9 @@ export function EnhancedBrandingForm({
                       type="tel"
                       {...register('supportPhone')}
                       placeholder="+1 (555) 123-4567"
+                      readOnly={readOnly}
+                      disabled={readOnly}
+                      className={readOnly ? 'bg-muted/40' : undefined}
                     />
                     {errors.supportPhone && (
                       <p className="text-sm text-destructive">{errors.supportPhone.message}</p>
@@ -600,6 +640,9 @@ export function EnhancedBrandingForm({
                       placeholder="Custom footer text for email communications"
                       maxLength={300}
                       rows={3}
+                      readOnly={readOnly}
+                      disabled={readOnly}
+                      className={readOnly ? 'bg-muted/40' : undefined}
                     />
                     {errors.emailFooterText && (
                       <p className="text-sm text-destructive">{errors.emailFooterText.message}</p>
@@ -629,6 +672,7 @@ export function EnhancedBrandingForm({
               </TabsContent>
               </div>
 
+              {!readOnly ? (
               <div className="sticky bottom-0 z-10 space-y-3 border-t border-border/60 bg-card/95 px-4 py-4 backdrop-blur-sm sm:px-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-3">
                   <Button
@@ -683,6 +727,7 @@ export function EnhancedBrandingForm({
                       : ' '}
                 </p>
               </div>
+              ) : null}
             </form>
           </Tabs>
       </div>
@@ -692,7 +737,9 @@ export function EnhancedBrandingForm({
           <div className="space-y-1 px-1">
             <p className="text-sm font-semibold tracking-tight">Live preview</p>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Updates as you edit. Open the Preview tab for email and PDF samples.
+              {readOnly
+                ? 'Firm branding as clients see it on portals and emails.'
+                : 'Updates as you edit. Open the Preview tab for email and PDF samples.'}
             </p>
           </div>
           <BrandingSidebarPreview branding={brandingForPreview} />

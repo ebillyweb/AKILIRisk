@@ -1,0 +1,157 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const billingContext = vi.hoisted(() => vi.fn());
+const enterpriseFindUnique = vi.hoisted(() => vi.fn());
+const advisorProfileFindUnique = vi.hoisted(() => vi.fn());
+const resolveBranding = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/enterprise/billing-context", () => ({
+  resolveBillingContext: billingContext,
+}));
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    advisorEnterprise: { findUnique: enterpriseFindUnique },
+    advisorProfile: { findUnique: advisorProfileFindUnique },
+  },
+}));
+vi.mock("@/lib/enterprise/branding", () => ({
+  resolveAdvisorBrandingForProfile: resolveBranding,
+}));
+
+import {
+  assertCanMutateAdvisorBranding,
+  loadAdvisorBrandingSettingsView,
+  resolveAdvisorBrandingSettingsContext,
+} from "./branding-access";
+
+describe("resolveAdvisorBrandingSettingsContext", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns solo for advisors without an enterprise membership", async () => {
+    billingContext.mockResolvedValue({
+      kind: "solo",
+      userId: "user-1",
+      advisorProfileId: "profile-1",
+      subscription: null,
+    });
+
+    await expect(resolveAdvisorBrandingSettingsContext("user-1")).resolves.toEqual({
+      mode: "solo",
+    });
+  });
+
+  it("returns enterprise-manage for firm owners", async () => {
+    billingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "OWNER",
+      advisorProfileId: "profile-1",
+      subscription: null,
+    });
+    enterpriseFindUnique.mockResolvedValue({ name: "Belvedere Wealth" });
+
+    await expect(resolveAdvisorBrandingSettingsContext("user-1")).resolves.toEqual({
+      mode: "enterprise-manage",
+      enterpriseId: "ent-1",
+      enterpriseName: "Belvedere Wealth",
+    });
+  });
+
+  it("returns enterprise-view for firm advisors", async () => {
+    billingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "ADVISOR",
+      advisorProfileId: "profile-2",
+      subscription: null,
+    });
+    enterpriseFindUnique.mockResolvedValue({ name: "Belvedere Wealth" });
+
+    await expect(resolveAdvisorBrandingSettingsContext("user-2")).resolves.toEqual({
+      mode: "enterprise-view",
+      enterpriseId: "ent-1",
+      enterpriseName: "Belvedere Wealth",
+    });
+  });
+});
+
+describe("assertCanMutateAdvisorBranding", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("blocks branding mutations for enterprise advisors", async () => {
+    billingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "ADVISOR",
+      advisorProfileId: "profile-2",
+      subscription: null,
+    });
+    enterpriseFindUnique.mockResolvedValue({ name: "Belvedere Wealth" });
+
+    await expect(assertCanMutateAdvisorBranding("user-2")).rejects.toThrow(/read-only/i);
+  });
+});
+
+describe("loadAdvisorBrandingSettingsView", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    advisorProfileFindUnique.mockResolvedValue({
+      firmName: "Solo Firm",
+      brandName: "Solo Firm",
+      tagline: "Solo tagline",
+      primaryColor: "#111111",
+      secondaryColor: null,
+      accentColor: null,
+      websiteUrl: null,
+      emailFooterText: null,
+      supportEmail: null,
+      supportPhone: null,
+      logoUrl: null,
+      logoS3Key: null,
+      logoContentType: null,
+      logoFileSize: null,
+      logoUploadedAt: null,
+    });
+  });
+
+  it("uses firm-resolved branding for read-only enterprise advisors", async () => {
+    billingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "ADVISOR",
+      advisorProfileId: "profile-2",
+      subscription: null,
+    });
+    enterpriseFindUnique.mockResolvedValue({ name: "Belvedere Wealth" });
+    resolveBranding.mockResolvedValue({
+      brandName: "Belvedere Wealth",
+      advisorFirmName: "Belvedere Wealth",
+      tagline: "Firm tagline",
+      primaryColor: "#533483",
+      secondaryColor: null,
+      accentColor: null,
+      logoUrl: null,
+      logoS3Key: null,
+      logoContentType: null,
+      logoFileSize: null,
+      logoUploadedAt: null,
+      websiteUrl: null,
+      emailFooterText: null,
+      supportEmail: null,
+      supportPhone: null,
+      brandingEnabled: true,
+      customDomainEnabled: false,
+    });
+
+    const view = await loadAdvisorBrandingSettingsView("user-2", "profile-2");
+
+    expect(view.readOnly).toBe(true);
+    expect(view.profile.tagline).toBe("Firm tagline");
+    expect(view.profile.primaryColor).toBe("#533483");
+    expect(view.readOnlyNotice).toMatch(/Belvedere Wealth/i);
+  });
+});

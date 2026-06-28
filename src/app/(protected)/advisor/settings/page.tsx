@@ -10,6 +10,7 @@ import {
   ESSENTIALS_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
+import { loadAdvisorBrandingSettingsView } from "@/lib/enterprise/branding-access";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
@@ -39,6 +40,8 @@ export default async function AdvisorSettingsPage() {
   }
 
   const { profile } = result.data!;
+
+  const brandingSettings = await loadAdvisorBrandingSettingsView(profile.userId, profile.id);
 
   const currentSubdomain = await getAdvisorSubdomainSettings(profile.id);
   const productionDomain = getProductionDomain() ?? "akilirisk.com";
@@ -97,23 +100,9 @@ export default async function AdvisorSettingsPage() {
         {/* Branding Section (page title: sr-only "Settings" in advisor layout) */}
         <div data-tour="config-primary-form">
         <EnhancedBrandingForm
-          profile={{
-            firmName: profile.firmName,
-            brandName: profile.brandName,
-            tagline: profile.tagline,
-            primaryColor: profile.primaryColor,
-            secondaryColor: profile.secondaryColor,
-            accentColor: profile.accentColor,
-            websiteUrl: profile.websiteUrl,
-            emailFooterText: profile.emailFooterText,
-            supportEmail: profile.supportEmail,
-            supportPhone: profile.supportPhone,
-            logoUrl: profile.logoUrl,
-            logoS3Key: profile.logoS3Key,
-            logoContentType: profile.logoContentType,
-            logoFileSize: profile.logoFileSize,
-            logoUploadedAt: profile.logoUploadedAt,
-          }}
+          profile={brandingSettings.profile}
+          readOnly={brandingSettings.readOnly}
+          readOnlyNotice={brandingSettings.readOnlyNotice}
           features={features}
           currentSubdomain={currentSubdomain}
           productionDomain={productionDomain}

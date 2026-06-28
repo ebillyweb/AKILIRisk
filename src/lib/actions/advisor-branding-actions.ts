@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { brandingUpdateSchema } from '@/lib/validation/branding';
 import { auditBrandingUpdate } from '@/lib/audit/branding-audit';
 import { requireAdvisorBrandingAccess, checkRateLimit } from '@/lib/subscription/validation';
+import { assertCanMutateAdvisorBranding } from '@/lib/enterprise/branding-access';
 import { generateLogoUploadUrl, confirmLogoUpload, deleteLogo, uploadLogoFromBuffer } from '@/lib/s3/branding-uploads';
 import { isSubdomainReserved } from '@/lib/advisor/subdomain';
 
@@ -22,6 +23,7 @@ export interface ActionResult {
 export async function updateAdvisorBrandingAction(formData: FormData): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId, features } = await requireAdvisorBrandingAccess(userId, 'write');
 
     const firmRow = await prisma.advisorProfile.findUnique({
@@ -219,6 +221,7 @@ export async function generateLogoUploadUrlAction(
 ): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId } = await requireAdvisorBrandingAccess(userId, 'write');
 
     // Validate file parameters
@@ -260,6 +263,7 @@ export async function uploadLogoDirectAction(
 ): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId } = await requireAdvisorBrandingAccess(userId, 'write');
 
     if (!fileName || !buffer.byteLength) {
@@ -301,6 +305,7 @@ export async function confirmLogoUploadAction(
 ): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     await requireAdvisorBrandingAccess(userId, 'write');
 
     const confirmResponse = await confirmLogoUpload({
@@ -330,6 +335,7 @@ export async function confirmLogoUploadAction(
 export async function deleteLogoAction(): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId } = await requireAdvisorBrandingAccess(userId, 'delete');
 
     await deleteLogo(advisorId);

@@ -84,7 +84,7 @@ describe("acceptEnterpriseTeamInvite — methodology sync", () => {
     expect(cancelStripe).toHaveBeenCalledWith("sub_solo_1");
   });
 
-  it("does not transfer or sync methodology when a regular ADVISOR accepts", async () => {
+  it("syncs firm methodology to ADVISOR members without transferring personal assets", async () => {
     mockAcceptTransaction("ADVISOR");
 
     await acceptEnterpriseTeamInvite(MEMBERSHIP_ID, USER_ID);
