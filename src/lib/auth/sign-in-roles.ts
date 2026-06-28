@@ -7,7 +7,7 @@ export const SIGN_IN_ROLES: ReadonlyArray<{
 }> = [
   { id: "client", label: "Client", shortLabel: "Client" },
   { id: "advisor", label: "Advisor", shortLabel: "Advisor" },
-  { id: "admin", label: "Platform admin", shortLabel: "Admin" },
+  { id: "admin", label: "Platform", shortLabel: "Platform" },
 ] as const;
 
 export function isSignInRole(value: string | null | undefined): value is SignInRole {

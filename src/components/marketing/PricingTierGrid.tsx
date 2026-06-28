@@ -71,12 +71,18 @@ function formatMoney(cents: number, currency: string): string {
   }).format(cents / 100);
 }
 
+type TierPriceDisplay = {
+  main: string;
+  sub?: string;
+  periodSuffix: string;
+};
+
 function priceForCycle(
   tierPricing: PublicTierPricing,
   cycle: BillingCycle,
   audience: PricingAudience,
   seatLimit?: number
-): { main: string; sub?: string } | null {
+): TierPriceDisplay | null {
   const perSeat =
     cycle === "MONTHLY" ? tierPricing.monthly : tierPricing.annual;
   if (!perSeat) return null;
@@ -86,22 +92,33 @@ function priceForCycle(
       const totalCents = perSeat.amountCents * seatLimit;
       return {
         main: formatMoney(totalCents, perSeat.currency),
-        sub: `${perSeat.display} × ${seatLimit} advisor seats / mo`,
+        periodSuffix: "/mo firm",
+        sub: `${perSeat.display} × ${seatLimit} advisor seats`,
       };
     }
     const annualTotalCents = perSeat.amountCents * seatLimit;
+    const monthlyEquivalentCents = Math.round(annualTotalCents / 12);
     return {
-      main: formatMoney(Math.round(annualTotalCents / 12), perSeat.currency),
-      sub: `${formatMoney(annualTotalCents, perSeat.currency)} / yr (${perSeat.display} per seat × ${seatLimit})`,
+      main: formatMoney(annualTotalCents, perSeat.currency),
+      periodSuffix: "/yr firm",
+      sub: `${formatMoney(monthlyEquivalentCents, perSeat.currency)}/mo firm equivalent (${perSeat.display} per seat × ${seatLimit})`,
     };
   }
 
   if (cycle === "MONTHLY") {
-    return { main: perSeat.display };
+    return {
+      main: perSeat.display,
+      periodSuffix: audience === "solo" ? "/mo" : "/mo firm",
+      sub: "Billed monthly",
+    };
   }
+
   return {
-    main: perSeat.monthlyEquivalentDisplay ?? perSeat.display,
-    sub: `${perSeat.display} billed annually`,
+    main: perSeat.display,
+    periodSuffix: audience === "solo" ? "/yr" : "/yr firm",
+    sub: perSeat.monthlyEquivalentDisplay
+      ? `${perSeat.monthlyEquivalentDisplay}/mo equivalent`
+      : "Billed annually",
   };
 }
 
@@ -666,15 +683,12 @@ export function PricingTierGrid({
                       <span className="text-4xl font-semibold tabular-nums tracking-tight text-foreground">
                         {quote.main}
                       </span>
-                      {audience === "solo" ? (
-                        <span className="text-sm text-muted-foreground">/mo</span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">/mo firm</span>
-                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {quote.periodSuffix}
+                      </span>
                     </p>
                     <p className="mt-1 min-h-8 text-xs leading-4 text-muted-foreground">
-                      {quote.sub ??
-                        (billingCycle === "MONTHLY" ? "Billed monthly" : "Billed annually")}
+                      {quote.sub}
                     </p>
                   </>
                 ) : (

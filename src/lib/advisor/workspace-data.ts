@@ -1,6 +1,7 @@
 import type { AdvisorNotification } from "@prisma/client";
 import type { PipelineClient, PipelineMetrics } from "@/lib/pipeline/types";
 import type { PortfolioIntelligence } from "@/lib/intelligence/types";
+import { advisorNotificationHref } from "@/lib/advisor/notification-links";
 
 export type AdvisorPriorityItem = {
   id: string;
@@ -130,7 +131,7 @@ export function mapNotificationsToActivity(
     message: n.message,
     createdAt: n.createdAt,
     read: n.read,
-    href: "/advisor/notifications",
+    href: advisorNotificationHref(n),
   }));
 }
 

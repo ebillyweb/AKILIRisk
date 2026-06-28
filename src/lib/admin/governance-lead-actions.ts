@@ -6,6 +6,7 @@ import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { createNotification } from "@/lib/data/advisor";
+import { formatInvestableAssetsRange } from "@/lib/governance/investable-assets-range";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 
 const assignLeadSchema = z.object({
@@ -66,11 +67,14 @@ export async function assignGovernanceReviewLeadAction(raw: unknown) {
     });
 
     if (advisorProfileId) {
+      const assetsLine = lead.investableAssetsRange
+        ? ` Assets: ${formatInvestableAssetsRange(lead.investableAssetsRange)}.`
+        : "";
       await createNotification(
         advisorProfileId,
         "NEW_LEAD",
         "Assessment lead assigned to you",
-        `${lead.name} (${lead.email}), ${lead.familyOfficeName}. Complexity: ${lead.familyComplexity.replace(/_/g, " ").toLowerCase()}.`,
+        `${lead.name} (${lead.email}). Complexity: ${lead.familyComplexity.replace(/_/g, " ").toLowerCase()}.${assetsLine}`,
         lead.id
       );
     }

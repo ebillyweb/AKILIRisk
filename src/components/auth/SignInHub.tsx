@@ -58,9 +58,9 @@ function rolePanelCopy(role: SignInRole) {
       };
     case "admin":
       return {
-        eyebrow: "Platform administration",
+        eyebrow: "AKILI platform team",
         description:
-          "Platform administrators sign in with the same secure credentials used for the AKILI admin console.",
+          "For AKILI team members with platform access. Sign in with the credentials issued for your admin account.",
       };
   }
 }
@@ -114,6 +114,12 @@ function ClientMagicLinkPanel({ callbackUrl }: { callbackUrl: string | null }) {
           </button>
           .
         </p>
+        <p className="text-sm text-muted-foreground">
+          Don&apos;t have an advisor yet?{" "}
+          <Link href="/request-review" className="font-semibold text-foreground hover:underline">
+            Get in contact with an advisor
+          </Link>
+        </p>
       </div>
     );
   }
@@ -145,6 +151,12 @@ function ClientMagicLinkPanel({ callbackUrl }: { callbackUrl: string | null }) {
         New family client?{" "}
         <Link href="/start" className="font-semibold text-foreground hover:underline">
           Start with your invite code
+        </Link>
+      </p>
+      <p className="text-center text-sm text-muted-foreground">
+        Don&apos;t have an advisor yet?{" "}
+        <Link href="/request-review" className="font-semibold text-foreground hover:underline">
+          Get in contact with an advisor
         </Link>
       </p>
       {callbackUrl ? (
@@ -186,7 +198,7 @@ function StaffCredentialsPanel({
         setError(
           role === "advisor"
             ? "Invalid email or password, or your email may not be confirmed yet. Check your inbox for the confirmation link, or create an account if you're new."
-            : "Invalid email or password. Platform administrator accounts use the same sign-in form — client accounts require an email link instead."
+            : "Invalid email or password. AKILI team platform accounts use this form — client accounts require an email link instead."
         );
         setIsLoading(false);
         return;
@@ -234,7 +246,7 @@ function StaffCredentialsPanel({
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
-          placeholder={role === "advisor" ? "you@firm.com" : "admin@firm.com"}
+          placeholder={role === "advisor" ? "you@firm.com" : "you@akili.com"}
           className="min-h-11"
         />
       </div>
@@ -346,7 +358,7 @@ function SignInHubContent() {
       <Tabs value={activeRole} onValueChange={handleRoleChange} className="gap-6">
         <TabsList
           aria-label="Sign-in account type"
-          className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1"
+          className="grid !h-auto min-h-14 w-full grid-cols-3 items-stretch gap-1.5 rounded-xl bg-muted/70 p-1.5"
         >
           {SIGN_IN_ROLES.map(({ id, label, shortLabel }) => {
             const Icon = ROLE_ICONS[id];
@@ -355,8 +367,9 @@ function SignInHubContent() {
                 key={id}
                 value={id}
                 className={cn(
-                  "min-h-11 flex-col gap-1 px-2 py-2 text-xs sm:flex-row sm:gap-2 sm:text-sm",
-                  "data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  "!h-auto min-h-11 w-full flex-col gap-1 rounded-lg px-2 py-2.5 text-xs",
+                  "sm:flex-row sm:gap-2 sm:text-sm",
+                  "data-[state=active]:bg-background data-[state=active]:shadow-sm",
                 )}
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
@@ -408,7 +421,7 @@ function SignInHubContent() {
         </p>
       ) : (
         <p className="text-center text-sm text-muted-foreground">
-          Advisor or administrator?{" "}
+          Advisor or AKILI team member?{" "}
           <button
             type="button"
             onClick={() => handleRoleChange("advisor")}

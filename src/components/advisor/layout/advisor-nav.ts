@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileText,
   Home,
+  Inbox,
   ListTodo,
   Mail,
   MessageSquare,
@@ -73,6 +74,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Clients",
     items: [
       { href: "/advisor/pipeline", label: "All Clients", icon: Users },
+      { href: "/advisor/leads", label: "Assessment leads", icon: Inbox },
       { href: "/advisor/invitations", label: "Invitations", icon: UserPlus, requiresClientCapacity: true },
     ],
   },

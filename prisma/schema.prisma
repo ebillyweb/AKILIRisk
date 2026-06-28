@@ -952,13 +952,20 @@ enum FamilyComplexity {
   FAMILY_BUSINESS_INVOLVED
 }
 
+enum InvestableAssetsRange {
+  UNDER_5M
+  FROM_5M_TO_25M
+  FROM_25M_TO_100M
+  OVER_100M
+  PREFER_NOT_TO_SAY
+}
+
 model GovernanceReviewLead {
-  id                    String            @id @default(cuid())
+  id                    String                 @id @default(cuid())
   name                  String
   email                 String
-  familyOfficeName      String
-  primaryAdvisor        String?
   familyComplexity      FamilyComplexity
+  investableAssetsRange InvestableAssetsRange?
   promptedInterest      String?
   assignedAdvisorId     String?
   assignedAt            DateTime?

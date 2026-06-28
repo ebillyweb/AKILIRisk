@@ -5,6 +5,7 @@ import { Bell, RefreshCw, Info } from "lucide-react";
 import { formatDistanceToNow, isToday, isThisWeek } from "date-fns";
 import { useRouter } from "next/navigation";
 import { markNotificationReadAction } from "@/lib/actions/advisor-actions";
+import { advisorNotificationHref } from "@/lib/advisor/notification-links";
 import type { AdvisorNotification } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -173,8 +174,9 @@ export function NotificationList({ notifications }: NotificationListProps) {
       }
     }
 
-    if (notification.referenceId && notification.type === "NEW_INTAKE") {
-      router.push(`/advisor/review/${notification.referenceId}`);
+    const href = advisorNotificationHref(notification);
+    if (href !== "/advisor/notifications") {
+      router.push(href);
     }
   };
 
