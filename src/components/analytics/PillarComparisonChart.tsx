@@ -102,8 +102,8 @@ export function PillarComparisonChart({ rows }: PillarComparisonChartProps) {
             tick={{ fontSize: 12, fill: theme.axis }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
-              value.toFixed(1),
+            formatter={(value, name) => [
+              typeof value === "number" ? value.toFixed(1) : String(value ?? ""),
               name === "previous" ? "Previous" : "Latest",
             ]}
             labelFormatter={(label) => String(label)}

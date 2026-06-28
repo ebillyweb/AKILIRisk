@@ -65,7 +65,10 @@ export function CategoryBreakdownChart({
         tick={{ fontSize: 12, fill: theme.axis }}
       />
       <Tooltip
-        formatter={(value: number) => [value.toFixed(1), "Score"]}
+        formatter={(value) => [
+          typeof value === "number" ? value.toFixed(1) : String(value ?? ""),
+          "Score",
+        ]}
         labelFormatter={(_, payload) => {
           const row = payload?.[0]?.payload as CategoryBreakdownPoint & {
             label: string;
