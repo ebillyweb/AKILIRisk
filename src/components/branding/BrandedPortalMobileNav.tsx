@@ -13,7 +13,7 @@ type BrandedPortalNavLink = {
   label: string;
 };
 
-const DEFAULT_NAV_LINKS: BrandedPortalNavLink[] = [{ href: "/pricing", label: "Pricing" }];
+const DEFAULT_NAV_LINKS: BrandedPortalNavLink[] = [];
 
 type BrandedPortalMobileNavProps = {
   navLinks?: BrandedPortalNavLink[];
@@ -97,7 +97,12 @@ export function BrandedPortalMobileNav({
                 );
               })}
             </div>
-            <div className="mt-4 flex flex-col gap-2 border-t border-border/60 pt-4">
+            <div
+              className={cn(
+                "flex flex-col gap-2",
+                navLinks.length > 0 && "mt-4 border-t border-border/60 pt-4",
+              )}
+            >
               <MarketingNavAuthActions layout="stacked" />
             </div>
           </nav>

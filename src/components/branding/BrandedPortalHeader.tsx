@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
 import { BrandedPortalMobileNav } from "@/components/branding/BrandedPortalMobileNav";
 import { MarketingNavAuthActions } from "@/components/marketing/MarketingNavAuthActions";
-import { Button } from "@/components/ui/button";
 import {
   clientPortalBrandingDisplayTitle,
   clientPortalLogoImgSrc,
@@ -27,7 +24,6 @@ export function BrandedPortalHeader({
   titleAsHeading = false,
   className,
 }: BrandedPortalHeaderProps) {
-  const pathname = usePathname();
   const brandTitle = clientPortalBrandingDisplayTitle(branding);
   const logoSrc = clientPortalLogoImgSrc(branding);
   const previewHex = getPreviewBrandHex(branding);
@@ -66,26 +62,10 @@ export function BrandedPortalHeader({
         </div>
 
         <nav
-          className="hidden items-center gap-1 lg:flex"
+          className="hidden items-center gap-2 lg:flex"
           aria-label="Portal navigation"
         >
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-9 px-3 text-sm",
-              pathname === "/pricing" &&
-                "bg-secondary font-semibold text-foreground hover:bg-secondary hover:text-foreground",
-            )}
-          >
-            <Link href="/pricing" aria-current={pathname === "/pricing" ? "page" : undefined}>
-              Pricing
-            </Link>
-          </Button>
-          <div className="ml-2 flex items-center gap-2 border-l border-border/60 pl-3">
-            <MarketingNavAuthActions />
-          </div>
+          <MarketingNavAuthActions />
         </nav>
 
         <BrandedPortalMobileNav primaryHex={previewHex?.primary} />

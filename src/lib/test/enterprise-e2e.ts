@@ -306,8 +306,8 @@ export async function inspectEnterpriseScenario(
       role: membership?.role ?? "UNKNOWN",
       resolvedBranding: memberBranding
         ? {
-            tagline: memberBranding.tagline,
-            primaryColor: memberBranding.primaryColor,
+            tagline: memberBranding.tagline ?? null,
+            primaryColor: memberBranding.primaryColor ?? null,
           }
         : null,
       intakeQuestionTexts: memberIntake.map((q) => q.questionText),
