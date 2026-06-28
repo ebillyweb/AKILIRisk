@@ -223,15 +223,15 @@ Plans:
 
 **Dependencies:** Phase 24 (continuous improvement complete)
 **Requirements:** REPORT-01
-**Plans:** 1/3 plans executed
+**Plans:** 3 plans
 
 **Goal:** Generate executive-grade reports that tell the full risk reduction story -- not just "your score is 7.2" but "risk reduced 38%, 14 of 18 recommendations completed, estimated financial exposure reduced, top remaining risks, upcoming milestones, trend over six months."
 
 Plans:
 
 - [x] 25-01-PLAN.md -- Schema migration (ExecutiveReport model), snapshot types, derivation functions, snapshot builder + tests
-- [ ] 25-02-PLAN.md -- PDF section components, executive styles, render function, API route
-- [ ] 25-03-PLAN.md -- Server actions, query helpers, advisor UI (list + edit), draft form, cron route
+- [x] 25-02-PLAN.md -- PDF section components, executive styles, render function, API route
+- [x] 25-03-PLAN.md -- Server actions, query helpers, advisor UI (list + edit), draft form, cron route
 
 **Report Content:**
 
@@ -262,9 +262,9 @@ Plans:
 | 22 - Recommendation Experience | Complete | 6/6 | ██████████ 100% |
 | 23 - Client Engagement & Tracking | Planned | 0/5 | ░░░░░░░░░░ 0% |
 | 24 - Continuous Risk Improvement | Complete | 4/4 | ██████████ 100% |
-| 25 - Executive Reporting | 1/3 | In Progress|  |
+| 25 - Executive Reporting | Complete | 3/3 | ██████████ 100% |
 
-**Overall:** ████████░░ 71% (5/7 phases complete)
+**Overall:** █████████░ 86% (6/7 phases complete)
 
 ## Architecture Notes
 

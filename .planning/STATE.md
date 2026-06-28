@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: verifying
-last_updated: "2026-06-27T22:10:00.000Z"
+status: ready
+last_updated: "2026-06-28T04:00:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 26
-  completed_plans: 25
-  percent: 90
+  total_plans: 21
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -23,29 +23,27 @@ progress:
 ## Current Position
 
 **Milestone:** v1.5 Cyber Risk Intelligence
-**Phase:** 25 - Executive Reporting (IN PROGRESS)
-**Plan:** 2 of 4 complete
-**Status:** In progress — Plans 01 and 02 complete
+**Phase:** 25 - Executive Reporting (DONE)
+**Plan:** 3 of 3 (complete)
+**Status:** Phase complete -- verified and approved
 
-### Phase 24 Goal
+### Phase 25 Goal
 
-Close the assessment loop -- clients can reassess, see score deltas, and measure the impact of completed solutions.
+Generate executive-grade reports that tell the full risk reduction story -- not just scores, but a strategic business review spanning multiple assessments, risk domains, recommendation progress, score deltas with attribution, and next steps. Two output types: Executive Report (client-facing) and Advisor Brief (internal meeting prep).
 
-**Requirements:** LIFECYCLE-03
+**Requirements:** REPORT-01
 
 ## Performance Metrics
 
 ### Milestone Progress
 
-- **Phases:** 5/7 complete (Phases 19, 20, 21, 22, 23, 24)
+- **Phases:** 6/7 complete (Phases 19, 20, 21, 22, 24, 25)
 - **Requirements:** 9 core + 4 lifecycle (LIFECYCLE-01 through 03, REPORT-01), 2 completed (UNIFIED-01, UNIFIED-02)
 - **Coverage:** 100% (all requirements mapped)
 
 ### Development Velocity
 
 - **Started:** 2026-03-18 (roadmap creation)
-- **Current:** Day 1
-- **Estimated:** TBD (needs planning)
 
 ### Historical Velocity
 
@@ -77,18 +75,22 @@ Close the assessment loop -- clients can reassess, see score deltas, and measure
 - **gpt-4o-mini model selection for cost-effective structured output**
 - **Identity Risk Subcategory Weighting:** Social Exposure and Public Information weighted 4 (vs 3 for Digital Footprint and Family Visibility) reflecting primary identity theft vectors
 - **Identity Risk Question Bank Size:** 21 questions providing comprehensive coverage while maintaining assessment efficiency and user experience
-- **Phase 21-01: Dual registration pattern:** New pillar rules added to both setup-all-pillar-rules.ts (DB seed) AND recommendation-catalog-fixtures.ts (test mocks) — both must stay in sync
-- **Phase 21-01: New pillar service categories:** financial (liquidity, tax), legal (estate), advisory (behavioral) — distinct from existing governance/security/insurance/reputation
-- **Phase 21-02: rulesOverride backward-compatibility:** resolveRecommendationRulesForAssessment returns undefined when no snapshot — engine falls back to DB load, zero behavior change for existing assessments
+- **Phase 21-01: Dual registration pattern:** New pillar rules added to both setup-all-pillar-rules.ts (DB seed) AND recommendation-catalog-fixtures.ts (test mocks) -- both must stay in sync
+- **Phase 21-01: New pillar service categories:** financial (liquidity, tax), legal (estate), advisory (behavioral) -- distinct from existing governance/security/insurance/reputation
+- **Phase 21-02: rulesOverride backward-compatibility:** resolveRecommendationRulesForAssessment returns undefined when no snapshot -- engine falls back to DB load, zero behavior change for existing assessments
 - **Phase 21-02: CatalogRule->RecommendationRule mapping required:** must map serviceRecommendationId->serviceId and triggerConditions->conditions before passing as rulesOverride to engine
 - **Phase 24-01: Assessment version = chain length:** Assessment.version is a rescore counter; reassessment version is derived from walking the previousAssessmentId chain
 - **Phase 24-01: SolutionActivity FK nullable evolution:** assessmentRecommendationId made nullable via ALTER COLUMN DROP NOT NULL; new assessmentId FK added for assessment-scoped events
+- **Phase 25-01: ExecutiveReport as separate model:** New ExecutiveReport table, not a reportType discriminator on existing Report. ExecutiveReportSnapshot is independent from ReportSnapshot. Shared PDF infrastructure (branding, rendering, styles).
+- **Phase 25-01: Executive Readiness tier replaces composite score:** Developing/Mature/Advanced derived from per-pillar risk levels. No mathematical composite score (D-09).
+- **Phase 25-01: Qualitative impact levels:** Critical/High/Medium/Low derived from urgency * pillarWeight. Financial dollar amounts deferred to future phases.
 
 ### Architecture Approach
 
 - **Foundation:** Builds on proven v1.4 platform patterns (Next.js/Prisma/PostgreSQL)
 - **Data Model:** Separate schemas for cyber-specific data, materialized views for unified scoring
 - **Integration:** Leverages ae-cvss-calculator for CVSS 4.0 scoring, mathjs for composite risk calculations
+- **Reporting:** ExecutiveReport model with Draft/Published/Superseded lifecycle and snapshot immutability. Two render variants (client + advisor brief) from one snapshot.
 
 ### Phase Dependencies
 
@@ -100,25 +102,19 @@ Close the assessment loop -- clients can reassess, see score deltas, and measure
 6. Phase 24: Requires Phase 23 execution tracking complete
 7. Phase 25: Requires Phase 24 continuous improvement complete
 
-### Research Insights
-
-- **Foundation Strategy:** Must establish domain boundaries and data architecture before any implementation to prevent contamination
-- **External Integration Isolation:** Threat intelligence APIs require proper caching and tenant isolation to prevent security cascades
-- **Unified Scoring Mathematics:** Risk aggregation requires mature individual assessment systems to ensure mathematical validity
-- **User Experience Separation:** Maintain separate assessment flows, use unified dashboards for combined results only
-
 ## Active TODOs
 
-### Immediate
+### Remaining
 
-- [x] Plan Phase 22 - Recommendation Experience
+- [ ] Phase 23 - Optional Client Engagement & Implementation Tracking (Planned, 0/5)
 
-### Upcoming
+### Phase 25 Complete
 
-- [ ] Execute Phase 22
-- [ ] Plan Phase 23 - Optional Client Engagement & Implementation Tracking
-- [ ] Plan Phase 24 - Continuous Risk Improvement
-- [ ] Plan Phase 25 - Executive Reporting
+- [x] REPORT-01: Executive-grade reports with risk reduction narrative, score deltas, recommendation progress, and trends
+
+### Phase 24 Complete
+
+- [x] LIFECYCLE-03: Reassessment, score deltas, risk intelligence timeline
 
 ### Phase 21 Complete
 
@@ -127,30 +123,19 @@ Close the assessment loop -- clients can reassess, see score deltas, and measure
 
 ### Phase 19 Complete
 
-- [x] CYBER-01: Independent cyber risk assessment with numerical scoring ✅
-- [x] CYBER-02: Automated cyber risk recommendations based on assessment results ✅
-- [x] Advisor visibility: Client cyber risk scores in separate portal section ✅
+- [x] CYBER-01: Independent cyber risk assessment with numerical scoring
+- [x] CYBER-02: Automated cyber risk recommendations based on assessment results
 
 ## Known Blockers
 
-None identified. Ready to proceed with Phase 19 planning.
-
-## Research Flags
-
-**Phase 20:** Complex vendor integrations require API security research and threat intelligence provider evaluation during planning
-**Phase 22:** Recommendation UX across advisor/enterprise/client roles — requires mapping existing UI touchpoints before planning
-**Phase 24:** Reassessment versioning and score delta computation need schema design research
-**Phase 25:** Executive reporting with trend visualization needs domain-specific research
-
-**Phases 19, 21:** Follow established patterns, skip research-phase
+None identified.
 
 ## Session Continuity
 
-**Last Action:** Phase 25 Plan 02 complete -- PDF rendering pipeline (11 components + API route), 2 commits.
-**Next Action:** Execute Phase 25 Plan 03.
-
-**Context Preservation:** Phase 25 Plans 01+02 established: ExecutiveReport Prisma model, ExecutiveReportSnapshot type contract, buildExecutiveReportSnapshot assembler (Plan 01); executive-styles.ts, 8 PDF section components, render-executive-report.tsx, GET /api/reports/executive/[reportId]/pdf route with three-bucket auth (Plan 02).
+**Last Action:** Phase 25 complete -- all 3 plans executed, verified, approved.
+**Next Action:** Phase 23 (Client Engagement & Implementation Tracking) is the only remaining phase in v1.5.
 
 ---
-*State updated: 2026-06-27*
-*Stopped at: Phase 25 Plan 02 complete*
+*State updated: 2026-06-28*
+*Phase 25 complete: 3/3 plans, verified*
+*Next phase: 23*
