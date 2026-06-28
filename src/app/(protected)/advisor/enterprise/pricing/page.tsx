@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { EnterprisePricingPageContent } from "@/components/marketing/EnterprisePricingPageContent";
 import { requireAdvisorSession } from "@/lib/advisor/auth";
 import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
-import { SELF_SERVE_TIERS, type SelfServeTier } from "@/lib/billing/tier-catalog";
 import { isModuleTier } from "@/lib/billing/plan-prices-ui";
+import { parseSignupCheckoutIntent } from "@/lib/billing/tier-catalog";
 import { resolveBillingContext } from "@/lib/enterprise/billing-context";
 import {
   enterpriseNeedsCardCheckout,
@@ -52,17 +52,7 @@ export default async function EnterprisePricingPage({
     redirect("/advisor/billing");
   }
 
-  const checkoutPlan =
-    sp.checkout_plan === "ESSENTIALS" ||
-    sp.checkout_plan === "PROFESSIONAL" ||
-    sp.checkout_plan === "BUSINESS" ||
-    sp.checkout_plan === "PLATINUM"
-      ? sp.checkout_plan
-      : null;
-  const checkoutCycle =
-    sp.checkout_cycle === "MONTHLY" || sp.checkout_cycle === "ANNUAL"
-      ? sp.checkout_cycle
-      : null;
+  const urlCheckoutIntent = parseSignupCheckoutIntent(sp);
 
   const pricing = await fetchPublicTierPricing();
 
@@ -77,11 +67,10 @@ export default async function EnterprisePricingPage({
       : null;
 
   const checkoutPlanIntent =
-    checkoutPlan && checkoutCycle
-      ? { tier: checkoutPlan as SelfServeTier, billingCycle: checkoutCycle }
-      : contractedTier && contractedCycle
-        ? { tier: contractedTier, billingCycle: contractedCycle }
-        : null;
+    urlCheckoutIntent ??
+    (contractedTier && contractedCycle
+      ? { tier: contractedTier, billingCycle: contractedCycle }
+      : null);
 
   return (
     <EnterprisePricingPageContent
