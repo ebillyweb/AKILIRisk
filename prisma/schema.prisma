@@ -97,6 +97,10 @@ model User {
   billingContactEnterprises     AdvisorEnterprise[]   @relation("EnterpriseBillingContact")
   /// Phase 24: review cadence entries where this user is the client.
   reviewCadences                ReviewCadence[]
+  /// Phase 25: executive reports where this user is the client.
+  executiveReports              ExecutiveReport[] @relation("ExecutiveReportClient")
+  /// Phase 25: executive reports this user has published (advisor/admin).
+  publishedExecutiveReports     ExecutiveReport[] @relation("ExecutiveReportPublisher")
 
   /// Round-11 commit 2.4a: @@index([email]) + the phase-A
   /// User_emailCiphertext_idx are dropped at the SQL level by
@@ -1088,6 +1092,8 @@ model AdvisorProfile {
   intakeSnapshots            IntakeSnapshot[]
   /// Phase 24: review cadence entries managed by this advisor.
   reviewCadences             ReviewCadence[]
+  /// Phase 25: executive reports this advisor has generated.
+  executiveReports           ExecutiveReport[]
 
   @@index([userId])
   @@index([enterpriseId])
@@ -2136,4 +2142,72 @@ model ReviewCadence {
   @@unique([clientId, advisorProfileId])
   @@index([nextDueDate])
   @@map("review_cadences")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 25: Executive Reporting
+// ---------------------------------------------------------------------------
+
+/// Phase 25 (D-01, D-03): Multi-assessment executive report with Draft ->
+/// Published -> Superseded lifecycle. Scoped to (client, advisor) pair, not
+/// a single assessment, because executive reports span the full risk story
+/// across multiple assessments (D-22). The frozen executiveSnapshotData is
+/// populated at publish time from buildExecutiveReportSnapshot(). Null on
+/// DRAFT rows -- DRAFT preview renders from live data with a watermark.
+///
+/// Cascade rules (mirror Report model):
+///   * client ON DELETE CASCADE -- RTBF on a client wipes every executive
+///     report for them. Snapshot data includes client PII.
+///   * advisorProfile ON DELETE CASCADE -- removing an advisor profile
+///     removes their executive reports (orphaned without the advisor context).
+///   * publishedBy ON DELETE SET NULL -- deleted advisor preserves report
+///     attribution-as-null rather than orphaning published rows.
+///
+/// Partial unique index (one DRAFT per (clientId, advisorProfileId)):
+///   Enforced by raw SQL in the migration -- Prisma DSL does not support
+///   partial unique indexes. The index is:
+///   CREATE UNIQUE INDEX "ExecutiveReport_clientId_advisorProfileId_draft_unique"
+///       ON "ExecutiveReport"("clientId", "advisorProfileId") WHERE "status" = 'DRAFT';
+model ExecutiveReport {
+  id                     String       @id @default(cuid())
+  /// Scoped to client, not assessment -- executive reports span multiple assessments (D-22).
+  clientId               String
+  advisorProfileId       String
+  /// Monotonic per (clientId, advisorProfileId). DRAFT rows hold the next
+  /// version value pre-emptively; publish transitions DRAFT -> PUBLISHED.
+  version                Int
+  /// Reuses existing ReportStatus enum (DRAFT/PUBLISHED/SUPERSEDED) per D-03.
+  status                 ReportStatus @default(DRAFT)
+
+  /// Reporting window. Advisor can override per D-23; default is "since last published."
+  reportingPeriodStart   DateTime
+  reportingPeriodEnd     DateTime
+
+  /// Frozen multi-assessment snapshot at publish time. Null on DRAFT rows.
+  executiveSnapshotData  Json?
+  /// Frozen advisor branding at publish time. Null on DRAFT rows.
+  brandingSnapshot       Json?
+
+  /// Advisor-authored editorial fields. Editable freely on DRAFT rows;
+  /// frozen into executiveSnapshotData at publish time (D-18).
+  advisorNotes           String?
+  meetingAgenda          String?
+  /// String[] stored as Json (Prisma does not have a native String[] Json column).
+  discussionPrompts      Json?
+
+  publishedAt            DateTime?
+  /// User id of whoever clicked Publish. Null on DRAFT rows and when publisher deleted.
+  publishedById          String?
+
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  client          User          @relation("ExecutiveReportClient", fields: [clientId], references: [id], onDelete: Cascade)
+  advisorProfile  AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  publishedBy     User?         @relation("ExecutiveReportPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+
+  /// Natural per-(client, advisor, version) uniqueness. Catches concurrent publish races.
+  @@unique([clientId, advisorProfileId, version])
+  /// Covers "fetch DRAFT for this client+advisor" and "fetch PUBLISHED history" at index speed.
+  @@index([clientId, advisorProfileId, status])
 }
