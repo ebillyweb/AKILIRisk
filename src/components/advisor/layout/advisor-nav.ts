@@ -186,6 +186,13 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         icon: Users,
         requiresEnterpriseTeam: true,
       },
+      {
+        href: "/advisor/enterprise/methodology",
+        label: "Firm methodology",
+        icon: BookOpen,
+        requiresEnterpriseTeam: true,
+        requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
+      },
     ],
   },
   {

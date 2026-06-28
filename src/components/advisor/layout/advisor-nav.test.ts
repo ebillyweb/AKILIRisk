@@ -126,6 +126,15 @@ describe("getActiveAdvisorNavHref", () => {
     expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/team")).toBe("configuration");
   });
 
+  it("shows Firm methodology for enterprise team managers when team nav is enabled", () => {
+    const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
+    const firmMethodology = visible
+      .flatMap((section) => section.items)
+      .find((item) => item.href === "/advisor/enterprise/methodology");
+    expect(firmMethodology?.label).toBe("Firm methodology");
+    expect(firmMethodology?.requiresTierFeature).toBe("METHODOLOGY_CUSTOMIZATION");
+  });
+
   it("hides Billing nav when billing access is disabled for enterprise advisors", () => {
     const withBilling = getVisibleAdvisorNavSections(flags);
     expect(

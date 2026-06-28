@@ -1,5 +1,6 @@
 'use client';
 
+import type { Session } from "next-auth";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
 import { Toaster } from 'react-hot-toast';
@@ -13,7 +14,13 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider';
  * Wraps the app with TanStack Query and toast notifications.
  */
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  session?: Session | null;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -27,7 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <SessionProvider refetchOnWindowFocus>
+    <SessionProvider session={session} refetchOnWindowFocus>
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           {children}

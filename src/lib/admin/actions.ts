@@ -942,10 +942,28 @@ export async function createEnterpriseByAdmin(input: unknown) {
         });
       }
 
+      const { transferAdvisorAssetsToEnterprise } = await import(
+        "@/lib/enterprise/transfer-advisor-assets"
+      );
+      await transferAdvisorAssetsToEnterprise(
+        tx,
+        owner.advisorProfile!.id,
+        enterprise.id,
+      );
+
       return { enterprise, membership, subscription };
     });
 
     await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
+
+    const { syncEnterpriseRulesToMembers } = await import(
+      "@/lib/methodology/clone-enterprise-defaults"
+    );
+    const { syncEnterpriseMethodologyToMembers } = await import(
+      "@/lib/methodology/clone-enterprise-methodology"
+    );
+    await syncEnterpriseRulesToMembers(result.enterprise.id);
+    await syncEnterpriseMethodologyToMembers(result.enterprise.id);
 
     await writeAudit({
       actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },

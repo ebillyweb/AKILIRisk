@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,13 @@ export function MarketingNavAuthActions({
   className,
 }: MarketingNavAuthActionsProps) {
   const { status } = useSession();
+  const router = useRouter();
   const stacked = layout === "stacked";
+
+  async function handleSignOut() {
+    await signOut({ redirect: false });
+    router.refresh();
+  }
 
   if (status === "loading") {
     return (
@@ -54,7 +60,7 @@ export function MarketingNavAuthActions({
           className={cn(
             stacked ? "h-12 w-full" : "h-9 px-3 text-[13px] font-medium text-muted-foreground",
           )}
-          onClick={() => void signOut({ redirectTo: "/" })}
+          onClick={() => void handleSignOut()}
         >
           Sign Out
         </Button>

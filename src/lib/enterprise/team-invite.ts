@@ -7,6 +7,9 @@ import { decryptUserEmail } from "@/lib/auth/user-email-crypto";
 import { prisma } from "@/lib/db";
 import { cancelSoloSubscriptionForEnterprise } from "@/lib/enterprise/cancel-solo-subscription";
 import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-subscription";
+import { transferAdvisorAssetsToEnterprise } from "@/lib/enterprise/transfer-advisor-assets";
+import { syncEnterpriseRulesToMembers } from "@/lib/methodology/clone-enterprise-defaults";
+import { syncEnterpriseMethodologyToMembers } from "@/lib/methodology/clone-enterprise-methodology";
 import { getEnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
 import {
   buildEnterpriseTeamInviteUrl,
@@ -211,9 +214,20 @@ export async function acceptEnterpriseTeamInvite(
         acceptedAt: new Date(),
       },
     });
+
+    if (membership.role === "ADMIN") {
+      await transferAdvisorAssetsToEnterprise(
+        tx,
+        profile.id,
+        membership.enterpriseId,
+      );
+    }
   });
 
   await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
+
+  await syncEnterpriseRulesToMembers(membership.enterpriseId);
+  await syncEnterpriseMethodologyToMembers(membership.enterpriseId);
 
   return {
     enterpriseId: membership.enterprise.id,

@@ -4,6 +4,24 @@ import { prisma } from "@/lib/db";
 type CloneTx = Prisma.TransactionClient;
 
 /**
+ * Seed platform recommendation rules on an enterprise when it has none yet.
+ * Safe to call inside a larger transaction (e.g. advisor asset transfer).
+ */
+export async function ensureEnterprisePlatformRecommendationRulesInTx(
+  tx: CloneTx,
+  enterpriseId: string,
+): Promise<boolean> {
+  const existing = await tx.enterpriseRecommendationRule.count({
+    where: { enterpriseId },
+  });
+  if (existing > 0) return false;
+
+  const slugToPillarId = await buildSlugToPillarIdMapInTx(tx);
+  await cloneAllPlatformRulesToEnterprise(tx, enterpriseId, slugToPillarId);
+  return true;
+}
+
+/**
  * Clone platform recommendation rules into an enterprise's rule set.
  * Idempotent — skips rules already cloned (matched by platformSourceId).
  */
@@ -15,11 +33,9 @@ export async function cloneEnterpriseDefaultsIfNeeded(
   });
   if (existing > 0) return false;
 
-  const slugToPillarId = await buildSlugToPillarIdMap();
-
   await prisma.$transaction(
     async (tx) => {
-      await cloneAllPlatformRulesToEnterprise(tx, enterpriseId, slugToPillarId);
+      await ensureEnterprisePlatformRecommendationRulesInTx(tx, enterpriseId);
     },
     { timeout: 60_000 },
   );
@@ -139,7 +155,13 @@ export async function syncEnterpriseRulesToAdvisor(
 // --- Internal helpers ---
 
 async function buildSlugToPillarIdMap(): Promise<Map<string, string>> {
-  const pillars = await prisma.pillar.findMany({
+  return buildSlugToPillarIdMapInTx(prisma);
+}
+
+async function buildSlugToPillarIdMapInTx(
+  tx: CloneTx | typeof prisma,
+): Promise<Map<string, string>> {
+  const pillars = await tx.pillar.findMany({
     where: { archivedAt: null },
     select: { id: true, slug: true },
   });

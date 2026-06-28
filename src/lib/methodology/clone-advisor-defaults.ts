@@ -12,6 +12,10 @@ import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-catego
 import { narrativeStarterForSlug } from "@/lib/methodology/narrative-starter";
 import { pillarIdForRecommendationRule } from "@/lib/methodology/infer-recommendation-rule-pillar";
 import { PLATFORM_PILLAR_CATALOG } from "@/lib/methodology/pillar-catalog-starter";
+import {
+  cloneAllEnterpriseMethodologyToAdvisorInTx,
+  syncEnterpriseMethodologyToAdvisorInTx,
+} from "@/lib/methodology/clone-enterprise-methodology";
 
 export async function cloneAdvisorDefaultsIfNeeded(
   advisorProfileId: string,
@@ -34,87 +38,107 @@ export async function cloneAdvisorDefaultsIfNeeded(
 
   await prisma.$transaction(
     async (tx) => {
-      for (const pillar of pillars) {
-        const starter = PLATFORM_PILLAR_CATALOG.find((p) => p.slug === pillar.slug);
-        const weight = starter?.defaultWeight ?? 10;
-        await tx.advisorPillarOverride.upsert({
-          where: {
-            advisorProfileId_pillarId: {
-              advisorProfileId,
-              pillarId: pillar.id,
-            },
-          },
-          create: {
+      const enterpriseId = await resolveEnterpriseIdForAdvisor(tx, advisorProfileId);
+
+      if (enterpriseId) {
+        const overrideCount = await tx.advisorPillarOverride.count({
+          where: { advisorProfileId },
+        });
+        if (overrideCount === 0) {
+          await cloneAllEnterpriseMethodologyToAdvisorInTx(
+            tx,
             advisorProfileId,
-            pillarId: pillar.id,
-            isActive: true,
-            weight,
-            threshold: DEFAULT_RISK_THRESHOLDS as unknown as Prisma.InputJsonValue,
-            emphasisMultiplier: 1.5,
-            displayOrder: pillar.defaultOrder,
-          },
-          update: {},
-        });
-      }
-
-      const assessCount = await tx.advisorPillarQuestion.count({
-        where: { advisorProfileId },
-      });
-      if (assessCount === 0) {
-        await cloneAllPlatformAssessmentQuestions(tx, advisorProfileId, slugToPillarId);
-      } else if (options?.force) {
-        await syncMissingPlatformAssessmentQuestions(tx, advisorProfileId, slugToPillarId);
-      }
-
-      const intakeCount = await tx.advisorIntakeQuestion.count({
-        where: { advisorProfileId },
-      });
-      if (intakeCount === 0) {
-        await cloneAllPlatformIntakeQuestions(tx, advisorProfileId, slugToPillarId);
-      } else if (options?.force) {
-        await syncMissingPlatformIntakeQuestions(tx, advisorProfileId, slugToPillarId);
-      }
-
-      for (const pillar of pillars) {
-        const existing = await tx.advisorPillarNarrative.findUnique({
-          where: {
-            advisorProfileId_pillarId: {
-              advisorProfileId,
-              pillarId: pillar.id,
-            },
-          },
-        });
-        if (existing && !options?.force) continue;
-        const bands = narrativeStarterForSlug(pillar.slug);
-        await tx.advisorPillarNarrative.upsert({
-          where: {
-            advisorProfileId_pillarId: {
-              advisorProfileId,
-              pillarId: pillar.id,
-            },
-          },
-          create: {
+            enterpriseId,
+          );
+        } else if (options?.force) {
+          await syncEnterpriseMethodologyToAdvisorInTx(
+            tx,
+            enterpriseId,
             advisorProfileId,
-            pillarId: pillar.id,
-            allNegative: bands.allNegative,
-            allYes: bands.allYes,
-            midBand: bands.midBand,
-          },
-          update: options?.force
-            ? {
-                allNegative: bands.allNegative,
-                allYes: bands.allYes,
-                midBand: bands.midBand,
-                version: { increment: 1 },
-              }
-            : {},
+          );
+        }
+      } else {
+        for (const pillar of pillars) {
+          const starter = PLATFORM_PILLAR_CATALOG.find((p) => p.slug === pillar.slug);
+          const weight = starter?.defaultWeight ?? 10;
+          await tx.advisorPillarOverride.upsert({
+            where: {
+              advisorProfileId_pillarId: {
+                advisorProfileId,
+                pillarId: pillar.id,
+              },
+            },
+            create: {
+              advisorProfileId,
+              pillarId: pillar.id,
+              isActive: true,
+              weight,
+              threshold: DEFAULT_RISK_THRESHOLDS as unknown as Prisma.InputJsonValue,
+              emphasisMultiplier: 1.5,
+              displayOrder: pillar.defaultOrder,
+            },
+            update: {},
+          });
+        }
+
+        const assessCount = await tx.advisorPillarQuestion.count({
+          where: { advisorProfileId },
         });
+        if (assessCount === 0) {
+          await cloneAllPlatformAssessmentQuestions(tx, advisorProfileId, slugToPillarId);
+        } else if (options?.force) {
+          await syncMissingPlatformAssessmentQuestions(tx, advisorProfileId, slugToPillarId);
+        }
+
+        const intakeCount = await tx.advisorIntakeQuestion.count({
+          where: { advisorProfileId },
+        });
+        if (intakeCount === 0) {
+          await cloneAllPlatformIntakeQuestions(tx, advisorProfileId, slugToPillarId);
+        } else if (options?.force) {
+          await syncMissingPlatformIntakeQuestions(tx, advisorProfileId, slugToPillarId);
+        }
+
+        for (const pillar of pillars) {
+          const existing = await tx.advisorPillarNarrative.findUnique({
+            where: {
+              advisorProfileId_pillarId: {
+                advisorProfileId,
+                pillarId: pillar.id,
+              },
+            },
+          });
+          if (existing && !options?.force) continue;
+          const bands = narrativeStarterForSlug(pillar.slug);
+          await tx.advisorPillarNarrative.upsert({
+            where: {
+              advisorProfileId_pillarId: {
+                advisorProfileId,
+                pillarId: pillar.id,
+              },
+            },
+            create: {
+              advisorProfileId,
+              pillarId: pillar.id,
+              allNegative: bands.allNegative,
+              allYes: bands.allYes,
+              midBand: bands.midBand,
+            },
+            update: options?.force
+              ? {
+                  allNegative: bands.allNegative,
+                  allYes: bands.allYes,
+                  midBand: bands.midBand,
+                  version: { increment: 1 },
+                }
+              : {},
+          });
+        }
       }
 
       const ruleCount = await tx.advisorRecommendationRule.count({
         where: { advisorProfileId },
       });
-      const enterpriseId = await resolveEnterpriseIdForAdvisor(tx, advisorProfileId);
       if (ruleCount === 0) {
         if (enterpriseId) {
           await cloneAllEnterpriseRecommendationRules(tx, advisorProfileId, enterpriseId, slugToPillarId);

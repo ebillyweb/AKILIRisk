@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Geist_Mono, Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { auth } from "@/lib/auth";
 import { getThemeInlineScript } from "@/lib/theme/theme-inline-script";
 
 const manrope = Manrope({
@@ -49,6 +50,7 @@ export default async function RootLayout({
   const headersList = await headers();
   const isBrandedTenant = headersList.get("x-branded-mode") === "true";
   const forceTenantLight = headersList.get("x-tenant-force-light") === "true";
+  const session = await auth();
 
   return (
     <html
@@ -76,7 +78,7 @@ export default async function RootLayout({
         data-branded-mode={isBrandedTenant ? "true" : undefined}
         suppressHydrationWarning
       >
-        <Providers>
+        <Providers session={session}>
           <div className="relative isolate min-h-screen">{children}</div>
         </Providers>
       </body>

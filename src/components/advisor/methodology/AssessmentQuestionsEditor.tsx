@@ -7,6 +7,7 @@ import {
   deleteAdvisorPillarQuestion,
   updateAdvisorPillarQuestion,
 } from "@/lib/actions/methodology-actions";
+import { isEnterpriseAdvisorQuestion } from "@/lib/methodology/advisor-question-policy";
 import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
-type AssessmentQuestionRow = {
+export type AssessmentQuestionRow = {
   id: string;
   sourceKind: AdvisorQuestionSource;
   questionNumber: string | null;
@@ -25,12 +26,34 @@ type AssessmentQuestionRow = {
   isVisible: boolean;
 };
 
+type AssessmentQuestionActions = {
+  updateQuestion: typeof updateAdvisorPillarQuestion;
+  createQuestion: typeof createAdvisorPillarQuestion;
+  deleteQuestion: typeof deleteAdvisorPillarQuestion;
+};
+
+const defaultActions: AssessmentQuestionActions = {
+  updateQuestion: updateAdvisorPillarQuestion,
+  createQuestion: createAdvisorPillarQuestion,
+  deleteQuestion: deleteAdvisorPillarQuestion,
+};
+
+function sourceBadgeLabel(sourceKind: AdvisorQuestionSource): string {
+  if (sourceKind === "CUSTOM") return "Custom";
+  if (isEnterpriseAdvisorQuestion(sourceKind)) return "Firm default";
+  return "Platform base";
+}
+
 export function AssessmentQuestionsEditor({
   pillarSlug,
   questions,
+  actions = defaultActions,
+  createDescription = "Custom questions apply to new intakes only and are visible only to your clients. Platform base questions can be edited or hidden but not removed.",
 }: {
   pillarSlug: string;
   questions: AssessmentQuestionRow[];
+  actions?: AssessmentQuestionActions;
+  createDescription?: string;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -44,7 +67,7 @@ export function AssessmentQuestionsEditor({
                 {q.questionNumber ? `Question ${q.questionNumber}` : "Question"}
               </CardTitle>
               <Badge variant={q.sourceKind === "CUSTOM" ? "secondary" : "outline"}>
-                {q.sourceKind === "CUSTOM" ? "Custom" : "Platform base"}
+                {sourceBadgeLabel(q.sourceKind)}
               </Badge>
             </div>
             {q.sourceKind === "CUSTOM" ? (
@@ -56,7 +79,7 @@ export function AssessmentQuestionsEditor({
                 onClick={() => {
                   if (!window.confirm("Remove this custom question?")) return;
                   startTransition(async () => {
-                    await deleteAdvisorPillarQuestion(q.id);
+                    await actions.deleteQuestion(q.id);
                   });
                 }}
               >
@@ -70,7 +93,7 @@ export function AssessmentQuestionsEditor({
                 defaultChecked={q.isVisible}
                 onCheckedChange={(checked) => {
                   startTransition(async () => {
-                    await updateAdvisorPillarQuestion(q.id, {
+                    await actions.updateQuestion(q.id, {
                       isVisible: checked === true,
                     });
                   });
@@ -83,7 +106,7 @@ export function AssessmentQuestionsEditor({
               className="space-y-3"
               action={(formData) => {
                 startTransition(async () => {
-                  await updateAdvisorPillarQuestion(q.id, {
+                  await actions.updateQuestion(q.id, {
                     questionText:
                       formData.get("questionText")?.toString() ?? q.questionText,
                     whyThisMatters:
@@ -129,16 +152,13 @@ export function AssessmentQuestionsEditor({
           <CardTitle className="text-base">Add custom question</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Custom questions apply to new intakes only and are visible only to your clients.
-            Platform base questions can be edited or hidden but not removed.
-          </p>
+          <p className="mb-3 text-sm text-muted-foreground">{createDescription}</p>
           <form
             className="space-y-3"
             action={(formData) => {
               startTransition(async () => {
                 const questionText = formData.get("questionText")?.toString() ?? "";
-                await createAdvisorPillarQuestion(pillarSlug, {
+                await actions.createQuestion(pillarSlug, {
                   questionText,
                   whyThisMatters: formData.get("whyThisMatters")?.toString() || null,
                   recommendedActions:
