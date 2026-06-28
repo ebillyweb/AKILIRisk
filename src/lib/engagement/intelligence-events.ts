@@ -27,6 +27,25 @@ export const INTELLIGENCE_ACTIONS = {
 export type IntelligenceAction =
   (typeof INTELLIGENCE_ACTIONS)[keyof typeof INTELLIGENCE_ACTIONS];
 
+const INTELLIGENCE_ACTION_LABELS: Record<string, string> = {
+  [INTELLIGENCE_ACTIONS.ASSESSMENT_STARTED]: "Assessment started",
+  [INTELLIGENCE_ACTIONS.ASSESSMENT_COMPLETED]: "Assessment completed",
+  [INTELLIGENCE_ACTIONS.SCORE_CALCULATED]: "Score calculated",
+  [INTELLIGENCE_ACTIONS.REASSESSMENT_TRIGGERED]: "Reassessment triggered",
+  [INTELLIGENCE_ACTIONS.PILLAR_SCORE_DELTA]: "Score change",
+  [INTELLIGENCE_ACTIONS.RISK_LEVEL_TRANSITION]: "Risk level change",
+  [INTELLIGENCE_ACTIONS.CADENCE_DUE_APPROACHING]: "Review due soon",
+  [INTELLIGENCE_ACTIONS.CADENCE_OVERDUE]: "Review overdue",
+  [INTELLIGENCE_ACTIONS.CADENCE_CHANGED]: "Review cadence updated",
+  [INTELLIGENCE_ACTIONS.CADENCE_SYSTEM_RECOMMENDED]: "System reassessment recommendation",
+  [INTELLIGENCE_ACTIONS.RECOMMENDATION_IMPACT_MEASURED]: "Recommendation impact measured",
+  [INTELLIGENCE_ACTIONS.COMPLETION_MILESTONE_REACHED]: "Completion milestone reached",
+};
+
+export function intelligenceActionLabel(action: string): string {
+  return INTELLIGENCE_ACTION_LABELS[action] ?? action.replace(/_/g, " ");
+}
+
 // ---------------------------------------------------------------------------
 // Client-visible subset (merged with CLIENT_VISIBLE_ACTIONS in Plan 03)
 // ---------------------------------------------------------------------------
@@ -78,7 +97,7 @@ export async function logIntelligenceEvent(
       ...(assessmentId ? { assessmentId } : {}),
       ...(assessmentRecommendationId ? { assessmentRecommendationId } : {}),
       ...(actorId ? { actorId } : {}),
-      detail: detail ?? {},
+      detail: (detail ?? {}) as Prisma.InputJsonValue,
     },
   });
 }

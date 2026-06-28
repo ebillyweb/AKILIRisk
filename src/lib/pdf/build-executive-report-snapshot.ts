@@ -25,6 +25,7 @@ import { prisma } from "@/lib/db";
 import { computePillarDeltas } from "@/lib/analytics/score-delta";
 import { getGuidancePackageForClient } from "@/lib/recommendations/guidance-package";
 import { getEngagementClients } from "@/lib/engagement/engagement-metrics";
+import { intelligenceActionLabel } from "@/lib/engagement/intelligence-events";
 import {
   deriveExecutiveReadiness,
   deriveImpactLevel,
@@ -208,7 +209,6 @@ export async function buildExecutiveReportSnapshot(
           take: 10,
           select: {
             action: true,
-            label: true,
             createdAt: true,
           },
         })
@@ -379,7 +379,7 @@ export async function buildExecutiveReportSnapshot(
   const intelligenceExcerpt: IntelligenceEvent[] = solutionActivities.map(
     (activity) => ({
       action: activity.action,
-      label: activity.label ?? activity.action,
+      label: intelligenceActionLabel(activity.action),
       occurredAt: activity.createdAt.toISOString(),
     }),
   );
