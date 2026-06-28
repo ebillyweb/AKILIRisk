@@ -593,7 +593,9 @@ function buildInvestorDeck(): PptxGenJS {
   {
     const slide = pres.addSlide();
     addContentHeader(slide, { title: "The Problem" });
-    slide.addText("Financial planning manages assets.\nNobody manages family risk.", {
+    slide.addText(
+      "Every professional protects a piece of the family.\nNobody owns the whole picture.",
+      {
       x: 0.55,
       y: 1.55,
       w: 8.9,
@@ -604,7 +606,7 @@ function buildInvestorDeck(): PptxGenJS {
       fontFace: FONT_TITLE,
     });
     slide.addText(
-      "Families spend millions protecting their wealth — advisors, insurance, estate counsel, cybersecurity — but almost nothing measuring the operational risks that actually destroy it.",
+      "Families spend millions on wealth management, tax planning, estate counsel, and cybersecurity — but almost nothing measuring whether the family itself is governable over time.",
       {
         x: 0.55,
         y: 2.85,
@@ -630,7 +632,7 @@ function buildInvestorDeck(): PptxGenJS {
       "The password manager is inaccessible",
       "The successor trustee doesn't know they're the trustee",
       "The family business stalls; children disagree over distributions",
-      "The financial advisor wasn't included",
+      "The wealth advisor, CPA, and estate attorney each had a fragment — none had the whole picture",
     ]);
     slide.addText("Nothing failed financially. Everything failed operationally.", {
       x: 0.55,
@@ -655,14 +657,14 @@ function buildInvestorDeck(): PptxGenJS {
         ["Largest intergenerational wealth transfer", "Trillions moving to unprepared heirs"],
         ["Rising cybercrime vs. affluent families", "HNW households are high-value targets"],
         ["AI-driven fraud & impersonation", "Social engineering scales faster than vigilance"],
-        ["Advisor commoditization", "Differentiation beyond portfolio returns"],
+        ["Professional commoditization", "Differentiation beyond siloed expertise"],
         ["Estate complexity increasing", "Trusts, entities, digital assets, multi-jurisdiction"],
         ["Family offices growing rapidly", "Institutional governance without in-house build"],
       ],
       1.45,
     );
     slide.addText(
-      "The window is open for a new category between financial planning and family continuity.",
+      "The window is open for a new category between fragmented professional advice and family continuity.",
       { x: 0.55, y: 4.85, w: 8.9, h: 0.4, fontSize: 12, bold: true, color: C.navy, fontFace: FONT },
     );
   }
@@ -682,8 +684,8 @@ function buildInvestorDeck(): PptxGenJS {
         ["Remembers", "Household structure, roles, history, prior assessments"],
         ["Measures", "Posture across 10 risk domains with transparent scoring"],
         ["Tracks", "Change over time — not a one-time PDF in a drawer"],
-        ["Compares", "Portfolio-wide patterns across an advisor's client book"],
-        ["Connects", "Advisors, families, and deliverables in one workflow"],
+        ["Compares", "Portfolio-wide patterns across a firm's client book"],
+        ["Connects", "Professionals, families, and deliverables in one workflow"],
         ["Creates continuity", "Discovery through action — and ongoing monitoring"],
       ],
       1.75,
@@ -726,7 +728,7 @@ function buildInvestorDeck(): PptxGenJS {
       subtitle: "Shipped today · Family Governance Score",
     });
     pillarWheel(slide);
-    slide.addText("Advisors scope 1–10 pillars per engagement.", {
+    slide.addText("Firms scope 1–10 pillars per engagement.", {
       x: 0.55,
       y: 4.85,
       w: 8.9,
@@ -741,14 +743,17 @@ function buildInvestorDeck(): PptxGenJS {
   // Slide 9 — Market + TAM
   {
     const slide = pres.addSlide();
-    addContentHeader(slide, { title: "Market", subtitle: "Beachhead: wealth advisors & RIAs serving HNW households" });
+    addContentHeader(slide, {
+      title: "Market",
+      subtitle: "One platform · multiple professional front doors · wealth advisory deployed first",
+    });
     addTable(
       slide,
       ["Market", "Scale"],
       [
-        ["WealthTech", "$[X]B global — advisor digitization"],
+        ["WealthTech", "$[X]B global — professional digitization"],
         ["Intergenerational transfer", "$[X]T transferring (US, next decade)"],
-        ["RIA-managed assets", "$[X]T+ under advisory"],
+        ["HNW professional services", "$[X]B+ advisory, tax, legal, succession"],
         ["HNW cybersecurity", "$[X]B protecting digital & financial exposure"],
       ],
       1.45,
@@ -757,9 +762,11 @@ function buildInvestorDeck(): PptxGenJS {
       slide,
       ["Segment", "Opportunity"],
       [
-        ["~300K+ financial advisors (US)", "Differentiation beyond AUM"],
-        ["~10K+ family offices (global)", "Standardize governance across generations"],
-        ["Enterprise advisory firms", "White-label governance intelligence"],
+        ["Wealth advisors & RIAs (US)", "Governance beyond portfolio returns"],
+        ["CPAs & tax advisory firms", "Tax, liquidity, continuity intelligence"],
+        ["Estate attorneys & succession planners", "Evidence-based governance assessment"],
+        ["Family offices (global)", "Standardize governance across generations"],
+        ["Enterprise professional firms", "White-label governance intelligence"],
       ],
       3.35,
     );
@@ -768,15 +775,16 @@ function buildInvestorDeck(): PptxGenJS {
   // Slide 10 — Business model
   {
     const slide = pres.addSlide();
-    addContentHeader(slide, { title: "Business Model", subtitle: "SaaS — advisor and firm subscriptions" });
+    addContentHeader(slide, { title: "Business Model", subtitle: "SaaS — firm and practice subscriptions" });
     addTable(
       slide,
       ["Tier", "Clients", "Buyer"],
       [
-        ["Starter", "25", "Solo advisor"],
-        ["Growth", "50", "Small practice"],
-        ["Professional", "100", "Established firm + branding"],
-        ["Enterprise", "Negotiated", "Multi-advisor firms (sales-assisted)"],
+        ["Essentials", "25", "Solo practitioner"],
+        ["Professional", "50", "Established firm + customization"],
+        ["Business", "100", "Growing firm + branding"],
+        ["Platinum", "250", "High-volume firm"],
+        ["Enterprise", "Negotiated", "Multi-seat firms (sales-assisted)"],
       ],
       1.55,
     );
@@ -799,10 +807,11 @@ function buildInvestorDeck(): PptxGenJS {
       slide,
       ["", "Traditional planning", "AKILI"],
       [
-        ["Focus", "Portfolio & assets", "Whole-family risk"],
+        ["Focus", "Siloed expertise (tax, legal, wealth)", "Whole-family operational risk"],
         ["Format", "Static PDFs", "Living intelligence platform"],
         ["Cadence", "Episodic", "Continuous monitoring"],
-        ["Scope", "Financial", "Governance + cyber + estate + 7 more"],
+        ["Scope", "Single-domain", "Governance + cyber + estate + tax + 7 more"],
+        ["Delivery", "Generic vendor branding", "White-label subdomain, custom intake, firm methodology"],
         ["Outcome", "Reports", "Confidence — Family Governance Score"],
       ],
       1.55,
@@ -818,7 +827,7 @@ function buildInvestorDeck(): PptxGenJS {
       fontFace: FONT,
     });
     slide.addText(
-      "The system of record for family governance — the platform that compounds with every engagement.",
+      "The system of record for family governance — plus white-label delivery so firms own the client relationship.",
       { x: 0.55, y: 4.65, w: 8.9, h: 0.45, fontSize: 13, bold: true, color: C.trustAccent, fontFace: FONT },
     );
   }
@@ -851,9 +860,10 @@ function buildInvestorDeck(): PptxGenJS {
       ["Built & shipped", ""],
       [
         ["10 production pillars", "Full methodology catalog"],
-        ["150+ questions", "Platform bank, advisor-customizable"],
-        ["Advisor portal", "Pipeline, intelligence, facilitated sessions"],
-        ["Enterprise + white-label", "Multi-seat, branded subdomains, Stripe billing"],
+        ["150+ questions", "Platform bank, firm-customizable"],
+        ["Practitioner workspace", "Pipeline, intelligence, facilitated sessions"],
+        ["Enterprise + white-label", "Subdomains, custom intake, methodology overlays, Stripe billing"],
+        ["Full lifecycle", "Action plans · tracking · reassessment"],
         ["AI-assisted intake", "Audio interview + transcription"],
       ],
       2.25,
@@ -868,8 +878,8 @@ function buildInvestorDeck(): PptxGenJS {
       slide,
       ["Phase", "What"],
       [
-        ["Now (shipped)", "10-pillar assessment, advisor workflow, white-label, enterprise, billing"],
-        ["Next", "Cross-pillar AI insights · action plans · continuity scoring"],
+        ["Now (shipped)", "10-pillar assessment, professional workflow, lifecycle loop, enterprise, billing"],
+        ["Next", "Cross-pillar AI insights · executive reporting · continuity scoring"],
         ["Platform", "Living records · policy mgmt · continuous monitoring"],
       ],
       1.55,
@@ -918,7 +928,7 @@ function buildInvestorDeck(): PptxGenJS {
     addBullets(slide, [
       "25+ years building enterprise software and leading engineering organizations",
       "CTO of Habits — scaled AI products and enterprise SaaS",
-      "Built alongside practitioners — real advisor and family-office workflows",
+      "Built alongside practitioners — wealth, tax, legal, and family-office workflows",
       "Enterprise platform live — white-label, multi-seat, billing, first enterprise client deployed",
     ], 1.75);
     slide.addText(
@@ -945,7 +955,7 @@ function buildInvestorDeck(): PptxGenJS {
       fontFace: FONT_TITLE,
     });
     slide.addText(
-      "We're raising $[X]M to become the governance intelligence platform powering the next generation of wealth advisory.",
+      "We're raising $3.5M Seed to become the governance intelligence platform for modern family wealth.",
       {
         x: 0.75,
         y: 3.05,
@@ -961,7 +971,7 @@ function buildInvestorDeck(): PptxGenJS {
       slide,
       ["", ""],
       [
-        ["Raising", "$[X]M Seed / Pre-Seed"],
+        ["Raising", "$3.5M Seed"],
         ["Outcome", "Category leadership — system of record for family governance"],
         ["Milestones", "[X] enterprise firms · [Y] households · [Z] ARR"],
         ["Contact", "hello@akilirisk.com"],
@@ -984,7 +994,7 @@ function buildProductDeck(): PptxGenJS {
 
   titleSlide(pres, {
     main: AKILI_TAGLINES.product,
-    tag: "10-pillar family risk framework · live in production",
+    tag: "Governance intelligence · 10 pillars · live in production",
     sub: `Product Deck · ${AKILI_BRAND.website}`,
   });
 
@@ -994,17 +1004,17 @@ function buildProductDeck(): PptxGenJS {
       bullets: [
         "Legacy survives through governance, not assumption.",
         "AKILI helps modern family wealth operate with clearer governance — before informal structures become costly disputes.",
-        "We give families and advisors a structured way to surface risks, align decision frameworks, and act with intention.",
+        "We give families and the professionals who serve them a structured way to surface risks, align decision frameworks, and act with intention.",
       ],
     },
     {
       title: "The Problem We Solve",
-      subtitle: "Wealth is managed. Governance is assumed.",
+      subtitle: "Every professional protects a piece. Nobody owns the whole picture.",
       bullets: [
-        "HNW families rarely have a systematic view of non-financial risk",
-        "Advisors lack a repeatable way to surface governance, cyber, succession, and continuity gaps",
+        "HNW families rarely have a systematic view of operational risk across domains",
+        "Wealth, tax, legal, and succession professionals each see a slice — not a shared scored profile",
         "When structures fail, cost is measured in disputes and lost legacy — not basis points",
-        "Families need one coherent risk profile, not scattered conversations",
+        "Families need one coherent risk profile, not scattered conversations and siloed checklists",
       ],
     },
     {
@@ -1014,8 +1024,20 @@ function buildProductDeck(): PptxGenJS {
         "Surfaces structural gaps across 10 risk pillars",
         "Scores household posture with transparent, weighted algorithms",
         "Prioritizes missing controls and remediation actions",
-        "Delivers advisor-ready reports, policy templates, and recommendations",
+        "Delivers firm-ready reports, policy templates, and recommendations",
         "Tracks progress over time — living intelligence, not a one-time PDF",
+        "Brands under your firm — white-label subdomains, custom intake, firm methodology",
+      ],
+    },
+    {
+      title: "Why Firms Trust AKILI",
+      subtitle: "Your brand. Your methodology. Your client relationship.",
+      bullets: [
+        "Private by design — encrypted responses, firm-controlled visibility",
+        "Structured methodology — governed pillars, not a generic survey",
+        "White-label & customizable — branding, subdomain, intake, and methodology overlays",
+        "Action-oriented — prioritized risks, recommendations, measurable improvement",
+        "Differentiator: firms deliver governance intelligence as their own — not a resold vendor product",
       ],
     },
     {
@@ -1026,8 +1048,8 @@ function buildProductDeck(): PptxGenJS {
           s,
           [
             "Discovery: branded invitation, secure onboarding, AI-assisted intake",
-            "Assessment: advisor-scoped pillars (1–10), emphasis weighting",
-            "Insights → Recommendations → Action plan → Monitoring",
+            "Assessment: firm-scoped pillars (1–10), emphasis weighting",
+            "Insights → Recommendations → Action plan → Monitoring → Reassessment",
             "Typical engagement: 12–15 minutes per pillar",
           ],
           2.95,
@@ -1038,12 +1060,12 @@ function buildProductDeck(): PptxGenJS {
     {
       title: "Dual Experience",
       table: {
-        h: ["Advisors", "Families"],
+        h: ["Professional firms", "Families"],
         r: [
           ["Multi-client pipeline & portfolio intelligence", "Secure magic-link access & MFA"],
           ["Pillar scoping, facilitated sessions", "Guided intake & scoped assessment"],
           ["White-label subdomains & branded reports", "Household profiles & branded dashboard"],
-          ["Enterprise: team seats & firm billing", "Documents, policies, advisor visibility"],
+          ["Enterprise: team seats & firm billing", "Documents, policies, firm visibility"],
         ],
       },
     },
@@ -1053,15 +1075,16 @@ function buildProductDeck(): PptxGenJS {
       extra: (s) => pillarWheel(s),
     },
     {
-      title: "Advisor Workflow",
+      title: "Professional Workflow",
       table: {
         h: ["Stage", "Capability"],
         r: [
           ["Acquire", "Branded invitations, white-label subdomains"],
-          ["Discover", "Audio intake + transcription; advisor review"],
+          ["Discover", "Audio intake + transcription; firm review"],
           ["Customize", "Pillar scope, emphasis, intake waivers"],
           ["Assess", "Facilitated or self-service; auto-save"],
           ["Deliver", "PDF reports, policy templates, documents"],
+          ["Improve", "Action plans, tracking, reassessment with score deltas"],
           ["Manage", "Pipeline, notifications, intelligence"],
         ],
       },
@@ -1084,7 +1107,7 @@ function buildProductDeck(): PptxGenJS {
         r: [
           ["Authentication", "TOTP MFA, magic-link access, RBAC"],
           ["Encryption", "AES-256-GCM; presigned S3 document uploads"],
-          ["Isolation", "Row-level data isolation; advisor–client enforcement"],
+          ["Isolation", "Row-level data isolation; firm–client enforcement"],
           ["Compliance", "Consent workflows, audit logging, PII controls"],
         ],
       },
@@ -1094,10 +1117,11 @@ function buildProductDeck(): PptxGenJS {
       table: {
         h: ["Segment", "Need"],
         r: [
-          ["Wealth advisors & RIAs", "Governance alongside financial planning"],
-          ["Multi-family offices", "Standardized assessment across the book"],
-          ["Family leadership", "Succession readiness & decision frameworks"],
-          ["Enterprise firms", "White-label, team seats, firm client limits"],
+          ["Wealth advisors & RIAs", "Governance intelligence alongside financial planning"],
+          ["CPAs & tax advisory firms", "Tax, liquidity, and continuity visibility"],
+          ["Estate attorneys & succession planners", "Evidence-based governance assessment"],
+          ["Family offices & MFOs", "Standardized assessment across the book"],
+          ["Enterprise professional firms", "White-label, team seats, firm client limits"],
         ],
       },
     },
@@ -1106,10 +1130,11 @@ function buildProductDeck(): PptxGenJS {
       table: {
         h: ["Tier", "Clients", "Target"],
         r: [
-          ["Starter", "25", "Solo advisors"],
-          ["Growth", "50", "Small practices"],
-          ["Professional", "100", "Established firms"],
-          ["Enterprise", "Negotiated", "Multi-advisor firms"],
+          ["Essentials", "25", "Solo practitioner"],
+          ["Professional", "50", "Established firm + customization"],
+          ["Business", "100", "Growing firm + branding"],
+          ["Platinum", "250", "High-volume firm"],
+          ["Enterprise", "Negotiated", "Multi-seat firms"],
         ],
       },
     },
@@ -1118,17 +1143,17 @@ function buildProductDeck(): PptxGenJS {
       subtitle: "Live in production today",
       bullets: [
         "Belvedere — first enterprise client on white-label platform",
-        "10-pillar framework · 150+ questions · full advisor lifecycle",
+        "10-pillar framework · 150+ questions · full professional lifecycle",
         "Scoring engine, enterprise architecture, Stripe billing",
-        "In flight: composite scoring, cross-pillar AI insights, action plans",
+        "In flight: executive PDF reporting, cross-pillar AI insights",
       ],
     },
     {
       title: "Platform Vision",
       bullets: [
-        "Risk assessment is the first application",
+        "Governance infrastructure for the professional ecosystem around family wealth",
         "Living family governance records & decision logs",
-        "Annual reassessments & continuous monitoring",
+        "Continuous reassessment & measurable risk reduction",
         "Policy management, document vault, AI-guided planning",
         "Cross-generational continuity infrastructure",
       ],
@@ -1164,7 +1189,7 @@ function buildProductDeck(): PptxGenJS {
       slide,
       ["Audience", "Next step"],
       [
-        ["Advisors", "akilirisk.com/contact?intent=demo"],
+        ["Professional firms", "akilirisk.com/contact?intent=demo"],
         ["Enterprise firms", "sales@akilirisk.com"],
         ["General inquiries", "hello@akilirisk.com"],
       ],

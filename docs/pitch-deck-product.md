@@ -4,7 +4,7 @@
 
 **Entity:** AKILI Risk Intelligence · [akilirisk.com](https://akilirisk.com) · hello@akilirisk.com
 
-> **Deck type:** Product explanation for advisors, enterprise buyers, demos, and diligence. For fundraising narrative, see [pitch-deck-investor.md](./pitch-deck-investor.md).
+> **Deck type:** Product explanation for professional firms, enterprise buyers, demos, and diligence. For fundraising narrative, see [pitch-deck-investor.md](./pitch-deck-investor.md).
 
 ---
 
@@ -14,7 +14,7 @@
 
 *Prevent family wealth from becoming family conflict.*
 
-A governance intelligence platform for wealth advisors, family offices, and multi-generational households — built on a **10-pillar** family risk framework, live in production today.
+A governance intelligence platform for affluent families and the **professional firms** that serve them — wealth advisors, CPAs, estate attorneys, succession planners, and family offices — built on a **10-pillar** family risk framework, live in production today.
 
 ---
 
@@ -24,19 +24,19 @@ A governance intelligence platform for wealth advisors, family offices, and mult
 
 AKILI helps modern family wealth operate with clearer governance — before informal structures become costly disputes.
 
-We give families and advisors a structured way to surface risks, align decision frameworks, and act with intention.
+We give families and their professional advisors a structured way to surface risks, align decision frameworks, and act with intention — in one shared system of record.
 
 ---
 
 ## Slide 3 — The Problem We Solve
 
-**Wealth is managed. Governance is assumed.**
+**Every professional protects a piece of the family. Nobody owns the whole picture.**
 
-- High-net-worth families hold complex assets, multiple generations, and informal decision structures — but rarely have a systematic view of non-financial risk.
-- Advisors excel at portfolio construction yet lack a repeatable, evidence-based way to surface governance, cyber, succession, and continuity gaps.
+- High-net-worth families hold complex assets, multiple generations, and informal decision structures — but rarely have a systematic view of operational risk across domains.
+- Wealth advisors, CPAs, attorneys, and succession planners each excel in their domain — yet lack a **shared, evidence-based** way to measure governance, cyber, succession, and continuity gaps.
 - When structures fail, the cost is not measured in basis points — it is measured in disputes, reputational damage, and lost legacy.
 
-Families and advisors need **one coherent risk profile** — not scattered conversations and anecdotal checklists.
+Families and their professional circle need **one coherent risk profile** — not scattered conversations and siloed checklists.
 
 ---
 
@@ -47,10 +47,24 @@ Families and advisors need **one coherent risk profile** — not scattered conve
 1. **Surfaces** structural gaps across 10 risk pillars
 2. **Scores** household posture with transparent, weighted algorithms
 3. **Prioritizes** missing controls and remediation actions
-4. **Delivers** advisor-ready reports, policy templates, and recommendations
+4. **Delivers** firm-ready reports, policy templates, and recommendations
 5. **Tracks** progress over time — living intelligence, not a one-time PDF
+6. **Brands** under your firm — white-label subdomains, custom intake, and methodology your clients recognize
 
 **Core value:** Turn informal family risk into measurable, actionable intelligence — before it becomes an event.
+
+---
+
+## Slide 4b — Why Firms Trust AKILI
+
+| | |
+|---|---|
+| **Private by design** | Encrypted responses, firm-controlled visibility |
+| **Structured methodology** | Governed pillars — not a generic survey |
+| **White-label & customizable** | Your branding, subdomain, intake, and methodology — clients experience **your firm** |
+| **Action-oriented** | Prioritized risks, recommendations, and measurable improvement over time |
+
+**Differentiator:** Firms don't resell someone else's product. They deliver governance intelligence **as their own**.
 
 ---
 
@@ -69,19 +83,19 @@ flowchart TB
 | Stage | What happens |
 |-------|----------------|
 | **Discovery** | Branded invitation, secure onboarding, audio intake with AI transcription |
-| **Assessment** | Advisor-scoped pillars (1–10), emphasis weighting, facilitated or self-service |
+| **Assessment** | Firm-scoped pillars (1–10), emphasis weighting, facilitated or self-service |
 | **Insights** | Composite score, heat map, missing controls ranked by severity |
 | **Recommendations** | Rule-based guidance mapped to professional services |
-| **Action plan** | Policy templates, document collection, advisor-published deliverables |
-| **Monitoring** | Dashboard trends, portfolio intelligence, annual reassessment cadence |
+| **Action plan** | Policy templates, document collection, firm-published deliverables |
+| **Monitoring** | Dashboard trends, portfolio intelligence, reassessment cadence |
 
-**Typical engagement:** 12–15 minutes per pillar; advisors scope each client to what matters.
+**Typical engagement:** 12–15 minutes per pillar; firms scope each client to what matters.
 
 ---
 
 ## Slide 6 — Dual Experience
 
-**Advisors**
+**Professional firms**
 - Multi-client pipeline with real-time status tracking
 - Intake review, pillar scoping, and emphasis configuration
 - Facilitated sessions and portfolio-wide intelligence
@@ -92,10 +106,10 @@ flowchart TB
 - Secure magic-link access and MFA
 - Guided intake interview and scoped assessment
 - Household profiles with roles and personalization
-- Branded dashboard with scores, trends, and advisor emphasis visibility
+- Branded dashboard with scores, trends, and firm emphasis visibility
 - Document upload and policy delivery
 
-**Distribution:** Advisor-led, invitation-only — clients enter through their advisor.
+**Distribution:** Professional-led, invitation-only — households enter through their firm.
 
 ---
 
@@ -105,7 +119,7 @@ flowchart TB
 
 | # | Pillar | What it measures |
 |---|--------|------------------|
-| 1 | **Governance & Decision-Making** | Authority, documentation, advisor coordination, dispute resolution |
+| 1 | **Governance & Decision-Making** | Authority, documentation, professional coordination, dispute resolution |
 | 2 | **Cyber & Digital Security** | Digital footprint, data protection, fraud, online threats |
 | 3 | **Physical Security** | Personal safety, property, travel, access control |
 | 4 | **Protection & Risk Transfer** | Insurance, titling, concentration, continuity planning |
@@ -116,13 +130,13 @@ flowchart TB
 | 9 | **Estate & Succession** | Wills, trusts, beneficiaries, digital asset access |
 | 10 | **Behavioral Resilience** | Family dynamics, heir preparedness, behavioral finance |
 
-Advisors **scope engagements** to the pillars that matter — full profile or focused assessment.
+Firms **scope engagements** to the pillars that matter — full profile or focused assessment.
 
 **Visual for slides:** 10-spoke radar or icon wheel (see investor deck for weighting reference).
 
 ---
 
-## Slide 8 — Advisor Workflow
+## Slide 8 — Professional Workflow
 
 **From invitation to deliverable — one platform.**
 
@@ -130,28 +144,29 @@ Advisors **scope engagements** to the pillars that matter — full profile or fo
 |-------|------------|
 | **Acquire** | Branded client invitations, white-label subdomains |
 | **Onboard** | Secure registration, MFA, magic-link client access |
-| **Discover** | Audio intake with transcription; advisor review & approval |
+| **Discover** | Audio intake with transcription; firm review & approval |
 | **Customize** | Pillar scope, emphasis weighting, intake waivers |
 | **Assess** | Facilitated or self-service; auto-save, smart resume |
 | **Deliver** | PDF reports, per-pillar policy templates, document collection |
 | **Manage** | Pipeline tracking, notifications, portfolio intelligence |
+| **Improve** | Action plans, optional implementation tracking, reassessment with score deltas |
 
-**Enterprise:** Multi-advisor firms, shared branding, firm-level billing, seat and client caps.
+**Enterprise:** Multi-seat firms, shared branding, firm-level billing, seat and client caps.
 
 ---
 
 ## Slide 9 — Intelligence & Deliverables
 
-**What advisors and families see after assessment:**
+**What firms and families see after assessment:**
 
 - **Composite risk score** (0–10 scale, transparent breakdown across all 10 pillars)
 - **Risk heat map** across the full framework with trend tracking
 - **Missing controls** ranked by severity and impact
 - **Automated recommendations** with service mappings and priority
 - **Policy templates** pre-filled with household context (Word/PDF)
-- **Branded PDF reports** suitable for client meetings
+- **Branded PDF reports** suitable for client meetings, boards, and counsel
 
-**Advisor intelligence layer:** Portfolio-wide insights, drill-down by client, risk signal monitoring.
+**Firm intelligence layer:** Portfolio-wide insights, drill-down by client, risk signal monitoring.
 
 **AI-assisted intake:** Audio interview + transcription captures context that used to live in notes and email.
 
@@ -165,11 +180,11 @@ Advisors **scope engagements** to the pillars that matter — full profile or fo
 |---------|----------------|
 | Authentication | TOTP MFA, magic-link client access, role-based access |
 | Encryption | AES-256-GCM at rest; secure document uploads via presigned S3 URLs |
-| Isolation | Row-level data isolation; advisor–client relationship enforcement |
+| Isolation | Row-level data isolation; firm–client relationship enforcement |
 | Compliance posture | Consent workflows, audit logging, PII policy controls |
-| Privacy | Private, encrypted responses visible only to assigned advisor |
+| Privacy | Private, encrypted responses visible only to assigned professionals |
 
-Built on **Next.js**, **PostgreSQL**, **Prisma**, and **AWS** — designed for advisors managing 50+ family relationships.
+Built on **Next.js**, **PostgreSQL**, **Prisma**, and **AWS** — designed for firms managing 50+ family relationships.
 
 ---
 
@@ -177,23 +192,27 @@ Built on **Next.js**, **PostgreSQL**, **Prisma**, and **AWS** — designed for a
 
 | Segment | Need |
 |---------|------|
-| **Wealth advisors & RIAs** | Differentiated governance offering alongside financial planning |
-| **Multi-family offices** | Standardized risk assessment across the client book |
-| **Family leadership** | Succession readiness and decision-framework clarity |
-| **Enterprise advisory firms** | White-label platform, team seats, firm-wide client limits |
+| **Wealth advisors & RIAs** | Governance intelligence alongside financial planning |
+| **CPAs & tax advisory firms** | Tax, liquidity, and continuity visibility in one profile |
+| **Estate attorneys & succession planners** | Evidence-based succession and governance assessment |
+| **Family offices & MFOs** | Standardized risk assessment across the client book |
+| **Enterprise professional firms** | White-label platform, team seats, firm-wide client limits |
+
+**Beachhead:** Wealth advisory (first enterprise client live). **Same platform** serves adjacent professional networks on the same households.
 
 ---
 
 ## Slide 12 — Business Model
 
-**SaaS subscription — advisor pays, clients included.**
+**SaaS subscription — firms subscribe; client households included.**
 
 | Tier | Client limit | Target |
 |------|--------------|--------|
-| **Starter** | 25 clients | Solo advisors |
-| **Growth** | 50 clients | Small practices |
-| **Professional** | 100 clients | Established firms + custom branding |
-| **Enterprise** | Negotiated (e.g. 100 firm clients, 25 seats) | Multi-advisor firms — sales-assisted |
+| **Essentials** | 25 | Solo practitioner / small practice |
+| **Professional** | 50 | Established firm + methodology customization |
+| **Business** | 100 | Growing firm + white-label branding |
+| **Platinum** | 250 | High-volume firm + advanced analytics |
+| **Enterprise** | Negotiated (e.g. 100 firm clients, 25 seats) | Multi-seat firms — sales-assisted |
 
 - Monthly and annual billing (Stripe live in production)
 - Hard client limits with in-app upgrade prompts
@@ -210,28 +229,27 @@ Built on **Next.js**, **PostgreSQL**, **Prisma**, and **AWS** — designed for a
 - **10-pillar personal risk framework** — full catalog in platform methodology and assessment flows
 - **150+ assessment questions** spanning all 10 pillars
 - Weighted scoring, missing-controls identification, pillar-level emphasis weighting
-- Full lifecycle: household profiles, advisor portal, pipeline, invitations, document collection, billing, white-label
+- Full lifecycle: household profiles, practitioner workspace, pipeline, invitations, document collection, billing, white-label
 - **25+ mapped service recommendations** with cost/time estimates
 - Per-pillar policy templates and branded PDF deliverables
 - Enterprise architecture, team billing, and provisioning
+- Recommendation experience, action plans, optional implementation tracking, reassessment
 - Playwright smoke coverage and Stripe billing integration
 
-**In flight (depth, not breadth):**
+**In flight:**
 
-- Unified composite scoring across all 10 pillars
+- Executive PDF reporting (board- and counsel-ready)
 - Cross-pillar AI insights and compounding-risk analysis
-- Identity risk insights within Cyber & Digital Security
-- Advisor-guided action plans tied to pillar-level outcomes
 
 ---
 
 ## Slide 14 — Platform Vision
 
-Risk assessment is the first application. The platform grows into governance infrastructure:
+The platform grows into governance infrastructure for the professional ecosystem around family wealth:
 
-- Living family governance records
-- Advisor collaboration and family decision logs
-- Annual risk reassessments and continuous monitoring
+- Living family governance records shared across engagements
+- Professional collaboration and family decision logs
+- Continuous reassessment and measurable risk reduction
 - Policy management and secure document collection
 - Cross-generational continuity and AI-guided planning
 
@@ -241,7 +259,7 @@ Risk assessment is the first application. The platform grows into governance inf
 
 | Audience | Next step |
 |----------|-----------|
-| **Advisors** | [Request a demo](https://akilirisk.com/contact?intent=demo) |
+| **Professional firms** | [Request a demo](https://akilirisk.com/contact?intent=demo) |
 | **Enterprise firms** | sales@akilirisk.com |
 | **General inquiries** | hello@akilirisk.com |
 
@@ -251,14 +269,14 @@ Risk assessment is the first application. The platform grows into governance inf
 
 ### Sample client journey
 
-1. Advisor sends branded invitation email
+1. Firm sends branded invitation email
 2. Client registers via secure link, sets up MFA
 3. Client completes audio intake interview
-4. Advisor reviews intake, selects risk pillars and emphasis areas
+4. Professional reviews intake, selects risk pillars and emphasis areas
 5. Client completes scoped assessment (auto-save throughout)
 6. Platform scores responses, surfaces missing controls
-7. Advisor publishes report; client views branded dashboard
-8. Document collection, policy templates, ongoing monitoring
+7. Firm publishes report; client views branded dashboard
+8. Document collection, policy templates, action plan, ongoing monitoring
 
 ### Technical stack
 
@@ -266,14 +284,20 @@ Next.js · TypeScript · PostgreSQL · Prisma · Auth.js · OpenAI Whisper · AW
 
 ### Speaker notes
 
-**Slide 3:** Use for advisor audiences who already feel this pain — less story, more recognition.
+**Slide 3:** Use for any professional audience who already feels this pain — wealth, tax, legal, succession.
+
+**Slide 4:** Lead with deliverables list; use **Slide 4b** for trust/differentiation — especially white-label.
+
+**Slide 4b:** Emphasize that firms own the client experience. Demo `{firm}.akilirisk.com` if possible.
 
 **Slide 7:** Lead with "10 pillars, live today." Scoping is a feature — not every engagement needs all 10.
 
 **Slide 9:** Demo the heat map and pipeline if possible — `preview.akilirisk.com` with seeded fixtures.
 
+**Slide 11:** Emphasize **same platform, different professional front doors** — not separate products per vertical.
+
 **Slide 12:** Confirm live price points from Stripe before external meetings.
 
 ---
 
-*Product deck — for demos, advisor sales, and technical diligence.*
+*Product deck — for demos, firm sales, and technical diligence.*

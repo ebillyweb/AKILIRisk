@@ -13,21 +13,21 @@ const STEPS: ReadonlyArray<{
     step: "1",
     title: "Assess",
     description:
-      "Families complete a guided profile. Advisors manage intake and progress from one workspace.",
+      "Families complete a guided profile. Professional firms manage intake and progress from one workspace.",
     icon: ClipboardCheck,
   },
   {
     step: "2",
     title: "Analyze",
     description:
-      "Scores and pillar-level insights surface succession, authority, and continuity gaps.",
+      "Scores and pillar-level insights surface succession, authority, tax, and continuity gaps.",
     icon: LineChart,
   },
   {
     step: "3",
     title: "Act",
     description:
-      "Structured recommendations help advisors and families address risks before they escalate.",
+      "Structured recommendations help firms and families address risks before they escalate.",
     icon: ShieldCheck,
   },
 ];
@@ -39,7 +39,7 @@ export function LandingHowItWorks() {
         id="how-it-works"
         kicker="How it works"
         title="Assess. Analyze. Act."
-        description="A straightforward workflow — from structured intake to advisor-ready guidance."
+        description="A straightforward workflow — from structured intake to firm-ready guidance."
         className="!space-y-8"
         headerClassName="max-w-2xl"
       >

@@ -1,16 +1,26 @@
-import { Building2, Landmark, Lock, Scale, Sparkles, UsersRound } from "lucide-react";
+import { Briefcase, Building2, Landmark, Palette, Scale, Sparkles, UsersRound } from "lucide-react";
 import { MarketingSection } from "@/components/marketing/MarketingSection";
 
 const AUDIENCES = [
   {
-    title: "Family offices",
-    description: "Multi-generational governance across complex ownership.",
-    icon: Landmark,
+    title: "Wealth advisors & RIAs",
+    description: "Governance intelligence beyond portfolio planning.",
+    icon: Building2,
   },
   {
-    title: "Wealth advisors",
-    description: "Client-ready intelligence alongside financial planning.",
-    icon: Building2,
+    title: "CPAs & tax advisors",
+    description: "Tax, liquidity, and continuity visibility in one profile.",
+    icon: Briefcase,
+  },
+  {
+    title: "Estate attorneys & succession planners",
+    description: "Evidence-based succession and governance assessment.",
+    icon: Scale,
+  },
+  {
+    title: "Family offices",
+    description: "Standardized governance across multi-generational clients.",
+    icon: Landmark,
   },
   {
     title: "Family leadership",
@@ -20,8 +30,9 @@ const AUDIENCES = [
 ] as const;
 
 const TRUST_POINTS = [
-  { title: "Private by design", description: "Encrypted responses, advisor-only visibility.", icon: Lock },
-  { title: "Structured methodology", description: "Governed pillars — not a generic survey.", icon: Scale },
+  { title: "Private by design", description: "Encrypted responses, firm-controlled visibility.", icon: Scale },
+  { title: "Structured methodology", description: "Governed pillars — not a generic survey.", icon: Briefcase },
+  { title: "White-label & customizable", description: "Your branding, subdomain, intake, and methodology — clients experience your firm.", icon: Palette },
   { title: "Action-oriented", description: "Prioritized risks and tailored recommendations.", icon: Sparkles },
 ] as const;
 
@@ -30,8 +41,8 @@ export function LandingOutcomesSection() {
     <MarketingSection
       id="who-its-for"
       kicker="Who it's for"
-      title="One platform for families and the advisors who guide them"
-      description="AKILI gives both sides a shared view of governance risk — discreet for clients, structured for advisory firms."
+      title="One platform. Multiple professional front doors."
+      description="AKILI gives affluent families and the firms that serve them a shared system of record for governance risk — discreet for clients, structured for professional delivery."
       className="!space-y-10"
     >
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
@@ -56,7 +67,7 @@ export function LandingOutcomesSection() {
 
         <div className="space-y-5 border-t border-border/60 pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-16">
           <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Why advisors trust AKILI
+            Why firms trust AKILI
           </p>
           <ul className="space-y-4">
             {TRUST_POINTS.map(({ title, description, icon: Icon }) => (

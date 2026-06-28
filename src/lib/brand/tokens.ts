@@ -57,7 +57,7 @@ export const AKILI_TAGLINES = {
   /** Product / client-facing */
   product: "Prevent family wealth from becoming family conflict.",
   /** Transactional email header */
-  email: "Intelligent governance for advisory teams",
+  email: "Intelligent governance for professional firms and families",
   /** Category positioning */
   category: "Governance Intelligence Platform",
 } as const;

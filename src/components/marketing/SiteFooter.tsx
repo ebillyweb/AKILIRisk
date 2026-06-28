@@ -27,8 +27,8 @@ export function SiteFooter({ className }: SiteFooterProps) {
             <AkiliLogoLockup className="h-auto w-full max-w-[140px] sm:max-w-[160px]" />
           </Link>
           <p className="max-w-sm text-pretty text-sm leading-6">
-            Governance intelligence for modern families and advisory firms — structured
-            assessments, prioritized risks, and actionable recommendations.
+            Governance intelligence for modern family wealth — a shared system of record for
+            professional firms and the households they serve.
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export function SiteFooter({ className }: SiteFooterProps) {
           &copy; {year} {LEGAL_ENTITY_NAME}. All rights reserved.
         </p>
         <p className="max-w-md text-xs leading-5 lg:max-w-sm lg:text-right">
-          Built for the advisory process used by AKILI Risk Intelligence.
+          Built for the professional-led process used by AKILI Risk Intelligence.
         </p>
       </div>
     </footer>

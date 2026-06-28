@@ -1,6 +1,6 @@
 # AKILI Risk Intelligence — Investor Deck
 
-**Category:** Governance Intelligence Platform for wealth advisors and multi-generational families
+**Category:** Governance Intelligence Platform for affluent families and the professional firms that serve them
 
 **Entity:** AKILI Risk Intelligence · [akilirisk.com](https://akilirisk.com) · hello@akilirisk.com
 
@@ -18,9 +18,9 @@
 
 ## Slide 2 — The Problem
 
-**Financial planning manages assets. Nobody manages family risk.**
+**Every professional protects a piece of the family. Nobody owns the whole picture.**
 
-Families spend millions protecting their wealth — advisors, insurance, estate counsel, cybersecurity — but almost nothing **measuring** the operational risks that actually destroy it.
+Families spend millions on wealth management, tax planning, estate counsel, succession planning, and cybersecurity — but almost nothing **measuring** whether the family itself is governable over time.
 
 ---
 
@@ -35,7 +35,7 @@ Then Dad dies unexpectedly.
 - The successor trustee doesn't know they're the trustee
 - The family business stalls
 - Children disagree over distributions
-- The financial advisor wasn't included
+- The wealth advisor, CPA, and estate attorney each had a fragment — **none had the whole picture**
 
 **Nothing failed financially. Everything failed operationally.**
 
@@ -50,11 +50,11 @@ That's the problem AKILI solves.
 | **Largest intergenerational wealth transfer in history** | Trillions moving to heirs who are unprepared to govern |
 | **Rising cybercrime targeting affluent families** | HNW households are high-value, soft targets |
 | **AI-driven fraud and impersonation** | Deepfakes and social engineering scale faster than human vigilance |
-| **Advisor commoditization** | Firms need differentiated, high-trust planning beyond portfolio returns |
+| **Professional commoditization** | Firms need differentiated, high-trust planning beyond siloed expertise |
 | **Estate complexity increasing** | Trusts, entities, digital assets, multi-jurisdiction families |
 | **Family offices growing rapidly** | More households need institutional-grade governance — without building it in-house |
 
-The window is open for a **new category** between financial planning and family continuity.
+The window is open for a **new category** between fragmented professional advice and family continuity.
 
 ---
 
@@ -62,18 +62,18 @@ The window is open for a **new category** between financial planning and family 
 
 **Traditional assessments generate reports. AKILI creates a living system of record for family governance.**
 
-AKILI gives advisors and families a **living system** for family risk — one that:
+AKILI gives **professional firms and families** a **living system** for family risk — one that:
 
 | | |
 |---|---|
 | **Remembers** | Household structure, roles, history, and prior assessments |
 | **Measures** | Posture across 10 risk domains with transparent scoring |
 | **Tracks** | Change over time — not a one-time PDF in a drawer |
-| **Compares** | Portfolio-wide patterns across an advisor's client book |
-| **Connects** | Advisors, families, and deliverables in one secure workflow |
+| **Compares** | Portfolio-wide patterns across a firm's client book |
+| **Connects** | Professionals, families, and deliverables in one secure workflow |
 | **Creates continuity** | From discovery through action — and ongoing monitoring |
 
-**Family Risk Intelligence™** — structured, measurable, advisor-led.
+**Family Risk Intelligence™** — structured, measurable, **professional-led**.
 
 We sell **confidence**, not questionnaires.
 
@@ -86,9 +86,9 @@ We sell **confidence**, not questionnaires.
 | | |
 |---|---|
 | **Heat map** | 10-pillar Family Governance Score across the household |
-| **Advisor pipeline** | Multi-client status from intake through deliverables |
+| **Firm pipeline** | Multi-client status from intake through deliverables |
 | **Risk profile** | Missing controls, emphasis areas, trend over time |
-| **Branded report** | Client-ready PDF under advisor white-label |
+| **Branded report** | Client-ready PDF under firm white-label |
 
 *Drop live screenshots from `preview.akilirisk.com` before the meeting.*
 
@@ -130,7 +130,7 @@ flowchart TB
 
 ## Slide 8 — The 10-Pillar Framework *(shipped today)*
 
-Ten domains. One household profile. Advisors scope 1–10 per engagement.
+Ten domains. One household profile. Firms scope 1–10 per engagement.
 
 **Visual for slides:** 10-spoke radar or icon wheel — one graphic, not a table.
 
@@ -147,28 +147,32 @@ Ten domains. One household profile. Advisors scope 1–10 per engagement.
 | 📜 | Estate & Succession |
 | 🧠 | Behavioral Resilience |
 
-**Family Governance Score** — a single continuity signal advisors and families can act on.
+**Family Governance Score** — a single continuity signal professionals and families can act on.
 
 ---
 
 ## Slide 9 — Market
 
-**Beachhead:** Wealth advisors and RIAs serving HNW and UHNW households.
+**One platform. One problem. Multiple professional front doors.**
+
+**Beachhead:** Firms serving HNW and UHNW households — **wealth advisory deployed first**; expanding to CPAs, estate attorneys, and succession planners serving the same clients.
 
 | Market | Scale *(validate before meeting)* |
 |--------|-----------------------------------|
-| **WealthTech** | $[X]B global market, growing with advisor digitization |
+| **WealthTech** | $[X]B global market, growing with professional digitization |
 | **Intergenerational transfer** | $[X]T transferring over the next decade (US) |
-| **RIA-managed assets** | $[X]T+ under advisory — expanding need for differentiated planning |
+| **Professional services (HNW)** | $[X]B+ across advisory, tax, legal, and succession practices |
 | **Cybersecurity (HNW / family office)** | $[X]B spent protecting digital and financial exposure |
 
 | Segment | Opportunity |
 |---------|-------------|
-| **~300K+ financial advisors** (US) | Need differentiation beyond AUM and portfolio performance |
-| **~10K+ family offices** (global, growing) | Standardize governance across clients and generations |
-| **Enterprise advisory firms** | White-label governance intelligence under their brand |
+| **Wealth advisors & RIAs** | Differentiated governance beyond portfolio returns |
+| **CPAs & tax advisory firms** | Structured tax, liquidity, and continuity intelligence |
+| **Estate attorneys & succession planners** | Evidence-based succession and governance assessments |
+| **Family offices & multi-family offices** | Standardize governance across clients and generations |
+| **Enterprise professional firms** | White-label governance intelligence under their brand |
 
-**Wedge:** Advisor-led distribution — advisors pay, clients are included.
+**Wedge:** Professional-led, invitation-only — **firms subscribe; client households included.**
 
 **Expansion:** Monitoring, reassessment, document vault, policy management → **recurring revenue per household**.
 
@@ -176,14 +180,15 @@ Ten domains. One household profile. Advisors scope 1–10 per engagement.
 
 ## Slide 10 — Business Model
 
-**SaaS — advisor and firm subscriptions.**
+**SaaS — firm and practice subscriptions.**
 
 | Tier | Clients | Buyer |
 |------|---------|-------|
-| **Starter** | 25 | Solo advisor |
-| **Growth** | 50 | Small practice |
-| **Professional** | 100 | Established firm + branding |
-| **Enterprise** | Negotiated seats + firm cap | Multi-advisor firms (sales-assisted) |
+| **Essentials** | 25 | Solo practitioner / small practice |
+| **Professional** | 50 | Established firm + methodology customization |
+| **Business** | 100 | Growing firm + white-label branding |
+| **Platinum** | 250 | High-volume firm + advanced analytics |
+| **Enterprise** | Negotiated seats + firm cap | Multi-professional firms (sales-assisted) |
 
 - Monthly / annual billing (Stripe live in production)
 - Client limits drive natural upgrade motion
@@ -199,15 +204,16 @@ Ten domains. One household profile. Advisors scope 1–10 per engagement.
 
 | | Traditional planning | AKILI |
 |---|---------------------|-------|
-| **Focus** | Portfolio & assets | Whole-family risk |
+| **Focus** | Siloed expertise (tax, legal, wealth) | Whole-family operational risk |
 | **Format** | Static PDFs, annual meetings | Living intelligence platform |
 | **Cadence** | Episodic | Continuous monitoring + reassessment |
-| **Scope** | Financial | Governance + cyber + estate + behavior + 6 more |
+| **Scope** | Single-domain | Governance + cyber + estate + tax + behavior + 6 more |
+| **Delivery** | Generic vendor tools & branding | **White-label** subdomains, custom intake, firm methodology |
 | **Outcome** | Reports | **Confidence** — a Family Governance Score that compounds |
 
 **The moat isn't the pillar list.**
 
-**The system of record for family governance** — the platform that remembers, measures, and connects risk across every engagement.
+**The system of record for family governance** — plus **white-label delivery** so firms own the client relationship, not a generic vendor experience.
 
 ---
 
@@ -222,16 +228,17 @@ Ten domains. One household profile. Advisors scope 1–10 per engagement.
 | Built & shipped | |
 |-----------------|---|
 | **10 production pillars** | Full methodology catalog in platform |
-| **150+ assessment questions** | Platform question bank, advisor-customizable |
-| **Advisor portal** | Multi-client pipeline, intelligence, facilitated sessions |
+| **150+ assessment questions** | Platform question bank, firm-customizable |
+| **Practitioner workspace** | Multi-client pipeline, intelligence, facilitated sessions |
 | **Enterprise architecture** | Multi-seat firms, provisioning, team billing |
-| **White-label platform** | Branded subdomains, client invitations, PDFs |
+| **White-label platform** | Branded subdomains, custom intake, methodology snapshots, firm overlays |
 | **Scoring engine** | Family Governance Score, emphasis, missing controls |
 | **AI-assisted intake** | Audio interview + transcription |
 | **Document automation** | Collection, policy templates, branded reports |
-| **Billing** | Stripe subscriptions — Starter through Enterprise |
+| **Billing** | Stripe subscriptions — Essentials through Enterprise |
+| **Full lifecycle** | Recommendations → action plans → tracking → reassessment |
 
-**Momentum signal:** End-to-end advisor workflow in production — invite → intake → assess → deliver → monitor.
+**Momentum signal:** End-to-end professional workflow in production — invite → intake → assess → deliver → monitor → reassess.
 
 *Add when available: additional enterprise contracts, assessment volume, pipeline metrics.*
 
@@ -243,8 +250,8 @@ Ten domains. One household profile. Advisors scope 1–10 per engagement.
 
 | Phase | What |
 |-------|------|
-| **Now (shipped)** | 10-pillar assessment, advisor workflow, white-label, enterprise, billing |
-| **Next** | Cross-pillar AI insights · advisor action plans · unified continuity scoring |
+| **Now (shipped)** | 10-pillar assessment, professional workflow, white-label, enterprise, billing, lifecycle loop |
+| **Next** | Cross-pillar AI insights · executive reporting · unified continuity scoring |
 | **Platform** | Living governance records · policy management · continuous monitoring |
 
 **AI example — tangible, not abstract:**
@@ -252,7 +259,7 @@ Ten domains. One household profile. Advisors scope 1–10 per engagement.
 > **Household Risk Insight**  
 > High cyber risk combined with concentrated ownership and no documented successor increases business continuity risk by **42%**.
 
-AI surfaces compounding connections no advisor can hold in memory across 50+ households.
+AI surfaces compounding connections no professional can hold in memory across 50+ households.
 
 ---
 
@@ -262,7 +269,7 @@ AI surfaces compounding connections no advisor can hold in memory across 50+ hou
 
 - **25+ years** building enterprise software and leading engineering organizations
 - **CTO of Habits** — scaled AI products and enterprise SaaS
-- **Built alongside practitioners** — methodology grounded in real advisor and family-office workflows
+- **Built alongside practitioners** — methodology grounded in wealth, tax, legal, and family-office workflows
 - **Enterprise platform live** — white-label, multi-seat, billing, first enterprise client deployed
 
 **Why this team:** We combine enterprise platform depth with domain practitioners — and we've already shipped what most startups only pitch.
@@ -273,12 +280,12 @@ AI surfaces compounding connections no advisor can hold in memory across 50+ hou
 
 ## Slide 15 — The Ask
 
-**We're raising $[X]M to become the governance intelligence platform powering the next generation of wealth advisory.**
+**We're raising $3.5M Seed to become the governance intelligence platform for modern family wealth.**
 
 | | |
 |---|---|
-| **Raising** | $[X]M [Seed / Pre-Seed] |
-| **Outcome** | Category leadership in family governance intelligence — the system of record advisors and families trust for continuity |
+| **Raising** | $3.5M Seed |
+| **Outcome** | Category leadership in family governance intelligence — the system of record professionals and families trust for continuity |
 | **Milestones** | [X] enterprise firms · [Y] households on platform · [Z] ARR |
 
 **Contact:** hello@akilirisk.com · sales@akilirisk.com (enterprise)
@@ -291,19 +298,19 @@ AI surfaces compounding connections no advisor can hold in memory across 50+ hou
 
 **Slide 1:** One line only. Don't open by sounding small.
 
-**Slide 2:** Pause after the headline. Don't explain — let it land.
+**Slide 2:** Pause after the headline. Don't explain — let it land. Emphasize *fragmented professionals, no whole picture*.
 
 **Slide 3:** Tell this story slowly. It's the emotional core.
 
-**Slide 5:** "System of record for family governance" — say it once, clearly.
+**Slide 5:** "System of record for family governance" — say it once, clearly. Say **professional-led**, not advisor-only.
 
 **Slide 6:** Four screenshots, almost no words. Live demo backup ready.
 
 **Slide 7:** The slide they remember six months later. Slow down.
 
-**Slide 9:** Replace $[X] placeholders with sourced TAM figures before the meeting.
+**Slide 9:** Lead with **one platform, multiple front doors**. Wealth advisory is beachhead, not the category. Replace $[X] placeholders with sourced TAM figures before the meeting.
 
-**Slide 11:** Category creation, not comparison anxiety.
+**Slide 11:** Category creation, not comparison anxiety. Call out **Delivery** row — white-label is how firms adopt without looking like resellers.
 
 **Slide 12:** "We are not pitching a roadmap" — deliver with confidence.
 
@@ -315,4 +322,4 @@ AI surfaces compounding connections no advisor can hold in memory across 50+ hou
 
 ---
 
-*Update TAM sources, raise amount, milestones, and founder details before distribution.*
+*Update TAM sources, milestones, and founder details before distribution.*

@@ -18,7 +18,7 @@
 |----------|------|
 | **Investor / platform** | The governance intelligence platform for modern family wealth. |
 | **Product / emotional** | Prevent family wealth from becoming family conflict. |
-| **Email** | Intelligent governance for advisory teams |
+| **Email** | Intelligent governance for professional firms and families |
 | **Mission** | Legacy survives through governance, not assumption. |
 
 ---
@@ -26,10 +26,16 @@
 ## Elevator hooks
 
 **Problem (investor):**
-> Financial planning manages assets. Nobody manages family risk.
+> Every professional protects a piece of the family. Nobody owns the whole picture.
+
+**Problem (alternate):**
+> Financial planning manages assets. Nobody measures whether the family itself is governable.
 
 **Solution:**
 > Traditional assessments generate reports. AKILI creates a living system of record for family governance.
+
+**Distribution:**
+> One platform. One problem. Multiple professional front doors.
 
 **Moat:**
 > The system of record for family governance.
@@ -37,8 +43,11 @@
 **Confidence (not features):**
 > We sell confidence, not questionnaires.
 
+**White-label (firm-facing):**
+> Your brand, your subdomain, your methodology — clients experience your firm, not a generic platform.
+
 **AI (tangible):**
-> AI identifies compounding risks across governance, cyber, succession, tax, reputation, and family behavior — connections no advisor can hold across 50+ households.
+> AI identifies compounding risks across governance, cyber, succession, tax, reputation, and family behavior — connections no professional can hold across 50+ households.
 
 ---
 
@@ -47,9 +56,9 @@
 | Attribute | Guideline |
 |-----------|-----------|
 | **Tone** | Discreet, institutional, calm — never alarmist |
-| **Audience** | Wealth advisors, family offices, family leadership |
-| **Avoid** | Hype, "disruption," consumer fintech slang, fear-mongering |
-| **Prefer** | Continuity, governance, confidence, intelligence, structure |
+| **Audience** | Professional firms (wealth, tax, legal, succession), family offices, family leadership |
+| **Avoid** | Hype, "disruption," consumer fintech slang, fear-mongering, defining AKILI as "wealth advisor software" |
+| **Prefer** | Continuity, governance, confidence, intelligence, structure, professional-led |
 
 Write like a trusted advisor briefing a board — not a startup landing page.
 
@@ -63,7 +72,9 @@ Write like a trusted advisor briefing a board — not a startup landing page.
 - System of record for family governance
 - Living system / living intelligence
 - 10-pillar framework (current product state)
-- Advisor-led, invitation-only
+- Professional-led, invitation-only
+- One platform · one problem · multiple professional front doors
+- White-label & customizable (subdomain, intake, methodology, firm branding)
 - White-label enterprise platform
 
 ---
@@ -74,6 +85,25 @@ Write like a trusted advisor briefing a board — not a startup landing page.
 - "Questionnaire" or "survey" as the primary product descriptor
 - "Composite Risk Score" (prefer **Family Governance Score**)
 - Naming enterprise clients as methodology sources (clients are **traction**, not IP attribution)
+- "Platform for wealth advisors" as the primary category (wealth advisory is a **beachhead**, not the identity)
+
+---
+
+## Who we serve
+
+**Professional firms** delivering governance intelligence to affluent households:
+
+| Segment | Primary need |
+|---------|----------------|
+| **Wealth advisors & RIAs** | Governance intelligence beyond portfolio planning |
+| **CPAs & tax advisory firms** | Tax, liquidity, and continuity visibility |
+| **Estate attorneys & succession planners** | Evidence-based succession and governance assessment |
+| **Family offices & MFOs** | Standardized governance across the client book |
+| **Enterprise professional firms** | White-label platform, team seats, firm-wide delivery |
+
+**Beachhead:** Wealth advisory (first enterprise deployment live). **Expansion:** Adjacent professional networks serving the same HNW/UHNW households.
+
+**Families** enter through their professional — invitation-only, never direct-to-consumer.
 
 ---
 
@@ -88,19 +118,8 @@ Write like a trusted advisor briefing a board — not a startup landing page.
 
 ---
 
-## About copy (from product)
-
-From `src/lib/marketing/content.ts`:
+## About copy (canonical)
 
 > AKILI Risk Intelligence helps modern family wealth operate with clearer governance—before informal structures become costly disputes.
 
-> We provide a discreet digital personal risk profile that identifies structural gaps across succession planning, authority, and family decision-making.
-
----
-
-## Who we serve
-
-- Family offices and multi-generational households
-- Wealth advisors extending beyond financial planning
-- Family leadership strengthening decision frameworks and succession readiness
-- Enterprise advisory firms needing white-label governance intelligence
+> We provide a discreet digital personal risk profile that identifies structural gaps across succession planning, authority, and family decision-making — delivered by the trusted professionals already serving the household.

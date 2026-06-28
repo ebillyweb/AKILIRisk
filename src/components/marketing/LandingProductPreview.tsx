@@ -160,7 +160,7 @@ export function LandingProductPreview() {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Aggregate maturity {SAMPLE_MATURITY.toFixed(1)} / {MATURITY_SCALE_MAX} ·
-                  scored across active pillars with advisor-customized weights
+                  scored across active pillars with firm-customized weights
                 </p>
                 <div className="h-2.5 overflow-hidden rounded-full bg-secondary/90">
                   <div
@@ -196,7 +196,7 @@ export function LandingProductPreview() {
                 <p className="editorial-kicker">Pillar coverage</p>
                 <p className="text-sm leading-6 text-muted-foreground">
                   All {PLATFORM_PILLAR_COUNT} platform pillars — active domains scored, inactive
-                  domains marked not in scope for this advisor-configured engagement.
+                  domains marked not in scope for this firm-configured engagement.
                 </p>
               </div>
               <div className="mt-4 flex w-full flex-1 items-center justify-center">
@@ -254,7 +254,7 @@ export function LandingProductPreview() {
 
               <p className="text-xs leading-5 text-muted-foreground">
                 Illustrative sample. Actual output reflects each household&apos;s responses,
-                advisor pillar selection, and methodology settings.
+                firm pillar selection, and methodology settings.
               </p>
             </div>
           </div>

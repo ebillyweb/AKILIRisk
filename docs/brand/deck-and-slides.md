@@ -65,8 +65,8 @@ Built automatically in generated PPTX; reference diagram in investor markdown Sl
 
 ## Before presenting
 
-- [ ] Replace `$[X]M` raise amount (Slide 15)
 - [ ] Fill TAM `$[X]B` / `$[X]T` with sourced figures (Slide 9)
+- [ ] Confirm `$3.5M Seed` raise and milestone targets (Slide 15)
 - [ ] Add founder name + photo (Slide 14 — Why We Can Win)
 - [ ] Drop product screenshots (Slide 6)
 - [ ] Confirm Stripe price points if discussing tiers (Slide 10)

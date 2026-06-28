@@ -5,7 +5,7 @@ export const HERO_AUDIENCE_OPTIONS: ReadonlyArray<{
   label: string;
 }> = [
   { id: "families", label: "For Families" },
-  { id: "advisors", label: "For Advisors" },
+  { id: "advisors", label: "For Firms" },
   { id: "overview", label: "Overview" },
 ] as const;
 
@@ -38,7 +38,7 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     headline:
       "The governance intelligence platform for modern family wealth.",
     supporting:
-      "A discreet personal risk profile that surfaces structural gaps and gives your advisor clear, actionable guidance.",
+      "A discreet personal risk profile that surfaces structural gaps and gives your professional team clear, actionable guidance.",
     subtext: "12–15 minute structured assessment",
     primaryCta: {
       label: "Start Assessment",
@@ -61,16 +61,16 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
       {
         id: "privacy",
         content: "text",
-        text: "Private and encrypted. Responses visible only to your assigned advisor.",
+        text: "Private and encrypted. Responses visible only to your assigned professional.",
       },
     ],
   },
   advisors: {
-    kicker: "For advisors",
+    kicker: "For firms",
     headline:
-      "Governance intelligence for modern advisory firms.",
+      "Governance intelligence for modern professional practices.",
     supporting:
-      "One workspace for client profiles, assessment progress, risk scoring, and structured recommendations your clients can trust.",
+      "One workspace for client profiles, assessment progress, risk scoring, and structured recommendations — for wealth advisors, CPAs, estate attorneys, succession planners, and family offices.",
     primaryCta: {
       label: "Advisor Sign In",
       href: "/signin?role=advisor",
@@ -109,25 +109,25 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     kicker: "How it works",
     headline: "Assess. Analyze. Act.",
     supporting:
-      "Structured intake across up to ten modular pillars — scoped and weighted per engagement — with prioritized recommendations for families and the advisors who guide them.",
+      "Structured intake across up to ten modular pillars — scoped and weighted per engagement — with prioritized recommendations for families and the professional firms that guide them.",
     overviewSteps: [
       {
         step: "1",
         title: "Assess",
         description:
-          "Families complete a guided profile. Advisors choose which pillars are in scope and manage intake from one workspace.",
+          "Families complete a guided profile. Firms choose which pillars are in scope and manage intake from one workspace.",
       },
       {
         step: "2",
         title: "Analyze",
         description:
-          "Scores across the advisor's active pillars surface succession, authority, cyber, and continuity gaps.",
+          "Scores across active pillars surface succession, authority, cyber, tax, and continuity gaps.",
       },
       {
         step: "3",
         title: "Act",
         description:
-          "Structured recommendations help advisors and families address risks before they escalate.",
+          "Structured recommendations help firms and families address risks before they escalate.",
       },
     ],
     primaryCta: {

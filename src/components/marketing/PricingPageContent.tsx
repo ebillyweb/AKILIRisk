@@ -26,7 +26,7 @@ export function PricingPageContent({
       <MarketingPageHero
         kicker="Pricing"
         title="Modular governance intelligence, priced to scale with your practice"
-        description="Compare Essentials through Platinum side by side — each card shows what is included and what unlocks on higher tiers. Solo advisors subscribe self-serve; enterprise firms license the same modules with shared branding and multiple advisor seats."
+        description="Compare Essentials through Platinum side by side — each card shows what is included and what unlocks on higher tiers. Solo practitioners subscribe self-serve; enterprise firms license the same modules with shared branding and multiple team seats."
       />
 
       <PricingTierGrid
