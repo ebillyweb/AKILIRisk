@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 import type { ReassessmentInput, ReassessmentChainEntry } from "./reassessment-types";
 
@@ -59,17 +61,18 @@ export async function createReassessment(
  * Returns 1 for an assessment with no predecessor (it is the first).
  */
 async function walkChainLength(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: Prisma.TransactionClient,
   assessmentId: string,
 ): Promise<number> {
   let count = 1;
   let currentId: string | null = assessmentId;
 
   while (currentId) {
-    const row = await tx.assessment.findUnique({
-      where: { id: currentId },
-      select: { previousAssessmentId: true },
-    });
+    const row: { previousAssessmentId: string | null } | null =
+      await tx.assessment.findUnique({
+        where: { id: currentId },
+        select: { previousAssessmentId: true },
+      });
     if (row?.previousAssessmentId) {
       count++;
       currentId = row.previousAssessmentId;
@@ -92,14 +95,21 @@ export async function getReassessmentChain(
   let currentId: string | null = assessmentId;
 
   while (currentId) {
-    const row = await prisma.assessment.findUnique({
+    const row: {
+      id: string;
+      version: number;
+      status: string;
+      completedAt: Date | null;
+      startedAt: Date;
+      previousAssessmentId: string | null;
+    } | null = await prisma.assessment.findUnique({
       where: { id: currentId },
       select: {
         id: true,
         version: true,
         status: true,
         completedAt: true,
-        createdAt: true,
+        startedAt: true,
         previousAssessmentId: true,
       },
     });
@@ -110,7 +120,7 @@ export async function getReassessmentChain(
       version: row.version,
       status: row.status,
       completedAt: row.completedAt,
-      createdAt: row.createdAt,
+      createdAt: row.startedAt,
     });
 
     currentId = row.previousAssessmentId;

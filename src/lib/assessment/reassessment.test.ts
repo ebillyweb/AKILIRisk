@@ -181,7 +181,7 @@ describe("getReassessmentChain", () => {
         version: 1,
         status: "IN_PROGRESS",
         completedAt: null,
-        createdAt: new Date("2026-06-03"),
+        startedAt: new Date("2026-06-03"),
         previousAssessmentId: "mid",
       })
       .mockResolvedValueOnce({
@@ -189,7 +189,7 @@ describe("getReassessmentChain", () => {
         version: 1,
         status: "COMPLETED",
         completedAt: new Date("2026-03-01"),
-        createdAt: new Date("2026-02-01"),
+        startedAt: new Date("2026-02-01"),
         previousAssessmentId: "root",
       })
       .mockResolvedValueOnce({
@@ -197,7 +197,7 @@ describe("getReassessmentChain", () => {
         version: 1,
         status: "COMPLETED",
         completedAt: new Date("2025-12-01"),
-        createdAt: new Date("2025-11-01"),
+        startedAt: new Date("2025-11-01"),
         previousAssessmentId: null,
       });
 
@@ -216,7 +216,7 @@ describe("getReassessmentChain", () => {
       version: 1,
       status: "COMPLETED",
       completedAt: new Date("2026-01-01"),
-      createdAt: new Date("2025-12-01"),
+      startedAt: new Date("2025-12-01"),
       previousAssessmentId: null,
     });
 
