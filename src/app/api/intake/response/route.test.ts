@@ -14,6 +14,7 @@ const { resolveUser, prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     intakeInterview: { findFirst: vi.fn(), update: vi.fn() },
     intakeResponse: { findUnique: vi.fn(), upsert: vi.fn() },
+    assessment: { findFirst: vi.fn() },
   },
 }));
 
@@ -40,6 +41,7 @@ beforeEach(() => {
     id: "intv-1",
     status: "IN_PROGRESS",
   });
+  prismaMock.assessment.findFirst.mockResolvedValue(null);
   prismaMock.intakeResponse.findUnique.mockResolvedValue(null);
   prismaMock.intakeResponse.upsert.mockResolvedValue({});
   prismaMock.intakeInterview.update.mockResolvedValue({});
@@ -76,6 +78,16 @@ describe("POST /api/intake/response", () => {
     prismaMock.intakeInterview.findFirst.mockResolvedValue(null);
     const res = await POST(postRequest(validType));
     expect(res.status).toBe(404);
+  });
+
+  it("returns 409 when the client assessment has already started", async () => {
+    prismaMock.assessment.findFirst.mockResolvedValue({ id: "assessment-1" });
+    const res = await POST(postRequest(validType));
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toMatchObject({
+      error: "Intake answers cannot be changed after your assessment has started.",
+    });
+    expect(prismaMock.intakeResponse.upsert).not.toHaveBeenCalled();
   });
 
   it("skips a stale write without upserting (server is newer)", async () => {
