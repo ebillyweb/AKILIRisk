@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
 import { LEGAL_ENTITY_NAME } from "@/lib/legal/documents";
-import { SITE_NAV_LINKS } from "@/lib/marketing/site-nav";
+import {
+  SITE_AUDIENCE_NAV,
+  SITE_PRIMARY_NAV_LINKS,
+  SITE_SECONDARY_NAV_LINKS,
+  audienceNavHref,
+} from "@/lib/marketing/site-nav";
 import { cn } from "@/lib/utils";
 
 interface SiteFooterProps {
@@ -9,7 +14,7 @@ interface SiteFooterProps {
 }
 
 const linkClassName =
-  "font-medium text-foreground/90 underline-offset-4 hover:text-foreground hover:underline";
+  "font-medium text-foreground/90 underline-offset-4 transition-colors duration-200 hover:text-foreground hover:underline";
 
 export function SiteFooter({ className }: SiteFooterProps) {
   const year = new Date().getFullYear();
@@ -36,23 +41,33 @@ export function SiteFooter({ className }: SiteFooterProps) {
           <div className="space-y-2.5 sm:space-y-3">
             <p className="editorial-kicker">Platform</p>
             <nav className="flex flex-col gap-1.5 sm:gap-2" aria-label="Platform links">
-              {SITE_NAV_LINKS.map(({ href, label }) => (
+              {SITE_AUDIENCE_NAV.map(({ id, label }) => (
+                <Link key={id} href={audienceNavHref(id)} className={linkClassName}>
+                  {label}
+                </Link>
+              ))}
+              {SITE_PRIMARY_NAV_LINKS.map(({ href, label }) => (
                 <Link key={href} href={href} className={linkClassName}>
                   {label}
                 </Link>
               ))}
               <Link href="/start" className={linkClassName}>
-                Start assessment
+                Start Assessment
               </Link>
               <Link href="/signin" className={linkClassName}>
-                Sign in
+                Sign In
               </Link>
             </nav>
           </div>
 
           <div className="space-y-2.5 sm:space-y-3">
-            <p className="editorial-kicker">Legal</p>
-            <nav className="flex flex-col gap-1.5 sm:gap-2" aria-label="Legal links">
+            <p className="editorial-kicker">Company</p>
+            <nav className="flex flex-col gap-1.5 sm:gap-2" aria-label="Company links">
+              {SITE_SECONDARY_NAV_LINKS.map(({ href, label }) => (
+                <Link key={href} href={href} className={linkClassName}>
+                  {label}
+                </Link>
+              ))}
               <Link href="/privacy" className={linkClassName}>
                 Privacy Policy
               </Link>

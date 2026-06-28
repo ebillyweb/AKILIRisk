@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useId } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { HeroAudienceSwitcher } from "@/components/home/hero/HeroAudienceSwitcher";
+import { useHeroAudienceNav } from "@/components/home/hero/HeroAudienceContext";
 import { HeroFeatureCard } from "@/components/home/hero/HeroFeatureCard";
 import {
   ADVISOR_HERO_FEATURES,
@@ -15,11 +15,9 @@ import {
   type HeroAudience,
 } from "@/components/home/hero/hero-audience-content";
 import { Button } from "@/components/ui/button";
-import { useHeroAudience } from "@/components/home/hero/useHeroAudience";
 import { cn } from "@/lib/utils";
 
 type LandingHeroProps = {
-  initialAudience?: HeroAudience;
   authenticated: boolean;
   userEmail?: string | null;
   advisorWorkspaceTitle?: string;
@@ -40,7 +38,6 @@ const HERO_FEATURE_CARDS: Partial<
 };
 
 export function LandingHero({
-  initialAudience = "families",
   authenticated,
   userEmail,
   advisorWorkspaceTitle,
@@ -48,7 +45,7 @@ export function LandingHero({
 }: LandingHeroProps) {
   const baseId = useId();
   const prefersReducedMotion = useReducedMotion();
-  const { audience, setAudience } = useHeroAudience(initialAudience);
+  const { audience } = useHeroAudienceNav();
   const copy = HERO_AUDIENCE_CONTENT[audience];
   const featureCards = HERO_FEATURE_CARDS[audience];
   const kicker =
@@ -74,13 +71,6 @@ export function LandingHero({
           featureCards ? "max-w-5xl" : "max-w-3xl",
         )}
       >
-        <HeroAudienceSwitcher
-          idPrefix={baseId}
-          value={audience}
-          onChange={setAudience}
-          className="mb-8"
-        />
-
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={audience}

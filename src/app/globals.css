@@ -758,6 +758,15 @@
     margin-bottom: 0.25rem;
   }
 
+  /* Explicit SVG width/height in markup; keep visible inside flex headers (Safari). */
+  .site-header svg.akili-logo-lockup,
+  .site-header svg.akili-header-lockup,
+  svg.akili-header-lockup {
+    display: block;
+    flex-shrink: 0;
+    overflow: visible;
+  }
+
   .dark .editorial-kicker {
     color: color-mix(in oklab, var(--foreground) 90%, transparent 10%);
   }

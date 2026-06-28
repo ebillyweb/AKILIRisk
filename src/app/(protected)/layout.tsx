@@ -8,7 +8,7 @@ import { ClientPageHeaderSlot } from "@/components/layout/ClientPageHeaderSlot";
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
 import { RedirectIncompleteIntake } from "@/components/layout/RedirectIncompleteIntake";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
-import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { AkiliHeaderLockup } from "@/components/home/AkiliLogoLockup";
 import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
 import { ClientPortalRootTheme } from "@/components/branding/ClientPortalRootTheme";
 import { clientPortalBrandingDisplayTitle, clientPortalLogoImgSrc } from "@/lib/client/client-portal-branding";
@@ -188,10 +188,10 @@ export default async function ProtectedLayout({
                       ) : (
                         <Link
                           href="/"
-                          className="block text-foreground"
+                          className="inline-flex shrink-0 leading-none text-foreground transition-opacity duration-200 hover:opacity-80"
                           aria-label="AKILI home"
                         >
-                          <AkiliLogoLockup className="h-auto w-full max-w-[190px] lg:max-w-[220px]" />
+                          <AkiliHeaderLockup height={40} />
                         </Link>
                       )}
 

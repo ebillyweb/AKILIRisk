@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { HeroAudience } from "@/components/home/hero/hero-audience-content";
+import { HeroAudienceProvider } from "@/components/home/hero/HeroAudienceContext";
 import { SiteFooter } from "@/components/marketing/SiteFooter";
 import { SiteHeader } from "@/components/marketing/SiteHeader";
 import { cn } from "@/lib/utils";
@@ -9,6 +11,8 @@ type PublicPageShellProps = {
   maxWidth?: "full" | "narrow" | "wide";
   className?: string;
   contentClassName?: string;
+  /** When set, enables audience-aware navigation on the homepage. */
+  heroAudienceInitial?: HeroAudience;
 };
 
 const MAX_WIDTH_CLASS = {
@@ -22,8 +26,9 @@ export function PublicPageShell({
   maxWidth = "wide",
   className,
   contentClassName,
+  heroAudienceInitial,
 }: PublicPageShellProps) {
-  return (
+  const inner = (
     <>
       <a href="#main-content" className="skip-to-content">
         Skip to main content
@@ -50,4 +55,14 @@ export function PublicPageShell({
       </main>
     </>
   );
+
+  if (heroAudienceInitial) {
+    return (
+      <HeroAudienceProvider initialAudience={heroAudienceInitial}>
+        {inner}
+      </HeroAudienceProvider>
+    );
+  }
+
+  return inner;
 }

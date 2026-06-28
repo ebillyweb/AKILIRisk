@@ -6,13 +6,13 @@ import {
 } from "@/lib/marketing/content";
 
 export const metadata: Metadata = {
-  title: "About Us",
+  title: "About",
 };
 
 export default function AboutUsPage() {
   return (
     <MarketingPage
-      title="About Us"
+      title="About"
       kicker="Company"
       heroDescription={aboutUsHeroDescription}
       sections={aboutUsSections}

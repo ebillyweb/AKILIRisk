@@ -26,17 +26,17 @@ test.describe("landing hero audience paths", () => {
     await expect(page.getByText("Risk Identification")).toBeVisible();
   });
 
-  test("advisors tab shows advisor workspace copy and CTAs", async ({ page }) => {
+  test("firms nav shows advisor workspace copy and CTAs", async ({ page }) => {
     await page.goto("/");
 
-    await page.getByTestId("landing-hero-tab-advisors").click();
+    await page.getByTestId("site-nav-audience-advisors").click();
 
     const panel = page.getByTestId("landing-hero-panel");
     await expect(panel).toHaveAttribute("data-audience", "advisors");
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: /governance intelligence for modern advisory firms/i,
+        name: /governance intelligence for modern professional practices/i,
       })
     ).toBeVisible();
 
@@ -54,10 +54,10 @@ test.describe("landing hero audience paths", () => {
     await expect(page.getByText("Family Continuity Planning")).toBeVisible();
   });
 
-  test("overview tab shows workflow copy and dual-path CTAs", async ({ page }) => {
+  test("how it works nav shows workflow copy and dual-path CTAs", async ({ page }) => {
     await page.goto("/");
 
-    await page.getByTestId("landing-hero-tab-overview").click();
+    await page.getByTestId("site-nav-audience-overview").click();
 
     const panel = page.getByTestId("landing-hero-panel");
     await expect(panel).toHaveAttribute("data-audience", "overview");
@@ -89,7 +89,7 @@ test.describe("landing hero audience paths", () => {
     );
     await expect(page).toHaveURL(/audience=overview/);
     await expect(
-      page.getByRole("tab", { name: /Overview/i, selected: true })
+      page.getByRole("tab", { name: /How It Works/i, selected: true })
     ).toBeVisible();
   });
 
@@ -102,7 +102,7 @@ test.describe("landing hero audience paths", () => {
     );
     await expect(page).toHaveURL(/audience=advisors/);
     await expect(
-      page.getByRole("tab", { name: /For Advisors/i, selected: true })
+      page.getByRole("tab", { name: /Firms/i, selected: true })
     ).toBeVisible();
   });
 
@@ -132,7 +132,7 @@ test.describe("landing hero audience paths", () => {
 
   test("remembers last audience in session storage", async ({ page }) => {
     await page.goto("/");
-    await page.getByTestId("landing-hero-tab-advisors").click();
+    await page.getByTestId("site-nav-audience-advisors").click();
 
     await page.goto("/");
     await expect(page.getByTestId("landing-hero-panel")).toHaveAttribute(

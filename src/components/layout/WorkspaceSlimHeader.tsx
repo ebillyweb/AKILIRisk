@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { AkiliHeaderLockup } from "@/components/home/AkiliLogoLockup";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface WorkspaceSlimHeaderProps {
@@ -19,10 +19,10 @@ export function WorkspaceSlimHeader({
     <div className="flex items-center justify-between gap-4">
       <Link
         href={homeHref}
-        className="block shrink-0 text-foreground"
+        className="inline-flex shrink-0 leading-none text-foreground transition-opacity duration-200 hover:opacity-80"
         aria-label={homeAriaLabel}
       >
-        <AkiliLogoLockup className="h-auto w-full max-w-[140px] sm:max-w-[160px]" />
+        <AkiliHeaderLockup height={40} />
       </Link>
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {userEmail ? (

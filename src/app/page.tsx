@@ -29,9 +29,9 @@ export default async function Home({ searchParams }: HomePageProps) {
       maxWidth="full"
       className="space-y-0"
       contentClassName="flex flex-col gap-14 sm:gap-20 lg:gap-24 space-y-0"
+      heroAudienceInitial={initialAudience}
     >
       <LandingHero
-        initialAudience={initialAudience}
         authenticated={Boolean(session?.user)}
         userEmail={session?.user?.email}
         advisorWorkspaceTitle={advisorWorkspaceTitle}
