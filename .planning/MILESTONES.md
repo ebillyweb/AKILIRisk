@@ -59,3 +59,24 @@
 
 ---
 
+
+## v1.5 Cyber Risk Intelligence (Shipped: 2026-06-28)
+
+**Phases completed:** 7 phases (19-25), 26 plans
+**Commits:** 573 | **Files modified:** 1,988 | **LOC:** +247,103 / -11,387
+**Timeline:** 102 days (2026-03-18 to 2026-06-28)
+
+**Key accomplishments:**
+- Full-spectrum risk coverage across 10 pillars with cyber and identity risk as first-class assessment pillars
+- Three-tier recommendation lifecycle engine with platform, enterprise, and advisor override layers
+- Client strategic action plan with advisor guidance review, bulk actions, and enterprise overlay customization
+- Opt-in implementation tracking with milestone management, activity feed, and portfolio engagement dashboard
+- Continuous reassessment with score deltas, targeted follow-up, and automated review cadence engine
+- Executive reporting pipeline with 8-section branded PDF, draft/publish workflow, and scheduled cron generation
+
+**Requirements:** 12/12 complete (CYBER-01/02, IDENTITY-01/02, FINANCE-01/02, UNIFIED-01/02, REPORT-01, LIFECYCLE-01/02/03)
+
+**Archive:** [v1.5-ROADMAP.md](milestones/v1.5-ROADMAP.md) | [v1.5-REQUIREMENTS.md](milestones/v1.5-REQUIREMENTS.md)
+
+---
+
