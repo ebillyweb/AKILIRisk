@@ -2,11 +2,12 @@
  * Tests for client activity feed query service.
  *
  * Coverage:
- *   - Query is scoped to clientId via assessment.userId
+ *   - Query is scoped to clientId via OR conditions (recommendation-based + intelligence events)
  *   - Respects limit and offset defaults and overrides
  *   - CLIENT role excludes advisor-internal actions
  *   - ADVISOR role includes all actions
  *   - Maps Prisma result to ActivityFeedItem shape
+ *   - Intelligence events (no assessmentRecommendation) get labeled correctly
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -29,6 +30,7 @@ const mockActivity = (overrides: Record<string, unknown> = {}) => ({
   detail: { milestoneId: "m-1", status: "COMPLETED" },
   createdAt: new Date("2026-06-15T10:00:00Z"),
   actorId: "user-1",
+  assessmentRecommendationId: "rec-1",
   assessmentRecommendation: {
     id: "rec-1",
     serviceRecommendation: { name: "Security Audit" },
@@ -42,7 +44,7 @@ describe("getClientActivityFeed", () => {
     findManyActivities.mockResolvedValue([]);
   });
 
-  it("scopes query to clientId via assessment.userId", async () => {
+  it("scopes query to clientId via OR conditions", async () => {
     await getClientActivityFeed({
       clientId: "client-abc",
       role: "ADVISOR",
@@ -50,12 +52,15 @@ describe("getClientActivityFeed", () => {
 
     expect(findManyActivities).toHaveBeenCalledTimes(1);
     const call = findManyActivities.mock.calls[0][0];
-    expect(call.where.assessmentRecommendation.assessment.userId).toBe(
-      "client-abc",
-    );
-    expect(call.where.assessmentRecommendation.assessment.status).toBe(
-      "COMPLETED",
-    );
+    // Phase 24 uses OR conditions for recommendation-based + intelligence events
+    expect(call.where.OR).toBeDefined();
+    expect(call.where.OR).toHaveLength(2);
+    // First condition: recommendation-based scoped to clientId
+    expect(
+      call.where.OR[0].assessmentRecommendation.assessment.userId,
+    ).toBe("client-abc");
+    // Second condition: intelligence events scoped to clientId
+    expect(call.where.OR[1].assessment.userId).toBe("client-abc");
   });
 
   it("uses default limit=20 and offset=0", async () => {
@@ -111,7 +116,7 @@ describe("getClientActivityFeed", () => {
     expect(call.where.action.in).not.toContain("status_declined");
   });
 
-  it("maps Prisma results to ActivityFeedItem shape", async () => {
+  it("maps recommendation-based results to ActivityFeedItem shape", async () => {
     findManyActivities.mockResolvedValue([mockActivity()]);
 
     const items = await getClientActivityFeed({
@@ -128,12 +133,14 @@ describe("getClientActivityFeed", () => {
       actorId: "user-1",
       recommendationName: "Security Audit",
       recommendationId: "rec-1",
+      eventType: "recommendation",
     });
   });
 
   it("uses 'Unknown' for missing recommendation name", async () => {
     findManyActivities.mockResolvedValue([
       mockActivity({
+        assessmentRecommendationId: "rec-2",
         assessmentRecommendation: {
           id: "rec-2",
           serviceRecommendation: null,
@@ -147,6 +154,26 @@ describe("getClientActivityFeed", () => {
     });
 
     expect(items[0]?.recommendationName).toBe("Unknown");
+  });
+
+  it("maps intelligence events with labeled action names", async () => {
+    findManyActivities.mockResolvedValue([
+      mockActivity({
+        id: "act-intel",
+        action: "assessment_completed",
+        assessmentRecommendationId: null,
+        assessmentRecommendation: null,
+      }),
+    ]);
+
+    const items = await getClientActivityFeed({
+      clientId: "client-abc",
+      role: "ADVISOR",
+    });
+
+    expect(items[0]?.eventType).toBe("intelligence");
+    expect(items[0]?.recommendationName).toBe("Assessment completed");
+    expect(items[0]?.recommendationId).toBeNull();
   });
 
   it("orders by createdAt descending", async () => {
