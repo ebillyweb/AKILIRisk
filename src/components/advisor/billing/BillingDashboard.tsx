@@ -32,12 +32,14 @@ import {
   shouldConfirmPlanChange,
 } from "@/lib/billing/plan-change-explainer";
 import {
+  enterprisePricingDeepLink,
   SELF_SERVE_TIERS,
   TIER_CATALOG,
   TIER_DISPLAY_NAME,
   TIER_RANK,
   type SelfServeTier,
 } from "@/lib/billing/tier-catalog";
+import { isModuleTier } from "@/lib/billing/plan-prices-ui";
 import { PlanTierFeatureList } from "@/components/billing/PlanTierFeatureList";
 import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
 import type { EnterpriseBillingSummary } from "@/lib/enterprise/billing-details";
@@ -263,7 +265,7 @@ function EnterpriseContactSalesCard() {
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h3 id="billing-enterprise-heading" className="font-semibold text-foreground">
-            {TIER_LABEL.ENTERPRISE}
+            Enterprise
           </h3>
           <Badge
             variant="outline"
@@ -689,7 +691,16 @@ export function EnterpriseBillingDashboard({
     enterprise.paymentMethod === "CARD" &&
     !enterprise.stripeSubscriptionId?.trim();
   const planLabel =
-    TIER_DISPLAY_NAME[enterprise.tier] ?? enterprise.tier.replace(/_/g, " ");
+    TIER_DISPLAY_NAME[enterprise.tier as SelfServeTier] ??
+    enterprise.tier.replace(/_/g, " ");
+  const checkoutHref =
+    isModuleTier(enterprise.tier) &&
+    (enterprise.billingCycle === "MONTHLY" || enterprise.billingCycle === "ANNUAL")
+      ? enterprisePricingDeepLink(
+          enterprise.tier,
+          enterprise.billingCycle as BillingCycle
+        )
+      : "/advisor/enterprise/pricing";
 
   const onPortal = useCallback(() => {
     setPortalError(null);
@@ -729,14 +740,14 @@ export function EnterpriseBillingDashboard({
           </p>
           <p className="max-w-prose text-sm text-muted-foreground">
             {needsCardCheckout
-              ? "Your agreement is in place. Choose a module tier and complete checkout to activate firm billing."
+              ? "Your agreement is in place. Complete checkout for your contracted module tier to activate firm billing."
               : "Firm-wide usage, seats, and payment method. Plan changes after activation require your account manager."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {needsCardCheckout ? (
             <Button asChild className="shrink-0">
-              <Link href="/advisor/enterprise/pricing">Choose plan & subscribe</Link>
+              <Link href={checkoutHref}>Complete checkout</Link>
             </Button>
           ) : null}
           {enterprise.canManageStripePortal ? (

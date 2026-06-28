@@ -50,7 +50,6 @@ export function getPriceIdForTier(
   tier: SubscriptionTier,
   billingCycle: BillingCycle
 ): string | undefined {
-  if (tier === "ENTERPRISE") return undefined;
   if (!SELF_SERVE_TIERS.includes(tier as SelfServeTier)) return undefined;
   return readEnv(...envKeysForTier(tier as SelfServeTier, billingCycle));
 }

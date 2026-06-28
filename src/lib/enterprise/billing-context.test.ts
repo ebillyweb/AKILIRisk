@@ -63,7 +63,7 @@ describe("resolveBillingContext", () => {
           cancelAtPeriodEnd: false,
           stripeSubscriptionId: null,
           createdAt: new Date("2026-01-01"),
-          tier: "ENTERPRISE",
+          tier: "BUSINESS",
           clientLimit: 100,
         },
       },

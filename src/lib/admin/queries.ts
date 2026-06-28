@@ -382,6 +382,7 @@ export type AdminEnterpriseListRow = {
   activeSeats: number;
   seatOverage: number;
   subscriptionStatus: string | null;
+  moduleTier: string | null;
   ownerName: string | null;
   ownerEmail: string | null;
 };
@@ -398,7 +399,7 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       clientLimit: true,
       paymentMethod: true,
       createdAt: true,
-      subscription: { select: { status: true } },
+      subscription: { select: { status: true, tier: true } },
       memberships: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
@@ -429,6 +430,7 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       activeSeats: enterprise._count.memberships,
       seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
       subscriptionStatus: enterprise.subscription?.status ?? null,
+      moduleTier: enterprise.subscription?.tier ?? null,
       ownerName: owner?.name ?? null,
       ownerEmail: owner
         ? safeDecryptUserEmail(owner.emailCiphertext, { rowId: owner.id })
@@ -450,6 +452,8 @@ export type AdminEnterpriseDetail = {
   activeSeats: number;
   seatOverage: number;
   subscriptionStatus: string | null;
+  moduleTier: string | null;
+  billingCycle: string | null;
   ownerName: string | null;
   ownerEmail: string | null;
   ownerUserId: string | null;
@@ -471,7 +475,7 @@ export async function getEnterpriseDetailForAdmin(
       perAdvisorClientLimit: true,
       paymentMethod: true,
       createdAt: true,
-      subscription: { select: { status: true } },
+      subscription: { select: { status: true, tier: true, billingCycle: true } },
       memberships: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
@@ -503,6 +507,8 @@ export async function getEnterpriseDetailForAdmin(
     activeSeats: enterprise._count.memberships,
     seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
     subscriptionStatus: enterprise.subscription?.status ?? null,
+    moduleTier: enterprise.subscription?.tier ?? null,
+    billingCycle: enterprise.subscription?.billingCycle ?? null,
     ownerName: owner?.name ?? null,
     ownerEmail: owner
       ? safeDecryptUserEmail(owner.emailCiphertext, { rowId: owner.id })

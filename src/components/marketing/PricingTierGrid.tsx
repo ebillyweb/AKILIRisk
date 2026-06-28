@@ -116,6 +116,8 @@ function PricingTierActionButton({
   onRequestPlanChange,
   planChangePending,
   planChangeError,
+  contractTierLocked = false,
+  isContractedTier = false,
 }: {
   tier: SelfServeTier;
   billingCycle: BillingCycle;
@@ -127,6 +129,8 @@ function PricingTierActionButton({
   onRequestPlanChange: (tier: SelfServeTier) => void;
   planChangePending: boolean;
   planChangeError: string | null;
+  contractTierLocked?: boolean;
+  isContractedTier?: boolean;
 }) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -308,12 +312,20 @@ function PricingTierActionButton({
     );
   }
 
+  if (contractTierLocked) {
+    return (
+      <Button className="w-full" variant="outline" disabled>
+        Not in your contract
+      </Button>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <Button
         type="button"
         className="w-full"
-        variant={featured ? "default" : "outline"}
+        variant={featured || isContractedTier ? "default" : "outline"}
         disabled={pending}
         onClick={() => onRequestPlanChange(tier)}
       >
@@ -324,7 +336,9 @@ function PricingTierActionButton({
           </>
         ) : (
           <>
-            Get Started
+            {isContractedTier && audience === "enterprise"
+              ? "Complete checkout"
+              : "Get Started"}
             <ArrowRight className="size-4" aria-hidden />
           </>
         )}
@@ -351,9 +365,26 @@ export function PricingTierGrid({
   const router = useRouter();
   const changePlanMode = resolvePricingPlanChangeMode(advisorSubscription);
   const committedPlan = resolveCommittedPlan(advisorSubscription);
+  const contractedModuleTier =
+    audience === "enterprise" &&
+    firm?.currentModuleTier &&
+    SELF_SERVE_TIERS.includes(firm.currentModuleTier as SelfServeTier)
+      ? (firm.currentModuleTier as SelfServeTier)
+      : null;
+  const contractedBillingCycle =
+    audience === "enterprise" &&
+    (firm?.contractedBillingCycle === "MONTHLY" ||
+      firm?.contractedBillingCycle === "ANNUAL")
+      ? firm.contractedBillingCycle
+      : null;
+  const billingCycleLocked = Boolean(contractedBillingCycle);
+
   const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
     if (checkoutPlanIntent?.billingCycle) {
       return checkoutPlanIntent.billingCycle;
+    }
+    if (contractedBillingCycle) {
+      return contractedBillingCycle;
     }
     if (initialBillingCycle) {
       return initialBillingCycle;
@@ -523,6 +554,7 @@ export function PricingTierGrid({
                 : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setBillingCycle("MONTHLY")}
+            disabled={billingCycleLocked && contractedBillingCycle !== "MONTHLY"}
           >
             Monthly
           </button>
@@ -535,6 +567,7 @@ export function PricingTierGrid({
                 : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => setBillingCycle("ANNUAL")}
+            disabled={billingCycleLocked && contractedBillingCycle !== "ANNUAL"}
           >
             Annual
             <span className="ml-1.5 text-xs font-semibold text-brand">
@@ -569,6 +602,9 @@ export function PricingTierGrid({
           const isCurrentSelection = changePlanMode === "stripe_update" && isSamePlan;
           const isSameTier = committedPlan !== null && tier === committedPlan.tier;
 
+          const isContractedTier =
+            contractedModuleTier !== null && tier === contractedModuleTier;
+
           return (
             <article
               key={tier}
@@ -576,6 +612,8 @@ export function PricingTierGrid({
                 "relative flex h-full flex-col rounded-[1.5rem] border bg-card/85 p-6 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
                 isCurrentSelection
                   ? "border-primary/35 ring-1 ring-primary/20"
+                  : isContractedTier
+                    ? "border-brand/40 ring-1 ring-brand/25"
                   : featured
                     ? "border-brand/40 ring-1 ring-brand/25"
                     : "border-border/70",
@@ -671,6 +709,10 @@ export function PricingTierGrid({
                   onRequestPlanChange={requestPlanChange}
                   planChangePending={planChangePending}
                   planChangeError={planChangeError}
+                  contractTierLocked={
+                    contractedModuleTier !== null && tier !== contractedModuleTier
+                  }
+                  isContractedTier={isContractedTier}
                 />
               </div>
             </article>

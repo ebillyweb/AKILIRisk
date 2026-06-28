@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AdminEnterpriseLifecyclePanel } from "@/components/admin/AdminEnterpriseLifecyclePanel";
+import { AdminEnterpriseSubscriptionPanel } from "@/components/admin/AdminEnterpriseSubscriptionPanel";
 import { getEnterpriseDetailForAdmin } from "@/lib/admin/queries";
+import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
+import type { SelfServeTier } from "@/lib/billing/tier-catalog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -77,6 +80,21 @@ export default async function AdminEnterpriseDetailPage({ params }: PageProps) {
             <p className="font-medium">{humanizeToken(enterprise.paymentMethod)}</p>
           </div>
           <div>
+            <p className="text-muted-foreground">Module tier</p>
+            <p className="font-medium">
+              {enterprise.moduleTier
+                ? TIER_DISPLAY_NAME[enterprise.moduleTier as SelfServeTier] ??
+                  humanizeToken(enterprise.moduleTier)
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Billing cycle</p>
+            <p className="font-medium">
+              {enterprise.billingCycle ? humanizeToken(enterprise.billingCycle) : "—"}
+            </p>
+          </div>
+          <div>
             <p className="text-muted-foreground">Subscription</p>
             <p className="font-medium">
               {enterprise.subscriptionStatus
@@ -86,6 +104,21 @@ export default async function AdminEnterpriseDetailPage({ params }: PageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {enterprise.moduleTier && enterprise.billingCycle ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Module subscription</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AdminEnterpriseSubscriptionPanel
+              enterpriseId={enterprise.id}
+              moduleTier={enterprise.moduleTier as SelfServeTier}
+              billingCycle={enterprise.billingCycle as "MONTHLY" | "ANNUAL"}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

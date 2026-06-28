@@ -269,8 +269,7 @@ function tierFromStripeSubscription(
     (metaTier === "ESSENTIALS" ||
       metaTier === "PROFESSIONAL" ||
       metaTier === "BUSINESS" ||
-      metaTier === "PLATINUM" ||
-      metaTier === "ENTERPRISE") &&
+      metaTier === "PLATINUM") &&
     (metaCycle === "MONTHLY" || metaCycle === "ANNUAL")
   ) {
     return { tier: metaTier, billingCycle: metaCycle, priceId };

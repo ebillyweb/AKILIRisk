@@ -10,7 +10,7 @@ describe("tierIncludesFeature", () => {
   it("allows Professional+ for methodology customization", () => {
     expect(tierIncludesFeature("ESSENTIALS", "METHODOLOGY_CUSTOMIZATION")).toBe(false);
     expect(tierIncludesFeature("PROFESSIONAL", "METHODOLOGY_CUSTOMIZATION")).toBe(true);
-    expect(tierIncludesFeature("ENTERPRISE", "METHODOLOGY_CUSTOMIZATION")).toBe(true);
+    expect(tierIncludesFeature("PLATINUM", "METHODOLOGY_CUSTOMIZATION")).toBe(true);
   });
 
   it("allows Business+ for implementation engagements", () => {

@@ -15,6 +15,7 @@ export type EnterprisePricingFirmContext = {
   subscriptionStatus: string | null;
   hasActiveStripeSubscription: boolean;
   currentModuleTier: SubscriptionTier | null;
+  contractedBillingCycle: "MONTHLY" | "ANNUAL" | null;
 };
 
 export async function getEnterprisePricingFirmContext(
@@ -38,6 +39,7 @@ export async function getEnterprisePricingFirmContext(
         select: {
           tier: true,
           status: true,
+          billingCycle: true,
           stripeSubscriptionId: true,
         },
       },
@@ -63,6 +65,7 @@ export async function getEnterprisePricingFirmContext(
     subscriptionStatus: sub?.status ?? null,
     hasActiveStripeSubscription,
     currentModuleTier: sub?.tier ?? null,
+    contractedBillingCycle: sub?.billingCycle ?? null,
   };
 }
 

@@ -115,7 +115,6 @@ enum SubscriptionTier {
   PROFESSIONAL
   BUSINESS
   PLATINUM
-  ENTERPRISE
 }
 
 enum SubscriptionStatus {

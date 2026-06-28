@@ -31,12 +31,6 @@ const TIER_FEATURES = {
     customSubdomainEnabled: true,
     whiteLabel: true,
   },
-  ENTERPRISE: {
-    basicBrandingEnabled: true,
-    advancedBrandingEnabled: true,
-    customSubdomainEnabled: true,
-    whiteLabel: true,
-  },
 } as const;
 
 /** Used when no billing row exists yet (e.g. local dev) so advisor branding UI still loads.

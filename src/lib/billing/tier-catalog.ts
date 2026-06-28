@@ -12,6 +12,9 @@ export const SELF_SERVE_TIERS = [
 
 export type SelfServeTier = (typeof SELF_SERVE_TIERS)[number];
 
+/** Module tier on firm or solo subscriptions (Essentials–Platinum). */
+export type ModuleTier = SelfServeTier;
+
 export type TierCatalogEntry = {
   tier: SelfServeTier;
   name: string;
@@ -120,20 +123,18 @@ export const TIER_CATALOG: Record<SelfServeTier, TierCatalogEntry> = {
   },
 };
 
-export const TIER_DISPLAY_NAME: Record<SubscriptionTier, string> = {
+export const TIER_DISPLAY_NAME: Record<SelfServeTier, string> = {
   ESSENTIALS: "Essentials",
   PROFESSIONAL: "Professional",
   BUSINESS: "Business",
   PLATINUM: "Platinum",
-  ENTERPRISE: "Enterprise",
 };
 
-export const TIER_RANK: Record<SubscriptionTier, number> = {
+export const TIER_RANK: Record<SelfServeTier, number> = {
   ESSENTIALS: 0,
   PROFESSIONAL: 1,
   BUSINESS: 2,
   PLATINUM: 3,
-  ENTERPRISE: 4,
 };
 
 export function tierEnvKey(tier: SelfServeTier, cycle: BillingCycle): string {

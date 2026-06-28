@@ -75,7 +75,7 @@ export async function getEnterpriseBillingSummary(
     enterpriseId: enterprise.id,
     enterpriseName: enterprise.name,
     paymentMethod: enterprise.paymentMethod,
-    tier: subscription?.tier ?? "ENTERPRISE",
+    tier: subscription?.tier ?? "ESSENTIALS",
     status: subscription?.status ?? "NONE",
     billingCycle: subscription?.billingCycle ?? "ANNUAL",
     currentPeriodEnd: (subscription?.currentPeriodEnd ?? new Date()).toISOString(),

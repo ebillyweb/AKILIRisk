@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Building2, Plus } from "lucide-react";
 
 import { getEnterprisesForAdmin } from "@/lib/admin/queries";
+import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
+import type { SelfServeTier } from "@/lib/billing/tier-catalog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +66,7 @@ export default async function AdminEnterprisesPage() {
                   <th className="pb-2 pr-4 font-medium">Seat overage</th>
                   <th className="pb-2 pr-4 font-medium">Clients cap</th>
                   <th className="pb-2 pr-4 font-medium">Payment</th>
+                  <th className="pb-2 pr-4 font-medium">Module tier</th>
                   <th className="pb-2 pr-4 font-medium">Subscription</th>
                   <th className="pb-2 font-medium">Actions</th>
                 </tr>
@@ -100,6 +103,12 @@ export default async function AdminEnterprisesPage() {
                     </td>
                     <td className="py-3 pr-4">{enterprise.clientLimit}</td>
                     <td className="py-3 pr-4">{humanizeToken(enterprise.paymentMethod)}</td>
+                    <td className="py-3 pr-4">
+                      {enterprise.moduleTier
+                        ? TIER_DISPLAY_NAME[enterprise.moduleTier as SelfServeTier] ??
+                          humanizeToken(enterprise.moduleTier)
+                        : "—"}
+                    </td>
                     <td className="py-3 pr-4">
                       {enterprise.subscriptionStatus
                         ? humanizeToken(enterprise.subscriptionStatus)

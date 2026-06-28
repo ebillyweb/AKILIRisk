@@ -1,6 +1,6 @@
 import type { SubscriptionTier } from "@prisma/client";
 
-import { ENTERPRISE_DEFAULT_CLIENT_LIMIT } from "@/lib/enterprise/constants";
+import type { SelfServeTier } from "@/lib/billing/tier-catalog";
 
 /**
  * Per-tier client limit. Authoritative cap for enforcement and UI — also
@@ -12,17 +12,16 @@ import { ENTERPRISE_DEFAULT_CLIENT_LIMIT } from "@/lib/enterprise/constants";
  * STRIPE-SPEC.md's original rollout. See migration
  * `20260504200000_tier_limit_bump_brd_alignment` for the existing-rows update.
  */
-export const TIER_LIMITS: Record<SubscriptionTier, number> = {
+export const TIER_LIMITS: Record<SelfServeTier, number> = {
   ESSENTIALS: 25,
   PROFESSIONAL: 50,
   BUSINESS: 100,
   PLATINUM: 150,
-  ENTERPRISE: ENTERPRISE_DEFAULT_CLIENT_LIMIT,
 };
 
 /** Effective client cap for a subscription tier (authoritative at read time). */
 export function clientLimitForTier(tier: SubscriptionTier): number {
-  return TIER_LIMITS[tier] ?? TIER_LIMITS.ESSENTIALS;
+  return TIER_LIMITS[tier as SelfServeTier] ?? TIER_LIMITS.ESSENTIALS;
 }
 
 /** Annual billing promo shown on pricing and advisor billing toggles. */

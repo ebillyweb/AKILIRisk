@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { PricingTierGrid } from "@/components/marketing/PricingTierGrid";
-import { SELF_SERVE_TIERS } from "@/lib/billing/tier-catalog";
+import { SELF_SERVE_TIERS, TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
 import { isBillingEnabled } from "@/lib/billing/config";
 import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import type { EnterprisePricingFirmContext } from "@/lib/enterprise/pricing-page-access";
@@ -23,6 +23,11 @@ export function EnterprisePricingPageContent({
   checkoutPlanIntent = null,
 }: EnterprisePricingPageContentProps) {
   const billingEnabled = isBillingEnabled();
+  const contractedTier =
+    firm.currentModuleTier &&
+    SELF_SERVE_TIERS.includes(firm.currentModuleTier as (typeof SELF_SERVE_TIERS)[number])
+      ? TIER_DISPLAY_NAME[firm.currentModuleTier as (typeof SELF_SERVE_TIERS)[number]]
+      : null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-10">
@@ -34,12 +39,14 @@ export function EnterprisePricingPageContent({
         <div className="relative space-y-4">
           <p className="editorial-kicker">Firm subscription</p>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Choose your module tier for {firm.enterpriseName}
+            {contractedTier
+              ? `Complete checkout for ${firm.enterpriseName}`
+              : `Choose your module tier for ${firm.enterpriseName}`}
           </h1>
           <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-            Your agreement is in place. Select Essentials through Platinum to activate firm
-            billing — shared branding, {firm.seatLimit} advisor seats, and centralized
-            subscription checkout on Stripe.
+            {contractedTier
+              ? `Your contract includes the ${contractedTier} module tier. Complete Stripe checkout to activate firm billing — shared branding, ${firm.seatLimit} advisor seats, and centralized subscription management.`
+              : `Your agreement is in place. Select Essentials through Platinum to activate firm billing — shared branding, ${firm.seatLimit} advisor seats, and centralized subscription checkout on Stripe.`}
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Button asChild variant="outline" size="sm">
