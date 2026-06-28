@@ -95,6 +95,8 @@ model User {
   enterpriseMembership          EnterpriseMembership?
   /// Firms where this user is the billing contact (typically the OWNER).
   billingContactEnterprises     AdvisorEnterprise[]   @relation("EnterpriseBillingContact")
+  /// Phase 24: review cadence entries where this user is the client.
+  reviewCadences                ReviewCadence[]
 
   /// Round-11 commit 2.4a: @@index([email]) + the phase-A
   /// User_emailCiphertext_idx are dropped at the SQL level by
@@ -176,6 +178,8 @@ model AdvisorEnterprise {
   logoUploadedAt        DateTime?
   brandingEnabled                Boolean                 @default(true)
   implementationTrackingEnabled  Boolean                 @default(true)
+  /// Phase 24 (D-08): enterprise-wide default reassessment frequency.
+  defaultCadenceFrequency        CadenceFrequency        @default(ANNUAL)
   customDomainEnabled            Boolean                 @default(false)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
@@ -443,6 +447,13 @@ model Assessment {
   upsellTriggersFired    Json?
   actionPlanPublishedAt  DateTime? @map("action_plan_published_at")
 
+  /// Phase 24 (D-04): self-referential link for reassessment versioning.
+  /// Each reassessment creates a new Assessment row linked to its predecessor.
+  /// Reassessment sequence number is derived from chain length (not `version`).
+  previousAssessmentId String? @map("previous_assessment_id")
+  previousAssessment   Assessment?  @relation("AssessmentChain", fields: [previousAssessmentId], references: [id], onDelete: SetNull)
+  nextAssessments      Assessment[] @relation("AssessmentChain")
+
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   responses     AssessmentResponse[]
   scores        PillarScore[]
@@ -454,11 +465,16 @@ model Assessment {
   reports        Report[]
   portfolioEngagement PortfolioEngagement?
   snapshot            IntakeSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  /// Phase 24 (D-11): assessment-scoped intelligence events (not tied to a recommendation).
+  intelligenceEvents  SolutionActivity[] @relation("AssessmentIntelligenceEvents")
+  /// Phase 24 (D-08): review cadence entries pointing to this as last completed assessment.
+  reviewCadences      ReviewCadence[]
 
   @@index([userId])
   @@index([status])
   @@index([deliverablePhase])
   @@index([snapshotId])
+  @@index([previousAssessmentId])
 }
 
 model AssessmentResponse {
@@ -1070,6 +1086,8 @@ model AdvisorProfile {
   recommendationRules        AdvisorRecommendationRule[]
   solutionCustomizations     AdvisorSolutionCustomization[]
   intakeSnapshots            IntakeSnapshot[]
+  /// Phase 24: review cadence entries managed by this advisor.
+  reviewCadences             ReviewCadence[]
 
   @@index([userId])
   @@index([enterpriseId])
@@ -2034,19 +2052,30 @@ model SolutionMilestone {
 }
 
 /// Activity log entry for recommendation lifecycle events (status changes,
-/// notes, milestone completions). Append-only — never updated or deleted.
+/// notes, milestone completions) and Phase 24 intelligence events (assessment
+/// completions, score changes, cadence triggers). Append-only — never updated
+/// or deleted.
 model SolutionActivity {
   id                         String   @id @default(cuid())
-  assessmentRecommendationId String   @map("assessment_recommendation_id")
+  /// Nullable (Phase 24 D-11): intelligence events may not be tied to a
+  /// specific recommendation. Existing recommendation-scoped events still
+  /// populate this field; assessment-scoped events leave it null and use
+  /// assessmentId instead.
+  assessmentRecommendationId String?  @map("assessment_recommendation_id")
+  /// Phase 24 (D-11): optional FK for assessment-scoped intelligence events
+  /// (e.g., assessment_completed, score_calculated, cadence triggers).
+  assessmentId               String?  @map("assessment_id")
   actorId                    String?  @map("actor_id")
   action                     String   @db.VarChar(60)
   detail                     Json?
   createdAt                  DateTime @default(now()) @map("created_at")
 
-  assessmentRecommendation AssessmentRecommendation @relation(fields: [assessmentRecommendationId], references: [id], onDelete: Cascade)
+  assessmentRecommendation AssessmentRecommendation? @relation(fields: [assessmentRecommendationId], references: [id], onDelete: Cascade)
+  assessment               Assessment?               @relation("AssessmentIntelligenceEvents", fields: [assessmentId], references: [id], onDelete: Cascade)
 
   @@index([assessmentRecommendationId])
   @@index([assessmentRecommendationId, createdAt])
+  @@index([assessmentId])
   @@map("solution_activities")
 }
 
@@ -2067,4 +2096,44 @@ model IntakeSnapshot {
   @@index([advisorProfileId])
   @@index([takenAt])
   @@map("intake_snapshots")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 24: Continuous Risk Improvement
+// ---------------------------------------------------------------------------
+
+/// Phase 24 (D-08): reassessment frequency options.
+enum CadenceFrequency {
+  QUARTERLY    // 90 days
+  SEMI_ANNUAL  // 180 days
+  ANNUAL       // 365 days
+}
+
+/// Phase 24 (D-08, D-09, D-10): per-client reassessment scheduling state.
+/// The Review Cadence Engine manages the reassessment lifecycle — not just
+/// reminders, but active scheduling and system-recommended reassessments.
+model ReviewCadence {
+  id                          String           @id @default(cuid())
+  clientId                    String
+  advisorProfileId            String
+  frequency                   CadenceFrequency @default(ANNUAL)
+  nextDueDate                 DateTime         @map("next_due_date")
+  lastAssessmentId            String?          @map("last_assessment_id")
+  /// Pitfall 5: track last reminder to prevent duplicate sends.
+  lastReminderSentAt          DateTime?        @map("last_reminder_sent_at")
+  /// true = advisor explicitly set; false = inherited from enterprise default.
+  isOverridden                Boolean          @default(false) @map("is_overridden")
+  /// true = AKILI system-initiated recommendation (D-09).
+  systemRecommended           Boolean          @default(false) @map("system_recommended")
+  systemRecommendationReason  String?          @map("system_recommendation_reason")
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+
+  client          User            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  advisorProfile  AdvisorProfile  @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  lastAssessment  Assessment?     @relation(fields: [lastAssessmentId], references: [id], onDelete: SetNull)
+
+  @@unique([clientId, advisorProfileId])
+  @@index([nextDueDate])
+  @@map("review_cadences")
 }
