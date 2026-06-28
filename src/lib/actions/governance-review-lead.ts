@@ -26,7 +26,7 @@ const governanceReviewLeadSchema = z.object({
     .max(254, "Email is too long")
     .transform((value) => value.toLowerCase()),
   familyComplexity: z.nativeEnum(FamilyComplexity, {
-    errorMap: () => ({ message: "Please select approximate family complexity." }),
+    message: "Please select approximate family complexity.",
   }),
   investableAssetsRange: z.nativeEnum(InvestableAssetsRange).nullable().optional(),
   promptedInterest: z
