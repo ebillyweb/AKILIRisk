@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 
+import { billingPlanNavigationLabel } from "@/lib/billing/billing-plan-cta";
 import { Button } from "@/components/ui/button";
 
 /** Entry point to Stripe Checkout / billing (spec upgrade flow without embedded Elements). */
 export function UpgradeModalTrigger({
   upgradePath = "/advisor/billing",
-  label = "Upgrade plan",
+  label = billingPlanNavigationLabel(),
 }: {
   upgradePath?: string;
   label?: string;

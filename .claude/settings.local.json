@@ -31,7 +31,8 @@
       "Bash(ls -la /Users/bwoodtalton/Projects/AkiliRisk/src/app/\\\\\\(protected\\\\\\)/admin/recommendations/)",
       "Bash(node ~/.claude/get-shit-done/bin/gsd-tools.cjs state record-session --stopped-at \"Phase 22 context gathered\" --resume-file \".planning/phases/22-recommendation-experience/22-CONTEXT.md\" 2>&1)",
       "Bash(node -e \"\nrequire\\('dotenv'\\).config\\({ path: '.env.local' }\\);\nconst { Pool } = require\\('pg'\\);\nconst pool = new Pool\\({ connectionString: process.env.DATABASE_URL }\\);\npool.query\\('SELECT ap.id, ap.\\\\\"userId\\\\\", ap.\\\\\"firmName\\\\\", ap.\\\\\"enterpriseId\\\\\", u.name FROM \\\\\"AdvisorProfile\\\\\" ap JOIN \\\\\"User\\\\\" u ON u.id = ap.\\\\\"userId\\\\\" LIMIT 5'\\)\n  .then\\(r => { console.log\\(JSON.stringify\\(r.rows, null, 2\\)\\); pool.end\\(\\); }\\)\n  .catch\\(e => { console.error\\(e.message\\); pool.end\\(\\); }\\);\n\" 2>/dev/null)",
-      "Skill(gsd-plan-phase)"
+      "Skill(gsd-plan-phase)",
+      "Bash(command -v gsd-sdk 2>/dev/null && echo \"found\" || echo \"not found\")"
     ]
   }
 }

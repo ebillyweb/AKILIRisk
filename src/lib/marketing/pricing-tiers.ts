@@ -11,6 +11,8 @@ export const PRICING_TIERS = SELF_SERVE_TIERS.map((tier) => {
     tagline: entry.tagline,
     modules: entry.modules,
     highlights: [...entry.highlights],
+    cardIncludes: [...entry.cardIncludes],
+    cardExcludes: entry.cardExcludes ? [...entry.cardExcludes] : undefined,
     featured: entry.featured,
     clientLimit: entry.clientLimit,
     subscriptionTier: tier,

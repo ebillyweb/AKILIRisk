@@ -10,7 +10,7 @@ import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "AKILI modular pricing for advisors and enterprise firms — Essentials through Platinum with assessment, customization, implementation tracking, and continuous monitoring.",
+    "Compare AKILI Essentials through Platinum — see what each module tier includes, client limits, and which capabilities unlock as you upgrade.",
 };
 
 export const dynamic = "force-dynamic";

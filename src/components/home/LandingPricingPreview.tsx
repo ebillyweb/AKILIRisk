@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 import { LandingSectionBand } from "@/components/marketing/LandingSectionBand";
 import { MarketingSection } from "@/components/marketing/MarketingSection";
+import { PlanTierFeatureList } from "@/components/billing/PlanTierFeatureList";
 import { SELF_SERVE_TIERS, TIER_CATALOG } from "@/lib/billing/tier-catalog";
 import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export function LandingPricingPreview({ pricing = [] }: LandingPricingPreviewPro
         id="pricing"
         kicker="Pricing"
         title="Modular tiers that grow with your practice"
-        description="Essentials through Platinum for solo advisors and enterprise firms."
+        description="Four module tiers from structured assessments through portfolio analytics — compare what's included before you subscribe."
         className="!space-y-8"
       >
       {startingMonthly ? (
@@ -40,7 +41,7 @@ export function LandingPricingPreview({ pricing = [] }: LandingPricingPreviewPro
         {SELF_SERVE_TIERS.map((tier) => {
           const catalog = TIER_CATALOG[tier];
           return (
-            <MarketingSurfaceCard key={tier} className="space-y-2">
+            <MarketingSurfaceCard key={tier} className="flex h-full flex-col space-y-3">
               <h3 className="font-display text-lg font-semibold text-foreground">
                 {catalog.name}
               </h3>
@@ -48,6 +49,7 @@ export function LandingPricingPreview({ pricing = [] }: LandingPricingPreviewPro
                 {catalog.modules}
               </p>
               <p className="text-sm leading-6 text-muted-foreground">{catalog.tagline}</p>
+              <PlanTierFeatureList tier={tier} variant="minimal" className="mt-auto pt-1" />
             </MarketingSurfaceCard>
           );
         })}

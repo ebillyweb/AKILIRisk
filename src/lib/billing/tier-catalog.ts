@@ -21,6 +21,10 @@ export type TierCatalogEntry = {
   /** Stripe product name (Dashboard / provision script). */
   stripeProductName: string;
   highlights: readonly string[];
+  /** Compact positives for plan comparison cards (billing + pricing). */
+  cardIncludes: readonly string[];
+  /** Key gaps vs higher tiers — omit on Platinum. */
+  cardExcludes?: readonly string[];
   /** Marketing emphasis on pricing page. */
   featured?: boolean;
 };
@@ -39,6 +43,15 @@ export const TIER_CATALOG: Record<SelfServeTier, TierCatalogEntry> = {
       "Prioritized client action plan",
       "Advisor pipeline and invitations",
     ],
+    cardIncludes: [
+      "10-pillar assessments, PDF reports & action plans",
+      "Client pipeline, invitations & deliverables",
+      "Standard Akili methodology (not customizable)",
+    ],
+    cardExcludes: [
+      "Custom pillars, intake & white-label branding",
+      "Implementation tracking & portfolio analytics",
+    ],
   },
   PROFESSIONAL: {
     tier: "PROFESSIONAL",
@@ -54,6 +67,15 @@ export const TIER_CATALOG: Record<SelfServeTier, TierCatalogEntry> = {
       "Recommendation rules and methodology snapshots",
       "White-label branding and client portal",
     ],
+    cardIncludes: [
+      "Everything in Essentials",
+      "Custom methodology, intake & assessment content",
+      "White-label portal, branding & custom subdomain",
+    ],
+    cardExcludes: [
+      "Implementation milestone tracking",
+      "Portfolio analytics & continuous monitoring",
+    ],
   },
   BUSINESS: {
     tier: "BUSINESS",
@@ -68,6 +90,14 @@ export const TIER_CATALOG: Record<SelfServeTier, TierCatalogEntry> = {
       "Milestone checkpoints and follow-ups",
       "Engagement visibility across your book",
     ],
+    cardIncludes: [
+      "Everything in Professional",
+      "Implementation stages & milestone checkpoints",
+      "Engagement visibility across your book",
+    ],
+    cardExcludes: [
+      "Portfolio analytics, reassessments & monitoring",
+    ],
   },
   PLATINUM: {
     tier: "PLATINUM",
@@ -81,6 +111,11 @@ export const TIER_CATALOG: Record<SelfServeTier, TierCatalogEntry> = {
       "Scheduled reassessments and trend comparison",
       "Portfolio-level risk analytics",
       "Continuous monitoring across families",
+    ],
+    cardIncludes: [
+      "Everything in Business",
+      "Portfolio analytics & risk intelligence dashboard",
+      "Reassessments, trends & continuous monitoring",
     ],
   },
 };

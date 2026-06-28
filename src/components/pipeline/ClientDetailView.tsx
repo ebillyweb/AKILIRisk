@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle, ClipboardList } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, CheckCircle, ClipboardList } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
@@ -70,10 +70,19 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
   );
 }
 
+function clientHasDistinctName(name: string, email: string): boolean {
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === "Unnamed Client") return false;
+  if (trimmed.includes("@")) return false;
+  return trimmed.toLowerCase() !== email.toLowerCase();
+}
+
 export function ClientDetailView({ detail }: ClientDetailViewProps) {
   const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker } = detail;
   const assessmentDomains = assessmentDomainPicker.domains;
-  const displayName = client.name || 'Unnamed Client';
+  const displayName = client.name || "Unnamed Client";
+  const hasDistinctName = clientHasDistinctName(displayName, client.email);
+  const headline = hasDistinctName ? displayName : client.email;
   const assignmentActive = advisorAssignment.status === "ACTIVE";
   const intakeWaived = advisorAssignment.intakeWaivedAt != null;
   const intakeSubmitted = isIntakeFinished(intakeDetails);
@@ -85,15 +94,15 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
     intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
   return (
     <div className="container mx-auto py-6">
-      {/* Breadcrumb */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <Link
           href="/advisor/pipeline"
-          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="mr-1.5 size-4" />
           Back to Pipeline
         </Link>
+        <ProductTourButton tourId="advisor-pipeline-client" autoStart iconOnly />
       </div>
 
       {!assignmentActive ? (
@@ -108,39 +117,32 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
 
       {/* Client Header */}
       <div className="mb-8" data-tour="pipeline-client-header">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2 min-w-0 flex-1">
-            <h1 className="text-3xl font-bold">{displayName}</h1>
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Mail className="w-4 h-4" />
-                <span>{client.email}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>Assigned {format(client.assignedAt, 'MMM d, yyyy')}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-right space-y-2 shrink-0">
-            <ProductTourButton tourId="advisor-pipeline-client" autoStart />
-            <Badge variant={getStageBadgeVariant(client.stage)} className="text-sm">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight">{headline}</h1>
+            <Badge variant={getStageBadgeVariant(client.stage)} className="text-xs font-semibold uppercase tracking-wide">
               {getStageLabel(client.stage)}
             </Badge>
-            <div className="text-sm text-muted-foreground">
-              Last activity {formatDistanceToNow(client.lastActivity, { addSuffix: true })}
-            </div>
           </div>
-        </div>
 
-        {/* Progress Bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Workflow Progress</span>
-            <span className="font-medium">{client.progress}%</span>
+          <p className="text-sm text-muted-foreground">
+            {[
+              hasDistinctName ? client.email : null,
+              `Assigned ${format(client.assignedAt, "MMM d, yyyy")}`,
+              `Active ${formatDistanceToNow(client.lastActivity, { addSuffix: true })}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+
+          <div className="flex items-center gap-3 pt-1">
+            <Progress
+              value={client.progress}
+              className="h-1.5 flex-1"
+              aria-label={`Workflow progress ${client.progress}%`}
+            />
+            <span className="text-sm tabular-nums text-muted-foreground">{client.progress}%</span>
           </div>
-          <Progress value={client.progress} className="h-2" />
         </div>
       </div>
 

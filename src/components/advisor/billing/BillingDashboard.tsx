@@ -14,23 +14,31 @@ import {
   type SubscriptionDetailsDTO,
 } from "@/lib/actions/billing";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
+import { billingPlanNavigationLabel } from "@/lib/billing/billing-plan-cta";
 import { ANNUAL_BILLING_SAVINGS_LABEL, TIER_LIMITS } from "@/lib/billing/constants";
 import {
   ADVISOR_PIPELINE_HREF,
   analyzeDowngradeCapacity,
   clientLimitBillingHref,
   clientLimitUpgradeMessage,
+  clientsOverTierCapacity,
   downgradeCapacityBannerMessage,
   suggestedTierForMoreClients,
   type ClientLimitSnapshot,
   type DowngradeCapacityStatus,
 } from "@/lib/billing/client-limit";
 import {
+  buildPlanChangeExplainer,
+  shouldConfirmPlanChange,
+} from "@/lib/billing/plan-change-explainer";
+import {
   SELF_SERVE_TIERS,
+  TIER_CATALOG,
   TIER_DISPLAY_NAME,
   TIER_RANK,
   type SelfServeTier,
 } from "@/lib/billing/tier-catalog";
+import { PlanTierFeatureList } from "@/components/billing/PlanTierFeatureList";
 import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
 import type { EnterpriseBillingSummary } from "@/lib/enterprise/billing-details";
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
@@ -47,6 +55,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EnterpriseSalesContactDialog } from "@/components/advisor/billing/EnterpriseSalesContactDialog";
+import { PlanChangeConfirmDialog } from "@/components/advisor/billing/PlanChangeConfirmDialog";
 
 const TIER_ORDER = SELF_SERVE_TIERS;
 
@@ -199,9 +208,9 @@ function UsageBar({
               {clientLimitUpgradeMessage(upgradeStatus)}
             </p>
             {upgradeStatus.suggestedUpgradeTier ? (
-              <Button asChild size="sm">
+              <Button asChild size="sm" variant="outline">
                 <Link href={clientLimitBillingHref(upgradeStatus)}>
-                  Upgrade to {TIER_LABEL[upgradeStatus.suggestedUpgradeTier]}
+                  {billingPlanNavigationLabel(upgradeStatus.suggestedUpgradeTier)}
                 </Link>
               </Button>
             ) : (
@@ -359,6 +368,7 @@ function PlanSelector({
       <CardContent className="space-y-6">
         <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {TIER_ORDER.map((tier) => {
+          const catalog = TIER_CATALOG[tier];
           const hasCommitted = committedPlan !== null;
           const isSameTier = hasCommitted && tier === committedPlan!.tier;
           const isSamePlan =
@@ -494,7 +504,13 @@ function PlanSelector({
               <h3 className="font-display text-lg font-semibold leading-tight text-foreground">
                 {TIER_LABEL[tier]}
               </h3>
-              <p className="mt-1 min-h-10 text-sm leading-5 text-muted-foreground">
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                {catalog.tagline}
+              </p>
+              <p className="mt-2 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground">
+                {catalog.modules}
+              </p>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 Up to {TIER_LIMITS[tier]} active clients
               </p>
 
@@ -508,7 +524,13 @@ function PlanSelector({
                 )}
               </div>
 
-              <div className="mt-auto space-y-2 pt-5">
+              <PlanTierFeatureList
+                tier={tier}
+                variant="compact"
+                className="mt-4 flex-1 border-t border-border/60 pt-4"
+              />
+
+              <div className="mt-auto space-y-2 pt-4">
                 {isCurrentSelection ? (
                   <Button
                     type="button"
@@ -861,6 +883,8 @@ export function BillingDashboard({
     return "MONTHLY";
   });
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [pendingPlanTier, setPendingPlanTier] = useState<SelfServeTier | null>(null);
+  const [planChangeDialogOpen, setPlanChangeDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const data =
@@ -973,8 +997,8 @@ export function BillingDashboard({
     committedPlan,
   ]);
 
-  const onSelectPlan = useCallback(
-    (tier: SubscriptionTier) => {
+  const executePlanChange = useCallback(
+    (tier: SelfServeTier) => {
       setCheckoutError(null);
       startTransition(async () => {
         if (changePlanMode === "stripe_update") {
@@ -1004,8 +1028,69 @@ export function BillingDashboard({
         window.location.href = res.url;
       });
     },
-    [billingCycle, changePlanMode, router]
+    [billingCycle, changePlanMode, router],
   );
+
+  const requestPlanChange = useCallback(
+    (tier: SubscriptionTier) => {
+      const selfServeTier = tier as SelfServeTier;
+      const input = {
+        targetTier: selfServeTier,
+        targetBillingCycle: billingCycle,
+        committedPlan,
+        changePlanMode,
+        subscriptionStatus: data.status,
+        currentClientCount: data.currentClientCount,
+      };
+      if (shouldConfirmPlanChange(input)) {
+        setPendingPlanTier(selfServeTier);
+        setPlanChangeDialogOpen(true);
+        return;
+      }
+      executePlanChange(selfServeTier);
+    },
+    [
+      billingCycle,
+      changePlanMode,
+      committedPlan,
+      data.currentClientCount,
+      data.status,
+      executePlanChange,
+    ],
+  );
+
+  const planChangeExplainer = useMemo(() => {
+    if (!pendingPlanTier) return null;
+    return buildPlanChangeExplainer({
+      targetTier: pendingPlanTier,
+      targetBillingCycle: billingCycle,
+      committedPlan,
+      changePlanMode,
+      subscriptionStatus: data.status,
+      currentClientCount: data.currentClientCount,
+    });
+  }, [
+    pendingPlanTier,
+    billingCycle,
+    committedPlan,
+    changePlanMode,
+    data.status,
+    data.currentClientCount,
+  ]);
+
+  const planChangeConfirmDisabled = pendingPlanTier
+    ? clientsOverTierCapacity(data.currentClientCount, pendingPlanTier) > 0
+    : false;
+
+  const onConfirmPlanChange = useCallback(() => {
+    if (!pendingPlanTier) return;
+    const tier = pendingPlanTier;
+    setPlanChangeDialogOpen(false);
+    setPendingPlanTier(null);
+    executePlanChange(tier);
+  }, [executePlanChange, pendingPlanTier]);
+
+  const onSelectPlan = requestPlanChange;
 
   const checkoutIntentStarted = useRef(false);
 
@@ -1139,6 +1224,18 @@ export function BillingDashboard({
       <BillingHistory
         invoices={initialInvoices}
         canUseBillingPortal={Boolean(data.stripeCustomerId?.trim())}
+      />
+
+      <PlanChangeConfirmDialog
+        explainer={planChangeExplainer}
+        open={planChangeDialogOpen}
+        onOpenChange={(open) => {
+          setPlanChangeDialogOpen(open);
+          if (!open) setPendingPlanTier(null);
+        }}
+        onConfirm={onConfirmPlanChange}
+        pending={pending}
+        confirmDisabled={planChangeConfirmDisabled}
       />
     </div>
   );

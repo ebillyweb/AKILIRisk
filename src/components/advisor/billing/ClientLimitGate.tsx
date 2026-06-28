@@ -10,7 +10,7 @@ import {
   clientLimitUsageLabel,
   type ClientLimitSnapshot,
 } from "@/lib/billing/client-limit";
-import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
+import { billingPlanNavigationLabel } from "@/lib/billing/billing-plan-cta";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -63,13 +63,13 @@ export function ClientLimitUpgradeDialog({
           {showStripeUpgrade ? (
             <Button asChild>
               <Link href={billingHref} onClick={() => onOpenChange(false)}>
-                Upgrade to {TIER_DISPLAY_NAME[status.suggestedUpgradeTier!]}
+                {billingPlanNavigationLabel(status.suggestedUpgradeTier ?? undefined)}
               </Link>
             </Button>
           ) : status.canSelfServeUpgrade ? (
             <Button asChild>
               <Link href="/advisor/billing" onClick={() => onOpenChange(false)}>
-                Open billing
+                {billingPlanNavigationLabel()}
               </Link>
             </Button>
           ) : null}
@@ -101,7 +101,7 @@ export function ClientLimitBanner({ status }: { status: ClientLimitSnapshot }) {
             className="shrink-0"
             onClick={() => setOpen(true)}
           >
-            Upgrade plan
+            {billingPlanNavigationLabel()}
           </Button>
         ) : null}
       </div>

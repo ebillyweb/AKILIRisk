@@ -13,6 +13,8 @@ type ProductTourButtonProps = {
   autoStart?: boolean;
   className?: string;
   label?: string;
+  /** Icon-only control for dense headers and toolbars. */
+  iconOnly?: boolean;
 };
 
 export function ProductTourButton({
@@ -20,6 +22,7 @@ export function ProductTourButton({
   autoStart = true,
   className,
   label = "Take a tour",
+  iconOnly = false,
 }: ProductTourButtonProps) {
   useEffect(() => {
     if (!autoStart || hasSeenTour(tourId)) return;
@@ -31,12 +34,13 @@ export function ProductTourButton({
     <Button
       type="button"
       variant="outline"
-      size="sm"
+      size={iconOnly ? "icon" : "sm"}
       className={cn("shrink-0", className)}
       onClick={() => startProductTour(tourId)}
+      aria-label={iconOnly ? label : undefined}
     >
-      <CircleHelp className="mr-1.5 h-4 w-4" aria-hidden />
-      {label}
+      <CircleHelp className={cn("h-4 w-4", !iconOnly && "mr-1.5")} aria-hidden />
+      {iconOnly ? <span className="sr-only">{label}</span> : label}
     </Button>
   );
 }

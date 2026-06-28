@@ -1,4 +1,4 @@
-import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, CheckCircle } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,44 +7,23 @@ import { Button } from "@/components/ui/button";
 export default function ClientDetailLoading() {
   return (
     <div className="container mx-auto py-6">
-      {/* Breadcrumb */}
-      <div className="mb-6">
-        <Button variant="ghost" className="p-0 text-muted-foreground" disabled>
-          <ArrowLeft className="w-4 h-4 mr-2" />
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <Button variant="ghost" className="p-0 text-sm text-muted-foreground" disabled>
+          <ArrowLeft className="mr-1.5 size-4" />
           Back to Pipeline
         </Button>
+        <Skeleton className="size-9 rounded-md" />
       </div>
 
-      {/* Client Header */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-9 w-64" /> {/* Client name */}
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Mail className="w-4 h-4" />
-                <Skeleton className="h-4 w-48" /> {/* Email */}
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <Skeleton className="h-4 w-32" /> {/* Assigned date */}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-right space-y-2">
-            <Skeleton className="h-6 w-24" /> {/* Stage badge */}
-            <Skeleton className="h-4 w-32" /> {/* Last activity */}
-          </div>
+      <div className="mb-8 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-6 w-40" />
         </div>
-
-        {/* Progress Bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Workflow Progress</span>
-            <Skeleton className="h-4 w-12" /> {/* Progress percentage */}
-          </div>
-          <Skeleton className="h-2 w-full" /> {/* Progress bar */}
+        <Skeleton className="h-4 w-80" />
+        <div className="flex items-center gap-3 pt-1">
+          <Skeleton className="h-1.5 flex-1" />
+          <Skeleton className="h-4 w-10" />
         </div>
       </div>
 

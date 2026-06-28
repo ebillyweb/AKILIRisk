@@ -25,6 +25,7 @@ import {
 import type { FacilitatedLauncherData } from "@/lib/actions/facilitated-session-actions";
 import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
 import { clientLimitUpgradeMessage } from "@/lib/billing/client-limit";
+import { billingPlanNavigationLabel } from "@/lib/billing/billing-plan-cta";
 import { ClientLimitUpgradeDialog } from "@/components/advisor/billing/ClientLimitGate";
 import { facilitatedSessionResumePath } from "@/lib/facilitated/paths";
 
@@ -170,7 +171,7 @@ export function StartSessionForm({ data, clientLimitStatus }: StartSessionFormPr
                 className="mt-4"
                 onClick={() => setClientLimitDialogOpen(true)}
               >
-                Upgrade plan
+                {billingPlanNavigationLabel()}
               </Button>
             </div>
           ) : (

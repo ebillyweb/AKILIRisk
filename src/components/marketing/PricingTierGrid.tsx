@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ArrowRight, Building2, Check, Loader2, Sparkles } from "lucide-react";
 import type { BillingCycle } from "@prisma/client";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,11 @@ import {
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { ANNUAL_BILLING_SAVINGS_LABEL } from "@/lib/billing/constants";
-import { ADVISOR_PIPELINE_HREF } from "@/lib/billing/client-limit";
+import { ADVISOR_PIPELINE_HREF, clientsOverTierCapacity } from "@/lib/billing/client-limit";
+import {
+  buildPlanChangeExplainer,
+  shouldConfirmPlanChange,
+} from "@/lib/billing/plan-change-explainer";
 import {
   advisorBillingDeepLink,
   advisorSignupHref,
@@ -41,6 +45,8 @@ import {
 } from "@/lib/marketing/pricing-tiers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PlanTierFeatureList } from "@/components/billing/PlanTierFeatureList";
+import { PlanChangeConfirmDialog } from "@/components/advisor/billing/PlanChangeConfirmDialog";
 import { cn } from "@/lib/utils";
 
 export type PricingAudience = "solo" | "enterprise";
@@ -107,6 +113,9 @@ function PricingTierActionButton({
   featured,
   audience,
   advisorSubscription,
+  onRequestPlanChange,
+  planChangePending,
+  planChangeError,
 }: {
   tier: SelfServeTier;
   billingCycle: BillingCycle;
@@ -115,11 +124,13 @@ function PricingTierActionButton({
   featured?: boolean;
   audience: PricingAudience;
   advisorSubscription?: SubscriptionDetailsDTO | null;
+  onRequestPlanChange: (tier: SelfServeTier) => void;
+  planChangePending: boolean;
+  planChangeError: string | null;
 }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
 
   const billingDestination =
     audience === "enterprise"
@@ -160,34 +171,6 @@ function PricingTierActionButton({
   const nextTier =
     isCurrentSelection && committedPlan ? nextSelfServeTier(committedPlan.tier) : null;
 
-  const onSelectPlan = useCallback(
-    (selectedTier: SelfServeTier) => {
-      setError(null);
-      startTransition(async () => {
-        if (changePlanMode === "stripe_update") {
-          const res = await switchSubscriptionPlan({ tier: selectedTier, billingCycle });
-          if (!res.success) {
-            setError(res.error);
-            return;
-          }
-          router.refresh();
-          return;
-        }
-        const action =
-          audience === "enterprise"
-            ? createEnterpriseCheckoutSession
-            : createCheckoutSession;
-        const res = await action({ tier: selectedTier, billingCycle });
-        if (!res.success) {
-          setError(res.error);
-          return;
-        }
-        window.location.href = res.url;
-      });
-    },
-    [audience, billingCycle, changePlanMode, router],
-  );
-
   const onSoloAdvisorGetStarted = useCallback(() => {
     setError(null);
     router.push(billingDestination);
@@ -209,6 +192,8 @@ function PricingTierActionButton({
     billingCycle,
   });
   const busyLabel = changePlanMode === "stripe_update" ? "Updating…" : "Redirecting…";
+  const displayError = error ?? planChangeError;
+  const pending = planChangePending;
 
   if (!billingEnabled) {
     return (
@@ -242,13 +227,13 @@ function PricingTierActionButton({
           className="w-full"
           variant="billingUpgrade"
           disabled={pending}
-          onClick={() => onSelectPlan(nextTier)}
+          onClick={() => onRequestPlanChange(nextTier)}
         >
           {pending ? busyLabel : "Upgrade"}
         </Button>
-        {error ? (
+        {displayError ? (
           <p className="text-xs text-destructive" role="alert">
-            {error}
+            {displayError}
           </p>
         ) : null}
       </div>
@@ -263,7 +248,7 @@ function PricingTierActionButton({
           className="w-full"
           variant={planButtonVariant}
           disabled={pending || capacityBlock.blocked}
-          onClick={() => onSelectPlan(tier)}
+          onClick={() => onRequestPlanChange(tier)}
         >
           {pending ? busyLabel : buttonLabel}
         </Button>
@@ -275,9 +260,9 @@ function PricingTierActionButton({
             </Link>
           </p>
         ) : null}
-        {error ? (
+        {displayError ? (
           <p className="text-xs text-destructive" role="alert">
-            {error}
+            {displayError}
           </p>
         ) : null}
       </div>
@@ -296,9 +281,9 @@ function PricingTierActionButton({
           Get Started
           <ArrowRight className="size-4" aria-hidden />
         </Button>
-        {error ? (
+        {displayError ? (
           <p className="text-xs text-destructive" role="alert">
-            {error}
+            {displayError}
           </p>
         ) : null}
       </div>
@@ -314,9 +299,9 @@ function PricingTierActionButton({
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         </Button>
-        {error ? (
+        {displayError ? (
           <p className="text-xs text-destructive" role="alert">
-            {error}
+            {displayError}
           </p>
         ) : null}
       </div>
@@ -330,7 +315,7 @@ function PricingTierActionButton({
         className="w-full"
         variant={featured ? "default" : "outline"}
         disabled={pending}
-        onClick={() => onSelectPlan(tier)}
+        onClick={() => onRequestPlanChange(tier)}
       >
         {pending ? (
           <>
@@ -344,9 +329,9 @@ function PricingTierActionButton({
           </>
         )}
       </Button>
-      {error ? (
+      {displayError ? (
         <p className="text-xs text-destructive" role="alert">
-          {error}
+          {displayError}
         </p>
       ) : null}
     </div>
@@ -383,34 +368,138 @@ export function PricingTierGrid({
     return "MONTHLY";
   });
   const checkoutStarted = useRef(false);
+  const [pendingPlanTier, setPendingPlanTier] = useState<SelfServeTier | null>(null);
+  const [planChangeDialogOpen, setPlanChangeDialogOpen] = useState(false);
+  const [planChangeError, setPlanChangeError] = useState<string | null>(null);
+  const [planChangePending, startPlanChangeTransition] = useTransition();
+
+  const subscriptionStatus = advisorSubscription?.status ?? "NONE";
+  const currentClientCount = advisorSubscription?.currentClientCount ?? 0;
+
+  const executePlanChange = useCallback(
+    (tier: SelfServeTier) => {
+      setPlanChangeError(null);
+      startPlanChangeTransition(async () => {
+        if (changePlanMode === "stripe_update") {
+          const res = await switchSubscriptionPlan({ tier, billingCycle });
+          if (!res.success) {
+            setPlanChangeError(res.error);
+            return;
+          }
+          router.refresh();
+          return;
+        }
+        const action =
+          audience === "enterprise"
+            ? createEnterpriseCheckoutSession
+            : createCheckoutSession;
+        const res = await action({ tier, billingCycle });
+        if (!res.success) {
+          setPlanChangeError(res.error);
+          return;
+        }
+        window.location.href = res.url;
+      });
+    },
+    [audience, billingCycle, changePlanMode, router],
+  );
+
+  const requestPlanChange = useCallback(
+    (tier: SelfServeTier) => {
+      const input = {
+        targetTier: tier,
+        targetBillingCycle: billingCycle,
+        committedPlan,
+        changePlanMode,
+        subscriptionStatus,
+        currentClientCount,
+      };
+      if (shouldConfirmPlanChange(input)) {
+        setPendingPlanTier(tier);
+        setPlanChangeDialogOpen(true);
+        return;
+      }
+      executePlanChange(tier);
+    },
+    [
+      billingCycle,
+      changePlanMode,
+      committedPlan,
+      currentClientCount,
+      executePlanChange,
+      subscriptionStatus,
+    ],
+  );
+
+  const planChangeExplainer = useMemo(() => {
+    if (!pendingPlanTier) return null;
+    return buildPlanChangeExplainer({
+      targetTier: pendingPlanTier,
+      targetBillingCycle: billingCycle,
+      committedPlan,
+      changePlanMode,
+      subscriptionStatus,
+      currentClientCount,
+    });
+  }, [
+    pendingPlanTier,
+    billingCycle,
+    committedPlan,
+    changePlanMode,
+    subscriptionStatus,
+    currentClientCount,
+  ]);
+
+  const planChangeConfirmDisabled = pendingPlanTier
+    ? clientsOverTierCapacity(currentClientCount, pendingPlanTier) > 0
+    : false;
+
+  const onConfirmPlanChange = useCallback(() => {
+    if (!pendingPlanTier) return;
+    const tier = pendingPlanTier;
+    setPlanChangeDialogOpen(false);
+    setPendingPlanTier(null);
+    executePlanChange(tier);
+  }, [executePlanChange, pendingPlanTier]);
+
   const pricingByTier = Object.fromEntries(pricing.map((row) => [row.tier, row])) as Record<
     SelfServeTier,
     PublicTierPricing
   >;
 
   useEffect(() => {
-    if (!checkoutPlanIntent || !billingEnabled || !canSubscribe || checkoutStarted.current) {
+    if (!checkoutPlanIntent || !billingEnabled || checkoutStarted.current) {
       return;
     }
     checkoutStarted.current = true;
-    const action =
-      audience === "enterprise"
-        ? createEnterpriseCheckoutSession
-        : createCheckoutSession;
-    void action({
-      tier: checkoutPlanIntent.tier,
-      billingCycle: checkoutPlanIntent.billingCycle,
-    }).then((res) => {
-      if (res.success) {
-        window.location.href = res.url;
-        return;
-      }
+    if (changePlanMode === "stripe_update") {
       router.replace(
         audience === "enterprise" ? "/advisor/enterprise/pricing" : "/pricing",
-        { scroll: false }
+        { scroll: false },
       );
-    });
-  }, [audience, billingEnabled, canSubscribe, checkoutPlanIntent, router]);
+      return;
+    }
+    if (!canSubscribe) {
+      router.replace(
+        audience === "enterprise" ? "/advisor/enterprise/pricing" : "/pricing",
+        { scroll: false },
+      );
+      return;
+    }
+    requestPlanChange(checkoutPlanIntent.tier);
+    router.replace(
+      audience === "enterprise" ? "/advisor/enterprise/pricing" : "/pricing",
+      { scroll: false },
+    );
+  }, [
+    audience,
+    billingEnabled,
+    canSubscribe,
+    changePlanMode,
+    checkoutPlanIntent,
+    requestPlanChange,
+    router,
+  ]);
 
   const clientLimitNote =
     audience === "enterprise" && firm
@@ -564,14 +653,11 @@ export function PricingTierGrid({
                 {clientLimitNote ?? `Up to ${catalog.clientLimit} active clients`}
               </p>
 
-              <ul className="mt-5 flex-1 space-y-2.5 border-t border-border/60 pt-5">
-                {catalog.highlights.map((item) => (
-                  <li key={item} className="flex gap-2 text-sm leading-6 text-muted-foreground">
-                    <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+              <PlanTierFeatureList
+                tier={tier}
+                variant="compact"
+                className="mt-5 flex-1 border-t border-border/60 pt-5"
+              />
 
               <div className="mt-6 pt-0">
                 <PricingTierActionButton
@@ -582,6 +668,9 @@ export function PricingTierGrid({
                   featured={featured}
                   audience={audience}
                   advisorSubscription={advisorSubscription}
+                  onRequestPlanChange={requestPlanChange}
+                  planChangePending={planChangePending}
+                  planChangeError={planChangeError}
                 />
               </div>
             </article>
@@ -657,6 +746,18 @@ export function PricingTierGrid({
           </ul>
         </section>
       )}
+
+      <PlanChangeConfirmDialog
+        explainer={planChangeExplainer}
+        open={planChangeDialogOpen}
+        onOpenChange={(open) => {
+          setPlanChangeDialogOpen(open);
+          if (!open) setPendingPlanTier(null);
+        }}
+        onConfirm={onConfirmPlanChange}
+        pending={planChangePending}
+        confirmDisabled={planChangeConfirmDisabled}
+      />
     </div>
   );
 }

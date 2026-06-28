@@ -13,7 +13,7 @@ import {
   tierIncludesFeature,
   type AdvisorTierFeatureKey,
 } from "@/lib/billing/tier-features";
-import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
+import { billingPlanNavigationLabel } from "@/lib/billing/billing-plan-cta";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -76,7 +76,7 @@ export function TierFeatureUpgradeDialog({
           </Button>
           <Button asChild>
             <Link href={billingHref} onClick={() => onOpenChange(false)}>
-              Upgrade to {TIER_DISPLAY_NAME[requiredTier]}
+              {billingPlanNavigationLabel(requiredTier)}
             </Link>
           </Button>
         </DialogFooter>
@@ -98,7 +98,7 @@ export function TierFeatureUpgradeButton({
   return (
     <Button asChild className={className} size={size}>
       <Link href={advisorTierFeatureBillingHref(feature)}>
-        Upgrade to {TIER_DISPLAY_NAME[requiredTier]}
+        {billingPlanNavigationLabel(requiredTier)}
       </Link>
     </Button>
   );
