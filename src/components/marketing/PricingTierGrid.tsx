@@ -753,16 +753,10 @@ export function PricingTierGrid({
                   ? "border-primary/35 ring-1 ring-primary/20"
                   : isContractedTier
                     ? "border-brand/40 ring-1 ring-brand/25"
-                  : featured
-                    ? "border-brand/40 ring-1 ring-brand/25"
                     : "border-border/70",
               )}
               aria-current={isCurrentSelection ? "true" : undefined}
             >
-              {featured ? (
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand/20 via-brand to-brand/20" />
-              ) : null}
-
               <div className={PRICING_CARD_LAYOUT.badge}>
                 {isCurrentSelection ? (
                   <Badge variant="secondary" className={PRICING_CARD_LAYOUT.statusBadge}>
