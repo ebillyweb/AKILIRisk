@@ -45,3 +45,27 @@ export async function isTrackingActiveForAssessment(
 
   return assessment?.actionPlanPublishedAt != null;
 }
+
+/**
+ * Check whether the cadence engine is enabled for an advisor.
+ *
+ * Solo advisors (no enterprise row) default to enabled.
+ * Enterprise advisors: cadence piggybacks on implementationTrackingEnabled --
+ * if tracking is off, cadence is off too.
+ */
+export async function isCadenceEngineEnabled(
+  advisorProfileId: string,
+): Promise<boolean> {
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { id: advisorProfileId },
+    select: {
+      enterprise: {
+        select: { implementationTrackingEnabled: true },
+      },
+    },
+  });
+
+  if (!profile) return false;
+
+  return profile.enterprise?.implementationTrackingEnabled ?? true;
+}
