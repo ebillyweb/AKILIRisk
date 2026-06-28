@@ -22,11 +22,18 @@ function cadenceBadge(status: ReassessmentCadenceClientRow["cadence"]) {
   }
   switch (status.status) {
     case "overdue":
-      return <Badge variant="destructive">Overdue</Badge>;
+      return (
+        <Badge
+          variant="default"
+          className="border-transparent bg-destructive text-destructive-foreground"
+        >
+          Overdue
+        </Badge>
+      );
     case "due_soon":
-      return <Badge variant="secondary">Due soon</Badge>;
+      return <Badge variant="warning">Due soon</Badge>;
     case "system_recommended":
-      return <Badge variant="secondary">Recommended</Badge>;
+      return <Badge variant="info">Recommended</Badge>;
     default:
       return <Badge variant="outline">On track</Badge>;
   }

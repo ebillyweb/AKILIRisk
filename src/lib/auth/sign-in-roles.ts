@@ -13,3 +13,10 @@ export const SIGN_IN_ROLES: ReadonlyArray<{
 export function isSignInRole(value: string | null | undefined): value is SignInRole {
   return value === "client" || value === "advisor" || value === "admin";
 }
+
+export function getVisibleSignInRoles(options?: { hidePlatform?: boolean }) {
+  if (options?.hidePlatform) {
+    return SIGN_IN_ROLES.filter((role) => role.id !== "admin");
+  }
+  return SIGN_IN_ROLES;
+}

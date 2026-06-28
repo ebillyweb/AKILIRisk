@@ -20,7 +20,18 @@ import {
   SIGN_IN_HUB_PATH,
   resolveSignInRole,
 } from "@/lib/auth/sign-in-routes";
-import { SIGN_IN_ROLES, type SignInRole } from "@/lib/auth/sign-in-roles";
+import {
+  advisorSignInPanelDescription,
+  clientSignInPanelDescription,
+  coerceSignInRoleForBrandedPortal,
+  signInHubDescription,
+} from "@/lib/auth/sign-in-copy";
+import {
+  getVisibleSignInRoles,
+  type SignInRole,
+} from "@/lib/auth/sign-in-roles";
+import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
+import { useBrandingOptional } from "@/components/providers/BrandingProvider";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import { cn } from "@/lib/utils";
 
@@ -42,19 +53,17 @@ function resolvePostSignInPath(
   return "/dashboard";
 }
 
-function rolePanelCopy(role: SignInRole) {
+function rolePanelCopy(role: SignInRole, firmName?: string | null) {
   switch (role) {
     case "client":
       return {
         eyebrow: "Client access",
-        description:
-          "Enter the email your advisor used for your account. We'll send a one-time sign-in link — no password required.",
+        description: clientSignInPanelDescription(firmName),
       };
     case "advisor":
       return {
         eyebrow: "Advisor workspace",
-        description:
-          "Sign in to manage client profiles, assessments, and recommendations from your advisor workspace.",
+        description: advisorSignInPanelDescription(firmName),
       };
     case "admin":
       return {
@@ -308,15 +317,25 @@ function StaffCredentialsPanel({
 function SignInHubContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const brandingContext = useBrandingOptional();
+  const isBrandedPortal = Boolean(brandingContext?.branding);
+  const firmName = brandingContext?.branding
+    ? clientPortalBrandingDisplayTitle(brandingContext.branding)
+    : null;
+  const visibleRoles = getVisibleSignInRoles({ hidePlatform: isBrandedPortal });
+
   const callbackUrl = searchParams.get("callbackUrl");
   const accountDeactivatedNotice = searchParams.get("notice") === "account_deactivated";
   const passwordUpdatedNotice = searchParams.get("notice") === "password_updated";
 
-  const initialRole = resolveSignInRole({
+  const resolvedRole = resolveSignInRole({
     role: searchParams.get("role"),
     portal: searchParams.get("portal"),
     callbackUrl,
   });
+  const initialRole = isBrandedPortal
+    ? coerceSignInRoleForBrandedPortal(resolvedRole)
+    : resolvedRole;
 
   const [activeRole, setActiveRole] = useState<SignInRole>(initialRole);
 
@@ -340,27 +359,37 @@ function SignInHubContent() {
     [callbackUrl, router, searchParams]
   );
 
+  useEffect(() => {
+    if (!isBrandedPortal || searchParams.get("role") !== "admin") return;
+    syncRoleToUrl("advisor");
+  }, [isBrandedPortal, searchParams, syncRoleToUrl]);
+
   const handleRoleChange = (value: string) => {
-    const role = value as SignInRole;
+    const role = isBrandedPortal
+      ? coerceSignInRoleForBrandedPortal(value as SignInRole)
+      : (value as SignInRole);
     setActiveRole(role);
     syncRoleToUrl(role);
   };
 
-  const panelCopy = rolePanelCopy(activeRole);
+  const panelCopy = rolePanelCopy(activeRole, firmName);
 
   return (
     <AuthPanel
       eyebrow="Sign in"
       title="Welcome back"
-      description="Choose your account type, then continue with the sign-in method for that role."
+      description={signInHubDescription(firmName)}
       contentClassName="space-y-6"
     >
       <Tabs value={activeRole} onValueChange={handleRoleChange} className="gap-6">
         <TabsList
           aria-label="Sign-in account type"
-          className="grid !h-auto min-h-14 w-full grid-cols-3 items-stretch gap-1.5 rounded-xl bg-muted/70 p-1.5"
+          className={cn(
+            "grid !h-auto min-h-14 w-full items-stretch gap-1.5 rounded-xl bg-muted/70 p-1.5",
+            visibleRoles.length === 2 ? "grid-cols-2" : "grid-cols-3",
+          )}
         >
-          {SIGN_IN_ROLES.map(({ id, label, shortLabel }) => {
+          {visibleRoles.map(({ id, label, shortLabel }) => {
             const Icon = ROLE_ICONS[id];
             return (
               <TabsTrigger
@@ -398,14 +427,16 @@ function SignInHubContent() {
           />
         </TabsContent>
 
-        <TabsContent value="admin" className="mt-0">
-          <StaffCredentialsPanel
-            role="admin"
-            callbackUrl={callbackUrl}
-            accountDeactivatedNotice={accountDeactivatedNotice}
-            passwordUpdatedNotice={passwordUpdatedNotice}
-          />
-        </TabsContent>
+        {!isBrandedPortal ? (
+          <TabsContent value="admin" className="mt-0">
+            <StaffCredentialsPanel
+              role="admin"
+              callbackUrl={callbackUrl}
+              accountDeactivatedNotice={accountDeactivatedNotice}
+              passwordUpdatedNotice={passwordUpdatedNotice}
+            />
+          </TabsContent>
+        ) : null}
       </Tabs>
 
       {activeRole !== "client" ? (
@@ -421,7 +452,7 @@ function SignInHubContent() {
         </p>
       ) : (
         <p className="text-center text-sm text-muted-foreground">
-          Advisor or AKILI team member?{" "}
+          {isBrandedPortal && firmName ? `${firmName} advisor?` : "Advisor or AKILI team member?"}{" "}
           <button
             type="button"
             onClick={() => handleRoleChange("advisor")}
