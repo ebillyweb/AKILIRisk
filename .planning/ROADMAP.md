@@ -142,7 +142,7 @@ Plans:
 
 **Dashboard (progressive disclosure):**
 - Default view remains assessment results for advisors not using tracking
-- When tracking is active: per-recommendation progress bars (e.g., "Cybersecurity Uplift — 72% Complete")
+- When tracking is active: per-recommendation progress bars (e.g., "Cybersecurity Uplift -- 72% Complete")
 - Next step callout with due date
 - Engagement status summary
 
@@ -157,8 +157,15 @@ Plans:
 ### Phase 24: Continuous Risk Improvement
 **Dependencies:** Phase 23 (client engagement infrastructure available)
 **Requirements:** LIFECYCLE-03
+**Plans:** 4 plans
 
-**Goal:** Close the assessment loop — clients can reassess, see score deltas, and measure the impact of completed solutions. This is where the platform becomes sticky.
+**Goal:** Close the assessment loop -- clients can reassess, see score deltas, and measure the impact of completed solutions. This is where the platform becomes sticky.
+
+Plans:
+- [ ] 24-01-PLAN.md -- Schema migration (assessment versioning, SolutionActivity evolution, ReviewCadence model) + types + reassessment creation + score delta + targeted follow-up
+- [ ] 24-02-PLAN.md -- Intelligence event constants + cadence engine logic + system triggers + enterprise feature flag
+- [ ] 24-03-PLAN.md -- Server actions (reassessment + cadence) + cron route + activity feed evolution
+- [ ] 24-04-PLAN.md -- UI components (PillarDeltaPanel, ReassessmentDialog, IntelligenceTimeline, ReviewCadencePanel) + human verification
 
 **Reassessment:**
 - Retake full assessment or individual pillars
@@ -167,7 +174,7 @@ Plans:
 - Reminder engine (configurable cadence per advisor/enterprise)
 
 **Impact Measurement:**
-- Before/after pillar score comparison (e.g., Governance: 7.8 → 4.1, down 47%)
+- Before/after pillar score comparison (e.g., Governance: 7.8 -> 4.1, down 47%)
 - Recommendation effectiveness tracking (which solutions moved the needle)
 - Completed vs remaining solutions summary
 - Projected vs actual risk reduction
@@ -188,7 +195,7 @@ Plans:
 **Dependencies:** Phase 24 (continuous improvement complete)
 **Requirements:** REPORT-01
 
-**Goal:** Generate executive-grade reports that tell the full risk reduction story — not just "your score is 7.2" but "risk reduced 38%, 14 of 18 recommendations completed, estimated financial exposure reduced, top remaining risks, upcoming milestones, trend over six months."
+**Goal:** Generate executive-grade reports that tell the full risk reduction story -- not just "your score is 7.2" but "risk reduced 38%, 14 of 18 recommendations completed, estimated financial exposure reduced, top remaining risks, upcoming milestones, trend over six months."
 
 **Report Content:**
 - Executive summary with risk reduction percentage
@@ -216,7 +223,7 @@ Plans:
 | 21 - Recommendation Engine | Complete | 2/2 | ██████████ 100% |
 | 22 - Recommendation Experience | Complete | 6/6 | ██████████ 100% |
 | 23 - Client Engagement & Tracking | Planned | 0/5 | ░░░░░░░░░░ 0% |
-| 24 - Continuous Risk Improvement | Pending | 0/0 | ░░░░░░░░░░ 0% |
+| 24 - Continuous Risk Improvement | Planned | 0/4 | ░░░░░░░░░░ 0% |
 | 25 - Executive Reporting | Pending | 0/0 | ░░░░░░░░░░ 0% |
 
 **Overall:** ██████░░░░ 57% (4/7 phases complete)
@@ -235,5 +242,5 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-19*
-*Roadmap updated: 2026-06-27 — Phase 23 planned: 5 plans across 3 waves*
-*Next phase: 23*
+*Roadmap updated: 2026-06-27 -- Phase 24 planned: 4 plans across 3 waves*
+*Next phase: 24*
