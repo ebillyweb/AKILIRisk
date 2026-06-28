@@ -43,6 +43,31 @@ interface AdvisorSidebarNavProps {
   className?: string;
 }
 
+function advisorNavItemClassName(
+  isActive: boolean,
+  options: { disabled?: boolean; locked?: boolean } = {},
+) {
+  const { disabled = false, locked = false } = options;
+
+  return cn(
+    "flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+    disabled
+      ? "cursor-not-allowed text-muted-foreground/50"
+      : locked
+        ? "cursor-pointer text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        : isActive
+          ? "bg-primary/10 text-primary hover:bg-primary/15"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+  );
+}
+
+function advisorSectionTitleClassName(isActiveSection: boolean) {
+  return cn(
+    "px-2 text-xs font-semibold uppercase tracking-wide transition-colors",
+    isActiveSection ? "text-primary" : "text-muted-foreground",
+  );
+}
+
 function NavItem({
   item,
   isActive,
@@ -58,24 +83,17 @@ function NavItem({
 }) {
   const Icon = item.icon;
   const isLocked = lockReason !== null;
-  const baseClass = cn(
-    "flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
-    item.disabled || isLocked
-      ? isLocked
-        ? "cursor-pointer text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-        : "cursor-not-allowed text-muted-foreground/50"
-      : "hover:bg-muted/60 hover:text-foreground",
-    !item.disabled && !isLocked && isActive
-      ? "bg-muted text-foreground"
-      : "text-muted-foreground"
-  );
+  const baseClass = advisorNavItemClassName(isActive, {
+    disabled: item.disabled,
+    locked: isLocked,
+  });
 
   if (item.disabled) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <span className={baseClass} aria-disabled="true">
-            <Icon className="size-4 shrink-0 opacity-60" />
+            <Icon className="size-4 shrink-0 opacity-60" aria-hidden />
             <span className="truncate">{item.label}</span>
           </span>
         </TooltipTrigger>
@@ -94,7 +112,7 @@ function NavItem({
         onClick={onLockedClick}
         aria-label={`${item.label} — upgrade required`}
       >
-        <Icon className="size-4 shrink-0 opacity-80" />
+        <Icon className="size-4 shrink-0 opacity-80" aria-hidden />
         <span className="truncate">{item.label}</span>
         <TierFeatureLockIcon className="ml-auto !opacity-100" />
       </button>
@@ -108,7 +126,7 @@ function NavItem({
       className={baseClass}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon className="size-4 shrink-0" />
+      <Icon className={cn("size-4 shrink-0", isActive && "text-primary")} aria-hidden />
       <span className="truncate">{item.label}</span>
     </Link>
   );
@@ -195,10 +213,10 @@ export function AdvisorSidebarNav({
                 {sectionIndex > 0 && <Separator className="mb-4" />}
                 <CollapsibleTrigger
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5",
-                    "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
-                    "hover:bg-muted/40 hover:text-foreground transition-colors",
-                    "[&[data-state=open]>svg]:rotate-180"
+                    "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 transition-colors",
+                    advisorSectionTitleClassName(sectionHasActive),
+                    "hover:bg-muted/40 hover:text-foreground",
+                    "[&[data-state=open]>svg]:rotate-180",
                   )}
                 >
                   <span>{section.title}</span>
@@ -222,7 +240,7 @@ export function AdvisorSidebarNav({
             <div key={section.id}>
               {sectionIndex > 0 && <Separator className="mb-4" />}
               <div className="space-y-1">
-                <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className={advisorSectionTitleClassName(sectionHasActive)}>
                   {section.title}
                 </h3>
                 <NavLinks

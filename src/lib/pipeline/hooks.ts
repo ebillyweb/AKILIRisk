@@ -123,8 +123,8 @@ export function usePipelineFilters(
       filtered = filtered.filter((client) => client.documentsNeeded);
     }
 
-    if (filters.needsRescore) {
-      filtered = filtered.filter((client) => client.needsRescore);
+    if (filters.staleScores) {
+      filtered = filtered.filter((client) => client.staleScores);
     }
 
     // Filter by search (name or email)

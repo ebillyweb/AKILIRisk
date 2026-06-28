@@ -5,6 +5,7 @@ import {
   Bell,
   BookOpen,
   Briefcase,
+  CalendarClock,
   ClipboardList,
   CreditCard,
   FileText,
@@ -26,6 +27,7 @@ import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { AdvisorTierFeatureKey } from "@/lib/billing/tier-features";
 import { tierIncludesFeature } from "@/lib/billing/tier-features";
 import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
+import { REASSESSMENT_COPY, STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 
 export const ADVISOR_COMING_SOON_TOOLTIP =
   "Coming soon — this workspace area is not available yet.";
@@ -130,9 +132,14 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         icon: Mail,
       },
       {
-        href: "/advisor/pipeline?needsRescore=1",
-        label: "Reassessment",
+        href: "/advisor/pipeline?staleScores=1",
+        label: STALE_SCORES_COPY.navLabel,
         icon: BarChart3,
+      },
+      {
+        href: "/advisor/reassessment",
+        label: REASSESSMENT_COPY.navCadenceLabel,
+        icon: CalendarClock,
         requiresTierFeature: "REASSESSMENT_WORKFLOW",
       },
       {
@@ -243,8 +250,67 @@ export function getVisibleAdvisorNavSections(
   })).filter((section) => section.items.length > 0);
 }
 
+/** Nested routes that should activate a specific sidebar item. */
+const ADVISOR_NAV_PATH_ALIASES: ReadonlyArray<{
+  test: (pathname: string) => boolean;
+  pathname: string;
+  searchParams?: Record<string, string>;
+}> = [
+  {
+    test: (pathname) => pathname.startsWith("/advisor/clients/"),
+    pathname: "/advisor/pipeline",
+  },
+  {
+    test: (pathname) => pathname.startsWith("/advisor/review/"),
+    pathname: "/advisor/pipeline",
+    searchParams: { awaitingReview: "1" },
+  },
+  {
+    test: (pathname) => pathname.startsWith("/advisor/analytics/"),
+    pathname: "/advisor/dashboard",
+  },
+  {
+    test: (pathname) =>
+      pathname === "/advisor/engagement" || pathname.startsWith("/advisor/engagement/"),
+    pathname: "/advisor/engagements",
+  },
+  {
+    test: (pathname) => pathname.startsWith("/advisor/question-bank/"),
+    pathname: "/advisor/methodology",
+  },
+  {
+    test: (pathname) =>
+      pathname === "/advisor/invite" || pathname.startsWith("/advisor/invite/"),
+    pathname: "/advisor/invitations",
+  },
+  {
+    test: (pathname) => pathname.startsWith("/advisor/enterprise/"),
+    pathname: "/advisor/settings",
+  },
+];
+
+function normalizeAdvisorNavLocation(
+  pathname: string,
+  searchParams?: Record<string, string | undefined> | URLSearchParams,
+): {
+  pathname: string;
+  searchParams?: Record<string, string | undefined> | URLSearchParams;
+} {
+  for (const alias of ADVISOR_NAV_PATH_ALIASES) {
+    if (!alias.test(pathname)) continue;
+    return {
+      pathname: alias.pathname,
+      searchParams: alias.searchParams ?? searchParams,
+    };
+  }
+  return { pathname, searchParams };
+}
+
 function hrefMatchesPath(pathname: string, path: string, hasQuery: boolean): boolean {
   if (hasQuery) {
+    return pathname === path;
+  }
+  if (path === "/advisor") {
     return pathname === path;
   }
   return pathname === path || pathname.startsWith(`${path}/`);
@@ -271,6 +337,8 @@ export function getActiveAdvisorNavHref(
   sections: AdvisorNavSection[],
   searchParams?: Record<string, string | undefined> | URLSearchParams
 ): string | undefined {
+  const normalized = normalizeAdvisorNavLocation(pathname, searchParams);
+
   const items = sections
     .flatMap((section) => section.items)
     .filter((item): item is AdvisorNavItem & { href: string } =>
@@ -280,8 +348,8 @@ export function getActiveAdvisorNavHref(
 
   for (const item of items) {
     const [path, query] = item.href.split("?");
-    if (!hrefMatchesPath(pathname, path, Boolean(query))) continue;
-    if (query && !hrefQueryMatches(query, searchParams)) continue;
+    if (!hrefMatchesPath(normalized.pathname, path, Boolean(query))) continue;
+    if (query && !hrefQueryMatches(query, normalized.searchParams)) continue;
     return item.href;
   }
 

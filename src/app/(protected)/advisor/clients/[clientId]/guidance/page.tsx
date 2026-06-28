@@ -6,6 +6,8 @@ import { getGuidancePackageForClient } from "@/lib/recommendations/guidance-pack
 import { GuidanceReviewPage } from "@/components/guidance/GuidanceReviewPage";
 import { GuidanceSummaryStrip } from "@/components/guidance/GuidanceSummaryStrip";
 import { PublishActionPlanButton } from "@/components/engagement/PublishActionPlanButton";
+import { ClientAssessmentLifecycleToolbar } from "@/components/assessment/ClientAssessmentLifecycleToolbar";
+import { getAdvisorAssessmentLifecycleContext } from "@/lib/advisor/assessment-lifecycle.server";
 
 export default async function AdvisorClientGuidancePage({
   params,
@@ -15,8 +17,10 @@ export default async function AdvisorClientGuidancePage({
   const { clientId } = await params;
 
   let advisorProfileId: string;
+  let advisorUserId: string;
   try {
     const { userId } = await requireAdvisorRole();
+    advisorUserId = userId;
 
     // T-22-10: Verify advisor has an active assignment for this client
     const advisorProfile = await prisma.advisorProfile.findUnique({
@@ -55,8 +59,13 @@ export default async function AdvisorClientGuidancePage({
   const latestAssessment = await prisma.assessment.findFirst({
     where: { userId: clientId },
     orderBy: { startedAt: "desc" },
-    select: { id: true, actionPlanPublishedAt: true },
+    select: { id: true, actionPlanPublishedAt: true, status: true },
   });
+
+  const assessmentLifecycle = await getAdvisorAssessmentLifecycleContext(
+    advisorUserId,
+    latestAssessment,
+  );
 
   if (!guidancePackage || guidancePackage.items.length === 0) {
     return (
@@ -128,8 +137,18 @@ export default async function AdvisorClientGuidancePage({
             </div>
           )}
         </div>
-        <div className="mt-4 pt-4 border-t border-border/50">
+        <div className="mt-4 pt-4 border-t border-border/50 space-y-4">
           <GuidanceSummaryStrip summary={guidancePackage.summary} />
+          {latestAssessment ? (
+            <ClientAssessmentLifecycleToolbar
+              assessmentId={latestAssessment.id}
+              assessmentStatus={latestAssessment.status}
+              showStaleScoresActions={false}
+              reassessmentEnabled={assessmentLifecycle.reassessmentEnabled}
+              targetedQuestionCount={assessmentLifecycle.targetedQuestionCount}
+              variant="stacked"
+            />
+          ) : null}
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import { loadEnterpriseRecommendationRules } from "@/lib/methodology/enterprise-
 import { loadActiveServiceRecommendations } from "@/lib/methodology/methodology-queries";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EnterpriseRecommendationRulesEditor } from "@/components/advisor/enterprise/EnterpriseRecommendationRulesEditor";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
@@ -53,12 +53,7 @@ export default async function EnterpriseRecommendationsPage({
         description="Firm-wide recommendation defaults. Changes sync to all member advisors. Individual advisors can further customize their own copies."
       />
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            {rules.length} rule{rules.length === 1 ? "" : "s"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <EnterpriseRecommendationRulesEditor
             pillarSlug={slug}
             services={services}

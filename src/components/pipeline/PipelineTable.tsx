@@ -14,6 +14,7 @@ import Link from "next/link";
 import { StageProgressBar } from "./StageIndicator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { getStageLabel } from "@/lib/pipeline/status";
 import {
   formatPipelineClientRowTitle,
@@ -88,11 +89,11 @@ export function PipelineTable({ clients }: PipelineTableProps) {
             <p className="mt-0.5 truncate text-sm text-muted-foreground">
               {secondaryLabel}
             </p>
-            {client.needsRescore || client.stalled ? (
+            {client.staleScores || client.stalled ? (
               <div className="mt-1.5 flex flex-wrap gap-1">
-                {client.needsRescore ? (
+                {client.staleScores ? (
                   <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
-                    Reassessment
+                    {STALE_SCORES_COPY.tableBadge}
                   </Badge>
                 ) : null}
                 {client.stalled ? (

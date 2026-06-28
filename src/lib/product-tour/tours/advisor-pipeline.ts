@@ -32,7 +32,16 @@ export const ADVISOR_PIPELINE_TOURS = {
       popover: {
         title: "Find and focus",
         description:
-          "Search by name or email, switch between active and inactive workflows, filter by stage, or jump to clients who need documents, intake review, reassessment, or follow-up.",
+          "Search by name or email, switch between active and inactive workflows, filter by stage, or jump to clients who need documents, intake review, stale scores, or follow-up.",
+        side: "top",
+      },
+    },
+    {
+      element: '[data-tour="pipeline-stale-scores-filter"]',
+      popover: {
+        title: "Stale scores",
+        description:
+          "Shows clients who changed answers after completing the assessment. Scores and recommendations may be out of date — platform support can re-score the existing assessment. This is different from reassessment, where the client takes a new assessment to measure progress over time.",
         side: "top",
       },
     },
@@ -97,6 +106,15 @@ export const ADVISOR_PIPELINE_TOURS = {
         description:
           "Scores, risk level, and per-pillar heat map appear here once the client progresses. Open analytics, review answers, or export results when assessment is complete.",
         side: "top",
+      },
+    },
+    {
+      element: '[data-tour="pipeline-stale-scores-alert"]',
+      popover: {
+        title: "Stale scores vs reassessment",
+        description:
+          "If answers changed after completion, scores need a re-score (admin recalculates from the same assessment). Reassessment is separate: the client completes a new linked assessment so you can compare improvement over time.",
+        side: "bottom",
       },
     },
     {

@@ -1,4 +1,5 @@
 import { AdvisorQuestionSource, PillarCategoryKind, Prisma } from "@prisma/client";
+import { serviceIdFromRulePayload } from "@/lib/admin/recommendation-rule-ui";
 import { prisma } from "@/lib/db";
 import { DEFAULT_RISK_THRESHOLDS } from "@/lib/assessment/governance-rubric";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/lib/assessment/bank/pillar-question-wire";
 import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
 import { narrativeStarterForSlug } from "@/lib/methodology/narrative-starter";
+import { pillarIdForRecommendationRule } from "@/lib/methodology/infer-recommendation-rule-pillar";
 import { PLATFORM_PILLAR_CATALOG } from "@/lib/methodology/pillar-catalog-starter";
 
 export async function cloneAdvisorDefaultsIfNeeded(
@@ -402,7 +404,14 @@ export async function syncMissingPlatformRecommendationRules(
       advisorProfileId,
       sourceKind: AdvisorQuestionSource.PLATFORM,
     },
-    select: { id: true, platformSourceId: true, name: true },
+    select: {
+      id: true,
+      platformSourceId: true,
+      name: true,
+      pillarId: true,
+      triggerConditions: true,
+      servicePayload: true,
+    },
   });
   const known = new Set(
     existing.map((r) => r.platformSourceId).filter((id): id is string => id != null),
@@ -413,16 +422,46 @@ export async function syncMissingPlatformRecommendationRules(
       .map((r) => [r.name, r.id]),
   );
 
-  const platformRules = await loadPlatformRecommendationRows(tx);
   let added = 0;
+  for (const row of existing) {
+    if (row.pillarId != null) continue;
+    const serviceRecommendationId = serviceIdFromRulePayload(row.servicePayload);
+    const pillarId = pillarIdForRecommendationRule(
+      {
+        triggerConditions: row.triggerConditions,
+        serviceRecommendationId,
+        ruleName: row.name,
+      },
+      slugToPillarId,
+    );
+    if (pillarId) {
+      await tx.advisorRecommendationRule.update({
+        where: { id: row.id },
+        data: { pillarId },
+      });
+    }
+  }
+
+  const platformRules = await loadPlatformRecommendationRows(tx);
   for (const rule of platformRules) {
     if (known.has(rule.id)) continue;
 
     const legacyId = legacyByName.get(rule.ruleName);
     if (legacyId) {
+      const pillarId = pillarIdForRecommendationRule(
+        {
+          triggerConditions: rule.triggerConditions,
+          serviceRecommendationId: rule.serviceRecommendationId,
+          ruleName: rule.ruleName,
+        },
+        slugToPillarId,
+      );
       await tx.advisorRecommendationRule.update({
         where: { id: legacyId },
-        data: { platformSourceId: rule.id },
+        data: {
+          platformSourceId: rule.id,
+          ...(pillarId ? { pillarId } : {}),
+        },
       });
       known.add(rule.id);
       continue;
@@ -453,9 +492,14 @@ async function createPlatformRecommendationClone(
   },
   slugToPillarId: Map<string, string>,
 ): Promise<void> {
-  const conditions = rule.triggerConditions as { pillarId?: string };
-  const pillarSlug = conditions.pillarId;
-  const pillarId = pillarSlug ? slugToPillarId.get(pillarSlug) : null;
+  const pillarId = pillarIdForRecommendationRule(
+    {
+      triggerConditions: rule.triggerConditions,
+      serviceRecommendationId: rule.serviceRecommendationId,
+      ruleName: rule.ruleName,
+    },
+    slugToPillarId,
+  );
   await tx.advisorRecommendationRule.create({
     data: {
       advisorProfileId,

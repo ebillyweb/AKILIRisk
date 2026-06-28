@@ -12,16 +12,8 @@ interface Props {
 }
 
 /**
- * C2 (BRD §7.2): "Rescore" button on the admin assessment list.
- *
- * Two-step UX: button opens an inline confirmation panel with a required
- * reason prompt (typed-but-optional in Zod; the form prompts for it
- * because rescoring is destructive — overwrites prior PillarScore +
- * AssessmentRecommendation rows). Submit is labeled "Rescore now" with
- * destructive styling.
- *
- * The audit row is written by the server action regardless of outcome
- * (success or rollback) — see admin-rescore-actions.ts:rescoreAssessment.
+ * Admin re-score for assessments with stale scores (answers edited after completion).
+ * Shown only when `answersChangedAfterCompleteAt` is set on a completed assessment.
  */
 export function AssessmentRescoreButton({ assessmentId }: Props) {
   const router = useRouter();

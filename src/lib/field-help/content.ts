@@ -419,6 +419,18 @@ export const FIELD_HELP = {
     description:
       "Advisors access client workflows. Admins can additionally manage team members and firm defaults.",
   },
+
+  // Advisor — assessment lifecycle (stale scores vs reassessment)
+  "pipeline-stale-scores": {
+    title: "Stale scores",
+    description:
+      "Clients who edited answers after marking the assessment complete. Their stored scores and recommendations still reflect the old responses — contact platform support to re-score. This is not the same as reassessment: a reassessment is a new assessment cycle where the client answers again so you can measure progress over time.",
+  },
+  "assessment-stale-scores-alert": {
+    title: "Re-score vs reassessment",
+    description:
+      "Re-score recalculates results from the same assessment using the latest answers (admin action when answers change or scoring rules update). Reassessment starts a new linked assessment — full, single pillar, or targeted follow-up — so you can compare before/after scores and track improvement from completed recommendations.",
+  },
 } as const satisfies Record<string, FieldHelpContent>;
 
 export type FieldHelpKey = keyof typeof FIELD_HELP;

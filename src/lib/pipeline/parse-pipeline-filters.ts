@@ -31,7 +31,10 @@ export function parsePipelineFiltersFromSearchParams(
     stalled: single("stalled") === "1" ? true : undefined,
     awaitingIntakeReview: single("awaitingReview") === "1" ? true : undefined,
     documentsNeeded: single("documentsNeeded") === "1" ? true : undefined,
-    needsRescore: single("needsRescore") === "1" ? true : undefined,
+    staleScores:
+      single("staleScores") === "1" || single("needsRescore") === "1"
+        ? true
+        : undefined,
     inactive: single("inactive") === "1" ? true : undefined,
     search: single("search"),
     sortBy: "lastActivity",
@@ -47,6 +50,30 @@ export function parsePipelinePageFromSearchParams(
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
+/** Redirect legacy `needsRescore=1` bookmarks to `staleScores=1`. */
+export function legacyPipelineSearchRedirect(
+  searchParams: Record<string, string | string[] | undefined>,
+): string | null {
+  const single = (key: string) => {
+    const v = searchParams[key];
+    return typeof v === "string" ? v : undefined;
+  };
+
+  if (single("needsRescore") === "1" && single("staleScores") !== "1") {
+    const page = parsePipelinePageFromSearchParams(searchParams);
+    return buildPipelineHref(
+      parsePipelineFiltersFromSearchParams({
+        ...searchParams,
+        staleScores: "1",
+        needsRescore: undefined,
+      }),
+      page,
+    );
+  }
+
+  return null;
+}
+
 export function buildPipelineHref(
   filters: PipelineFilters,
   page: number,
@@ -56,7 +83,7 @@ export function buildPipelineHref(
   if (filters.stalled) sp.set("stalled", "1");
   if (filters.awaitingIntakeReview) sp.set("awaitingReview", "1");
   if (filters.documentsNeeded) sp.set("documentsNeeded", "1");
-  if (filters.needsRescore) sp.set("needsRescore", "1");
+  if (filters.staleScores) sp.set("staleScores", "1");
   if (filters.inactive) sp.set("inactive", "1");
   if (filters.search?.trim()) sp.set("search", filters.search.trim());
   if (page > 1) sp.set("page", String(page));

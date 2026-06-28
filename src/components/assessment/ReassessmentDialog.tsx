@@ -25,6 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { startReassessmentAction } from "@/lib/actions/reassessment-actions";
 import type { ReassessmentType } from "@/lib/assessment/reassessment-types";
+import { REASSESSMENT_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -86,7 +87,7 @@ const TYPE_OPTIONS: OptionDef[] = [
 export function ReassessmentDialog({
   assessmentId,
   targetedQuestionCount,
-  triggerLabel = "Start Reassessment",
+  triggerLabel = REASSESSMENT_COPY.startButton,
   onReassessmentStarted,
 }: ReassessmentDialogProps) {
   const [open, setOpen] = useState(false);
@@ -153,7 +154,7 @@ export function ReassessmentDialog({
 
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Choose Reassessment Type</DialogTitle>
+          <DialogTitle>{REASSESSMENT_COPY.dialogTitle}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 mt-2">

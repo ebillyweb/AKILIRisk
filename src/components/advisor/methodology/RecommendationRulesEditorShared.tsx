@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type RecommendationRuleEditorRow = {
   id: string;
@@ -350,6 +351,45 @@ function CreateRuleCard({
   );
 }
 
+function isCustomRule(sourceKind: AdvisorQuestionSource): boolean {
+  return sourceKind === "CUSTOM";
+}
+
+function RulesList({
+  rules,
+  questionOptions,
+  pending,
+  onUpdate,
+  onDelete,
+  emptyMessage,
+}: {
+  rules: RecommendationRuleEditorRow[];
+  questionOptions: RulePickerQuestion[];
+  pending: boolean;
+  onUpdate: RuleActions["updateRule"];
+  onDelete: RuleActions["deleteRule"];
+  emptyMessage: string;
+}) {
+  if (rules.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {rules.map((rule) => (
+        <RuleCard
+          key={rule.id}
+          rule={rule}
+          questionOptions={questionOptions}
+          pending={pending}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function RecommendationRulesEditorShared({
   pillarSlug,
   rules,
@@ -388,34 +428,61 @@ export function RecommendationRulesEditorShared({
       }),
   };
 
-  return (
-    <div className="space-y-4" data-tour="rules-existing">
-      {rules.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No rules for this pillar yet. Add a custom rule below, or check back after platform
-          defaults are synced.
-        </p>
-      ) : (
-        rules.map((rule) => (
-          <RuleCard
-            key={rule.id}
-            rule={rule}
-            questionOptions={questionOptions}
-            pending={pending}
-            onUpdate={wrappedActions.updateRule}
-            onDelete={wrappedActions.deleteRule}
-          />
-        ))
-      )}
+  const platformRules = rules.filter((rule) => !isCustomRule(rule.sourceKind));
+  const customRules = rules.filter((rule) => isCustomRule(rule.sourceKind));
 
-      <CreateRuleCard
-        pillarSlug={pillarSlug}
-        services={services}
-        questionOptions={questionOptions}
-        pending={pending}
-        createDescription={createDescription}
-        onCreate={wrappedActions.createRule}
-      />
-    </div>
+  return (
+    <Tabs defaultValue="platform" className="gap-4" data-tour="rules-existing">
+      <TabsList variant="line" className="w-full justify-start">
+        <TabsTrigger value="platform">
+          Platform
+          <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-xs">
+            {platformRules.length}
+          </Badge>
+        </TabsTrigger>
+        <TabsTrigger value="custom">
+          Custom
+          <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-xs">
+            {customRules.length}
+          </Badge>
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="platform" className="mt-0 space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Platform base rules ship with AkiliRisk. Edit triggers or deactivate them for your
+          clients — they cannot be deleted. Firm defaults also appear here when your organization
+          provides them.
+        </p>
+        <RulesList
+          rules={platformRules}
+          questionOptions={questionOptions}
+          pending={pending}
+          onUpdate={wrappedActions.updateRule}
+          onDelete={wrappedActions.deleteRule}
+          emptyMessage="No platform rules for this pillar yet. Check back after defaults sync, or add a custom rule."
+        />
+      </TabsContent>
+
+      <TabsContent value="custom" className="mt-0 space-y-4">
+        <RulesList
+          rules={customRules}
+          questionOptions={questionOptions}
+          pending={pending}
+          onUpdate={wrappedActions.updateRule}
+          onDelete={wrappedActions.deleteRule}
+          emptyMessage="No custom rules for this pillar yet."
+        />
+
+        <CreateRuleCard
+          pillarSlug={pillarSlug}
+          services={services}
+          questionOptions={questionOptions}
+          pending={pending}
+          createDescription={createDescription}
+          onCreate={wrappedActions.createRule}
+        />
+      </TabsContent>
+    </Tabs>
   );
 }

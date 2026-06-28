@@ -126,6 +126,15 @@
   --logo-foreground: #1e293b;
   --logo-muted-foreground: #64748b;
   --logo-border: #e2e8f0;
+
+  /* Analytics charts — Recharts SVG fills need resolved colors, not hsl(var(...)) */
+  --analytics-bar-previous: oklch(0.57 0.04 252);
+  --analytics-bar-current: oklch(0.45 0.07 55);
+  --analytics-trend-line: oklch(0.45 0.07 55);
+  --analytics-maturity-excellent: oklch(0.52 0.14 145);
+  --analytics-maturity-good: oklch(0.62 0.12 75);
+  --analytics-maturity-fair: oklch(0.58 0.14 45);
+  --analytics-maturity-poor: oklch(0.55 0.18 28);
 }
 
 .dark {
@@ -190,6 +199,14 @@
   --logo-foreground: #f1f5f9;
   --logo-muted-foreground: #94a3b8;
   --logo-border: #334155;
+
+  --analytics-bar-previous: oklch(0.62 0.035 255);
+  --analytics-bar-current: oklch(0.78 0.075 88);
+  --analytics-trend-line: oklch(0.78 0.075 88);
+  --analytics-maturity-excellent: oklch(0.75 0.11 148);
+  --analytics-maturity-good: oklch(0.78 0.085 88);
+  --analytics-maturity-fair: oklch(0.76 0.1 55);
+  --analytics-maturity-poor: oklch(0.74 0.12 28);
 }
 
 @layer base {

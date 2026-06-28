@@ -7,6 +7,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FieldHelp } from "@/components/ui/field-help";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { cn } from "@/lib/utils";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { PipelineFilters, PipelineMetrics } from "@/lib/pipeline/types";
@@ -43,7 +45,7 @@ const stages: ClientWorkflowStage[] = [
 type WorkflowFilterKey =
   | "documentsNeeded"
   | "awaitingIntakeReview"
-  | "needsRescore"
+  | "staleScores"
   | "stalled";
 
 const WORKFLOW_FILTERS: {
@@ -51,12 +53,12 @@ const WORKFLOW_FILTERS: {
   label: string;
   countKey: keyof Pick<
     PipelineMetrics,
-    "documentsNeeded" | "intakesAwaitingReview" | "needsRescore" | "stalled"
+    "documentsNeeded" | "intakesAwaitingReview" | "staleScores" | "stalled"
   >;
 }[] = [
   { key: "documentsNeeded", label: "Documents Needed", countKey: "documentsNeeded" },
   { key: "awaitingIntakeReview", label: "Awaiting Review", countKey: "intakesAwaitingReview" },
-  { key: "needsRescore", label: "Reassessments", countKey: "needsRescore" },
+  { key: "staleScores", label: STALE_SCORES_COPY.filterLabel, countKey: "staleScores" },
   { key: "stalled", label: "Stalled", countKey: "stalled" },
 ];
 
@@ -65,11 +67,13 @@ function WorkflowFilterChip({
   count,
   active,
   onClick,
+  dataTour,
 }: {
   label: string;
   count: number;
   active: boolean;
   onClick: () => void;
+  dataTour?: string;
 }) {
   return (
     <Button
@@ -78,6 +82,7 @@ function WorkflowFilterChip({
       size="sm"
       aria-pressed={active}
       onClick={onClick}
+      data-tour={dataTour}
       className={cn(
         "h-auto min-h-10 w-full justify-between gap-3 px-3 py-2.5 text-left font-normal",
         !active && "bg-background/60 hover:bg-muted/50",
@@ -133,7 +138,7 @@ export function PipelineFilters({
       stalled: undefined,
       awaitingIntakeReview: undefined,
       documentsNeeded: undefined,
-      needsRescore: undefined,
+      staleScores: undefined,
       stage: undefined,
     });
   };
@@ -146,7 +151,7 @@ export function PipelineFilters({
         stalled: undefined,
         awaitingIntakeReview: undefined,
         documentsNeeded: undefined,
-        needsRescore: undefined,
+        staleScores: undefined,
         stage: undefined,
       });
       return;
@@ -164,7 +169,7 @@ export function PipelineFilters({
   if (filters.stalled) activeFilterLabels.push("Stalled");
   if (filters.awaitingIntakeReview) activeFilterLabels.push("Awaiting Review");
   if (filters.documentsNeeded) activeFilterLabels.push("Documents Needed");
-  if (filters.needsRescore) activeFilterLabels.push("Reassessments");
+  if (filters.staleScores) activeFilterLabels.push(STALE_SCORES_COPY.filterLabel);
   if (filters.inactive) activeFilterLabels.push("Inactive");
 
   return (
@@ -247,9 +252,12 @@ export function PipelineFilters({
 
       {/* Workflow attention filters — equal-width grid */}
       <div className="space-y-2 border-t border-border/50 pt-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Needs attention
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Needs attention
+          </p>
+          <FieldHelp helpKey="pipeline-stale-scores" triggerLabel="Stale scores help" />
+        </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {WORKFLOW_FILTERS.map(({ key, label, countKey }) => (
             <WorkflowFilterChip
@@ -258,6 +266,7 @@ export function PipelineFilters({
               count={metrics[countKey]}
               active={Boolean(filters[key])}
               onClick={() => toggleFlag(key)}
+              dataTour={key === "staleScores" ? "pipeline-stale-scores-filter" : undefined}
             />
           ))}
         </div>

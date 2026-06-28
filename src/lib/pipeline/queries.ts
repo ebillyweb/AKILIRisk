@@ -343,7 +343,7 @@ export async function getClientPipeline(
       interviewId: null,
     };
     const documentsNeeded = hasUnfulfilledMandatoryDocuments(docCounts);
-    const needsRescore = latestAssessment
+    const staleScores = latestAssessment
       ? assessmentNeedsRescore(latestAssessment)
       : false;
 
@@ -361,7 +361,7 @@ export async function getClientPipeline(
       awaitingIntakeReview: intakeReview.awaiting,
       intakeReviewInterviewId: intakeReview.interviewId,
       documentsNeeded,
-      needsRescore,
+      staleScores,
       invitation: invitation ? {
         status: invitation.status,
         sentAt: invitation.createdAt,
@@ -428,7 +428,7 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
 
   const documentsNeeded = clients.filter((client) => client.documentsNeeded).length;
 
-  const needsRescore = clients.filter((client) => client.needsRescore).length;
+  const staleScores = clients.filter((client) => client.staleScores).length;
 
   const stalled = clients.filter((client) => client.stalled).length;
 
@@ -440,7 +440,7 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
     total,
     byStage: allStages,
     documentsNeeded,
-    needsRescore,
+    staleScores,
     stalled,
     intakesAwaitingReview,
     inactive: 0,
@@ -702,7 +702,7 @@ export async function getClientDetail(
     { assessmentCompleted: latestAssessment?.status === "COMPLETED" },
   );
   const documentsNeededFlag = hasUnfulfilledMandatoryDocuments(docCounts);
-  const needsRescoreFlag = latestAssessment
+  const staleScoresFlag = latestAssessment
     ? assessmentNeedsRescore(latestAssessment)
     : false;
 
@@ -720,7 +720,7 @@ export async function getClientDetail(
     awaitingIntakeReview,
     intakeReviewInterviewId: awaitingIntakeReview ? latestIntake?.id ?? null : null,
     documentsNeeded: documentsNeededFlag,
-    needsRescore: needsRescoreFlag,
+    staleScores: staleScoresFlag,
     invitation: invitation ? {
       status: invitation.status,
       sentAt: invitation.createdAt,
@@ -826,6 +826,22 @@ export async function getClientDetail(
   );
   const pillarCatalog = await getPlatformPillarCatalog();
 
+  const advisorProfile = await prisma.advisorProfile.findUnique({
+    where: { id: assignmentAdvisorProfileId },
+    select: { userId: true },
+  });
+  const { getAdvisorAssessmentLifecycleContext } = await import(
+    "@/lib/advisor/assessment-lifecycle.server"
+  );
+  const assessmentLifecycle = advisorProfile
+    ? await getAdvisorAssessmentLifecycleContext(
+        advisorProfile.userId,
+        latestAssessment
+          ? { id: latestAssessment.id, status: latestAssessment.status }
+          : null,
+      )
+    : { reassessmentEnabled: false, targetedQuestionCount: 0 };
+
   return {
     client: pipelineClient,
     assessmentDomains: assessmentDomainPicker.domains,
@@ -852,5 +868,6 @@ export async function getClientDetail(
     })),
     intakeDetails,
     assessmentDetails,
+    assessmentLifecycle,
   };
 }

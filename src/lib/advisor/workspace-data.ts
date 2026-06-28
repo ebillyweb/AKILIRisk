@@ -2,6 +2,7 @@ import type { AdvisorNotification } from "@prisma/client";
 import type { PipelineClient, PipelineMetrics } from "@/lib/pipeline/types";
 import type { PortfolioIntelligence } from "@/lib/intelligence/types";
 import { advisorNotificationHref } from "@/lib/advisor/notification-links";
+import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 
 export type AdvisorPriorityItem = {
   id: string;
@@ -62,14 +63,14 @@ export function deriveAdvisorPriorities(
     });
   }
 
-  if (metrics.needsRescore > 0) {
+  if (metrics.staleScores > 0) {
     priorities.push({
       id: "rescore",
       kind: "in_progress",
-      title: "Reassessment needed",
-      description: `${metrics.needsRescore} client${metrics.needsRescore === 1 ? "" : "s"} changed answers after completing the assessment.`,
-      href: "/advisor/pipeline?needsRescore=1",
-      count: metrics.needsRescore,
+      title: STALE_SCORES_COPY.workspaceTitle,
+      description: `${metrics.staleScores} client${metrics.staleScores === 1 ? "" : "s"} changed answers after completing the assessment. Scores may need a platform re-score.`,
+      href: "/advisor/pipeline?staleScores=1",
+      count: metrics.staleScores,
     });
   }
 

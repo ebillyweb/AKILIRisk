@@ -10,7 +10,7 @@ import {
 } from "@/lib/methodology/methodology-queries";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { RecommendationRulesEditor } from "@/components/advisor/methodology/RecommendationRulesEditor";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
@@ -52,12 +52,7 @@ export default async function MethodologyRecommendationsPage({
         description="Edit or deactivate platform base rules, or add custom triggers for your clients. Snapshotted at intake start."
       />
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            {rules.length} rule{rules.length === 1 ? "" : "s"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <RecommendationRulesEditor
             pillarSlug={slug}
             services={services}

@@ -51,7 +51,12 @@ export default async function EngagementPage() {
             Implementation Tracking
           </h1>
           <p className="text-sm text-muted-foreground max-w-2xl">
-            Track client progress across published action plans
+            Track client progress across published action plans. For scheduled
+            review cycles and linked reassessments, see{" "}
+            <Link href="/advisor/reassessment" className="underline underline-offset-2">
+              Reassessment cadence
+            </Link>
+            .
           </p>
         </div>
       </div>

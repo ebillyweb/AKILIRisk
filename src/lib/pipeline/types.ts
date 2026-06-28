@@ -28,7 +28,7 @@ export type PipelineClient = {
   /** Mandatory document requirements still open */
   documentsNeeded: boolean;
   /** Completed assessment answers changed since last re-score */
-  needsRescore: boolean;
+  staleScores: boolean;
   // Invitation data (if exists)
   invitation: {
     status: InvitationStatus;
@@ -63,7 +63,7 @@ export type PipelineMetrics = {
   total: number;
   byStage: Record<ClientWorkflowStage, number>;
   documentsNeeded: number;  // clients with unfulfilled mandatory document requirements
-  needsRescore: number;     // completed assessments with post-completion answer edits
+  staleScores: number;     // completed assessments with post-completion answer edits
   stalled: number;          // clients with no activity in 7+ days
   intakesAwaitingReview: number; // submitted intake not yet approved/rejected
   /** Ended workflows (INACTIVE assignments) for this advisor */
@@ -80,7 +80,7 @@ export type PipelineFilters = {
   /** When true, only clients with unfulfilled mandatory documents */
   documentsNeeded?: boolean;
   /** When true, only clients whose completed assessment answers changed */
-  needsRescore?: boolean;
+  staleScores?: boolean;
   /** When true, list inactive (ended) client workflows instead of active ones */
   inactive?: boolean;
   search?: string;
@@ -140,6 +140,10 @@ export type ClientDetail = {
     deliverablePhase: DeliverablePhase;
     pillarScores: { pillar: string; score: number; riskLevel: string }[];
   } | null;
+  assessmentLifecycle: {
+    reassessmentEnabled: boolean;
+    targetedQuestionCount: number;
+  };
 };
 
 // Timeline event for workflow progression

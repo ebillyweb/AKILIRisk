@@ -1,18 +1,19 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ClientLimitBanner } from "@/components/advisor/billing/ClientLimitGate";
 import { PipelinePageToolbar } from "@/components/advisor/pipeline/PipelinePageToolbar";
-import { TierFeatureLockedPage } from "@/components/advisor/billing/TierFeatureLockedPage";
-import { requireAdvisorTierFeatureAccess } from "@/lib/advisor/tier-feature-guard.server";
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
 import { auth } from "@/lib/auth";
 import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
 import {
+  legacyPipelineSearchRedirect,
   parsePipelineFiltersFromSearchParams,
   parsePipelinePageFromSearchParams,
 } from "@/lib/pipeline/parse-pipeline-filters";
 import type { PipelineFilters } from "@/lib/pipeline/types";
+import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { MetricCard } from "@/components/advisor/workspace/MetricCard";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
@@ -38,12 +39,11 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
         "Clients with mandatory document requirements still outstanding.",
     };
   }
-  if (filters.needsRescore) {
+  if (filters.staleScores) {
     return {
       kicker: "Workflow",
-      title: "Reassessment",
-      subtitle:
-        "Clients who changed assessment answers after completion and need a fresh score.",
+      title: STALE_SCORES_COPY.pageTitle,
+      subtitle: STALE_SCORES_COPY.pageSubtitle,
     };
   }
   if (filters.stalled) {
@@ -165,20 +165,13 @@ export default async function PipelinePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const resolvedSearchParams = await searchParams;
+  const legacyRedirect = legacyPipelineSearchRedirect(resolvedSearchParams);
+  if (legacyRedirect) {
+    redirect(legacyRedirect);
+  }
+
   const initialFilters = parsePipelineFiltersFromSearchParams(resolvedSearchParams);
   const initialPage = parsePipelinePageFromSearchParams(resolvedSearchParams);
-
-  if (initialFilters.needsRescore) {
-    const access = await requireAdvisorTierFeatureAccess("REASSESSMENT_WORKFLOW");
-    if (!access.allowed) {
-      return (
-        <TierFeatureLockedPage
-          feature="REASSESSMENT_WORKFLOW"
-          currentTier={access.currentTier}
-        />
-      );
-    }
-  }
 
   const workflowHeading = pipelineWorkflowHeading(initialFilters);
   const session = await auth();

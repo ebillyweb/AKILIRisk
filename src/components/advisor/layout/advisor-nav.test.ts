@@ -66,8 +66,9 @@ describe("getActiveAdvisorNavHref", () => {
     expect(workflows?.items[0]?.href).toBe("/advisor/pipeline?awaitingReview=1");
     expect(workflows?.items[1]?.href).toBe("/advisor/facilitate");
     expect(workflows?.items[2]?.href).toBe("/advisor/pipeline?documentsNeeded=1");
-    expect(workflows?.items[3]?.href).toBe("/advisor/pipeline?needsRescore=1");
-    expect(workflows?.items[4]?.href).toBe("/advisor/engagements");
+    expect(workflows?.items[3]?.href).toBe("/advisor/pipeline?staleScores=1");
+    expect(workflows?.items[4]?.href).toBe("/advisor/reassessment");
+    expect(workflows?.items[5]?.href).toBe("/advisor/engagements");
   });
 
   it("exposes Configuration section with methodology and settings", () => {
@@ -148,6 +149,43 @@ describe("getActiveAdvisorNavHref", () => {
       ?.items.find((item) => item.href === "/advisor/engagements");
     expect(isAdvisorNavItemTierLocked(engagements!, "PROFESSIONAL")).toBe(true);
     expect(isAdvisorNavItemTierLocked(engagements!, "BUSINESS")).toBe(false);
+  });
+
+  it("highlights All Clients on client detail routes", () => {
+    expect(getActiveAdvisorNavHref("/advisor/pipeline/client-1", sections)).toBe(
+      "/advisor/pipeline",
+    );
+  });
+
+  it("highlights All Clients on client guidance routes", () => {
+    expect(
+      getActiveAdvisorNavHref("/advisor/clients/client-1/guidance", sections),
+    ).toBe("/advisor/pipeline");
+  });
+
+  it("highlights Intake on intake review routes", () => {
+    expect(getActiveAdvisorNavHref("/advisor/review/intake-1", sections)).toBe(
+      "/advisor/pipeline?awaitingReview=1",
+    );
+  });
+
+  it("highlights Risk Profile Portfolio on client analytics routes", () => {
+    expect(getActiveAdvisorNavHref("/advisor/analytics/client-1", sections)).toBe(
+      "/advisor/dashboard",
+    );
+  });
+
+  it("highlights Engagements on the legacy singular engagement route", () => {
+    expect(getActiveAdvisorNavHref("/advisor/engagement", sections)).toBe(
+      "/advisor/engagements",
+    );
+  });
+
+  it("highlights Today only on the advisor home route", () => {
+    expect(getActiveAdvisorNavHref("/advisor", sections)).toBe("/advisor");
+    expect(getActiveAdvisorNavHref("/advisor/pipeline", sections, {})).toBe(
+      "/advisor/pipeline",
+    );
   });
 
   it("locks invitations when the advisor is at their client cap", () => {

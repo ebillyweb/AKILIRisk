@@ -3,14 +3,19 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer } from './ChartContainer';
 import { formatChartDate } from '@/lib/analytics/formatters';
-import { CHART_COLORS } from '@/lib/analytics/formatters';
 import type { GovernanceTrendPoint } from '@/lib/analytics/types';
+import {
+  tooltipContentStyle,
+  useAnalyticsChartTheme,
+} from '@/components/analytics/use-analytics-chart-theme';
 
 interface GovernanceTrendChartProps {
   data: GovernanceTrendPoint[];
 }
 
 export function GovernanceTrendChart({ data }: GovernanceTrendChartProps) {
+  const theme = useAnalyticsChartTheme();
+
   if (data.length < 2) {
     return (
       <ChartContainer title="Governance Score Trend">
@@ -31,21 +36,25 @@ export function GovernanceTrendChart({ data }: GovernanceTrendChartProps) {
         <XAxis
           dataKey="date"
           tickFormatter={formatChartDate}
+          tick={{ fill: theme.axis }}
         />
         <YAxis
-          domain={[0, 10]}
-          label={{ value: 'Governance Score', angle: -90, position: 'insideLeft' }}
+          domain={[0, 3]}
+          ticks={[0, 1, 2, 3]}
+          tick={{ fill: theme.axis }}
+          label={{ value: 'Score (0–3)', angle: -90, position: 'insideLeft', fill: theme.axis }}
         />
         <Tooltip
           formatter={(value: any) => [typeof value === 'number' ? value.toFixed(1) : value, 'Score']}
           labelFormatter={(label: any) => typeof label === 'string' ? formatChartDate(label) : label}
+          contentStyle={tooltipContentStyle(theme)}
         />
         <Line
           type="monotone"
           dataKey="overallScore"
-          stroke={CHART_COLORS.primary}
+          stroke={theme.trendLine}
           strokeWidth={2}
-          dot={{ fill: CHART_COLORS.primary, strokeWidth: 2, r: 4 }}
+          dot={{ fill: theme.trendLine, strokeWidth: 2, r: 4 }}
         />
       </LineChart>
     </ChartContainer>

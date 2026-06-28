@@ -5,12 +5,16 @@ import { format, formatDistanceToNow } from "date-fns";
 import { ArrowLeft, BarChart3, FileText, CheckCircle, ClipboardList } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
+import { ClientAssessmentLifecycleToolbar } from "@/components/assessment/ClientAssessmentLifecycleToolbar";
+import { RequestRescoreButton } from "@/components/assessment/RequestRescoreButton";
 import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
 import { IntakeWaiverScopePanel } from "@/components/pipeline/IntakeWaiverScopePanel";
 import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
 import { ExportAssessmentPdfButton } from "@/components/advisor/ExportAssessmentPdfButton";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FieldHelp } from "@/components/ui/field-help";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -295,21 +299,32 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                {client.needsRescore && assessmentDetails.answersChangedAfterCompleteAt ? (
-                  <Alert variant="warning">
-                    <AlertTitle>Reassessment needed</AlertTitle>
-                    <AlertDescription>
-                      This client changed assessment answers after completion
-                      {assessmentDetails.version
-                        ? ` (currently scored as v${assessmentDetails.version})`
-                        : ""}
-                      . Answers were updated{" "}
-                      {formatDistanceToNow(
-                        new Date(assessmentDetails.answersChangedAfterCompleteAt),
-                        { addSuffix: true },
-                      )}
-                      . Request a platform re-score so scores, recommendations, and
-                      published reports reflect the latest responses.
+                {client.staleScores && assessmentDetails.answersChangedAfterCompleteAt ? (
+                  <Alert
+                    variant="warning"
+                    data-tour="pipeline-stale-scores-alert"
+                  >
+                    <AlertTitle className="flex items-center gap-1.5">
+                      {STALE_SCORES_COPY.alertTitle}
+                      <FieldHelp
+                        helpKey="assessment-stale-scores-alert"
+                        triggerLabel="Re-score vs reassessment"
+                      />
+                    </AlertTitle>
+                    <AlertDescription className="space-y-3">
+                      <p>
+                        {STALE_SCORES_COPY.alertDescription}
+                        {assessmentDetails.version
+                          ? ` Currently scored as v${assessmentDetails.version}.`
+                          : ""}{" "}
+                        Answers were updated{" "}
+                        {formatDistanceToNow(
+                          new Date(assessmentDetails.answersChangedAfterCompleteAt),
+                          { addSuffix: true },
+                        )}
+                        .
+                      </p>
+                      <RequestRescoreButton assessmentId={assessmentDetails.id} />
                     </AlertDescription>
                   </Alert>
                 ) : null}
@@ -392,6 +407,16 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     ) : null}
                   </div>
                 )}
+
+                {assessmentDetails.id ? (
+                  <ClientAssessmentLifecycleToolbar
+                    assessmentId={assessmentDetails.id}
+                    assessmentStatus={assessmentDetails.status}
+                    showStaleScoresActions={false}
+                    reassessmentEnabled={detail.assessmentLifecycle.reassessmentEnabled}
+                    targetedQuestionCount={detail.assessmentLifecycle.targetedQuestionCount}
+                  />
+                ) : null}
               </CardContent>
             </Card>
           )}

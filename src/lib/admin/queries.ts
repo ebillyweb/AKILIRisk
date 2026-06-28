@@ -289,6 +289,7 @@ export async function getAssessmentsForAdmin() {
       userId: true,
       version: true,
       status: true,
+      answersChangedAfterCompleteAt: true,
       currentPillar: true,
       currentQuestionIndex: true,
       startedAt: true,
