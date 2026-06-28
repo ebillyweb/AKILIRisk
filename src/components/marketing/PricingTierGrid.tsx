@@ -51,6 +51,7 @@ import { PlanChangeConfirmDialog } from "@/components/advisor/billing/PlanChange
 import { cn } from "@/lib/utils";
 
 export type PricingAudience = "solo" | "enterprise";
+export type PricingTierGridSurface = "marketing" | "billing";
 
 type PricingTierGridProps = {
   pricing: PublicTierPricing[];
@@ -62,6 +63,17 @@ type PricingTierGridProps = {
   checkoutPlanIntent?: { tier: SelfServeTier; billingCycle: BillingCycle } | null;
   advisorSubscription?: SubscriptionDetailsDTO | null;
   initialBillingCycle?: BillingCycle;
+  /** Marketing pricing page (default) vs advisor billing dashboard embed. */
+  surface?: PricingTierGridSurface;
+  /** Controlled billing interval (used by billing dashboard). */
+  billingCycle?: BillingCycle;
+  onBillingCycleChange?: (cycle: BillingCycle) => void;
+  /** When set, plan changes are handled by the parent (no confirm dialog in grid). */
+  onRequestPlanChange?: (tier: SelfServeTier) => void;
+  planChangePending?: boolean;
+  planChangeError?: string | null;
+  suppressPlanChangeDialog?: boolean;
+  suppressCheckoutIntent?: boolean;
 };
 
 function formatMoney(cents: number, currency: string): string {
@@ -78,6 +90,22 @@ type TierPriceDisplay = {
   sub?: string;
   periodSuffix: string;
 };
+
+/** Fixed row heights so titles, prices, and dividers line up across all tier cards. */
+const PRICING_CARD_LAYOUT = {
+  badge: "flex h-7 shrink-0 items-center",
+  tagline: "mt-2 min-h-12 shrink-0 text-sm leading-6 text-muted-foreground",
+  modules:
+    "mt-4 min-h-[3.75rem] shrink-0 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground",
+  clientLimit: "mt-1 min-h-5 shrink-0 text-sm leading-5 text-muted-foreground",
+  priceBlock: "mt-4 min-h-[4.75rem] shrink-0",
+  featureList: "mt-5 min-h-0 flex-1 border-t border-border/60 pt-5",
+  action: "mt-auto shrink-0 pt-6",
+  statusBadge:
+    "inline-flex h-6 items-center px-2.5 py-0 text-[0.65rem] font-semibold normal-case tracking-normal",
+  featuredBadge:
+    "inline-flex h-6 items-center gap-1 rounded-full bg-brand/10 px-2.5 py-0 text-[0.65rem] font-semibold uppercase tracking-wide text-brand",
+} as const;
 
 function priceForCycle(
   tierPricing: PublicTierPricing,
@@ -131,6 +159,7 @@ function PricingTierActionButton({
   canSubscribe,
   featured,
   audience,
+  surface = "marketing",
   advisorSubscription,
   onRequestPlanChange,
   planChangePending,
@@ -144,6 +173,7 @@ function PricingTierActionButton({
   canSubscribe: boolean;
   featured?: boolean;
   audience: PricingAudience;
+  surface?: PricingTierGridSurface;
   advisorSubscription?: SubscriptionDetailsDTO | null;
   onRequestPlanChange: (tier: SelfServeTier) => void;
   planChangePending: boolean;
@@ -185,7 +215,6 @@ function PricingTierActionButton({
     subscriptionStatus !== "CANCELLED" &&
     subscriptionStatus !== "NONE";
   const hasCommitted = committedPlan !== null;
-  const isSameTier = hasCommitted && tier === committedPlan.tier;
   const isSamePlan =
     hasCommitted &&
     tier === committedPlan.tier &&
@@ -235,6 +264,49 @@ function PricingTierActionButton({
         <Loader2 className="size-4 animate-spin" aria-hidden />
         Loading…
       </Button>
+    );
+  }
+
+  if (surface === "billing" && isAdvisorSession) {
+    if (isCurrentSelection) {
+      return (
+        <Button
+          type="button"
+          className="w-full"
+          variant="billingCurrent"
+          disabled
+          aria-disabled
+        >
+          Current plan
+        </Button>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <Button
+          type="button"
+          className="w-full"
+          variant={planButtonVariant}
+          disabled={pending || capacityBlock.blocked}
+          onClick={() => onRequestPlanChange(tier)}
+        >
+          {pending ? busyLabel : buttonLabel}
+        </Button>
+        {capacityBlock.blocked ? (
+          <p className="text-xs leading-5 text-muted-foreground">
+            {capacityBlock.reason}{" "}
+            <Link href={ADVISOR_PIPELINE_HREF} className="font-medium text-primary hover:underline">
+              Open Pipeline
+            </Link>
+          </p>
+        ) : null}
+        {displayError ? (
+          <p className="text-xs text-destructive" role="alert">
+            {displayError}
+          </p>
+        ) : null}
+      </div>
     );
   }
 
@@ -381,6 +453,14 @@ export function PricingTierGrid({
   checkoutPlanIntent = null,
   advisorSubscription = null,
   initialBillingCycle,
+  surface = "marketing",
+  billingCycle: controlledBillingCycle,
+  onBillingCycleChange,
+  onRequestPlanChange: externalRequestPlanChange,
+  planChangePending: externalPlanChangePending,
+  planChangeError: externalPlanChangeError,
+  suppressPlanChangeDialog = false,
+  suppressCheckoutIntent = false,
 }: PricingTierGridProps) {
   const router = useRouter();
   const changePlanMode = resolvePricingPlanChangeMode(advisorSubscription);
@@ -399,7 +479,10 @@ export function PricingTierGrid({
       : null;
   const billingCycleLocked = Boolean(contractedBillingCycle);
 
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
+  const [internalBillingCycle, setInternalBillingCycle] = useState<BillingCycle>(() => {
+    if (controlledBillingCycle) {
+      return controlledBillingCycle;
+    }
     if (checkoutPlanIntent?.billingCycle) {
       return checkoutPlanIntent.billingCycle;
     }
@@ -418,6 +501,16 @@ export function PricingTierGrid({
     }
     return "MONTHLY";
   });
+  const billingCycle = controlledBillingCycle ?? internalBillingCycle;
+  const handleBillingCycleChange = useCallback(
+    (cycle: BillingCycle) => {
+      if (controlledBillingCycle === undefined) {
+        setInternalBillingCycle(cycle);
+      }
+      onBillingCycleChange?.(cycle);
+    },
+    [controlledBillingCycle, onBillingCycleChange],
+  );
   const checkoutStarted = useRef(false);
   const [pendingPlanTier, setPendingPlanTier] = useState<SelfServeTier | null>(null);
   const [planChangeDialogOpen, setPlanChangeDialogOpen] = useState(false);
@@ -513,13 +606,23 @@ export function PricingTierGrid({
     executePlanChange(tier);
   }, [executePlanChange, pendingPlanTier]);
 
+  const requestPlanChangeHandler = externalRequestPlanChange ?? requestPlanChange;
+  const planChangePendingState = externalPlanChangePending ?? planChangePending;
+  const planChangeErrorState = externalPlanChangeError ?? planChangeError;
+
+  const awaitingCheckoutOnly =
+    changePlanMode === "checkout" &&
+    committedPlan !== null &&
+    subscriptionStatus !== "CANCELLED" &&
+    subscriptionStatus !== "NONE";
+
   const pricingByTier = Object.fromEntries(pricing.map((row) => [row.tier, row])) as Record<
     SelfServeTier,
     PublicTierPricing
   >;
 
   useEffect(() => {
-    if (!checkoutPlanIntent || !billingEnabled || checkoutStarted.current) {
+    if (suppressCheckoutIntent || !checkoutPlanIntent || !billingEnabled || checkoutStarted.current) {
       return;
     }
     checkoutStarted.current = true;
@@ -550,6 +653,7 @@ export function PricingTierGrid({
     checkoutPlanIntent,
     requestPlanChange,
     router,
+    suppressCheckoutIntent,
   ]);
 
   const clientLimitNote =
@@ -558,10 +662,15 @@ export function PricingTierGrid({
       : null;
 
   return (
-    <div className="space-y-8">
+    <div className={cn("space-y-8", surface === "billing" && "space-y-6")}>
       <TierPricingConfigAlert errors={configErrors} />
 
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+      <div
+        className={cn(
+          "flex flex-col gap-4 sm:flex-row sm:justify-center",
+          surface === "billing" ? "sm:justify-start" : "items-center",
+        )}
+      >
         <div
           className="inline-flex rounded-full border border-border/80 bg-card/90 p-1 shadow-sm"
           role="group"
@@ -575,7 +684,7 @@ export function PricingTierGrid({
                 ? "bg-foreground text-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
-            onClick={() => setBillingCycle("MONTHLY")}
+            onClick={() => handleBillingCycleChange("MONTHLY")}
             disabled={billingCycleLocked && contractedBillingCycle !== "MONTHLY"}
           >
             Monthly
@@ -588,7 +697,7 @@ export function PricingTierGrid({
                 ? "bg-foreground text-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
-            onClick={() => setBillingCycle("ANNUAL")}
+            onClick={() => handleBillingCycleChange("ANNUAL")}
             disabled={billingCycleLocked && contractedBillingCycle !== "ANNUAL"}
           >
             Annual
@@ -607,7 +716,14 @@ export function PricingTierGrid({
         </p>
       ) : null}
 
-      <div className="grid items-stretch gap-5 lg:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={cn(
+          "grid w-full items-stretch gap-5 sm:grid-cols-2",
+          surface === "billing"
+            ? "max-w-6xl 2xl:grid-cols-4"
+            : "lg:grid-cols-2 xl:grid-cols-4",
+        )}
+      >
         {SELF_SERVE_TIERS.map((tier) => {
           const catalog = TIER_CATALOG[tier];
           const quote = priceForCycle(
@@ -622,6 +738,8 @@ export function PricingTierGrid({
             tier === committedPlan.tier &&
             billingCycle === committedPlan.billingCycle;
           const isCurrentSelection = changePlanMode === "stripe_update" && isSamePlan;
+          const hasCommitted = committedPlan !== null;
+          const isSameTier = hasCommitted && tier === committedPlan.tier;
 
           const isContractedTier =
             contractedModuleTier !== null && tier === contractedModuleTier;
@@ -630,7 +748,7 @@ export function PricingTierGrid({
             <article
               key={tier}
               className={cn(
-                "relative flex h-full flex-col rounded-[1.5rem] border bg-card/85 p-6 pt-10 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
+                "relative flex h-full flex-col rounded-[1.5rem] border bg-card/85 p-6 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
                 isCurrentSelection
                   ? "border-primary/35 ring-1 ring-primary/20"
                   : isContractedTier
@@ -645,30 +763,39 @@ export function PricingTierGrid({
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand/20 via-brand to-brand/20" />
               ) : null}
 
-              {isCurrentSelection ? (
-                <Badge
-                  variant="secondary"
-                  className="absolute left-6 top-6 text-[0.65rem] font-semibold normal-case tracking-normal"
-                >
-                  Current plan
-                </Badge>
-              ) : featured ? (
-                <p className="absolute left-6 top-6 inline-flex w-fit items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand">
-                  <Sparkles className="size-3" aria-hidden />
-                  Most popular
-                </p>
-              ) : null}
+              <div className={PRICING_CARD_LAYOUT.badge}>
+                {isCurrentSelection ? (
+                  <Badge variant="secondary" className={PRICING_CARD_LAYOUT.statusBadge}>
+                    Current plan
+                  </Badge>
+                ) : surface === "billing" &&
+                  isSameTier &&
+                  hasCommitted &&
+                  awaitingCheckoutOnly ? (
+                  <Badge variant="outline" className={PRICING_CARD_LAYOUT.statusBadge}>
+                    Your plan
+                  </Badge>
+                ) : featured && surface === "marketing" ? (
+                  <p className={PRICING_CARD_LAYOUT.featuredBadge}>
+                    <Sparkles className="size-3 shrink-0" aria-hidden />
+                    Most popular
+                  </p>
+                ) : null}
+              </div>
 
-              <header className="space-y-2">
-                <h3 className="font-display text-2xl font-semibold leading-tight tracking-tight text-foreground">
-                  {catalog.name}
-                </h3>
-                <p className="min-h-12 text-sm leading-6 text-muted-foreground">
-                  {catalog.tagline}
-                </p>
-              </header>
+              <h3 className="shrink-0 font-display text-2xl font-semibold leading-tight tracking-tight text-foreground">
+                {catalog.name}
+              </h3>
 
-              <div className="mt-5 min-h-[5.5rem]">
+              <p className={PRICING_CARD_LAYOUT.tagline}>{catalog.tagline}</p>
+
+              <p className={PRICING_CARD_LAYOUT.modules}>{catalog.modules}</p>
+
+              <p className={PRICING_CARD_LAYOUT.clientLimit}>
+                {clientLimitNote ?? `Up to ${catalog.clientLimit} active clients`}
+              </p>
+
+              <div className={PRICING_CARD_LAYOUT.priceBlock}>
                 {quote ? (
                   <>
                     <p className="flex items-baseline gap-1">
@@ -692,20 +819,13 @@ export function PricingTierGrid({
                 )}
               </div>
 
-              <p className="mt-4 min-h-10 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground">
-                {catalog.modules}
-              </p>
-              <p className="mt-1 min-h-10 text-sm leading-5 text-muted-foreground">
-                {clientLimitNote ?? `Up to ${catalog.clientLimit} active clients`}
-              </p>
-
               <PlanTierFeatureList
                 tier={tier}
                 variant="compact"
-                className="mt-5 flex-1 border-t border-border/60 pt-5"
+                className={PRICING_CARD_LAYOUT.featureList}
               />
 
-              <div className="mt-auto pt-6">
+              <div className={PRICING_CARD_LAYOUT.action}>
                 <PricingTierActionButton
                   tier={tier}
                   billingCycle={billingCycle}
@@ -713,10 +833,11 @@ export function PricingTierGrid({
                   canSubscribe={canSubscribe}
                   featured={featured}
                   audience={audience}
+                  surface={surface}
                   advisorSubscription={advisorSubscription}
-                  onRequestPlanChange={requestPlanChange}
-                  planChangePending={planChangePending}
-                  planChangeError={planChangeError}
+                  onRequestPlanChange={requestPlanChangeHandler}
+                  planChangePending={planChangePendingState}
+                  planChangeError={planChangeErrorState}
                   contractTierLocked={
                     contractedModuleTier !== null && tier !== contractedModuleTier
                   }
@@ -728,7 +849,8 @@ export function PricingTierGrid({
         })}
       </div>
 
-      {audience === "solo" ? (
+      {surface === "marketing" ? (
+        audience === "solo" ? (
         <>
           <section
             className="grid gap-5 rounded-[1.5rem] border border-border/70 bg-gradient-to-br from-card/95 via-muted/20 to-card/90 p-6 sm:p-8 lg:grid-cols-[1.1fr_0.9fr]"
@@ -795,8 +917,10 @@ export function PricingTierGrid({
             ))}
           </ul>
         </section>
-      )}
+      )
+      ) : null}
 
+      {!suppressPlanChangeDialog ? (
       <PlanChangeConfirmDialog
         explainer={planChangeExplainer}
         open={planChangeDialogOpen}
@@ -808,6 +932,7 @@ export function PricingTierGrid({
         pending={planChangePending}
         confirmDisabled={planChangeConfirmDisabled}
       />
+      ) : null}
     </div>
   );
 }

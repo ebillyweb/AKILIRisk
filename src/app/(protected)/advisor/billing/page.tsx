@@ -5,8 +5,8 @@ import {
   EnterpriseBillingDashboard,
 } from "@/components/advisor/billing/BillingDashboard";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
-import { fetchPlanPricesForUi } from "@/lib/billing/plan-price-display";
-import { emptyPlanPricesForUi } from "@/lib/billing/plan-prices-ui";
+import { isBillingEnabled } from "@/lib/billing/config";
+import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import { getBillingPageData } from "@/lib/actions/billing";
 
 export default async function AdvisorBillingPage({
@@ -35,7 +35,7 @@ export default async function AdvisorBillingPage({
       ? sp.checkout_cycle
       : null;
 
-  const billingEnabled = process.env.ENABLE_BILLING_FEATURES !== "false";
+  const billingEnabled = isBillingEnabled();
 
   const pageRes = await getBillingPageData();
   if (!pageRes.success) {
@@ -60,9 +60,9 @@ export default async function AdvisorBillingPage({
     );
   }
 
-  const planPrices = billingEnabled
-    ? await fetchPlanPricesForUi()
-    : emptyPlanPricesForUi();
+  const { pricing, configErrors } = billingEnabled
+    ? await fetchPublicTierPricing()
+    : { pricing: [], configErrors: [] as string[] };
   const sub = pageRes.data.subscription;
 
   if (isAdvisorBillingDebugEnabled()) {
@@ -99,7 +99,8 @@ export default async function AdvisorBillingPage({
       checkoutNotice={checkout}
       subscriptionRequiredNotice={subscriptionRequiredNotice}
       billingEnabled={billingEnabled}
-      planPrices={planPrices}
+      pricing={pricing}
+      configErrors={configErrors}
       debugBilling={isAdvisorBillingDebugEnabled()}
       checkoutPlanIntent={
         checkoutPlan && checkoutCycle

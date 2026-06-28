@@ -15,7 +15,7 @@ import {
 } from "@/lib/actions/billing";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { billingPlanNavigationLabel } from "@/lib/billing/billing-plan-cta";
-import { ANNUAL_BILLING_SAVINGS_LABEL, TIER_LIMITS } from "@/lib/billing/constants";
+import { TIER_LIMITS } from "@/lib/billing/constants";
 import {
   ADVISOR_PIPELINE_HREF,
   analyzeDowngradeCapacity,
@@ -33,15 +33,11 @@ import {
 } from "@/lib/billing/plan-change-explainer";
 import {
   enterprisePricingDeepLink,
-  SELF_SERVE_TIERS,
-  TIER_CATALOG,
   TIER_DISPLAY_NAME,
-  TIER_RANK,
   type SelfServeTier,
 } from "@/lib/billing/tier-catalog";
 import { isModuleTier } from "@/lib/billing/plan-prices-ui";
-import { PlanTierFeatureList } from "@/components/billing/PlanTierFeatureList";
-import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
+import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import type { EnterpriseBillingSummary } from "@/lib/enterprise/billing-details";
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -58,8 +54,7 @@ import {
 } from "@/components/ui/card";
 import { EnterpriseSalesContactDialog } from "@/components/advisor/billing/EnterpriseSalesContactDialog";
 import { PlanChangeConfirmDialog } from "@/components/advisor/billing/PlanChangeConfirmDialog";
-
-const TIER_ORDER = SELF_SERVE_TIERS;
+import { PricingTierGrid } from "@/components/marketing/PricingTierGrid";
 
 const TIER_LABEL = TIER_DISPLAY_NAME;
 
@@ -288,286 +283,24 @@ function EnterpriseContactSalesCard() {
 
 type CommittedPlan = { tier: SubscriptionTier; billingCycle: BillingCycle };
 
-function PlanSelector({
-  billingCycle,
-  onBillingCycleChange,
-  onSelectPlan,
-  busy,
-  error,
-  planPrices,
-  changePlanMode,
-  committedPlan,
-  subscriptionStatus,
-  currentClientCount,
-  debugBilling,
-}: {
-  billingCycle: BillingCycle;
-  onBillingCycleChange: (c: BillingCycle) => void;
-  onSelectPlan: (tier: SubscriptionTier) => void;
-  busy: boolean;
-  error: string | null;
-  planPrices: PlanPricesForUi;
-  changePlanMode: "checkout" | "stripe_update";
-  committedPlan: CommittedPlan | null;
-  subscriptionStatus: string;
-  currentClientCount: number;
-  debugBilling: boolean;
-}) {
+function advisorPlanGridDescription(
+  changePlanMode: "checkout" | "stripe_update",
+  committedPlan: CommittedPlan | null,
+  subscriptionStatus: string,
+): string {
   const awaitingCheckoutOnly =
     changePlanMode === "checkout" &&
     committedPlan !== null &&
     subscriptionStatus !== "CANCELLED" &&
     subscriptionStatus !== "NONE";
 
-  const description =
-    changePlanMode === "stripe_update"
-      ? "Your active plan is highlighted. Change tier or billing interval below—Stripe applies proration on upgrades and downgrades. To downgrade, active clients must fit the new plan limit—end workflows in Pipeline first."
-      : awaitingCheckoutOnly
-        ? `Plan on file: ${TIER_LABEL[committedPlan!.tier]} (${committedPlan!.billingCycle === "ANNUAL" ? "annual" : "monthly"}). Complete checkout to activate, or pick a different tier first.`
-        : "Choose a tier and billing interval, then complete payment on Stripe Checkout.";
-
-  return (
-    <Card>
-      <CardHeader className="space-y-4">
-        <div className="space-y-1.5">
-          <CardTitle className="text-lg">Plans</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </div>
-        <div
-          className="inline-flex w-fit rounded-full border border-border/80 bg-card/90 p-1 shadow-sm"
-          role="group"
-          aria-label="Billing interval"
-        >
-          <button
-            type="button"
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              billingCycle === "MONTHLY"
-                ? "bg-foreground text-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => onBillingCycleChange("MONTHLY")}
-          >
-            Monthly
-          </button>
-          <button
-            type="button"
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              billingCycle === "ANNUAL"
-                ? "bg-foreground text-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => onBillingCycleChange("ANNUAL")}
-          >
-            Annual
-            <span className="ml-1.5 text-xs font-semibold text-brand">
-              {ANNUAL_BILLING_SAVINGS_LABEL}
-            </span>
-          </button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {TIER_ORDER.map((tier) => {
-          const catalog = TIER_CATALOG[tier];
-          const hasCommitted = committedPlan !== null;
-          const isSameTier = hasCommitted && tier === committedPlan!.tier;
-          const isSamePlan =
-            hasCommitted &&
-            tier === committedPlan!.tier &&
-            billingCycle === committedPlan!.billingCycle;
-          const committedRank = hasCommitted ? TIER_RANK[committedPlan!.tier] : -1;
-          const tierRank = TIER_RANK[tier];
-
-          const isCurrentSelection =
-            changePlanMode === "stripe_update" && isSamePlan;
-
-          let buttonLabel = "Subscribe";
-          if (isSamePlan && awaitingCheckoutOnly) {
-            buttonLabel = "Add payment in Stripe";
-          } else if (isSamePlan && subscriptionStatus === "CANCELLED") {
-            buttonLabel = "Resubscribe";
-          } else if (hasCommitted && isSameTier && !isSamePlan) {
-            buttonLabel = "Switch billing";
-          } else if (hasCommitted && tierRank > committedRank) {
-            buttonLabel = "Upgrade";
-          } else if (hasCommitted && tierRank < committedRank) {
-            buttonLabel = "Downgrade";
-          }
-
-          const planButtonVariant: "billingUpgrade" | "billingDowngrade" | "default" = (() => {
-            if (hasCommitted && tierRank > committedRank) {
-              return "billingUpgrade";
-            }
-            if (hasCommitted && tierRank < committedRank) {
-              return "billingDowngrade";
-            }
-            return "default";
-          })();
-
-          const isSameTierBillingSwitch =
-            hasCommitted && isSameTier && !isSamePlan;
-
-          const capacityBlocked =
-            !isSamePlan &&
-            currentClientCount > TIER_LIMITS[tier];
-
-          const capacityActionLabel =
-            hasCommitted && tierRank < committedRank
-              ? "downgrading"
-              : isSameTierBillingSwitch
-                ? "switching billing"
-                : "selecting this plan";
-
-          const disabled = busy || capacityBlocked;
-
-          const busyLabel =
-            changePlanMode === "stripe_update" ? "Updating…" : "Redirecting…";
-
-          if (debugBilling) {
-            const whyNotCurrent: string[] = [];
-            if (changePlanMode !== "stripe_update") {
-              whyNotCurrent.push(
-                `changePlanMode is "${changePlanMode}" (isCurrentSelection only when "stripe_update")`
-              );
-            }
-            if (!hasCommitted) {
-              whyNotCurrent.push("no committedPlan (subscription status is NONE)");
-            } else if (tier !== committedPlan!.tier) {
-              whyNotCurrent.push(`tier mismatch: card=${tier} committed=${committedPlan!.tier}`);
-            } else if (billingCycle !== committedPlan!.billingCycle) {
-              whyNotCurrent.push(
-                `billing interval mismatch: uiCycle=${billingCycle} committedCycle=${committedPlan!.billingCycle} (toggle Monthly/Annual above)`
-              );
-            }
-            console.debug("[advisor-billing] plan-card", {
-              tier,
-              uiBillingCycle: billingCycle,
-              changePlanMode,
-              subscriptionStatus,
-              committedPlan,
-              hasCommitted,
-              isSameTier,
-              isSamePlan,
-              isCurrentSelection,
-              awaitingCheckoutOnly,
-              buttonLabel,
-              planButtonVariant,
-              showsNonSelectableCurrentBlock: isCurrentSelection,
-              whyNotCurrent: isCurrentSelection ? [] : whyNotCurrent,
-            });
-          }
-
-          const priceLine =
-            billingCycle === "MONTHLY"
-              ? planPrices[tier].monthly
-              : planPrices[tier].annual;
-
-          return (
-            <article
-              key={tier}
-              className={cn(
-                "relative flex h-full flex-col rounded-[1.25rem] border bg-card/85 p-5 pt-9 shadow-sm",
-                isCurrentSelection
-                  ? "border-primary/35 ring-1 ring-primary/20"
-                  : "border-border/70"
-              )}
-              aria-current={isCurrentSelection ? "true" : undefined}
-            >
-              {isCurrentSelection ? (
-                <Badge
-                  variant="secondary"
-                  className="absolute left-5 top-5 text-[0.65rem] font-semibold normal-case tracking-normal"
-                >
-                  Current plan
-                </Badge>
-              ) : isSameTier && hasCommitted && awaitingCheckoutOnly ? (
-                <Badge
-                  variant="outline"
-                  className="absolute left-5 top-5 text-[0.65rem] font-semibold normal-case tracking-normal"
-                >
-                  Your plan
-                </Badge>
-              ) : null}
-
-              <h3 className="font-display text-lg font-semibold leading-tight text-foreground">
-                {TIER_LABEL[tier]}
-              </h3>
-              <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                {catalog.tagline}
-              </p>
-              <p className="mt-2 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground">
-                {catalog.modules}
-              </p>
-              <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                Up to {TIER_LIMITS[tier]} active clients
-              </p>
-
-              <div className="mt-4 min-h-[3.25rem]">
-                {priceLine ? (
-                  <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-                    {priceLine}
-                  </p>
-                ) : (
-                  <p className="text-sm font-medium text-muted-foreground">Price unavailable</p>
-                )}
-              </div>
-
-              <PlanTierFeatureList
-                tier={tier}
-                variant="compact"
-                className="mt-4 flex-1 border-t border-border/60 pt-4"
-              />
-
-              <div className="mt-auto space-y-2 pt-4">
-                {isCurrentSelection ? (
-                  <Button
-                    type="button"
-                    className="w-full"
-                    variant="billingCurrent"
-                    disabled
-                    aria-disabled
-                  >
-                    Current plan
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full"
-                    type="button"
-                    variant={planButtonVariant}
-                    disabled={disabled}
-                    onClick={() => onSelectPlan(tier)}
-                  >
-                    {busy ? busyLabel : buttonLabel}
-                  </Button>
-                )}
-                {capacityBlocked ? (
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    {currentClientCount} active clients exceed the {TIER_LIMITS[tier]}-client cap.
-                    End workflows in{" "}
-                    <Link href={ADVISOR_PIPELINE_HREF} className="font-medium text-primary hover:underline">
-                      Pipeline
-                    </Link>{" "}
-                    before {capacityActionLabel}.
-                  </p>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
-        </div>
-        <EnterpriseContactSalesCard />
-      </CardContent>
-      {error ? (
-        <CardFooter>
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        </CardFooter>
-      ) : null}
-    </Card>
-  );
+  if (changePlanMode === "stripe_update") {
+    return "Your active plan is highlighted. Change tier or billing interval below—Stripe applies proration on upgrades and downgrades. To downgrade, active clients must fit the new plan limit—end workflows in Pipeline first.";
+  }
+  if (awaitingCheckoutOnly && committedPlan) {
+    return `Plan on file: ${TIER_LABEL[committedPlan.tier as SelfServeTier]} (${committedPlan.billingCycle === "ANNUAL" ? "annual" : "monthly"}). Complete checkout to activate, or pick a different tier first.`;
+  }
+  return "Choose a tier and billing interval, then complete payment on Stripe Checkout.";
 }
 
 function BillingHistory({
@@ -856,7 +589,8 @@ export function BillingDashboard({
   checkoutNotice,
   subscriptionRequiredNotice = false,
   billingEnabled,
-  planPrices,
+  pricing,
+  configErrors = [],
   debugBilling = isAdvisorBillingDebugEnabled(),
   checkoutPlanIntent = null,
 }: {
@@ -865,7 +599,8 @@ export function BillingDashboard({
   checkoutNotice: "success" | "cancel" | null;
   subscriptionRequiredNotice?: boolean;
   billingEnabled: boolean;
-  planPrices: PlanPricesForUi;
+  pricing: PublicTierPricing[];
+  configErrors?: string[];
   /** Prefer pass-through from server page; falls back to env gate when omitted (e.g. Storybook). */
   debugBilling?: boolean;
   checkoutPlanIntent?: { tier: SelfServeTier; billingCycle: BillingCycle } | null;
@@ -1206,19 +941,39 @@ export function BillingDashboard({
         <DowngradeCapacityBanner status={downgradeCapacity} />
       ) : null}
 
-      <PlanSelector
-        billingCycle={billingCycle}
-        onBillingCycleChange={setBillingCycle}
-        onSelectPlan={onSelectPlan}
-        busy={pending}
-        error={checkoutError}
-        planPrices={planPrices}
-        changePlanMode={changePlanMode}
-        committedPlan={committedPlan}
-        subscriptionStatus={data.status}
-        currentClientCount={data.currentClientCount}
-        debugBilling={debugBilling}
-      />
+      <Card>
+        <CardHeader className="space-y-1.5">
+          <CardTitle className="text-lg">Plans</CardTitle>
+          <CardDescription>
+            {advisorPlanGridDescription(changePlanMode, committedPlan, data.status)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 overflow-x-auto">
+          <PricingTierGrid
+            surface="billing"
+            pricing={pricing}
+            configErrors={configErrors}
+            billingEnabled={billingEnabled}
+            canSubscribe
+            advisorSubscription={data}
+            billingCycle={billingCycle}
+            onBillingCycleChange={setBillingCycle}
+            onRequestPlanChange={(tier) => onSelectPlan(tier)}
+            planChangePending={pending}
+            planChangeError={checkoutError}
+            suppressPlanChangeDialog
+            suppressCheckoutIntent
+          />
+          <EnterpriseContactSalesCard />
+        </CardContent>
+        {checkoutError ? (
+          <CardFooter>
+            <p className="text-sm text-destructive" role="alert">
+              {checkoutError}
+            </p>
+          </CardFooter>
+        ) : null}
+      </Card>
 
       <BillingHistory
         invoices={initialInvoices}
