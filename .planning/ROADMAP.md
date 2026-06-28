@@ -194,8 +194,14 @@ Plans:
 ### Phase 25: Executive Reporting
 **Dependencies:** Phase 24 (continuous improvement complete)
 **Requirements:** REPORT-01
+**Plans:** 3 plans
 
 **Goal:** Generate executive-grade reports that tell the full risk reduction story -- not just "your score is 7.2" but "risk reduced 38%, 14 of 18 recommendations completed, estimated financial exposure reduced, top remaining risks, upcoming milestones, trend over six months."
+
+Plans:
+- [ ] 25-01-PLAN.md -- Schema migration (ExecutiveReport model), snapshot types, derivation functions, snapshot builder + tests
+- [ ] 25-02-PLAN.md -- PDF section components, executive styles, render function, API route
+- [ ] 25-03-PLAN.md -- Server actions, query helpers, advisor UI (list + edit), draft form, cron route
 
 **Report Content:**
 - Executive summary with risk reduction percentage
@@ -224,7 +230,7 @@ Plans:
 | 22 - Recommendation Experience | Complete | 6/6 | ██████████ 100% |
 | 23 - Client Engagement & Tracking | Planned | 0/5 | ░░░░░░░░░░ 0% |
 | 24 - Continuous Risk Improvement | Complete | 4/4 | ██████████ 100% |
-| 25 - Executive Reporting | Pending | 0/0 | ░░░░░░░░░░ 0% |
+| 25 - Executive Reporting | Planned | 0/3 | ░░░░░░░░░░ 0% |
 
 **Overall:** ████████░░ 71% (5/7 phases complete)
 
@@ -242,5 +248,5 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-19*
-*Roadmap updated: 2026-06-28 -- Phase 24 complete: 4/4 plans, human-verified*
+*Roadmap updated: 2026-06-28 -- Phase 25 planned: 3 plans in 3 waves*
 *Next phase: 25*
