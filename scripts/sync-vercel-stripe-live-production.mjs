@@ -37,6 +37,14 @@ const TIER_BY_PRODUCT = {
   growth: "PROFESSIONAL",
 };
 
+/** Pre–modular-tier-rename Stripe price env vars; app no longer reads these. */
+const LEGACY_STRIPE_ENV_KEYS = [
+  "STRIPE_PRICE_STARTER_MONTHLY",
+  "STRIPE_PRICE_STARTER_ANNUAL",
+  "STRIPE_PRICE_GROWTH_MONTHLY",
+  "STRIPE_PRICE_GROWTH_ANNUAL",
+];
+
 function usage() {
   console.log(`Usage: node scripts/sync-vercel-stripe-live-production.mjs [options]
 
@@ -81,6 +89,8 @@ function parseEnvFile(filePath) {
     if (eq === -1) continue;
     const key = line.slice(0, eq).trim();
     let val = line.slice(eq + 1).trim();
+    const hash = val.indexOf(" #");
+    if (hash !== -1) val = val.slice(0, hash).trim();
     if (
       (val.startsWith('"') && val.endsWith('"')) ||
       (val.startsWith("'") && val.endsWith("'"))
@@ -179,6 +189,16 @@ function upsertProduction(p) {
   }
 }
 
+/** @param {{ key: string; dryRun: boolean; cwd: string }} p */
+function removeProduction(p) {
+  const { key, dryRun, cwd } = p;
+  try {
+    runVercel(["env", "rm", key, "production", "--yes"], { dryRun, cwd });
+  } catch {
+    // Already removed or never set on Production.
+  }
+}
+
 const opts = parseArgs(process.argv.slice(2));
 if (opts.help) {
   usage();
@@ -274,6 +294,15 @@ console.log(
 
 for (const [key, value] of Object.entries(toPush)) {
   upsertProduction({ key, value, dryRun: opts.dryRun, cwd });
+}
+
+if (LEGACY_STRIPE_ENV_KEYS.length) {
+  console.log(
+    `Removing ${LEGACY_STRIPE_ENV_KEYS.length} legacy Starter/Growth key(s) from Production…`
+  );
+  for (const key of LEGACY_STRIPE_ENV_KEYS) {
+    removeProduction({ key, dryRun: opts.dryRun, cwd });
+  }
 }
 
 console.log(opts.dryRun ? "Dry run complete." : "Done.");

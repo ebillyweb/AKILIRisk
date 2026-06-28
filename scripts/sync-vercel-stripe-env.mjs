@@ -36,6 +36,14 @@ const DEFAULT_KEYS = [
   "ENABLE_BILLING_FEATURES",
 ];
 
+/** Pre–modular-tier-rename Stripe price env vars (Starter/Growth); app no longer reads these. */
+const LEGACY_STRIPE_ENV_KEYS = [
+  "STRIPE_PRICE_STARTER_MONTHLY",
+  "STRIPE_PRICE_STARTER_ANNUAL",
+  "STRIPE_PRICE_GROWTH_MONTHLY",
+  "STRIPE_PRICE_GROWTH_ANNUAL",
+];
+
 function usage() {
   console.log(`Usage: node scripts/sync-vercel-stripe-env.mjs [options]
 
@@ -47,7 +55,10 @@ Options:
   --help                     Show this message
 
 Does not modify Production. STRIPE_WEBHOOK_SECRET is omitted by default (local stripe listen
-secret ≠ Dashboard signing secret for https://your-preview…/api/webhooks/stripe).`);
+secret ≠ Dashboard signing secret for https://your-preview…/api/webhooks/stripe).
+
+After upserting, removes legacy STRIPE_PRICE_STARTER_* / STRIPE_PRICE_GROWTH_* from Preview
+(staging branch) and Development if still present.`);
 }
 
 function parseArgs(argv) {
@@ -84,6 +95,8 @@ function parseEnvFile(filePath) {
     if (eq === -1) continue;
     const key = line.slice(0, eq).trim();
     let val = line.slice(eq + 1).trim();
+    const hash = val.indexOf(" #");
+    if (hash !== -1) val = val.slice(0, hash).trim();
     if (
       (val.startsWith('"') && val.endsWith('"')) ||
       (val.startsWith("'") && val.endsWith("'"))
@@ -141,6 +154,19 @@ function upsert(p) {
   }
 }
 
+/**
+ * @param {{ key: string; env: 'preview' | 'development'; branch?: string; dryRun: boolean; cwd: string }} p
+ */
+function removeEnv(p) {
+  const { key, env, branch, dryRun, cwd } = p;
+  const mid = branch ? [env, branch] : [env];
+  try {
+    runVercel(["env", "rm", key, ...mid, "--yes"], { dryRun, cwd });
+  } catch {
+    // Already removed or never set on this target.
+  }
+}
+
 const opts = parseArgs(process.argv.slice(2));
 if (opts.help) {
   usage();
@@ -195,6 +221,22 @@ for (const key of keys) {
     cwd,
   });
   upsert({ key, value, env: "development", dryRun: opts.dryRun, cwd });
+}
+
+if (LEGACY_STRIPE_ENV_KEYS.length) {
+  console.log(
+    `Removing ${LEGACY_STRIPE_ENV_KEYS.length} legacy Starter/Growth key(s) from Preview (${opts.previewBranch}) + Development…`
+  );
+  for (const key of LEGACY_STRIPE_ENV_KEYS) {
+    removeEnv({
+      key,
+      env: "preview",
+      branch: opts.previewBranch,
+      dryRun: opts.dryRun,
+      cwd,
+    });
+    removeEnv({ key, env: "development", dryRun: opts.dryRun, cwd });
+  }
 }
 
 console.log(opts.dryRun ? "Dry run complete." : "Done.");

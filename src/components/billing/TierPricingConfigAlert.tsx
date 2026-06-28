@@ -19,7 +19,14 @@ export function TierPricingConfigAlert({ errors }: TierPricingConfigAlertProps) 
           Stripe tier prices are misconfigured in this environment. Checkout and displayed
           prices may be wrong until each tier has its own{" "}
           <code className="rounded bg-destructive/10 px-1 py-0.5 text-xs">STRIPE_PRICE_*</code>{" "}
-          variable. Legacy env fallbacks are disabled.
+          variable. Legacy env fallbacks are disabled. Sync from a complete{" "}
+          <code className="rounded bg-destructive/10 px-1 py-0.5 text-xs">.env.local</code>{" "}
+          with{" "}
+          <code className="rounded bg-destructive/10 px-1 py-0.5 text-xs">
+            npm run env:vercel:sync-stripe
+          </code>{" "}
+          (Preview branch defaults to{" "}
+          <code className="rounded bg-destructive/10 px-1 py-0.5 text-xs">staging</code>).
         </p>
         <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
           {errors.map((error) => (

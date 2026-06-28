@@ -1,0 +1,31 @@
+# Playwright / QA artifacts (must not ship to serverless bundles)
+test-results
+playwright-report
+blob-report
+qa-screens
+qa-temp
+playwright/.cache
+.playwright-browsers
+.playwright-mcp
+playwright-results.json
+playwright-run.log
+playwright-run.stderr
+
+# Dev / planning / docs not needed at runtime
+.planning
+preview
+coverage
+tests
+
+# Large local-only assets (tracked in git but not needed on Vercel)
+Belvedere_Household_Risk_Profile.xlsx
+Akili_Risk*.docx
+docs/pitch-decks
+structure.txt
+
+# Build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Uploaded dev files
+public/uploads

@@ -9,6 +9,29 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 /** Baked at build/dev start for /admin/operations (Vercel has no commit-date env). */
 const nextConfig: NextConfig = {
   env: resolveGitBuildEnv({ cwd: projectRoot }),
+  /** Pin NFT tracing to this app — avoids pulling sibling/home dirs when extra lockfiles exist. */
+  outputFileTracingRoot: projectRoot,
+  outputFileTracingExcludes: {
+    "*": [
+      "./test-results/**",
+      "./playwright-report/**",
+      "./blob-report/**",
+      "./qa-screens/**",
+      "./qa-temp/**",
+      "./tests/**",
+      "./docs/**",
+      "./.planning/**",
+      "./preview/**",
+      "./Belvedere_Household_Risk_Profile.xlsx",
+      "./*.docx",
+      "./structure.txt",
+      "./tsconfig.tsbuildinfo",
+      "./public/uploads/**",
+    ],
+  },
+  outputFileTracingIncludes: {
+    "/api/templates/[id]": ["./templates/**/*"],
+  },
   turbopack: {
     root: projectRoot,
   },
