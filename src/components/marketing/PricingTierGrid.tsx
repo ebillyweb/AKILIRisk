@@ -622,7 +622,6 @@ export function PricingTierGrid({
             tier === committedPlan.tier &&
             billingCycle === committedPlan.billingCycle;
           const isCurrentSelection = changePlanMode === "stripe_update" && isSamePlan;
-          const isSameTier = committedPlan !== null && tier === committedPlan.tier;
 
           const isContractedTier =
             contractedModuleTier !== null && tier === contractedModuleTier;
@@ -631,7 +630,7 @@ export function PricingTierGrid({
             <article
               key={tier}
               className={cn(
-                "relative flex h-full flex-col rounded-[1.5rem] border bg-card/85 p-6 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
+                "relative flex h-full flex-col rounded-[1.5rem] border bg-card/85 p-6 pt-10 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md",
                 isCurrentSelection
                   ? "border-primary/35 ring-1 ring-primary/20"
                   : isContractedTier
@@ -646,31 +645,19 @@ export function PricingTierGrid({
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand/20 via-brand to-brand/20" />
               ) : null}
 
-              <div className="mb-3 flex h-6 items-center">
-                {isCurrentSelection ? (
-                  <Badge
-                    variant="secondary"
-                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
-                  >
-                    Current plan
-                  </Badge>
-                ) : isSameTier &&
-                  committedPlan !== null &&
-                  changePlanMode === "stripe_update" &&
-                  !isSamePlan ? (
-                  <Badge
-                    variant="outline"
-                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
-                  >
-                    Other interval
-                  </Badge>
-                ) : featured ? (
-                  <p className="inline-flex w-fit items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand">
-                    <Sparkles className="size-3" aria-hidden />
-                    Most popular
-                  </p>
-                ) : null}
-              </div>
+              {isCurrentSelection ? (
+                <Badge
+                  variant="secondary"
+                  className="absolute left-6 top-6 text-[0.65rem] font-semibold normal-case tracking-normal"
+                >
+                  Current plan
+                </Badge>
+              ) : featured ? (
+                <p className="absolute left-6 top-6 inline-flex w-fit items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-brand">
+                  <Sparkles className="size-3" aria-hidden />
+                  Most popular
+                </p>
+              ) : null}
 
               <header className="space-y-2">
                 <h3 className="font-display text-2xl font-semibold leading-tight tracking-tight text-foreground">
@@ -718,7 +705,7 @@ export function PricingTierGrid({
                 className="mt-5 flex-1 border-t border-border/60 pt-5"
               />
 
-              <div className="mt-6 pt-0">
+              <div className="mt-auto pt-6">
                 <PricingTierActionButton
                   tier={tier}
                   billingCycle={billingCycle}

@@ -468,40 +468,28 @@ function PlanSelector({
             <article
               key={tier}
               className={cn(
-                "flex h-full flex-col rounded-[1.25rem] border bg-card/85 p-5 shadow-sm",
+                "relative flex h-full flex-col rounded-[1.25rem] border bg-card/85 p-5 pt-9 shadow-sm",
                 isCurrentSelection
                   ? "border-primary/35 ring-1 ring-primary/20"
                   : "border-border/70"
               )}
               aria-current={isCurrentSelection ? "true" : undefined}
             >
-              <div className="mb-3 flex h-6 items-center">
-                {isCurrentSelection ? (
-                  <Badge
-                    variant="secondary"
-                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
-                  >
-                    Current plan
-                  </Badge>
-                ) : isSameTier &&
-                  hasCommitted &&
-                  changePlanMode === "stripe_update" &&
-                  !isSamePlan ? (
-                  <Badge
-                    variant="outline"
-                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
-                  >
-                    Other interval
-                  </Badge>
-                ) : isSameTier && hasCommitted && awaitingCheckoutOnly ? (
-                  <Badge
-                    variant="outline"
-                    className="text-[0.65rem] font-semibold normal-case tracking-normal"
-                  >
-                    Your plan
-                  </Badge>
-                ) : null}
-              </div>
+              {isCurrentSelection ? (
+                <Badge
+                  variant="secondary"
+                  className="absolute left-5 top-5 text-[0.65rem] font-semibold normal-case tracking-normal"
+                >
+                  Current plan
+                </Badge>
+              ) : isSameTier && hasCommitted && awaitingCheckoutOnly ? (
+                <Badge
+                  variant="outline"
+                  className="absolute left-5 top-5 text-[0.65rem] font-semibold normal-case tracking-normal"
+                >
+                  Your plan
+                </Badge>
+              ) : null}
 
               <h3 className="font-display text-lg font-semibold leading-tight text-foreground">
                 {TIER_LABEL[tier]}
