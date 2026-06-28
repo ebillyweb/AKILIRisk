@@ -314,7 +314,7 @@ describe("buildExecutiveReportSnapshot", () => {
       currAssessment,
     ] as never);
     vi.mocked(prisma.assessment.findUnique).mockImplementation(
-      ({ where }: { where: { id: string } }) => {
+      (({ where }: { where: { id?: string } }) => {
         if (where.id === "assessment-1") {
           return Promise.resolve({
             previousAssessmentId: "assessment-0",
@@ -327,7 +327,7 @@ describe("buildExecutiveReportSnapshot", () => {
           }) as never;
         }
         return Promise.resolve(null) as never;
-      },
+      }) as never,
     );
 
     vi.mocked(computePillarDeltas).mockReturnValue([
