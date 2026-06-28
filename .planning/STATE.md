@@ -23,15 +23,15 @@ progress:
 ## Current Position
 
 **Milestone:** v1.5 Cyber Risk Intelligence
-**Phase:** 23 - Optional Client Engagement & Implementation Tracking (DONE)
-**Plan:** 5 of 5 (complete)
-**Status:** Phase complete — human-verified and approved
+**Phase:** 24 - Continuous Risk Improvement
+**Plan:** 1 of 4 (complete)
+**Status:** Executing Phase 24
 
-### Phase 23 Goal
+### Phase 24 Goal
 
-Advisors who want ongoing client engagement get a lightweight project-management layer. Advisors who don't can ignore it entirely — the platform works either way. This is opt-in infrastructure, not a mandatory workflow.
+Close the assessment loop -- clients can reassess, see score deltas, and measure the impact of completed solutions.
 
-**Requirements:** LIFECYCLE-02
+**Requirements:** LIFECYCLE-03
 
 ## Performance Metrics
 
@@ -81,6 +81,8 @@ Advisors who want ongoing client engagement get a lightweight project-management
 - **Phase 21-01: New pillar service categories:** financial (liquidity, tax), legal (estate), advisory (behavioral) — distinct from existing governance/security/insurance/reputation
 - **Phase 21-02: rulesOverride backward-compatibility:** resolveRecommendationRulesForAssessment returns undefined when no snapshot — engine falls back to DB load, zero behavior change for existing assessments
 - **Phase 21-02: CatalogRule->RecommendationRule mapping required:** must map serviceRecommendationId->serviceId and triggerConditions->conditions before passing as rulesOverride to engine
+- **Phase 24-01: Assessment version = chain length:** Assessment.version is a rescore counter; reassessment version is derived from walking the previousAssessmentId chain
+- **Phase 24-01: SolutionActivity FK nullable evolution:** assessmentRecommendationId made nullable via ALTER COLUMN DROP NOT NULL; new assessmentId FK added for assessment-scoped events
 
 ### Architecture Approach
 
@@ -144,11 +146,11 @@ None identified. Ready to proceed with Phase 19 planning.
 
 ## Session Continuity
 
-**Last Action:** Phase 23 complete -- human-verified and approved. All 5 plans executed, build passes, 47 phase tests pass.
-**Next Action:** Plan and execute Phase 24 (Continuous Risk Improvement).
+**Last Action:** Phase 24 Plan 01 complete. Schema migration applied, reassessment creation service, score delta computation, and targeted follow-up question selection implemented with 28 passing tests.
+**Next Action:** Execute Phase 24 Plan 02 (intelligence event constants, cadence engine logic, system triggers, enterprise feature flag).
 
-**Context Preservation:** Phases 19-21 complete. Phase 21: 10-pillar recommendation coverage achieved. Post-phase: built Risk Solutions Library -- compose-at-read layered system (EnterpriseSolutionCustomization, AdvisorSolutionCustomization, SolutionMilestone, SolutionActivity), lifecycle state machine, milestone hydration on ACCEPTED, sourceLayerSummary persistence. Phase 22 context gathered: Strategic Action Plan (renamed from Family Roadmap), per-client holistic Guidance Package (cumulative across assessments), generic Platform Asset Catalog inheritance engine (recommendations first consumer), three-tier override policy (Protected/Configurable/Additions), implementation-focused lifecycle (Generated->Reviewed->Included->InProgress->Completed), Defer = "not now" with trigger events, shared ownership (task status + validation status), Role vs Assignee separation.
+**Context Preservation:** Phase 24-01 established: Assessment.previousAssessmentId self-ref FK for reassessment chaining, SolutionActivity.assessmentRecommendationId made nullable with new assessmentId FK for assessment-scoped intelligence events, ReviewCadence model with CadenceFrequency enum, computePillarDeltas pure function, chain-length version derivation.
 
 ---
-*State updated: 2026-06-25*
-*Stopped at: Roadmap restructured, ready to plan Phase 22*
+*State updated: 2026-06-28*
+*Stopped at: Completed 24-01-PLAN.md*
