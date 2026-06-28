@@ -8,6 +8,7 @@ import type { BillingCycle } from "@prisma/client";
 
 type PricingPageContentProps = {
   pricing: PublicTierPricing[];
+  configErrors?: string[];
   canSubscribe: boolean;
   advisorSubscription?: SubscriptionDetailsDTO | null;
   initialBillingCycle?: BillingCycle;
@@ -15,6 +16,7 @@ type PricingPageContentProps = {
 
 export function PricingPageContent({
   pricing,
+  configErrors = [],
   canSubscribe,
   advisorSubscription = null,
   initialBillingCycle,
@@ -31,6 +33,7 @@ export function PricingPageContent({
 
       <PricingTierGrid
         pricing={pricing}
+        configErrors={configErrors}
         billingEnabled={billingEnabled}
         canSubscribe={canSubscribe}
         advisorSubscription={advisorSubscription}

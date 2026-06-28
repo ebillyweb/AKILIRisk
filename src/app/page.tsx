@@ -22,7 +22,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     session?.user?.id && isAdvisorHubNavRole(session.user.role)
       ? await resolveAdvisorWorkspaceTitleForUserId(session.user.id)
       : undefined;
-  const pricingPreview = await fetchPublicTierPricing();
+  const { pricing: pricingPreview } = await fetchPublicTierPricing();
 
   return (
     <PublicPageShell

@@ -46,6 +46,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlanTierFeatureList } from "@/components/billing/PlanTierFeatureList";
+import { TierPricingConfigAlert } from "@/components/billing/TierPricingConfigAlert";
 import { PlanChangeConfirmDialog } from "@/components/advisor/billing/PlanChangeConfirmDialog";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,7 @@ export type PricingAudience = "solo" | "enterprise";
 
 type PricingTierGridProps = {
   pricing: PublicTierPricing[];
+  configErrors?: string[];
   billingEnabled: boolean;
   canSubscribe: boolean;
   audience?: PricingAudience;
@@ -371,6 +373,7 @@ function PricingTierActionButton({
 
 export function PricingTierGrid({
   pricing,
+  configErrors = [],
   billingEnabled,
   canSubscribe,
   audience = "solo",
@@ -556,6 +559,8 @@ export function PricingTierGrid({
 
   return (
     <div className="space-y-8">
+      <TierPricingConfigAlert errors={configErrors} />
+
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
         <div
           className="inline-flex rounded-full border border-border/80 bg-card/90 p-1 shadow-sm"
@@ -692,8 +697,10 @@ export function PricingTierGrid({
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Contact us for current pricing
+                  <p className="text-sm text-destructive">
+                    {configErrors.length > 0 && billingEnabled
+                      ? "Pricing unavailable — configuration error"
+                      : "Contact us for current pricing"}
                   </p>
                 )}
               </div>

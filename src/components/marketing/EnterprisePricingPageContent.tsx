@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 
 type EnterprisePricingPageContentProps = {
   pricing: PublicTierPricing[];
+  configErrors?: string[];
   firm: EnterprisePricingFirmContext;
   checkoutPlanIntent?: {
     tier: (typeof SELF_SERVE_TIERS)[number];
@@ -19,6 +20,7 @@ type EnterprisePricingPageContentProps = {
 
 export function EnterprisePricingPageContent({
   pricing,
+  configErrors = [],
   firm,
   checkoutPlanIntent = null,
 }: EnterprisePricingPageContentProps) {
@@ -58,6 +60,7 @@ export function EnterprisePricingPageContent({
 
       <PricingTierGrid
         pricing={pricing}
+        configErrors={configErrors}
         billingEnabled={billingEnabled}
         canSubscribe
         audience="enterprise"

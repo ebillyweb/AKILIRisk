@@ -16,7 +16,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
-  const [session, pricing] = await Promise.all([auth(), fetchPublicTierPricing()]);
+  const [{ pricing, configErrors }, session] = await Promise.all([
+    fetchPublicTierPricing(),
+    auth(),
+  ]);
   const canSubscribe = Boolean(
     session?.user?.id && isAdvisorHubNavRole(session.user.role),
   );
@@ -41,6 +44,7 @@ export default async function PricingPage() {
   return (
     <PricingPageContent
       pricing={pricing}
+      configErrors={configErrors}
       canSubscribe={canSubscribe}
       advisorSubscription={advisorSubscription}
       initialBillingCycle={initialBillingCycle}

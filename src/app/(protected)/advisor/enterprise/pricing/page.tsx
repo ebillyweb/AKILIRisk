@@ -54,7 +54,7 @@ export default async function EnterprisePricingPage({
 
   const urlCheckoutIntent = parseSignupCheckoutIntent(sp);
 
-  const pricing = await fetchPublicTierPricing();
+  const { pricing, configErrors } = await fetchPublicTierPricing();
 
   const contractedTier =
     firm.currentModuleTier && isModuleTier(firm.currentModuleTier)
@@ -75,6 +75,7 @@ export default async function EnterprisePricingPage({
   return (
     <EnterprisePricingPageContent
       pricing={pricing}
+      configErrors={configErrors}
       firm={firm}
       checkoutPlanIntent={checkoutPlanIntent}
     />

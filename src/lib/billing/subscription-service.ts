@@ -17,6 +17,7 @@ import {
   getPriceIdPlanMap,
   isBillingEnabled,
 } from "./config";
+import { SELF_SERVE_TIERS, tierEnvKey, type SelfServeTier } from "./tier-catalog";
 import { currentPeriodEndFromStripeSubscription } from "./stripe-subscription-period";
 import { mapStripeSubscriptionStatus } from "./stripe-status";
 
@@ -787,10 +788,15 @@ export function validateCheckoutPrice(
   tier: SubscriptionTier,
   billingCycle: BillingCycle
 ): string {
+  if (!SELF_SERVE_TIERS.includes(tier as SelfServeTier)) {
+    throw new Error(`Billing is not configured for tier ${tier}.`);
+  }
+  const selfServeTier = tier as SelfServeTier;
+  const envKey = tierEnvKey(selfServeTier, billingCycle);
   const priceId = getPriceIdForTier(tier, billingCycle);
   if (!priceId) {
     throw new Error(
-      `Missing Stripe price env for ${tier} ${billingCycle}. Configure STRIPE_PRICE_* in the environment.`
+      `Missing ${envKey} for ${tier} ${billingCycle}. Set this Stripe price ID in the environment — legacy fallbacks are not supported.`
     );
   }
   return priceId;

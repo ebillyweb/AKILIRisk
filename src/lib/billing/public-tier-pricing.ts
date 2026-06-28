@@ -9,6 +9,7 @@ import {
   SELF_SERVE_TIERS,
   type SelfServeTier,
 } from "./tier-catalog";
+import { validateTierPriceEnvConfiguration } from "./tier-price-env";
 
 const CYCLES: BillingCycle[] = ["MONTHLY", "ANNUAL"];
 
@@ -27,6 +28,11 @@ export type PublicTierPricing = {
   annual: PublicTierPriceQuote | null;
 };
 
+export type PublicTierPricingLoadResult = {
+  pricing: PublicTierPricing[];
+  configErrors: string[];
+};
+
 function formatCents(amount: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -36,31 +42,40 @@ function formatCents(amount: number, currency: string): string {
   }).format(amount / 100);
 }
 
-export async function fetchPublicTierPricing(): Promise<PublicTierPricing[]> {
-  const empty = SELF_SERVE_TIERS.map((tier) => ({
+function emptyPricing(): PublicTierPricing[] {
+  return SELF_SERVE_TIERS.map((tier) => ({
     tier,
     monthly: null,
     annual: null,
   }));
+}
+
+export async function fetchPublicTierPricing(): Promise<PublicTierPricingLoadResult> {
+  const configErrors = validateTierPriceEnvConfiguration();
+  if (configErrors.length > 0) {
+    console.error("[tier-pricing] Stripe tier price configuration errors:", configErrors);
+  }
 
   if (!process.env.STRIPE_SECRET_KEY?.trim()) {
-    return empty;
+    return { pricing: emptyPricing(), configErrors };
   }
 
   let stripe: ReturnType<typeof getStripe>;
   try {
     stripe = getStripe();
   } catch {
-    return empty;
+    return { pricing: emptyPricing(), configErrors };
   }
 
-  return Promise.all(
+  const pricing = await Promise.all(
     SELF_SERVE_TIERS.map(async (tier) => {
       const monthly = await loadQuote(stripe, tier, "MONTHLY");
       const annual = await loadQuote(stripe, tier, "ANNUAL");
       return { tier, monthly, annual };
     })
   );
+
+  return { pricing, configErrors };
 }
 
 async function loadQuote(

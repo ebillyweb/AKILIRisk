@@ -141,24 +141,6 @@ export function tierEnvKey(tier: SelfServeTier, cycle: BillingCycle): string {
   return `STRIPE_PRICE_${tier}_${cycle}`;
 }
 
-/** Legacy env names kept for backward compatibility during Stripe migration. */
-export const LEGACY_TIER_ENV_ALIASES: Partial<
-  Record<SelfServeTier, Partial<Record<BillingCycle, string>>>
-> = {
-  ESSENTIALS: {
-    MONTHLY: "STRIPE_PRICE_STARTER_MONTHLY",
-    ANNUAL: "STRIPE_PRICE_STARTER_ANNUAL",
-  },
-  PROFESSIONAL: {
-    MONTHLY: "STRIPE_PRICE_GROWTH_MONTHLY",
-    ANNUAL: "STRIPE_PRICE_GROWTH_ANNUAL",
-  },
-  BUSINESS: {
-    MONTHLY: "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
-    ANNUAL: "STRIPE_PRICE_PROFESSIONAL_ANNUAL",
-  },
-};
-
 export function enterprisePricingDeepLink(
   tier: SelfServeTier,
   billingCycle: BillingCycle
