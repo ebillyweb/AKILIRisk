@@ -98,9 +98,13 @@ export async function resolveAdvisorBrandingSettingsContext(
   };
 }
 
-export async function assertCanMutateAdvisorBranding(userId: string): Promise<void> {
+export async function isAdvisorBrandingReadOnly(userId: string): Promise<boolean> {
   const context = await resolveAdvisorBrandingSettingsContext(userId);
-  if (context.mode === "enterprise-view") {
+  return context.mode === "enterprise-view";
+}
+
+export async function assertCanMutateAdvisorBranding(userId: string): Promise<void> {
+  if (await isAdvisorBrandingReadOnly(userId)) {
     throw new Error(
       "Firm branding is read-only for your role. Contact a firm owner or administrator to request changes.",
     );

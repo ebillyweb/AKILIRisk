@@ -33,6 +33,10 @@ export class AdvisorBrandingSettingsPage {
     await this.page.getByRole("tab", { name: patterns[tab] }).click();
   }
 
+  brandNameInput(): Locator {
+    return this.page.locator("#brandNameDisplay");
+  }
+
   taglineInput(): Locator {
     return this.page.locator("#tagline");
   }

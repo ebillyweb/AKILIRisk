@@ -1,31 +1,35 @@
 "use client";
 
 import type { TourId } from "@/lib/product-tour/types";
-import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
+
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 
 type ConfigurationPageHeaderProps = {
-  tourId: TourId;
+  tourId?: TourId;
   title: string;
   description?: string;
+  kicker?: string;
   /** Show auto-start tour on first visit (default true). */
   autoStart?: boolean;
+  borderBottom?: boolean;
 };
 
+/**
+ * Configuration screens use the shared advisor header chrome.
+ * Plan badge and Take a tour render from AdvisorSubscreenToolbar in the layout.
+ */
 export function ConfigurationPageHeader({
-  tourId,
   title,
   description,
-  autoStart = true,
+  kicker,
+  borderBottom = false,
 }: ConfigurationPageHeaderProps) {
   return (
-    <div className="space-y-1" data-tour="config-page-header">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <ProductTourButton tourId={tourId} autoStart={autoStart} />
-      </div>
-      {description ? (
-        <p className="text-sm text-muted-foreground">{description}</p>
-      ) : null}
-    </div>
+    <AdvisorScreenHeader
+      kicker={kicker}
+      title={title}
+      description={description}
+      borderBottom={borderBottom}
+    />
   );
 }

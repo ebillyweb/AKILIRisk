@@ -2,6 +2,7 @@ import type { TourId } from "@/lib/product-tour/types";
 import { ADMIN_CONFIGURATION_TOURS } from "@/lib/product-tour/tours/admin-configuration";
 import { ADVISOR_CONFIGURATION_TOURS } from "@/lib/product-tour/tours/advisor-configuration";
 import { ADVISOR_PIPELINE_TOURS } from "@/lib/product-tour/tours/advisor-pipeline";
+import { ADVISOR_HUB_TOURS } from "@/lib/product-tour/tours/advisor-hub-tours";
 import { RECOMMENDATION_RULES_TOURS } from "@/lib/product-tour/tours/recommendation-rules";
 
 export const TOUR_STEPS = {
@@ -9,4 +10,5 @@ export const TOUR_STEPS = {
   ...ADMIN_CONFIGURATION_TOURS,
   ...ADVISOR_CONFIGURATION_TOURS,
   ...ADVISOR_PIPELINE_TOURS,
+  ...ADVISOR_HUB_TOURS,
 } satisfies Record<TourId, import("@/lib/product-tour/types").TourStepDefinition[]>;

@@ -10,6 +10,7 @@ import {
   type ClientPersonalDetailsFormData,
 } from '@/lib/schemas/profile';
 import { revalidatePath } from 'next/cache';
+import { isAdvisorBrandingReadOnly } from '@/lib/enterprise/branding-access';
 
 export async function getAdvisorPersonalDetails() {
   const session = await auth();
@@ -43,7 +44,18 @@ export async function updateAdvisorPersonalDetails(data: unknown) {
   }
   try {
     const profile = await getAdvisorProfileOrThrow(session.user.id);
+    const brandingReadOnly = await isAdvisorBrandingReadOnly(session.user.id);
     const { firstName, lastName, phone, jobTitle, firmName, licenseNumber } = parsed.data;
+    const trimmedFirmName = firmName?.trim() || null;
+    if (
+      brandingReadOnly &&
+      trimmedFirmName !== (profile.firmName?.trim() || null)
+    ) {
+      return {
+        success: false,
+        error: 'Firm name is managed by your firm owner or administrators.',
+      };
+    }
     const displayName = [firstName, lastName]
       .map((part) => part?.trim())
       .filter(Boolean)
@@ -62,7 +74,7 @@ export async function updateAdvisorPersonalDetails(data: unknown) {
         data: {
           phone: phone?.trim() || null,
           jobTitle: jobTitle?.trim() || null,
-          firmName: firmName?.trim() || null,
+          firmName: brandingReadOnly ? profile.firmName?.trim() || null : trimmedFirmName,
           licenseNumber: licenseNumber?.trim() || null,
         },
       }),

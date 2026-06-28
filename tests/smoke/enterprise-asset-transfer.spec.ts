@@ -88,6 +88,8 @@ test.describe("enterprise asset transfer and member sync", () => {
     await settings.openTab("identity");
 
     await expect(page.getByText(/managed by your firm owner or administrators/i)).toBeVisible();
+    await expect(page.locator("#brandNameDisplay")).toBeDisabled();
+    await expect(page.locator("#advisor-firmName")).toBeDisabled();
     await expect(settings.taglineInput()).toHaveValue(scenario.marker.tagline);
     await expect(settings.taglineInput()).toBeDisabled();
     await expect(settings.saveButton()).toHaveCount(0);

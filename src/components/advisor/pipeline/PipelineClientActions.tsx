@@ -9,7 +9,7 @@ export function PipelineClientActions({
   clientLimitStatus: ClientLimitSnapshot;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <GatedClientAddButton
         status={clientLimitStatus}
         href="/advisor/facilitate"

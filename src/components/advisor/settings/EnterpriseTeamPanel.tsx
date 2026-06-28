@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
 import { Loader2, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +108,6 @@ export function EnterpriseTeamPanel({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ProductTourButton tourId="advisor-settings-team" autoStart />
           <Badge variant={overage ? "warning" : "secondary"}>
             {seatUsage.activeSeats} / {seatUsage.seatLimit} seats
           </Badge>

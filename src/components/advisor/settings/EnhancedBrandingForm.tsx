@@ -64,7 +64,6 @@ function useXlSidebarNav() {
 
 interface EnhancedBrandingFormProps {
   profile: {
-    /** Source of truth for displayed/saved brand name (same as brandName on save) */
     firmName?: string | null;
     brandName?: string | null;
     tagline?: string | null;
@@ -185,11 +184,11 @@ export function EnhancedBrandingForm({
     ? FORM_SECTIONS.filter((section) => section.id !== 'domain')
     : FORM_SECTIONS;
 
-  const brandNameFromFirm =
-    profile.firmName?.trim() || profile.brandName?.trim() || '';
+  const displayBrandName =
+    profile.brandName?.trim() || profile.firmName?.trim() || '';
 
   const defaultFormValues: BrandingFormData = {
-    brandName: brandNameFromFirm,
+    brandName: displayBrandName,
     tagline: profile.tagline || '',
     primaryColor: profile.primaryColor || '',
     secondaryColor: profile.secondaryColor || '',
@@ -229,10 +228,6 @@ export function EnhancedBrandingForm({
     }),
     [watchedValues, profile.logoUrl]
   );
-
-  useEffect(() => {
-    setValue('brandName', brandNameFromFirm, { shouldDirty: false, shouldValidate: false });
-  }, [brandNameFromFirm, setValue]);
 
   useEffect(() => {
     if (isDirty) {
@@ -453,7 +448,9 @@ export function EnhancedBrandingForm({
                 </Alert>
               ) : null}
               {/* RHF only submits registered fields; ColorPickers use setValue only */}
-              <input type="hidden" {...register('brandName')} />
+              {readOnly ? (
+                <input type="hidden" {...register('brandName')} />
+              ) : null}
               <input type="hidden" {...register('primaryColor')} />
               <input type="hidden" {...register('secondaryColor')} />
               <input type="hidden" {...register('accentColor')} />
@@ -466,23 +463,30 @@ export function EnhancedBrandingForm({
                 >
                   <div className="space-y-2">
                     <Label htmlFor="brandNameDisplay">Public brand name</Label>
-                    <Input
-                      id="brandNameDisplay"
-                      value={brandNameFromFirm || '—'}
-                      readOnly
-                      disabled
-                      className="bg-muted/40"
-                    />
+                    {readOnly ? (
+                      <Input
+                        id="brandNameDisplay"
+                        value={displayBrandName || '—'}
+                        readOnly
+                        disabled
+                        className="bg-muted/40"
+                      />
+                    ) : (
+                      <Input
+                        id="brandNameDisplay"
+                        {...register('brandName')}
+                        placeholder="Your firm or public-facing name"
+                        maxLength={100}
+                        aria-invalid={errors.brandName ? true : undefined}
+                      />
+                    )}
+                    {errors.brandName && (
+                      <p className="text-sm text-destructive">{errors.brandName.message}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {readOnly
                         ? 'Managed centrally for your firm. Contact a firm owner or administrator to change it.'
-                        : (
-                          <>
-                            Matches your firm name from{' '}
-                            <span className="font-medium text-foreground">Your profile</span> below.
-                            Contact your administrator to change it.
-                          </>
-                        )}
+                        : 'Shown to clients on branded portals, emails, and reports.'}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -658,6 +662,7 @@ export function EnhancedBrandingForm({
                   productionDomain={productionDomain}
                   tenantSubdomainSuffix={tenantSubdomainSuffix}
                   platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
+                  readOnly={readOnly}
                 />
               </TabsContent>
 

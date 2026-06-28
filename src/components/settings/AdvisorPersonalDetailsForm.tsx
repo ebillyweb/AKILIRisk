@@ -11,9 +11,14 @@ import type { AdvisorPersonalDetailsInitialData } from '@/lib/schemas/profile';
 
 interface AdvisorPersonalDetailsFormProps {
   initialData: AdvisorPersonalDetailsInitialData;
+  /** Firm name is canonical firm branding for enterprise members. */
+  firmNameReadOnly?: boolean;
 }
 
-export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetailsFormProps) {
+export function AdvisorPersonalDetailsForm({
+  initialData,
+  firmNameReadOnly = false,
+}: AdvisorPersonalDetailsFormProps) {
   const router = useRouter();
   const [firstName, setFirstName] = useState(initialData.firstName ?? '');
   const [lastName, setLastName] = useState(initialData.lastName ?? '');
@@ -122,8 +127,15 @@ export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetai
             value={firmName}
             onChange={(e) => setFirmName(e.target.value)}
             placeholder="Firm name"
-            disabled={isSubmitting}
+            readOnly={firmNameReadOnly}
+            disabled={isSubmitting || firmNameReadOnly}
+            className={firmNameReadOnly ? 'bg-muted/40' : undefined}
           />
+          {firmNameReadOnly ? (
+            <p className="text-xs text-muted-foreground">
+              Managed by your firm owner or administrators. Edit firm branding above if you manage the firm.
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="advisor-licenseNumber">License number</Label>

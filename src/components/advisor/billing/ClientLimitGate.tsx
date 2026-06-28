@@ -188,7 +188,7 @@ export function GatedClientAddButton({
 
   if (status.canAddClient) {
     return (
-      <Button asChild variant={variant} size={size} className={className}>
+      <Button asChild variant={variant} size={size} className={cn("shrink-0", className)}>
         <Link href={href}>{children}</Link>
       </Button>
     );
@@ -200,7 +200,7 @@ export function GatedClientAddButton({
         type="button"
         variant={variant}
         size={size}
-        className={className}
+        className={cn("shrink-0", className)}
         onClick={() => setOpen(true)}
       >
         <ClientLimitLockIcon className="mr-2 size-3.5 text-current" />

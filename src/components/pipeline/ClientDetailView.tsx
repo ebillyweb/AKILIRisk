@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { ClientAssessmentLifecycleToolbar } from "@/components/assessment/ClientAssessmentLifecycleToolbar";
 import { RequestRescoreButton } from "@/components/assessment/RequestRescoreButton";
-import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
 import { IntakeWaiverScopePanel } from "@/components/pipeline/IntakeWaiverScopePanel";
 import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
 import { ExportAssessmentPdfButton } from "@/components/advisor/ExportAssessmentPdfButton";
@@ -98,7 +97,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
     intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <div className="mb-6">
         <Link
           href="/advisor/pipeline"
           className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -106,7 +105,6 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
           <ArrowLeft className="mr-1.5 size-4" />
           Back to Pipeline
         </Link>
-        <ProductTourButton tourId="advisor-pipeline-client" autoStart iconOnly />
       </div>
 
       {!assignmentActive ? (

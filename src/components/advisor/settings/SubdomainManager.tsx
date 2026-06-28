@@ -31,6 +31,7 @@ interface SubdomainManagerProps {
   /** e.g. `-staging` on Preview; empty on Production */
   tenantSubdomainSuffix?: string;
   platformSubdomainsAutoActivate?: boolean;
+  readOnly?: boolean;
   className?: string;
 }
 
@@ -40,6 +41,7 @@ export function SubdomainManager({
   productionDomain,
   tenantSubdomainSuffix = '',
   platformSubdomainsAutoActivate = true,
+  readOnly = false,
   className = '',
 }: SubdomainManagerProps) {
   const domainSuffix = `.${productionDomain}`;
@@ -105,7 +107,7 @@ export function SubdomainManager({
   }, [subdomain]);
 
   const handleClaim = async () => {
-    if (!subdomain || !checkResult?.available) return;
+    if (readOnly || !subdomain || !checkResult?.available) return;
 
     setIsClaiming(true);
     try {
@@ -133,7 +135,7 @@ export function SubdomainManager({
   };
 
   const handleRelease = async () => {
-    if (!currentSubdomain) return;
+    if (readOnly || !currentSubdomain) return;
 
     setIsReleasing(true);
     try {
@@ -204,6 +206,14 @@ export function SubdomainManager({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {readOnly ? (
+          <Alert>
+            <Lock className="h-4 w-4" aria-hidden />
+            <AlertDescription>
+              Custom subdomain settings are managed by your firm owner or administrators.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {!features.customSubdomainEnabled ? (
           <Alert>
             <Lock className="h-4 w-4" aria-hidden />
@@ -271,6 +281,8 @@ export function SubdomainManager({
 
             <Separator />
 
+            {!readOnly ? (
+            <>
             {/* Change subdomain */}
             <div className="space-y-4">
               <h4 className="font-medium">Change Subdomain</h4>
@@ -358,8 +370,10 @@ export function SubdomainManager({
                 Release Subdomain
               </Button>
             </div>
+            </>
+            ) : null}
           </div>
-        ) : (
+        ) : !readOnly ? (
           // Claim new subdomain
           <div className="space-y-4">
             <Alert>
@@ -440,7 +454,7 @@ export function SubdomainManager({
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

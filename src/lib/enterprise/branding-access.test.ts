@@ -20,6 +20,7 @@ vi.mock("@/lib/enterprise/branding", () => ({
 
 import {
   assertCanMutateAdvisorBranding,
+  isAdvisorBrandingReadOnly,
   loadAdvisorBrandingSettingsView,
   resolveAdvisorBrandingSettingsContext,
 } from "./branding-access";
@@ -74,6 +75,38 @@ describe("resolveAdvisorBrandingSettingsContext", () => {
       enterpriseId: "ent-1",
       enterpriseName: "Belvedere Wealth",
     });
+  });
+});
+
+describe("isAdvisorBrandingReadOnly", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns true for enterprise firm advisors", async () => {
+    billingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "ADVISOR",
+      advisorProfileId: "profile-2",
+      subscription: null,
+    });
+    enterpriseFindUnique.mockResolvedValue({ name: "Belvedere Wealth" });
+
+    await expect(isAdvisorBrandingReadOnly("user-2")).resolves.toBe(true);
+  });
+
+  it("returns false for firm owners", async () => {
+    billingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "OWNER",
+      advisorProfileId: "profile-1",
+      subscription: null,
+    });
+    enterpriseFindUnique.mockResolvedValue({ name: "Belvedere Wealth" });
+
+    await expect(isAdvisorBrandingReadOnly("user-1")).resolves.toBe(false);
   });
 });
 

@@ -48,7 +48,7 @@ async function expandLatestBrandingAuditRow(
  * Requires ENABLE_TEST_AUTH=1 for branding prepare + client magic-link sign-in.
  * Fixture: advisor@test.com → client@test.com (see scripts/seed-advisor-test-data.js).
  *
- * Note: Public brand name / firm name are read-only on this page (admin-managed).
+ * Solo advisors can edit public brand name on the Brand identity tab.
  */
 test.describe("advisor branding edit + audit log", () => {
   let baseline: BrandingE2EBaseline;
@@ -82,7 +82,7 @@ test.describe("advisor branding edit + audit log", () => {
     await settings.goto();
 
     await settings.openTab("identity");
-    await expect(page.locator("#brandNameDisplay")).toBeDisabled();
+    await expect(page.locator("#brandNameDisplay")).toBeEnabled();
 
     await settings.taglineInput().fill(newTagline);
     await settings.openTab("colors");

@@ -12,7 +12,7 @@ import {
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
 import { loadAdvisorBrandingSettingsView } from "@/lib/enterprise/branding-access";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
-import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
@@ -60,26 +60,24 @@ export default async function AdvisorSettingsPage() {
     lastName: profile.user.lastName ?? "",
     phone: profile.phone ?? "",
     jobTitle: profile.jobTitle ?? "",
-    firmName: profile.firmName ?? "",
+    firmName:
+      brandingSettings.readOnly
+        ? (brandingSettings.profile.firmName ??
+          brandingSettings.profile.brandName ??
+          profile.firmName ??
+          "")
+        : (profile.firmName ?? ""),
     licenseNumber: profile.licenseNumber ?? "",
     email: profile.user.email,
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <ConfigurationPageHeader
-          tourId="advisor-settings"
-          title="Settings"
-          description="Branding, profile, security, and practice policies for your firm."
-        />
-        <Badge
-          variant={features.tier === 'BUSINESS' ? 'default' : 'secondary'}
-          className="w-fit shrink-0 px-3 py-1 text-xs font-semibold uppercase tracking-wide"
-        >
-          {features.tier} plan
-        </Badge>
-      </div>
+    <div className="space-y-6 sm:space-y-8">
+      <AdvisorScreenHeader
+        kicker="Professional profile"
+        title="Settings"
+        description="Branding, profile, security, and practice policies for your firm."
+      />
 
       <div className="space-y-6">
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm" data-tour="config-methodology-link">
@@ -121,7 +119,10 @@ export default async function AdvisorSettingsPage() {
             </p>
           </div>
           <div className="mt-6">
-            <AdvisorPersonalDetailsForm initialData={profileInitialData} />
+            <AdvisorPersonalDetailsForm
+              initialData={profileInitialData}
+              firmNameReadOnly={brandingSettings.readOnly}
+            />
           </div>
         </div>
 
