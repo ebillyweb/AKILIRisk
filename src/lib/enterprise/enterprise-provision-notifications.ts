@@ -1,8 +1,10 @@
 import "server-only";
 
+import type { SubscriptionTier } from "@prisma/client";
+
 import { AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { userEmailForDisplay } from "@/lib/auth/user-email";
-import { TIER_DISPLAY_NAME, type SelfServeTier } from "@/lib/billing/tier-catalog";
+import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
 import { isModuleTier } from "@/lib/billing/plan-prices-ui";
 import { prisma } from "@/lib/db";
 import { escapeHtml } from "@/lib/escape-html";
@@ -66,9 +68,9 @@ async function resolveProvisioningAdminUserId(
   return null;
 }
 
-function moduleTierLabel(tier: string | null | undefined): string | null {
+function moduleTierLabel(tier: SubscriptionTier | null | undefined): string | null {
   if (!tier || !isModuleTier(tier)) return null;
-  return TIER_DISPLAY_NAME[tier as SelfServeTier];
+  return TIER_DISPLAY_NAME[tier];
 }
 
 /**
