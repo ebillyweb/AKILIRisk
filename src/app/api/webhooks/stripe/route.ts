@@ -369,13 +369,19 @@ export async function POST(request: Request) {
   } catch (e) {
     outcome = "FAILED";
     console.error("Stripe webhook handler error:", e);
-    // Mark FAILED in finally; Stripe's retry will see a FAILED row and
-    // re-claim it via claimWebhookEvent's reclaim path. Return 5xx so
-    // Stripe knows to retry.
-    await prisma.stripeWebhookEvent.update({
-      where: { id: event.id },
-      data: { status: outcome, processedAt: null },
-    });
+    // Mark FAILED so Stripe's retry sees a FAILED row and re-claims it via
+    // claimWebhookEvent's reclaim path. Guard this bookkeeping write in its own
+    // try/catch so a secondary failure (e.g. the row was concurrently reclaimed)
+    // doesn't mask the original handler error or swallow the 5xx that triggers
+    // Stripe's retry.
+    try {
+      await prisma.stripeWebhookEvent.update({
+        where: { id: event.id },
+        data: { status: outcome, processedAt: null },
+      });
+    } catch (markErr) {
+      console.error("Failed to mark Stripe webhook FAILED:", markErr);
+    }
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 

@@ -71,12 +71,18 @@ export async function clientExpectsBrandedPortal(input: {
     return false;
   }
 
+  // SECURITY: scope to invites whose advisor also holds an ACTIVE assignment to
+  // this client — `prefillEmail` alone is attacker-controlled (see
+  // resolve-client-portal-branding.ts).
   const brandedInvite = await prisma.inviteCode.findFirst({
     where: {
       prefillEmail: { equals: clientEmail, mode: "insensitive" },
       status: { in: BRANDED_INVITE_STATUSES },
       createdBy: { not: null },
-      advisor: { brandingEnabled: true },
+      advisor: {
+        brandingEnabled: true,
+        clientAssignments: { some: { clientId: input.userId, status: "ACTIVE" } },
+      },
     },
     select: { id: true },
   });

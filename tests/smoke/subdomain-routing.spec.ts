@@ -75,7 +75,11 @@ test.describe("tenant portal routing", () => {
     await page.getByRole("button", { name: /^sign in$/i }).click();
 
     await page.waitForURL(/\/advisor(\/|$|\?)/, { timeout: 30_000 });
-    if (!usesTenantPathPortals()) {
+    // Post sign-in must stay inside the tenant portal: subdomain mode keeps the
+    // tenant host; path-portal mode keeps the /t/{slug} prefix.
+    if (usesTenantPathPortals()) {
+      expect(page.url()).toContain("/t/independent-wealth/advisor");
+    } else {
       expect(page.url()).toContain("independent-wealth");
     }
     await expect(

@@ -70,10 +70,13 @@ export function validateOverlayFields(
 
   for (const field of fields) {
     const tier = RECOMMENDATION_FIELD_POLICIES[field];
-    if (tier === "PROTECTED") {
-      rejected.push(field);
-    } else {
+    // Allowlist semantics: only explicitly overridable tiers pass. PROTECTED
+    // and unknown/typo'd fields (tier === undefined) are rejected — otherwise a
+    // misspelled PROTECTED field would slip through as overridable.
+    if (tier === "CONFIGURABLE" || tier === "ADDITION") {
       allowed.push(field);
+    } else {
+      rejected.push(field);
     }
   }
 

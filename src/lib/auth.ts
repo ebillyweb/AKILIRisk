@@ -122,20 +122,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         //
         // We create the row when none is bound yet: on first sign-in (`user`
         // present) and also for legacy JWTs minted before this binding existed
-        // (no `user`, no `sessionToken`). For the legacy case we seed
-        // mfaVerified from the previous newest-row value so already-verified
-        // sessions are not re-challenged after the upgrade.
+        // (no `user`, no `sessionToken`). MFA-enabled users always start
+        // UNVERIFIED — never seed verification from another (newest-expiring)
+        // session row, or a second login could inherit a first login's
+        // verification without completing TOTP. Worst case is one re-challenge
+        // after the binding upgrade, which is the safe trade.
         if (userId && !token.sessionToken) {
-          let seedVerified = !token.mfaEnabled;
-          if (token.mfaEnabled && !user?.id) {
-            const [prev] = await prisma.session.findMany({
-              where: { userId, expires: { gt: new Date() } },
-              orderBy: { expires: "desc" },
-              take: 1,
-              select: { mfaVerified: true },
-            });
-            seedVerified = Boolean(prev?.mfaVerified);
-          }
+          const seedVerified = !token.mfaEnabled;
           const sessionToken = generateSessionToken();
           await prisma.session.create({
             data: {

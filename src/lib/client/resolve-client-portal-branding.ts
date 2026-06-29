@@ -49,17 +49,25 @@ async function resolveClientEmailForBranding(
 }
 
 async function getInvitingAdvisorBrandingForEmail(
+  userId: string,
   clientEmail: string
 ): Promise<AdvisorBrandingData | null> {
   const normalizedEmail = clientEmail.trim().toLowerCase();
   if (!normalizedEmail) return null;
 
+  // SECURITY: `prefillEmail` is attacker-controlled (any advisor can create an
+  // invite for any email). Require the inviting advisor to also hold an ACTIVE
+  // assignment to THIS client, so a stranger's invite can never inject their
+  // firm name / logo / support contacts into the victim's portal.
   const invite = await prisma.inviteCode.findFirst({
     where: {
       prefillEmail: { equals: normalizedEmail, mode: "insensitive" },
       status: { in: INVITING_ADVISOR_STATUSES },
       createdBy: { not: null },
-      advisor: { brandingEnabled: true },
+      advisor: {
+        brandingEnabled: true,
+        clientAssignments: { some: { clientId: userId, status: "ACTIVE" } },
+      },
     },
     orderBy: { createdAt: "desc" },
     select: {
@@ -111,7 +119,7 @@ export async function resolveClientPortalBrandingForUser(input: {
       getAssignedAdvisorBrandingForClient(input.userId),
       getTenantBrandingFromRequestHeaders(),
       isTenantBrandedRequest(),
-      getInvitingAdvisorBrandingForEmail(clientEmail),
+      getInvitingAdvisorBrandingForEmail(input.userId, clientEmail),
     ]);
 
   const raw = onTenantHost

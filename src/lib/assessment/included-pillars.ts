@@ -63,6 +63,10 @@ export function isAssessmentScopeComplete(
   catalog: readonly PillarCatalogEntry[],
 ): boolean {
   const scoped = resolveIncludedPillars(includedPillars, catalog);
+  // An empty resolved scope (e.g. catalog failed to load) must NOT report
+  // complete — `[].every()` is vacuously true and would mark an assessment
+  // COMPLETED with zero scored pillars.
+  if (scoped.length === 0) return false;
   const scored = new Set(
     [...scoredPillarIds].map((id) => normalizePillarSlug(id)),
   );

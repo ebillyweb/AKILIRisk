@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { InvitationStatus } from "@prisma/client";
 
 const prismaSpies = vi.hoisted(() => ({
   clientAdvisorAssignment: {
@@ -7,6 +6,9 @@ const prismaSpies = vi.hoisted(() => ({
   },
   advisorProfile: {
     findUnique: vi.fn(),
+  },
+  enterpriseMembership: {
+    findFirst: vi.fn(),
   },
   inviteCode: {
     findFirst: vi.fn(),
@@ -85,6 +87,7 @@ describe("resolveClientPortalBrandingForUser", () => {
     tenantBrandingMock.mockResolvedValue(null);
     userEmailForDisplayMock.mockReturnValue("");
     prismaSpies.clientAdvisorAssignment.findFirst.mockResolvedValue(null);
+    prismaSpies.enterpriseMembership.findFirst.mockResolvedValue(null);
     prismaSpies.inviteCode.findFirst.mockResolvedValue(null);
     prismaSpies.user.findUnique.mockResolvedValue(null);
   });
@@ -131,7 +134,7 @@ describe("resolveClientPortalBrandingForUser", () => {
     expect(branding?.logoUrl).toBe("/api/branded/advisor-logo");
   });
 
-  it("falls back to the inviting advisor when no assignment exists yet", async () => {
+  it("falls back to the inviting advisor, scoped to an active assignment", async () => {
     prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
       advisor: brandedAdvisor,
     });
@@ -142,17 +145,19 @@ describe("resolveClientPortalBrandingForUser", () => {
     });
 
     expect(branding?.primaryColor).toBe("#112233");
+    // SECURITY: the invite-branding query must require the inviting advisor to
+    // hold an ACTIVE assignment to this client — `prefillEmail` alone is
+    // attacker-controlled. Guards against the cross-tenant branding hijack.
     expect(prismaSpies.inviteCode.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           prefillEmail: { equals: "invited@example.com", mode: "insensitive" },
-          status: {
-            in: [
-              InvitationStatus.SENT,
-              InvitationStatus.OPENED,
-              InvitationStatus.REGISTERED,
-            ],
-          },
+          advisor: expect.objectContaining({
+            brandingEnabled: true,
+            clientAssignments: {
+              some: { clientId: "client-1", status: "ACTIVE" },
+            },
+          }),
         }),
       })
     );

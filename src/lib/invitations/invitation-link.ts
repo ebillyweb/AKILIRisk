@@ -7,7 +7,10 @@ import {
   getProductionDomain,
   toTenantHostLabel,
 } from "@/lib/advisor/platform-subdomain";
-import { usesStagingTenantPathPortals } from "@/lib/advisor/tenant-path-portals";
+import {
+  getStagingPlatformHostname,
+  usesStagingTenantPathPortals,
+} from "@/lib/advisor/tenant-path-portals";
 import { getPublicAppUrlFromEnv } from "@/lib/public-app-url";
 import type { SubscriptionFeatures } from "@/lib/validation/branding";
 
@@ -32,6 +35,12 @@ export class BrandedInvitationLinkNotReadyError extends Error {
 
 function buildAdvisorPortalOrigin(canonicalSlug: string): string {
   if (usesStagingTenantPathPortals()) {
+    // Path portals require PRODUCTION_DOMAIN. Fail closed with the typed,
+    // user-facing error instead of letting buildStagingTenantPortalUrl throw a
+    // generic Error (or, previously, emit a bogus preview.example.com link).
+    if (!getStagingPlatformHostname()) {
+      throw new BrandedInvitationLinkNotReadyError();
+    }
     return buildAdvisorPortalUrl(canonicalSlug);
   }
 

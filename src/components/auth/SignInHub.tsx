@@ -32,6 +32,7 @@ import {
   type SignInRole,
 } from "@/lib/auth/sign-in-roles";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
+import { scopePostAuthPath } from "@/lib/client/tenant-path-prefix-client";
 import { useBrandingOptional } from "@/components/providers/BrandingProvider";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import { cn } from "@/lib/utils";
@@ -221,7 +222,7 @@ function StaffCredentialsPanel({
       const session = await getSession();
       broadcastAuthSessionChange();
       const redirectTo = resolvePostSignInPath(callbackUrl, session?.user?.role);
-      window.location.assign(redirectTo);
+      window.location.assign(scopePostAuthPath(redirectTo));
     } catch (err) {
       console.error("Sign in error:", err);
       setError("An unexpected error occurred");

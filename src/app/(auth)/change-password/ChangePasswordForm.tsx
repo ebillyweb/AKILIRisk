@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
+import { scopePostAuthPath } from "@/lib/client/tenant-path-prefix-client";
 import {
   buildPasswordRequirementsMessage,
   validatePasswordComplexity,
@@ -98,7 +99,11 @@ export function ChangePasswordForm({
         notice: "password_updated",
         callbackUrl: afterSignIn,
       });
-      await signOut({ callbackUrl: `/signin?${signInParams.toString()}` });
+      // Keep the post-signout sign-in page inside the tenant portal; the
+      // embedded callbackUrl stays app-level and SignInHub re-scopes it.
+      await signOut({
+        callbackUrl: scopePostAuthPath(`/signin?${signInParams.toString()}`),
+      });
     } catch (err) {
       console.error(err);
       setError("An unexpected error occurred");

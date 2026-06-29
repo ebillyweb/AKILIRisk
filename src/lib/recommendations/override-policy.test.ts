@@ -47,11 +47,13 @@ describe("validateOverlayFields", () => {
     expect(allowed).toEqual(["notes", "prerequisites"]);
   });
 
-  it("allows unknown fields not in the policy map", () => {
+  it("rejects unknown fields not in the policy map (allowlist semantics)", () => {
+    // Unknown / typo'd fields must be rejected, not silently allowed — a
+    // misspelled PROTECTED field could otherwise slip through as overridable.
     const { allowed, rejected } = validateOverlayFields(["customField"]);
 
-    expect(rejected).toHaveLength(0);
-    expect(allowed).toEqual(["customField"]);
+    expect(allowed).toHaveLength(0);
+    expect(rejected).toEqual(["customField"]);
   });
 
   it("rejects all PROTECTED fields when mixed with ADDITION fields", () => {

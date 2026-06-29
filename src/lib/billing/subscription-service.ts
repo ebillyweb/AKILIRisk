@@ -279,14 +279,13 @@ function tierFromStripeSubscription(
   // Fallback path: price ID isn't in the env-configured map AND Stripe
   // metadata didn't carry a usable tier/cycle. This typically means the
   // subscription was created out-of-band (Stripe Dashboard, legacy import).
-  // Default to STARTER (lowest paid tier) — never GROWTH — so we don't
-  // silently over-grant entitlements. Existing rows keep their tier so we
-  // don't downgrade a paying customer because of a one-off webhook
-  // hiccup. The warning is grep-friendly so we can audit how often this
-  // path fires in production.
+  // Default to ESSENTIALS (lowest paid tier) so we don't silently over-grant
+  // entitlements. Existing rows keep their tier so we don't downgrade a paying
+  // customer because of a one-off webhook hiccup. The warning is grep-friendly
+  // so we can audit how often this path fires in production.
   if (!existingTier) {
     console.warn(
-      `[subscription-service] Unmapped Stripe price ID, defaulting to STARTER tier: ${priceId ?? "<no price id>"}`
+      `[subscription-service] Unmapped Stripe price ID, defaulting to ESSENTIALS tier: ${priceId ?? "<no price id>"}`
     );
   }
   return {

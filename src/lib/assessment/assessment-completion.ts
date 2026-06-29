@@ -20,9 +20,14 @@ export async function syncAssessmentCompletionStatus(
 ): Promise<{ allPillarsScored: boolean }> {
   const assessment = await tx.assessment.findUnique({
     where: { id: assessmentId },
-    select: { includedPillars: true },
+    select: { includedPillars: true, status: true },
   });
   if (!assessment) {
+    return { allPillarsScored: false };
+  }
+  // ARCHIVED is terminal — re-scoring must not silently flip it back to
+  // COMPLETED/IN_PROGRESS or reset completedAt.
+  if (assessment.status === "ARCHIVED") {
     return { allPillarsScored: false };
   }
 

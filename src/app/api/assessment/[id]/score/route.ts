@@ -332,6 +332,15 @@ export async function POST(
 
     // Check minimum completion threshold (50% of visible questions)
     const totalVisibleQuestions = visibleQuestions.length;
+    // Guard divide-by-zero: with no applicable questions `0/0 = NaN`, and
+    // `NaN < 50` is false, which would let an empty pillar score through and
+    // persist a fabricated "critical" result.
+    if (totalVisibleQuestions === 0) {
+      return NextResponse.json(
+        { error: "No applicable questions for this pillar." },
+        { status: 400 }
+      );
+    }
     const answeredCount = visibleQuestions.filter((q) => {
       const a = answers[q.id];
       return a !== undefined && a !== null;
