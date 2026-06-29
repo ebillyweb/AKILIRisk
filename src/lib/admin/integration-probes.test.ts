@@ -34,6 +34,7 @@ import {
   probeResend,
   probeS3,
   probeStripe,
+  probeUpstashRedis,
   probeWhiteLabelDns,
   probeResultToServiceHealth,
   runIntegrationProbes,
@@ -239,22 +240,39 @@ describe("probeResultToServiceHealth", () => {
   });
 });
 
+describe("probeUpstashRedis", () => {
+  it("returns not_configured without redis env", async () => {
+    delete process.env.REDIS_URL;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    delete process.env.KV_REST_API_URL;
+    delete process.env.KV_REST_API_TOKEN;
+
+    const result = await probeUpstashRedis();
+    expect(result.status).toBe("not_configured");
+  });
+});
+
 describe("runIntegrationProbes", () => {
-  it("returns five probe rows in stable order", async () => {
+  it("returns six probe rows in stable order", async () => {
     delete process.env.STRIPE_SECRET_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.RESEND_API_KEY;
     delete process.env.S3_BRANDING_BUCKET;
     delete process.env.S3_BUCKET_NAME;
     delete process.env.PRODUCTION_DOMAIN;
+    delete process.env.REDIS_URL;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
     const results = await runIntegrationProbes();
-    expect(results).toHaveLength(5);
+    expect(results).toHaveLength(6);
     expect(results.map((r) => r.id)).toEqual([
       "stripe",
       "openai",
       "resend",
       "s3",
+      "upstash-redis",
       "white-label-dns",
     ]);
     expect(results.every((r) => r.status === "not_configured")).toBe(true);

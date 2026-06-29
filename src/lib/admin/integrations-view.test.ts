@@ -73,10 +73,47 @@ function minimalSnapshot(
         status: "healthy",
         probedAt: "2026-05-18T12:00:00.000Z",
       },
+      {
+        id: "upstash-redis",
+        label: "Upstash Redis",
+        description: "Queue",
+        configured: false,
+        status: "unknown",
+      },
     ],
     failedIntegrations: [],
     recentErrors: [],
     lastSuccessfulHealthCheck: "2026-05-18T12:00:00.000Z",
+    backgroundJobs: {
+      redis: {
+        id: "redis",
+        label: "Redis (Upstash)",
+        description: "Queue backend",
+        configured: false,
+        status: "unknown",
+      },
+      cronSecret: {
+        id: "cron-secret",
+        label: "Worker auth",
+        description: "CRON_SECRET",
+        configured: true,
+        status: "healthy",
+      },
+      enterpriseProvision: {
+        id: "enterprise-provision",
+        label: "Enterprise provisioning",
+        description: "Async setup",
+        configured: true,
+        status: "healthy",
+      },
+      metrics: {
+        mode: "legacy",
+        jobCounts: null,
+        provisioningFirms: 0,
+        stuckProvisioningFirms: 0,
+        oldestProvisioningAt: null,
+      },
+    },
   };
   return { ...base, ...overrides };
 }
@@ -84,8 +121,9 @@ function minimalSnapshot(
 describe("buildIntegrationsView", () => {
   it("counts core + external integrations including white-label DNS", () => {
     const view = buildIntegrationsView(minimalSnapshot());
-    expect(view.summary.total).toBe(8);
+    expect(view.summary.total).toBe(9);
     expect(view.integrations.some((i) => i.id === "white-label-dns")).toBe(true);
+    expect(view.integrations.some((i) => i.id === "upstash-redis")).toBe(true);
     const stripe = view.integrations.find((i) => i.id === "stripe");
     expect(stripe?.lastCheckedAt).toBe("2026-05-18T12:00:00.000Z");
   });
