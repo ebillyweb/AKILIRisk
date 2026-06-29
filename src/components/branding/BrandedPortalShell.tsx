@@ -13,6 +13,8 @@ type BrandedPortalShellProps = {
   variant?: "auth" | "landing";
   /** Use h1 for brand title on the tenant landing page only */
   titleAsHeading?: boolean;
+  /** `/t/{slug}` prefix when staging path portals are active */
+  tenantPathPrefix?: string | null;
 };
 
 /**
@@ -25,6 +27,7 @@ export function BrandedPortalShell({
   children,
   variant = "auth",
   titleAsHeading = false,
+  tenantPathPrefix = null,
 }: BrandedPortalShellProps) {
   const previewHex = getPreviewBrandHex(branding);
 
@@ -92,7 +95,7 @@ export function BrandedPortalShell({
           </div>
         )}
 
-        <BrandedPortalFooter branding={branding} />
+        <BrandedPortalFooter branding={branding} tenantPathPrefix={tenantPathPrefix} />
       </div>
     </div>
   );

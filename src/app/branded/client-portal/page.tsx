@@ -11,6 +11,7 @@ import { MarketingSection } from "@/components/marketing/MarketingSection";
 import { MarketingSurfaceCard } from "@/components/marketing/MarketingSurfaceCard";
 import { withClientPortalLogoSrc } from "@/lib/client/resolve-client-portal-branding";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
+import { tenantPublicPath } from "@/lib/client/tenant-path-prefix";
 
 const TRUST_SIGNALS = [
   { label: "Encrypted & private", icon: Lock },
@@ -35,11 +36,15 @@ export default async function BrandedClientPortalPage() {
   const branding = withClientPortalLogoSrc(brandingRaw, true);
   const brandTitle = clientPortalBrandingDisplayTitle(branding);
   const kicker = branding.tagline?.trim() || "Personal Risk Profile";
+  const homeHref = await tenantPublicPath("/");
+  const signInHref = await tenantPublicPath("/signin?role=client");
+  const tenantPathPrefix = headersList.get("x-tenant-path-prefix");
 
   return (
     <BrandedPortalShell
       branding={branding}
-      homeHref="/"
+      homeHref={homeHref}
+      tenantPathPrefix={tenantPathPrefix}
       variant="landing"
       titleAsHeading
     >
@@ -78,7 +83,7 @@ export default async function BrandedClientPortalPage() {
               <span>
                 Already have an account?{" "}
                 <Link
-                  href="/signin?role=client"
+                  href={signInHref}
                   className="font-semibold text-foreground hover:underline"
                 >
                   Sign in
@@ -113,7 +118,7 @@ export default async function BrandedClientPortalPage() {
           <p className="text-sm leading-6 text-muted-foreground">
             Questions before you begin? Contact {brandTitle} using the details in the
             footer, or{" "}
-            <Link href="/signin?role=client" className="font-semibold text-foreground hover:underline">
+            <Link href={signInHref} className="font-semibold text-foreground hover:underline">
               sign in
             </Link>{" "}
             if you already have an account.

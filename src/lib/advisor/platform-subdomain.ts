@@ -1,3 +1,8 @@
+import {
+  buildStagingTenantPortalUrl,
+  usesStagingTenantPathPortals,
+} from '@/lib/advisor/tenant-path-portals';
+
 /**
  * Platform-owned advisor subdomains under PRODUCTION_DOMAIN (e.g. firm.akilirisk.com).
  * Platform hosts (preview, www, app) never enter tenant routing.
@@ -73,6 +78,9 @@ export function buildAdvisorPortalHostname(canonicalSlug: string): string {
 }
 
 export function buildAdvisorPortalUrl(subdomain: string): string {
+  if (usesStagingTenantPathPortals()) {
+    return buildStagingTenantPortalUrl(subdomain);
+  }
   return `https://${buildAdvisorPortalHostname(subdomain)}`;
 }
 

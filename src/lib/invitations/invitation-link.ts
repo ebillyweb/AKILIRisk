@@ -3,9 +3,11 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import {
   buildAdvisorPortalHostname,
+  buildAdvisorPortalUrl,
   getProductionDomain,
   toTenantHostLabel,
 } from "@/lib/advisor/platform-subdomain";
+import { usesStagingTenantPathPortals } from "@/lib/advisor/tenant-path-portals";
 import { getPublicAppUrlFromEnv } from "@/lib/public-app-url";
 import type { SubscriptionFeatures } from "@/lib/validation/branding";
 
@@ -29,6 +31,10 @@ export class BrandedInvitationLinkNotReadyError extends Error {
 }
 
 function buildAdvisorPortalOrigin(canonicalSlug: string): string {
+  if (usesStagingTenantPathPortals()) {
+    return buildAdvisorPortalUrl(canonicalSlug);
+  }
+
   const domain = getProductionDomain();
   if (!domain) {
     const port = process.env.PORT?.trim() || "3000";

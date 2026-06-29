@@ -34,8 +34,11 @@ interface SubdomainManagerProps {
   features: SubscriptionFeatures;
   currentSubdomain?: AdvisorSubdomainSettings | null;
   productionDomain: string;
-  /** e.g. `-staging` on Preview; empty on Production */
+  /** e.g. `-staging` on Preview when hostname suffix mode is enabled; empty on Production */
   tenantSubdomainSuffix?: string;
+  /** When true, show preview.akilirisk.com/t/{slug} instead of a subdomain host */
+  useTenantPathPortals?: boolean;
+  stagingPlatformHost?: string;
   platformSubdomainsAutoActivate?: boolean;
   readOnly?: boolean;
   className?: string;
@@ -46,13 +49,17 @@ export function SubdomainManager({
   currentSubdomain,
   productionDomain,
   tenantSubdomainSuffix = '',
+  useTenantPathPortals = false,
+  stagingPlatformHost = 'preview.akilirisk.com',
   platformSubdomainsAutoActivate = true,
   readOnly = false,
   className = '',
 }: SubdomainManagerProps) {
   const domainSuffix = `.${productionDomain}`;
   const portalHost = (canonicalSlug: string) =>
-    `${canonicalSlug}${tenantSubdomainSuffix}${domainSuffix}`;
+    useTenantPathPortals
+      ? `${stagingPlatformHost}/t/${canonicalSlug}`
+      : `${canonicalSlug}${tenantSubdomainSuffix}${domainSuffix}`;
   const portalUrl = (canonicalSlug: string) => `https://${portalHost(canonicalSlug)}`;
   const [subdomain, setSubdomain] = useState('');
   const [isChecking, setIsChecking] = useState(false);
@@ -400,7 +407,9 @@ export function SubdomainManager({
                 Claim your custom subdomain to provide clients with a fully branded portal experience.
                 Your subdomain will be:{' '}
                 <strong>
-                  yourname{tenantSubdomainSuffix}{domainSuffix}
+                  {useTenantPathPortals
+                    ? `${stagingPlatformHost}/t/yourname`
+                    : `yourname${tenantSubdomainSuffix}${domainSuffix}`}
                 </strong>
                 {platformSubdomainsAutoActivate && (
                   <> It will be active immediately after you claim it.</>
@@ -414,7 +423,7 @@ export function SubdomainManager({
                 <div className="flex">
                   <Input id="subdomain" {...subdomainInputProps} />
                   <div className="px-3 py-2 bg-muted text-sm rounded-r-md border border-l-0 flex items-center">
-                    {domainSuffix}
+                    {useTenantPathPortals ? `/t…` : domainSuffix}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>

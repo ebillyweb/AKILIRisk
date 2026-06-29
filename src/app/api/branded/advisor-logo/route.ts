@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdvisorBySubdomain } from '@/lib/advisor/subdomain';
 import { extractTenantSubdomainLabel } from '@/lib/advisor/platform-subdomain';
+import { extractTenantSlugFromReferer } from '@/lib/advisor/tenant-path-portals';
 import {
   isS3ObjectNotFound,
   resolveBrandingLogoS3Key,
@@ -17,7 +18,11 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   try {
     const host = request.headers.get('host') ?? '';
-    const canonicalSlug = extractTenantSubdomainLabel(host);
+    const fromQuery = request.nextUrl.searchParams.get('subdomain')?.trim().toLowerCase();
+    const canonicalSlug =
+      (fromQuery && fromQuery.length > 0 ? fromQuery : null) ??
+      extractTenantSubdomainLabel(host) ??
+      extractTenantSlugFromReferer(request.headers.get('referer'));
 
     if (!canonicalSlug) {
       return new NextResponse(null, { status: 404 });

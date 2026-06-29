@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   buildAdvisorPortalHostname,
+  buildAdvisorPortalUrl,
   extractTenantSubdomainLabel,
   isPlatformHostname,
   isPlatformSubdomainLabel,
@@ -24,6 +25,8 @@ describe('platform-subdomain', () => {
 
   it('does not extract platform labels as tenant slugs', () => {
     process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    process.env.TENANT_PATH_PORTALS = 'false';
+    delete process.env.TENANT_SUBDOMAIN_SUFFIX;
     expect(extractTenantSubdomainLabel('preview.akilirisk.com')).toBeNull();
     expect(extractTenantSubdomainLabel('www.akilirisk.com')).toBeNull();
     expect(extractTenantSubdomainLabel('independent-wealth.akilirisk.com')).toBe(
@@ -52,8 +55,15 @@ describe('platform-subdomain', () => {
     expect(buildAdvisorPortalHostname('wealthfirm')).toBe('wealthfirm.akilirisk.com');
   });
 
+  it('builds path-based staging portal URLs when enabled', () => {
+    process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    process.env.TENANT_PATH_PORTALS = 'true';
+    expect(buildAdvisorPortalUrl('ebilly')).toBe('https://preview.akilirisk.com/t/ebilly');
+  });
+
   it('appends TENANT_SUBDOMAIN_SUFFIX on preview-style hosts', () => {
     process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    process.env.TENANT_PATH_PORTALS = 'false';
     process.env.TENANT_SUBDOMAIN_SUFFIX = '-staging';
     expect(toTenantHostLabel('ebilly')).toBe('ebilly-staging');
     expect(buildAdvisorPortalHostname('ebilly')).toBe('ebilly-staging.akilirisk.com');

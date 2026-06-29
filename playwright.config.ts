@@ -27,12 +27,12 @@ loadEnv({ path: resolve(root, ".env.local"), quiet: true });
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "https://preview.akilirisk.com";
 
-// Match Vercel Preview: tenant hosts are {slug}-staging.akilirisk.com (see TENANT_SUBDOMAIN_SUFFIX).
+// Match Vercel Preview: tenant portals at preview.akilirisk.com/t/{slug}.
 if (
-  !process.env.TENANT_SUBDOMAIN_SUFFIX &&
+  !process.env.TENANT_PATH_PORTALS &&
   BASE_URL.includes("preview.akilirisk.com")
 ) {
-  process.env.TENANT_SUBDOMAIN_SUFFIX = "-staging";
+  process.env.TENANT_PATH_PORTALS = "true";
 }
 
 export default defineConfig({

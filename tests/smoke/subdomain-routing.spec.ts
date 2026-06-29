@@ -1,38 +1,28 @@
 import { test, expect } from "@playwright/test";
 import { SignInPage } from "../page-objects/SignInPage";
 import { USERS } from "../fixtures/users";
-import { tenantHostOrigin } from "../helpers/tenant-host";
+import {
+  tenantHostOrigin,
+  tenantPortalUrl,
+  usesTenantPathPortals,
+} from "../helpers/tenant-host";
 
 /**
- * Subdomain-based white-label routing.
+ * White-label tenant routing (subdomain on production, path on preview).
  *
- * Architecture (Next.js 16 `proxy.ts` convention):
- *  - `src/proxy.ts` extracts subdomain from `Host`, looks up `AdvisorSubdomain`
- *    via `getAdvisorBySubdomain` (returns the row whenever `brandingEnabled`
- *    on the advisor; the proxy decides what to do with it).
- *  - If `isActive && dnsVerified` -> rewrites to `/branded/<path>` with
- *    `x-advisor-id`/`x-subdomain` headers for client-portal pages, OR passes
- *    through to the main app tree for `/signup`, `/signin`, `/advisor`, etc.
- *  - Anything else (row exists but `dnsVerified=false`, or `isActive=false`)
- *    -> static 404 HTML "Subdomain Not Available".
+ * Architecture (Next.js 16 `proxy.ts`):
+ *  - Production: `{slug}.akilirisk.com` via Host header
+ *  - Preview/staging: `preview.akilirisk.com/t/{slug}` via path prefix
+ *  - Active + verified -> `/branded/*` rewrite with tenant headers
+ *  - Inactive/unverified -> 404 "Subdomain Not Available"
  *
- * Seeded fixtures (scripts/seed-advisor-test-data.js):
+ * Fixtures (scripts/seed-advisor-test-data.js):
  *  - advisor2 -> `independent-wealth` (active+verified)
  *  - advisor3 -> `inactive-tenant` (active, NOT verified)
  *  - advisor4 -> `disabled-tenant` (verified, NOT active)
- *
- * Vercel: wildcard `*.akilirisk.com` on Preview. When TENANT_SUBDOMAIN_SUFFIX is
- * set (e.g. `-staging` on preview.akilirisk.com), tenant hosts are
- * `{slug}-staging.akilirisk.com`, not bare `{slug}.akilirisk.com`.
  */
 
-const TENANT_SUBDOMAIN_SUFFIX = process.env.TENANT_SUBDOMAIN_SUFFIX ?? "";
-
-function tenantPortalUrl(slug: string): string {
-  return `https://${slug}${TENANT_SUBDOMAIN_SUFFIX}.akilirisk.com/`;
-}
-
-const ACTIVE_SUBDOMAIN_URL = tenantPortalUrl("independent-wealth");
+const ACTIVE_TENANT_URL = tenantPortalUrl("independent-wealth");
 const NOT_AVAILABLE_CASES: { label: string; url: string }[] = [
   {
     label: "active but not dnsVerified",
@@ -44,9 +34,9 @@ const NOT_AVAILABLE_CASES: { label: string; url: string }[] = [
   },
 ];
 
-test.describe("subdomain routing", () => {
-  test("active subdomain serves the branded client portal", async ({ page }) => {
-    const response = await page.goto(ACTIVE_SUBDOMAIN_URL);
+test.describe("tenant portal routing", () => {
+  test("active tenant serves the branded client portal", async ({ page }) => {
+    const response = await page.goto(ACTIVE_TENANT_URL);
     expect(response?.status()).toBe(200);
 
     await expect(page).toHaveTitle(/Independent Wealth Group/i);
@@ -56,7 +46,7 @@ test.describe("subdomain routing", () => {
     ).toBeVisible();
 
     await expect(
-      page.getByRole("heading", { name: /Comprehensive Family Risk Assessment/i })
+      page.getByRole("heading", { name: /Comprehensive family risk assessment/i })
     ).toBeVisible();
 
     const brandedMode = await page.evaluate(
@@ -67,7 +57,10 @@ test.describe("subdomain routing", () => {
     await expect(page.getByText(/Powered by AkiliRisk Platform/i)).toBeVisible();
 
     const signInLink = page.getByRole("link", { name: /^Sign In$/i });
-    await expect(signInLink.first()).toHaveAttribute("href", "/signin");
+    const expectedSignInHref = usesTenantPathPortals()
+      ? "/t/independent-wealth/signin"
+      : "/signin";
+    await expect(signInLink.first()).toHaveAttribute("href", expectedSignInHref);
   });
 
   test("advisor credentials sign-in on tenant host reaches /advisor workspace", async ({
@@ -82,14 +75,16 @@ test.describe("subdomain routing", () => {
     await page.getByRole("button", { name: /^sign in$/i }).click();
 
     await page.waitForURL(/\/advisor(\/|$|\?)/, { timeout: 30_000 });
-    expect(page.url()).toContain("independent-wealth");
+    if (!usesTenantPathPortals()) {
+      expect(page.url()).toContain("independent-wealth");
+    }
     await expect(
       page.getByRole("navigation", { name: "Advisor workspace" })
     ).toBeVisible();
   });
 
   for (const { label, url } of NOT_AVAILABLE_CASES) {
-    test(`Not Available page renders when subdomain is ${label}`, async ({ page }) => {
+    test(`Not Available page renders when tenant is ${label}`, async ({ page }) => {
       const response = await page.goto(url);
       expect(response?.status()).toBe(404);
 

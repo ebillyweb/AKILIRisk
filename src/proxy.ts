@@ -6,6 +6,11 @@ import {
   extractTenantSubdomainLabel,
   isPlatformHostname,
 } from "@/lib/advisor/platform-subdomain";
+import {
+  buildStagingTenantPathPrefix,
+  parseStagingTenantPathRoute,
+  usesStagingTenantPathPortals,
+} from "@/lib/advisor/tenant-path-portals";
 import { isTenantPassThroughPath } from "@/lib/advisor/tenant-pass-through-paths";
 import { isTenantPublicSurfacePath } from "@/lib/advisor/tenant-public-surface";
 import {
@@ -38,6 +43,7 @@ function withAkiliPathname(req: NextRequest): Headers {
   h.delete("x-advisor-id");
   h.delete("x-subdomain");
   h.delete("x-branded-mode");
+  h.delete("x-tenant-path-prefix");
   return h;
 }
 
@@ -55,6 +61,62 @@ function shouldHandleSubdomain(pathname: string): boolean {
     '/.well-known',
   ];
   return !skipPaths.some(path => pathname.startsWith(path));
+}
+
+type TenantBrandingRouteOptions = {
+  tenantPathPrefix?: string | null;
+};
+
+async function handleAdvisorTenantBrandingRoute(
+  req: NextRequest,
+  subdomain: string,
+  effectivePathname: string,
+  options: TenantBrandingRouteOptions = {},
+): Promise<NextResponse | null> {
+  try {
+    const advisorSubdomain = await getAdvisorBySubdomain(subdomain);
+
+    if (advisorSubdomain?.isActive && advisorSubdomain?.dnsVerified) {
+      const requestHeaders = withAkiliPathname(req);
+      requestHeaders.set('x-advisor-id', advisorSubdomain.advisorId);
+      requestHeaders.set('x-subdomain', subdomain);
+      requestHeaders.set('x-branded-mode', 'true');
+      requestHeaders.set('x-akili-pathname', effectivePathname);
+      if (options.tenantPathPrefix) {
+        requestHeaders.set('x-tenant-path-prefix', options.tenantPathPrefix);
+      }
+      if (isTenantPublicSurfacePath(effectivePathname)) {
+        requestHeaders.set('x-tenant-force-light', 'true');
+      }
+
+      if (isTenantPassThroughPath(effectivePathname)) {
+        return NextResponse.next({
+          request: { headers: requestHeaders },
+        });
+      }
+
+      const url = req.nextUrl.clone();
+      url.pathname =
+        effectivePathname === '/'
+          ? '/branded/client-portal'
+          : `/branded${effectivePathname}`;
+
+      return NextResponse.rewrite(url, {
+        request: { headers: requestHeaders },
+      });
+    }
+
+    if (advisorSubdomain) {
+      return new NextResponse(
+        `<!DOCTYPE html><html><head><title>Subdomain Not Available</title></head><body style="font-family: system-ui; text-align: center; padding: 2rem;"><h1>Subdomain Not Available</h1><p>This subdomain is not currently active.</p></body></html>`,
+        { status: 404, headers: { 'Content-Type': 'text/html' } }
+      );
+    }
+  } catch (error) {
+    console.error('Subdomain resolution error:', error);
+  }
+
+  return null;
 }
 
 /**
@@ -91,46 +153,30 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
-  // Handle advisor tenant subdomain routing (skip platform hosts like preview.*)
-  if (shouldHandleSubdomain(pathname) && !isPlatformHostname(hostname)) {
-    const subdomain = extractTenantSubdomainLabel(hostname);
+  if (shouldHandleSubdomain(pathname)) {
+    if (usesStagingTenantPathPortals()) {
+      const pathRoute = parseStagingTenantPathRoute(pathname);
+      if (pathRoute) {
+        const tenantResponse = await handleAdvisorTenantBrandingRoute(
+          req,
+          pathRoute.slug,
+          pathRoute.restPath,
+          { tenantPathPrefix: buildStagingTenantPathPrefix(pathRoute.slug) },
+        );
+        if (tenantResponse) return tenantResponse;
+      }
+    }
 
-    if (subdomain) {
-      try {
-        const advisorSubdomain = await getAdvisorBySubdomain(subdomain);
+    if (!isPlatformHostname(hostname)) {
+      const subdomain = extractTenantSubdomainLabel(hostname);
 
-        if (advisorSubdomain?.isActive && advisorSubdomain?.dnsVerified) {
-          const requestHeaders = withAkiliPathname(req);
-          requestHeaders.set('x-advisor-id', advisorSubdomain.advisorId);
-          requestHeaders.set('x-subdomain', subdomain);
-          requestHeaders.set('x-branded-mode', 'true');
-          if (isTenantPublicSurfacePath(pathname)) {
-            requestHeaders.set('x-tenant-force-light', 'true');
-          }
-
-          if (isTenantPassThroughPath(pathname)) {
-            return NextResponse.next({
-              request: { headers: requestHeaders },
-            });
-          }
-
-          const url = req.nextUrl.clone();
-          url.pathname =
-            pathname === '/' ? '/branded/client-portal' : `/branded${pathname}`;
-
-          return NextResponse.rewrite(url, {
-            request: { headers: requestHeaders },
-          });
-        } else if (advisorSubdomain) {
-          // Subdomain exists but not active/verified
-          return new NextResponse(
-            `<!DOCTYPE html><html><head><title>Subdomain Not Available</title></head><body style="font-family: system-ui; text-align: center; padding: 2rem;"><h1>Subdomain Not Available</h1><p>This subdomain is not currently active.</p></body></html>`,
-            { status: 404, headers: { 'Content-Type': 'text/html' } }
-          );
-        }
-      } catch (error) {
-        console.error('Subdomain resolution error:', error);
-        // Continue with normal processing on error
+      if (subdomain) {
+        const tenantResponse = await handleAdvisorTenantBrandingRoute(
+          req,
+          subdomain,
+          pathname,
+        );
+        if (tenantResponse) return tenantResponse;
       }
     }
   }

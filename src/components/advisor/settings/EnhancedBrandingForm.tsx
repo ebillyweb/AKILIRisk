@@ -87,6 +87,8 @@ interface EnhancedBrandingFormProps {
   currentSubdomain?: AdvisorSubdomainSettings | null;
   productionDomain: string;
   tenantSubdomainSuffix?: string;
+  useTenantPathPortals?: boolean;
+  stagingPlatformHost?: string;
   platformSubdomainsAutoActivate?: boolean;
 }
 
@@ -177,6 +179,8 @@ export function EnhancedBrandingForm({
   currentSubdomain = null,
   productionDomain,
   tenantSubdomainSuffix = '',
+  useTenantPathPortals = false,
+  stagingPlatformHost = 'preview.akilirisk.com',
   platformSubdomainsAutoActivate = true,
 }: EnhancedBrandingFormProps) {
   const xlSidebar = useXlSidebarNav();
@@ -661,6 +665,8 @@ export function EnhancedBrandingForm({
                   currentSubdomain={currentSubdomain}
                   productionDomain={productionDomain}
                   tenantSubdomainSuffix={tenantSubdomainSuffix}
+                  useTenantPathPortals={useTenantPathPortals}
+                  stagingPlatformHost={stagingPlatformHost}
                   platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
                   readOnly={readOnly}
                 />

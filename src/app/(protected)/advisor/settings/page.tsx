@@ -6,6 +6,10 @@ import {
   isSubdomainAutoActivateEnabled,
 } from "@/lib/advisor/platform-subdomain";
 import {
+  getStagingPlatformHostname,
+  usesStagingTenantPathPortals,
+} from "@/lib/advisor/tenant-path-portals";
+import {
   getSubscriptionFeatures,
   ESSENTIALS_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
@@ -52,6 +56,8 @@ export default async function AdvisorSettingsPage({
   const currentSubdomain = await getAdvisorSubdomainSettings(profile.id);
   const productionDomain = getProductionDomain() ?? "akilirisk.com";
   const tenantSubdomainSuffix = getTenantSubdomainSuffix();
+  const useTenantPathPortals = usesStagingTenantPathPortals();
+  const stagingPlatformHost = getStagingPlatformHostname();
   const platformSubdomainsAutoActivate = isSubdomainAutoActivateEnabled();
 
   // Subscription flags gate premium tabs; missing Subscription row should not hide the full branding UI
@@ -98,6 +104,8 @@ export default async function AdvisorSettingsPage({
         currentSubdomain={currentSubdomain}
         productionDomain={productionDomain}
         tenantSubdomainSuffix={tenantSubdomainSuffix}
+        useTenantPathPortals={useTenantPathPortals}
+        stagingPlatformHost={stagingPlatformHost}
         platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
         passwordChangeRequired={passwordChangeRequired}
         changePasswordHref={changePasswordHref}

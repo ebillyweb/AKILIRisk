@@ -3,15 +3,21 @@ import { Mail, Phone, Globe } from "lucide-react";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
 import { MarketingSurfaceCard } from "@/components/marketing/MarketingSurfaceCard";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
+import { buildTenantScopedPublicPath } from "@/lib/advisor/tenant-path-portals";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 import { cn } from "@/lib/utils";
 
 type BrandedPortalFooterProps = {
   branding: AdvisorBrandingData;
   className?: string;
+  tenantPathPrefix?: string | null;
 };
 
-export function BrandedPortalFooter({ branding, className }: BrandedPortalFooterProps) {
+export function BrandedPortalFooter({
+  branding,
+  className,
+  tenantPathPrefix = null,
+}: BrandedPortalFooterProps) {
   const brandTitle = clientPortalBrandingDisplayTitle(branding);
   const year = new Date().getFullYear();
   const hasContact = Boolean(
@@ -85,19 +91,19 @@ export function BrandedPortalFooter({ branding, className }: BrandedPortalFooter
           aria-label="Portal footer links"
         >
           <Link
-            href="/signin"
+            href={buildTenantScopedPublicPath("/signin", tenantPathPrefix)}
             className="font-medium text-foreground/90 underline-offset-4 hover:text-foreground hover:underline"
           >
             Sign in
           </Link>
           <Link
-            href="/privacy"
+            href={buildTenantScopedPublicPath("/privacy", tenantPathPrefix)}
             className="font-medium text-foreground/90 underline-offset-4 hover:text-foreground hover:underline"
           >
             Privacy Policy
           </Link>
           <Link
-            href="/terms"
+            href={buildTenantScopedPublicPath("/terms", tenantPathPrefix)}
             className="font-medium text-foreground/90 underline-offset-4 hover:text-foreground hover:underline"
           >
             Terms of Service
