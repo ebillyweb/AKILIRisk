@@ -966,7 +966,7 @@ export async function createEnterpriseByAdmin(input: unknown) {
 
     const provisionActor = {
       userId: actorUserId,
-      email: actorEmail,
+      email: actorEmail ?? null,
       role: actorRole as UserRole,
     };
 
@@ -1116,7 +1116,7 @@ export async function retryEnterpriseProvisionByAdmin(input: unknown) {
       };
     }
 
-    const actor = { userId, email, role: role as UserRole };
+    const actor = { userId, email: email ?? null, role: role as UserRole };
     const queued = await queueEnterpriseProvision(parsed.data.enterpriseId, actor);
     revalidateEnterpriseAdminPaths(parsed.data.enterpriseId);
     return { success: true as const, queued: true, mode: queued.mode };

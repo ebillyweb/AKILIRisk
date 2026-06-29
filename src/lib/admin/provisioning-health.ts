@@ -72,7 +72,9 @@ function resolveRedisSource(env: NodeJS.ProcessEnv = process.env): string {
   return "not configured";
 }
 
-export async function probeRedisQueueBackend(): Promise<ServiceHealth> {
+export async function probeRedisQueueBackend(
+  prefetchedCounts?: EnterpriseProvisionQueueCounts | null,
+): Promise<ServiceHealth> {
   const configured = isRedisConfigured();
   if (!configured) {
     return {
@@ -91,11 +93,14 @@ export async function probeRedisQueueBackend(): Promise<ServiceHealth> {
   const probedAt = new Date().toISOString();
 
   try {
-    const counts = await withTimeout(
-      getEnterpriseProvisionQueueCounts(),
-      INTEGRATION_PROBE_TIMEOUT_MS,
-      "Redis",
-    );
+    const counts =
+      prefetchedCounts === undefined
+        ? await withTimeout(
+            getEnterpriseProvisionQueueCounts(),
+            INTEGRATION_PROBE_TIMEOUT_MS,
+            "Redis",
+          )
+        : prefetchedCounts;
     const rttMs = Date.now() - start;
     const countSummary = counts
       ? `Queue depth: ${counts.waiting} waiting, ${counts.active} active, ${counts.failed} failed.`
@@ -247,16 +252,23 @@ export function resolveEnterpriseProvisionHealth(input: {
 
 export async function getBackgroundJobsHealth(): Promise<BackgroundJobsHealth> {
   const mode = isEnterpriseProvisionQueueEnabled() ? "queue" : "legacy";
-  const [redis, firmMetrics] = await Promise.all([
-    probeRedisQueueBackend(),
-    loadProvisioningFirmMetrics(),
-  ]);
+  const firmMetrics = await loadProvisioningFirmMetrics();
   const cronSecret = probeCronSecretForWorkers();
 
-  const jobCounts =
-    mode === "queue" && redis.status !== "down"
-      ? await getEnterpriseProvisionQueueCounts().catch(() => null)
-      : null;
+  let jobCounts: EnterpriseProvisionQueueCounts | null = null;
+  if (mode === "queue") {
+    try {
+      jobCounts = await withTimeout(
+        getEnterpriseProvisionQueueCounts(),
+        INTEGRATION_PROBE_TIMEOUT_MS,
+        "Redis",
+      );
+    } catch {
+      jobCounts = null;
+    }
+  }
+
+  const redis = await probeRedisQueueBackend(jobCounts);
 
   const enterpriseRollup = resolveEnterpriseProvisionHealth({
     mode,
