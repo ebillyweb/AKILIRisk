@@ -350,6 +350,15 @@ export const FIELD_HELP = {
     title: "Recommended actions",
     description: "Suggested next steps when clients score poorly on this question.",
   },
+  "advisor-assessment-answer-type": {
+    title: "How clients answer",
+    description:
+      "Choose the response format clients see during the assessment — maturity scale, yes/no, Likert, short text, numeric, or date.",
+  },
+  "advisor-assessment-answer-option": {
+    title: "Answer label",
+    description: "Optional label shown for each preset answer choice in the client assessment UI.",
+  },
 
   // Advisor — pillar narratives
   "narrative-all-negative": {

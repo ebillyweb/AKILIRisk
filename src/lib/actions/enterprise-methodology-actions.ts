@@ -8,8 +8,11 @@ import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { DEFAULT_RISK_THRESHOLDS } from "@/lib/assessment/governance-rubric";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import {
+  buildAdvisorAssessmentQuestionWriteData,
+  parseAdvisorAssessmentQuestionInput,
+} from "@/lib/methodology/advisor-assessment-question-config";
+import {
   canDeleteAdvisorQuestion,
-  DEFAULT_MATURITY_SCORE_MAP,
   deleteAdvisorQuestionError,
   nextDisplayOrder,
 } from "@/lib/methodology/advisor-question-policy";
@@ -148,6 +151,11 @@ export async function updateEnterprisePillarQuestion(
     whyThisMatters?: string | null;
     recommendedActions?: string | null;
     isVisible?: boolean;
+    answerType?: string;
+    answer0?: string | null;
+    answer1?: string | null;
+    answer2?: string | null;
+    answer3?: string | null;
   },
 ) {
   try {
@@ -162,15 +170,43 @@ export async function updateEnterprisePillarQuestion(
       return { success: false as const, error: "Question not found" };
     }
 
+    let writeData: Record<string, unknown> = {
+      ...(data.questionText !== undefined ? { questionText: data.questionText } : {}),
+      ...(data.whyThisMatters !== undefined ? { whyThisMatters: data.whyThisMatters } : {}),
+      ...(data.recommendedActions !== undefined
+        ? { recommendedActions: data.recommendedActions }
+        : {}),
+      ...(data.isVisible !== undefined ? { isVisible: data.isVisible } : {}),
+    };
+
+    if (existing.sourceKind === AdvisorQuestionSource.CUSTOM && data.answerType !== undefined) {
+      const parsed = parseAdvisorAssessmentQuestionInput({
+        questionText: data.questionText ?? existing.questionText,
+        whyThisMatters:
+          data.whyThisMatters !== undefined ? data.whyThisMatters : existing.whyThisMatters,
+        recommendedActions:
+          data.recommendedActions !== undefined
+            ? data.recommendedActions
+            : existing.recommendedActions,
+        answerType: data.answerType,
+        answer0: data.answer0,
+        answer1: data.answer1,
+        answer2: data.answer2,
+        answer3: data.answer3,
+      });
+      if (!parsed.success) {
+        return { success: false as const, error: parsed.error };
+      }
+      writeData = {
+        ...writeData,
+        ...buildAdvisorAssessmentQuestionWriteData(parsed.data),
+      };
+    }
+
     await prisma.enterprisePillarQuestion.update({
       where: { id: questionId },
       data: {
-        ...(data.questionText !== undefined ? { questionText: data.questionText } : {}),
-        ...(data.whyThisMatters !== undefined ? { whyThisMatters: data.whyThisMatters } : {}),
-        ...(data.recommendedActions !== undefined
-          ? { recommendedActions: data.recommendedActions }
-          : {}),
-        ...(data.isVisible !== undefined ? { isVisible: data.isVisible } : {}),
+        ...writeData,
         version: { increment: 1 },
       },
     });
@@ -191,6 +227,11 @@ export async function createEnterprisePillarQuestion(
     questionText: string;
     whyThisMatters?: string | null;
     recommendedActions?: string | null;
+    answerType?: string;
+    answer0?: string | null;
+    answer1?: string | null;
+    answer2?: string | null;
+    answer3?: string | null;
   },
 ) {
   try {
@@ -202,9 +243,9 @@ export async function createEnterprisePillarQuestion(
       return { success: false as const, error: "Unknown pillar" };
     }
 
-    const text = data.questionText.trim();
-    if (!text) {
-      return { success: false as const, error: "Question text is required" };
+    const parsed = parseAdvisorAssessmentQuestionInput(data);
+    if (!parsed.success) {
+      return { success: false as const, error: parsed.error };
     }
 
     const siblings = await prisma.enterprisePillarQuestion.findMany({
@@ -219,11 +260,7 @@ export async function createEnterprisePillarQuestion(
         sourceKind: AdvisorQuestionSource.CUSTOM,
         sectionCode: "CUSTOM",
         displayOrder: nextDisplayOrder(siblings),
-        questionText: text,
-        answerType: "scored_0_3",
-        scoreMap: DEFAULT_MATURITY_SCORE_MAP as unknown as Prisma.InputJsonValue,
-        whyThisMatters: data.whyThisMatters ?? null,
-        recommendedActions: data.recommendedActions ?? null,
+        ...buildAdvisorAssessmentQuestionWriteData(parsed.data),
         isVisible: true,
       },
     });

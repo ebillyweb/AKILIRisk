@@ -27,6 +27,7 @@ export default async function AdminEnterpriseDetailPage({ params }: PageProps) {
   if (!enterprise) notFound();
 
   const isSuspended = enterprise.status === "SUSPENDED";
+  const isProvisioning = enterprise.status === "PROVISIONING";
 
   return (
     <div className="space-y-6">
@@ -41,11 +42,21 @@ export default async function AdminEnterpriseDetailPage({ params }: PageProps) {
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{enterprise.name}</h1>
-          <Badge variant={isSuspended ? "warning" : "success"}>
-            {isSuspended ? "Suspended" : "Active"}
-          </Badge>
+          {isSuspended ? (
+            <Badge variant="warning">Suspended</Badge>
+          ) : isProvisioning ? (
+            <Badge variant="secondary">Provisioning</Badge>
+          ) : (
+            <Badge variant="success">Active</Badge>
+          )}
         </div>
         <p className="text-sm text-muted-foreground font-mono">{enterprise.slug}</p>
+        {isProvisioning ? (
+          <p className="text-sm text-muted-foreground">
+            Firm setup is running in the background. Refresh this page in a minute if status
+            stays on Provisioning.
+          </p>
+        ) : null}
       </div>
 
       <Card>

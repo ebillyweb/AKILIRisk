@@ -13,6 +13,12 @@ import {
 } from '@/lib/enterprise/branding-access';
 import { generateLogoUploadUrl, confirmLogoUpload, deleteLogo, uploadLogoFromBuffer } from '@/lib/s3/branding-uploads';
 import { isSubdomainReserved } from '@/lib/advisor/subdomain';
+import {
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_MIN_LENGTH,
+  SUBDOMAIN_SLUG_REGEX,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+} from '@/lib/advisor/subdomain-slug-input';
 
 const ENTERPRISE_BRANDING_MUTABLE_SELECT = {
   brandName: true,
@@ -478,11 +484,11 @@ export async function checkSubdomainAvailabilityAction(subdomain: string): Promi
     await requireAdvisorBrandingAccess(userId, 'read');
 
     // Validate subdomain format
-    const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
-    if (!subdomainRegex.test(subdomain) || subdomain.length < 3 || subdomain.length > 20) {
+    const subdomainRegex = SUBDOMAIN_SLUG_REGEX;
+    if (!subdomainRegex.test(subdomain) || subdomain.length < SUBDOMAIN_SLUG_MIN_LENGTH || subdomain.length > SUBDOMAIN_SLUG_MAX_LENGTH) {
       return {
         success: false,
-        error: 'Invalid subdomain format. Use 3-20 characters, lowercase letters, numbers, and hyphens only.',
+        error: SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
       };
     }
 

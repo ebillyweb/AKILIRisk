@@ -76,7 +76,10 @@ export async function resolveBillingContext(
   });
 
   if (membership) {
-    if (membership.enterprise.status === "SUSPENDED") {
+    if (
+      membership.enterprise.status === "SUSPENDED" ||
+      membership.enterprise.status === "PROVISIONING"
+    ) {
       return {
         kind: "enterprise",
         enterpriseId: membership.enterprise.id,

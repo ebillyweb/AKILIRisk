@@ -15,6 +15,16 @@ function humanizeToken(value: string) {
     .join(" ");
 }
 
+function enterpriseStatusBadge(status: string) {
+  if (status === "SUSPENDED") {
+    return <Badge variant="warning">Suspended</Badge>;
+  }
+  if (status === "PROVISIONING") {
+    return <Badge variant="secondary">Provisioning</Badge>;
+  }
+  return <Badge variant="success">Active</Badge>;
+}
+
 export default async function AdminEnterprisesPage() {
   const enterprises = await getEnterprisesForAdmin();
 
@@ -75,13 +85,7 @@ export default async function AdminEnterprisesPage() {
                 {enterprises.map((enterprise) => (
                   <tr key={enterprise.id} className="border-b border-border/60">
                     <td className="py-3 pr-4 font-medium">{enterprise.name}</td>
-                    <td className="py-3 pr-4">
-                      <Badge
-                        variant={enterprise.status === "SUSPENDED" ? "warning" : "success"}
-                      >
-                        {enterprise.status === "SUSPENDED" ? "Suspended" : "Active"}
-                      </Badge>
-                    </td>
+                    <td className="py-3 pr-4">{enterpriseStatusBadge(enterprise.status)}</td>
                     <td className="py-3 pr-4">
                       <div>{enterprise.ownerName ?? "—"}</div>
                       {enterprise.ownerEmail ? (

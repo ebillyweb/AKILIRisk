@@ -27,7 +27,7 @@ import {
   ENTERPRISE_DEFAULT_SEAT_LIMIT,
 } from "@/lib/enterprise/constants";
 import { cancelSoloSubscriptionForEnterprise } from "@/lib/enterprise/cancel-solo-subscription";
-import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-subscription";
+import { scheduleEnterpriseProvision, queueEnterpriseProvision } from "@/lib/enterprise/schedule-enterprise-provision";
 import {
   deleteEnterpriseFirmByAdmin,
   EnterpriseLifecycleError,
@@ -40,9 +40,7 @@ import {
   validatePasswordForSet,
 } from "@/lib/auth/password-policy";
 import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
-import {
-  hashPasswordForStorage,
-} from "@/lib/auth/password-update";
+import { hashPasswordForStorage } from "@/lib/auth/password-update";
 
 // Round-11 bug-hunt fix: normalize email casing — both schemas
 // trim+lowercase so userEmailWriteData (deterministic ciphertext,
@@ -841,13 +839,12 @@ export async function createEnterpriseByAdmin(input: unknown) {
     const periodEnd = new Date();
     periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1);
 
-    let soloStripeSubscriptionId: string | null = null;
-
     const result = await prisma.$transaction(async (tx) => {
       const enterprise = await tx.advisorEnterprise.create({
         data: {
           name: parsed.data.name.trim(),
           slug: parsed.data.slug,
+          status: "PROVISIONING",
           seatLimit,
           clientLimit,
           perAdvisorClientLimit,
@@ -856,7 +853,7 @@ export async function createEnterpriseByAdmin(input: unknown) {
         },
       });
 
-      const soloCancel = await cancelSoloSubscriptionForEnterprise(
+      await cancelSoloSubscriptionForEnterprise(
         owner.id,
         {
           reason: "enterprise_owner_provision",
@@ -864,7 +861,6 @@ export async function createEnterpriseByAdmin(input: unknown) {
         },
         tx
       );
-      soloStripeSubscriptionId = soloCancel.stripeSubscriptionId;
 
       await tx.advisorProfile.update({
         where: { id: owner.advisorProfile!.id },
@@ -942,28 +938,8 @@ export async function createEnterpriseByAdmin(input: unknown) {
         });
       }
 
-      const { transferAdvisorAssetsToEnterprise } = await import(
-        "@/lib/enterprise/transfer-advisor-assets"
-      );
-      await transferAdvisorAssetsToEnterprise(
-        tx,
-        owner.advisorProfile!.id,
-        enterprise.id,
-      );
-
       return { enterprise, membership, subscription };
     });
-
-    await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
-
-    const { syncEnterpriseRulesToMembers } = await import(
-      "@/lib/methodology/clone-enterprise-defaults"
-    );
-    const { syncEnterpriseMethodologyToMembers } = await import(
-      "@/lib/methodology/clone-enterprise-methodology"
-    );
-    await syncEnterpriseRulesToMembers(result.enterprise.id);
-    await syncEnterpriseMethodologyToMembers(result.enterprise.id);
 
     await writeAudit({
       actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
@@ -979,6 +955,8 @@ export async function createEnterpriseByAdmin(input: unknown) {
         perAdvisorClientLimit,
         paymentMethod: parsed.data.paymentMethod,
         moduleTier,
+        status: "PROVISIONING",
+        provisionSubmitted: true,
       },
     });
 
@@ -986,8 +964,17 @@ export async function createEnterpriseByAdmin(input: unknown) {
     revalidatePath("/admin/enterprises");
     revalidatePath("/admin");
 
+    const provisionActor = {
+      userId: actorUserId,
+      email: actorEmail,
+      role: actorRole as UserRole,
+    };
+
+    scheduleEnterpriseProvision(result.enterprise.id, provisionActor);
+
     return {
       success: true,
+      queued: true,
       enterpriseId: result.enterprise.id,
       subscriptionId: result.subscription.id,
       ownerMembershipId: result.membership.id,
@@ -1098,6 +1085,46 @@ export async function updateEnterpriseModuleTierByAdmin(input: unknown) {
     return {
       success: false,
       error: safeErrorMessage(e, "Failed to update module tier"),
+    };
+  }
+}
+
+export async function retryEnterpriseProvisionByAdmin(input: unknown) {
+  try {
+    const { userId, email, role } = await requireAdminRole();
+    const parsed = enterpriseIdSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    const enterprise = await prisma.advisorEnterprise.findUnique({
+      where: { id: parsed.data.enterpriseId },
+      select: { id: true, status: true },
+    });
+    if (!enterprise) {
+      return { success: false, error: "Enterprise not found" };
+    }
+    if (enterprise.status !== "PROVISIONING") {
+      return {
+        success: false,
+        error: "Provisioning can only be retried while the firm is still provisioning",
+      };
+    }
+
+    const actor = { userId, email, role: role as UserRole };
+    const queued = await queueEnterpriseProvision(parsed.data.enterpriseId, actor);
+    revalidateEnterpriseAdminPaths(parsed.data.enterpriseId);
+    return { success: true as const, queued: true, mode: queued.mode };
+  } catch (e) {
+    logSafeError("admin/retryEnterpriseProvision", e);
+    return {
+      success: false,
+      error: safeErrorMessage(e, "Failed to retry provisioning"),
     };
   }
 }

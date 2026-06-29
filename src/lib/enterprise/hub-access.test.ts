@@ -44,9 +44,25 @@ describe("getAdvisorHubAccessForUserId — enterprise suspended", () => {
     });
     prismaSpies.enterpriseMembership.findUnique.mockResolvedValue({
       status: "SUSPENDED",
+      enterprise: { status: "ACTIVE" },
     });
 
     const result = await getAdvisorHubAccessForUserId("user-1");
     expect(result).toEqual({ allowed: false, blockReason: "suspended" });
+  });
+
+  it("denies hub access while firm is PROVISIONING", async () => {
+    prismaSpies.user.findUnique.mockResolvedValue({
+      role: "ADVISOR",
+      deletedAt: null,
+      advisorPortalAccessEnabled: true,
+    });
+    prismaSpies.enterpriseMembership.findUnique.mockResolvedValue({
+      status: "ACTIVE",
+      enterprise: { status: "PROVISIONING" },
+    });
+
+    const result = await getAdvisorHubAccessForUserId("user-1");
+    expect(result).toEqual({ allowed: false, blockReason: "provisioning" });
   });
 });

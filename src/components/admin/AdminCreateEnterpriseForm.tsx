@@ -34,14 +34,22 @@ import {
   ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT,
   ENTERPRISE_DEFAULT_SEAT_LIMIT,
 } from "@/lib/enterprise/constants";
+import {
+  SUBDOMAIN_SLUG_INPUT_PATTERN,
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_MIN_LENGTH,
+  SUBDOMAIN_SLUG_REGEX,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+  sanitizeSubdomainSlugInput,
+} from "@/lib/advisor/subdomain-slug-input";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   slug: z
     .string()
-    .min(3, "Slug must be at least 3 characters")
-    .max(20)
-    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers, and hyphens only"),
+    .min(SUBDOMAIN_SLUG_MIN_LENGTH, SUBDOMAIN_SLUG_VALIDATION_MESSAGE)
+    .max(SUBDOMAIN_SLUG_MAX_LENGTH)
+    .regex(SUBDOMAIN_SLUG_REGEX, SUBDOMAIN_SLUG_VALIDATION_MESSAGE),
   ownerUserId: z.string().min(1, "Select an owner"),
   moduleTier: z.enum(["ESSENTIALS", "PROFESSIONAL", "BUSINESS", "PLATINUM"]),
   seatLimit: z.string().optional(),
@@ -121,11 +129,19 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
       };
       const result = await createEnterpriseByAdmin(payload);
       if (!result.success) {
-        toast.error(result.error ?? "Failed to create enterprise.");
+        toast.error(result.error ?? "Failed to submit enterprise provisioning.");
         return;
       }
-      toast.success("Enterprise firm created.");
-      router.push("/admin/enterprises");
+      toast.success(
+        result.queued
+          ? "Provisioning submitted. Firm setup will complete in the background."
+          : "Enterprise firm created.",
+      );
+      router.push(
+        result.enterpriseId
+          ? `/admin/enterprises/${result.enterpriseId}`
+          : "/admin/enterprises",
+      );
       router.refresh();
     } catch {
       toast.error("Failed to create enterprise.");
@@ -159,7 +175,24 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
 
             <div className="space-y-2">
               <Label htmlFor="enterprise-slug">Subdomain slug</Label>
-              <Input id="enterprise-slug" placeholder="acme-wealth" {...register("slug")} />
+              <Input
+                id="enterprise-slug"
+                placeholder="acme-wealth"
+                maxLength={SUBDOMAIN_SLUG_MAX_LENGTH}
+                pattern={SUBDOMAIN_SLUG_INPUT_PATTERN}
+                title={SUBDOMAIN_SLUG_VALIDATION_MESSAGE}
+                spellCheck={false}
+                autoComplete="off"
+                autoCapitalize="off"
+                inputMode="url"
+                {...register("slug", {
+                  onChange: (event) => {
+                    const sanitized = sanitizeSubdomainSlugInput(event.target.value);
+                    setValue("slug", sanitized, { shouldValidate: true });
+                  },
+                })}
+              />
+              <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>
               {errors.slug ? (
                 <p className="text-sm text-destructive">{errors.slug.message}</p>
               ) : null}

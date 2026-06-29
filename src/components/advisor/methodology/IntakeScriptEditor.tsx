@@ -1,6 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import type { AdvisorQuestionSource } from "@prisma/client";
 import {
   createAdvisorIntakeQuestion,
@@ -25,7 +27,27 @@ type IntakeRow = {
 };
 
 export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [createFormKey, setCreateFormKey] = useState(0);
+
+  const refreshAfterSuccess = (onSuccess?: () => void) => {
+    onSuccess?.();
+    startTransition(() => router.refresh());
+  };
+
+  const handleMutationResult = (
+    result: { success: boolean; error?: string },
+    successMessage: string,
+    onSuccess?: () => void,
+  ) => {
+    if (!result.success) {
+      toast.error(result.error ?? "Something went wrong");
+      return;
+    }
+    toast.success(successMessage);
+    refreshAfterSuccess(onSuccess);
+  };
 
   return (
     <div className="space-y-4">
@@ -47,7 +69,8 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
                 onClick={() => {
                   if (!window.confirm("Remove this custom question?")) return;
                   startTransition(async () => {
-                    await deleteAdvisorIntakeQuestion(q.id);
+                    const result = await deleteAdvisorIntakeQuestion(q.id);
+                    handleMutationResult(result, "Custom question removed");
                   });
                 }}
               >
@@ -61,9 +84,14 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
                 defaultChecked={q.isVisible}
                 onCheckedChange={(checked) => {
                   startTransition(async () => {
-                    await updateAdvisorIntakeQuestion(q.id, {
+                    const result = await updateAdvisorIntakeQuestion(q.id, {
                       isVisible: checked === true,
                     });
+                    if (!result.success) {
+                      toast.error(result.error ?? "Failed to update visibility");
+                      return;
+                    }
+                    refreshAfterSuccess();
                   });
                 }}
               />
@@ -74,10 +102,11 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
               className="space-y-3"
               action={(formData) => {
                 startTransition(async () => {
-                  await updateAdvisorIntakeQuestion(q.id, {
+                  const result = await updateAdvisorIntakeQuestion(q.id, {
                     questionText: formData.get("questionText")?.toString() ?? q.questionText,
                     context: formData.get("context")?.toString() ?? null,
                   });
+                  handleMutationResult(result, "Question saved");
                 });
               }}
             >
@@ -112,12 +141,16 @@ export function IntakeScriptEditor({ questions }: { questions: IntakeRow[] }) {
             questions can be edited or hidden but not removed.
           </p>
           <form
+            key={createFormKey}
             className="space-y-3"
             action={(formData) => {
               startTransition(async () => {
-                await createAdvisorIntakeQuestion({
+                const result = await createAdvisorIntakeQuestion({
                   questionText: formData.get("questionText")?.toString() ?? "",
                   context: formData.get("context")?.toString() || null,
+                });
+                handleMutationResult(result, "Custom question added", () => {
+                  setCreateFormKey((key) => key + 1);
                 });
               });
             }}

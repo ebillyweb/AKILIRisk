@@ -6,7 +6,7 @@ import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { loadEnterpriseAssessmentQuestions } from "@/lib/methodology/enterprise-methodology-queries";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EnterpriseAssessmentQuestionsEditor } from "@/components/advisor/enterprise/EnterpriseAssessmentQuestionsEditor";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
@@ -45,28 +45,24 @@ export default async function EnterpriseMethodologyQuestionsPage({
         description="Firm-wide assessment questions sync to all member advisors."
       />
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            {questions.length} question{questions.length === 1 ? "" : "s"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {questions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No questions for this pillar yet.</p>
-          ) : (
-            <EnterpriseAssessmentQuestionsEditor
-              pillarSlug={slug}
-              questions={questions.map((q) => ({
-                id: q.id,
-                sourceKind: q.sourceKind,
-                questionNumber: q.questionNumber,
-                questionText: q.questionText,
-                whyThisMatters: q.whyThisMatters,
-                recommendedActions: q.recommendedActions,
-                isVisible: q.isVisible,
-              }))}
-            />
-          )}
+        <CardContent className="pt-6" data-tour="config-primary-form">
+          <EnterpriseAssessmentQuestionsEditor
+            pillarSlug={slug}
+            questions={questions.map((q) => ({
+              id: q.id,
+              sourceKind: q.sourceKind,
+              questionNumber: q.questionNumber,
+              questionText: q.questionText,
+              answerType: q.answerType,
+              answer0: q.answer0,
+              answer1: q.answer1,
+              answer2: q.answer2,
+              answer3: q.answer3,
+              whyThisMatters: q.whyThisMatters,
+              recommendedActions: q.recommendedActions,
+              isVisible: q.isVisible,
+            }))}
+          />
         </CardContent>
       </Card>
       <div className="flex flex-wrap gap-2">

@@ -149,6 +149,7 @@ enum EnterprisePaymentMethod {
 
 enum AdvisorEnterpriseStatus {
   ACTIVE
+  PROVISIONING
   SUSPENDED
 }
 
@@ -1843,6 +1844,10 @@ model AdvisorPillarQuestion {
   questionText       String                 @map("question_text") @db.Text
   answerType         String                 @default("scored_0_3") @map("answer_type") @db.VarChar(50)
   scoreMap           Json                   @map("score_map")
+  answer0            String?                @map("answer_0") @db.Text
+  answer1            String?                @map("answer_1") @db.Text
+  answer2            String?                @map("answer_2") @db.Text
+  answer3            String?                @map("answer_3") @db.Text
   whyThisMatters     String?                @map("why_this_matters") @db.Text
   recommendedActions String?                @map("recommended_actions") @db.Text
   isVisible          Boolean                @default(true) @map("is_visible")
@@ -1958,6 +1963,10 @@ model EnterprisePillarQuestion {
   questionText       String                @map("question_text") @db.Text
   answerType         String                @default("scored_0_3") @map("answer_type") @db.VarChar(50)
   scoreMap           Json                  @map("score_map")
+  answer0            String?               @map("answer_0") @db.Text
+  answer1            String?               @map("answer_1") @db.Text
+  answer2            String?               @map("answer_2") @db.Text
+  answer3            String?               @map("answer_3") @db.Text
   whyThisMatters     String?               @map("why_this_matters") @db.Text
   recommendedActions String?               @map("recommended_actions") @db.Text
   isVisible          Boolean               @default(true) @map("is_visible")

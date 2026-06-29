@@ -7,6 +7,12 @@ import {
   isSubdomainAutoActivateEnabled,
   toTenantHostLabel,
 } from '@/lib/advisor/platform-subdomain';
+import {
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_MIN_LENGTH,
+  SUBDOMAIN_SLUG_REGEX,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+} from '@/lib/advisor/subdomain-slug-input';
 
 /** Shape passed from the server into SubdomainManager after a claim. */
 export interface AdvisorSubdomainSettings {
@@ -162,15 +168,14 @@ export function getSubdomainCacheStats() {
  */
 export function validateSubdomainFormat(subdomain: string): { valid: boolean; error?: string } {
   // Check length
-  if (subdomain.length < 3 || subdomain.length > 20) {
-    return { valid: false, error: 'Subdomain must be 3-20 characters long' };
+  if (subdomain.length < SUBDOMAIN_SLUG_MIN_LENGTH || subdomain.length > SUBDOMAIN_SLUG_MAX_LENGTH) {
+    return { valid: false, error: SUBDOMAIN_SLUG_VALIDATION_MESSAGE };
   }
 
-  const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
-  if (!subdomainRegex.test(subdomain)) {
+  if (!SUBDOMAIN_SLUG_REGEX.test(subdomain)) {
     return {
       valid: false,
-      error: 'Subdomain can only contain lowercase letters, numbers, and hyphens (not at start/end)'
+      error: SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
     };
   }
 

@@ -167,6 +167,10 @@ export async function transferAdvisorMethodologyToEnterpriseInTx(
         questionText: row.questionText,
         answerType: row.answerType,
         scoreMap: row.scoreMap as Prisma.InputJsonValue,
+        answer0: row.answer0,
+        answer1: row.answer1,
+        answer2: row.answer2,
+        answer3: row.answer3,
         whyThisMatters: row.whyThisMatters,
         recommendedActions: row.recommendedActions,
         isVisible: row.isVisible,
@@ -278,6 +282,10 @@ async function mergeAdvisorMethodologyIntoEnterpriseInTx(
         questionText: row.questionText,
         answerType: row.answerType,
         scoreMap: row.scoreMap as Prisma.InputJsonValue,
+        answer0: row.answer0,
+        answer1: row.answer1,
+        answer2: row.answer2,
+        answer3: row.answer3,
         whyThisMatters: row.whyThisMatters,
         recommendedActions: row.recommendedActions,
         isVisible: row.isVisible,
@@ -661,6 +669,10 @@ function buildAdvisorAssessmentCloneCreate(
     questionText: string;
     answerType: string;
     scoreMap: unknown;
+    answer0: string | null;
+    answer1: string | null;
+    answer2: string | null;
+    answer3: string | null;
     whyThisMatters: string | null;
     recommendedActions: string | null;
     isVisible: boolean;
@@ -682,6 +694,10 @@ function buildAdvisorAssessmentCloneCreate(
     questionText: ent.questionText,
     answerType: ent.answerType,
     scoreMap: ent.scoreMap as Prisma.InputJsonValue,
+    answer0: ent.answer0,
+    answer1: ent.answer1,
+    answer2: ent.answer2,
+    answer3: ent.answer3,
     whyThisMatters: ent.whyThisMatters,
     recommendedActions: ent.recommendedActions,
     isVisible: ent.isVisible,
@@ -696,7 +712,12 @@ function buildAdvisorAssessmentCloneUpdate(ent: {
   recommendedActions: string | null;
   isVisible: boolean;
   displayOrder: number;
+  answerType: string;
   scoreMap: unknown;
+  answer0: string | null;
+  answer1: string | null;
+  answer2: string | null;
+  answer3: string | null;
 }): Prisma.AdvisorPillarQuestionUpdateInput {
   return {
     questionText: ent.questionText,
@@ -704,7 +725,12 @@ function buildAdvisorAssessmentCloneUpdate(ent: {
     recommendedActions: ent.recommendedActions,
     isVisible: ent.isVisible,
     displayOrder: ent.displayOrder,
+    answerType: ent.answerType,
     scoreMap: ent.scoreMap as Prisma.InputJsonValue,
+    answer0: ent.answer0,
+    answer1: ent.answer1,
+    answer2: ent.answer2,
+    answer3: ent.answer3,
     version: { increment: 1 },
   };
 }
@@ -833,6 +859,10 @@ async function createEnterprisePlatformAssessmentClone(
       questionText: row.questionText,
       answerType: row.answerType,
       scoreMap: wire.scoreMap as Prisma.InputJsonValue,
+      answer0: row.answer0,
+      answer1: row.answer1,
+      answer2: row.answer2,
+      answer3: row.answer3,
       whyThisMatters: row.whyThisMatters,
       recommendedActions: row.recommendedActions,
       isVisible: row.isVisible,

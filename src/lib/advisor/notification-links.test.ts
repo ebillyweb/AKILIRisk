@@ -14,6 +14,15 @@ describe("advisorNotificationHref", () => {
     ).toBe("/advisor/review/intake-1");
   });
 
+  it("routes enterprise provision SYSTEM notifications to billing", () => {
+    expect(
+      advisorNotificationHref({
+        type: "SYSTEM",
+        referenceId: "enterprise-active:ent-123",
+      }),
+    ).toBe("/advisor/billing");
+  });
+
   it("falls back to the notifications hub", () => {
     expect(advisorNotificationHref({ type: "SYSTEM", referenceId: null })).toBe(
       "/advisor/notifications"

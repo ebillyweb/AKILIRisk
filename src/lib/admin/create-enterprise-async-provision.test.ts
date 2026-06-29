@@ -6,13 +6,11 @@ const prismaSpies = vi.hoisted(() => ({
   $transaction: vi.fn(),
 }));
 
-const transferAssets = vi.hoisted(() => vi.fn(async () => undefined));
-const syncRules = vi.hoisted(() => vi.fn(async () => ({ advisorsUpdated: 0 })));
-const syncMethodology = vi.hoisted(() => vi.fn(async () => ({ advisorsUpdated: 0 })));
-const cancelSolo = vi.hoisted(() =>
-  vi.fn(async () => ({ stripeSubscriptionId: "sub_solo_owner" as string | null })),
+const enterpriseCreate = vi.hoisted(() => vi.fn());
+const scheduleProvision = vi.hoisted(() => vi.fn());
+const queueProvision = vi.hoisted(() =>
+  vi.fn(async () => ({ queued: true, mode: "legacy" as const })),
 );
-const cancelStripe = vi.hoisted(() => vi.fn(async () => undefined));
 const writeAudit = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
@@ -35,20 +33,15 @@ vi.mock("@/lib/advisor/platform-subdomain", () => ({
     verifiedAt: new Date("2026-01-01"),
   })),
 }));
-vi.mock("@/lib/enterprise/transfer-advisor-assets", () => ({
-  transferAdvisorAssetsToEnterprise: transferAssets,
-}));
-vi.mock("@/lib/methodology/clone-enterprise-defaults", () => ({
-  syncEnterpriseRulesToMembers: syncRules,
-}));
-vi.mock("@/lib/methodology/clone-enterprise-methodology", () => ({
-  syncEnterpriseMethodologyToMembers: syncMethodology,
+vi.mock("@/lib/enterprise/schedule-enterprise-provision", () => ({
+  scheduleEnterpriseProvision: scheduleProvision,
+  queueEnterpriseProvision: queueProvision,
 }));
 vi.mock("@/lib/enterprise/cancel-solo-subscription", () => ({
-  cancelSoloSubscriptionForEnterprise: cancelSolo,
-}));
-vi.mock("@/lib/billing/cancel-stripe-subscription", () => ({
-  cancelStripeSubscriptionBestEffort: cancelStripe,
+  cancelSoloSubscriptionForEnterprise: vi.fn(async () => ({
+    cancelled: true,
+    stripeSubscriptionId: "sub_solo_owner",
+  })),
 }));
 vi.mock("@/lib/audit/audit-log", () => ({
   writeAudit,
@@ -62,7 +55,7 @@ const OWNER_USER_ID = "clp8v0abc12345678901234567";
 const OWNER_PROFILE_ID = "adv-owner-profile";
 const ENTERPRISE_ID = "ent-new-1";
 
-describe("createEnterpriseByAdmin — methodology sync", () => {
+describe("createEnterpriseByAdmin — async provision", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -73,15 +66,15 @@ describe("createEnterpriseByAdmin — methodology sync", () => {
     });
     prismaSpies.advisorEnterprise.findUnique.mockResolvedValue(null);
 
+    enterpriseCreate.mockResolvedValue({
+      id: ENTERPRISE_ID,
+      name: "Belvedere Group",
+      slug: "belvedere-group",
+    });
+
     prismaSpies.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
-        advisorEnterprise: {
-          create: vi.fn().mockResolvedValue({
-            id: ENTERPRISE_ID,
-            name: "Belvedere Group",
-            slug: "belvedere-group",
-          }),
-        },
+        advisorEnterprise: { create: enterpriseCreate },
         advisorProfile: { update: vi.fn() },
         enterpriseMembership: {
           create: vi.fn().mockResolvedValue({ id: "membership-owner-1" }),
@@ -99,7 +92,7 @@ describe("createEnterpriseByAdmin — methodology sync", () => {
     });
   });
 
-  it("transfers owner methodology into the firm and syncs members after provision", async () => {
+  it("creates a PROVISIONING firm shell and schedules background finalize", async () => {
     const result = await createEnterpriseByAdmin({
       name: "Belvedere Group",
       slug: "belvedere-group",
@@ -109,15 +102,27 @@ describe("createEnterpriseByAdmin — methodology sync", () => {
     });
 
     expect(result.success).toBe(true);
+    expect(result.queued).toBe(true);
     expect(result.enterpriseId).toBe(ENTERPRISE_ID);
-    expect(transferAssets).toHaveBeenCalledWith(
-      expect.anything(),
-      OWNER_PROFILE_ID,
+
+    expect(enterpriseCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        status: "PROVISIONING",
+        slug: "belvedere-group",
+      }),
+    });
+
+    expect(scheduleProvision).toHaveBeenCalledWith(
       ENTERPRISE_ID,
+      expect.objectContaining({ userId: "admin-1" }),
     );
-    expect(syncRules).toHaveBeenCalledWith(ENTERPRISE_ID);
-    expect(syncMethodology).toHaveBeenCalledWith(ENTERPRISE_ID);
-    expect(cancelStripe).toHaveBeenCalledWith("sub_solo_owner");
-    expect(writeAudit).toHaveBeenCalled();
+    expect(writeAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        afterData: expect.objectContaining({
+          status: "PROVISIONING",
+          provisionSubmitted: true,
+        }),
+      }),
+    );
   });
 });

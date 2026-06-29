@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,12 @@ import { toast } from 'react-hot-toast';
 import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
 import { SubscriptionFeatures } from '@/lib/validation/branding';
 import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
+import {
+  SUBDOMAIN_SLUG_INPUT_PATTERN,
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+  sanitizeSubdomainSlugInput,
+} from '@/lib/advisor/subdomain-slug-input';
 
 interface SubdomainManagerProps {
   features: SubscriptionFeatures;
@@ -166,6 +172,24 @@ export function SubdomainManager({
     toast.success('Copied to clipboard');
   };
 
+  const handleSubdomainInput = (value: string) => {
+    setSubdomain(sanitizeSubdomainSlugInput(value));
+  };
+
+  const subdomainInputProps = {
+    value: subdomain,
+    onChange: (e: ChangeEvent<HTMLInputElement>) => handleSubdomainInput(e.target.value),
+    placeholder: 'yourname',
+    className: 'rounded-r-none font-mono',
+    maxLength: SUBDOMAIN_SLUG_MAX_LENGTH,
+    pattern: SUBDOMAIN_SLUG_INPUT_PATTERN,
+    title: SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+    spellCheck: false,
+    autoComplete: 'off',
+    autoCapitalize: 'off',
+    inputMode: 'url' as const,
+  };
+
   const getStatusBadge = (data: AdvisorSubdomainSettings) => {
     if (data.status === 'active' || (data.dnsVerified && data.sslProvisioned)) {
       return (
@@ -290,18 +314,12 @@ export function SubdomainManager({
                 <div className="space-y-2">
                   <Label htmlFor="new-subdomain">New Subdomain</Label>
                   <div className="flex">
-                    <Input
-                      id="new-subdomain"
-                      value={subdomain}
-                      onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
-                      placeholder="yourname"
-                      className="rounded-r-none font-mono"
-                      maxLength={20}
-                    />
+                    <Input id="new-subdomain" {...subdomainInputProps} />
                     <div className="px-3 py-2 bg-muted text-sm rounded-r-md border border-l-0 flex items-center">
                       {domainSuffix}
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>
                 </div>
 
                 {subdomain && (
@@ -330,7 +348,7 @@ export function SubdomainManager({
                           key={index}
                           variant="outline"
                           size="sm"
-                          onClick={() => setSubdomain(suggestion)}
+                          onClick={() => handleSubdomainInput(suggestion)}
                           className="text-xs"
                         >
                           {suggestion}
@@ -394,18 +412,12 @@ export function SubdomainManager({
               <div className="space-y-2">
                 <Label htmlFor="subdomain">Choose Your Subdomain</Label>
                 <div className="flex">
-                  <Input
-                    id="subdomain"
-                    value={subdomain}
-                    onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
-                    placeholder="yourname"
-                    className="rounded-r-none font-mono"
-                    maxLength={20}
-                  />
+                  <Input id="subdomain" {...subdomainInputProps} />
                   <div className="px-3 py-2 bg-muted text-sm rounded-r-md border border-l-0 flex items-center">
-                    .akiliplatform.com
+                    {domainSuffix}
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>
               </div>
 
               {subdomain && (
@@ -434,7 +446,7 @@ export function SubdomainManager({
                         key={index}
                         variant="outline"
                         size="sm"
-                        onClick={() => setSubdomain(suggestion)}
+                        onClick={() => handleSubdomainInput(suggestion)}
                         className="text-xs"
                       >
                         {suggestion}

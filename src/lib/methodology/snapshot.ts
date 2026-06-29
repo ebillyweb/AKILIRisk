@@ -16,6 +16,7 @@ import type {
   MethodologySnapshotBlob,
   ParsedMethodologySnapshot,
 } from "@/lib/methodology/types";
+import { advisorAssessmentQuestionToWire } from "@/lib/methodology/advisor-assessment-question-config";
 import {
   SNAPSHOT_MAX_BYTES,
   SNAPSHOT_SCHEMA_VERSION,
@@ -101,7 +102,20 @@ export async function buildAdvisorConfigSnapshot(
 
   for (const row of advisorQuestions) {
     if (!scopedSlugs.includes(row.pillar.slug)) continue;
-    const wire = advisorQuestionToWire(row);
+    const wire = advisorAssessmentQuestionToWire({
+      id: row.id,
+      displayOrder: row.displayOrder,
+      questionText: row.questionText,
+      answerType: row.answerType,
+      scoreMap: row.scoreMap,
+      answer0: row.answer0,
+      answer1: row.answer1,
+      answer2: row.answer2,
+      answer3: row.answer3,
+      whyThisMatters: row.whyThisMatters,
+      recommendedActions: row.recommendedActions,
+      pillarSlug: row.pillar.slug,
+    });
     if (!assessmentQuestions[row.pillar.slug]) {
       assessmentQuestions[row.pillar.slug] = [];
     }
@@ -182,42 +196,6 @@ export async function buildAdvisorConfigSnapshot(
     intakeQuestions,
     pillarNarratives,
     recRules,
-  };
-}
-
-function advisorQuestionToWire(
-  row: {
-    id: string;
-    displayOrder: number;
-    questionText: string;
-    answerType: string;
-    scoreMap: unknown;
-    whyThisMatters: string | null;
-    recommendedActions: string | null;
-    pillar: { slug: string };
-  },
-) {
-  const scoreMap = row.scoreMap as Record<string, number>;
-  return {
-    questionId: row.id,
-    riskAreaId: row.pillar.slug,
-    sortOrderGlobal: row.displayOrder,
-    text: row.questionText,
-    helpText: row.whyThisMatters ?? null,
-    learnMore: row.recommendedActions ?? null,
-    riskRelevance: row.whyThisMatters ?? null,
-    type: row.answerType === "likert_5" ? ("likert" as const) : ("maturity-scale" as const),
-    options: [0, 1, 2, 3].map((value) => ({
-      value,
-      label: String(value),
-    })),
-    required: true,
-    weight: 2,
-    scoreMap,
-    branchingDependsOn: null,
-    branchingPredicate: null,
-    profileConditionKey: null,
-    omitMaturityScoreWhenYes: false,
   };
 }
 

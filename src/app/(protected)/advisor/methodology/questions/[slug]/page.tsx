@@ -5,7 +5,7 @@ import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { loadAdvisorAssessmentQuestions } from "@/lib/methodology/methodology-queries";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { AssessmentQuestionsEditor } from "@/components/advisor/methodology/AssessmentQuestionsEditor";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
@@ -42,28 +42,24 @@ export default async function MethodologyQuestionsPage({
         description="Edit or hide platform base questions, or add custom questions for your clients. Changes apply to new intakes only."
       />
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            {questions.length} question{questions.length === 1 ? "" : "s"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent data-tour="config-primary-form">
-          {questions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No questions for this pillar yet.</p>
-          ) : (
-            <AssessmentQuestionsEditor
-              pillarSlug={slug}
-              questions={questions.map((q) => ({
-                id: q.id,
-                sourceKind: q.sourceKind,
-                questionNumber: q.questionNumber,
-                questionText: q.questionText,
-                whyThisMatters: q.whyThisMatters,
-                recommendedActions: q.recommendedActions,
-                isVisible: q.isVisible,
-              }))}
-            />
-          )}
+        <CardContent className="pt-6" data-tour="config-primary-form">
+          <AssessmentQuestionsEditor
+            pillarSlug={slug}
+            questions={questions.map((q) => ({
+              id: q.id,
+              sourceKind: q.sourceKind,
+              questionNumber: q.questionNumber,
+              questionText: q.questionText,
+              answerType: q.answerType,
+              answer0: q.answer0,
+              answer1: q.answer1,
+              answer2: q.answer2,
+              answer3: q.answer3,
+              whyThisMatters: q.whyThisMatters,
+              recommendedActions: q.recommendedActions,
+              isVisible: q.isVisible,
+            }))}
+          />
         </CardContent>
       </Card>
       <div className="flex flex-wrap gap-2">
