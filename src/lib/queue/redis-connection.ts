@@ -10,11 +10,22 @@ type RedisEnv = {
   KV_REST_API_TOKEN?: string;
 };
 
+function readRedisEnvFromProcess(): RedisEnv {
+  return {
+    REDIS_URL: process.env.REDIS_URL,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+    KV_REST_API_URL: process.env.KV_REST_API_URL,
+    KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN,
+  };
+}
+
 /** @internal Exported for unit tests. */
 export function resolveBullMqConnectionFromEnv(
-  env: RedisEnv = process.env,
+  env?: RedisEnv,
 ): ConnectionOptions | null {
-  const explicitUrl = env.REDIS_URL?.trim();
+  const resolved = env ?? readRedisEnvFromProcess();
+  const explicitUrl = resolved.REDIS_URL?.trim();
   if (explicitUrl) {
     return {
       url: explicitUrl,
@@ -23,9 +34,11 @@ export function resolveBullMqConnectionFromEnv(
     };
   }
 
-  const restUrl = env.UPSTASH_REDIS_REST_URL?.trim() || env.KV_REST_API_URL?.trim();
+  const restUrl =
+    resolved.UPSTASH_REDIS_REST_URL?.trim() || resolved.KV_REST_API_URL?.trim();
   const token =
-    env.UPSTASH_REDIS_REST_TOKEN?.trim() || env.KV_REST_API_TOKEN?.trim();
+    resolved.UPSTASH_REDIS_REST_TOKEN?.trim() ||
+    resolved.KV_REST_API_TOKEN?.trim();
   if (!restUrl || !token) {
     return null;
   }
@@ -49,7 +62,7 @@ export function resolveBullMqConnectionFromEnv(
   };
 }
 
-export function isRedisConfigured(env: RedisEnv = process.env): boolean {
+export function isRedisConfigured(env?: RedisEnv): boolean {
   return resolveBullMqConnectionFromEnv(env) !== null;
 }
 
