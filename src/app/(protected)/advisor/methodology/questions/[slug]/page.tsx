@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AssessmentQuestionsEditor } from "@/components/advisor/methodology/AssessmentQuestionsEditor";
+import { MethodologyPillarTabs } from "@/components/advisor/methodology/MethodologyPillarTabs";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyQuestionsPage({
@@ -67,20 +68,11 @@ export default async function MethodologyQuestionsPage({
           />
         </CardContent>
       </Card>
-      <div className="flex flex-wrap gap-2">
-        {activePillars.map((p) => (
-          <Button
-            key={p.pillarId}
-            variant={p.slug === slug ? "default" : "outline"}
-            size="sm"
-            asChild
-          >
-            <Link href={`/advisor/methodology/questions/${p.slug}`}>
-              {methodologyPillarDisplayName(p)}
-            </Link>
-          </Button>
-        ))}
-      </div>
+      <MethodologyPillarTabs
+        pillars={activePillars}
+        activeSlug={slug}
+        hrefForSlug={(pillarSlug) => `/advisor/methodology/questions/${pillarSlug}`}
+      />
     </div>
   );
 }

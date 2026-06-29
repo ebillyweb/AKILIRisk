@@ -10,6 +10,7 @@ import {
 import { narrativeStarterForSlug } from "@/lib/methodology/narrative-starter";
 import { Button } from "@/components/ui/button";
 import { NarrativeEditor } from "@/components/advisor/methodology/NarrativeEditor";
+import { MethodologyPillarTabs } from "@/components/advisor/methodology/MethodologyPillarTabs";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyNarrativesPage({
@@ -64,20 +65,11 @@ export default async function MethodologyNarrativesPage({
         midBand={midBand as { critical: string[]; high: string[]; medium: string[]; low: string[] }}
         />
       </div>
-      <div className="flex flex-wrap gap-2">
-        {activePillars.map((p) => (
-          <Button
-            key={p.pillarId}
-            variant={p.slug === slug ? "default" : "outline"}
-            size="sm"
-            asChild
-          >
-            <Link href={`/advisor/methodology/narratives/${p.slug}`}>
-              {methodologyPillarDisplayName(p)}
-            </Link>
-          </Button>
-        ))}
-      </div>
+      <MethodologyPillarTabs
+        pillars={activePillars}
+        activeSlug={slug}
+        hrefForSlug={(pillarSlug) => `/advisor/methodology/narratives/${pillarSlug}`}
+      />
     </div>
   );
 }

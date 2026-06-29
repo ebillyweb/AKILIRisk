@@ -99,10 +99,9 @@ export async function loadAdvisorMethodologyPillars(
       slug: pillar.slug,
       canonicalName: pillar.canonicalName,
       description: pillar.description,
-      isActive:
-        override?.enterpriseSourceId && enterpriseOverride
-          ? enterpriseOverride.isActive
-          : (override?.isActive ?? defaultIsActive),
+      isActive: enterpriseId
+        ? (enterpriseOverride?.isActive ?? false)
+        : (override?.isActive ?? defaultIsActive),
       displayName:
         override?.displayName ?? enterpriseOverride?.displayName ?? null,
       weight: override?.weight ?? enterpriseOverride?.weight ?? 10,

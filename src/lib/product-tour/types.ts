@@ -15,7 +15,6 @@ export const TOUR_IDS = [
   "advisor-methodology-intake",
   "advisor-methodology-questions",
   "advisor-methodology-narratives",
-  "advisor-methodology-preview",
   "advisor-methodology-versions",
   "advisor-methodology-catalog-updates",
   "advisor-recommendation-rules",

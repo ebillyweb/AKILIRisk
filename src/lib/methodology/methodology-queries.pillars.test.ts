@@ -55,11 +55,11 @@ describe("loadAdvisorMethodologyPillars", () => {
     expect(pillars.find((p) => p.slug === "cyber")?.isActive).toBe(false);
   });
 
-  it("prefers enterprise isActive for linked advisor overrides", async () => {
+  it("ignores stale solo advisor overrides for enterprise team members", async () => {
     prismaSpies.advisorPillarOverride.findMany.mockResolvedValue([
       {
         pillarId: "pillar-cyber",
-        enterpriseSourceId: "ent-override-cyber",
+        enterpriseSourceId: null,
         isActive: true,
         displayName: null,
         weight: 10,
@@ -68,10 +68,6 @@ describe("loadAdvisorMethodologyPillars", () => {
         displayOrder: 2,
         version: 1,
       },
-    ]);
-    prismaSpies.enterprisePillarOverride.findMany.mockResolvedValue([
-      { id: "ent-override-gov", pillarId: "pillar-gov", isActive: true, displayName: null, weight: 10, threshold: null, emphasisMultiplier: 1.5, displayOrder: 1 },
-      { id: "ent-override-cyber", pillarId: "pillar-cyber", isActive: false, displayName: null, weight: 10, threshold: null, emphasisMultiplier: 1.5, displayOrder: 2 },
     ]);
 
     const pillars = await loadAdvisorMethodologyPillars("profile-1");

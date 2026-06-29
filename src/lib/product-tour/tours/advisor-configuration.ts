@@ -99,24 +99,6 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       },
     },
   ],
-  "advisor-methodology-preview": [
-    {
-      popover: {
-        title: "Preview as client",
-        description:
-          "Dry-run your live methodology without starting an intake — see pillars, questions, and rules as configured now.",
-      },
-    },
-    {
-      element: '[data-tour="config-primary-list"]',
-      popover: {
-        title: "Live snapshot summary",
-        description:
-          "Active pillars, intake question count, and recommendation rules reflect your current configuration.",
-        side: "top",
-      },
-    },
-  ],
   "advisor-methodology-versions": [
     {
       popover: {

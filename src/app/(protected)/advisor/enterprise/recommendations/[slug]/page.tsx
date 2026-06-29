@@ -6,11 +6,15 @@ import { serviceIdFromRulePayload } from "@/lib/admin/recommendation-rule-ui";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { loadEnterpriseRecommendationRules } from "@/lib/methodology/enterprise-recommendation-queries";
-import { loadActiveServiceRecommendations } from "@/lib/methodology/methodology-queries";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import { loadActiveEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
+import {
+  loadActiveServiceRecommendations,
+  methodologyPillarDisplayName,
+} from "@/lib/methodology/methodology-queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EnterpriseRecommendationRulesEditor } from "@/components/advisor/enterprise/EnterpriseRecommendationRulesEditor";
+import { MethodologyPillarTabs } from "@/components/advisor/methodology/MethodologyPillarTabs";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function EnterpriseRecommendationsPage({
@@ -20,20 +24,22 @@ export default async function EnterpriseRecommendationsPage({
 }) {
   const { slug: rawSlug } = await params;
   const slug = normalizePillarSlug(rawSlug);
-  const pillars = await loadPlatformPillars();
-  const pillar = pillars.find((p) => p.slug === slug);
-  if (!pillar) notFound();
 
   let enterpriseName: string;
   let enterpriseId: string;
+  let activePillars: Awaited<ReturnType<typeof loadActiveEnterpriseMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
     enterpriseName = team.enterpriseName;
     enterpriseId = team.enterpriseId;
+    activePillars = await loadActiveEnterpriseMethodologyPillars(enterpriseId);
   } catch {
     redirect("/signin");
   }
+
+  const pillar = activePillars.find((p) => p.slug === slug);
+  if (!pillar) notFound();
 
   const [rules, services, questionOptions] = await Promise.all([
     loadEnterpriseRecommendationRules(enterpriseId, slug),
@@ -49,7 +55,7 @@ export default async function EnterpriseRecommendationsPage({
       </Button>
       <ConfigurationPageHeader
         tourId="enterprise-recommendation-rules"
-        title={`${enterpriseName} — Recommendation rules — ${pillar.name}`}
+        title={`${enterpriseName} — Recommendation rules — ${methodologyPillarDisplayName(pillar)}`}
         description="Firm-wide recommendation defaults. Changes sync to all member advisors. Individual advisors can further customize their own copies."
       />
       <Card>
@@ -76,20 +82,11 @@ export default async function EnterpriseRecommendationsPage({
           />
         </CardContent>
       </Card>
-      <div className="flex flex-wrap gap-2">
-        {pillars.map((p) => (
-          <Button
-            key={p.id}
-            variant={p.slug === slug ? "default" : "outline"}
-            size="sm"
-            asChild
-          >
-            <Link href={`/advisor/enterprise/recommendations/${p.slug}`}>
-              {p.name}
-            </Link>
-          </Button>
-        ))}
-      </div>
+      <MethodologyPillarTabs
+        pillars={activePillars}
+        activeSlug={slug}
+        hrefForSlug={(pillarSlug) => `/advisor/enterprise/recommendations/${pillarSlug}`}
+      />
     </div>
   );
 }

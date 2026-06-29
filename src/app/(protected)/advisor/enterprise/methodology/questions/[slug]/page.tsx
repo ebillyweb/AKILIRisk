@@ -3,11 +3,15 @@ import { notFound, redirect } from "next/navigation";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
-import { loadEnterpriseAssessmentQuestions } from "@/lib/methodology/enterprise-methodology-queries";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import {
+  loadActiveEnterpriseMethodologyPillars,
+  loadEnterpriseAssessmentQuestions,
+} from "@/lib/methodology/enterprise-methodology-queries";
+import { methodologyPillarDisplayName } from "@/lib/methodology/methodology-queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EnterpriseAssessmentQuestionsEditor } from "@/components/advisor/enterprise/EnterpriseAssessmentQuestionsEditor";
+import { MethodologyPillarTabs } from "@/components/advisor/methodology/MethodologyPillarTabs";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function EnterpriseMethodologyQuestionsPage({
@@ -17,20 +21,22 @@ export default async function EnterpriseMethodologyQuestionsPage({
 }) {
   const { slug: rawSlug } = await params;
   const slug = normalizePillarSlug(rawSlug);
-  const pillars = await loadPlatformPillars();
-  const pillar = pillars.find((p) => p.slug === slug);
-  if (!pillar) notFound();
 
   let enterpriseId: string;
   let enterpriseName: string;
+  let activePillars: Awaited<ReturnType<typeof loadActiveEnterpriseMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
     enterpriseId = team.enterpriseId;
     enterpriseName = team.enterpriseName;
+    activePillars = await loadActiveEnterpriseMethodologyPillars(enterpriseId);
   } catch {
     redirect("/signin");
   }
+
+  const pillar = activePillars.find((p) => p.slug === slug);
+  if (!pillar) notFound();
 
   const questions = await loadEnterpriseAssessmentQuestions(enterpriseId, slug);
 
@@ -41,7 +47,7 @@ export default async function EnterpriseMethodologyQuestionsPage({
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-methodology-questions"
-        title={`${enterpriseName} — Assessment questions (${pillar.name})`}
+        title={`${enterpriseName} — Assessment questions (${methodologyPillarDisplayName(pillar)})`}
         description="Firm-wide assessment questions sync to all member advisors."
       />
       <Card>
@@ -65,18 +71,13 @@ export default async function EnterpriseMethodologyQuestionsPage({
           />
         </CardContent>
       </Card>
-      <div className="flex flex-wrap gap-2">
-        {pillars.map((p) => (
-          <Button
-            key={p.id}
-            variant={p.slug === slug ? "default" : "outline"}
-            size="sm"
-            asChild
-          >
-            <Link href={`/advisor/enterprise/methodology/questions/${p.slug}`}>{p.name}</Link>
-          </Button>
-        ))}
-      </div>
+      <MethodologyPillarTabs
+        pillars={activePillars}
+        activeSlug={slug}
+        hrefForSlug={(pillarSlug) =>
+          `/advisor/enterprise/methodology/questions/${pillarSlug}`
+        }
+      />
     </div>
   );
 }

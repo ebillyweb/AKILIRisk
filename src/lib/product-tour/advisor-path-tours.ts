@@ -21,7 +21,6 @@ export function getAdvisorTourIdForPath(pathname: string): TourId | null {
   if (pathname.startsWith("/advisor/methodology/recommendations/")) {
     return "advisor-recommendation-rules";
   }
-  if (pathname === "/advisor/methodology/preview") return "advisor-methodology-preview";
   if (pathname === "/advisor/methodology/versions") return "advisor-methodology-versions";
   if (pathname === "/advisor/methodology/catalog-updates") {
     return "advisor-methodology-catalog-updates";

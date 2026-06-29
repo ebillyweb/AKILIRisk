@@ -10,7 +10,8 @@ import {
 
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import { loadActiveEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
+import { methodologyPillarDisplayName } from "@/lib/methodology/methodology-queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
@@ -18,15 +19,17 @@ import { ENTERPRISE_METHODOLOGY_HUB_LINKS } from "@/lib/advisor/enterprise-metho
 
 export default async function EnterpriseMethodologyHubPage() {
   let enterpriseName: string;
+  let enterpriseId: string;
   try {
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
     enterpriseName = team.enterpriseName;
+    enterpriseId = team.enterpriseId;
   } catch {
     redirect("/signin");
   }
 
-  const pillars = await loadPlatformPillars();
+  const pillars = await loadActiveEnterpriseMethodologyPillars(enterpriseId);
 
   return (
     <div className="space-y-8">
@@ -45,9 +48,9 @@ export default async function EnterpriseMethodologyHubPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {pillars.map((pillar) => (
-            <Button key={pillar.id} variant="outline" size="sm" asChild>
+            <Button key={pillar.pillarId} variant="outline" size="sm" asChild>
               <Link href={`/advisor/enterprise/methodology/questions/${pillar.slug}`}>
-                {pillar.name}
+                {methodologyPillarDisplayName(pillar)}
               </Link>
             </Button>
           ))}

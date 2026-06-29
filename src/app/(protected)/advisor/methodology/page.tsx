@@ -15,7 +15,6 @@ import {
   Layers,
   ListChecks,
   Sparkles,
-  Eye,
   History,
   Bell,
 } from "lucide-react";
@@ -44,12 +43,6 @@ const LINKS = [
     title: "Recommendation rules",
     description: "Configure service triggers per pillar.",
     icon: Sparkles,
-  },
-  {
-    href: "/advisor/methodology/preview",
-    title: "Preview as client",
-    description: "Dry-run your live methodology without starting an intake.",
-    icon: Eye,
   },
   {
     href: "/advisor/methodology/versions",

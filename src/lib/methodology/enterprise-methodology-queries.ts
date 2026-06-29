@@ -56,6 +56,11 @@ export async function loadEnterpriseMethodologyPillars(enterpriseId: string) {
   });
 }
 
+export async function loadActiveEnterpriseMethodologyPillars(enterpriseId: string) {
+  const pillars = await loadEnterpriseMethodologyPillars(enterpriseId);
+  return pillars.filter((pillar) => pillar.isActive);
+}
+
 export async function loadEnterpriseAssessmentQuestions(
   enterpriseId: string,
   pillarSlug: string,

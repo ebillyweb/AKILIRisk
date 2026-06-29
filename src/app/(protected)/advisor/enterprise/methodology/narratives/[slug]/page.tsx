@@ -3,11 +3,15 @@ import { notFound, redirect } from "next/navigation";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
-import { loadEnterprisePillarNarrative } from "@/lib/methodology/enterprise-methodology-queries";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import {
+  loadActiveEnterpriseMethodologyPillars,
+  loadEnterprisePillarNarrative,
+} from "@/lib/methodology/enterprise-methodology-queries";
+import { methodologyPillarDisplayName } from "@/lib/methodology/methodology-queries";
 import { narrativeStarterForSlug } from "@/lib/methodology/narrative-starter";
 import { Button } from "@/components/ui/button";
 import { EnterpriseNarrativeEditor } from "@/components/advisor/enterprise/EnterpriseNarrativeEditor";
+import { MethodologyPillarTabs } from "@/components/advisor/methodology/MethodologyPillarTabs";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function EnterpriseMethodologyNarrativesPage({
@@ -17,20 +21,22 @@ export default async function EnterpriseMethodologyNarrativesPage({
 }) {
   const { slug: rawSlug } = await params;
   const slug = normalizePillarSlug(rawSlug);
-  const pillars = await loadPlatformPillars();
-  const pillar = pillars.find((p) => p.slug === slug);
-  if (!pillar) notFound();
 
   let enterpriseId: string;
   let enterpriseName: string;
+  let activePillars: Awaited<ReturnType<typeof loadActiveEnterpriseMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
     enterpriseId = team.enterpriseId;
     enterpriseName = team.enterpriseName;
+    activePillars = await loadActiveEnterpriseMethodologyPillars(enterpriseId);
   } catch {
     redirect("/signin");
   }
+
+  const pillar = activePillars.find((p) => p.slug === slug);
+  if (!pillar) notFound();
 
   const row = await loadEnterprisePillarNarrative(enterpriseId, slug);
   const starter = narrativeStarterForSlug(slug);
@@ -51,7 +57,7 @@ export default async function EnterpriseMethodologyNarrativesPage({
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-methodology-narratives"
-        title={`${enterpriseName} — Pillar narratives (${pillar.name})`}
+        title={`${enterpriseName} — Pillar narratives (${methodologyPillarDisplayName(pillar)})`}
         description="Firm-wide narrative copy syncs to all member advisors."
       />
       <EnterpriseNarrativeEditor
@@ -65,20 +71,13 @@ export default async function EnterpriseMethodologyNarrativesPage({
           low: [...midBand.low],
         }}
       />
-      <div className="flex flex-wrap gap-2">
-        {pillars.map((p) => (
-          <Button
-            key={p.id}
-            variant={p.slug === slug ? "default" : "outline"}
-            size="sm"
-            asChild
-          >
-            <Link href={`/advisor/enterprise/methodology/narratives/${p.slug}`}>
-              {p.name}
-            </Link>
-          </Button>
-        ))}
-      </div>
+      <MethodologyPillarTabs
+        pillars={activePillars}
+        activeSlug={slug}
+        hrefForSlug={(pillarSlug) =>
+          `/advisor/enterprise/methodology/narratives/${pillarSlug}`
+        }
+      />
     </div>
   );
 }

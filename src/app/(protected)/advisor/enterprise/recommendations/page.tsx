@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import { loadActiveEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
+import { methodologyPillarDisplayName } from "@/lib/methodology/methodology-queries";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ export default async function EnterpriseRecommendationsIndexPage() {
     redirect("/signin");
   }
 
-  const pillars = await loadPlatformPillars();
+  const pillars = await loadActiveEnterpriseMethodologyPillars(enterpriseId);
   const ruleCounts = await prisma.enterpriseRecommendationRule.groupBy({
     by: ["pillarId"],
     where: { enterpriseId },
@@ -39,11 +40,13 @@ export default async function EnterpriseRecommendationsIndexPage() {
       />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-tour="config-primary-list">
         {pillars.map((pillar) => {
-          const count = countByPillarId.get(pillar.id) ?? 0;
+          const count = countByPillarId.get(pillar.pillarId) ?? 0;
           return (
-            <Card key={pillar.id}>
+            <Card key={pillar.pillarId}>
               <CardHeader>
-                <CardTitle className="text-base">{pillar.name}</CardTitle>
+                <CardTitle className="text-base">
+                  {methodologyPillarDisplayName(pillar)}
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
