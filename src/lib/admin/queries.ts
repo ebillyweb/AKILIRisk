@@ -62,7 +62,17 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
           accentColor: true,
           enterpriseId: true,
           enterprise: {
-            select: { name: true, status: true },
+            select: {
+              name: true,
+              status: true,
+              brandName: true,
+              primaryColor: true,
+              secondaryColor: true,
+              accentColor: true,
+              logoUrl: true,
+              logoS3Key: true,
+              brandingEnabled: true,
+            },
           },
           _count: { select: { clientAssignments: true } },
         },

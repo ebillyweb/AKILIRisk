@@ -112,12 +112,24 @@ export async function resolveAdvisorBrandingForProfile(
       customDomainEnabled: true,
     },
   });
-  if (!profile?.brandingEnabled) return null;
+  if (!profile) return null;
 
-  if (profile.enterpriseId) {
-    const enterpriseBranding = await getEnterpriseBrandingById(profile.enterpriseId);
+  const enterpriseId =
+    profile.enterpriseId ??
+    (
+      await prisma.enterpriseMembership.findFirst({
+        where: { advisorProfileId, status: "ACTIVE" },
+        select: { enterpriseId: true },
+      })
+    )?.enterpriseId ??
+    null;
+
+  if (enterpriseId) {
+    const enterpriseBranding = await getEnterpriseBrandingById(enterpriseId);
     if (enterpriseBranding) return enterpriseBranding;
   }
+
+  if (!profile.brandingEnabled) return null;
 
   return mapAdvisorProfileToBrandingData(profile);
 }

@@ -6,6 +6,7 @@ import {
   pickAdvisorBrandPrimary,
   pickAdvisorBrandSecondary,
 } from "@/components/admin/admin-advisor-list-styles";
+import { resolveAdminAdvisorListBranding } from "@/lib/admin/advisor-list-branding";
 import { getAdminAdvisorHubDisplay } from "@/lib/admin/advisor-hub-display";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { getAdvisorsForAdmin, type AdvisorsAdminScope } from "@/lib/admin/queries";
@@ -144,24 +145,48 @@ export default async function AdminAdvisorsPage({
             const isDeactivated = Boolean(a.deletedAt);
             const isWhiteLabel = Boolean(a.subscription?.whiteLabel);
             const profile = a.advisorProfile;
-            const primary = pickAdvisorBrandPrimary(profile?.primaryColor, profile?.accentColor);
-            const secondary = pickAdvisorBrandSecondary(
-              profile?.secondaryColor,
-              profile?.primaryColor,
-              profile?.accentColor
+            const displayBranding = profile
+              ? resolveAdminAdvisorListBranding(
+                  {
+                    firmName: profile.firmName,
+                    brandName: profile.brandName,
+                    primaryColor: profile.primaryColor,
+                    secondaryColor: profile.secondaryColor,
+                    accentColor: profile.accentColor,
+                    logoUrl: profile.logoUrl,
+                    logoS3Key: profile.logoS3Key,
+                  },
+                  profile.enterprise,
+                  { linkedToEnterprise: Boolean(profile.enterpriseId) },
+                )
+              : null;
+            const primary = pickAdvisorBrandPrimary(
+              displayBranding?.primaryColor,
+              displayBranding?.accentColor,
             );
-            const rawLogo = profile?.logoUrl?.trim() || "";
+            const secondary = pickAdvisorBrandSecondary(
+              displayBranding?.secondaryColor,
+              displayBranding?.primaryColor,
+              displayBranding?.accentColor,
+            );
+            const rawLogo = displayBranding?.logoUrl?.trim() || "";
             const showPublicLogo =
               Boolean(rawLogo) && !looksLikeAdvisorBrandingS3Url(rawLogo) && /^https?:\/\//i.test(rawLogo);
-            const hasS3Logo = Boolean(profile?.logoS3Key);
+            const hasS3Logo = Boolean(displayBranding?.logoS3Key);
             const adminLogoSrc = `/api/admin/advisors/${a.id}/logo`;
-            const initials = profile
-              ? advisorBrandInitials(profile.brandName, profile.firmName, a.name ?? a.email)
+            const initials = displayBranding
+              ? advisorBrandInitials(
+                  displayBranding.brandName,
+                  displayBranding.firmName,
+                  a.name ?? a.email,
+                )
               : (a.name ?? a.email).slice(0, 2).toUpperCase();
 
             const hasBrandColors = Boolean(primary);
             const brandDisplayName =
-              profile?.brandName?.trim() || profile?.firmName?.trim() || null;
+              displayBranding?.brandName?.trim() ||
+              displayBranding?.firmName?.trim() ||
+              null;
 
             const cardSurfaceStyle: CSSProperties | undefined =
               !isDeactivated && hasBrandColors && primary
