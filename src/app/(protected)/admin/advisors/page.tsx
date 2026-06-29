@@ -7,6 +7,7 @@ import {
   pickAdvisorBrandSecondary,
 } from "@/components/admin/admin-advisor-list-styles";
 import { resolveAdminAdvisorListBranding } from "@/lib/admin/advisor-list-branding";
+import { isEnterpriseLinkedAdvisor } from "@/lib/admin/advisor-list-filters";
 import { getAdminAdvisorHubDisplay } from "@/lib/admin/advisor-hub-display";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { getAdvisorsForAdmin, type AdvisorsAdminScope } from "@/lib/admin/queries";
@@ -24,7 +25,7 @@ function humanizeEnumToken(value: string) {
     .join(" ");
 }
 
-export type AdvisorsAdminFilter = AdvisorsAdminScope | "attention";
+export type AdvisorsAdminFilter = AdvisorsAdminScope | "attention" | "enterprise";
 
 export default async function AdminAdvisorsPage({
   searchParams,
@@ -37,7 +38,9 @@ export default async function AdminAdvisorsPage({
       ? "all"
       : sp.filter === "attention"
         ? "attention"
-        : "active";
+        : sp.filter === "enterprise"
+          ? "enterprise"
+          : "active";
   const billingEnabled = isBillingEnabled();
   const allAdvisors = await getAdvisorsForAdmin({
     scope: filter === "all" ? "all" : "active",
@@ -60,9 +63,14 @@ export default async function AdminAdvisorsPage({
   const advisors =
     filter === "attention"
       ? advisorsWithStatus.filter(({ hub }) => hub.needsAttention)
-      : advisorsWithStatus;
+      : filter === "enterprise"
+        ? advisorsWithStatus.filter(({ advisor }) => isEnterpriseLinkedAdvisor(advisor))
+        : advisorsWithStatus;
 
   const attentionCount = advisorsWithStatus.filter(({ hub }) => hub.needsAttention).length;
+  const enterpriseCount = advisorsWithStatus.filter(({ advisor }) =>
+    isEnterpriseLinkedAdvisor(advisor),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -90,6 +98,17 @@ export default async function AdminAdvisorsPage({
               <Link href="/admin/advisors?filter=attention">
                 Needs attention
                 {attentionCount > 0 ? ` (${attentionCount})` : ""}
+              </Link>
+            </Button>
+            <Button
+              variant={filter === "enterprise" ? "default" : "outline"}
+              size="sm"
+              className="h-8"
+              asChild
+            >
+              <Link href="/admin/advisors?filter=enterprise">
+                Enterprise
+                {enterpriseCount > 0 ? ` (${enterpriseCount})` : ""}
               </Link>
             </Button>
             <Button
@@ -135,7 +154,9 @@ export default async function AdminAdvisorsPage({
             <p className="text-center text-sm text-muted-foreground">
               {filter === "attention"
                 ? "No advisors need attention right now."
-                : "No advisors found."}
+                : filter === "enterprise"
+                  ? "No enterprise advisors found."
+                  : "No advisors found."}
             </p>
           </CardContent>
         </Card>
