@@ -194,14 +194,14 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Team management",
         description:
-          "Invite advisors, manage roles, and monitor seat usage for your firm.",
+          "Invite team members, manage access, and monitor seat usage for your firm.",
       },
     },
     {
       element: '[data-tour="config-primary-action"]',
       popover: {
         title: "Invite members",
-        description: "Send invitations to new team members with advisor or admin roles.",
+        description: "Send invitations for team members to join your firm.",
         side: "bottom",
       },
     },

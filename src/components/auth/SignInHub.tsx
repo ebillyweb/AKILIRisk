@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth-roles";
 import {
   SIGN_IN_HUB_PATH,
+  isEnterpriseTeamJoinCallback,
   resolveSignInRole,
 } from "@/lib/auth/sign-in-routes";
 import {
@@ -180,13 +181,17 @@ function StaffCredentialsPanel({
   callbackUrl,
   accountDeactivatedNotice,
   passwordUpdatedNotice,
+  initialEmail,
+  enterpriseJoinSignupHref,
 }: {
   role: "advisor" | "admin";
   callbackUrl: string | null;
   accountDeactivatedNotice: boolean;
   passwordUpdatedNotice: boolean;
+  initialEmail?: string | null;
+  enterpriseJoinSignupHref?: string | null;
 }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -291,19 +296,32 @@ function StaffCredentialsPanel({
 
       {role === "advisor" ? (
         <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground">
-          <p>
-            New advisor?{" "}
-            <Link href="/signup/advisor" className="font-semibold text-foreground hover:underline">
-              Create an account
-            </Link>
-            {" · "}
-            <Link
-              href="/signup/advisor/check-email"
-              className="font-semibold text-foreground hover:underline"
-            >
-              Resend confirmation
-            </Link>
-          </p>
+          {enterpriseJoinSignupHref ? (
+            <p>
+              New to Akili?{" "}
+              <Link
+                href={enterpriseJoinSignupHref}
+                className="font-semibold text-foreground hover:underline"
+              >
+                Create your team member account
+              </Link>{" "}
+              to accept this invitation.
+            </p>
+          ) : (
+            <p>
+              New advisor?{" "}
+              <Link href="/signup/advisor" className="font-semibold text-foreground hover:underline">
+                Create an account
+              </Link>
+              {" · "}
+              <Link
+                href="/signup/advisor/check-email"
+                className="font-semibold text-foreground hover:underline"
+              >
+                Resend confirmation
+              </Link>
+            </p>
+          )}
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
@@ -325,8 +343,12 @@ function SignInHubContent() {
   const visibleRoles = getVisibleSignInRoles({ hidePlatform: isBrandedPortal });
 
   const callbackUrl = searchParams.get("callbackUrl");
+  const prefilledEmail = searchParams.get("email");
   const accountDeactivatedNotice = searchParams.get("notice") === "account_deactivated";
   const passwordUpdatedNotice = searchParams.get("notice") === "password_updated";
+  const enterpriseTeamJoin = isEnterpriseTeamJoinCallback(callbackUrl);
+  const enterpriseJoinSignupHref =
+    enterpriseTeamJoin && callbackUrl ? callbackUrl : null;
 
   const resolvedRole = resolveSignInRole({
     role: searchParams.get("role"),
@@ -377,8 +399,12 @@ function SignInHubContent() {
   return (
     <AuthPanel
       eyebrow="Sign in"
-      title="Welcome back"
-      description={signInHubDescription(firmName)}
+      title={enterpriseTeamJoin ? "Sign in to accept invitation" : "Welcome back"}
+      description={
+        enterpriseTeamJoin
+          ? "Use the email address that received your team invitation."
+          : signInHubDescription(firmName)
+      }
       contentClassName="space-y-6"
     >
       <Tabs value={activeRole} onValueChange={handleRoleChange} className="gap-6">
@@ -424,6 +450,8 @@ function SignInHubContent() {
             callbackUrl={callbackUrl}
             accountDeactivatedNotice={accountDeactivatedNotice}
             passwordUpdatedNotice={passwordUpdatedNotice}
+            initialEmail={prefilledEmail}
+            enterpriseJoinSignupHref={enterpriseJoinSignupHref}
           />
         </TabsContent>
 

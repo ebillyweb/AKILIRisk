@@ -227,7 +227,6 @@ export async function setupEnterpriseScenario(input: {
 
   const invite = await inviteEnterpriseMember(owner.id, {
     email: memberEmail,
-    role: "ADVISOR",
   });
   const member = await requireAdvisorUser(memberEmail);
   await acceptEnterpriseTeamInvite(invite.membershipId, member.id);

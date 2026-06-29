@@ -52,7 +52,31 @@ export function AdvisorSidebar({
           className,
         )}
       >
-        <div className={cn("border-b border-border/60", collapsed ? "p-3" : "p-6")}>
+        <div
+          className={cn(
+            "flex shrink-0 pt-3",
+            collapsed ? "justify-center px-2" : "px-4",
+          )}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            onClick={toggle}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? <PanelLeft className="size-4" /> : <PanelLeftClose className="size-4" />}
+          </Button>
+        </div>
+
+        <div
+          className={cn(
+            "border-b border-border/60",
+            collapsed ? "px-2 pb-3 pt-3" : "px-4 pb-5 pt-3",
+          )}
+        >
           <div
             className={cn(
               "flex gap-3",
@@ -82,8 +106,8 @@ export function AdvisorSidebar({
             </Tooltip>
 
             {!collapsed ? (
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <h2 className="truncate text-lg font-semibold tracking-tight text-foreground">
                   {workspaceTitle}
                 </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -92,21 +116,6 @@ export function AdvisorSidebar({
                 </div>
               </div>
             ) : null}
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "shrink-0 text-muted-foreground hover:text-foreground",
-                collapsed ? "size-8" : "size-8 self-start",
-              )}
-              onClick={toggle}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-expanded={!collapsed}
-            >
-              {collapsed ? <PanelLeft className="size-4" /> : <PanelLeftClose className="size-4" />}
-            </Button>
           </div>
         </div>
 

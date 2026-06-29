@@ -182,7 +182,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
       },
       {
         href: "/advisor/settings/team",
-        label: "Team",
+        label: "Enterprise Team Management",
         icon: Users,
         requiresEnterpriseTeam: true,
       },

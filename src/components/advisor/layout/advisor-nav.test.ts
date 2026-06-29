@@ -113,10 +113,10 @@ describe("getActiveAdvisorNavHref", () => {
     expect(enabledItems.some((item) => item.label === "Follow-ups")).toBe(true);
   });
 
-  it("shows Team nav only when enterprise team management is enabled", () => {
+  it("shows Enterprise Team nav only when enterprise team management is enabled", () => {
     const hidden = getVisibleAdvisorNavSections(flags);
     expect(
-      hidden.flatMap((section) => section.items).some((item) => item.label === "Team")
+      hidden.flatMap((section) => section.items).some((item) => item.label === "Enterprise Team Management")
     ).toBe(false);
 
     const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });

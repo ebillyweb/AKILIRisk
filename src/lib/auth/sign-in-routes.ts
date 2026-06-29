@@ -41,6 +41,10 @@ export function isClientWorkspacePath(pathname: string): boolean {
 function roleForWorkspace(pathname: string): SignInRole {
   const pathOnly = pathname.split("?")[0] ?? pathname;
 
+  if (pathOnly.startsWith("/enterprise/join")) {
+    return "advisor";
+  }
+
   if (isClientWorkspacePath(pathOnly)) {
     return "client";
   }
@@ -95,8 +99,10 @@ export function buildSignInHref(options: {
   audience?: "staff" | "client";
   /** Explicit hub tab selection. */
   role?: SignInRole;
+  /** Prefill the credentials email field (e.g. enterprise team invite). */
+  email?: string | null;
 }): string {
-  const { callbackUrl, audience, role: explicitRole } = options;
+  const { callbackUrl, audience, role: explicitRole, email } = options;
 
   let role: SignInRole;
   if (explicitRole) {
@@ -121,7 +127,21 @@ export function buildSignInHref(options: {
     url.searchParams.set("callbackUrl", callbackUrl);
   }
 
+  if (email?.trim()) {
+    url.searchParams.set("email", email.trim().toLowerCase());
+  }
+
   return `${url.pathname}${url.search}`;
+}
+
+export function isEnterpriseTeamJoinCallback(
+  callbackUrl: string | null | undefined
+): boolean {
+  if (!callbackUrl?.startsWith("/") || callbackUrl.startsWith("//")) {
+    return false;
+  }
+  const pathOnly = callbackUrl.split("?")[0] ?? callbackUrl;
+  return pathOnly === "/enterprise/join";
 }
 
 /**
@@ -146,6 +166,9 @@ export function resolveSignInRole(options: {
 
   if (callbackUrl) {
     const pathOnly = callbackUrl.split("?")[0] ?? callbackUrl;
+    if (pathOnly.startsWith("/enterprise/join")) {
+      return "advisor";
+    }
     if (isClientWorkspacePath(pathOnly)) {
       return "client";
     }

@@ -27,7 +27,7 @@ export function AdminControlCenterLayout({
       )}
     >
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <AdminSidebar superUser={superUser} className="hidden w-64 shrink-0 lg:flex" />
+        <AdminSidebar superUser={superUser} className="hidden shrink-0 lg:flex" />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <AdminMobileNav superUser={superUser} />

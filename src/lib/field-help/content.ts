@@ -421,12 +421,7 @@ export const FIELD_HELP = {
   // Advisor — team
   "team-invite-email": {
     title: "Invite email",
-    description: "The advisor or admin receives an invitation to join your firm workspace at this address.",
-  },
-  "team-invite-role": {
-    title: "Role",
-    description:
-      "Advisors access client workflows. Admins can additionally manage team members and firm defaults.",
+    description: "The team member receives an invitation to join your firm workspace at this address.",
   },
 
   // Advisor — assessment lifecycle (stale scores vs reassessment)
