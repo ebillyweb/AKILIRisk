@@ -554,9 +554,17 @@ async function resolveEnterpriseIdForAdvisor(
 ): Promise<string | null> {
   const profile = await tx.advisorProfile.findUnique({
     where: { id: advisorProfileId },
+    select: { enterpriseId: true, userId: true },
+  });
+  if (profile?.enterpriseId) return profile.enterpriseId;
+
+  if (!profile?.userId) return null;
+
+  const membership = await tx.enterpriseMembership.findFirst({
+    where: { userId: profile.userId, status: "ACTIVE" },
     select: { enterpriseId: true },
   });
-  return profile?.enterpriseId ?? null;
+  return membership?.enterpriseId ?? null;
 }
 
 async function cloneAllEnterpriseRecommendationRules(

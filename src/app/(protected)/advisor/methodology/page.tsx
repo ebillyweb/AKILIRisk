@@ -4,7 +4,10 @@ import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import {
+  loadActiveAdvisorMethodologyPillars,
+  methodologyPillarDisplayName,
+} from "@/lib/methodology/methodology-queries";
 import {
   BookOpen,
   ClipboardList,
@@ -63,14 +66,15 @@ const LINKS = [
 ] as const;
 
 export default async function MethodologyHubPage() {
+  let profile: Awaited<ReturnType<typeof getAdvisorProfileOrThrow>>;
   try {
     const { userId } = await requireAdvisorRole();
-    await getAdvisorProfileOrThrow(userId);
+    profile = await getAdvisorProfileOrThrow(userId);
   } catch {
     redirect("/signin");
   }
 
-  const pillars = await loadPlatformPillars();
+  const pillars = await loadActiveAdvisorMethodologyPillars(profile.id);
 
   return (
     <div className="space-y-8">
@@ -89,9 +93,9 @@ export default async function MethodologyHubPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {pillars.map((pillar) => (
-            <Button key={pillar.id} variant="outline" size="sm" asChild>
+            <Button key={pillar.pillarId} variant="outline" size="sm" asChild>
               <Link href={`/advisor/methodology/questions/${pillar.slug}`}>
-                {pillar.name}
+                {methodologyPillarDisplayName(pillar)}
               </Link>
             </Button>
           ))}

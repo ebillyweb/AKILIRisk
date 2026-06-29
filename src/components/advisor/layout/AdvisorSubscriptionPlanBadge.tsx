@@ -1,8 +1,7 @@
 import type { SubscriptionTier } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
-import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
-import { isModuleTier } from "@/lib/billing/plan-prices-ui";
+import { TIER_DISPLAY_NAME, type SelfServeTier } from "@/lib/billing/tier-catalog";
 import { cn } from "@/lib/utils";
 
 type AdvisorSubscriptionPlanBadgeProps = {
@@ -11,8 +10,7 @@ type AdvisorSubscriptionPlanBadgeProps = {
 };
 
 function subscriptionTierLabel(tier: SubscriptionTier): string {
-  if (isModuleTier(tier)) return TIER_DISPLAY_NAME[tier];
-  return tier.charAt(0) + tier.slice(1).toLowerCase();
+  return TIER_DISPLAY_NAME[tier as SelfServeTier];
 }
 
 export function AdvisorSubscriptionPlanBadge({

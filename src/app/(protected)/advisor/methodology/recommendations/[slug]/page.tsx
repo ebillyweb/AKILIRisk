@@ -5,10 +5,11 @@ import { listQuestionsForRulePicker } from "@/lib/admin/recommendation-queries";
 import { serviceIdFromRulePayload } from "@/lib/admin/recommendation-rule-ui";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import {
+  loadActiveAdvisorMethodologyPillars,
   loadAdvisorRecommendationRules,
   loadActiveServiceRecommendations,
+  methodologyPillarDisplayName,
 } from "@/lib/methodology/methodology-queries";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RecommendationRulesEditor } from "@/components/advisor/methodology/RecommendationRulesEditor";
@@ -21,18 +22,20 @@ export default async function MethodologyRecommendationsPage({
 }) {
   const { slug: rawSlug } = await params;
   const slug = normalizePillarSlug(rawSlug);
-  const pillars = await loadPlatformPillars();
-  const pillar = pillars.find((p) => p.slug === slug);
-  if (!pillar) notFound();
 
   let profileId: string;
+  let activePillars: Awaited<ReturnType<typeof loadActiveAdvisorMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
     profileId = profile.id;
+    activePillars = await loadActiveAdvisorMethodologyPillars(profileId);
   } catch {
     redirect("/signin");
   }
+
+  const pillar = activePillars.find((p) => p.slug === slug);
+  if (!pillar) notFound();
 
   const [rules, services, questionOptions] = await Promise.all([
     loadAdvisorRecommendationRules(profileId, slug),
@@ -48,7 +51,7 @@ export default async function MethodologyRecommendationsPage({
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-recommendation-rules"
-        title={`Recommendation rules — ${pillar.name}`}
+        title={`Recommendation rules — ${methodologyPillarDisplayName(pillar)}`}
         description="Edit or deactivate platform base rules, or add custom triggers for your clients. Snapshotted at intake start."
       />
       <Card>
@@ -76,15 +79,15 @@ export default async function MethodologyRecommendationsPage({
         </CardContent>
       </Card>
       <div className="flex flex-wrap gap-2">
-        {pillars.map((p) => (
+        {activePillars.map((p) => (
           <Button
-            key={p.id}
+            key={p.pillarId}
             variant={p.slug === slug ? "default" : "outline"}
             size="sm"
             asChild
           >
             <Link href={`/advisor/methodology/recommendations/${p.slug}`}>
-              {p.name}
+              {methodologyPillarDisplayName(p)}
             </Link>
           </Button>
         ))}

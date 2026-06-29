@@ -2,8 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
-import { loadAdvisorPillarNarrative } from "@/lib/methodology/methodology-queries";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import {
+  loadActiveAdvisorMethodologyPillars,
+  loadAdvisorPillarNarrative,
+  methodologyPillarDisplayName,
+} from "@/lib/methodology/methodology-queries";
 import { narrativeStarterForSlug } from "@/lib/methodology/narrative-starter";
 import { Button } from "@/components/ui/button";
 import { NarrativeEditor } from "@/components/advisor/methodology/NarrativeEditor";
@@ -16,18 +19,20 @@ export default async function MethodologyNarrativesPage({
 }) {
   const { slug: rawSlug } = await params;
   const slug = normalizePillarSlug(rawSlug);
-  const pillars = await loadPlatformPillars();
-  const pillar = pillars.find((p) => p.slug === slug);
-  if (!pillar) notFound();
 
   let profileId: string;
+  let activePillars: Awaited<ReturnType<typeof loadActiveAdvisorMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
     profileId = profile.id;
+    activePillars = await loadActiveAdvisorMethodologyPillars(profileId);
   } catch {
     redirect("/signin");
   }
+
+  const pillar = activePillars.find((p) => p.slug === slug);
+  if (!pillar) notFound();
 
   const row = await loadAdvisorPillarNarrative(profileId, slug);
   const starter = narrativeStarterForSlug(slug);
@@ -48,7 +53,7 @@ export default async function MethodologyNarrativesPage({
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-methodology-narratives"
-        title={`Pillar narratives — ${pillar.name}`}
+        title={`Pillar narratives — ${methodologyPillarDisplayName(pillar)}`}
         description="Outcome copy for score reports and PDFs. Snapshotted at intake start."
       />
       <div data-tour="config-primary-form">
@@ -60,15 +65,15 @@ export default async function MethodologyNarrativesPage({
         />
       </div>
       <div className="flex flex-wrap gap-2">
-        {pillars.map((p) => (
+        {activePillars.map((p) => (
           <Button
-            key={p.id}
+            key={p.pillarId}
             variant={p.slug === slug ? "default" : "outline"}
             size="sm"
             asChild
           >
             <Link href={`/advisor/methodology/narratives/${p.slug}`}>
-              {p.name}
+              {methodologyPillarDisplayName(p)}
             </Link>
           </Button>
         ))}

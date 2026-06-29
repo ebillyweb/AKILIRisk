@@ -10,6 +10,7 @@ import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-
 import { transferAdvisorAssetsToEnterprise } from "@/lib/enterprise/transfer-advisor-assets";
 import { syncEnterpriseRulesToMembers } from "@/lib/methodology/clone-enterprise-defaults";
 import { syncEnterpriseMethodologyToMembers } from "@/lib/methodology/clone-enterprise-methodology";
+import { provisionEnterpriseTeamMemberContent } from "@/lib/enterprise/provision-team-member-content";
 import { getEnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
 import {
   buildEnterpriseTeamInviteUrl,
@@ -295,6 +296,7 @@ export async function acceptEnterpriseTeamInvite(
   }
 
   let soloStripeSubscriptionId: string | null = null;
+  let acceptedAdvisorProfileId: string | null = null;
 
   await prisma.$transaction(async (tx) => {
     const soloCancel = await cancelSoloSubscriptionForEnterprise(
@@ -339,6 +341,8 @@ export async function acceptEnterpriseTeamInvite(
       },
     });
 
+    acceptedAdvisorProfileId = profile.id;
+
     if (membership.role === "ADMIN") {
       await transferAdvisorAssetsToEnterprise(
         tx,
@@ -350,8 +354,15 @@ export async function acceptEnterpriseTeamInvite(
 
   await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
 
-  await syncEnterpriseRulesToMembers(membership.enterpriseId);
-  await syncEnterpriseMethodologyToMembers(membership.enterpriseId);
+  if (acceptedAdvisorProfileId) {
+    await provisionEnterpriseTeamMemberContent(
+      membership.enterpriseId,
+      acceptedAdvisorProfileId,
+    );
+  } else {
+    await syncEnterpriseRulesToMembers(membership.enterpriseId);
+    await syncEnterpriseMethodologyToMembers(membership.enterpriseId);
+  }
 
   return {
     enterpriseId: membership.enterprise.id,

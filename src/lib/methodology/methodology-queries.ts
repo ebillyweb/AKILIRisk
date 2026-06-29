@@ -1,53 +1,130 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import {
+  ensureEnterpriseTeamMemberProvisioned,
+  resolveEnterpriseIdForAdvisorProfile,
+} from "@/lib/enterprise/provision-team-member-content";
 import { ensureAdvisorDefaultsCloned } from "@/lib/methodology/snapshot";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
 
-export async function loadAdvisorMethodologyPillars(advisorProfileId: string) {
+export type AdvisorMethodologyPillar = {
+  pillarId: string;
+  slug: string;
+  canonicalName: string;
+  description: string | null;
+  isActive: boolean;
+  displayName: string | null;
+  weight: number;
+  threshold: unknown;
+  emphasisMultiplier: number;
+  displayOrder: number;
+  version: number;
+};
+
+export function methodologyPillarDisplayName(pillar: {
+  canonicalName: string;
+  displayName: string | null;
+}): string {
+  return pillar.displayName?.trim() || pillar.canonicalName;
+}
+
+export async function loadAdvisorMethodologyPillars(
+  advisorProfileId: string,
+): Promise<AdvisorMethodologyPillar[]> {
+  await ensureEnterpriseTeamMemberProvisioned(advisorProfileId);
   await ensureAdvisorDefaultsCloned(advisorProfileId);
-  const pillars = await prisma.pillar.findMany({
-    where: { archivedAt: null },
-    orderBy: { defaultOrder: "asc" },
-  });
-  const overrides = await prisma.advisorPillarOverride.findMany({
-    where: { advisorProfileId },
-  });
+
+  const enterpriseId = await resolveEnterpriseIdForAdvisorProfile(advisorProfileId);
+  const [pillars, overrides, enterpriseOverrides] = await Promise.all([
+    prisma.pillar.findMany({
+      where: { archivedAt: null },
+      orderBy: { defaultOrder: "asc" },
+    }),
+    prisma.advisorPillarOverride.findMany({
+      where: { advisorProfileId },
+      select: {
+        pillarId: true,
+        enterpriseSourceId: true,
+        isActive: true,
+        displayName: true,
+        weight: true,
+        threshold: true,
+        emphasisMultiplier: true,
+        displayOrder: true,
+        version: true,
+      },
+    }),
+    enterpriseId
+      ? prisma.enterprisePillarOverride.findMany({ where: { enterpriseId } })
+      : Promise.resolve([]),
+  ]);
   const overrideByPillarId = new Map(overrides.map((o) => [o.pillarId, o]));
+  const enterpriseByPillarId = new Map(
+    enterpriseOverrides.map((o) => [o.pillarId, o]),
+  );
 
   if (pillars.length === 0) {
     const starter = await loadPlatformPillars();
-    return starter.map((pillar) => ({
-      pillarId: pillar.id,
-      slug: pillar.slug,
-      canonicalName: pillar.name,
-      description: pillar.summary,
-      isActive: true,
-      displayName: null as string | null,
-      weight: 10,
-      threshold: null,
-      emphasisMultiplier: 1.5,
-      displayOrder: pillar.defaultOrder,
-      version: 1,
-    }));
+    return starter.map((pillar) => {
+      const enterpriseOverride = enterpriseByPillarId.get(pillar.id);
+      const defaultIsActive = enterpriseId
+        ? (enterpriseOverride?.isActive ?? false)
+        : true;
+      return {
+        pillarId: pillar.id,
+        slug: pillar.slug,
+        canonicalName: pillar.name,
+        description: pillar.summary,
+        isActive: defaultIsActive,
+        displayName: enterpriseOverride?.displayName ?? null,
+        weight: enterpriseOverride?.weight ?? 10,
+        threshold: null,
+        emphasisMultiplier: enterpriseOverride?.emphasisMultiplier ?? 1.5,
+        displayOrder: enterpriseOverride?.displayOrder ?? pillar.defaultOrder,
+        version: 1,
+      };
+    });
   }
 
   return pillars.map((pillar) => {
     const override = overrideByPillarId.get(pillar.id);
+    const enterpriseOverride = enterpriseByPillarId.get(pillar.id);
+    const defaultIsActive = enterpriseId
+      ? (enterpriseOverride?.isActive ?? false)
+      : true;
+
     return {
       pillarId: pillar.id,
       slug: pillar.slug,
       canonicalName: pillar.canonicalName,
       description: pillar.description,
-      isActive: override?.isActive ?? true,
-      displayName: override?.displayName ?? null,
-      weight: override?.weight ?? 10,
-      threshold: override?.threshold,
-      emphasisMultiplier: override?.emphasisMultiplier ?? 1.5,
-      displayOrder: override?.displayOrder ?? pillar.defaultOrder,
+      isActive:
+        override?.enterpriseSourceId && enterpriseOverride
+          ? enterpriseOverride.isActive
+          : (override?.isActive ?? defaultIsActive),
+      displayName:
+        override?.displayName ?? enterpriseOverride?.displayName ?? null,
+      weight: override?.weight ?? enterpriseOverride?.weight ?? 10,
+      threshold: override?.threshold ?? enterpriseOverride?.threshold,
+      emphasisMultiplier:
+        override?.emphasisMultiplier ??
+        enterpriseOverride?.emphasisMultiplier ??
+        1.5,
+      displayOrder:
+        override?.displayOrder ??
+        enterpriseOverride?.displayOrder ??
+        pillar.defaultOrder,
       version: override?.version ?? 1,
     };
   });
+}
+
+export async function loadActiveAdvisorMethodologyPillars(
+  advisorProfileId: string,
+): Promise<AdvisorMethodologyPillar[]> {
+  const pillars = await loadAdvisorMethodologyPillars(advisorProfileId);
+  return pillars.filter((pillar) => pillar.isActive);
 }
 
 export async function loadAdvisorAssessmentQuestions(
@@ -94,6 +171,7 @@ export async function loadAdvisorRecommendationRules(
   advisorProfileId: string,
   pillarSlug?: string,
 ) {
+  await ensureEnterpriseTeamMemberProvisioned(advisorProfileId);
   await ensureAdvisorDefaultsCloned(advisorProfileId);
   const pillar = pillarSlug
     ? await prisma.pillar.findUnique({ where: { slug: pillarSlug } })

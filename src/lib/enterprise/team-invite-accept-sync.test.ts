@@ -6,6 +6,7 @@ const prismaSpies = vi.hoisted(() => ({
 }));
 
 const transferAssets = vi.hoisted(() => vi.fn(async () => undefined));
+const provisionMemberContent = vi.hoisted(() => vi.fn(async () => undefined));
 const syncRules = vi.hoisted(() => vi.fn(async () => ({ advisorsUpdated: 0 })));
 const syncMethodology = vi.hoisted(() => vi.fn(async () => ({ advisorsUpdated: 0 })));
 const cancelSolo = vi.hoisted(() =>
@@ -16,6 +17,9 @@ const cancelStripe = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock("@/lib/db", () => ({ prisma: prismaSpies }));
 vi.mock("@/lib/enterprise/transfer-advisor-assets", () => ({
   transferAdvisorAssetsToEnterprise: transferAssets,
+}));
+vi.mock("@/lib/enterprise/provision-team-member-content", () => ({
+  provisionEnterpriseTeamMemberContent: provisionMemberContent,
 }));
 vi.mock("@/lib/methodology/clone-enterprise-defaults", () => ({
   syncEnterpriseRulesToMembers: syncRules,
@@ -79,8 +83,9 @@ describe("acceptEnterpriseTeamInvite — methodology sync", () => {
       PROFILE_ID,
       ENTERPRISE_ID,
     );
-    expect(syncRules).toHaveBeenCalledWith(ENTERPRISE_ID);
-    expect(syncMethodology).toHaveBeenCalledWith(ENTERPRISE_ID);
+    expect(provisionMemberContent).toHaveBeenCalledWith(ENTERPRISE_ID, PROFILE_ID);
+    expect(syncRules).not.toHaveBeenCalled();
+    expect(syncMethodology).not.toHaveBeenCalled();
     expect(cancelStripe).toHaveBeenCalledWith("sub_solo_1");
   });
 
@@ -90,7 +95,8 @@ describe("acceptEnterpriseTeamInvite — methodology sync", () => {
     await acceptEnterpriseTeamInvite(MEMBERSHIP_ID, USER_ID);
 
     expect(transferAssets).not.toHaveBeenCalled();
-    expect(syncRules).toHaveBeenCalledWith(ENTERPRISE_ID);
-    expect(syncMethodology).toHaveBeenCalledWith(ENTERPRISE_ID);
+    expect(provisionMemberContent).toHaveBeenCalledWith(ENTERPRISE_ID, PROFILE_ID);
+    expect(syncRules).not.toHaveBeenCalled();
+    expect(syncMethodology).not.toHaveBeenCalled();
   });
 });

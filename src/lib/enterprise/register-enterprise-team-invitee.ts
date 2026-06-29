@@ -72,6 +72,7 @@ export async function registerEnterpriseTeamInvitee(
     select: {
       status: true,
       userId: true,
+      enterpriseId: true,
       enterprise: { select: { name: true } },
     },
   });
@@ -88,7 +89,7 @@ export async function registerEnterpriseTeamInvitee(
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: membership.userId },
-        select: { id: true, password: true, advisorProfile: { select: { id: true } } },
+        select: { id: true, password: true, advisorProfile: { select: { id: true, enterpriseId: true } } },
       });
 
       if (!user) {
@@ -115,6 +116,7 @@ export async function registerEnterpriseTeamInvitee(
         const profile = await tx.advisorProfile.create({
           data: {
             userId: user.id,
+            enterpriseId: membership.enterpriseId,
             firmName,
             brandName: firmName,
           },
@@ -124,6 +126,15 @@ export async function registerEnterpriseTeamInvitee(
         await tx.enterpriseMembership.update({
           where: { id: invite.membershipId },
           data: { advisorProfileId: profile.id },
+        });
+      } else if (!user.advisorProfile.enterpriseId) {
+        await tx.advisorProfile.update({
+          where: { id: user.advisorProfile.id },
+          data: { enterpriseId: membership.enterpriseId },
+        });
+        await tx.enterpriseMembership.update({
+          where: { id: invite.membershipId },
+          data: { advisorProfileId: user.advisorProfile.id },
         });
       }
     });
