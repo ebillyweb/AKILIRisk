@@ -6,11 +6,23 @@ import type { PlatformKpis } from "@/lib/admin/analytics-queries";
  * of /admin/analytics. Pure render; data resolved at the page layer.
  */
 export function KpiStrip({ kpis }: { kpis: PlatformKpis }) {
+  const enterpriseSub = (() => {
+    const parts: string[] = [];
+    if (kpis.enterprisesProvisioning > 0) {
+      parts.push(`${kpis.enterprisesProvisioning} provisioning`);
+    }
+    if (kpis.enterprisesSuspended > 0) {
+      parts.push(`${kpis.enterprisesSuspended} suspended`);
+    }
+    return parts.length > 0 ? parts.join(" · ") : undefined;
+  })();
+
   const tiles: Array<{
     label: string;
     value: string;
     sub?: string;
   }> = [
+    // Advisor & firm footprint
     {
       label: "Active advisors",
       value: kpis.advisorsActive.toString(),
@@ -19,6 +31,17 @@ export function KpiStrip({ kpis }: { kpis: PlatformKpis }) {
           ? `${kpis.advisorsSoftDeleted} soft-deleted`
           : undefined,
     },
+    {
+      label: "Enterprises",
+      value: kpis.enterprisesActive.toString(),
+      sub: enterpriseSub,
+    },
+    {
+      label: "Active subscriptions",
+      value: kpis.activeSubscriptions.toString(),
+      sub: "Includes grace period",
+    },
+    // Client portfolio & assessment activity
     {
       label: "Active clients",
       value: kpis.clientsActive.toString(),
@@ -31,6 +54,7 @@ export function KpiStrip({ kpis }: { kpis: PlatformKpis }) {
       label: "Scored assessments",
       value: kpis.scoredAssessments.toString(),
     },
+    // Deliverables
     {
       label: "Published reports",
       value: kpis.publishedReports.toString(),
@@ -38,15 +62,6 @@ export function KpiStrip({ kpis }: { kpis: PlatformKpis }) {
         kpis.draftReports > 0
           ? `${kpis.draftReports} drafts open`
           : undefined,
-    },
-    {
-      label: "Open drafts",
-      value: kpis.draftReports.toString(),
-    },
-    {
-      label: "Active subscriptions",
-      value: kpis.activeSubscriptions.toString(),
-      sub: "Includes grace period",
     },
   ];
 

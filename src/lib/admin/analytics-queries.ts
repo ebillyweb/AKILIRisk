@@ -27,6 +27,9 @@ import type { RiskLevelPalette } from "@/lib/assessment/risk-color-palette";
 export interface PlatformKpis {
   advisorsActive: number;
   advisorsSoftDeleted: number;
+  enterprisesActive: number;
+  enterprisesProvisioning: number;
+  enterprisesSuspended: number;
   clientsActive: number;
   clientsSoftDeleted: number;
   scoredAssessments: number;
@@ -39,6 +42,9 @@ export async function getPlatformKpis(): Promise<PlatformKpis> {
   const [
     advisorsActive,
     advisorsSoftDeleted,
+    enterprisesActive,
+    enterprisesProvisioning,
+    enterprisesSuspended,
     clientsActive,
     clientsSoftDeleted,
     scoredAssessmentRows,
@@ -48,6 +54,9 @@ export async function getPlatformKpis(): Promise<PlatformKpis> {
   ] = await Promise.all([
     prisma.user.count({ where: { role: "ADVISOR", deletedAt: null } }),
     prisma.user.count({ where: { role: "ADVISOR", deletedAt: { not: null } } }),
+    prisma.advisorEnterprise.count({ where: { status: "ACTIVE" } }),
+    prisma.advisorEnterprise.count({ where: { status: "PROVISIONING" } }),
+    prisma.advisorEnterprise.count({ where: { status: "SUSPENDED" } }),
     prisma.user.count({ where: { role: "USER", deletedAt: null } }),
     prisma.user.count({ where: { role: "USER", deletedAt: { not: null } } }),
     // "Scored assessments" = distinct Assessment rows with at least one
@@ -69,6 +78,9 @@ export async function getPlatformKpis(): Promise<PlatformKpis> {
   return {
     advisorsActive,
     advisorsSoftDeleted,
+    enterprisesActive,
+    enterprisesProvisioning,
+    enterprisesSuspended,
     clientsActive,
     clientsSoftDeleted,
     scoredAssessments: scoredAssessmentRows.length,
