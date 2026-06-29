@@ -57,7 +57,8 @@ export default async function AdvisorSettingsPage({
   const productionDomain = getProductionDomain() ?? "akilirisk.com";
   const tenantSubdomainSuffix = getTenantSubdomainSuffix();
   const useTenantPathPortals = usesStagingTenantPathPortals();
-  const stagingPlatformHost = getStagingPlatformHostname();
+  const stagingPlatformHost =
+    getStagingPlatformHostname() ?? `preview.${productionDomain}`;
   const platformSubdomainsAutoActivate = isSubdomainAutoActivateEnabled();
 
   // Subscription flags gate premium tabs; missing Subscription row should not hide the full branding UI

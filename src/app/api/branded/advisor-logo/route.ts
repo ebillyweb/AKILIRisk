@@ -13,14 +13,17 @@ export const runtime = 'nodejs';
 
 /**
  * Public logo bytes for an active tenant subdomain (no session).
- * Resolves advisor from the request Host header because /api/* skips proxy rewrites.
+ *
+ * Tenant is resolved only from trusted request context: the Host header
+ * (production `{slug}.akilirisk.com`) and, for path-portal mode where /api/*
+ * arrives on the platform host, the origin-checked Referer (`/t/{slug}`). The
+ * previously-honored `?subdomain=` query param was caller-controlled and let
+ * any host request another tenant's logo, so it is intentionally ignored.
  */
 export async function GET(request: NextRequest) {
   try {
     const host = request.headers.get('host') ?? '';
-    const fromQuery = request.nextUrl.searchParams.get('subdomain')?.trim().toLowerCase();
     const canonicalSlug =
-      (fromQuery && fromQuery.length > 0 ? fromQuery : null) ??
       extractTenantSubdomainLabel(host) ??
       extractTenantSlugFromReferer(request.headers.get('referer'));
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/advisor/platform-subdomain";
 import {
   buildStagingTenantPathPrefix,
+  buildTenantScopedPublicPath,
   parseStagingTenantPathRoute,
   usesStagingTenantPathPortals,
 } from "@/lib/advisor/tenant-path-portals";
@@ -67,12 +68,24 @@ type TenantBrandingRouteOptions = {
   tenantPathPrefix?: string | null;
 };
 
-async function handleAdvisorTenantBrandingRoute(
+/**
+ * Result of resolving a tenant host/path:
+ *  - `short-circuit`: a finished response (branded `/branded/*` rewrite or the
+ *    "Not Available" 404) that must be returned immediately.
+ *  - `pass-through`: the tenant is valid but this path stays on the main app
+ *    tree. The caller continues into the shared auth/MFA gating (using the
+ *    tenant-stripped `effectivePathname`) and emits the final response itself.
+ */
+type TenantRouteResolution =
+  | { type: "short-circuit"; response: NextResponse }
+  | { type: "pass-through"; headers: Headers };
+
+async function resolveAdvisorTenantRoute(
   req: NextRequest,
   subdomain: string,
   effectivePathname: string,
   options: TenantBrandingRouteOptions = {},
-): Promise<NextResponse | null> {
+): Promise<TenantRouteResolution | null> {
   try {
     const advisorSubdomain = await getAdvisorBySubdomain(subdomain);
 
@@ -90,9 +103,11 @@ async function handleAdvisorTenantBrandingRoute(
       }
 
       if (isTenantPassThroughPath(effectivePathname)) {
-        return NextResponse.next({
-          request: { headers: requestHeaders },
-        });
+        // Hand back the tenant headers and let the main proxy run auth/MFA
+        // gating against `effectivePathname`, then rewrite/forward. This is
+        // what makes `/t/{slug}/signin`, `/t/{slug}/dashboard`, etc. resolve
+        // in path-portal mode (the prefix must be stripped before serving).
+        return { type: "pass-through", headers: requestHeaders };
       }
 
       const url = req.nextUrl.clone();
@@ -101,16 +116,22 @@ async function handleAdvisorTenantBrandingRoute(
           ? '/branded/client-portal'
           : `/branded${effectivePathname}`;
 
-      return NextResponse.rewrite(url, {
-        request: { headers: requestHeaders },
-      });
+      return {
+        type: "short-circuit",
+        response: NextResponse.rewrite(url, {
+          request: { headers: requestHeaders },
+        }),
+      };
     }
 
     if (advisorSubdomain) {
-      return new NextResponse(
-        `<!DOCTYPE html><html><head><title>Subdomain Not Available</title></head><body style="font-family: system-ui; text-align: center; padding: 2rem;"><h1>Subdomain Not Available</h1><p>This subdomain is not currently active.</p></body></html>`,
-        { status: 404, headers: { 'Content-Type': 'text/html' } }
-      );
+      return {
+        type: "short-circuit",
+        response: new NextResponse(
+          `<!DOCTYPE html><html><head><title>Subdomain Not Available</title></head><body style="font-family: system-ui; text-align: center; padding: 2rem;"><h1>Subdomain Not Available</h1><p>This subdomain is not currently active.</p></body></html>`,
+          { status: 404, headers: { 'Content-Type': 'text/html' } }
+        ),
+      };
     }
   } catch (error) {
     console.error('Subdomain resolution error:', error);
@@ -129,6 +150,23 @@ export default async function proxy(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
   const pathname = req.nextUrl.pathname;
 
+  // Normalize the tenant path prefix up front so every downstream guard
+  // (deactivation, workspace, MFA, password-change) sees the app-level path.
+  // In path-portal mode the raw path is `/t/{slug}/dashboard`; the gating
+  // helpers only understand `/dashboard`.
+  const pathPortalRoute = usesStagingTenantPathPortals()
+    ? parseStagingTenantPathRoute(pathname)
+    : null;
+  const tenantPathPrefix = pathPortalRoute
+    ? buildStagingTenantPathPrefix(pathPortalRoute.slug)
+    : null;
+  const effectivePathname = pathPortalRoute ? pathPortalRoute.restPath : pathname;
+
+  // Tenant-scope a redirect/callback target so the user stays inside the
+  // portal during auth flows. No-op (identity) when not in path-portal mode.
+  const scopeTarget = (appPath: string): string =>
+    buildTenantScopedPublicPath(appPath, tenantPathPrefix);
+
   const proto = req.headers.get("x-forwarded-proto");
   const secureCookie = proto === "https" || req.nextUrl.protocol === "https:";
   const token = await getToken({
@@ -143,9 +181,9 @@ export default async function proxy(req: NextRequest) {
   );
   if (isAuthenticated && accountDeactivated) {
     const allowWhileDeactivated =
-      pathname.startsWith("/signin") ||
-      pathname.startsWith("/api/auth") ||
-      pathname.startsWith("/_next");
+      effectivePathname.startsWith("/signin") ||
+      effectivePathname.startsWith("/api/auth") ||
+      effectivePathname.startsWith("/_next");
     if (!allowWhileDeactivated) {
       const signOutUrl = new URL("/api/auth/signout", req.url);
       signOutUrl.searchParams.set("callbackUrl", "/signin?notice=account_deactivated");
@@ -153,31 +191,35 @@ export default async function proxy(req: NextRequest) {
     }
   }
 
+  let tenantPassThroughHeaders: Headers | null = null;
   if (shouldHandleSubdomain(pathname)) {
-    if (usesStagingTenantPathPortals()) {
-      const pathRoute = parseStagingTenantPathRoute(pathname);
-      if (pathRoute) {
-        const tenantResponse = await handleAdvisorTenantBrandingRoute(
-          req,
-          pathRoute.slug,
-          pathRoute.restPath,
-          { tenantPathPrefix: buildStagingTenantPathPrefix(pathRoute.slug) },
-        );
-        if (tenantResponse) return tenantResponse;
-      }
+    let tenantResolution: TenantRouteResolution | null = null;
+
+    if (pathPortalRoute) {
+      tenantResolution = await resolveAdvisorTenantRoute(
+        req,
+        pathPortalRoute.slug,
+        effectivePathname,
+        { tenantPathPrefix },
+      );
     }
 
-    if (!isPlatformHostname(hostname)) {
+    if (!tenantResolution && !isPlatformHostname(hostname)) {
       const subdomain = extractTenantSubdomainLabel(hostname);
-
       if (subdomain) {
-        const tenantResponse = await handleAdvisorTenantBrandingRoute(
+        tenantResolution = await resolveAdvisorTenantRoute(
           req,
           subdomain,
           pathname,
         );
-        if (tenantResponse) return tenantResponse;
       }
+    }
+
+    if (tenantResolution?.type === "short-circuit") {
+      return tenantResolution.response;
+    }
+    if (tenantResolution?.type === "pass-through") {
+      tenantPassThroughHeaders = tenantResolution.headers;
     }
   }
 
@@ -234,42 +276,60 @@ export default async function proxy(req: NextRequest) {
     );
   }
 
-  const isWorkspace = isWorkspacePath(pathname);
+  const isWorkspace = isWorkspacePath(effectivePathname);
 
   if (isWorkspace && !isAuthenticated) {
-    const callbackUrl = `${pathname}${req.nextUrl.search}`;
+    // callbackUrl uses the app-level path so `buildSignInHref` infers the
+    // correct role tab; the sign-in page itself is tenant-scoped.
+    const callbackUrl = `${effectivePathname}${req.nextUrl.search}`;
     const signInHref = buildSignInHref({ callbackUrl });
-    return NextResponse.redirect(new URL(signInHref, req.url));
+    return NextResponse.redirect(new URL(scopeTarget(signInHref), req.url));
   }
 
   if (
     isAuthenticated &&
-    !isPagePasswordChangeExempt(pathname) &&
+    !isPagePasswordChangeExempt(effectivePathname) &&
     isWorkspace
   ) {
     if (isPasswordChangePending(mfaClaims)) {
-      const changePasswordUrl = new URL("/change-password", req.url);
-      changePasswordUrl.searchParams.set("callbackUrl", pathname);
+      const changePasswordUrl = new URL(scopeTarget("/change-password"), req.url);
+      changePasswordUrl.searchParams.set("callbackUrl", effectivePathname);
       return NextResponse.redirect(changePasswordUrl);
     }
   }
 
   if (
     isAuthenticated &&
-    !isPageMfaExempt(pathname) &&
+    !isPageMfaExempt(effectivePathname) &&
     isWorkspace
   ) {
     if (isMfaSetupPending(mfaClaims)) {
-      const mfaSetupUrl = new URL("/mfa/setup", req.url);
-      mfaSetupUrl.searchParams.set("callbackUrl", pathname);
+      const mfaSetupUrl = new URL(scopeTarget("/mfa/setup"), req.url);
+      mfaSetupUrl.searchParams.set("callbackUrl", effectivePathname);
       return NextResponse.redirect(mfaSetupUrl);
     }
 
     if (isMfaChallengePending(mfaClaims)) {
-      const mfaVerifyUrl = new URL("/mfa/verify", req.url);
-      mfaVerifyUrl.searchParams.set("callbackUrl", pathname);
+      const mfaVerifyUrl = new URL(scopeTarget("/mfa/verify"), req.url);
+      mfaVerifyUrl.searchParams.set("callbackUrl", effectivePathname);
       return NextResponse.redirect(mfaVerifyUrl);
     }
+  }
+
+  // Tenant pass-through: forward to the app with tenant headers. In path-portal
+  // mode rewrite to the stripped path (`/t/{slug}/dashboard` -> `/dashboard`)
+  // so the route resolves; subdomain mode keeps the path in place.
+  if (tenantPassThroughHeaders) {
+    if (tenantPathPrefix) {
+      const url = req.nextUrl.clone();
+      url.pathname = effectivePathname;
+      return NextResponse.rewrite(url, {
+        request: { headers: tenantPassThroughHeaders },
+      });
+    }
+    return NextResponse.next({
+      request: { headers: tenantPassThroughHeaders },
+    });
   }
 
   return NextResponse.next({

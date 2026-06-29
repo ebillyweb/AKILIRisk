@@ -1,11 +1,6 @@
 import {
-  SUBDOMAIN_SLUG_MAX_LENGTH,
-  SUBDOMAIN_SLUG_MIN_LENGTH,
-  SUBDOMAIN_SLUG_REGEX,
-} from '@/lib/advisor/subdomain-slug-input';
-import {
   getProductionDomain,
-  isPlatformSubdomainLabel,
+  isCanonicalSubdomainSlug,
 } from '@/lib/advisor/platform-subdomain';
 
 /** Path segment for staging tenant portals: preview.akilirisk.com/t/{slug} */
@@ -30,20 +25,19 @@ export function usesStagingTenantPathPortals(): boolean {
   return false;
 }
 
-export function getStagingPlatformHostname(): string {
+/**
+ * Staging platform host (e.g. `preview.akilirisk.com`). Returns null when
+ * PRODUCTION_DOMAIN is unset so callers fail loudly instead of emitting links
+ * to a bogus placeholder host.
+ */
+export function getStagingPlatformHostname(): string | null {
   const domain = getProductionDomain();
-  if (!domain) return 'preview.example.com';
+  if (!domain) return null;
   return `preview.${domain}`;
 }
 
 export function isValidTenantPortalSlug(slug: string): boolean {
-  const normalized = slug.toLowerCase();
-  return (
-    normalized.length >= SUBDOMAIN_SLUG_MIN_LENGTH &&
-    normalized.length <= SUBDOMAIN_SLUG_MAX_LENGTH &&
-    SUBDOMAIN_SLUG_REGEX.test(normalized) &&
-    !isPlatformSubdomainLabel(normalized)
-  );
+  return isCanonicalSubdomainSlug(slug);
 }
 
 export function buildStagingTenantPathPrefix(slug: string): string {
@@ -51,7 +45,13 @@ export function buildStagingTenantPathPrefix(slug: string): string {
 }
 
 export function buildStagingTenantPortalUrl(slug: string): string {
-  return `https://${getStagingPlatformHostname()}${buildStagingTenantPathPrefix(slug)}`;
+  const host = getStagingPlatformHostname();
+  if (!host) {
+    throw new Error(
+      'Cannot build staging tenant portal URL: PRODUCTION_DOMAIN is not set.'
+    );
+  }
+  return `https://${host}${buildStagingTenantPathPrefix(slug)}`;
 }
 
 /**
@@ -93,10 +93,18 @@ export function buildTenantScopedPublicPath(
   return `${base}${normalized}`;
 }
 
+/**
+ * Extract a tenant slug from a referer, but only when the referer points at the
+ * staging platform host. Without the origin check, a forged
+ * `Referer: https://evil.example/t/victim` would select another tenant.
+ */
 export function extractTenantSlugFromReferer(referer: string | null): string | null {
   if (!referer) return null;
+  const platformHost = getStagingPlatformHostname();
+  if (!platformHost) return null;
   try {
     const url = new URL(referer);
+    if (url.hostname.toLowerCase() !== platformHost.toLowerCase()) return null;
     return parseStagingTenantPathRoute(url.pathname)?.slug ?? null;
   } catch {
     return null;

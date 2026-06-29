@@ -3,12 +3,14 @@ import {
   buildAdvisorPortalHostname,
   buildAdvisorPortalUrl,
   extractTenantSubdomainLabel,
+  isCanonicalSubdomainSlug,
   isPlatformHostname,
   isPlatformSubdomainLabel,
   isSubdomainAutoActivateEnabled,
   toCanonicalSubdomainSlug,
   toTenantHostLabel,
 } from './platform-subdomain';
+import { isValidTenantPortalSlug } from './tenant-path-portals';
 
 describe('platform-subdomain', () => {
   const envSnapshot = { ...process.env };
@@ -59,6 +61,25 @@ describe('platform-subdomain', () => {
     process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
     process.env.TENANT_PATH_PORTALS = 'true';
     expect(buildAdvisorPortalUrl('ebilly')).toBe('https://preview.akilirisk.com/t/ebilly');
+  });
+
+  it('validates canonical slugs and path-portal slugs identically', () => {
+    delete process.env.PLATFORM_SUBDOMAIN_LABELS;
+    for (const slug of ['ab', 'this-slug-is-way-too-long', '-lead', 'lead-', 'preview', 'www']) {
+      expect(isCanonicalSubdomainSlug(slug)).toBe(false);
+      expect(isValidTenantPortalSlug(slug)).toBe(false);
+    }
+    for (const slug of ['ebilly', 'independent-wealth', 'firm123']) {
+      expect(isCanonicalSubdomainSlug(slug)).toBe(true);
+      expect(isValidTenantPortalSlug(slug)).toBe(true);
+    }
+  });
+
+  it('rejects host labels that are not valid canonical slugs', () => {
+    delete process.env.TENANT_SUBDOMAIN_SUFFIX;
+    expect(toCanonicalSubdomainSlug('-bad')).toBeNull();
+    expect(toCanonicalSubdomainSlug('ab')).toBeNull();
+    expect(toCanonicalSubdomainSlug('ebilly')).toBe('ebilly');
   });
 
   it('appends TENANT_SUBDOMAIN_SUFFIX on preview-style hosts', () => {

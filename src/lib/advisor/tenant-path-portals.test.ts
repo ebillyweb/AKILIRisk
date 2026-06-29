@@ -3,6 +3,8 @@ import {
   buildStagingTenantPathPrefix,
   buildStagingTenantPortalUrl,
   buildTenantScopedPublicPath,
+  extractTenantSlugFromReferer,
+  getStagingPlatformHostname,
   parseStagingTenantPathRoute,
   usesStagingTenantPathPortals,
 } from './tenant-path-portals';
@@ -33,6 +35,25 @@ describe('tenant-path-portals', () => {
       'https://preview.akilirisk.com/t/ebilly',
     );
     expect(buildStagingTenantPathPrefix('ebilly')).toBe('/t/ebilly');
+  });
+
+  it('fails loudly instead of emitting a placeholder host when PRODUCTION_DOMAIN is unset', () => {
+    delete process.env.PRODUCTION_DOMAIN;
+    expect(getStagingPlatformHostname()).toBeNull();
+    expect(() => buildStagingTenantPortalUrl('ebilly')).toThrow(/PRODUCTION_DOMAIN/);
+  });
+
+  it('extracts a referer slug only from the platform host', () => {
+    process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    expect(
+      extractTenantSlugFromReferer('https://preview.akilirisk.com/t/ebilly/signin'),
+    ).toBe('ebilly');
+    // Forged referer on a foreign host must not select a tenant.
+    expect(
+      extractTenantSlugFromReferer('https://evil.example/t/victim'),
+    ).toBeNull();
+    expect(extractTenantSlugFromReferer('not a url')).toBeNull();
+    expect(extractTenantSlugFromReferer(null)).toBeNull();
   });
 
   it('scopes public paths under /t/{slug}', () => {

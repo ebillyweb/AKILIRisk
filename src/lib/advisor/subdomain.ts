@@ -45,13 +45,21 @@ export interface AdvisorSubdomainData {
  */
 const subdomainCache = new Map<string, AdvisorSubdomainData | null>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Errors are cached only briefly: a transient DB blip should not make an active
+// tenant 404 for the full TTL after the DB recovers. Short enough to recover
+// fast, long enough to dampen hammering during an outage.
+const CACHE_ERROR_TTL = 5 * 1000; // 5 seconds
 
 /**
  * Clear cache entry after TTL
  */
-function setCacheWithTTL(key: string, value: AdvisorSubdomainData | null) {
+function setCacheWithTTL(
+  key: string,
+  value: AdvisorSubdomainData | null,
+  ttl: number = CACHE_TTL
+) {
   subdomainCache.set(key, value);
-  setTimeout(() => subdomainCache.delete(key), CACHE_TTL);
+  setTimeout(() => subdomainCache.delete(key), ttl);
 }
 
 /**
@@ -109,8 +117,9 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
   } catch (error) {
     console.error('Error resolving subdomain:', error);
 
-    // Cache null result for failed lookups to prevent hammering DB
-    setCacheWithTTL(subdomain, null);
+    // Cache the failure only briefly (not the full TTL) so a recovered DB
+    // resolves the tenant again right away instead of serving a stale 404.
+    setCacheWithTTL(subdomain, null, CACHE_ERROR_TTL);
     return null;
   }
 }
