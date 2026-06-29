@@ -25,7 +25,8 @@ export type EnterpriseProvisionQueueCounts = {
 };
 
 export function enterpriseProvisionJobId(enterpriseId: string): string {
-  return `provision:${enterpriseId}`;
+  // BullMQ custom job ids cannot contain ":".
+  return `provision-${enterpriseId}`;
 }
 
 export function isEnterpriseProvisionQueueEnabled(): boolean {

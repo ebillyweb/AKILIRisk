@@ -5,7 +5,7 @@ import { isRedisConfigured } from "@/lib/queue/redis-connection";
 
 describe("enterpriseProvisionJobId", () => {
   it("uses a stable id per enterprise", () => {
-    expect(enterpriseProvisionJobId("ent_abc")).toBe("provision:ent_abc");
+    expect(enterpriseProvisionJobId("ent_abc")).toBe("provision-ent_abc");
   });
 });
 

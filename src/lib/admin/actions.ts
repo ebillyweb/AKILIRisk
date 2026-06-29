@@ -14,6 +14,10 @@ import {
 } from "@/lib/billing/new-advisor-grace";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import {
+  isPrismaSchemaDriftError,
+  SCHEMA_DRIFT_USER_MESSAGE,
+} from "@/lib/db/schema-drift";
 import { sendNotification } from "@/lib/notifications/service";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
 import { requireAdminRole } from "@/lib/admin/auth";
@@ -981,6 +985,9 @@ export async function createEnterpriseByAdmin(input: unknown) {
     };
   } catch (e) {
     logSafeError("admin/createEnterprise", e);
+    if (isPrismaSchemaDriftError(e)) {
+      return { success: false, error: SCHEMA_DRIFT_USER_MESSAGE };
+    }
     return { success: false, error: safeErrorMessage(e, "Failed to create enterprise") };
   }
 }
