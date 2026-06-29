@@ -8,6 +8,7 @@ import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/advisor/NotificationBell";
+import { AdvisorSubscriptionPlanBadge } from "@/components/advisor/layout/AdvisorSubscriptionPlanBadge";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { AdvisorSidebarNav } from "./AdvisorSidebarNav";
 
@@ -81,7 +82,10 @@ export function AdvisorMobileNav({
         </Button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{workspaceTitle}</p>
-          <p className="truncate text-xs text-muted-foreground">Practice operations</p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            <p className="truncate text-xs text-muted-foreground">Practice operations</p>
+            <AdvisorSubscriptionPlanBadge subscriptionTier={subscriptionTier} />
+          </div>
         </div>
         <NotificationBell initialCount={unreadNotificationCount} />
       </div>
@@ -114,7 +118,10 @@ export function AdvisorMobileNav({
                   <p className="truncate text-base font-semibold text-foreground">
                     {workspaceTitle}
                   </p>
-                  <p className="text-xs text-muted-foreground">Practice operations</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="text-xs text-muted-foreground">Practice operations</p>
+                    <AdvisorSubscriptionPlanBadge subscriptionTier={subscriptionTier} />
+                  </div>
                 </div>
               </div>
               <Button

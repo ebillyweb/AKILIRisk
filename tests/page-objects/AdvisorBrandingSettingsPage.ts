@@ -6,6 +6,13 @@ export class AdvisorBrandingSettingsPage {
 
   async goto() {
     await this.page.goto("/advisor/settings");
+    await expect(this.page.getByRole("tab", { name: /^general$/i })).toBeVisible({
+      timeout: 20_000,
+    });
+  }
+
+  async openBrandingTab() {
+    await this.page.getByRole("tab", { name: /^branding$/i }).click();
     await expect(
       this.page.getByRole("tab", { name: /^brand identity$|^brand$/i })
     ).toBeVisible({ timeout: 20_000 });
@@ -21,6 +28,7 @@ export class AdvisorBrandingSettingsPage {
       | "domain"
       | "preview"
   ) {
+    await this.openBrandingTab();
     const patterns: Record<string, RegExp> = {
       identity: /^brand identity$|^brand$/i,
       colors: /^colors & style$|^style$/i,

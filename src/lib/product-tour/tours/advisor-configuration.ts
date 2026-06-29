@@ -158,24 +158,16 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Advisor settings",
         description:
-          "Branding, profile, security, PII policy, and household profile options for your practice.",
+          "General, Branding, and Security tabs organize your profile, client-facing branding, and account security including PII policy.",
       },
     },
     {
-      element: '[data-tour="config-methodology-link"]',
+      element: '[data-tour="config-branding-tab"]',
       popover: {
-        title: "Risk methodology",
-        description: "Shortcut to pillars, intake, questions, narratives, and recommendation rules.",
-        side: "bottom",
-      },
-    },
-    {
-      element: '[data-tour="config-primary-form"]',
-      popover: {
-        title: "Branding and profile",
+        title: "Branding tab",
         description:
-          "Firm name, logo, colors, and contact details appear in client-facing emails and reports.",
-        side: "top",
+          "Open Branding to edit firm name, logo, colors, and contact details for client-facing emails and reports.",
+        side: "bottom",
       },
     },
   ],

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -67,7 +68,11 @@ export function AdvisorPersonalDetailsForm({
             className="bg-muted/50"
           />
           <p className="text-xs text-muted-foreground">
-            Contact your administrator to change your sign-in email.
+            To change your sign-in email, contact AKILI using the{' '}
+            <Link href="/contact" className="font-medium text-primary underline-offset-2 hover:underline">
+              contact form
+            </Link>
+            .
           </p>
         </div>
       ) : null}

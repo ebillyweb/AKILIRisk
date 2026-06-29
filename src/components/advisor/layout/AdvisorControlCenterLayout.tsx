@@ -9,7 +9,6 @@ import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
 import { AdvisorSidebar } from "./AdvisorSidebar";
 import { AdvisorMobileNav } from "./AdvisorMobileNav";
-import { AdvisorWorkspaceProvider } from "./AdvisorWorkspaceContext";
 import { AdvisorSubscreenToolbar } from "./AdvisorSubscreenToolbar";
 
 interface AdvisorControlCenterLayoutProps {
@@ -36,14 +35,13 @@ export function AdvisorControlCenterLayout({
   className,
 }: AdvisorControlCenterLayoutProps) {
   return (
-    <AdvisorWorkspaceProvider subscriptionTier={subscriptionTier}>
-      <div
-        className={cn(
-          "flex min-h-[calc(100vh-8rem)] flex-col bg-background -mx-4 sm:-mx-6 lg:-mx-8",
-          className
-        )}
-      >
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+    <div
+      className={cn(
+        "flex min-h-[calc(100vh-8rem)] flex-col bg-background -mx-4 sm:-mx-6 lg:-mx-8",
+        className
+      )}
+    >
+      <div className="flex min-h-0 flex-1 overflow-hidden">
           <AdvisorSidebar
             featureFlags={featureFlags}
             subscriptionTier={subscriptionTier}
@@ -52,7 +50,7 @@ export function AdvisorControlCenterLayout({
             workspaceTitle={workspaceTitle}
             enterpriseTeamEnabled={enterpriseTeamEnabled}
             billingNavEnabled={billingNavEnabled}
-            className="hidden w-64 shrink-0 lg:flex"
+            className="hidden shrink-0 lg:flex"
           />
 
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -75,8 +73,7 @@ export function AdvisorControlCenterLayout({
           </div>
         </div>
 
-        <WorkspaceSiteFooterRow />
-      </div>
-    </AdvisorWorkspaceProvider>
+      <WorkspaceSiteFooterRow />
+    </div>
   );
 }

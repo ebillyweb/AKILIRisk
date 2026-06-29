@@ -2,9 +2,11 @@
 
 import { usePathname } from "next/navigation";
 
+import { getAdvisorTourIdForPath } from "@/lib/product-tour/advisor-path-tours";
+
 import { AdvisorHeaderActions } from "./AdvisorHeaderActions";
 
-/** Plan badge + product tour on every advisor route except the workspace home. */
+/** Product tour on advisor sub-routes except workspace home (pipeline merges on its page). */
 export function AdvisorSubscreenToolbar() {
   const pathname = usePathname() ?? "";
   const isAdvisorHome = pathname === "/advisor" || pathname === "/advisor/";
@@ -16,6 +18,10 @@ export function AdvisorSubscreenToolbar() {
 
   // Pipeline merges client actions with this toolbar on the page itself.
   if (pathname === "/advisor/pipeline") {
+    return null;
+  }
+
+  if (!getAdvisorTourIdForPath(pathname)) {
     return null;
   }
 

@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
+import { resolveAdvisorPersonalNameFields } from '@/lib/advisor/advisor-workspace-label';
 import {
   advisorPersonalDetailsSchema,
   clientPersonalDetailsSchema,
@@ -17,12 +18,12 @@ export async function getAdvisorPersonalDetails() {
   if (!session?.user?.id) return { success: false, data: null, error: 'Not authenticated' };
   try {
     const profile = await getAdvisorProfileOrThrow(session.user.id);
-    const user = profile.user as { firstName?: string | null; lastName?: string | null };
+    const { firstName, lastName } = resolveAdvisorPersonalNameFields(profile.user);
     return {
       success: true,
       data: {
-        firstName: user?.firstName ?? '',
-        lastName: user?.lastName ?? '',
+        firstName,
+        lastName,
         phone: profile.phone ?? '',
         jobTitle: profile.jobTitle ?? '',
         firmName: profile.firmName ?? '',

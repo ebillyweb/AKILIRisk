@@ -16,7 +16,7 @@ type ConfigurationPageHeaderProps = {
 
 /**
  * Configuration screens use the shared advisor header chrome.
- * Plan badge and Take a tour render from AdvisorSubscreenToolbar in the layout.
+ * Take a tour renders from AdvisorSubscreenToolbar in the layout; plan badge is in the sidebar.
  */
 export function ConfigurationPageHeader({
   title,

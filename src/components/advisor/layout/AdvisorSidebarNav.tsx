@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import type { SubscriptionTier } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -39,18 +39,20 @@ interface AdvisorSidebarNavProps {
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
   collapsibleSections?: boolean;
+  collapsed?: boolean;
   onNavigate?: () => void;
   className?: string;
 }
 
 function advisorNavItemClassName(
   isActive: boolean,
-  options: { disabled?: boolean; locked?: boolean } = {},
+  options: { disabled?: boolean; locked?: boolean; collapsed?: boolean } = {},
 ) {
-  const { disabled = false, locked = false } = options;
+  const { disabled = false, locked = false, collapsed = false } = options;
 
   return cn(
-    "flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+    "flex w-full items-center rounded-md py-2 text-sm font-medium transition-colors",
+    collapsed ? "justify-center px-2" : "gap-3 px-2",
     disabled
       ? "cursor-not-allowed text-muted-foreground/50"
       : locked
@@ -74,29 +76,51 @@ function NavItem({
   lockReason,
   onLockedClick,
   onNavigate,
+  collapsed = false,
 }: {
   item: AdvisorNavItem;
   isActive: boolean;
   lockReason: AdvisorNavLockReason;
   onLockedClick: () => void;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   const Icon = item.icon;
   const isLocked = lockReason !== null;
   const baseClass = advisorNavItemClassName(isActive, {
     disabled: item.disabled,
     locked: isLocked,
+    collapsed,
   });
 
-  if (item.disabled) {
+  const label = collapsed ? null : <span className="truncate">{item.label}</span>;
+
+  const wrapCollapsedTooltip = (node: ReactNode, tooltip: string) => {
+    if (!collapsed) return node;
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
-          <span className={baseClass} aria-disabled="true">
-            <Icon className="size-4 shrink-0 opacity-60" aria-hidden />
-            <span className="truncate">{item.label}</span>
-          </span>
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{node}</TooltipTrigger>
+        <TooltipContent side="right">{tooltip}</TooltipContent>
+      </Tooltip>
+    );
+  };
+
+  if (item.disabled) {
+    const content = (
+      <span className={baseClass} aria-disabled="true">
+        <Icon className="size-4 shrink-0 opacity-60" aria-hidden />
+        {label}
+        <span className="sr-only">{item.label}</span>
+      </span>
+    );
+
+    if (collapsed) {
+      return wrapCollapsedTooltip(content, item.comingSoonTooltip ?? "Coming soon");
+    }
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
         <TooltipContent side="right">
           {item.comingSoonTooltip ?? "Coming soon"}
         </TooltipContent>
@@ -105,7 +129,7 @@ function NavItem({
   }
 
   if (isLocked) {
-    return (
+    const content = (
       <button
         type="button"
         className={baseClass}
@@ -113,23 +137,28 @@ function NavItem({
         aria-label={`${item.label} — upgrade required`}
       >
         <Icon className="size-4 shrink-0 opacity-80" aria-hidden />
-        <span className="truncate">{item.label}</span>
-        <TierFeatureLockIcon className="ml-auto !opacity-100" />
+        {label}
+        {!collapsed ? <TierFeatureLockIcon className="ml-auto !opacity-100" /> : null}
       </button>
     );
+
+    return wrapCollapsedTooltip(content, `${item.label} — upgrade required`);
   }
 
-  return (
+  const content = (
     <Link
       href={item.href!}
       onClick={onNavigate}
       className={baseClass}
       aria-current={isActive ? "page" : undefined}
+      aria-label={collapsed ? item.label : undefined}
     >
       <Icon className={cn("size-4 shrink-0", isActive && "text-primary")} aria-hidden />
-      <span className="truncate">{item.label}</span>
+      {label}
     </Link>
   );
+
+  return wrapCollapsedTooltip(content, item.label);
 }
 
 function NavLinks({
@@ -139,6 +168,7 @@ function NavLinks({
   clientLimitStatus,
   onLockedClick,
   onNavigate,
+  collapsed = false,
 }: {
   section: AdvisorNavSection;
   activeHref: string | undefined;
@@ -146,6 +176,7 @@ function NavLinks({
   clientLimitStatus: ClientLimitSnapshot | null;
   onLockedClick: (item: AdvisorNavItem, reason: AdvisorNavLockReason) => void;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   return (
     <div className="space-y-1">
@@ -164,6 +195,7 @@ function NavLinks({
             lockReason={lockReason}
             onLockedClick={() => onLockedClick(item, lockReason)}
             onNavigate={onNavigate}
+            collapsed={collapsed}
           />
         );
       })}
@@ -178,6 +210,7 @@ export function AdvisorSidebarNav({
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
   collapsibleSections = false,
+  collapsed = false,
   onNavigate,
   className,
 }: AdvisorSidebarNavProps) {
@@ -197,7 +230,10 @@ export function AdvisorSidebarNav({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className={cn("flex-1 space-y-6 p-4", className)} aria-label="Advisor workspace">
+      <nav
+        className={cn("flex-1", collapsed ? "space-y-3 p-2" : "space-y-6 p-4", className)}
+        aria-label="Advisor workspace"
+      >
         {visibleSections.map((section, sectionIndex) => {
           const sectionHasActive = section.items.some(
             (item) => item.href === activeHref
@@ -230,6 +266,7 @@ export function AdvisorSidebarNav({
                     clientLimitStatus={clientLimitStatus}
                     onLockedClick={handleLockedClick}
                     onNavigate={onNavigate}
+                    collapsed={collapsed}
                   />
                 </CollapsibleContent>
               </Collapsible>
@@ -238,11 +275,13 @@ export function AdvisorSidebarNav({
 
           return (
             <div key={section.id}>
-              {sectionIndex > 0 && <Separator className="mb-4" />}
+              {sectionIndex > 0 && <Separator className={collapsed ? "mb-2" : "mb-4"} />}
               <div className="space-y-1">
-                <h3 className={advisorSectionTitleClassName(sectionHasActive)}>
-                  {section.title}
-                </h3>
+                {!collapsed ? (
+                  <h3 className={advisorSectionTitleClassName(sectionHasActive)}>
+                    {section.title}
+                  </h3>
+                ) : null}
                 <NavLinks
                   section={section}
                   activeHref={activeHref}
@@ -250,6 +289,7 @@ export function AdvisorSidebarNav({
                   clientLimitStatus={clientLimitStatus}
                   onLockedClick={handleLockedClick}
                   onNavigate={onNavigate}
+                  collapsed={collapsed}
                 />
               </div>
             </div>
