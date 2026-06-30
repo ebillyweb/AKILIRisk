@@ -154,7 +154,7 @@ export default async function proxy(req: NextRequest) {
   // (deactivation, workspace, MFA, password-change) sees the app-level path.
   // In path-portal mode the raw path is `/t/{slug}/dashboard`; the gating
   // helpers only understand `/dashboard`.
-  const pathPortalRoute = usesStagingTenantPathPortals()
+  const pathPortalRoute = usesStagingTenantPathPortals({ hostname })
     ? parseStagingTenantPathRoute(pathname)
     : null;
   const tenantPathPrefix = pathPortalRoute

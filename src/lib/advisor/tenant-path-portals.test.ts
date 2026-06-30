@@ -5,6 +5,7 @@ import {
   buildTenantScopedPublicPath,
   extractTenantSlugFromReferer,
   getStagingPlatformHostname,
+  isStagingPlatformHostname,
   parseStagingTenantPathRoute,
   usesStagingTenantPathPortals,
 } from './tenant-path-portals';
@@ -69,5 +70,37 @@ describe('tenant-path-portals', () => {
 
     process.env.TENANT_PATH_PORTALS = 'false';
     expect(usesStagingTenantPathPortals()).toBe(false);
+  });
+
+  it('recognizes the staging platform hostname', () => {
+    process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    expect(isStagingPlatformHostname('preview.akilirisk.com')).toBe(true);
+    expect(isStagingPlatformHostname('preview.akilirisk.com:443')).toBe(true);
+    expect(isStagingPlatformHostname('www.akilirisk.com')).toBe(false);
+  });
+
+  it('enables path portals on preview host even when VERCEL_ENV is production', () => {
+    process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    process.env.VERCEL_ENV = 'production';
+    delete process.env.TENANT_PATH_PORTALS;
+    delete process.env.AUTH_URL;
+    delete process.env.NEXT_PUBLIC_URL;
+
+    expect(
+      usesStagingTenantPathPortals({ hostname: 'preview.akilirisk.com' }),
+    ).toBe(true);
+    expect(
+      usesStagingTenantPathPortals({ hostname: 'www.akilirisk.com' }),
+    ).toBe(false);
+  });
+
+  it('enables path portals when AUTH_URL points at the staging platform host', () => {
+    process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    process.env.VERCEL_ENV = 'production';
+    delete process.env.TENANT_PATH_PORTALS;
+    process.env.AUTH_URL = 'https://preview.akilirisk.com';
+    delete process.env.NEXT_PUBLIC_URL;
+
+    expect(usesStagingTenantPathPortals()).toBe(true);
   });
 });

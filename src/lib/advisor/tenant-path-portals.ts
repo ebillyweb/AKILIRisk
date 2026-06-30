@@ -1,6 +1,7 @@
 import {
   getProductionDomain,
   isCanonicalSubdomainSlug,
+  normalizeHostname,
 } from '@/lib/advisor/platform-subdomain';
 
 /** Path segment for staging tenant portals: preview.akilirisk.com/t/{slug} */
@@ -14,15 +15,48 @@ export type StagingTenantPathRoute = {
 
 /**
  * When true, staging tenant portals use `preview.{domain}/t/{slug}` instead of
- * `{slug}-staging.{domain}`. Defaults on Vercel Preview; set TENANT_PATH_PORTALS=false
- * to restore hostname-suffix staging URLs.
+ * `{slug}-staging.{domain}`. Enabled when:
+ *   - TENANT_PATH_PORTALS=true, or
+ *   - VERCEL_ENV=preview, or
+ *   - the request host (or AUTH_URL / NEXT_PUBLIC_URL) is `preview.{PRODUCTION_DOMAIN}`
+ *
+ * Set TENANT_PATH_PORTALS=false to force hostname-suffix staging URLs.
  */
-export function usesStagingTenantPathPortals(): boolean {
+export function usesStagingTenantPathPortals(options?: {
+  hostname?: string | null;
+}): boolean {
   const explicit = process.env.TENANT_PATH_PORTALS?.trim().toLowerCase();
   if (explicit === 'false') return false;
   if (explicit === 'true') return true;
   if (process.env.VERCEL_ENV === 'preview') return true;
+
+  const requestHost = options?.hostname?.trim();
+  if (requestHost && isStagingPlatformHostname(requestHost)) return true;
+
+  const appHost = configuredAppHostname();
+  if (appHost && isStagingPlatformHostname(appHost)) return true;
+
   return false;
+}
+
+/** True when `hostname` is the staging platform host (`preview.{PRODUCTION_DOMAIN}`). */
+export function isStagingPlatformHostname(hostname: string): boolean {
+  const stagingHost = getStagingPlatformHostname();
+  if (!stagingHost) return false;
+  return normalizeHostname(hostname) === stagingHost.toLowerCase();
+}
+
+function configuredAppHostname(): string | null {
+  for (const key of ['AUTH_URL', 'NEXT_PUBLIC_URL'] as const) {
+    const raw = process.env[key]?.trim();
+    if (!raw) continue;
+    try {
+      return normalizeHostname(new URL(raw).hostname);
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 /**
