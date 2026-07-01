@@ -8,9 +8,7 @@ export async function expectBrandedClientPortalShell(
     page.getByText(/Brought to you by AKILI Risk Intelligence/i)
   ).toBeVisible({ timeout: 15_000 });
 
-  const advisorLogo = page.locator(
-    'img[src*="/api/client/advisor-logo"], img[src*="/api/branded/advisor-logo"]'
-  );
+  const advisorLogo = page.locator('img[src*="/api/branded/advisor-logo"]');
   await expect(advisorLogo.first()).toBeVisible();
 
   const advisorPrimary = await page.evaluate(() =>

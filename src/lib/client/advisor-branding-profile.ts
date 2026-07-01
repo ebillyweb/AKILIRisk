@@ -6,6 +6,10 @@ export const ADVISOR_BRANDING_PROFILE_SELECT = {
   firmName: true,
   brandName: true,
   tagline: true,
+  landingKicker: true,
+  landingHeadline: true,
+  landingSubheadline: true,
+  landingSubtext: true,
   primaryColor: true,
   secondaryColor: true,
   accentColor: true,
@@ -26,6 +30,10 @@ type AdvisorBrandingProfileRow = {
   firmName: string | null;
   brandName: string | null;
   tagline: string | null;
+  landingKicker: string | null;
+  landingHeadline: string | null;
+  landingSubheadline: string | null;
+  landingSubtext: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -49,6 +57,10 @@ export function mapAdvisorProfileToBrandingData(
     brandName: advisor.brandName?.trim() || null,
     advisorFirmName: advisor.firmName?.trim() || null,
     tagline: advisor.tagline,
+    landingKicker: advisor.landingKicker,
+    landingHeadline: advisor.landingHeadline,
+    landingSubheadline: advisor.landingSubheadline,
+    landingSubtext: advisor.landingSubtext,
     primaryColor: advisor.primaryColor,
     secondaryColor: advisor.secondaryColor,
     accentColor: advisor.accentColor,

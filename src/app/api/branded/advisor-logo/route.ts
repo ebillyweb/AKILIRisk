@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdvisorBySubdomain } from '@/lib/advisor/subdomain';
+import { getAdvisorBrandingBySubdomain, getAdvisorBySubdomain } from '@/lib/advisor/subdomain';
 import { extractTenantSubdomainLabel } from '@/lib/advisor/platform-subdomain';
 import { extractTenantSlugFromReferer } from '@/lib/advisor/tenant-path-portals';
 import {
   isS3ObjectNotFound,
   resolveBrandingLogoS3Key,
 } from '@/lib/branding/advisor-logo-display';
-import { prisma } from '@/lib/db';
 import { getBrandingLogoObjectBytes } from '@/lib/s3/branding-uploads';
 
 export const runtime = 'nodejs';
@@ -36,27 +35,17 @@ export async function GET(request: NextRequest) {
       return new NextResponse(null, { status: 404 });
     }
 
-    const advisor = await prisma.advisorProfile.findUnique({
-      where: { id: advisorSubdomain.advisorId },
-      select: {
-        id: true,
-        brandingEnabled: true,
-        logoS3Key: true,
-        logoUrl: true,
-        logoContentType: true,
-      },
-    });
-
-    if (!advisor?.brandingEnabled) {
+    const branding = await getAdvisorBrandingBySubdomain(canonicalSlug);
+    if (!branding?.brandingEnabled) {
       return new NextResponse(null, { status: 404 });
     }
 
-    const logoS3Key = resolveBrandingLogoS3Key(advisor);
+    const logoS3Key = resolveBrandingLogoS3Key(branding);
     if (!logoS3Key) {
       return new NextResponse(null, { status: 404 });
     }
 
-    const prefix = `advisors/${advisor.id}/`;
+    const prefix = `advisors/${advisorSubdomain.advisorId}/`;
     if (!logoS3Key.startsWith(prefix)) {
       return new NextResponse(null, { status: 404 });
     }
@@ -65,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     return new NextResponse(Buffer.from(data), {
       headers: {
-        'Content-Type': advisor.logoContentType || contentType,
+        'Content-Type': branding.logoContentType || contentType,
         'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
       },
     });

@@ -168,6 +168,10 @@ model AdvisorEnterprise {
   /// member profiles carry `enterpriseId`.
   brandName             String?
   tagline               String?
+  landingKicker         String?
+  landingHeadline       String?
+  landingSubheadline    String?
+  landingSubtext        String?
   primaryColor          String?
   secondaryColor        String?
   accentColor           String?
@@ -1048,6 +1052,10 @@ model AdvisorProfile {
   // Enhanced Branding Fields
   brandName        String?
   tagline          String?
+  landingKicker    String?
+  landingHeadline  String?
+  landingSubheadline String?
+  landingSubtext   String?
   primaryColor     String?
   secondaryColor   String?
   accentColor      String?

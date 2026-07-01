@@ -10,6 +10,10 @@ export const ENTERPRISE_BRANDING_SELECT = {
   name: true,
   brandName: true,
   tagline: true,
+  landingKicker: true,
+  landingHeadline: true,
+  landingSubheadline: true,
+  landingSubtext: true,
   primaryColor: true,
   secondaryColor: true,
   accentColor: true,
@@ -31,6 +35,10 @@ type EnterpriseBrandingRow = {
   name: string;
   brandName: string | null;
   tagline: string | null;
+  landingKicker: string | null;
+  landingHeadline: string | null;
+  landingSubheadline: string | null;
+  landingSubtext: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -53,6 +61,10 @@ type AdvisorBrandingProfileFields = {
   firmName: string | null;
   brandName: string | null;
   tagline: string | null;
+  landingKicker: string | null;
+  landingHeadline: string | null;
+  landingSubheadline: string | null;
+  landingSubtext: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -93,6 +105,10 @@ export function mapEnterpriseToBrandingData(
     brandName: enterprise.brandName?.trim() || enterprise.name.trim() || null,
     advisorFirmName: enterprise.name.trim() || null,
     tagline: enterprise.tagline,
+    landingKicker: enterprise.landingKicker,
+    landingHeadline: enterprise.landingHeadline,
+    landingSubheadline: enterprise.landingSubheadline,
+    landingSubtext: enterprise.landingSubtext,
     primaryColor: enterprise.primaryColor,
     secondaryColor: enterprise.secondaryColor,
     accentColor: enterprise.accentColor,
@@ -140,6 +156,10 @@ export async function resolveAdvisorBrandingForProfile(
       firmName: true,
       brandName: true,
       tagline: true,
+      landingKicker: true,
+      landingHeadline: true,
+      landingSubheadline: true,
+      landingSubtext: true,
       primaryColor: true,
       secondaryColor: true,
       accentColor: true,
@@ -205,6 +225,10 @@ export function mapResolvedBrandingToInvitationProfile(
   firmName: string | null;
   brandName: string | null;
   tagline: string | null;
+  landingKicker: string | null;
+  landingHeadline: string | null;
+  landingSubheadline: string | null;
+  landingSubtext: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -220,6 +244,10 @@ export function mapResolvedBrandingToInvitationProfile(
     firmName: branding.advisorFirmName ?? fallbackFirmName,
     brandName: branding.brandName ?? null,
     tagline: branding.tagline ?? null,
+    landingKicker: branding.landingKicker ?? null,
+    landingHeadline: branding.landingHeadline ?? null,
+    landingSubheadline: branding.landingSubheadline ?? null,
+    landingSubtext: branding.landingSubtext ?? null,
     primaryColor: branding.primaryColor ?? null,
     secondaryColor: branding.secondaryColor ?? null,
     accentColor: branding.accentColor ?? null,

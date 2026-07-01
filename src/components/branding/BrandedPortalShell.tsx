@@ -64,7 +64,7 @@ export function BrandedPortalShell({
                 : undefined
             }
           >
-            <div id="main-content" className="mx-auto w-full min-w-0 max-w-4xl" tabIndex={-1}>
+            <div id="main-content" className="mx-auto w-full min-w-0 max-w-5xl" tabIndex={-1}>
               {children}
             </div>
           </div>

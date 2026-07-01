@@ -35,6 +35,7 @@ import {
 import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
 import { updateAdvisorBrandingAction } from '@/lib/actions/advisor-branding-actions';
 import { resolveAdvisorLogoSrcForPreview } from '@/lib/branding/advisor-logo-display';
+import { resolveBrandedLandingCopy } from '@/lib/branding/landing-copy';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -68,6 +69,10 @@ interface EnhancedBrandingFormProps {
     firmName?: string | null;
     brandName?: string | null;
     tagline?: string | null;
+    landingKicker?: string | null;
+    landingHeadline?: string | null;
+    landingSubheadline?: string | null;
+    landingSubtext?: string | null;
     primaryColor?: string | null;
     secondaryColor?: string | null;
     accentColor?: string | null;
@@ -201,6 +206,10 @@ export function EnhancedBrandingForm({
   const defaultFormValues: BrandingFormData = {
     brandName: displayBrandName,
     tagline: profile.tagline || '',
+    landingKicker: profile.landingKicker || '',
+    landingHeadline: profile.landingHeadline || '',
+    landingSubheadline: profile.landingSubheadline || '',
+    landingSubtext: profile.landingSubtext || '',
     primaryColor: profile.primaryColor || '',
     secondaryColor: profile.secondaryColor || '',
     accentColor: profile.accentColor || '',
@@ -238,6 +247,11 @@ export function EnhancedBrandingForm({
       logoUrl: resolveAdvisorLogoSrcForPreview(watchedValues.logoUrl || profile.logoUrl || null),
     }),
     [watchedValues, profile.logoUrl]
+  );
+
+  const landingPreviewCopy = useMemo(
+    () => resolveBrandedLandingCopy(brandingForPreview),
+    [brandingForPreview],
   );
 
   const portalConfig = useMemo(
@@ -486,7 +500,7 @@ export function EnhancedBrandingForm({
               <TabsContent value="identity" className="mt-0 outline-none">
                 <SettingsSection
                   title="Brand identity"
-                  description="How clients see your firm name, tagline, and website on branded surfaces."
+                  description="How clients see your firm on branded portals, emails, and reports."
                   icon={Building}
                 >
                   <div className="space-y-2">
@@ -519,14 +533,14 @@ export function EnhancedBrandingForm({
                   </div>
                   <div className="space-y-2">
                     <LabelWithHelp htmlFor="tagline" helpKey="branding-tagline">
-                      Tagline
+                      Header tagline
                     </LabelWithHelp>
                     <Textarea
                       id="tagline"
                       {...register('tagline')}
-                      placeholder="Your brand tagline or mission statement"
+                      placeholder="Optional short line under your logo in the portal header"
                       maxLength={150}
-                      rows={3}
+                      rows={2}
                       readOnly={readOnly}
                       disabled={readOnly}
                       className={readOnly ? 'bg-muted/40' : undefined}
@@ -535,6 +549,81 @@ export function EnhancedBrandingForm({
                       <p className="text-sm text-destructive">{errors.tagline.message}</p>
                     )}
                   </div>
+
+                  <div className="space-y-4 rounded-xl border border-border/60 bg-muted/15 p-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold tracking-tight">Client landing page</h3>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Customize the hero on your white-label portal. Leave blank to use AKILI&apos;s
+                        default family-facing copy.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landingKicker">Kicker</Label>
+                      <Input
+                        id="landingKicker"
+                        {...register('landingKicker')}
+                        placeholder={landingPreviewCopy.kicker}
+                        maxLength={80}
+                        readOnly={readOnly}
+                        disabled={readOnly}
+                        className={readOnly ? 'bg-muted/40' : undefined}
+                      />
+                      {errors.landingKicker ? (
+                        <p className="text-sm text-destructive">{errors.landingKicker.message}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landingHeadline">Headline</Label>
+                      <Textarea
+                        id="landingHeadline"
+                        {...register('landingHeadline')}
+                        placeholder={landingPreviewCopy.headline}
+                        maxLength={200}
+                        rows={2}
+                        readOnly={readOnly}
+                        disabled={readOnly}
+                        className={readOnly ? 'bg-muted/40' : undefined}
+                      />
+                      {errors.landingHeadline ? (
+                        <p className="text-sm text-destructive">{errors.landingHeadline.message}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landingSubheadline">Subheadline</Label>
+                      <Textarea
+                        id="landingSubheadline"
+                        {...register('landingSubheadline')}
+                        placeholder={landingPreviewCopy.subheadline}
+                        maxLength={300}
+                        rows={3}
+                        readOnly={readOnly}
+                        disabled={readOnly}
+                        className={readOnly ? 'bg-muted/40' : undefined}
+                      />
+                      {errors.landingSubheadline ? (
+                        <p className="text-sm text-destructive">
+                          {errors.landingSubheadline.message}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="landingSubtext">Supporting line</Label>
+                      <Input
+                        id="landingSubtext"
+                        {...register('landingSubtext')}
+                        placeholder={landingPreviewCopy.subtext}
+                        maxLength={120}
+                        readOnly={readOnly}
+                        disabled={readOnly}
+                        className={readOnly ? 'bg-muted/40' : undefined}
+                      />
+                      {errors.landingSubtext ? (
+                        <p className="text-sm text-destructive">{errors.landingSubtext.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <LabelWithHelp htmlFor="websiteUrl" helpKey="branding-website">
                       Website URL

@@ -31,6 +31,10 @@ export type BrandingSettingsProfile = {
   firmName?: string | null;
   brandName?: string | null;
   tagline?: string | null;
+  landingKicker?: string | null;
+  landingHeadline?: string | null;
+  landingSubheadline?: string | null;
+  landingSubtext?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
   accentColor?: string | null;
@@ -63,6 +67,10 @@ function mapResolvedBrandingToProfile(
     firmName: branding.advisorFirmName ?? branding.brandName,
     brandName: branding.brandName,
     tagline: branding.tagline,
+    landingKicker: branding.landingKicker,
+    landingHeadline: branding.landingHeadline,
+    landingSubheadline: branding.landingSubheadline,
+    landingSubtext: branding.landingSubtext,
     primaryColor: branding.primaryColor,
     secondaryColor: branding.secondaryColor,
     accentColor: branding.accentColor,
@@ -166,6 +174,10 @@ export async function loadAdvisorBrandingSettingsView(
       firmName: true,
       brandName: true,
       tagline: true,
+      landingKicker: true,
+      landingHeadline: true,
+      landingSubheadline: true,
+      landingSubtext: true,
       primaryColor: true,
       secondaryColor: true,
       accentColor: true,

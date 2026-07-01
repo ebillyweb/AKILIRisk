@@ -23,6 +23,10 @@ import {
 const ENTERPRISE_BRANDING_MUTABLE_SELECT = {
   brandName: true,
   tagline: true,
+  landingKicker: true,
+  landingHeadline: true,
+  landingSubheadline: true,
+  landingSubtext: true,
   primaryColor: true,
   secondaryColor: true,
   accentColor: true,
@@ -128,6 +132,10 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
     const rawData = {
       brandName: formData.get('brandName')?.toString() || '',
       tagline: formData.get('tagline')?.toString() || '',
+      landingKicker: formData.get('landingKicker')?.toString() || '',
+      landingHeadline: formData.get('landingHeadline')?.toString() || '',
+      landingSubheadline: formData.get('landingSubheadline')?.toString() || '',
+      landingSubtext: formData.get('landingSubtext')?.toString() || '',
       primaryColor: formData.get('primaryColor')?.toString() || '',
       secondaryColor: formData.get('secondaryColor')?.toString() || '',
       accentColor: formData.get('accentColor')?.toString() || '',
@@ -144,7 +152,14 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
     // Feature-gate advanced fields
     if (!features.advancedBrandingEnabled) {
       // Only allow basic fields for STARTER tier
-      const allowedFields = ['brandName', 'logoUrl'];
+      const allowedFields = [
+        'brandName',
+        'logoUrl',
+        'landingKicker',
+        'landingHeadline',
+        'landingSubheadline',
+        'landingSubtext',
+      ];
       const restrictedFields = Object.keys(validatedData).filter((field) => {
         if (allowedFields.includes(field)) return false;
         const v = validatedData[field as keyof typeof validatedData];
@@ -174,6 +189,10 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
             brandName: true,
             firmName: true,
             tagline: true,
+            landingKicker: true,
+            landingHeadline: true,
+            landingSubheadline: true,
+            landingSubtext: true,
             primaryColor: true,
             secondaryColor: true,
             accentColor: true,
@@ -232,6 +251,10 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
           select: {
             brandName: true,
             tagline: true,
+            landingKicker: true,
+            landingHeadline: true,
+            landingSubheadline: true,
+            landingSubtext: true,
             primaryColor: true,
             secondaryColor: true,
             accentColor: true,

@@ -51,6 +51,26 @@ export const brandingUpdateSchema = z.object({
     .optional()
     .or(z.literal('')),
 
+  landingKicker: z.string()
+    .max(80, 'Landing kicker must be less than 80 characters')
+    .optional()
+    .or(z.literal('')),
+
+  landingHeadline: z.string()
+    .max(200, 'Landing headline must be less than 200 characters')
+    .optional()
+    .or(z.literal('')),
+
+  landingSubheadline: z.string()
+    .max(300, 'Landing subheadline must be less than 300 characters')
+    .optional()
+    .or(z.literal('')),
+
+  landingSubtext: z.string()
+    .max(120, 'Landing subtext must be less than 120 characters')
+    .optional()
+    .or(z.literal('')),
+
   primaryColor: z.string()
     .regex(HEX_COLOR_REGEX, 'Primary color must be valid hex format (#RRGGBB)')
     .refine(validateColorAccessibility, 'Primary color fails accessibility requirements')
@@ -147,6 +167,10 @@ export interface AdvisorBrandingData {
   /** Legacy firm name from advisor profile (e.g. PDF/report fallbacks) */
   advisorFirmName?: string | null;
   tagline?: string | null;
+  landingKicker?: string | null;
+  landingHeadline?: string | null;
+  landingSubheadline?: string | null;
+  landingSubtext?: string | null;
   websiteUrl?: string | null;
 
   // Colors

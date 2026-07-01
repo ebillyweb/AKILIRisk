@@ -3,10 +3,8 @@
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
 import { BrandedPortalMobileNav } from "@/components/branding/BrandedPortalMobileNav";
 import { MarketingNavAuthActions } from "@/components/marketing/MarketingNavAuthActions";
-import {
-  clientPortalBrandingDisplayTitle,
-  clientPortalLogoImgSrc,
-} from "@/lib/client/client-portal-branding";
+import { brandedPortalLogoImgSrc } from "@/lib/branding/branded-portal-logo";
+import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 import { cn } from "@/lib/utils";
@@ -25,7 +23,7 @@ export function BrandedPortalHeader({
   className,
 }: BrandedPortalHeaderProps) {
   const brandTitle = clientPortalBrandingDisplayTitle(branding);
-  const logoSrc = clientPortalLogoImgSrc(branding);
+  const logoSrc = brandedPortalLogoImgSrc(branding);
   const previewHex = getPreviewBrandHex(branding);
 
   return (
