@@ -79,7 +79,11 @@ export function PipelineView({
               className={`h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
             />
             <span>{connected ? "Live updates" : "Connection lost"}</span>
-            <span className="text-xs">Last updated: {lastUpdated.toLocaleTimeString()}</span>
+            {lastUpdated ? (
+              <span className="text-xs">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            ) : null}
           </div>
         </div>
       ) : null}

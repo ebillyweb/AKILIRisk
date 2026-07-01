@@ -5,6 +5,7 @@ import {
   describePortfolioAtTier,
   getVisibilityOptionTierState,
   isVisibilityOptionAtModuleTier,
+  minimumTierForPortfolioConfiguration,
 } from "./advisor-member-visibility-tier";
 
 const flags = {
@@ -66,14 +67,35 @@ describe("getVisibilityOptionTierState", () => {
     expect(state.includedSummary).toContain("Business");
   });
 
-  it("marks portfolio unavailable when the firm plan includes no portfolio modules", () => {
+  it("marks portfolio unavailable when portfolio modules are disabled platform-wide", () => {
     const state = getVisibilityOptionTierState("portfolio", "ESSENTIALS", {
       ...flags,
       riskIntelligenceEnabled: false,
       governanceDashboardEnabled: false,
     });
     expect(state.available).toBe(false);
-    expect(state.requiredTierLabel).toBe("Not included");
+    expect(state.lockBadge).toBe("Unavailable");
+    expect(state.requiredTierLabel).toBeNull();
+    expect(state.includedSummary).toContain("AKILI support");
+  });
+
+  it("marks portfolio with the required tier when analytics is gated", () => {
+    const state = getVisibilityOptionTierState("portfolio", "PROFESSIONAL", {
+      ...flags,
+      riskIntelligenceEnabled: false,
+      governanceDashboardEnabled: true,
+    });
+    expect(state.available).toBe(false);
+    expect(state.lockBadge).toBeNull();
+    expect(state.requiredTierLabel).toBe("Platinum");
+    expect(state.includedSummary).toBe(
+      "Requires Platinum or higher (your firm is on Professional).",
+    );
+    expect(minimumTierForPortfolioConfiguration({
+      ...flags,
+      riskIntelligenceEnabled: false,
+      governanceDashboardEnabled: true,
+    })).toBe("PLATINUM");
   });
 });
 

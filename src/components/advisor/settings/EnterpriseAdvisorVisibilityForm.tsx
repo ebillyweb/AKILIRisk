@@ -9,6 +9,7 @@ import type { SubscriptionTier } from "@prisma/client";
 import { updateEnterpriseAdvisorMemberVisibilityAction } from "@/lib/actions/enterprise-visibility-actions";
 import type { EnterpriseAdvisorMemberVisibility } from "@/lib/enterprise/advisor-member-visibility";
 import {
+  formatVisibilityLockBadge,
   getVisibilityOptionTierState,
   isVisibilityOptionAtModuleTier,
 } from "@/lib/enterprise/advisor-member-visibility-tier";
@@ -29,52 +30,96 @@ type VisibilityOption = {
   description: string;
 };
 
-const VISIBILITY_OPTIONS: VisibilityOption[] = [
+type VisibilityOptionGroup = {
+  id: string;
+  title: string;
+  description: string;
+  options: VisibilityOption[];
+};
+
+const VISIBILITY_OPTION_GROUPS: VisibilityOptionGroup[] = [
   {
-    key: "portfolio",
-    label: "Portfolio & risk insights",
-    description:
-      "Risk analytics, intelligence, reports, recommendations, and signals in the Portfolio workspace.",
+    id: "clients",
+    title: "Client Management",
+    description: "Prospect intake and client onboarding for team members.",
+    options: [
+      {
+        key: "assessmentLeads",
+        label: "Assessment leads",
+        description:
+          "Inbound prospect assignments from the AKILI team.",
+      },
+      {
+        key: "skipIntake",
+        label: "Skip intake",
+        description:
+          "Skip the governance intake step when inviting clients or managing the pipeline.",
+      },
+    ],
   },
   {
-    key: "assessmentLeads",
-    label: "Assessment leads",
-    description:
-      "Inbound prospect assignments from the AKILI team in the Clients workspace.",
+    id: "portfolio",
+    title: "Portfolio Analytics",
+    description: "Firm-wide risk insights and monitoring.",
+    options: [
+      {
+        key: "portfolio",
+        label: "Portfolio & risk insights",
+        description:
+          "Risk analytics, intelligence, reports, recommendations, and signals.",
+      },
+    ],
   },
   {
-    key: "methodology",
-    label: "Your methodology",
-    description: "Personal methodology settings in the account footer.",
+    id: "assessment-lifecycle",
+    title: "Assessment lifecycle",
+    description: "Post-assessment implementation and ongoing review.",
+    options: [
+      {
+        key: "engagements",
+        label: "Engagement Tracker",
+        description: "Accepted recommendations and implementation progress.",
+      },
+      {
+        key: "reassessment",
+        label: "Reassessment workflow",
+        description: "Scheduled reassessments and the rescoring queue.",
+      },
+    ],
   },
   {
-    key: "engagements",
-    label: "Engagement Tracker",
-    description: "Accepted recommendations and implementation progress.",
+    id: "account",
+    title: "Team Configuration",
+    description: "Individual practice settings in the sidebar footer.",
+    options: [
+      {
+        key: "methodology",
+        label: "Your methodology",
+        description: "Allows team to manage own methodology and question-bank customization.",
+      },
+    ],
   },
   {
-    key: "reassessment",
-    label: "Reassessment workflow",
-    description: "Scheduled reassessments and the rescoring queue.",
-  },
-  {
-    key: "productTours",
-    label: "Guided product tours",
-    description: "Auto-start walkthroughs on first visit to workspace areas.",
-  },
-  {
-    key: "hideTierLockedNav",
-    label: "Hide unavailable plan features",
-    description:
-      "Remove sidebar links to features above your firm's module tier instead of showing them locked.",
-  },
-  {
-    key: "skipIntake",
-    label: "Skip intake",
-    description:
-      "Allow team members to skip the governance intake step when inviting clients or managing the pipeline.",
+    id: "workspace-experience",
+    title: "Workspace experience",
+    description: "How the advisor hub looks and behaves for team members.",
+    options: [
+      {
+        key: "productTours",
+        label: "Guided product tours",
+        description: "Auto-start walkthroughs on first visit to workspace areas.",
+      },
+      {
+        key: "hideTierLockedNav",
+        label: "Hide unavailable plan features",
+        description:
+          "Remove sidebar links to features above your firm's module tier instead of showing them locked.",
+      },
+    ],
   },
 ];
+
+const VISIBILITY_OPTIONS = VISIBILITY_OPTION_GROUPS.flatMap((group) => group.options);
 
 type BrandingPolicyOption = {
   key: keyof EnterpriseMemberBrandingPolicy;
@@ -260,6 +305,67 @@ export function EnterpriseAdvisorVisibilityForm({
     );
   };
 
+  const renderVisibilityCheckbox = ({ key, label, description }: VisibilityOption) => {
+    const tierState = optionTierStates[key];
+    const tierLocked = !tierState.available;
+    const checked = tierLocked ? false : visibility[key];
+
+    return (
+      <div
+        key={key}
+        className={cn(
+          "flex items-start gap-3 rounded-lg border p-4",
+          tierLocked && "border-dashed bg-muted/30 opacity-90",
+        )}
+      >
+        <Checkbox
+          id={`advisor-visibility-${key}`}
+          checked={checked}
+          disabled={saving || tierLocked}
+          onCheckedChange={(next) => {
+            if (tierLocked) return;
+            setVisibility((current) => ({
+              ...current,
+              [key]: next === true,
+            }));
+          }}
+        />
+        <div className="grid min-w-0 flex-1 gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Label
+              htmlFor={`advisor-visibility-${key}`}
+              className={cn(
+                "text-sm font-medium leading-none",
+                tierLocked && "text-muted-foreground",
+              )}
+            >
+              {label}
+            </Label>
+            {tierLocked ? (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <Lock className="size-3" aria-hidden />
+                {formatVisibilityLockBadge(tierState)}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                On your plan
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">{description}</p>
+          <p
+            className={cn(
+              "text-xs",
+              tierLocked ? "text-muted-foreground" : "text-foreground/80",
+            )}
+          >
+            {tierState.includedSummary}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6" data-tour="config-advisor-visibility">
       <Card className="border-muted bg-muted/40">
@@ -275,75 +381,40 @@ export function EnterpriseAdvisorVisibilityForm({
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold tracking-tight">Workspace visibility</h3>
-        {VISIBILITY_OPTIONS.map(({ key, label, description }) => {
-          const tierState = optionTierStates[key];
-          const tierLocked = !tierState.available;
-          const checked = tierLocked ? false : visibility[key];
+      <div className="space-y-8">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold tracking-tight">Workspace visibility</h3>
+          <p className="text-sm text-muted-foreground">
+            Choose which sidebar areas team members can access. Settings are grouped to match the
+            advisor hub navigation.
+          </p>
+        </div>
 
-          return (
-            <div
-              key={key}
-              className={cn(
-                "flex items-start gap-3 rounded-lg border p-4",
-                tierLocked && "border-dashed bg-muted/30 opacity-90",
-              )}
-            >
-              <Checkbox
-                id={`advisor-visibility-${key}`}
-                checked={checked}
-                disabled={saving || tierLocked}
-                onCheckedChange={(next) => {
-                  if (tierLocked) return;
-                  setVisibility((current) => ({
-                    ...current,
-                    [key]: next === true,
-                  }));
-                }}
-              />
-              <div className="grid min-w-0 flex-1 gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Label
-                    htmlFor={`advisor-visibility-${key}`}
-                    className={cn(
-                      "text-sm font-medium leading-none",
-                      tierLocked && "text-muted-foreground",
-                    )}
-                  >
-                    {label}
-                  </Label>
-                  {tierLocked ? (
-                    <Badge variant="outline" className="gap-1 text-[10px]">
-                      <Lock className="size-3" aria-hidden />
-                      Requires {tierState.requiredTierLabel}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                      On your plan
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">{description}</p>
-                <p
-                  className={cn(
-                    "text-xs",
-                    tierLocked ? "text-muted-foreground" : "text-foreground/80",
-                  )}
-                >
-                  {tierState.includedSummary}
-                </p>
-              </div>
+        {VISIBILITY_OPTION_GROUPS.map((group) => (
+          <section key={group.id} className="space-y-3">
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-foreground">{group.title}</h4>
+              <p className="text-xs text-muted-foreground">{group.description}</p>
             </div>
-          );
-        })}
+            <div className="space-y-3">
+              {group.options.map((option) => renderVisibilityCheckbox(option))}
+            </div>
+          </section>
+        ))}
       </div>
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold tracking-tight">Client-facing branding</h3>
-        {BRANDING_POLICY_OPTIONS.map((option) =>
-          renderPolicyCheckbox(option, brandingPolicy, setBrandingPolicy),
-        )}
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold tracking-tight">Client-facing branding</h3>
+          <p className="text-sm text-muted-foreground">
+            Control how team members present themselves to assigned clients.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {BRANDING_POLICY_OPTIONS.map((option) =>
+            renderPolicyCheckbox(option, brandingPolicy, setBrandingPolicy),
+          )}
+        </div>
       </div>
 
       <Button type="button" onClick={handleSave} disabled={saving || !isDirty}>

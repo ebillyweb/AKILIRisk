@@ -5,7 +5,7 @@ import {
   tierIncludesFeature,
   type AdvisorTierFeatureKey,
 } from "@/lib/billing/tier-features";
-import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
+import { TIER_DISPLAY_NAME, type SelfServeTier } from "@/lib/billing/tier-catalog";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 
 import type { EnterpriseAdvisorMemberVisibilityKey } from "./advisor-member-visibility";
@@ -27,9 +27,75 @@ export const ENTERPRISE_MEMBER_VISIBILITY_TIER_FEATURE: Record<
 
 export type VisibilityOptionTierState = {
   available: boolean;
+  /** Full lock badge text when unavailable for non-tier reasons (e.g. platform disabled). */
+  lockBadge: string | null;
   requiredTierLabel: string | null;
   includedSummary: string;
 };
+
+export function formatVisibilityLockBadge(
+  state: Pick<VisibilityOptionTierState, "lockBadge" | "requiredTierLabel">,
+): string {
+  if (state.lockBadge) return state.lockBadge;
+  if (state.requiredTierLabel) return `Requires ${state.requiredTierLabel}`;
+  return "Unavailable";
+}
+
+/** Lowest module tier that unlocks at least one portfolio module for team visibility. */
+export function minimumTierForPortfolioConfiguration(
+  flags: AdvisorPlatformFeatureFlags,
+): SelfServeTier | null {
+  if (!flags.riskIntelligenceEnabled && !flags.governanceDashboardEnabled) {
+    return null;
+  }
+  if (flags.riskIntelligenceEnabled) {
+    return "ESSENTIALS";
+  }
+  return minimumTierForFeature("PORTFOLIO_ANALYTICS");
+}
+
+function portfolioVisibilityTierState(
+  moduleTier: SubscriptionTier,
+  flags: AdvisorPlatformFeatureFlags,
+): VisibilityOptionTierState {
+  const tierName = TIER_DISPLAY_NAME[moduleTier as keyof typeof TIER_DISPLAY_NAME] ?? moduleTier;
+  const includedSummary = describePortfolioAtTier(moduleTier, flags);
+
+  if (includedSummary.includes("disabled platform-wide")) {
+    return {
+      available: false,
+      lockBadge: "Unavailable",
+      requiredTierLabel: null,
+      includedSummary:
+        "Portfolio is not enabled for this deployment. Contact AKILI support if you need it for your firm.",
+    };
+  }
+
+  if (!includedSummary.startsWith("No portfolio modules")) {
+    return {
+      available: true,
+      lockBadge: null,
+      requiredTierLabel: null,
+      includedSummary,
+    };
+  }
+
+  const requiredTier = minimumTierForPortfolioConfiguration(flags);
+  const requiredLabel =
+    requiredTier === null
+      ? null
+      : TIER_DISPLAY_NAME[requiredTier as keyof typeof TIER_DISPLAY_NAME];
+
+  return {
+    available: false,
+    lockBadge: null,
+    requiredTierLabel: requiredLabel,
+    includedSummary:
+      requiredLabel === null
+        ? "Portfolio is not enabled for this deployment. Contact AKILI support if you need it for your firm."
+        : `Requires ${requiredLabel} or higher (your firm is on ${tierName}).`,
+  };
+}
 
 export function isVisibilityOptionAtModuleTier(
   key: EnterpriseAdvisorMemberVisibilityKey,
@@ -81,20 +147,13 @@ export function getVisibilityOptionTierState(
   const tierName = TIER_DISPLAY_NAME[moduleTier as keyof typeof TIER_DISPLAY_NAME] ?? moduleTier;
 
   if (key === "portfolio") {
-    const includedSummary = describePortfolioAtTier(moduleTier, flags);
-    const unavailableOnPlan =
-      includedSummary.startsWith("No portfolio modules") ||
-      includedSummary.includes("disabled platform-wide");
-    return {
-      available: !unavailableOnPlan,
-      requiredTierLabel: unavailableOnPlan ? "Not included" : null,
-      includedSummary,
-    };
+    return portfolioVisibilityTierState(moduleTier, flags);
   }
 
   if (key === "productTours" || key === "hideTierLockedNav" || key === "skipIntake" || key === "assessmentLeads") {
     return {
       available: true,
+      lockBadge: null,
       requiredTierLabel: null,
       includedSummary:
         key === "hideTierLockedNav"
@@ -110,6 +169,7 @@ export function getVisibilityOptionTierState(
   if (!feature) {
     return {
       available: true,
+      lockBadge: null,
       requiredTierLabel: null,
       includedSummary: `Included on your ${tierName} plan.`,
     };
@@ -121,6 +181,7 @@ export function getVisibilityOptionTierState(
 
   return {
     available,
+    lockBadge: null,
     requiredTierLabel: available ? null : requiredLabel,
     includedSummary: available
       ? `Included on your ${tierName} plan.`

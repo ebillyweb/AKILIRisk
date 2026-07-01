@@ -7,9 +7,11 @@ import { getStageOrder } from './status';
 export function usePipelineUpdates(initialClients: PipelineClient[]) {
   const [clients, setClients] = useState<PipelineClient[]>(initialClients);
   const [connected, setConnected] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
+    setLastUpdated(new Date());
+
     const eventSource = new EventSource('/api/advisor/status-stream');
 
     eventSource.onopen = () => {
