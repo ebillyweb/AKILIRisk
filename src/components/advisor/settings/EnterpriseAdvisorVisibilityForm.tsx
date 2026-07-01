@@ -37,6 +37,12 @@ const VISIBILITY_OPTIONS: VisibilityOption[] = [
       "Risk analytics, intelligence, reports, recommendations, and signals in the Portfolio workspace.",
   },
   {
+    key: "assessmentLeads",
+    label: "Assessment leads",
+    description:
+      "Inbound prospect assignments from the AKILI team in the Clients workspace.",
+  },
+  {
     key: "methodology",
     label: "Your methodology",
     description: "Personal methodology settings in the account footer.",
@@ -61,6 +67,12 @@ const VISIBILITY_OPTIONS: VisibilityOption[] = [
     label: "Hide unavailable plan features",
     description:
       "Remove sidebar links to features above your firm's module tier instead of showing them locked.",
+  },
+  {
+    key: "skipIntake",
+    label: "Skip intake",
+    description:
+      "Allow team members to skip the governance intake step when inviting clients or managing the pipeline.",
   },
 ];
 

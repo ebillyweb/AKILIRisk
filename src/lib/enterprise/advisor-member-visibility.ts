@@ -9,11 +9,13 @@ import { resolveBillingContext } from "./billing-context";
 
 export const ENTERPRISE_ADVISOR_MEMBER_VISIBILITY_KEYS = [
   "portfolio",
+  "assessmentLeads",
   "methodology",
   "engagements",
   "reassessment",
   "productTours",
   "hideTierLockedNav",
+  "skipIntake",
 ] as const;
 
 export type EnterpriseAdvisorMemberVisibilityKey =
@@ -26,39 +28,47 @@ export type EnterpriseAdvisorMemberVisibility = Record<
 
 const enterpriseVisibilitySelect = {
   advisorMemberPortfolioVisible: true,
+  advisorMemberAssessmentLeadsVisible: true,
   advisorMemberMethodologyVisible: true,
   advisorMemberEngagementsVisible: true,
   advisorMemberReassessmentVisible: true,
   advisorMemberProductToursVisible: true,
   advisorMemberHideTierLockedNav: true,
+  advisorMemberSkipIntakeEnabled: true,
 } as const;
 
 export function mapEnterpriseAdvisorMemberVisibility(row: {
   advisorMemberPortfolioVisible: boolean;
+  advisorMemberAssessmentLeadsVisible: boolean;
   advisorMemberMethodologyVisible: boolean;
   advisorMemberEngagementsVisible: boolean;
   advisorMemberReassessmentVisible: boolean;
   advisorMemberProductToursVisible: boolean;
   advisorMemberHideTierLockedNav: boolean;
+  advisorMemberSkipIntakeEnabled: boolean;
 }): EnterpriseAdvisorMemberVisibility {
   return {
     portfolio: row.advisorMemberPortfolioVisible,
+    assessmentLeads: row.advisorMemberAssessmentLeadsVisible,
     methodology: row.advisorMemberMethodologyVisible,
     engagements: row.advisorMemberEngagementsVisible,
     reassessment: row.advisorMemberReassessmentVisible,
     productTours: row.advisorMemberProductToursVisible,
     hideTierLockedNav: row.advisorMemberHideTierLockedNav,
+    skipIntake: row.advisorMemberSkipIntakeEnabled,
   };
 }
 
 export const DEFAULT_ENTERPRISE_ADVISOR_MEMBER_VISIBILITY: EnterpriseAdvisorMemberVisibility =
   {
     portfolio: true,
+    assessmentLeads: true,
     methodology: true,
     engagements: true,
     reassessment: true,
     productTours: true,
     hideTierLockedNav: false,
+    skipIntake: false,
   };
 
 export type EnterpriseMemberVisibilityContext = {
@@ -134,15 +144,26 @@ export async function requireEnterpriseMemberVisibility(
 
 export type EnterpriseAdvisorMemberVisibilityInput = EnterpriseAdvisorMemberVisibility;
 
+export async function assertAdvisorCanSkipIntake(userId: string): Promise<void> {
+  const context = await resolveEnterpriseMemberVisibilityContext(userId);
+  if (!isEnterpriseMemberVisibilityEnabled(context, "skipIntake")) {
+    throw new Error(
+      "Your firm administrator has not allowed team members to skip intake.",
+    );
+  }
+}
+
 export function visibilityInputToEnterpriseUpdate(
   input: EnterpriseAdvisorMemberVisibilityInput,
 ) {
   return {
     advisorMemberPortfolioVisible: input.portfolio,
+    advisorMemberAssessmentLeadsVisible: input.assessmentLeads,
     advisorMemberMethodologyVisible: input.methodology,
     advisorMemberEngagementsVisible: input.engagements,
     advisorMemberReassessmentVisible: input.reassessment,
     advisorMemberProductToursVisible: input.productTours,
     advisorMemberHideTierLockedNav: input.hideTierLockedNav,
+    advisorMemberSkipIntakeEnabled: input.skipIntake,
   };
 }

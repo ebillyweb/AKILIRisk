@@ -83,7 +83,14 @@ export function AdvisorMobileNav({
           </span>
         </Button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{workspaceTitle}</p>
+          <p
+            className={cn(
+              "text-pretty font-semibold leading-snug text-foreground break-words",
+              workspaceTitle.length > 28 ? "text-xs" : "text-sm",
+            )}
+          >
+            {workspaceTitle}
+          </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
             <p className="truncate text-xs text-muted-foreground">Practice operations</p>
             <AdvisorSubscriptionPlanBadge subscriptionTier={subscriptionTier} />
@@ -116,8 +123,17 @@ export function AdvisorMobileNav({
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Briefcase className="size-4" />
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-foreground">
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      "text-pretty font-semibold leading-snug text-foreground break-words",
+                      workspaceTitle.length > 32
+                        ? "text-sm"
+                        : workspaceTitle.length > 20
+                          ? "text-base"
+                          : "text-lg",
+                    )}
+                  >
                     {workspaceTitle}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">

@@ -25,6 +25,7 @@ import {
 } from "@/lib/schemas/invitation";
 import { InvitationListFilters, InvitationListResult, InvitationWithDetails } from "@/lib/invitations/types";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { assertAdvisorCanSkipIntake } from "@/lib/enterprise/advisor-member-visibility";
 import {
   mapResolvedBrandingToInvitationProfile,
   resolveAdvisorBrandingForProfile,
@@ -135,6 +136,20 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
     const invitationInput = { ...validatedInput, personalMessage };
 
     await assertCanAddClientForAdvisorProfile(profile.id);
+
+    if (validatedInput.intakeWaived) {
+      try {
+        await assertAdvisorCanSkipIntake(userId);
+      } catch (e) {
+        return {
+          success: false,
+          error:
+            e instanceof Error
+              ? e.message
+              : "Your firm administrator has not allowed team members to skip intake.",
+        };
+      }
+    }
 
     if (validatedInput.intakeWaived && validatedInput.includedPillars?.length) {
       const { assertAdvisorAssessmentDomainSelection } = await import(

@@ -76,11 +76,13 @@ export default async function AdvisorLayout({
           applyRestrictions: false,
           settings: {
             portfolio: true,
+            assessmentLeads: true,
             methodology: true,
             engagements: true,
             reassessment: true,
             productTours: true,
             hideTierLockedNav: false,
+            skipIntake: false,
           },
           enterpriseId: null,
           role: null,

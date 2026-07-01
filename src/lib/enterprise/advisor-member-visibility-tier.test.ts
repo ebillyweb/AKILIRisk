@@ -17,8 +17,10 @@ const flags = {
 describe("isVisibilityOptionAtModuleTier", () => {
   it("allows portfolio and product tours on Essentials", () => {
     expect(isVisibilityOptionAtModuleTier("portfolio", "ESSENTIALS")).toBe(true);
+    expect(isVisibilityOptionAtModuleTier("assessmentLeads", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("productTours", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("hideTierLockedNav", "ESSENTIALS")).toBe(true);
+    expect(isVisibilityOptionAtModuleTier("skipIntake", "ESSENTIALS")).toBe(true);
   });
 
   it("blocks methodology below Professional", () => {
@@ -81,21 +83,25 @@ describe("clampVisibilityToModuleTier", () => {
       clampVisibilityToModuleTier(
         {
           portfolio: true,
+          assessmentLeads: true,
           methodology: true,
           engagements: true,
           reassessment: true,
           productTours: true,
           hideTierLockedNav: true,
+          skipIntake: true,
         },
         "ESSENTIALS",
       ),
     ).toEqual({
       portfolio: true,
+      assessmentLeads: true,
       methodology: false,
       engagements: false,
       reassessment: false,
       productTours: true,
       hideTierLockedNav: true,
+      skipIntake: true,
     });
   });
 });

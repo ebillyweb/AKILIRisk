@@ -31,6 +31,7 @@ import { TemplateList } from "@/components/reports/TemplateList";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
+  canSkipIntake?: boolean;
 }
 
 function getStageBadgeVariant(stage: ClientWorkflowStage) {
@@ -80,7 +81,7 @@ function clientHasDistinctName(name: string, email: string): boolean {
   return trimmed.toLowerCase() !== email.toLowerCase();
 }
 
-export function ClientDetailView({ detail }: ClientDetailViewProps) {
+export function ClientDetailView({ detail, canSkipIntake = true }: ClientDetailViewProps) {
   const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker } = detail;
   const assessmentDomains = assessmentDomainPicker.domains;
   const displayName = client.name || "Unnamed Client";
@@ -188,6 +189,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   focusAreas={advisorAssignment.focusAreas}
                   assessmentDomainPicker={assessmentDomainPicker}
                   showWaiverAction={false}
+                  canManageWaiverScope={canSkipIntake}
                   waiverLocked={assessmentStarted}
                 />
               ) : intakeDetails ? (
@@ -265,7 +267,8 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         includedPillars={advisorAssignment.includedPillars}
                         focusAreas={advisorAssignment.focusAreas}
                         assessmentDomainPicker={assessmentDomainPicker}
-                        showWaiverAction
+                        showWaiverAction={canSkipIntake}
+                        canManageWaiverScope={canSkipIntake}
                         waiverLocked={assessmentStarted}
                       />
                     ) : null}
@@ -280,7 +283,8 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
                   assessmentDomainPicker={assessmentDomainPicker}
-                  showWaiverAction
+                  showWaiverAction={canSkipIntake}
+                  canManageWaiverScope={canSkipIntake}
                   waiverLocked={assessmentStarted}
                 />
               )}

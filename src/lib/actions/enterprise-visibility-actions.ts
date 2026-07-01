@@ -20,11 +20,13 @@ import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 
 const visibilitySchema = z.object({
   portfolio: z.boolean(),
+  assessmentLeads: z.boolean(),
   methodology: z.boolean(),
   engagements: z.boolean(),
   reassessment: z.boolean(),
   productTours: z.boolean(),
   hideTierLockedNav: z.boolean(),
+  skipIntake: z.boolean(),
 });
 
 const brandingPolicySchema = z.object({

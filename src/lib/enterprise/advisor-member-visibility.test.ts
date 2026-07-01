@@ -31,19 +31,23 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
     expect(
       mapEnterpriseAdvisorMemberVisibility({
         advisorMemberPortfolioVisible: false,
+        advisorMemberAssessmentLeadsVisible: true,
         advisorMemberMethodologyVisible: true,
         advisorMemberEngagementsVisible: false,
         advisorMemberReassessmentVisible: true,
         advisorMemberProductToursVisible: false,
         advisorMemberHideTierLockedNav: false,
+        advisorMemberSkipIntakeEnabled: false,
       }),
     ).toEqual({
       portfolio: false,
+      assessmentLeads: true,
       methodology: true,
       engagements: false,
       reassessment: true,
       productTours: false,
       hideTierLockedNav: false,
+      skipIntake: false,
     });
   });
 });
@@ -76,16 +80,19 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
     });
     mockFindUnique.mockResolvedValue({
       advisorMemberPortfolioVisible: false,
+      advisorMemberAssessmentLeadsVisible: true,
       advisorMemberMethodologyVisible: true,
       advisorMemberEngagementsVisible: true,
       advisorMemberReassessmentVisible: true,
       advisorMemberProductToursVisible: true,
       advisorMemberHideTierLockedNav: false,
+      advisorMemberSkipIntakeEnabled: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
     expect(result.applyRestrictions).toBe(true);
     expect(result.settings.portfolio).toBe(false);
+    expect(isEnterpriseMemberVisibilityEnabled(result, "skipIntake")).toBe(false);
   });
 
   it("does not apply restrictions for enterprise OWNER", async () => {
@@ -98,16 +105,19 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
     });
     mockFindUnique.mockResolvedValue({
       advisorMemberPortfolioVisible: false,
+      advisorMemberAssessmentLeadsVisible: false,
       advisorMemberMethodologyVisible: false,
       advisorMemberEngagementsVisible: false,
       advisorMemberReassessmentVisible: false,
       advisorMemberProductToursVisible: false,
       advisorMemberHideTierLockedNav: false,
+      advisorMemberSkipIntakeEnabled: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
     expect(result.applyRestrictions).toBe(false);
     expect(isEnterpriseMemberVisibilityEnabled(result, "portfolio")).toBe(true);
+    expect(isEnterpriseMemberVisibilityEnabled(result, "skipIntake")).toBe(true);
   });
 });
 
@@ -116,19 +126,23 @@ describe("visibilityInputToEnterpriseUpdate", () => {
     expect(
       visibilityInputToEnterpriseUpdate({
         portfolio: true,
+        assessmentLeads: false,
         methodology: false,
         engagements: true,
         reassessment: false,
         productTours: true,
         hideTierLockedNav: false,
+        skipIntake: false,
       }),
     ).toEqual({
       advisorMemberPortfolioVisible: true,
+      advisorMemberAssessmentLeadsVisible: false,
       advisorMemberMethodologyVisible: false,
       advisorMemberEngagementsVisible: true,
       advisorMemberReassessmentVisible: false,
       advisorMemberProductToursVisible: true,
       advisorMemberHideTierLockedNav: false,
+      advisorMemberSkipIntakeEnabled: false,
     });
   });
 });

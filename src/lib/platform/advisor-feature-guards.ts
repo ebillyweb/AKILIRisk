@@ -47,3 +47,7 @@ export async function requireAdvisorEngagementsMemberAccess() {
 export async function requireAdvisorReassessmentMemberAccess() {
   await requireEnterpriseMemberNavAccess("reassessment");
 }
+
+export async function requireAdvisorAssessmentLeadsMemberAccess() {
+  await requireEnterpriseMemberNavAccess("assessmentLeads");
+}

@@ -16,11 +16,13 @@ export const ENTERPRISE_MEMBER_VISIBILITY_TIER_FEATURE: Record<
   AdvisorTierFeatureKey | null
 > = {
   portfolio: null,
+  assessmentLeads: null,
   methodology: "METHODOLOGY_CUSTOMIZATION",
   engagements: "IMPLEMENTATION_ENGAGEMENTS",
   reassessment: "REASSESSMENT_WORKFLOW",
   productTours: null,
   hideTierLockedNav: null,
+  skipIntake: null,
 };
 
 export type VisibilityOptionTierState = {
@@ -90,14 +92,18 @@ export function getVisibilityOptionTierState(
     };
   }
 
-  if (key === "productTours" || key === "hideTierLockedNav") {
+  if (key === "productTours" || key === "hideTierLockedNav" || key === "skipIntake" || key === "assessmentLeads") {
     return {
       available: true,
       requiredTierLabel: null,
       includedSummary:
         key === "hideTierLockedNav"
           ? "Applies to sidebar links for features above your firm's module tier."
-          : "Included on all module tiers.",
+          : key === "skipIntake"
+            ? "Team members can skip intake on invites and in the client pipeline."
+            : key === "assessmentLeads"
+              ? "Team members can view and follow up on AKILI-assigned assessment leads."
+              : "Included on all module tiers.",
     };
   }
 
@@ -128,6 +134,7 @@ export function clampVisibilityToModuleTier(
 ): Record<EnterpriseAdvisorMemberVisibilityKey, boolean> {
   return {
     portfolio: visibility.portfolio,
+    assessmentLeads: visibility.assessmentLeads,
     methodology:
       visibility.methodology &&
       isVisibilityOptionAtModuleTier("methodology", moduleTier),
@@ -139,5 +146,6 @@ export function clampVisibilityToModuleTier(
       isVisibilityOptionAtModuleTier("reassessment", moduleTier),
     productTours: visibility.productTours,
     hideTierLockedNav: visibility.hideTierLockedNav,
+    skipIntake: visibility.skipIntake,
   };
 }

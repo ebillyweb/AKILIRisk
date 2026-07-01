@@ -45,12 +45,14 @@ interface InviteClientFormProps {
   firmName: string | null;
   assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
   clientLimitStatus: ClientLimitSnapshot | null;
+  skipIntakeEnabled?: boolean;
 }
 
 export function InviteClientForm({
   firmName,
   assessmentDomainPicker,
   clientLimitStatus,
+  skipIntakeEnabled = true,
 }: InviteClientFormProps) {
   const assessmentDomains = assessmentDomainPicker.domains;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -274,6 +276,7 @@ export function InviteClientForm({
           </div>
         </div>
 
+        {skipIntakeEnabled ? (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <input
@@ -315,6 +318,7 @@ export function InviteClientForm({
             </div>
           ) : null}
         </div>
+        ) : null}
 
         <div className="flex justify-end">
           <Button

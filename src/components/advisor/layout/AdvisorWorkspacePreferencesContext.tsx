@@ -15,11 +15,13 @@ const defaultPreferences: AdvisorWorkspacePreferences = {
   applyEnterpriseMemberVisibility: false,
   enterpriseMemberVisibility: {
     portfolio: true,
+    assessmentLeads: true,
     methodology: true,
     engagements: true,
     reassessment: true,
     productTours: true,
     hideTierLockedNav: false,
+    skipIntake: false,
   },
 };
 

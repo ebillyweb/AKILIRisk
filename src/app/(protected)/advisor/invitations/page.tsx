@@ -10,6 +10,10 @@ import { parseInvitationListParams } from "@/lib/invitations/parse-invitation-li
 import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
+import {
+  isEnterpriseMemberVisibilityEnabled,
+  resolveEnterpriseMemberVisibilityContext,
+} from "@/lib/enterprise/advisor-member-visibility";
 
 export default async function InvitationsPage({
   searchParams,
@@ -28,11 +32,16 @@ export default async function InvitationsPage({
     requireAdvisorRole(),
     getInvitationsAction(filters, { page, pageSize }),
   ]);
-  const [profile, clientLimitStatus] = await Promise.all([
+  const [profile, clientLimitStatus, visibilityContext] = await Promise.all([
     getAdvisorProfileOrThrow(userId),
     getAdvisorClientLimitStatus(userId),
+    resolveEnterpriseMemberVisibilityContext(userId),
   ]);
   const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(profile.id);
+  const skipIntakeEnabled = isEnterpriseMemberVisibilityEnabled(
+    visibilityContext,
+    "skipIntake",
+  );
 
   if (!result.success) {
     return (
@@ -55,6 +64,7 @@ export default async function InvitationsPage({
         firmName={profile.firmName}
         assessmentDomainPicker={assessmentDomainPicker}
         clientLimitStatus={clientLimitStatus}
+        skipIntakeEnabled={skipIntakeEnabled}
       />
 
       <div className="border-t section-divider" />

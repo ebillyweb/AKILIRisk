@@ -75,7 +75,12 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     title: "Clients",
     items: [
       { href: "/advisor/pipeline", label: "All clients", icon: Users },
-      { href: "/advisor/leads", label: "Assessment leads", icon: Inbox },
+      {
+        href: "/advisor/leads",
+        label: "Assessment leads",
+        icon: Inbox,
+        requiresMemberVisibility: "assessmentLeads",
+      },
       {
         href: "/advisor/invitations",
         label: "Invitations",
@@ -347,6 +352,10 @@ const ADVISOR_NAV_PATH_ALIASES: ReadonlyArray<{
   {
     test: (pathname) => pathname.startsWith("/advisor/clients/"),
     pathname: "/advisor/pipeline",
+  },
+  {
+    test: (pathname) => pathname.startsWith("/advisor/leads/"),
+    pathname: "/advisor/leads",
   },
   {
     test: (pathname) => pathname.startsWith("/advisor/review/"),

@@ -29,6 +29,8 @@ type IntakeWaiverScopePanelProps = {
   assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
   /** When true, show the waiver + scope form (no intake submitted). */
   showWaiverAction: boolean;
+  /** When intake is waived, allow editing assessment domains / scope. */
+  canManageWaiverScope?: boolean;
   /** When true, waiver on/off cannot be changed (assessment already started). */
   waiverLocked?: boolean;
 };
@@ -42,6 +44,7 @@ export function IntakeWaiverScopePanel({
   focusAreas,
   assessmentDomainPicker,
   showWaiverAction,
+  canManageWaiverScope = true,
   waiverLocked = false,
 }: IntakeWaiverScopePanelProps) {
   const assessmentDomains = assessmentDomainPicker.domains;
@@ -137,6 +140,7 @@ export function IntakeWaiverScopePanel({
                   .join(", ")}
               </p>
             ) : null}
+            {canManageWaiverScope ? (
             <Button
               type="button"
               variant="secondary"
@@ -154,10 +158,11 @@ export function IntakeWaiverScopePanel({
             >
               Edit domains
             </Button>
+            ) : null}
           </div>
         ) : null}
 
-        {(editingScope || !scopeSet) && (
+        {canManageWaiverScope && (editingScope || !scopeSet) && (
           <div className="space-y-4 rounded-lg border border-border/80 p-4">
             <AssessmentDomainsSelector
               domains={assessmentDomains}

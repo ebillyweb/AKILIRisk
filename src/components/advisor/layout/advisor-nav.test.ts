@@ -196,6 +196,17 @@ describe("getActiveAdvisorNavHref", () => {
     expect(visible.some((section) => section.id === "portfolio")).toBe(false);
   });
 
+  it("hides assessment leads nav for enterprise members when firm visibility is off", () => {
+    const visible = getVisibleAdvisorNavSections(flags, {
+      applyEnterpriseMemberVisibility: true,
+      enterpriseMemberVisibility: {
+        assessmentLeads: false,
+      },
+    });
+    const clientItems = visible.find((section) => section.id === "clients")?.items ?? [];
+    expect(clientItems.some((item) => item.href === "/advisor/leads")).toBe(false);
+  });
+
   it("hides methodology nav for enterprise members when firm visibility is off", () => {
     const visible = getVisibleAdvisorNavSections(flags, {
       applyEnterpriseMemberVisibility: true,

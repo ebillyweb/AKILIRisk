@@ -108,8 +108,17 @@ export function AdvisorSidebar({
             </Tooltip>
 
             {!collapsed ? (
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <h2 className="truncate text-lg font-semibold tracking-tight text-foreground">
+              <div className="min-w-0 flex-1">
+                <h2
+                  className={cn(
+                    "text-pretty font-semibold leading-snug tracking-tight text-foreground break-words",
+                    workspaceTitle.length > 32
+                      ? "text-sm"
+                      : workspaceTitle.length > 20
+                        ? "text-base"
+                        : "text-lg",
+                  )}
+                >
                   {workspaceTitle}
                 </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2">

@@ -2,6 +2,11 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import { getClientDetailData } from "@/lib/actions/pipeline-actions";
+import { requireAdvisorRole } from "@/lib/advisor/auth";
+import {
+  isEnterpriseMemberVisibilityEnabled,
+  resolveEnterpriseMemberVisibilityContext,
+} from "@/lib/enterprise/advisor-member-visibility";
 import { ClientDetailView } from "@/components/pipeline/ClientDetailView";
 import ClientDetailLoading from "./loading";
 
@@ -12,7 +17,10 @@ interface ClientDetailPageProps {
 }
 
 async function ClientDetailContent({ clientId }: { clientId: string }) {
-  const result = await getClientDetailData(clientId);
+  const [{ userId }, result] = await Promise.all([
+    requireAdvisorRole(),
+    getClientDetailData(clientId),
+  ]);
 
   if (!result.success) {
     if (result.error?.includes('not found')) {
@@ -21,7 +29,13 @@ async function ClientDetailContent({ clientId }: { clientId: string }) {
     throw new Error(result.error || 'Failed to load client data');
   }
 
-  return <ClientDetailView detail={result.data!} />;
+  const visibilityContext = await resolveEnterpriseMemberVisibilityContext(userId);
+  const canSkipIntake = isEnterpriseMemberVisibilityEnabled(
+    visibilityContext,
+    "skipIntake",
+  );
+
+  return <ClientDetailView detail={result.data!} canSkipIntake={canSkipIntake} />;
 }
 
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {
