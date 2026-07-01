@@ -63,6 +63,16 @@ describe("getVisibilityOptionTierState", () => {
     expect(state.available).toBe(true);
     expect(state.includedSummary).toContain("Business");
   });
+
+  it("marks portfolio unavailable when the firm plan includes no portfolio modules", () => {
+    const state = getVisibilityOptionTierState("portfolio", "ESSENTIALS", {
+      ...flags,
+      riskIntelligenceEnabled: false,
+      governanceDashboardEnabled: false,
+    });
+    expect(state.available).toBe(false);
+    expect(state.requiredTierLabel).toBe("Not included");
+  });
 });
 
 describe("clampVisibilityToModuleTier", () => {

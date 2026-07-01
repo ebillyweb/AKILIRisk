@@ -32,9 +32,9 @@ type VisibilityOption = {
 const VISIBILITY_OPTIONS: VisibilityOption[] = [
   {
     key: "portfolio",
-    label: "Portfolio",
+    label: "Portfolio & risk insights",
     description:
-      "Risk analytics, intelligence, reports, recommendations, and signals.",
+      "Risk analytics, intelligence, reports, recommendations, and signals in the Portfolio workspace.",
   },
   {
     key: "methodology",

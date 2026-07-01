@@ -79,10 +79,14 @@ export function getVisibilityOptionTierState(
   const tierName = TIER_DISPLAY_NAME[moduleTier as keyof typeof TIER_DISPLAY_NAME] ?? moduleTier;
 
   if (key === "portfolio") {
+    const includedSummary = describePortfolioAtTier(moduleTier, flags);
+    const unavailableOnPlan =
+      includedSummary.startsWith("No portfolio modules") ||
+      includedSummary.includes("disabled platform-wide");
     return {
-      available: true,
-      requiredTierLabel: null,
-      includedSummary: describePortfolioAtTier(moduleTier, flags),
+      available: !unavailableOnPlan,
+      requiredTierLabel: unavailableOnPlan ? "Not included" : null,
+      includedSummary,
     };
   }
 
