@@ -34,7 +34,14 @@ export function Providers({
   );
 
   return (
-    <SessionProvider session={session} refetchOnWindowFocus>
+    // SessionProvider only reads its `session` prop on mount, so a server-action
+    // sign-out (soft RSC navigation) would leave useSession() stale. Keying by the
+    // server session's user id remounts it whenever auth state actually changes.
+    <SessionProvider
+      key={session?.user?.id ?? "unauthenticated"}
+      session={session}
+      refetchOnWindowFocus
+    >
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           {children}
