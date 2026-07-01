@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import ColorPicker from '@/components/ui/color-picker';
 import { FileUpload } from '@/components/ui/file-upload';
 import { BrandingSidebarPreview } from '@/components/advisor/settings/BrandingSidebarPreview';
+import { BrandedLandingTestButton } from '@/components/advisor/settings/BrandedLandingTestButton';
 import { PreviewContainer } from '@/components/advisor/settings/BrandingPreview';
 import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
 import { SubdomainManager } from '@/components/advisor/settings/SubdomainManager';
@@ -90,6 +91,7 @@ interface EnhancedBrandingFormProps {
   productionDomain: string;
   tenantSubdomainSuffix?: string;
   useTenantPathPortals?: boolean;
+  platformAppOrigin?: string;
   stagingPlatformHost?: string;
   platformSubdomainsAutoActivate?: boolean;
 }
@@ -183,6 +185,7 @@ export function EnhancedBrandingForm({
   productionDomain,
   tenantSubdomainSuffix = '',
   useTenantPathPortals = false,
+  platformAppOrigin = '',
   stagingPlatformHost = 'preview.akilirisk.com',
   platformSubdomainsAutoActivate = true,
 }: EnhancedBrandingFormProps) {
@@ -235,6 +238,23 @@ export function EnhancedBrandingForm({
       logoUrl: resolveAdvisorLogoSrcForPreview(watchedValues.logoUrl || profile.logoUrl || null),
     }),
     [watchedValues, profile.logoUrl]
+  );
+
+  const portalConfig = useMemo(
+    () => ({
+      productionDomain,
+      tenantSubdomainSuffix,
+      useTenantPathPortals,
+      platformAppOrigin,
+      stagingPlatformHost,
+    }),
+    [
+      productionDomain,
+      tenantSubdomainSuffix,
+      useTenantPathPortals,
+      platformAppOrigin,
+      stagingPlatformHost,
+    ],
   );
 
   useEffect(() => {
@@ -384,10 +404,10 @@ export function EnhancedBrandingForm({
             aria-label="Branding settings sections"
             ref={mobileTabsListRef}
             className={cn(
-              'h-auto w-full shrink-0 gap-0 rounded-none border-border/60 bg-muted/25 p-2 text-muted-foreground',
+              'w-full shrink-0 gap-0 rounded-none border-border/60 bg-muted/25 p-2 text-muted-foreground',
               xlSidebar
                 ? 'xl:sticky xl:top-20 xl:z-10 xl:w-[13.5rem] xl:flex-col xl:border-r xl:bg-muted/20 xl:px-2 xl:py-4'
-                : 'grid w-full grid-cols-3 gap-1 border-b'
+                : '!grid !h-auto w-full grid-cols-2 gap-1.5 border-b pb-2 sm:grid-cols-3'
             )}
           >
               {visibleSections.map((section) => {
@@ -408,7 +428,7 @@ export function EnhancedBrandingForm({
                       'data-[state=active]:bg-background/90 data-[state=active]:shadow-none',
                       xlSidebar
                         ? 'h-auto flex-col items-stretch gap-1 px-3 py-2.5'
-                        : 'h-auto min-w-0 justify-center px-2 py-2'
+                        : 'h-auto min-w-0 flex-none justify-center px-2 py-2.5'
                     )}
                   >
                     <span
@@ -670,6 +690,7 @@ export function EnhancedBrandingForm({
                   productionDomain={productionDomain}
                   tenantSubdomainSuffix={tenantSubdomainSuffix}
                   useTenantPathPortals={useTenantPathPortals}
+                  platformAppOrigin={platformAppOrigin}
                   stagingPlatformHost={stagingPlatformHost}
                   platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
                   readOnly={readOnly}
@@ -679,9 +700,26 @@ export function EnhancedBrandingForm({
               <TabsContent value="preview" className="mt-0 outline-none">
                 <SettingsSection
                   title="Live preview"
-                  description="Email, dashboard, and PDF touchpoints with your current branding."
+                  description="Mockups for email, dashboard, and PDF touchpoints. Open your live tenant landing page to verify the full client experience."
                   icon={Eye}
                 >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <BrandedLandingTestButton
+                      currentSubdomain={currentSubdomain}
+                      portalConfig={portalConfig}
+                      customSubdomainEnabled={features.customSubdomainEnabled}
+                      hasUnsavedChanges={isDirty}
+                    />
+                    {!features.customSubdomainEnabled ? (
+                      <p className="text-sm text-muted-foreground">
+                        Custom subdomains require Professional or higher.
+                      </p>
+                    ) : !currentSubdomain?.dnsVerified ? (
+                      <p className="text-sm text-muted-foreground">
+                        Claim a subdomain under Custom Domain to test the live landing page.
+                      </p>
+                    ) : null}
+                  </div>
                   <PreviewContainer branding={brandingForPreview} />
                 </SettingsSection>
               </TabsContent>
@@ -749,13 +787,22 @@ export function EnhancedBrandingForm({
 
       {showSidebarPreview ? (
         <aside className="min-w-0 space-y-4 xl:sticky xl:top-20 xl:self-start">
-          <div className="space-y-1 px-1">
-            <p className="text-sm font-semibold tracking-tight">Live preview</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {readOnly
-                ? 'Firm branding as clients see it on portals and emails.'
-                : 'Updates as you edit. Open the Preview tab for email and PDF samples.'}
-            </p>
+          <div className="space-y-3 px-1">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold tracking-tight">Live preview</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {readOnly
+                  ? 'Firm branding as clients see it on portals and emails.'
+                  : 'Updates as you edit. Use Test live landing page for the real tenant portal.'}
+              </p>
+            </div>
+            <BrandedLandingTestButton
+              currentSubdomain={currentSubdomain}
+              portalConfig={portalConfig}
+              customSubdomainEnabled={features.customSubdomainEnabled}
+              hasUnsavedChanges={isDirty}
+              className="w-full justify-center"
+            />
           </div>
           <BrandingSidebarPreview branding={brandingForPreview} />
           {features.advancedBrandingEnabled &&

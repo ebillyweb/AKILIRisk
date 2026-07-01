@@ -3,12 +3,11 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import {
   buildAdvisorPortalHostname,
-  buildAdvisorPortalUrl,
   getProductionDomain,
   toTenantHostLabel,
 } from "@/lib/advisor/platform-subdomain";
 import {
-  getStagingPlatformHostname,
+  buildStagingTenantPortalUrl,
   usesStagingTenantPathPortals,
 } from "@/lib/advisor/tenant-path-portals";
 import { getPublicAppUrlFromEnv } from "@/lib/public-app-url";
@@ -35,13 +34,7 @@ export class BrandedInvitationLinkNotReadyError extends Error {
 
 function buildAdvisorPortalOrigin(canonicalSlug: string): string {
   if (usesStagingTenantPathPortals()) {
-    // Path portals require PRODUCTION_DOMAIN. Fail closed with the typed,
-    // user-facing error instead of letting buildStagingTenantPortalUrl throw a
-    // generic Error (or, previously, emit a bogus preview.example.com link).
-    if (!getStagingPlatformHostname()) {
-      throw new BrandedInvitationLinkNotReadyError();
-    }
-    return buildAdvisorPortalUrl(canonicalSlug);
+    return buildStagingTenantPortalUrl(canonicalSlug);
   }
 
   const domain = getProductionDomain();

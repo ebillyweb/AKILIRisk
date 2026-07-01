@@ -13,7 +13,6 @@ import {
   Check,
   X,
   Clock,
-  ExternalLink,
   Info,
   Lock,
   Loader2,
@@ -21,8 +20,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
+import { BrandedLandingTestButton } from '@/components/advisor/settings/BrandedLandingTestButton';
 import { SubscriptionFeatures } from '@/lib/validation/branding';
 import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
+import {
+  buildTenantPortalHost,
+  type TenantPortalUrlConfig,
+} from '@/lib/branding/tenant-portal-url';
 import {
   SUBDOMAIN_SLUG_INPUT_PATTERN,
   SUBDOMAIN_SLUG_MAX_LENGTH,
@@ -38,6 +42,7 @@ interface SubdomainManagerProps {
   tenantSubdomainSuffix?: string;
   /** When true, show preview.akilirisk.com/t/{slug} instead of a subdomain host */
   useTenantPathPortals?: boolean;
+  platformAppOrigin?: string;
   stagingPlatformHost?: string;
   platformSubdomainsAutoActivate?: boolean;
   readOnly?: boolean;
@@ -50,17 +55,22 @@ export function SubdomainManager({
   productionDomain,
   tenantSubdomainSuffix = '',
   useTenantPathPortals = false,
+  platformAppOrigin = '',
   stagingPlatformHost = 'preview.akilirisk.com',
   platformSubdomainsAutoActivate = true,
   readOnly = false,
   className = '',
 }: SubdomainManagerProps) {
+  const portalConfig: TenantPortalUrlConfig = {
+    productionDomain,
+    tenantSubdomainSuffix,
+    useTenantPathPortals,
+    platformAppOrigin,
+    stagingPlatformHost,
+  };
   const domainSuffix = `.${productionDomain}`;
   const portalHost = (canonicalSlug: string) =>
-    useTenantPathPortals
-      ? `${stagingPlatformHost}/t/${canonicalSlug}`
-      : `${canonicalSlug}${tenantSubdomainSuffix}${domainSuffix}`;
-  const portalUrl = (canonicalSlug: string) => `https://${portalHost(canonicalSlug)}`;
+    buildTenantPortalHost(canonicalSlug, portalConfig);
   const [subdomain, setSubdomain] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -267,16 +277,13 @@ export function SubdomainManager({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {currentSubdomain.dnsVerified && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(portalUrl(currentSubdomain.subdomain), '_blank')}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    Visit
-                  </Button>
-                )}
+                {currentSubdomain.dnsVerified ? (
+                  <BrandedLandingTestButton
+                    currentSubdomain={currentSubdomain}
+                    portalConfig={portalConfig}
+                    customSubdomainEnabled={features.customSubdomainEnabled}
+                  />
+                ) : null}
                 <Button
                   variant="outline"
                   size="sm"
@@ -323,7 +330,7 @@ export function SubdomainManager({
                   <div className="flex">
                     <Input id="new-subdomain" {...subdomainInputProps} />
                     <div className="px-3 py-2 bg-muted text-sm rounded-r-md border border-l-0 flex items-center">
-                      {domainSuffix}
+                      {useTenantPathPortals ? `/t…` : `.${productionDomain}`}
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>
@@ -408,7 +415,7 @@ export function SubdomainManager({
                 Your subdomain will be:{' '}
                 <strong>
                   {useTenantPathPortals
-                    ? `${stagingPlatformHost}/t/yourname`
+                    ? `${buildTenantPortalHost("yourname", portalConfig)}`
                     : `yourname${tenantSubdomainSuffix}${domainSuffix}`}
                 </strong>
                 {platformSubdomainsAutoActivate && (

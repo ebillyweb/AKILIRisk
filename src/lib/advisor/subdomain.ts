@@ -312,20 +312,12 @@ function subdomainSettingsStatus(row: {
   return 'inactive';
 }
 
-/**
- * Load the advisor's claimed subdomain for settings UI.
- */
-export async function getAdvisorSubdomainSettings(
-  advisorId: string
-): Promise<AdvisorSubdomainSettings | null> {
-  const row = await prisma.advisorSubdomain.findUnique({
-    where: { advisorId },
-  });
-
-  if (!row) {
-    return null;
-  }
-
+function mapSubdomainRowToSettings(row: {
+  subdomain: string;
+  isActive: boolean;
+  dnsVerified: boolean;
+  sslProvisioned: boolean;
+}): AdvisorSubdomainSettings {
   let verificationInstructions: AdvisorSubdomainSettings['verificationInstructions'];
   if (!row.dnsVerified && !isSubdomainAutoActivateEnabled()) {
     try {
@@ -342,4 +334,38 @@ export async function getAdvisorSubdomainSettings(
     sslProvisioned: row.sslProvisioned,
     verificationInstructions,
   };
+}
+
+/**
+ * Load the advisor's claimed subdomain for settings UI.
+ */
+export async function getAdvisorSubdomainSettings(
+  advisorId: string
+): Promise<AdvisorSubdomainSettings | null> {
+  const row = await prisma.advisorSubdomain.findUnique({
+    where: { advisorId },
+  });
+
+  if (!row) {
+    return null;
+  }
+
+  return mapSubdomainRowToSettings(row);
+}
+
+/**
+ * Firm-wide subdomain claimed by an enterprise owner/admin (shared portal URL).
+ */
+export async function getEnterpriseSubdomainSettings(
+  enterpriseId: string,
+): Promise<AdvisorSubdomainSettings | null> {
+  const row = await prisma.advisorSubdomain.findFirst({
+    where: { enterpriseId },
+  });
+
+  if (!row) {
+    return null;
+  }
+
+  return mapSubdomainRowToSettings(row);
 }

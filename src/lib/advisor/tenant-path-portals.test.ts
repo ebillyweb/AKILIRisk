@@ -30,18 +30,23 @@ describe('tenant-path-portals', () => {
     expect(parseStagingTenantPathRoute('/t/www')).toBeNull();
   });
 
-  it('builds staging portal URLs', () => {
+  it('builds staging portal URLs from the configured app origin', () => {
     process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
+    process.env.AUTH_URL = 'https://preview.akilirisk.com';
     expect(buildStagingTenantPortalUrl('ebilly')).toBe(
       'https://preview.akilirisk.com/t/ebilly',
     );
     expect(buildStagingTenantPathPrefix('ebilly')).toBe('/t/ebilly');
   });
 
-  it('fails loudly instead of emitting a placeholder host when PRODUCTION_DOMAIN is unset', () => {
-    delete process.env.PRODUCTION_DOMAIN;
-    expect(getStagingPlatformHostname()).toBeNull();
-    expect(() => buildStagingTenantPortalUrl('ebilly')).toThrow(/PRODUCTION_DOMAIN/);
+  it('builds local path portal URLs during development', () => {
+    process.env.NODE_ENV = 'development';
+    delete process.env.AUTH_URL;
+    delete process.env.NEXT_PUBLIC_URL;
+    delete process.env.PORT;
+    expect(buildStagingTenantPortalUrl('ebilly')).toBe(
+      'http://localhost:3000/t/ebilly',
+    );
   });
 
   it('extracts a referer slug only from the platform host', () => {
@@ -64,8 +69,20 @@ describe('tenant-path-portals', () => {
   });
 
   it('defaults path portals on Vercel preview', () => {
+    process.env.NODE_ENV = 'test';
     process.env.VERCEL_ENV = 'preview';
     delete process.env.TENANT_PATH_PORTALS;
+    expect(usesStagingTenantPathPortals()).toBe(true);
+
+    process.env.TENANT_PATH_PORTALS = 'false';
+    expect(usesStagingTenantPathPortals()).toBe(false);
+  });
+
+  it('defaults path portals in local development', () => {
+    process.env.NODE_ENV = 'development';
+    delete process.env.TENANT_PATH_PORTALS;
+    delete process.env.VERCEL_ENV;
+    delete process.env.AUTH_URL;
     expect(usesStagingTenantPathPortals()).toBe(true);
 
     process.env.TENANT_PATH_PORTALS = 'false';

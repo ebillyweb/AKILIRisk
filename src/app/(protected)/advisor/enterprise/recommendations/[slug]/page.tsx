@@ -6,7 +6,7 @@ import { serviceIdFromRulePayload } from "@/lib/admin/recommendation-rule-ui";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { loadEnterpriseRecommendationRules } from "@/lib/methodology/enterprise-recommendation-queries";
-import { loadActiveEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
+import { loadEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
 import {
   loadActiveServiceRecommendations,
   methodologyPillarDisplayName,
@@ -27,18 +27,18 @@ export default async function EnterpriseRecommendationsPage({
 
   let enterpriseName: string;
   let enterpriseId: string;
-  let activePillars: Awaited<ReturnType<typeof loadActiveEnterpriseMethodologyPillars>>;
+  let pillars: Awaited<ReturnType<typeof loadEnterpriseMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
     enterpriseName = team.enterpriseName;
     enterpriseId = team.enterpriseId;
-    activePillars = await loadActiveEnterpriseMethodologyPillars(enterpriseId);
+    pillars = await loadEnterpriseMethodologyPillars(enterpriseId);
   } catch {
     redirect("/signin");
   }
 
-  const pillar = activePillars.find((p) => p.slug === slug);
+  const pillar = pillars.find((p) => p.slug === slug);
   if (!pillar) notFound();
 
   const [rules, services, questionOptions] = await Promise.all([
@@ -83,7 +83,7 @@ export default async function EnterpriseRecommendationsPage({
         </CardContent>
       </Card>
       <MethodologyPillarTabs
-        pillars={activePillars}
+        pillars={pillars}
         activeSlug={slug}
         hrefForSlug={(pillarSlug) => `/advisor/enterprise/recommendations/${pillarSlug}`}
       />

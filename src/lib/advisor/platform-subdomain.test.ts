@@ -60,6 +60,7 @@ describe('platform-subdomain', () => {
   it('builds path-based staging portal URLs when enabled', () => {
     process.env.PRODUCTION_DOMAIN = 'akilirisk.com';
     process.env.TENANT_PATH_PORTALS = 'true';
+    process.env.AUTH_URL = 'https://preview.akilirisk.com';
     expect(buildAdvisorPortalUrl('ebilly')).toBe('https://preview.akilirisk.com/t/ebilly');
   });
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
-import { loadActiveEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
+import { loadEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
 import { methodologyPillarDisplayName } from "@/lib/methodology/methodology-queries";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default async function EnterpriseRecommendationsIndexPage() {
     redirect("/signin");
   }
 
-  const pillars = await loadActiveEnterpriseMethodologyPillars(enterpriseId);
+  const pillars = await loadEnterpriseMethodologyPillars(enterpriseId);
   const ruleCounts = await prisma.enterpriseRecommendationRule.groupBy({
     by: ["pillarId"],
     where: { enterpriseId },

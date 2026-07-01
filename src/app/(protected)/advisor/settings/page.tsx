@@ -1,5 +1,5 @@
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
-import { getAdvisorSubdomainSettings } from "@/lib/advisor/subdomain";
+import { getAdvisorSubdomainSettings, getEnterpriseSubdomainSettings } from "@/lib/advisor/subdomain";
 import {
   getProductionDomain,
   getTenantSubdomainSuffix,
@@ -7,6 +7,7 @@ import {
 } from "@/lib/advisor/platform-subdomain";
 import {
   getStagingPlatformHostname,
+  resolvePlatformAppOrigin,
   usesStagingTenantPathPortals,
 } from "@/lib/advisor/tenant-path-portals";
 import {
@@ -58,10 +59,15 @@ export default async function AdvisorSettingsPage({
     brandingTabVisible: brandingSettings.brandingTabVisible,
   });
 
-  const currentSubdomain = await getAdvisorSubdomainSettings(profile.id);
+  const currentSubdomain =
+    (await getAdvisorSubdomainSettings(profile.id)) ??
+    (brandingSettings.context.mode !== "solo"
+      ? await getEnterpriseSubdomainSettings(brandingSettings.context.enterpriseId)
+      : null);
   const productionDomain = getProductionDomain() ?? "akilirisk.com";
   const tenantSubdomainSuffix = getTenantSubdomainSuffix();
   const useTenantPathPortals = usesStagingTenantPathPortals();
+  const platformAppOrigin = resolvePlatformAppOrigin();
   const stagingPlatformHost =
     getStagingPlatformHostname() ?? `preview.${productionDomain}`;
   const platformSubdomainsAutoActivate = isSubdomainAutoActivateEnabled();
@@ -116,6 +122,7 @@ export default async function AdvisorSettingsPage({
         productionDomain={productionDomain}
         tenantSubdomainSuffix={tenantSubdomainSuffix}
         useTenantPathPortals={useTenantPathPortals}
+        platformAppOrigin={platformAppOrigin}
         stagingPlatformHost={stagingPlatformHost}
         platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
         passwordChangeRequired={passwordChangeRequired}

@@ -13,14 +13,65 @@ export type StagingTenantPathRoute = {
   restPath: string;
 };
 
+function sanitizeUrlEnv(value: string | undefined): string | undefined {
+  if (value == null) return undefined;
+  let s = value.trim().replace(/^\uFEFF/, '').replace(/\/$/, '').trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s === '' ? undefined : s;
+}
+
+function normalizeOrigin(raw: string | undefined): string | null {
+  const s0 = sanitizeUrlEnv(raw);
+  if (s0 == null) return null;
+  let s = s0.replace(/\/$/, '');
+  if (!/^https?:\/\//i.test(s)) {
+    s = `https://${s.replace(/^\/+/, '')}`;
+  }
+  try {
+    const u = new URL(s);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.origin;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * When true, staging tenant portals use `preview.{domain}/t/{slug}` instead of
+ * Platform app origin for path-based tenant portals (`{origin}/t/{slug}`).
+ * Uses AUTH_URL / NEXT_PUBLIC_URL, then VERCEL_URL, then localhost.
+ */
+export function resolvePlatformAppOrigin(): string {
+  const fromEnv =
+    normalizeOrigin(process.env.AUTH_URL) ??
+    normalizeOrigin(process.env.NEXT_PUBLIC_URL) ??
+    normalizeOrigin(process.env.NEXTAUTH_URL);
+
+  if (fromEnv) return fromEnv;
+
+  const vercel = sanitizeUrlEnv(process.env.VERCEL_URL);
+  if (vercel) {
+    const host = vercel.replace(/^https?:\/\//i, '').split('/')[0]?.trim();
+    if (host) {
+      const origin = normalizeOrigin(host);
+      if (origin) return origin;
+    }
+  }
+
+  const port = process.env.PORT?.trim() || '3000';
+  return `http://localhost:${port}`;
+}
+
+/**
+ * When true, non-production tenant portals use `{appOrigin}/t/{slug}` instead of
  * `{slug}-staging.{domain}`. Enabled when:
  *   - TENANT_PATH_PORTALS=true, or
+ *   - NODE_ENV=development (local dev), or
  *   - VERCEL_ENV=preview, or
  *   - the request host (or AUTH_URL / NEXT_PUBLIC_URL) is `preview.{PRODUCTION_DOMAIN}`
  *
- * Set TENANT_PATH_PORTALS=false to force hostname-suffix staging URLs.
+ * Set TENANT_PATH_PORTALS=false to force legacy hostname-suffix staging URLs.
  */
 export function usesStagingTenantPathPortals(options?: {
   hostname?: string | null;
@@ -28,6 +79,7 @@ export function usesStagingTenantPathPortals(options?: {
   const explicit = process.env.TENANT_PATH_PORTALS?.trim().toLowerCase();
   if (explicit === 'false') return false;
   if (explicit === 'true') return true;
+  if (process.env.NODE_ENV === 'development') return true;
   if (process.env.VERCEL_ENV === 'preview') return true;
 
   const requestHost = options?.hostname?.trim();
@@ -79,13 +131,7 @@ export function buildStagingTenantPathPrefix(slug: string): string {
 }
 
 export function buildStagingTenantPortalUrl(slug: string): string {
-  const host = getStagingPlatformHostname();
-  if (!host) {
-    throw new Error(
-      'Cannot build staging tenant portal URL: PRODUCTION_DOMAIN is not set.'
-    );
-  }
-  return `https://${host}${buildStagingTenantPathPrefix(slug)}`;
+  return `${resolvePlatformAppOrigin()}${buildStagingTenantPathPrefix(slug)}`;
 }
 
 /**
@@ -134,11 +180,15 @@ export function buildTenantScopedPublicPath(
  */
 export function extractTenantSlugFromReferer(referer: string | null): string | null {
   if (!referer) return null;
-  const platformHost = getStagingPlatformHostname();
-  if (!platformHost) return null;
   try {
     const url = new URL(referer);
-    if (url.hostname.toLowerCase() !== platformHost.toLowerCase()) return null;
+    const refererHost = url.hostname.toLowerCase();
+    const allowedHosts = new Set<string>();
+    const platformHost = getStagingPlatformHostname();
+    if (platformHost) allowedHosts.add(platformHost.toLowerCase());
+    allowedHosts.add(new URL(resolvePlatformAppOrigin()).hostname.toLowerCase());
+
+    if (!allowedHosts.has(refererHost)) return null;
     return parseStagingTenantPathRoute(url.pathname)?.slug ?? null;
   } catch {
     return null;

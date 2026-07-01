@@ -46,6 +46,7 @@ interface AdvisorSettingsTabsProps {
   productionDomain: string;
   tenantSubdomainSuffix: string;
   useTenantPathPortals: boolean;
+  platformAppOrigin: string;
   stagingPlatformHost: string;
   platformSubdomainsAutoActivate: boolean;
   passwordChangeRequired: boolean;
@@ -67,6 +68,7 @@ export function AdvisorSettingsTabs({
   productionDomain,
   tenantSubdomainSuffix,
   useTenantPathPortals,
+  platformAppOrigin,
   stagingPlatformHost,
   platformSubdomainsAutoActivate,
   passwordChangeRequired,
@@ -186,6 +188,7 @@ export function AdvisorSettingsTabs({
             productionDomain={productionDomain}
             tenantSubdomainSuffix={tenantSubdomainSuffix}
             useTenantPathPortals={useTenantPathPortals}
+            platformAppOrigin={platformAppOrigin}
             stagingPlatformHost={stagingPlatformHost}
             platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
           />
