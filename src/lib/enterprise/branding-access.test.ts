@@ -239,7 +239,7 @@ describe("loadAdvisorBrandingSettingsView", () => {
     });
   });
 
-  it("uses firm-resolved branding for read-only enterprise advisors", async () => {
+  it("hides the branding tab for enterprise members without personal branding", async () => {
     billingContext.mockResolvedValue({
       kind: "enterprise",
       enterpriseId: "ent-1",
@@ -248,33 +248,17 @@ describe("loadAdvisorBrandingSettingsView", () => {
       subscription: null,
     });
     enterpriseFindUnique.mockResolvedValue({ name: "Belvedere Wealth" });
-    resolveBranding.mockResolvedValue({
-      brandName: "Belvedere Wealth",
-      advisorFirmName: "Belvedere Wealth",
-      tagline: "Firm tagline",
-      primaryColor: "#533483",
-      secondaryColor: null,
-      accentColor: null,
-      logoUrl: null,
-      logoS3Key: null,
-      logoContentType: null,
-      logoFileSize: null,
-      logoUploadedAt: null,
-      websiteUrl: null,
-      emailFooterText: null,
-      supportEmail: null,
-      supportPhone: null,
-      brandingEnabled: true,
-      customDomainEnabled: false,
+    brandingPolicyMock.mockResolvedValue({
+      personalBranding: false,
+      personalSubdomain: false,
     });
 
     const view = await loadAdvisorBrandingSettingsView("user-2", "profile-2");
 
     expect(view.readOnly).toBe(true);
-    expect(view.profile.tagline).toBe("Firm tagline");
-    expect(view.profile.primaryColor).toBe("#533483");
-    expect(view.readOnlyNotice).toMatch(/Belvedere Wealth/i);
+    expect(view.brandingTabVisible).toBe(false);
     expect(view.subdomainEditable).toBe(false);
+    expect(resolveBranding).not.toHaveBeenCalled();
   });
 
   it("loads editable personal branding for enterprise-personal members", async () => {
@@ -296,6 +280,7 @@ describe("loadAdvisorBrandingSettingsView", () => {
     expect(view.readOnly).toBe(false);
     expect(view.profile.tagline).toBe("Solo tagline");
     expect(view.subdomainEditable).toBe(true);
+    expect(view.brandingTabVisible).toBe(true);
     expect(resolveBranding).not.toHaveBeenCalled();
   });
 });

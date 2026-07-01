@@ -13,4 +13,10 @@ describe("parseAdvisorSettingsTab", () => {
     expect(parseAdvisorSettingsTab("branding")).toBe("branding");
     expect(parseAdvisorSettingsTab("security")).toBe("security");
   });
+
+  it("maps branding to general when the branding tab is hidden", () => {
+    expect(parseAdvisorSettingsTab("branding", { brandingTabVisible: false })).toBe(
+      "general",
+    );
+  });
 });

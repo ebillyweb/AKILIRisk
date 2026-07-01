@@ -52,6 +52,8 @@ export type AdvisorBrandingSettingsView = {
   readOnlyNotice?: string;
   /** When false, hide subdomain management even if branding is editable. */
   subdomainEditable: boolean;
+  /** When false, the Branding settings tab is omitted (enterprise members without personal branding). */
+  brandingTabVisible: boolean;
 };
 
 function mapResolvedBrandingToProfile(
@@ -191,6 +193,7 @@ export async function loadAdvisorBrandingSettingsView(
       profile: baseProfile,
       readOnly: false,
       subdomainEditable: true,
+      brandingTabVisible: true,
     };
   }
 
@@ -200,26 +203,28 @@ export async function loadAdvisorBrandingSettingsView(
       profile: baseProfile,
       readOnly: false,
       subdomainEditable: context.subdomainEditable,
+      brandingTabVisible: true,
+    };
+  }
+
+  if (context.mode === "enterprise-view") {
+    return {
+      context,
+      profile: baseProfile,
+      readOnly: true,
+      subdomainEditable: false,
+      brandingTabVisible: false,
     };
   }
 
   const resolved = await resolveAdvisorBrandingForProfile(advisorProfileId);
   const profile = resolved ? mapResolvedBrandingToProfile(resolved) : baseProfile;
 
-  if (context.mode === "enterprise-view") {
-    return {
-      context,
-      profile,
-      readOnly: true,
-      readOnlyNotice: `Firm branding for ${context.enterpriseName} is managed by your firm owner or administrators. You can review how clients see the firm below.`,
-      subdomainEditable: false,
-    };
-  }
-
   return {
     context,
     profile,
     readOnly: false,
     subdomainEditable: true,
+    brandingTabVisible: true,
   };
 }

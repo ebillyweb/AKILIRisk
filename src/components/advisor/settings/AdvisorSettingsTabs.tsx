@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
@@ -51,6 +51,7 @@ interface AdvisorSettingsTabsProps {
   passwordChangeRequired: boolean;
   changePasswordHref: string;
   householdProfilesEnabled: boolean;
+  showBrandingTab?: boolean;
 }
 
 export function AdvisorSettingsTabs({
@@ -71,10 +72,24 @@ export function AdvisorSettingsTabs({
   passwordChangeRequired,
   changePasswordHref,
   householdProfilesEnabled,
+  showBrandingTab = true,
 }: AdvisorSettingsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = parseAdvisorSettingsTab(searchParams.get("tab") ?? initialTab);
+  const activeTab = parseAdvisorSettingsTab(searchParams.get("tab") ?? initialTab, {
+    brandingTabVisible: showBrandingTab,
+  });
+
+  useEffect(() => {
+    if (!showBrandingTab && searchParams.get("tab") === "branding") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("tab");
+      const query = params.toString();
+      router.replace(query ? `/advisor/settings?${query}` : "/advisor/settings", {
+        scroll: false,
+      });
+    }
+  }, [router, searchParams, showBrandingTab]);
 
   const setTab = useCallback(
     (tab: AdvisorSettingsTab) => {
@@ -110,13 +125,15 @@ export function AdvisorSettingsTabs({
         <TabsTrigger value="general" className="rounded-none px-3 pb-3">
           General
         </TabsTrigger>
-        <TabsTrigger
-          value="branding"
-          className="rounded-none px-3 pb-3"
-          data-tour="config-branding-tab"
-        >
-          Branding
-        </TabsTrigger>
+        {showBrandingTab ? (
+          <TabsTrigger
+            value="branding"
+            className="rounded-none px-3 pb-3"
+            data-tour="config-branding-tab"
+          >
+            Branding
+          </TabsTrigger>
+        ) : null}
         <TabsTrigger value="security" className="gap-2 rounded-none px-3 pb-3">
           Security
           {passwordChangeRequired ? (
@@ -157,8 +174,9 @@ export function AdvisorSettingsTabs({
       </TabsContent>
 
       <TabsContent value="branding" className="mt-0 outline-none">
-        <div data-tour="config-primary-form">
-          <EnhancedBrandingForm
+        {showBrandingTab ? (
+          <div data-tour="config-primary-form">
+            <EnhancedBrandingForm
             profile={brandingProfile}
             readOnly={brandingReadOnly}
             readOnlyNotice={brandingReadOnlyNotice}
@@ -171,7 +189,8 @@ export function AdvisorSettingsTabs({
             stagingPlatformHost={stagingPlatformHost}
             platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
           />
-        </div>
+          </div>
+        ) : null}
       </TabsContent>
 
       <TabsContent value="security" className="mt-0 space-y-6 outline-none">

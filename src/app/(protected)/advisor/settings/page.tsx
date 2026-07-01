@@ -30,7 +30,6 @@ export default async function AdvisorSettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const initialTab = parseAdvisorSettingsTab(resolvedSearchParams.tab);
 
   const [result, session] = await Promise.all([
     getAdvisorDashboardData(),
@@ -51,7 +50,13 @@ export default async function AdvisorSettingsPage({
 
   const { profile } = result.data!;
 
-  const brandingSettings = await loadAdvisorBrandingSettingsView(profile.userId, profile.id);
+  const brandingSettings = await loadAdvisorBrandingSettingsView(
+    profile.userId,
+    profile.id,
+  );
+  const initialTab = parseAdvisorSettingsTab(resolvedSearchParams.tab, {
+    brandingTabVisible: brandingSettings.brandingTabVisible,
+  });
 
   const currentSubdomain = await getAdvisorSubdomainSettings(profile.id);
   const productionDomain = getProductionDomain() ?? "akilirisk.com";
@@ -61,7 +66,6 @@ export default async function AdvisorSettingsPage({
     getStagingPlatformHostname() ?? `preview.${productionDomain}`;
   const platformSubdomainsAutoActivate = isSubdomainAutoActivateEnabled();
 
-  // Subscription flags gate premium tabs; missing Subscription row should not hide the full branding UI
   const features =
     (await getSubscriptionFeatures(profile.userId)) ?? ESSENTIALS_SUBSCRIPTION_FEATURES;
 
@@ -91,7 +95,11 @@ export default async function AdvisorSettingsPage({
       <AdvisorScreenHeader
         kicker="Professional profile"
         title="Settings"
-        description="Manage your profile, client-facing branding, and account security."
+        description={
+          brandingSettings.brandingTabVisible
+            ? "Manage your profile, client-facing branding, and account security."
+            : "Manage your profile and account security."
+        }
       />
 
       <AdvisorSettingsTabs
@@ -102,6 +110,7 @@ export default async function AdvisorSettingsPage({
         brandingReadOnly={brandingSettings.readOnly}
         brandingReadOnlyNotice={brandingSettings.readOnlyNotice}
         subdomainReadOnly={!brandingSettings.subdomainEditable}
+        showBrandingTab={brandingSettings.brandingTabVisible}
         features={features}
         currentSubdomain={currentSubdomain}
         productionDomain={productionDomain}

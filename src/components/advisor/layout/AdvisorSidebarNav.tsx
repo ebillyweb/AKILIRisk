@@ -357,7 +357,7 @@ export function AdvisorSidebarNav({
     footer.length > 0 ? (
       <NavSectionGroup
         sections={footer}
-        startIndex={primary.length}
+        startIndex={unifiedScroll ? primary.length : 0}
         {...sectionGroupProps}
       />
     ) : null;
