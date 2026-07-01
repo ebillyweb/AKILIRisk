@@ -27,7 +27,7 @@ import {
   getAdvisorNavSectionForHref,
   getAdvisorNavItemLockReason,
   getVisibleAdvisorNavSections,
-  filterAdvisorNavSectionsWithAccessibleItems,
+  resolveAdvisorNavSectionsForDisplay,
   partitionAdvisorNavSections,
   type AdvisorNavItem,
   type AdvisorNavLockReason,
@@ -318,7 +318,11 @@ export function AdvisorSidebarNav({
   const { applyEnterpriseMemberVisibility, enterpriseMemberVisibility } =
     useAdvisorWorkspacePreferences();
   const [navLock, setNavLock] = useState<AdvisorNavLockReason>(null);
-  const visibleSections = filterAdvisorNavSectionsWithAccessibleItems(
+  const hideTierLockedNav =
+    applyEnterpriseMemberVisibility &&
+    enterpriseMemberVisibility.hideTierLockedNav === true;
+
+  const visibleSections = resolveAdvisorNavSectionsForDisplay(
     getVisibleAdvisorNavSections(featureFlags, {
       enterpriseTeamEnabled,
       billingNavEnabled,
@@ -328,6 +332,7 @@ export function AdvisorSidebarNav({
     }),
     subscriptionTier,
     clientLimitStatus,
+    { hideTierLockedItems: hideTierLockedNav },
   );
   const { primary, footer } = partitionAdvisorNavSections(visibleSections);
   const activeHref = getActiveAdvisorNavHref(pathname, visibleSections, searchParams);

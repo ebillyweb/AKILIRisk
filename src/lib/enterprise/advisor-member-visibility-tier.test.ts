@@ -18,6 +18,7 @@ describe("isVisibilityOptionAtModuleTier", () => {
   it("allows portfolio and product tours on Essentials", () => {
     expect(isVisibilityOptionAtModuleTier("portfolio", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("productTours", "ESSENTIALS")).toBe(true);
+    expect(isVisibilityOptionAtModuleTier("hideTierLockedNav", "ESSENTIALS")).toBe(true);
   });
 
   it("blocks methodology below Professional", () => {
@@ -74,6 +75,7 @@ describe("clampVisibilityToModuleTier", () => {
           engagements: true,
           reassessment: true,
           productTours: true,
+          hideTierLockedNav: true,
         },
         "ESSENTIALS",
       ),
@@ -83,6 +85,7 @@ describe("clampVisibilityToModuleTier", () => {
       engagements: false,
       reassessment: false,
       productTours: true,
+      hideTierLockedNav: true,
     });
   });
 });

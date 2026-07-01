@@ -13,6 +13,7 @@ export const ENTERPRISE_ADVISOR_MEMBER_VISIBILITY_KEYS = [
   "engagements",
   "reassessment",
   "productTours",
+  "hideTierLockedNav",
 ] as const;
 
 export type EnterpriseAdvisorMemberVisibilityKey =
@@ -29,6 +30,7 @@ const enterpriseVisibilitySelect = {
   advisorMemberEngagementsVisible: true,
   advisorMemberReassessmentVisible: true,
   advisorMemberProductToursVisible: true,
+  advisorMemberHideTierLockedNav: true,
 } as const;
 
 export function mapEnterpriseAdvisorMemberVisibility(row: {
@@ -37,6 +39,7 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
   advisorMemberEngagementsVisible: boolean;
   advisorMemberReassessmentVisible: boolean;
   advisorMemberProductToursVisible: boolean;
+  advisorMemberHideTierLockedNav: boolean;
 }): EnterpriseAdvisorMemberVisibility {
   return {
     portfolio: row.advisorMemberPortfolioVisible,
@@ -44,6 +47,7 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
     engagements: row.advisorMemberEngagementsVisible,
     reassessment: row.advisorMemberReassessmentVisible,
     productTours: row.advisorMemberProductToursVisible,
+    hideTierLockedNav: row.advisorMemberHideTierLockedNav,
   };
 }
 
@@ -54,6 +58,7 @@ export const DEFAULT_ENTERPRISE_ADVISOR_MEMBER_VISIBILITY: EnterpriseAdvisorMemb
     engagements: true,
     reassessment: true,
     productTours: true,
+    hideTierLockedNav: false,
   };
 
 export type EnterpriseMemberVisibilityContext = {
@@ -138,5 +143,6 @@ export function visibilityInputToEnterpriseUpdate(
     advisorMemberEngagementsVisible: input.engagements,
     advisorMemberReassessmentVisible: input.reassessment,
     advisorMemberProductToursVisible: input.productTours,
+    advisorMemberHideTierLockedNav: input.hideTierLockedNav,
   };
 }

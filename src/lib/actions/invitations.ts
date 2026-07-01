@@ -25,6 +25,11 @@ import {
 } from "@/lib/schemas/invitation";
 import { InvitationListFilters, InvitationListResult, InvitationWithDetails } from "@/lib/invitations/types";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import {
+  mapResolvedBrandingToInvitationProfile,
+  resolveAdvisorBrandingForProfile,
+} from "@/lib/enterprise/branding";
+import type { InvitationAdvisorProfile } from "@/lib/invitations/invitation-email-branding";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -60,6 +65,33 @@ function invitationEmailThemeForProfile(
     logoS3Key: profile.logoS3Key,
     primaryColor: profile.primaryColor,
   });
+}
+
+async function resolveInvitationBrandingForAdvisor(
+  advisorProfileId: string,
+  fallbackFirmName: string | null,
+): Promise<InvitationAdvisorProfile> {
+  const resolved = await resolveAdvisorBrandingForProfile(advisorProfileId, {
+    scope: "client",
+  });
+  if (!resolved) {
+    return {
+      firmName: fallbackFirmName,
+      brandName: fallbackFirmName,
+      tagline: null,
+      primaryColor: null,
+      secondaryColor: null,
+      accentColor: null,
+      logoUrl: null,
+      logoS3Key: null,
+      websiteUrl: null,
+      emailFooterText: null,
+      supportEmail: null,
+      supportPhone: null,
+      brandingEnabled: false,
+    };
+  }
+  return mapResolvedBrandingToInvitationProfile(resolved, fallbackFirmName);
 }
 
 /**
@@ -117,7 +149,20 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
     const features =
       (await getSubscriptionFeatures(profile.userId)) ??
       ESSENTIALS_SUBSCRIPTION_FEATURES;
-    const emailTheme = invitationEmailThemeForProfile(profile, features);
+    const invitationBranding = await resolveInvitationBrandingForAdvisor(
+      profile.id,
+      profile.firmName,
+    );
+    const emailTheme = invitationEmailThemeForProfile(
+      {
+        brandingEnabled: invitationBranding.brandingEnabled,
+        logoUrl: invitationBranding.logoUrl,
+        logoS3Key: invitationBranding.logoS3Key,
+        primaryColor: invitationBranding.primaryColor,
+        userId: profile.userId,
+      },
+      features,
+    );
 
     const invitation = await createAdvisorInvitation(profile.id, invitationInput, {
       subscriptionFeatures: {
@@ -140,21 +185,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
       personalMessage: invitationInput.personalMessage,
       invitationUrl: invitation.url,
       clientName: validatedInput.clientName,
-      profile: {
-        firmName: profile.firmName,
-        brandName: profile.brandName,
-        tagline: profile.tagline,
-        primaryColor: profile.primaryColor,
-        secondaryColor: profile.secondaryColor,
-        accentColor: profile.accentColor,
-        logoUrl: profile.logoUrl,
-        logoS3Key: profile.logoS3Key,
-        websiteUrl: profile.websiteUrl,
-        emailFooterText: profile.emailFooterText,
-        supportEmail: profile.supportEmail,
-        supportPhone: profile.supportPhone,
-        brandingEnabled: profile.brandingEnabled,
-      },
+      profile: invitationBranding,
       theme: emailTheme,
     });
 
@@ -226,7 +257,20 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       },
     });
 
-    const emailTheme = invitationEmailThemeForProfile(profile, features);
+    const invitationBranding = await resolveInvitationBrandingForAdvisor(
+      profile.id,
+      profile.firmName,
+    );
+    const emailTheme = invitationEmailThemeForProfile(
+      {
+        brandingEnabled: invitationBranding.brandingEnabled,
+        logoUrl: invitationBranding.logoUrl,
+        logoS3Key: invitationBranding.logoS3Key,
+        primaryColor: invitationBranding.primaryColor,
+        userId: profile.userId,
+      },
+      features,
+    );
 
     const advisorInfo = {
       advisorName: profile.user.name || profile.user.firstName + " " + profile.user.lastName || "Advisor",
@@ -248,21 +292,7 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
         ),
       invitationUrl: invitation.url,
       clientName: invitation.clientName || undefined,
-      profile: {
-        firmName: profile.firmName,
-        brandName: profile.brandName,
-        tagline: profile.tagline,
-        primaryColor: profile.primaryColor,
-        secondaryColor: profile.secondaryColor,
-        accentColor: profile.accentColor,
-        logoUrl: profile.logoUrl,
-        logoS3Key: profile.logoS3Key,
-        websiteUrl: profile.websiteUrl,
-        emailFooterText: profile.emailFooterText,
-        supportEmail: profile.supportEmail,
-        supportPhone: profile.supportPhone,
-        brandingEnabled: profile.brandingEnabled,
-      },
+      profile: invitationBranding,
       theme: emailTheme,
     });
 

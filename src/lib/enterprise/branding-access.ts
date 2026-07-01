@@ -4,6 +4,7 @@ import { resolveBillingContext } from "@/lib/enterprise/billing-context";
 import {
   resolveAdvisorBrandingForProfile,
 } from "@/lib/enterprise/branding";
+import { getEnterpriseMemberBrandingPolicyForEnterprise } from "@/lib/enterprise/enterprise-member-branding-policy";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 import { prisma } from "@/lib/db";
 
@@ -18,6 +19,12 @@ export type AdvisorBrandingSettingsContext =
       mode: "enterprise-view";
       enterpriseId: string;
       enterpriseName: string;
+    }
+  | {
+      mode: "enterprise-personal";
+      enterpriseId: string;
+      enterpriseName: string;
+      subdomainEditable: boolean;
     };
 
 export type BrandingSettingsProfile = {
@@ -43,6 +50,8 @@ export type AdvisorBrandingSettingsView = {
   profile: BrandingSettingsProfile;
   readOnly: boolean;
   readOnlyNotice?: string;
+  /** When false, hide subdomain management even if branding is editable. */
+  subdomainEditable: boolean;
 };
 
 function mapResolvedBrandingToProfile(
@@ -75,10 +84,14 @@ export async function resolveAdvisorBrandingSettingsContext(
     return { mode: "solo" };
   }
 
-  const enterprise = await prisma.advisorEnterprise.findUnique({
-    where: { id: ctx.enterpriseId },
-    select: { name: true },
-  });
+  const [enterprise, brandingPolicy] = await Promise.all([
+    prisma.advisorEnterprise.findUnique({
+      where: { id: ctx.enterpriseId },
+      select: { name: true },
+    }),
+    getEnterpriseMemberBrandingPolicyForEnterprise(ctx.enterpriseId),
+  ]);
+
   if (!enterprise) {
     return { mode: "solo" };
   }
@@ -88,6 +101,15 @@ export async function resolveAdvisorBrandingSettingsContext(
       mode: "enterprise-manage",
       enterpriseId: ctx.enterpriseId,
       enterpriseName: enterprise.name,
+    };
+  }
+
+  if (brandingPolicy.personalBranding) {
+    return {
+      mode: "enterprise-personal",
+      enterpriseId: ctx.enterpriseId,
+      enterpriseName: enterprise.name,
+      subdomainEditable: brandingPolicy.personalSubdomain,
     };
   }
 
@@ -103,10 +125,29 @@ export async function isAdvisorBrandingReadOnly(userId: string): Promise<boolean
   return context.mode === "enterprise-view";
 }
 
+export async function isAdvisorSubdomainEditable(userId: string): Promise<boolean> {
+  const context = await resolveAdvisorBrandingSettingsContext(userId);
+  if (context.mode === "solo" || context.mode === "enterprise-manage") {
+    return true;
+  }
+  if (context.mode === "enterprise-personal") {
+    return context.subdomainEditable;
+  }
+  return false;
+}
+
 export async function assertCanMutateAdvisorBranding(userId: string): Promise<void> {
   if (await isAdvisorBrandingReadOnly(userId)) {
     throw new Error(
       "Firm branding is read-only for your role. Contact a firm owner or administrator to request changes.",
+    );
+  }
+}
+
+export async function assertCanMutateAdvisorSubdomain(userId: string): Promise<void> {
+  if (!(await isAdvisorSubdomainEditable(userId))) {
+    throw new Error(
+      "Subdomain management is disabled for your role. Contact a firm owner or administrator to enable it.",
     );
   }
 }
@@ -145,7 +186,21 @@ export async function loadAdvisorBrandingSettingsView(
   const baseProfile: BrandingSettingsProfile = advisorProfile;
 
   if (context.mode === "solo") {
-    return { context, profile: baseProfile, readOnly: false };
+    return {
+      context,
+      profile: baseProfile,
+      readOnly: false,
+      subdomainEditable: true,
+    };
+  }
+
+  if (context.mode === "enterprise-personal") {
+    return {
+      context,
+      profile: baseProfile,
+      readOnly: false,
+      subdomainEditable: context.subdomainEditable,
+    };
   }
 
   const resolved = await resolveAdvisorBrandingForProfile(advisorProfileId);
@@ -157,8 +212,14 @@ export async function loadAdvisorBrandingSettingsView(
       profile,
       readOnly: true,
       readOnlyNotice: `Firm branding for ${context.enterpriseName} is managed by your firm owner or administrators. You can review how clients see the firm below.`,
+      subdomainEditable: false,
     };
   }
 
-  return { context, profile, readOnly: false };
+  return {
+    context,
+    profile,
+    readOnly: false,
+    subdomainEditable: true,
+  };
 }

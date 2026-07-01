@@ -40,6 +40,7 @@ interface AdvisorSettingsTabsProps {
   brandingProfile: BrandingProfile;
   brandingReadOnly: boolean;
   brandingReadOnlyNotice?: string;
+  subdomainReadOnly?: boolean;
   features: SubscriptionFeatures;
   currentSubdomain: AdvisorSubdomainSettings | null;
   productionDomain: string;
@@ -59,6 +60,7 @@ export function AdvisorSettingsTabs({
   brandingProfile,
   brandingReadOnly,
   brandingReadOnlyNotice,
+  subdomainReadOnly = false,
   features,
   currentSubdomain,
   productionDomain,
@@ -160,6 +162,7 @@ export function AdvisorSettingsTabs({
             profile={brandingProfile}
             readOnly={brandingReadOnly}
             readOnlyNotice={brandingReadOnlyNotice}
+            subdomainReadOnly={subdomainReadOnly}
             features={features}
             currentSubdomain={currentSubdomain}
             productionDomain={productionDomain}

@@ -256,6 +256,37 @@ export function filterAdvisorNavSectionsWithAccessibleItems(
   );
 }
 
+/** Remove tier-locked items (used when firm hides unavailable plan features for members). */
+export function filterTierLockedAdvisorNavItems(
+  sections: AdvisorNavSection[],
+  subscriptionTier: SubscriptionTier,
+): AdvisorNavSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) => !isAdvisorNavItemTierLocked(item, subscriptionTier),
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+export function resolveAdvisorNavSectionsForDisplay(
+  sections: AdvisorNavSection[],
+  subscriptionTier: SubscriptionTier,
+  clientLimitStatus: ClientLimitSnapshot | null,
+  options?: { hideTierLockedItems?: boolean },
+): AdvisorNavSection[] {
+  const withTierPolicy = options?.hideTierLockedItems
+    ? filterTierLockedAdvisorNavItems(sections, subscriptionTier)
+    : sections;
+  return filterAdvisorNavSectionsWithAccessibleItems(
+    withTierPolicy,
+    subscriptionTier,
+    clientLimitStatus,
+  );
+}
+
 export function getVisibleAdvisorNavSections(
   flags: AdvisorPlatformFeatureFlags,
   options?: {

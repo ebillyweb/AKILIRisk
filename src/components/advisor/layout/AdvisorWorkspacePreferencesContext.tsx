@@ -19,6 +19,7 @@ const defaultPreferences: AdvisorWorkspacePreferences = {
     engagements: true,
     reassessment: true,
     productTours: true,
+    hideTierLockedNav: false,
   },
 };
 

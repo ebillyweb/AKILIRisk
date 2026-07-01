@@ -20,6 +20,7 @@ export const ENTERPRISE_MEMBER_VISIBILITY_TIER_FEATURE: Record<
   engagements: "IMPLEMENTATION_ENGAGEMENTS",
   reassessment: "REASSESSMENT_WORKFLOW",
   productTours: null,
+  hideTierLockedNav: null,
 };
 
 export type VisibilityOptionTierState = {
@@ -85,11 +86,14 @@ export function getVisibilityOptionTierState(
     };
   }
 
-  if (key === "productTours") {
+  if (key === "productTours" || key === "hideTierLockedNav") {
     return {
       available: true,
       requiredTierLabel: null,
-      includedSummary: "Included on all module tiers.",
+      includedSummary:
+        key === "hideTierLockedNav"
+          ? "Applies to sidebar links for features above your firm's module tier."
+          : "Included on all module tiers.",
     };
   }
 
@@ -130,5 +134,6 @@ export function clampVisibilityToModuleTier(
       visibility.reassessment &&
       isVisibilityOptionAtModuleTier("reassessment", moduleTier),
     productTours: visibility.productTours,
+    hideTierLockedNav: visibility.hideTierLockedNav,
   };
 }

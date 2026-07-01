@@ -6,6 +6,8 @@ import {
   getAdvisorNavItemLockReason,
   getVisibleAdvisorNavSections,
   filterAdvisorNavSectionsWithAccessibleItems,
+  filterTierLockedAdvisorNavItems,
+  resolveAdvisorNavSectionsForDisplay,
   isAdvisorNavItemTierLocked,
   isAdvisorNavItemClientLimitLocked,
   getAdvisorNavItemLockReason,
@@ -186,6 +188,7 @@ describe("getActiveAdvisorNavHref", () => {
         engagements: true,
         reassessment: true,
         productTours: true,
+        hideTierLockedNav: false,
       },
     });
     const portfolioItems = visible.find((section) => section.id === "portfolio")?.items ?? [];
@@ -202,6 +205,7 @@ describe("getActiveAdvisorNavHref", () => {
         engagements: true,
         reassessment: true,
         productTours: true,
+        hideTierLockedNav: false,
       },
     });
     const accountItems = visible.find((section) => section.id === "account")?.items ?? [];
@@ -246,6 +250,33 @@ describe("getActiveAdvisorNavHref", () => {
     const visible = getVisibleAdvisorNavSections(flags);
     const filtered = filterAdvisorNavSectionsWithAccessibleItems(visible, "BUSINESS", null);
     expect(filtered.some((section) => section.id === "assessment-lifecycle")).toBe(true);
+  });
+
+  it("removes tier-locked nav items when hide policy is enabled", () => {
+    const visible = getVisibleAdvisorNavSections(flags);
+    const filtered = filterTierLockedAdvisorNavItems(visible, "ESSENTIALS");
+    const accountItems = filtered.find((section) => section.id === "account")?.items ?? [];
+    expect(accountItems.some((item) => item.href === "/advisor/methodology")).toBe(false);
+    const portfolioItems = filtered.find((section) => section.id === "portfolio")?.items ?? [];
+    expect(portfolioItems.some((item) => item.href === "/advisor/dashboard")).toBe(false);
+    expect(portfolioItems.some((item) => item.href === "/advisor/reports")).toBe(true);
+  });
+
+  it("resolveAdvisorNavSectionsForDisplay hides tier-locked items when requested", () => {
+    const visible = getVisibleAdvisorNavSections(flags);
+    const displayed = resolveAdvisorNavSectionsForDisplay(visible, "PROFESSIONAL", null, {
+      hideTierLockedItems: true,
+    });
+    expect(
+      displayed.some((section) =>
+        section.items.some((item) => item.href === "/advisor/engagements"),
+      ),
+    ).toBe(false);
+    expect(
+      displayed.some((section) =>
+        section.items.some((item) => item.href === "/advisor/methodology"),
+      ),
+    ).toBe(true);
   });
 
   it("highlights All clients on client detail routes", () => {

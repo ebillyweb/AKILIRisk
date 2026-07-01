@@ -12,6 +12,8 @@ import {
   getVisibilityOptionTierState,
   isVisibilityOptionAtModuleTier,
 } from "@/lib/enterprise/advisor-member-visibility-tier";
+import type { EnterpriseMemberBrandingPolicy } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
+import { getBrandingPolicyOptionTierState } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
 import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { Badge } from "@/components/ui/badge";
@@ -54,22 +56,54 @@ const VISIBILITY_OPTIONS: VisibilityOption[] = [
     label: "Guided product tours",
     description: "Auto-start walkthroughs on first visit to workspace areas.",
   },
+  {
+    key: "hideTierLockedNav",
+    label: "Hide unavailable plan features",
+    description:
+      "Remove sidebar links to features above your firm's module tier instead of showing them locked.",
+  },
+];
+
+type BrandingPolicyOption = {
+  key: keyof EnterpriseMemberBrandingPolicy;
+  label: string;
+  description: string;
+  requiresPersonalBranding?: boolean;
+};
+
+const BRANDING_POLICY_OPTIONS: BrandingPolicyOption[] = [
+  {
+    key: "personalBranding",
+    label: "Personal branding",
+    description:
+      "Let team members customize logo, colors, and support details for their assigned clients.",
+  },
+  {
+    key: "personalSubdomain",
+    label: "Personal subdomain",
+    description:
+      "Let team members claim a white-label portal URL for invitations and client access.",
+    requiresPersonalBranding: true,
+  },
 ];
 
 type EnterpriseAdvisorVisibilityFormProps = {
   initialVisibility: EnterpriseAdvisorMemberVisibility;
+  initialBrandingPolicy: EnterpriseMemberBrandingPolicy;
   moduleTier: SubscriptionTier;
   platformFlags: AdvisorPlatformFeatureFlags;
 };
 
 export function EnterpriseAdvisorVisibilityForm({
   initialVisibility,
+  initialBrandingPolicy,
   moduleTier,
   platformFlags,
 }: EnterpriseAdvisorVisibilityFormProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [values, setValues] = useState(initialVisibility);
+  const [visibility, setVisibility] = useState(initialVisibility);
+  const [brandingPolicy, setBrandingPolicy] = useState(initialBrandingPolicy);
   const [saving, setSaving] = useState(false);
 
   const moduleTierLabel =
@@ -89,37 +123,139 @@ export function EnterpriseAdvisorVisibilityForm({
     [moduleTier, platformFlags],
   );
 
+  const brandingTierStates = useMemo(
+    () =>
+      Object.fromEntries(
+        BRANDING_POLICY_OPTIONS.map((option) => [
+          option.key,
+          getBrandingPolicyOptionTierState(option.key, moduleTier),
+        ]),
+      ) as Record<
+        keyof EnterpriseMemberBrandingPolicy,
+        ReturnType<typeof getBrandingPolicyOptionTierState>
+      >,
+    [moduleTier],
+  );
+
   useEffect(() => {
-    setValues(initialVisibility);
+    setVisibility(initialVisibility);
   }, [initialVisibility]);
+
+  useEffect(() => {
+    setBrandingPolicy(initialBrandingPolicy);
+  }, [initialBrandingPolicy]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const result = await updateEnterpriseAdvisorMemberVisibilityAction(values);
+      const result = await updateEnterpriseAdvisorMemberVisibilityAction({
+        visibility,
+        brandingPolicy,
+      });
       if (!result.success) {
         toast.error(result.error);
         return;
       }
-      toast.success("Advisor visibility settings saved.");
+      toast.success("Team settings saved.");
       startTransition(() => router.refresh());
     } catch {
-      toast.error("Failed to save advisor visibility settings.");
+      toast.error("Failed to save team settings.");
     } finally {
       setSaving(false);
     }
   };
 
-  const isDirty = VISIBILITY_OPTIONS.some(({ key }) => values[key] !== initialVisibility[key]);
+  const visibilityDirty = VISIBILITY_OPTIONS.some(
+    ({ key }) => visibility[key] !== initialVisibility[key],
+  );
+  const brandingDirty = BRANDING_POLICY_OPTIONS.some(
+    ({ key }) => brandingPolicy[key] !== initialBrandingPolicy[key],
+  );
+  const isDirty = visibilityDirty || brandingDirty;
+
+  const renderPolicyCheckbox = (
+    option: BrandingPolicyOption,
+    values: EnterpriseMemberBrandingPolicy,
+    setValues: React.Dispatch<React.SetStateAction<EnterpriseMemberBrandingPolicy>>,
+  ) => {
+    const tierState = brandingTierStates[option.key];
+    const tierLocked = !tierState.available;
+    const requiresPersonal =
+      option.requiresPersonalBranding && !values.personalBranding;
+    const disabled = saving || tierLocked || requiresPersonal;
+    const checked = tierLocked || requiresPersonal ? false : values[option.key];
+
+    return (
+      <div
+        key={option.key}
+        className={cn(
+          "flex items-start gap-3 rounded-lg border p-4",
+          (tierLocked || requiresPersonal) && "border-dashed bg-muted/30 opacity-90",
+        )}
+      >
+        <Checkbox
+          id={`branding-policy-${option.key}`}
+          checked={checked}
+          disabled={disabled}
+          onCheckedChange={(next) => {
+            if (disabled) return;
+            setValues((current) => ({
+              ...current,
+              [option.key]: next === true,
+              ...(option.key === "personalBranding" && next !== true
+                ? { personalSubdomain: false }
+                : {}),
+            }));
+          }}
+        />
+        <div className="grid min-w-0 flex-1 gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Label
+              htmlFor={`branding-policy-${option.key}`}
+              className={cn(
+                "text-sm font-medium leading-none",
+                disabled && "text-muted-foreground",
+              )}
+            >
+              {option.label}
+            </Label>
+            {tierLocked ? (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <Lock className="size-3" aria-hidden />
+                Requires {tierState.requiredTierLabel}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                On your plan
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">{option.description}</p>
+          <p
+            className={cn(
+              "text-xs",
+              tierLocked || requiresPersonal
+                ? "text-muted-foreground"
+                : "text-foreground/80",
+            )}
+          >
+            {requiresPersonal
+              ? "Enable personal branding first."
+              : tierState.includedSummary}
+          </p>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-4" data-tour="config-advisor-visibility">
+    <div className="space-y-6" data-tour="config-advisor-visibility">
       <Card className="border-muted bg-muted/40">
         <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm leading-6 text-muted-foreground">
             Control what <span className="font-medium text-foreground">team members</span> see
-            when they sign in. Firm owners and administrators always retain full access within
-            your module tier and platform limits.
+            and how they present themselves to assigned clients. Firm owners and administrators
+            always retain full access within your module tier.
           </p>
           <Badge variant="secondary" className="w-fit shrink-0">
             Firm plan: {moduleTierLabel}
@@ -128,10 +264,11 @@ export function EnterpriseAdvisorVisibilityForm({
       </Card>
 
       <div className="space-y-3">
+        <h3 className="text-sm font-semibold tracking-tight">Workspace visibility</h3>
         {VISIBILITY_OPTIONS.map(({ key, label, description }) => {
           const tierState = optionTierStates[key];
           const tierLocked = !tierState.available;
-          const checked = tierLocked ? false : values[key];
+          const checked = tierLocked ? false : visibility[key];
 
           return (
             <div
@@ -147,7 +284,7 @@ export function EnterpriseAdvisorVisibilityForm({
                 disabled={saving || tierLocked}
                 onCheckedChange={(next) => {
                   if (tierLocked) return;
-                  setValues((current) => ({
+                  setVisibility((current) => ({
                     ...current,
                     [key]: next === true,
                   }));
@@ -190,6 +327,13 @@ export function EnterpriseAdvisorVisibilityForm({
         })}
       </div>
 
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold tracking-tight">Client-facing branding</h3>
+        {BRANDING_POLICY_OPTIONS.map((option) =>
+          renderPolicyCheckbox(option, brandingPolicy, setBrandingPolicy),
+        )}
+      </div>
+
       <Button type="button" onClick={handleSave} disabled={saving || !isDirty}>
         {saving ? (
           <>
@@ -199,7 +343,7 @@ export function EnterpriseAdvisorVisibilityForm({
         ) : (
           <>
             <Save className="size-4" />
-            Save visibility settings
+            Save team settings
           </>
         )}
       </Button>

@@ -10,6 +10,9 @@ const prismaSpies = vi.hoisted(() => ({
   enterpriseMembership: {
     findFirst: vi.fn(),
   },
+  advisorEnterprise: {
+    findUnique: vi.fn(),
+  },
   inviteCode: {
     findFirst: vi.fn(),
   },
@@ -43,6 +46,7 @@ import {
 } from "./resolve-client-portal-branding";
 
 const brandedAdvisor = {
+  enterpriseId: null as string | null,
   firmName: "eBilly's WebSolutions",
   brandName: "eBilly's WebSolutions",
   tagline: "Tagline",
@@ -97,6 +101,7 @@ describe("resolveClientPortalBrandingForUser", () => {
       advisorId: "adv-1",
     });
     prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
+    prismaSpies.enterpriseMembership.findFirst.mockResolvedValueOnce(null);
 
     const branding = await resolveClientPortalBrandingForUser({
       userId: "client-1",
@@ -123,6 +128,7 @@ describe("resolveClientPortalBrandingForUser", () => {
       advisorId: "adv-1",
     });
     prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
+    prismaSpies.enterpriseMembership.findFirst.mockResolvedValueOnce(null);
     prismaSpies.inviteCode.findFirst.mockResolvedValueOnce(null);
 
     const branding = await resolveClientPortalBrandingForUser({
@@ -136,8 +142,10 @@ describe("resolveClientPortalBrandingForUser", () => {
 
   it("falls back to the inviting advisor, scoped to an active assignment", async () => {
     prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
-      advisor: brandedAdvisor,
+      advisorId: "adv-1",
     });
+    prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
+    prismaSpies.enterpriseMembership.findFirst.mockResolvedValueOnce(null);
 
     const branding = await resolveClientPortalBrandingForUser({
       userId: "client-1",
@@ -169,8 +177,10 @@ describe("resolveClientPortalBrandingForUser", () => {
     });
     userEmailForDisplayMock.mockReturnValueOnce("invited@example.com");
     prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
-      advisor: brandedAdvisor,
+      advisorId: "adv-1",
     });
+    prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
+    prismaSpies.enterpriseMembership.findFirst.mockResolvedValueOnce(null);
 
     const branding = await resolveClientPortalBrandingForUser({
       userId: "client-1",

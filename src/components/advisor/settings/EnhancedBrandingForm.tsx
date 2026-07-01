@@ -83,6 +83,8 @@ interface EnhancedBrandingFormProps {
   /** Firm advisors view canonical enterprise branding without editing. */
   readOnly?: boolean;
   readOnlyNotice?: string;
+  /** When true, hide subdomain management (e.g. firm members without subdomain permission). */
+  subdomainReadOnly?: boolean;
   features: SubscriptionFeatures;
   currentSubdomain?: AdvisorSubdomainSettings | null;
   productionDomain: string;
@@ -175,6 +177,7 @@ export function EnhancedBrandingForm({
   profile,
   readOnly = false,
   readOnlyNotice,
+  subdomainReadOnly = false,
   features,
   currentSubdomain = null,
   productionDomain,
@@ -184,9 +187,10 @@ export function EnhancedBrandingForm({
   platformSubdomainsAutoActivate = true,
 }: EnhancedBrandingFormProps) {
   const xlSidebar = useXlSidebarNav();
-  const visibleSections = readOnly
-    ? FORM_SECTIONS.filter((section) => section.id !== 'domain')
-    : FORM_SECTIONS;
+  const showDomainSection = !readOnly && !subdomainReadOnly;
+  const visibleSections = showDomainSection
+    ? FORM_SECTIONS
+    : FORM_SECTIONS.filter((section) => section.id !== "domain");
 
   const displayBrandName =
     profile.brandName?.trim() || profile.firmName?.trim() || '';

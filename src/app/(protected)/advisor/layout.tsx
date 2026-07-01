@@ -80,6 +80,7 @@ export default async function AdvisorLayout({
             engagements: true,
             reassessment: true,
             productTours: true,
+            hideTierLockedNav: false,
           },
           enterpriseId: null,
           role: null,

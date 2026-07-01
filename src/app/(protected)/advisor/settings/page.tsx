@@ -101,6 +101,7 @@ export default async function AdvisorSettingsPage({
         brandingProfile={brandingSettings.profile}
         brandingReadOnly={brandingSettings.readOnly}
         brandingReadOnlyNotice={brandingSettings.readOnlyNotice}
+        subdomainReadOnly={!brandingSettings.subdomainEditable}
         features={features}
         currentSubdomain={currentSubdomain}
         productionDomain={productionDomain}

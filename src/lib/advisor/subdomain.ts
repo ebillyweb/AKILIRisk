@@ -144,7 +144,12 @@ export async function getAdvisorBrandingBySubdomain(
   }
 
   try {
-    return await resolveAdvisorBrandingForProfile(advisorData.advisorId);
+    const subdomainRow = await prisma.advisorSubdomain.findUnique({
+      where: { subdomain },
+      select: { enterpriseId: true },
+    });
+    const scope = subdomainRow?.enterpriseId ? "firm" : "client";
+    return await resolveAdvisorBrandingForProfile(advisorData.advisorId, { scope });
   } catch (error) {
     console.error('Error fetching advisor branding:', error);
     return null;

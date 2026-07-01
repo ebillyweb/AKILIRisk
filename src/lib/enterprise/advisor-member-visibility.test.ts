@@ -35,6 +35,7 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
         advisorMemberEngagementsVisible: false,
         advisorMemberReassessmentVisible: true,
         advisorMemberProductToursVisible: false,
+        advisorMemberHideTierLockedNav: false,
       }),
     ).toEqual({
       portfolio: false,
@@ -42,6 +43,7 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
       engagements: false,
       reassessment: true,
       productTours: false,
+      hideTierLockedNav: false,
     });
   });
 });
@@ -78,6 +80,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberEngagementsVisible: true,
       advisorMemberReassessmentVisible: true,
       advisorMemberProductToursVisible: true,
+      advisorMemberHideTierLockedNav: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
@@ -99,6 +102,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberEngagementsVisible: false,
       advisorMemberReassessmentVisible: false,
       advisorMemberProductToursVisible: false,
+      advisorMemberHideTierLockedNav: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
@@ -116,6 +120,7 @@ describe("visibilityInputToEnterpriseUpdate", () => {
         engagements: true,
         reassessment: false,
         productTours: true,
+        hideTierLockedNav: false,
       }),
     ).toEqual({
       advisorMemberPortfolioVisible: true,
@@ -123,6 +128,7 @@ describe("visibilityInputToEnterpriseUpdate", () => {
       advisorMemberEngagementsVisible: true,
       advisorMemberReassessmentVisible: false,
       advisorMemberProductToursVisible: true,
+      advisorMemberHideTierLockedNav: false,
     });
   });
 });

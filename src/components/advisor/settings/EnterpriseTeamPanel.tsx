@@ -20,6 +20,7 @@ import type { SubscriptionTier } from "@prisma/client";
 
 import { EnterpriseAdvisorVisibilityForm } from "@/components/advisor/settings/EnterpriseAdvisorVisibilityForm";
 import type { EnterpriseAdvisorMemberVisibility } from "@/lib/enterprise/advisor-member-visibility";
+import type { EnterpriseMemberBrandingPolicy } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { EnterpriseTeamMemberView } from "@/lib/enterprise/team-invite";
 import type { EnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
@@ -43,6 +44,7 @@ type EnterpriseTeamPanelProps = {
   members: EnterpriseTeamMemberView[];
   seatUsage: EnterpriseSeatUsage;
   memberVisibility: EnterpriseAdvisorMemberVisibility;
+  memberBrandingPolicy: EnterpriseMemberBrandingPolicy;
   moduleTier: SubscriptionTier;
   platformFlags: AdvisorPlatformFeatureFlags;
 };
@@ -53,6 +55,7 @@ export function EnterpriseTeamPanel({
   members,
   seatUsage,
   memberVisibility,
+  memberBrandingPolicy,
   moduleTier,
   platformFlags,
 }: EnterpriseTeamPanelProps) {
@@ -273,13 +276,14 @@ export function EnterpriseTeamPanel({
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="mb-4 space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">Advisor workspace visibility</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Team member access</h2>
           <p className="text-sm text-muted-foreground">
-            Choose which workspace areas team members can access after they sign in.
+            Choose workspace areas and client-facing branding options for team members.
           </p>
         </div>
         <EnterpriseAdvisorVisibilityForm
           initialVisibility={memberVisibility}
+          initialBrandingPolicy={memberBrandingPolicy}
           moduleTier={moduleTier}
           platformFlags={platformFlags}
         />

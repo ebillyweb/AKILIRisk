@@ -1,7 +1,6 @@
 import "server-only";
 
 import {
-  ADVISOR_BRANDING_PROFILE_SELECT,
   mapAdvisorProfileToBrandingData,
 } from "@/lib/client/advisor-branding-profile";
 import { prisma } from "@/lib/db";
@@ -25,6 +24,7 @@ export const ENTERPRISE_BRANDING_SELECT = {
   supportPhone: true,
   brandingEnabled: true,
   customDomainEnabled: true,
+  advisorMemberPersonalBrandingEnabled: true,
 } as const;
 
 type EnterpriseBrandingRow = {
@@ -45,7 +45,46 @@ type EnterpriseBrandingRow = {
   supportPhone: string | null;
   brandingEnabled: boolean;
   customDomainEnabled: boolean;
+  advisorMemberPersonalBrandingEnabled?: boolean;
 };
+
+type AdvisorBrandingProfileFields = {
+  brandingEnabled: boolean;
+  firmName: string | null;
+  brandName: string | null;
+  tagline: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  accentColor: string | null;
+  logoUrl: string | null;
+  logoS3Key: string | null;
+  logoContentType: string | null;
+  logoFileSize: number | null;
+  logoUploadedAt: Date | null;
+  websiteUrl: string | null;
+  emailFooterText: string | null;
+  supportEmail: string | null;
+  supportPhone: string | null;
+  customDomainEnabled: boolean;
+};
+
+/** `firm` = canonical enterprise branding; `client` = assigned-client surfaces. */
+export type AdvisorBrandingResolveScope = "firm" | "client";
+
+export function hasConfiguredPersonalBrand(
+  profile: Pick<
+    AdvisorBrandingProfileFields,
+    "brandName" | "tagline" | "primaryColor" | "logoUrl" | "logoS3Key"
+  >,
+): boolean {
+  return Boolean(
+    profile.brandName?.trim() ||
+      profile.tagline?.trim() ||
+      profile.primaryColor?.trim() ||
+      profile.logoUrl?.trim() ||
+      profile.logoS3Key?.trim(),
+  );
+}
 
 export function mapEnterpriseToBrandingData(
   enterprise: EnterpriseBrandingRow
@@ -83,12 +122,16 @@ export async function getEnterpriseBrandingById(
 }
 
 /**
- * Resolve branding for an advisor profile — enterprise canonical branding when
- * the profile belongs to a firm, otherwise the profile's own branding row.
+ * Resolve branding for an advisor profile. Enterprise members use firm branding
+ * by default; with `scope: "client"` and firm policy enabled, ADVISOR-role members
+ * expose personal branding to their assigned clients.
  */
 export async function resolveAdvisorBrandingForProfile(
-  advisorProfileId: string
+  advisorProfileId: string,
+  options?: { scope?: AdvisorBrandingResolveScope },
 ): Promise<AdvisorBrandingData | null> {
+  const scope = options?.scope ?? "firm";
+
   const profile = await prisma.advisorProfile.findUnique({
     where: { id: advisorProfileId },
     select: {
@@ -114,22 +157,78 @@ export async function resolveAdvisorBrandingForProfile(
   });
   if (!profile) return null;
 
-  const enterpriseId =
-    profile.enterpriseId ??
-    (
-      await prisma.enterpriseMembership.findFirst({
-        where: { advisorProfileId, status: "ACTIVE" },
-        select: { enterpriseId: true },
-      })
-    )?.enterpriseId ??
-    null;
+  const membership = await prisma.enterpriseMembership.findFirst({
+    where: { advisorProfileId, status: "ACTIVE" },
+    select: { enterpriseId: true, role: true },
+  });
 
-  if (enterpriseId) {
-    const enterpriseBranding = await getEnterpriseBrandingById(enterpriseId);
-    if (enterpriseBranding) return enterpriseBranding;
+  const enterpriseId = profile.enterpriseId ?? membership?.enterpriseId ?? null;
+
+  if (!enterpriseId) {
+    if (!profile.brandingEnabled) return null;
+    return mapAdvisorProfileToBrandingData(profile);
   }
 
-  if (!profile.brandingEnabled) return null;
+  const enterprise = await prisma.advisorEnterprise.findUnique({
+    where: { id: enterpriseId },
+    select: ENTERPRISE_BRANDING_SELECT,
+  });
 
+  const enterpriseBranding =
+    enterprise?.brandingEnabled && enterprise
+      ? mapEnterpriseToBrandingData(enterprise)
+      : null;
+
+  const usePersonalBranding =
+    scope === "client" &&
+    membership?.role === "ADVISOR" &&
+    enterprise?.advisorMemberPersonalBrandingEnabled === true &&
+    profile.brandingEnabled;
+
+  if (usePersonalBranding) {
+    if (hasConfiguredPersonalBrand(profile)) {
+      return mapAdvisorProfileToBrandingData(profile);
+    }
+    return enterpriseBranding;
+  }
+
+  if (enterpriseBranding) return enterpriseBranding;
+
+  if (!profile.brandingEnabled) return null;
   return mapAdvisorProfileToBrandingData(profile);
+}
+
+export function mapResolvedBrandingToInvitationProfile(
+  branding: AdvisorBrandingData,
+  fallbackFirmName: string | null,
+): {
+  firmName: string | null;
+  brandName: string | null;
+  tagline: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  accentColor: string | null;
+  logoUrl: string | null;
+  logoS3Key: string | null;
+  websiteUrl: string | null;
+  emailFooterText: string | null;
+  supportEmail: string | null;
+  supportPhone: string | null;
+  brandingEnabled: boolean;
+} {
+  return {
+    firmName: branding.advisorFirmName ?? fallbackFirmName,
+    brandName: branding.brandName,
+    tagline: branding.tagline,
+    primaryColor: branding.primaryColor,
+    secondaryColor: branding.secondaryColor,
+    accentColor: branding.accentColor,
+    logoUrl: branding.logoUrl,
+    logoS3Key: branding.logoS3Key,
+    websiteUrl: branding.websiteUrl,
+    emailFooterText: branding.emailFooterText,
+    supportEmail: branding.supportEmail,
+    supportPhone: branding.supportPhone,
+    brandingEnabled: branding.brandingEnabled ?? true,
+  };
 }
