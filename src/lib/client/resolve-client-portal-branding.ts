@@ -68,12 +68,12 @@ async function getInvitingAdvisorBrandingForEmail(
     },
     orderBy: { createdAt: "desc" },
     select: {
-      advisorId: true,
+      createdBy: true,
     },
   });
 
-  if (!invite?.advisorId) return null;
-  return resolveAdvisorBrandingForProfile(invite.advisorId, { scope: "client" });
+  if (!invite?.createdBy) return null;
+  return resolveAdvisorBrandingForProfile(invite.createdBy, { scope: "client" });
 }
 
 /** Branding for a specific invite row (signup page on platform host). */
@@ -83,15 +83,15 @@ export async function getInvitingAdvisorBrandingForInviteCode(
   const invite = await prisma.inviteCode.findUnique({
     where: { id: inviteCodeId },
     select: {
-      advisorId: true,
+      createdBy: true,
       advisor: {
         select: { brandingEnabled: true },
       },
     },
   });
 
-  if (!invite?.advisorId || !invite.advisor?.brandingEnabled) return null;
-  return resolveAdvisorBrandingForProfile(invite.advisorId, { scope: "client" });
+  if (!invite?.createdBy || !invite.advisor?.brandingEnabled) return null;
+  return resolveAdvisorBrandingForProfile(invite.createdBy, { scope: "client" });
 }
 
 /**

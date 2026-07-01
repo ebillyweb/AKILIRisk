@@ -218,17 +218,17 @@ export function mapResolvedBrandingToInvitationProfile(
 } {
   return {
     firmName: branding.advisorFirmName ?? fallbackFirmName,
-    brandName: branding.brandName,
-    tagline: branding.tagline,
-    primaryColor: branding.primaryColor,
-    secondaryColor: branding.secondaryColor,
-    accentColor: branding.accentColor,
-    logoUrl: branding.logoUrl,
-    logoS3Key: branding.logoS3Key,
-    websiteUrl: branding.websiteUrl,
-    emailFooterText: branding.emailFooterText,
-    supportEmail: branding.supportEmail,
-    supportPhone: branding.supportPhone,
+    brandName: branding.brandName ?? null,
+    tagline: branding.tagline ?? null,
+    primaryColor: branding.primaryColor ?? null,
+    secondaryColor: branding.secondaryColor ?? null,
+    accentColor: branding.accentColor ?? null,
+    logoUrl: branding.logoUrl ?? null,
+    logoS3Key: branding.logoS3Key ?? null,
+    websiteUrl: branding.websiteUrl ?? null,
+    emailFooterText: branding.emailFooterText ?? null,
+    supportEmail: branding.supportEmail ?? null,
+    supportPhone: branding.supportPhone ?? null,
     brandingEnabled: branding.brandingEnabled ?? true,
   };
 }

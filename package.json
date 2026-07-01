@@ -32,6 +32,7 @@
     "generate:pitch-decks": "npx tsx scripts/generate-pitch-deck-pptx.ts",
     "db:fix-cyber-migration": "bash scripts/fix-cybersecurity-migration-failure.sh",
     "db:fix-enhanced-migration": "bash scripts/fix-failed-enhanced-migration.sh",
+    "db:fix-enterprise-assessment-leads-migration": "bash scripts/fix-failed-enterprise-assessment-leads-migration.sh",
     "db:backfill-advisor-subscriptions": "node scripts/migrate-advisor-subscriptions.js",
     "db:migrate-intake-to-client": "node scripts/migrate-intake-to-client.js",
     "db:cleanup-question-bank-probes": "node scripts/cleanup-question-bank-probes.js",

@@ -142,7 +142,7 @@ describe("resolveClientPortalBrandingForUser", () => {
 
   it("falls back to the inviting advisor, scoped to an active assignment", async () => {
     prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
-      advisorId: "adv-1",
+      createdBy: "adv-1",
     });
     prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
     prismaSpies.enterpriseMembership.findFirst.mockResolvedValueOnce(null);
@@ -177,7 +177,7 @@ describe("resolveClientPortalBrandingForUser", () => {
     });
     userEmailForDisplayMock.mockReturnValueOnce("invited@example.com");
     prismaSpies.inviteCode.findFirst.mockResolvedValueOnce({
-      advisorId: "adv-1",
+      createdBy: "adv-1",
     });
     prismaSpies.advisorProfile.findUnique.mockResolvedValueOnce(brandedAdvisor);
     prismaSpies.enterpriseMembership.findFirst.mockResolvedValueOnce(null);
