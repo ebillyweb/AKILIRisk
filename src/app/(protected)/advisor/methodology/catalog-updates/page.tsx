@@ -29,7 +29,7 @@ export default async function MethodologyCatalogUpdatesPage() {
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
-        <Link href="/advisor/methodology">Methodology</Link>
+        <Link href="/advisor/methodology">Your methodology</Link>
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-methodology-catalog-updates"

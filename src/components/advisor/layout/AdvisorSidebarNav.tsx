@@ -33,6 +33,7 @@ import {
   type AdvisorNavLockReason,
   type AdvisorNavSection,
 } from "./advisor-nav";
+import { useAdvisorWorkspacePreferences } from "./AdvisorWorkspacePreferencesContext";
 
 interface AdvisorSidebarNavProps {
   featureFlags: AdvisorPlatformFeatureFlags;
@@ -314,12 +315,16 @@ export function AdvisorSidebarNav({
 }: AdvisorSidebarNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { applyEnterpriseMemberVisibility, enterpriseMemberVisibility } =
+    useAdvisorWorkspacePreferences();
   const [navLock, setNavLock] = useState<AdvisorNavLockReason>(null);
   const visibleSections = filterAdvisorNavSectionsWithAccessibleItems(
     getVisibleAdvisorNavSections(featureFlags, {
       enterpriseTeamEnabled,
       billingNavEnabled,
       implementationTrackingEnabled,
+      applyEnterpriseMemberVisibility,
+      enterpriseMemberVisibility,
     }),
     subscriptionTier,
     clientLimitStatus,

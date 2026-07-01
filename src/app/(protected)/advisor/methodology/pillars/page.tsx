@@ -45,7 +45,7 @@ export default async function MethodologyPillarsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="outline" size="sm" asChild>
-          <Link href="/advisor/methodology">Methodology</Link>
+          <Link href="/advisor/methodology">Your methodology</Link>
         </Button>
       </div>
       <ConfigurationPageHeader

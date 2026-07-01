@@ -195,6 +195,15 @@ export const ADVISOR_CONFIGURATION_TOURS = {
         side: "top",
       },
     },
+    {
+      element: '[data-tour="config-advisor-visibility"]',
+      popover: {
+        title: "Advisor visibility",
+        description:
+          "Choose which workspace areas team members see when they sign in. Owners and admins always retain full access.",
+        side: "top",
+      },
+    },
   ],
   "enterprise-recommendation-rules-index": [
     {

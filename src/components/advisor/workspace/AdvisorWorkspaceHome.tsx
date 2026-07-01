@@ -125,6 +125,8 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
     clientLimitStatus,
     subscriptionTier,
     implementationTrackingEnabled,
+    memberPortfolioVisible,
+    memberEngagementsVisible,
   } = data;
   const firstName = profile.user.firstName;
   const firmName = profile.firmName;
@@ -250,7 +252,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
         </Card>
       )}
 
-      {flags.riskIntelligenceEnabled && (
+      {flags.riskIntelligenceEnabled && memberPortfolioVisible && (
         <Card className="border-border/70 shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
             <div>
@@ -284,7 +286,9 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
 
       <AdvisorQuickActions
         subscriptionTier={subscriptionTier}
-        implementationTrackingEnabled={implementationTrackingEnabled}
+        implementationTrackingEnabled={
+          implementationTrackingEnabled && memberEngagementsVisible
+        }
       />
     </div>
   );

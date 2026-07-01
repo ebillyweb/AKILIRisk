@@ -28,9 +28,8 @@ import {
  * the current status, the client's name, and the date the client accepted
  * the recommendation. Status advancement happens on the detail page.
  *
- * Open engagements (every status except COMPLETE / DECLINED) are listed
- * first; closed engagements follow underneath in a separate card so the
- * advisor's queue is always at the top.
+ * In-progress engagements (every status except COMPLETE / DECLINED) are listed
+ * first — an engagement appears here when a client accepts the report.
  */
 export default async function AdvisorEngagementsPage() {
   const session = await auth();
@@ -69,19 +68,20 @@ export default async function AdvisorEngagementsPage() {
         </p>
         <h1 className="text-3xl font-semibold">Engagements</h1>
         <p className="text-sm text-muted-foreground">
-          Clients who have accepted the recommendation on their Risk Profile.
-          Advance status as work progresses through scheduling, execution,
-          and completion.
+          Clients ready to move forward after accepting your report. Update each
+          engagement as you schedule meetings and complete the work.
         </p>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Open engagements</CardTitle>
+          <CardTitle className="text-2xl">In progress</CardTitle>
           <CardDescription>
             {open.length === 0
-              ? "No open engagements right now."
-              : `${open.length} engagement${open.length === 1 ? "" : "s"} awaiting your attention.`}
+              ? engagements.length === 0
+                ? "None started yet."
+                : "No engagements in progress."
+              : `${open.length} engagement${open.length === 1 ? "" : "s"} in progress.`}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -16,6 +16,11 @@ import {
   revokeEnterpriseTeamInviteAction,
   suspendEnterpriseTeamMemberAction,
 } from "@/lib/actions/enterprise-team-actions";
+import type { SubscriptionTier } from "@prisma/client";
+
+import { EnterpriseAdvisorVisibilityForm } from "@/components/advisor/settings/EnterpriseAdvisorVisibilityForm";
+import type { EnterpriseAdvisorMemberVisibility } from "@/lib/enterprise/advisor-member-visibility";
+import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { EnterpriseTeamMemberView } from "@/lib/enterprise/team-invite";
 import type { EnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
 
@@ -37,6 +42,9 @@ type EnterpriseTeamPanelProps = {
   role: "OWNER" | "ADMIN";
   members: EnterpriseTeamMemberView[];
   seatUsage: EnterpriseSeatUsage;
+  memberVisibility: EnterpriseAdvisorMemberVisibility;
+  moduleTier: SubscriptionTier;
+  platformFlags: AdvisorPlatformFeatureFlags;
 };
 
 export function EnterpriseTeamPanel({
@@ -44,6 +52,9 @@ export function EnterpriseTeamPanel({
   role,
   members,
   seatUsage,
+  memberVisibility,
+  moduleTier,
+  platformFlags,
 }: EnterpriseTeamPanelProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -136,7 +147,7 @@ export function EnterpriseTeamPanel({
     <div className="space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-tour="config-page-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Enterprise Team Management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Team management</h1>
           <p className="text-sm text-muted-foreground">
             Manage team members and administrators for{" "}
             <span className="font-semibold text-foreground">{enterpriseName}</span>.
@@ -258,6 +269,20 @@ export function EnterpriseTeamPanel({
             );
           })}
         </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="mb-4 space-y-1">
+          <h2 className="text-lg font-semibold tracking-tight">Advisor workspace visibility</h2>
+          <p className="text-sm text-muted-foreground">
+            Choose which workspace areas team members can access after they sign in.
+          </p>
+        </div>
+        <EnterpriseAdvisorVisibilityForm
+          initialVisibility={memberVisibility}
+          moduleTier={moduleTier}
+          platformFlags={platformFlags}
+        />
       </div>
     </div>
   );

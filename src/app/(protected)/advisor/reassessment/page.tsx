@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { requireAdvisorTierFeatureAccess } from "@/lib/advisor/tier-feature-guard.server";
+import { requireAdvisorReassessmentMemberAccess } from "@/lib/platform/advisor-feature-guards";
 import { TierFeatureLockedPage } from "@/components/advisor/billing/TierFeatureLockedPage";
 import { REASSESSMENT_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { listReassessmentCadenceClients } from "@/lib/cadence/advisor-reassessment-portfolio";
@@ -11,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { FieldHelp } from "@/components/ui/field-help";
 
 export default async function AdvisorReassessmentCadencePage() {
+  await requireAdvisorReassessmentMemberAccess();
+
   let advisorProfileId: string;
   try {
     const { userId } = await requireAdvisorRole();

@@ -7,6 +7,8 @@ import { getAdvisorTourIdForPath } from "@/lib/product-tour/advisor-path-tours";
 import type { TourId } from "@/lib/product-tour/types";
 import { cn } from "@/lib/utils";
 
+import { useAdvisorWorkspacePreferences } from "./AdvisorWorkspacePreferencesContext";
+
 type AdvisorHeaderActionsProps = {
   tourId?: TourId | null;
   autoStartTour?: boolean;
@@ -19,6 +21,7 @@ export function AdvisorHeaderActions({
   className,
 }: AdvisorHeaderActionsProps) {
   const pathname = usePathname() ?? "";
+  const { productToursEnabled } = useAdvisorWorkspacePreferences();
   const resolvedTourId = tourId ?? getAdvisorTourIdForPath(pathname);
 
   if (!resolvedTourId) {
@@ -27,7 +30,10 @@ export function AdvisorHeaderActions({
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <ProductTourButton tourId={resolvedTourId} autoStart={autoStartTour} />
+      <ProductTourButton
+        tourId={resolvedTourId}
+        autoStart={autoStartTour && productToursEnabled}
+      />
     </div>
   );
 }

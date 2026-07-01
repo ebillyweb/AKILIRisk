@@ -182,6 +182,12 @@ model AdvisorEnterprise {
   logoUploadedAt        DateTime?
   brandingEnabled                Boolean                 @default(true)
   implementationTrackingEnabled  Boolean                 @default(true)
+  /// Enterprise OWNER/ADMIN: what ADVISOR-role team members see in the workspace.
+  advisorMemberPortfolioVisible     Boolean              @default(true)
+  advisorMemberMethodologyVisible   Boolean              @default(true)
+  advisorMemberEngagementsVisible   Boolean              @default(true)
+  advisorMemberReassessmentVisible  Boolean              @default(true)
+  advisorMemberProductToursVisible  Boolean              @default(true)
   /// Phase 24 (D-08): enterprise-wide default reassessment frequency.
   defaultCadenceFrequency        CadenceFrequency        @default(ANNUAL)
   customDomainEnabled            Boolean                 @default(false)

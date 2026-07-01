@@ -21,7 +21,7 @@ export default async function MethodologyIntakePage() {
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
-        <Link href="/advisor/methodology">Methodology</Link>
+        <Link href="/advisor/methodology">Your methodology</Link>
       </Button>
       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
         Edits apply to <strong>new intakes only</strong>. Clients already in progress keep the

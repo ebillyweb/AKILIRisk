@@ -9,7 +9,8 @@ function labelForAdvisorPath(pathname: string): string {
   if (pathname.startsWith("/advisor/analytics")) return "Client analytics";
   if (pathname.startsWith("/advisor/review")) return "Assessment review";
   if (pathname.startsWith("/advisor/intelligence")) return "Risk intelligence";
-  if (pathname.startsWith("/advisor/methodology")) return "Methodology settings";
+  if (pathname.startsWith("/advisor/enterprise/methodology")) return "Firm standards";
+  if (pathname.startsWith("/advisor/methodology")) return "Your methodology";
   if (pathname.startsWith("/advisor/question-bank")) return "Question bank";
   if (pathname.startsWith("/advisor/settings/notifications"))
     return "Notification settings";

@@ -43,7 +43,7 @@ export function AdvisorQuickActions({
         {implementationTrackingEnabled ? (
           <GatedQuickActionButton
             href="/advisor/engagements"
-            label="Engagements"
+            label="Engagement Tracker"
             description="Accepted recommendations in progress"
             icon={Briefcase}
             currentTier={subscriptionTier}

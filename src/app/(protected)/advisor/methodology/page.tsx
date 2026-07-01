@@ -73,8 +73,8 @@ export default async function MethodologyHubPage() {
     <div className="space-y-8">
       <ConfigurationPageHeader
         tourId="advisor-methodology-hub"
-        title="Methodology"
-        description="Configure your household risk methodology. Changes apply to new intakes only; in-flight clients keep the configuration snapshotted at intake start."
+        title="Your methodology"
+        description="Your advisor profile. New intakes use this; in-flight clients keep their snapshot."
       />
 
       <Card data-tour="config-pillar-questions">

@@ -47,7 +47,7 @@ export default async function EnterpriseMethodologyPillarsPage() {
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
-        <Link href="/advisor/enterprise/methodology">Firm methodology</Link>
+        <Link href="/advisor/enterprise/methodology">Firm standards</Link>
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-methodology-pillars"

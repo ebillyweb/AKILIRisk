@@ -22,6 +22,7 @@ import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { AdvisorTierFeatureKey } from "@/lib/billing/tier-features";
 import { tierIncludesFeature } from "@/lib/billing/tier-features";
 import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
+import type { EnterpriseAdvisorMemberVisibilityKey } from "@/lib/enterprise/advisor-member-visibility";
 
 export type AdvisorNavItem = {
   href?: string;
@@ -35,6 +36,10 @@ export type AdvisorNavItem = {
   requiresEnterpriseTeam?: boolean;
   /** When true, item is shown only when the advisor can access billing (solo or enterprise OWNER/ADMIN). */
   requiresBillingAccess?: boolean;
+  /** When true, item is hidden for enterprise OWNER/ADMIN team managers. */
+  hideForEnterpriseTeam?: boolean;
+  /** When set, hidden for enterprise ADVISOR-role members when the firm toggle is off. */
+  requiresMemberVisibility?: EnterpriseAdvisorMemberVisibilityKey;
   /** Minimum module tier required; item stays visible but locked when tier is insufficient. */
   requiresTierFeature?: AdvisorTierFeatureKey;
   /** When true, item is shown only when implementation tracking is enabled for the firm. */
@@ -89,6 +94,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         icon: BarChart3,
         requiresFlag: "governanceDashboardEnabled",
         requiresTierFeature: "PORTFOLIO_ANALYTICS",
+        requiresMemberVisibility: "portfolio",
       },
       {
         href: "/advisor/intelligence",
@@ -96,18 +102,21 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         icon: Shield,
         requiresFlag: "riskIntelligenceEnabled",
         requiresTierFeature: "RISK_INTELLIGENCE",
+        requiresMemberVisibility: "portfolio",
       },
       {
         href: "/advisor/reports",
         label: "Reports",
         icon: FileText,
         requiresFlag: "riskIntelligenceEnabled",
+        requiresMemberVisibility: "portfolio",
       },
       {
         href: "/advisor/recommendations",
         label: "Recommendations",
         icon: Sparkles,
         requiresFlag: "riskIntelligenceEnabled",
+        requiresMemberVisibility: "portfolio",
       },
       {
         href: "/advisor/signals",
@@ -115,6 +124,7 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         icon: Radio,
         requiresFlag: "riskIntelligenceEnabled",
         requiresTierFeature: "CONTINUOUS_MONITORING",
+        requiresMemberVisibility: "portfolio",
       },
     ],
   },
@@ -128,12 +138,14 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         icon: Briefcase,
         requiresTierFeature: "IMPLEMENTATION_ENGAGEMENTS",
         requiresImplementationTracking: true,
+        requiresMemberVisibility: "engagements",
       },
       {
         href: "/advisor/reassessment",
         label: "Reassessment",
         icon: CalendarClock,
         requiresTierFeature: "REASSESSMENT_WORKFLOW",
+        requiresMemberVisibility: "reassessment",
       },
     ],
   },
@@ -143,16 +155,23 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     items: [
       {
         href: "/advisor/settings/team",
-        label: "Team",
+        label: "Team management",
         icon: Users,
         requiresEnterpriseTeam: true,
       },
       {
         href: "/advisor/enterprise/methodology",
-        label: "Firm methodology",
+        label: "Firm standards",
         icon: BookOpen,
         requiresEnterpriseTeam: true,
         requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
+      },
+      {
+        href: "/advisor/billing",
+        label: "Billing",
+        icon: CreditCard,
+        requiresEnterpriseTeam: true,
+        requiresBillingAccess: true,
       },
     ],
   },
@@ -164,15 +183,17 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
       { href: "/advisor/settings", label: "Account settings", icon: Settings },
       {
         href: "/advisor/methodology",
-        label: "Methodology settings",
+        label: "Your methodology",
         icon: BookOpen,
         requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
+        requiresMemberVisibility: "methodology",
       },
       {
         href: "/advisor/billing",
         label: "Billing",
         icon: CreditCard,
         requiresBillingAccess: true,
+        hideForEnterpriseTeam: true,
       },
     ],
   },
@@ -241,17 +262,29 @@ export function getVisibleAdvisorNavSections(
     enterpriseTeamEnabled?: boolean;
     billingNavEnabled?: boolean;
     implementationTrackingEnabled?: boolean;
+    enterpriseMemberVisibility?: Partial<Record<EnterpriseAdvisorMemberVisibilityKey, boolean>>;
+    applyEnterpriseMemberVisibility?: boolean;
   }
 ): AdvisorNavSection[] {
   const enterpriseTeamEnabled = options?.enterpriseTeamEnabled === true;
   const billingNavEnabled = options?.billingNavEnabled !== false;
   const implementationTrackingEnabled = options?.implementationTrackingEnabled !== false;
+  const applyEnterpriseMemberVisibility = options?.applyEnterpriseMemberVisibility === true;
+  const enterpriseMemberVisibility = options?.enterpriseMemberVisibility ?? {};
   return ADVISOR_NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (item.requiresEnterpriseTeam && !enterpriseTeamEnabled) return false;
+      if (item.hideForEnterpriseTeam && enterpriseTeamEnabled) return false;
       if (item.requiresBillingAccess && !billingNavEnabled) return false;
       if (item.requiresImplementationTracking && !implementationTrackingEnabled) return false;
+      if (
+        applyEnterpriseMemberVisibility &&
+        item.requiresMemberVisibility &&
+        enterpriseMemberVisibility[item.requiresMemberVisibility] === false
+      ) {
+        return false;
+      }
       if (!item.requiresFlag) return true;
       return flags[item.requiresFlag];
     }),

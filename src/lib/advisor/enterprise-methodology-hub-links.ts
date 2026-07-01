@@ -1,4 +1,4 @@
-/** Firm methodology hub cards — shared by hub page and tests. */
+/** Firm standards hub cards — shared by hub page and tests. */
 export const ENTERPRISE_METHODOLOGY_HUB_LINKS = [
   {
     href: "/advisor/enterprise/methodology/pillars",

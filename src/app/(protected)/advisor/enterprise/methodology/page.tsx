@@ -35,8 +35,8 @@ export default async function EnterpriseMethodologyHubPage() {
     <div className="space-y-8">
       <ConfigurationPageHeader
         tourId="advisor-methodology-hub"
-        title={`${enterpriseName} — Firm methodology`}
-        description="Manage methodology defaults for all firm advisors. Changes sync to member profiles automatically."
+        title={`${enterpriseName} — Firm standards`}
+        description="Applies to all advisors in your firm. Changes sync to member profiles."
       />
 
       <Card>

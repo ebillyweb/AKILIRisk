@@ -14,6 +14,10 @@ import {
 } from "@/lib/advisor/workspace-data";
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
 import { getAdvisorSubscriptionTier } from "@/lib/advisor/subscription-tier.server";
+import {
+  isEnterpriseMemberVisibilityEnabled,
+  resolveEnterpriseMemberVisibilityContext,
+} from "@/lib/enterprise/advisor-member-visibility";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { isImplementationTrackingEnabledForUser } from "@/lib/engagement/feature-flags";
 
@@ -21,7 +25,7 @@ export async function getAdvisorWorkspaceHomeData() {
   const flags = await getPlatformFeatureFlags();
   const { userId } = await requireAdvisorRole();
 
-  const [dash, pipelineRes, notificationsRes, intelligenceRes, clientLimitStatus, subscriptionTier, implementationTrackingEnabled] =
+  const [dash, pipelineRes, notificationsRes, intelligenceRes, clientLimitStatus, subscriptionTier, implementationTrackingEnabled, memberVisibilityContext] =
     await Promise.all([
     getAdvisorDashboardData(),
     getClientPipelineData(),
@@ -32,6 +36,7 @@ export async function getAdvisorWorkspaceHomeData() {
     getAdvisorClientLimitStatus(userId),
     getAdvisorSubscriptionTier(userId),
     isImplementationTrackingEnabledForUser(userId),
+    resolveEnterpriseMemberVisibilityContext(userId),
   ]);
 
   if (!dash.success) {
@@ -56,7 +61,17 @@ export async function getAdvisorWorkspaceHomeData() {
 
   const intelligenceHighlights = deriveIntelligenceHighlights(
     intelligenceRes.success ? intelligenceRes.data! : null,
-    flags.riskIntelligenceEnabled
+    flags.riskIntelligenceEnabled &&
+      isEnterpriseMemberVisibilityEnabled(memberVisibilityContext, "portfolio"),
+  );
+
+  const memberPortfolioVisible = isEnterpriseMemberVisibilityEnabled(
+    memberVisibilityContext,
+    "portfolio",
+  );
+  const memberEngagementsVisible = isEnterpriseMemberVisibilityEnabled(
+    memberVisibilityContext,
+    "engagements",
   );
 
   return {
@@ -75,6 +90,8 @@ export async function getAdvisorWorkspaceHomeData() {
       clientLimitStatus,
       subscriptionTier,
       implementationTrackingEnabled,
+      memberPortfolioVisible,
+      memberEngagementsVisible,
     },
   };
 }

@@ -4,12 +4,15 @@ import { TierFeatureLockedPage } from "@/components/advisor/billing/TierFeatureL
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { requireAdvisorTierFeatureAccess } from "@/lib/advisor/tier-feature-guard.server";
 import { isImplementationTrackingEnabled } from "@/lib/engagement/feature-flags";
+import { requireAdvisorEngagementsMemberAccess } from "@/lib/platform/advisor-feature-guards";
 
 export default async function AdvisorEngagementsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireAdvisorEngagementsMemberAccess();
+
   const access = await requireAdvisorTierFeatureAccess("IMPLEMENTATION_ENGAGEMENTS");
   if (!access.allowed) {
     return (

@@ -11,6 +11,10 @@ import { canAccessAdvisorBilling } from "@/lib/enterprise/billing-details";
 import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
 import { isImplementationTrackingEnabledForUser } from "@/lib/engagement/feature-flags";
+import {
+  isEnterpriseMemberVisibilityEnabled,
+  resolveEnterpriseMemberVisibilityContext,
+} from "@/lib/enterprise/advisor-member-visibility";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -54,7 +58,7 @@ export default async function AdvisorLayout({
     }
   }
 
-  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, implementationTrackingEnabled, workspaceTitle, subscriptionTier, clientLimitStatus] =
+  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, implementationTrackingEnabled, memberVisibilityContext, workspaceTitle, subscriptionTier, clientLimitStatus] =
     await Promise.all([
     getPlatformFeatureFlags(),
     onBillingPage
@@ -66,6 +70,20 @@ export default async function AdvisorLayout({
     userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
     userId ? canAccessAdvisorBilling(userId) : Promise.resolve(true),
     userId ? isImplementationTrackingEnabledForUser(userId) : Promise.resolve(true),
+    userId
+      ? resolveEnterpriseMemberVisibilityContext(userId)
+      : Promise.resolve({
+          applyRestrictions: false,
+          settings: {
+            portfolio: true,
+            methodology: true,
+            engagements: true,
+            reassessment: true,
+            productTours: true,
+          },
+          enterpriseId: null,
+          role: null,
+        }),
     resolveAdvisorWorkspaceTitleForUserId(userId),
     userId ? getAdvisorSubscriptionTier(userId) : Promise.resolve("ESSENTIALS" as const),
     userId ? getAdvisorClientLimitStatus(userId) : Promise.resolve(null),
@@ -74,6 +92,15 @@ export default async function AdvisorLayout({
   const unreadNotificationCount = dash.success
     ? dash.data!.unreadNotificationCount
     : 0;
+
+  const workspacePreferences = {
+    productToursEnabled: isEnterpriseMemberVisibilityEnabled(
+      memberVisibilityContext,
+      "productTours",
+    ),
+    applyEnterpriseMemberVisibility: memberVisibilityContext.applyRestrictions,
+    enterpriseMemberVisibility: memberVisibilityContext.settings,
+  };
 
   return (
     <AdvisorControlCenterLayout
@@ -85,6 +112,7 @@ export default async function AdvisorLayout({
       enterpriseTeamEnabled={enterpriseTeamEnabled}
       billingNavEnabled={billingNavEnabled}
       implementationTrackingEnabled={implementationTrackingEnabled}
+      workspacePreferences={workspacePreferences}
     >
       <AdvisorSrOnlyHeading />
       {children}

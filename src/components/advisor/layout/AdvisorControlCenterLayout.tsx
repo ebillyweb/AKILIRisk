@@ -10,6 +10,10 @@ import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
 import { AdvisorSidebar } from "./AdvisorSidebar";
 import { AdvisorMobileNav } from "./AdvisorMobileNav";
 import { AdvisorSubscreenToolbar } from "./AdvisorSubscreenToolbar";
+import {
+  AdvisorWorkspacePreferencesProvider,
+  type AdvisorWorkspacePreferences,
+} from "./AdvisorWorkspacePreferencesContext";
 
 interface AdvisorControlCenterLayoutProps {
   children: ReactNode;
@@ -21,6 +25,7 @@ interface AdvisorControlCenterLayoutProps {
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
   implementationTrackingEnabled?: boolean;
+  workspacePreferences: AdvisorWorkspacePreferences;
   className?: string;
 }
 
@@ -34,9 +39,11 @@ export function AdvisorControlCenterLayout({
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
   implementationTrackingEnabled = true,
+  workspacePreferences,
   className,
 }: AdvisorControlCenterLayoutProps) {
   return (
+    <AdvisorWorkspacePreferencesProvider value={workspacePreferences}>
     <div
       className={cn(
         "flex min-h-[calc(100vh-8rem)] flex-col bg-background -mx-4 sm:-mx-6 lg:-mx-8",
@@ -79,5 +86,6 @@ export function AdvisorControlCenterLayout({
 
       <WorkspaceSiteFooterRow />
     </div>
+    </AdvisorWorkspacePreferencesProvider>
   );
 }
