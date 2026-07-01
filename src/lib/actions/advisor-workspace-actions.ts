@@ -15,12 +15,13 @@ import {
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
 import { getAdvisorSubscriptionTier } from "@/lib/advisor/subscription-tier.server";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
+import { isImplementationTrackingEnabledForUser } from "@/lib/engagement/feature-flags";
 
 export async function getAdvisorWorkspaceHomeData() {
   const flags = await getPlatformFeatureFlags();
   const { userId } = await requireAdvisorRole();
 
-  const [dash, pipelineRes, notificationsRes, intelligenceRes, clientLimitStatus, subscriptionTier] =
+  const [dash, pipelineRes, notificationsRes, intelligenceRes, clientLimitStatus, subscriptionTier, implementationTrackingEnabled] =
     await Promise.all([
     getAdvisorDashboardData(),
     getClientPipelineData(),
@@ -30,6 +31,7 @@ export async function getAdvisorWorkspaceHomeData() {
       : Promise.resolve({ success: false as const, error: "disabled" }),
     getAdvisorClientLimitStatus(userId),
     getAdvisorSubscriptionTier(userId),
+    isImplementationTrackingEnabledForUser(userId),
   ]);
 
   if (!dash.success) {
@@ -72,6 +74,7 @@ export async function getAdvisorWorkspaceHomeData() {
       flags,
       clientLimitStatus,
       subscriptionTier,
+      implementationTrackingEnabled,
     },
   };
 }

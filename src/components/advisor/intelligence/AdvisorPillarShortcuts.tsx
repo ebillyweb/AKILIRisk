@@ -20,7 +20,7 @@ export function AdvisorPillarShortcuts({ shortcuts }: AdvisorPillarShortcutsProp
           <CardDescription>
             Household risk domains for intake and scoring. Configure your methodology in{" "}
             <Link href="/advisor/methodology" className="font-medium text-primary underline-offset-4 hover:underline">
-              Configuration → Methodology
+              Account → Methodology settings
             </Link>
             .
           </CardDescription>

@@ -13,7 +13,6 @@ import {
   parsePipelinePageFromSearchParams,
 } from "@/lib/pipeline/parse-pipeline-filters";
 import type { PipelineFilters } from "@/lib/pipeline/types";
-import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { MetricCard } from "@/components/advisor/workspace/MetricCard";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
@@ -31,19 +30,20 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
         "Clients who submitted intake and are waiting for your approval before assessment.",
     };
   }
+  if (filters.assessmentInProgress) {
+    return {
+      kicker: "Workflow",
+      title: "Client assessments",
+      subtitle:
+        "Households actively working through the risk assessment. Open a client to review progress or answers.",
+    };
+  }
   if (filters.documentsNeeded) {
     return {
       kicker: "Workflow",
       title: "Document Requests",
       subtitle:
         "Clients with mandatory document requirements still outstanding.",
-    };
-  }
-  if (filters.staleScores) {
-    return {
-      kicker: "Workflow",
-      title: STALE_SCORES_COPY.pageTitle,
-      subtitle: STALE_SCORES_COPY.pageSubtitle,
     };
   }
   if (filters.stalled) {

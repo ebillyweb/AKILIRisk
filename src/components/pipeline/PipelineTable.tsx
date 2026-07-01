@@ -78,32 +78,43 @@ export function PipelineTable({ clients }: PipelineTableProps) {
         const secondaryLabel = formatPipelineClientSecondaryLabel(client);
 
         return (
-          <Link
-            href={`/advisor/pipeline/${client.id}`}
-            className="-m-1 block min-w-0 max-w-full rounded-md p-1 transition-colors hover:bg-muted/50"
-            title={formatPipelineClientRowTitle(client)}
-          >
-            <p className="truncate font-medium text-primary hover:underline">
-              {displayName}
-            </p>
-            <p className="mt-0.5 truncate text-sm text-muted-foreground">
-              {secondaryLabel}
-            </p>
-            {client.staleScores || client.stalled ? (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {client.staleScores ? (
-                  <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
-                    {STALE_SCORES_COPY.tableBadge}
-                  </Badge>
-                ) : null}
-                {client.stalled ? (
-                  <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
-                    Stalled
-                  </Badge>
-                ) : null}
-              </div>
+          <div className="-m-1 min-w-0 max-w-full rounded-md p-1">
+            <Link
+              href={`/advisor/pipeline/${client.id}`}
+              className="block transition-colors hover:bg-muted/50 rounded-md p-0"
+              title={formatPipelineClientRowTitle(client)}
+            >
+              <p className="truncate font-medium text-primary hover:underline">
+                {displayName}
+              </p>
+              <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                {secondaryLabel}
+              </p>
+              {client.staleScores || client.stalled ? (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {client.staleScores ? (
+                    <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
+                      {STALE_SCORES_COPY.tableBadge}
+                    </Badge>
+                  ) : null}
+                  {client.stalled ? (
+                    <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
+                      Stalled
+                    </Badge>
+                  ) : null}
+                </div>
+              ) : null}
+            </Link>
+            {client.stage === "ASSESSMENT_IN_PROGRESS" &&
+            client.assessment?.id ? (
+              <Link
+                href={`/advisor/pipeline/${client.id}/assessment/${client.assessment.id}`}
+                className="mt-2 inline-flex text-xs font-medium text-primary hover:underline"
+              >
+                Review assessment
+              </Link>
             ) : null}
-          </Link>
+          </div>
         );
       },
       enableSorting: true,

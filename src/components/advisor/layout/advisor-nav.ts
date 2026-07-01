@@ -6,19 +6,14 @@ import {
   BookOpen,
   Briefcase,
   CalendarClock,
-  ClipboardList,
   CreditCard,
   FileText,
   Home,
   Inbox,
-  ListTodo,
-  Mail,
-  MessageSquare,
   PlayCircle,
   Radio,
   Settings,
   Shield,
-  SlidersHorizontal,
   Sparkles,
   UserPlus,
   Users,
@@ -27,10 +22,6 @@ import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { AdvisorTierFeatureKey } from "@/lib/billing/tier-features";
 import { tierIncludesFeature } from "@/lib/billing/tier-features";
 import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
-import { REASSESSMENT_COPY, STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
-
-export const ADVISOR_COMING_SOON_TOOLTIP =
-  "Coming soon — this workspace area is not available yet.";
 
 export type AdvisorNavItem = {
   href?: string;
@@ -46,6 +37,8 @@ export type AdvisorNavItem = {
   requiresBillingAccess?: boolean;
   /** Minimum module tier required; item stays visible but locked when tier is insufficient. */
   requiresTierFeature?: AdvisorTierFeatureKey;
+  /** When true, item is shown only when implementation tracking is enabled for the firm. */
+  requiresImplementationTracking?: boolean;
   /** When true, item is locked if the advisor is at their active client cap. */
   requiresClientCapacity?: boolean;
 };
@@ -54,36 +47,49 @@ export type AdvisorNavSection = {
   id: string;
   title: string;
   items: AdvisorNavItem[];
+  /** Pin section to the bottom of the sidebar (above usage meter / alerts). */
+  placement?: "footer";
 };
 
 export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
   {
-    id: "overview",
-    title: "Overview",
+    id: "home",
+    title: "Home",
     items: [
-      { href: "/advisor", label: "Today", icon: Home },
+      { href: "/advisor", label: "Overview", icon: Home },
       {
-        href: "/advisor/dashboard",
-        label: "Risk Profile Portfolio",
-        icon: BarChart3,
-        requiresFlag: "governanceDashboardEnabled",
-        requiresTierFeature: "PORTFOLIO_ANALYTICS",
+        href: "/advisor/facilitate",
+        label: "Facilitated sessions",
+        icon: PlayCircle,
       },
+      { href: "/advisor/notifications", label: "Notifications", icon: Bell },
     ],
   },
   {
     id: "clients",
     title: "Clients",
     items: [
-      { href: "/advisor/pipeline", label: "All Clients", icon: Users },
+      { href: "/advisor/pipeline", label: "All clients", icon: Users },
       { href: "/advisor/leads", label: "Assessment leads", icon: Inbox },
-      { href: "/advisor/invitations", label: "Invitations", icon: UserPlus, requiresClientCapacity: true },
+      {
+        href: "/advisor/invitations",
+        label: "Invitations",
+        icon: UserPlus,
+        requiresClientCapacity: true,
+      },
     ],
   },
   {
-    id: "intelligence",
-    title: "Intelligence",
+    id: "portfolio",
+    title: "Portfolio",
     items: [
+      {
+        href: "/advisor/dashboard",
+        label: "Risk analytics",
+        icon: BarChart3,
+        requiresFlag: "governanceDashboardEnabled",
+        requiresTierFeature: "PORTFOLIO_ANALYTICS",
+      },
       {
         href: "/advisor/intelligence",
         label: "Risk intelligence",
@@ -92,15 +98,15 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         requiresTierFeature: "RISK_INTELLIGENCE",
       },
       {
-        href: "/advisor/recommendations",
-        label: "Recommendations",
-        icon: Sparkles,
-        requiresFlag: "riskIntelligenceEnabled",
-      },
-      {
         href: "/advisor/reports",
         label: "Reports",
         icon: FileText,
+        requiresFlag: "riskIntelligenceEnabled",
+      },
+      {
+        href: "/advisor/recommendations",
+        label: "Recommendations",
+        icon: Sparkles,
         requiresFlag: "riskIntelligenceEnabled",
       },
       {
@@ -113,76 +119,31 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     ],
   },
   {
-    id: "workflows",
-    title: "Workflow",
+    id: "assessment-lifecycle",
+    title: "Assessment lifecycle",
     items: [
       {
-        href: "/advisor/pipeline?awaitingReview=1",
-        label: "Intake",
-        icon: ClipboardList,
-      },
-      {
-        href: "/advisor/facilitate",
-        label: "Risk Assessment",
-        icon: PlayCircle,
-      },
-      {
-        href: "/advisor/pipeline?documentsNeeded=1",
-        label: "Document Requests",
-        icon: Mail,
-      },
-      {
-        href: "/advisor/pipeline?staleScores=1",
-        label: STALE_SCORES_COPY.navLabel,
-        icon: BarChart3,
+        href: "/advisor/engagements",
+        label: "Engagement Tracker",
+        icon: Briefcase,
+        requiresTierFeature: "IMPLEMENTATION_ENGAGEMENTS",
+        requiresImplementationTracking: true,
       },
       {
         href: "/advisor/reassessment",
-        label: REASSESSMENT_COPY.navCadenceLabel,
+        label: "Reassessment",
         icon: CalendarClock,
         requiresTierFeature: "REASSESSMENT_WORKFLOW",
-      },
-      {
-        href: "/advisor/engagements",
-        label: "Engagements",
-        icon: Briefcase,
-        requiresTierFeature: "IMPLEMENTATION_ENGAGEMENTS",
-      },
-      {
-        label: "Tasks",
-        icon: ListTodo,
-        disabled: true,
-        comingSoonTooltip: ADVISOR_COMING_SOON_TOOLTIP,
-        requiresFlag: "workflowTasksEnabled",
-      },
-      {
-        label: "Follow-ups",
-        icon: MessageSquare,
-        disabled: true,
-        comingSoonTooltip: ADVISOR_COMING_SOON_TOOLTIP,
-        requiresFlag: "workflowFollowUpsEnabled",
       },
     ],
   },
   {
-    id: "configuration",
-    title: "Configuration",
+    id: "firm",
+    title: "Firm",
     items: [
       {
-        href: "/advisor/methodology",
-        label: "Methodology",
-        icon: BookOpen,
-        requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
-      },
-      { href: "/advisor/settings", label: "Settings", icon: Settings },
-      {
-        href: "/advisor/settings/notifications",
-        label: "Notification preferences",
-        icon: SlidersHorizontal,
-      },
-      {
         href: "/advisor/settings/team",
-        label: "Enterprise Team Management",
+        label: "Team",
         icon: Users,
         requiresEnterpriseTeam: true,
       },
@@ -198,9 +159,21 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
   {
     id: "account",
     title: "Account",
+    placement: "footer",
     items: [
-      { href: "/advisor/notifications", label: "Notifications", icon: Bell },
-      { href: "/advisor/billing", label: "Billing", icon: CreditCard, requiresBillingAccess: true },
+      { href: "/advisor/settings", label: "Account settings", icon: Settings },
+      {
+        href: "/advisor/methodology",
+        label: "Methodology settings",
+        icon: BookOpen,
+        requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
+      },
+      {
+        href: "/advisor/billing",
+        label: "Billing",
+        icon: CreditCard,
+        requiresBillingAccess: true,
+      },
     ],
   },
 ];
@@ -240,21 +213,65 @@ export function getAdvisorNavItemLockReason(
   return null;
 }
 
+export function isAdvisorNavItemAccessible(
+  item: AdvisorNavItem,
+  subscriptionTier: SubscriptionTier,
+  clientLimitStatus: ClientLimitSnapshot | null
+): boolean {
+  if (item.disabled) return false;
+  return getAdvisorNavItemLockReason(item, subscriptionTier, clientLimitStatus) === null;
+}
+
+/** Omit sections where every visible item is tier- or client-limit locked. */
+export function filterAdvisorNavSectionsWithAccessibleItems(
+  sections: AdvisorNavSection[],
+  subscriptionTier: SubscriptionTier,
+  clientLimitStatus: ClientLimitSnapshot | null
+): AdvisorNavSection[] {
+  return sections.filter((section) =>
+    section.items.some((item) =>
+      isAdvisorNavItemAccessible(item, subscriptionTier, clientLimitStatus)
+    )
+  );
+}
+
 export function getVisibleAdvisorNavSections(
   flags: AdvisorPlatformFeatureFlags,
-  options?: { enterpriseTeamEnabled?: boolean; billingNavEnabled?: boolean }
+  options?: {
+    enterpriseTeamEnabled?: boolean;
+    billingNavEnabled?: boolean;
+    implementationTrackingEnabled?: boolean;
+  }
 ): AdvisorNavSection[] {
   const enterpriseTeamEnabled = options?.enterpriseTeamEnabled === true;
   const billingNavEnabled = options?.billingNavEnabled !== false;
+  const implementationTrackingEnabled = options?.implementationTrackingEnabled !== false;
   return ADVISOR_NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (item.requiresEnterpriseTeam && !enterpriseTeamEnabled) return false;
       if (item.requiresBillingAccess && !billingNavEnabled) return false;
+      if (item.requiresImplementationTracking && !implementationTrackingEnabled) return false;
       if (!item.requiresFlag) return true;
       return flags[item.requiresFlag];
     }),
   })).filter((section) => section.items.length > 0);
+}
+
+export function partitionAdvisorNavSections(sections: AdvisorNavSection[]): {
+  primary: AdvisorNavSection[];
+  footer: AdvisorNavSection[];
+} {
+  const primary: AdvisorNavSection[] = [];
+  const footer: AdvisorNavSection[] = [];
+  for (const section of sections) {
+    if (section.placement === "footer") {
+      footer.push(section);
+    } else {
+      primary.push(section);
+    }
+  }
+  return { primary, footer };
 }
 
 /** Nested routes that should activate a specific sidebar item. */
@@ -270,16 +287,19 @@ const ADVISOR_NAV_PATH_ALIASES: ReadonlyArray<{
   {
     test: (pathname) => pathname.startsWith("/advisor/review/"),
     pathname: "/advisor/pipeline",
-    searchParams: { awaitingReview: "1" },
+  },
+  {
+    test: (pathname) =>
+      /^\/advisor\/pipeline\/[^/]+\/assessment\//.test(pathname),
+    pathname: "/advisor/pipeline",
   },
   {
     test: (pathname) => pathname.startsWith("/advisor/analytics/"),
     pathname: "/advisor/dashboard",
   },
   {
-    test: (pathname) =>
-      pathname === "/advisor/engagement" || pathname.startsWith("/advisor/engagement/"),
-    pathname: "/advisor/engagements",
+    test: (pathname) => pathname.startsWith("/advisor/settings/notifications"),
+    pathname: "/advisor/notifications",
   },
   {
     test: (pathname) => pathname.startsWith("/advisor/question-bank/"),
@@ -291,8 +311,14 @@ const ADVISOR_NAV_PATH_ALIASES: ReadonlyArray<{
     pathname: "/advisor/invitations",
   },
   {
+    test: (pathname) =>
+      pathname.startsWith("/advisor/enterprise/methodology") ||
+      pathname.startsWith("/advisor/enterprise/recommendations"),
+    pathname: "/advisor/enterprise/methodology",
+  },
+  {
     test: (pathname) => pathname.startsWith("/advisor/enterprise/"),
-    pathname: "/advisor/settings",
+    pathname: "/advisor/settings/team",
   },
 ];
 

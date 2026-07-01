@@ -9,13 +9,13 @@ function labelForAdvisorPath(pathname: string): string {
   if (pathname.startsWith("/advisor/analytics")) return "Client analytics";
   if (pathname.startsWith("/advisor/review")) return "Assessment review";
   if (pathname.startsWith("/advisor/intelligence")) return "Risk intelligence";
-  if (pathname.startsWith("/advisor/methodology")) return "Methodology";
+  if (pathname.startsWith("/advisor/methodology")) return "Methodology settings";
   if (pathname.startsWith("/advisor/question-bank")) return "Question bank";
   if (pathname.startsWith("/advisor/settings/notifications"))
     return "Notification settings";
-  if (pathname.startsWith("/advisor/settings")) return "Settings";
+  if (pathname.startsWith("/advisor/settings")) return "Account settings";
   if (pathname.startsWith("/advisor/invitations")) return "Client invitations";
-  if (pathname.startsWith("/advisor/dashboard")) return "Governance dashboard";
+  if (pathname.startsWith("/advisor/dashboard")) return "Risk analytics";
   if (pathname.startsWith("/advisor/notifications")) return "Notifications";
   if (pathname.startsWith("/advisor/billing")) return "Billing";
   if (pathname.startsWith("/advisor/cyber-risk")) return "Cyber risk";

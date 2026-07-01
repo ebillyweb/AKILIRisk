@@ -27,6 +27,8 @@ import {
   getAdvisorNavSectionForHref,
   getAdvisorNavItemLockReason,
   getVisibleAdvisorNavSections,
+  filterAdvisorNavSectionsWithAccessibleItems,
+  partitionAdvisorNavSections,
   type AdvisorNavItem,
   type AdvisorNavLockReason,
   type AdvisorNavSection,
@@ -38,7 +40,10 @@ interface AdvisorSidebarNavProps {
   clientLimitStatus: ClientLimitSnapshot | null;
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
+  implementationTrackingEnabled?: boolean;
   collapsibleSections?: boolean;
+  /** Mobile drawer: one scroll area for all sections (footer included). */
+  unifiedScroll?: boolean;
   collapsed?: boolean;
   onNavigate?: () => void;
   className?: string;
@@ -65,7 +70,7 @@ function advisorNavItemClassName(
 
 function advisorSectionTitleClassName(isActiveSection: boolean) {
   return cn(
-    "px-2 text-xs font-semibold uppercase tracking-wide transition-colors",
+    "px-2 text-xs font-semibold tracking-wide transition-colors",
     isActiveSection ? "text-primary" : "text-muted-foreground",
   );
 }
@@ -203,13 +208,106 @@ function NavLinks({
   );
 }
 
+function NavSectionGroup({
+  sections,
+  activeHref,
+  activeSectionId,
+  subscriptionTier,
+  clientLimitStatus,
+  onLockedClick,
+  onNavigate,
+  collapsed,
+  collapsibleSections,
+  startIndex = 0,
+}: {
+  sections: AdvisorNavSection[];
+  activeHref: string | undefined;
+  activeSectionId: string | undefined;
+  subscriptionTier: SubscriptionTier;
+  clientLimitStatus: ClientLimitSnapshot | null;
+  onLockedClick: (item: AdvisorNavItem, reason: AdvisorNavLockReason) => void;
+  onNavigate?: () => void;
+  collapsed: boolean;
+  collapsibleSections: boolean;
+  startIndex?: number;
+}) {
+  return (
+    <>
+      {sections.map((section, index) => {
+        const sectionIndex = startIndex + index;
+        const sectionHasActive = section.items.some((item) => item.href === activeHref);
+        const useCollapsible =
+          collapsibleSections && section.placement !== "footer";
+
+        if (useCollapsible) {
+          return (
+            <Collapsible
+              key={section.id}
+              defaultOpen={sectionHasActive || section.id === activeSectionId}
+              className="space-y-1"
+            >
+              {sectionIndex > 0 && <Separator className="mb-4" />}
+              <CollapsibleTrigger
+                className={cn(
+                  "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 transition-colors",
+                  advisorSectionTitleClassName(sectionHasActive),
+                  "hover:bg-muted/40 hover:text-foreground",
+                  "[&[data-state=open]>svg]:rotate-180",
+                )}
+              >
+                <span>{section.title}</span>
+                <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-1">
+                <NavLinks
+                  section={section}
+                  activeHref={activeHref}
+                  subscriptionTier={subscriptionTier}
+                  clientLimitStatus={clientLimitStatus}
+                  onLockedClick={onLockedClick}
+                  onNavigate={onNavigate}
+                  collapsed={collapsed}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        }
+
+        return (
+          <div key={section.id}>
+            {sectionIndex > 0 && <Separator className={collapsed ? "mb-2" : "mb-4"} />}
+            <div className="space-y-1">
+              {!collapsed ? (
+                <h3 className={advisorSectionTitleClassName(sectionHasActive)}>
+                  {section.title}
+                </h3>
+              ) : null}
+              <NavLinks
+                section={section}
+                activeHref={activeHref}
+                subscriptionTier={subscriptionTier}
+                clientLimitStatus={clientLimitStatus}
+                onLockedClick={onLockedClick}
+                onNavigate={onNavigate}
+                collapsed={collapsed}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 export function AdvisorSidebarNav({
   featureFlags,
   subscriptionTier,
   clientLimitStatus,
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
+  implementationTrackingEnabled = true,
   collapsibleSections = false,
+  unifiedScroll = false,
   collapsed = false,
   onNavigate,
   className,
@@ -217,10 +315,16 @@ export function AdvisorSidebarNav({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [navLock, setNavLock] = useState<AdvisorNavLockReason>(null);
-  const visibleSections = getVisibleAdvisorNavSections(featureFlags, {
-    enterpriseTeamEnabled,
-    billingNavEnabled,
-  });
+  const visibleSections = filterAdvisorNavSectionsWithAccessibleItems(
+    getVisibleAdvisorNavSections(featureFlags, {
+      enterpriseTeamEnabled,
+      billingNavEnabled,
+      implementationTrackingEnabled,
+    }),
+    subscriptionTier,
+    clientLimitStatus,
+  );
+  const { primary, footer } = partitionAdvisorNavSections(visibleSections);
   const activeHref = getActiveAdvisorNavHref(pathname, visibleSections, searchParams);
   const activeSectionId = getAdvisorNavSectionForHref(visibleSections, activeHref);
 
@@ -228,73 +332,64 @@ export function AdvisorSidebarNav({
     if (reason) setNavLock(reason);
   };
 
+  const sectionGroupProps = {
+    activeHref,
+    activeSectionId,
+    subscriptionTier,
+    clientLimitStatus,
+    onLockedClick: handleLockedClick,
+    onNavigate,
+    collapsed,
+    collapsibleSections,
+  };
+
+  const footerBlock =
+    footer.length > 0 ? (
+      <NavSectionGroup
+        sections={footer}
+        startIndex={primary.length}
+        {...sectionGroupProps}
+      />
+    ) : null;
+
   return (
     <TooltipProvider delayDuration={300}>
       <nav
-        className={cn("flex-1", collapsed ? "space-y-3 p-2" : "space-y-6 p-4", className)}
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          collapsed ? "p-2" : "p-4",
+          !unifiedScroll && className,
+        )}
         aria-label="Advisor workspace"
       >
-        {visibleSections.map((section, sectionIndex) => {
-          const sectionHasActive = section.items.some(
-            (item) => item.href === activeHref
-          );
-
-          if (collapsibleSections) {
-            return (
-              <Collapsible
-                key={section.id}
-                defaultOpen={sectionHasActive || section.id === activeSectionId}
-                className="space-y-1"
-              >
-                {sectionIndex > 0 && <Separator className="mb-4" />}
-                <CollapsibleTrigger
-                  className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 transition-colors",
-                    advisorSectionTitleClassName(sectionHasActive),
-                    "hover:bg-muted/40 hover:text-foreground",
-                    "[&[data-state=open]>svg]:rotate-180",
-                  )}
-                >
-                  <span>{section.title}</span>
-                  <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-1">
-                  <NavLinks
-                    section={section}
-                    activeHref={activeHref}
-                    subscriptionTier={subscriptionTier}
-                    clientLimitStatus={clientLimitStatus}
-                    onLockedClick={handleLockedClick}
-                    onNavigate={onNavigate}
-                    collapsed={collapsed}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            );
-          }
-
-          return (
-            <div key={section.id}>
-              {sectionIndex > 0 && <Separator className={collapsed ? "mb-2" : "mb-4"} />}
-              <div className="space-y-1">
-                {!collapsed ? (
-                  <h3 className={advisorSectionTitleClassName(sectionHasActive)}>
-                    {section.title}
-                  </h3>
-                ) : null}
-                <NavLinks
-                  section={section}
-                  activeHref={activeHref}
-                  subscriptionTier={subscriptionTier}
-                  clientLimitStatus={clientLimitStatus}
-                  onLockedClick={handleLockedClick}
-                  onNavigate={onNavigate}
-                  collapsed={collapsed}
-                />
-              </div>
+        {unifiedScroll ? (
+          <div className={cn("min-h-0 flex-1 space-y-6 overflow-y-auto", className)}>
+            <NavSectionGroup sections={primary} startIndex={0} {...sectionGroupProps} />
+            {footerBlock}
+          </div>
+        ) : (
+          <>
+            <div
+              className={cn(
+                "min-h-0 flex-1 space-y-6 overflow-y-auto",
+                collapsed && "space-y-3",
+              )}
+            >
+              <NavSectionGroup sections={primary} startIndex={0} {...sectionGroupProps} />
             </div>
-          );
-        })}
+
+            {footer.length > 0 ? (
+              <div
+                className={cn(
+                  "shrink-0 space-y-6 border-t border-border/60 pt-4",
+                  collapsed && "space-y-3 pt-3",
+                )}
+              >
+                {footerBlock}
+              </div>
+            ) : null}
+          </>
+        )}
       </nav>
       {navLock?.type === "tier" ? (
         <TierFeatureUpgradeDialog

@@ -383,6 +383,7 @@ export async function getClientPipeline(
             }
           : null,
       assessment: latestAssessment ? {
+        id: latestAssessment.id,
         status: latestAssessment.status,
         completedAt: latestAssessment.completedAt,
         score: latestAssessment.scores[0]?.score || null,
@@ -428,21 +429,21 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
 
   const documentsNeeded = clients.filter((client) => client.documentsNeeded).length;
 
-  const staleScores = clients.filter((client) => client.staleScores).length;
-
   const stalled = clients.filter((client) => client.stalled).length;
 
   const intakesAwaitingReview = clients.filter(
     (client) => client.awaitingIntakeReview,
   ).length;
 
+  const assessmentsInProgress = allStages.ASSESSMENT_IN_PROGRESS;
+
   return {
     total,
     byStage: allStages,
     documentsNeeded,
-    staleScores,
     stalled,
     intakesAwaitingReview,
+    assessmentsInProgress,
     inactive: 0,
   };
 }
@@ -744,6 +745,7 @@ export async function getClientDetail(
           }
         : null,
     assessment: latestAssessment ? {
+      id: latestAssessment.id,
       status: latestAssessment.status,
       completedAt: latestAssessment.completedAt,
       score: latestAssessment.scores[0]?.score || null,

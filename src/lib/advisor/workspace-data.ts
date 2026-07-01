@@ -2,7 +2,6 @@ import type { AdvisorNotification } from "@prisma/client";
 import type { PipelineClient, PipelineMetrics } from "@/lib/pipeline/types";
 import type { PortfolioIntelligence } from "@/lib/intelligence/types";
 import { advisorNotificationHref } from "@/lib/advisor/notification-links";
-import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 
 export type AdvisorPriorityItem = {
   id: string;
@@ -63,17 +62,6 @@ export function deriveAdvisorPriorities(
     });
   }
 
-  if (metrics.staleScores > 0) {
-    priorities.push({
-      id: "rescore",
-      kind: "in_progress",
-      title: STALE_SCORES_COPY.workspaceTitle,
-      description: `${metrics.staleScores} client${metrics.staleScores === 1 ? "" : "s"} changed answers after completing the assessment. Scores may need a platform re-score.`,
-      href: "/advisor/pipeline?staleScores=1",
-      count: metrics.staleScores,
-    });
-  }
-
   if (metrics.stalled > 0) {
     priorities.push({
       id: "stalled",
@@ -99,6 +87,23 @@ export function deriveAdvisorPriorities(
   const inFlight =
     (metrics.byStage.INTAKE_IN_PROGRESS ?? 0) +
     (metrics.byStage.ASSESSMENT_IN_PROGRESS ?? 0);
+  const assessmentsInProgress = metrics.assessmentsInProgress ?? 0;
+  if (assessmentsInProgress > 0) {
+    const firstAssessment = clients.find(
+      (c) => c.stage === "ASSESSMENT_IN_PROGRESS" && c.assessment?.id,
+    );
+    priorities.push({
+      id: "assessments",
+      kind: "in_progress",
+      title: "Client assessments in progress",
+      description: `${assessmentsInProgress} client${assessmentsInProgress === 1 ? "" : "s"} actively taking the risk assessment.`,
+      href: firstAssessment?.assessment?.id
+        ? `/advisor/pipeline/${firstAssessment.id}/assessment/${firstAssessment.assessment.id}`
+        : "/advisor/pipeline?assessmentInProgress=1",
+      count: assessmentsInProgress,
+    });
+  }
+
   if (inFlight > 0 && priorities.length < 5) {
     const names = clients
       .filter(

@@ -7,7 +7,6 @@ import { useDebouncedCallback } from "use-debounce";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FieldHelp } from "@/components/ui/field-help";
 import {
   Select,
   SelectContent,
@@ -15,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
 import { cn } from "@/lib/utils";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { PipelineFilters, PipelineMetrics } from "@/lib/pipeline/types";
@@ -42,24 +40,20 @@ const stages: ClientWorkflowStage[] = [
   "COMPLETE",
 ];
 
-type WorkflowFilterKey =
-  | "documentsNeeded"
-  | "awaitingIntakeReview"
-  | "staleScores"
-  | "stalled";
+type IntakeFilterKey = "awaitingIntakeReview";
 
-const WORKFLOW_FILTERS: {
-  key: WorkflowFilterKey;
+const INTAKE_FILTERS: {
+  key: IntakeFilterKey;
   label: string;
-  countKey: keyof Pick<
-    PipelineMetrics,
-    "documentsNeeded" | "intakesAwaitingReview" | "staleScores" | "stalled"
-  >;
+  summaryLabel: string;
+  countKey: "intakesAwaitingReview";
 }[] = [
-  { key: "documentsNeeded", label: "Documents Needed", countKey: "documentsNeeded" },
-  { key: "awaitingIntakeReview", label: "Awaiting Review", countKey: "intakesAwaitingReview" },
-  { key: "staleScores", label: STALE_SCORES_COPY.filterLabel, countKey: "staleScores" },
-  { key: "stalled", label: "Stalled", countKey: "stalled" },
+  {
+    key: "awaitingIntakeReview",
+    label: "Awaiting review",
+    summaryLabel: "Awaiting Review",
+    countKey: "intakesAwaitingReview",
+  },
 ];
 
 function WorkflowFilterChip({
@@ -67,13 +61,11 @@ function WorkflowFilterChip({
   count,
   active,
   onClick,
-  dataTour,
 }: {
   label: string;
   count: number;
   active: boolean;
   onClick: () => void;
-  dataTour?: string;
 }) {
   return (
     <Button
@@ -82,16 +74,16 @@ function WorkflowFilterChip({
       size="sm"
       aria-pressed={active}
       onClick={onClick}
-      data-tour={dataTour}
       className={cn(
-        "h-auto min-h-10 w-full justify-between gap-3 px-3 py-2.5 text-left font-normal",
-        !active && "bg-background/60 hover:bg-muted/50",
+        "h-9 shrink-0 gap-2 rounded-full px-3.5 font-normal shadow-none",
+        !active && "border-border/70 bg-background/60 hover:bg-muted/50",
+        active && "shadow-sm",
       )}
     >
-      <span className="text-sm font-medium leading-snug">{label}</span>
+      <span className="whitespace-nowrap text-sm font-medium">{label}</span>
       <Badge
         variant={active ? "secondary" : "outline"}
-        className="shrink-0 tabular-nums"
+        className="h-5 min-w-5 shrink-0 rounded-full px-1.5 text-[0.65rem] tabular-nums"
       >
         {count}
       </Badge>
@@ -137,25 +129,13 @@ export function PipelineFilters({
       inactive: inactive ? true : undefined,
       stalled: undefined,
       awaitingIntakeReview: undefined,
+      assessmentInProgress: undefined,
       documentsNeeded: undefined,
-      staleScores: undefined,
       stage: undefined,
     });
   };
 
-  const toggleFlag = (key: WorkflowFilterKey | "inactive") => {
-    if (key === "inactive") {
-      onFilterChange({
-        ...filters,
-        inactive: filters.inactive ? undefined : true,
-        stalled: undefined,
-        awaitingIntakeReview: undefined,
-        documentsNeeded: undefined,
-        staleScores: undefined,
-        stage: undefined,
-      });
-      return;
-    }
+  const toggleIntakeFilter = (key: IntakeFilterKey) => {
     onFilterChange({
       ...filters,
       [key]: filters[key] ? undefined : true,
@@ -166,10 +146,12 @@ export function PipelineFilters({
   const activeFilterLabels: string[] = [];
   if (filters.stage) activeFilterLabels.push(getStageLabel(filters.stage));
   if (filters.search) activeFilterLabels.push(`"${filters.search}"`);
-  if (filters.stalled) activeFilterLabels.push("Stalled");
-  if (filters.awaitingIntakeReview) activeFilterLabels.push("Awaiting Review");
+  for (const { key, summaryLabel } of INTAKE_FILTERS) {
+    if (filters[key]) activeFilterLabels.push(summaryLabel);
+  }
   if (filters.documentsNeeded) activeFilterLabels.push("Documents Needed");
-  if (filters.staleScores) activeFilterLabels.push(STALE_SCORES_COPY.filterLabel);
+  if (filters.assessmentInProgress) activeFilterLabels.push("Assessments In Progress");
+  if (filters.stalled) activeFilterLabels.push("Stalled");
   if (filters.inactive) activeFilterLabels.push("Inactive");
 
   return (
@@ -250,23 +232,19 @@ export function PipelineFilters({
         </div>
       </div>
 
-      {/* Workflow attention filters — equal-width grid */}
+      {/* Intake-only quick filter; other workflow queues live in the sidebar */}
       <div className="space-y-2 border-t border-border/50 pt-4">
-        <div className="flex items-center gap-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Needs attention
-          </p>
-          <FieldHelp helpKey="pipeline-stale-scores" triggerLabel="Stale scores help" />
-        </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {WORKFLOW_FILTERS.map(({ key, label, countKey }) => (
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Intake
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {INTAKE_FILTERS.map(({ key, label, countKey }) => (
             <WorkflowFilterChip
               key={key}
               label={label}
               count={metrics[countKey]}
               active={Boolean(filters[key])}
-              onClick={() => toggleFlag(key)}
-              dataTour={key === "staleScores" ? "pipeline-stale-scores-filter" : undefined}
+              onClick={() => toggleIntakeFilter(key)}
             />
           ))}
         </div>

@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function AdvisorQuickActions({
   subscriptionTier,
+  implementationTrackingEnabled = true,
 }: {
   subscriptionTier: SubscriptionTier;
+  implementationTrackingEnabled?: boolean;
 }) {
   return (
     <Card className="border-border/70 shadow-sm">
@@ -25,20 +27,29 @@ export function AdvisorQuickActions({
           currentTier={subscriptionTier}
         />
         <GatedQuickActionButton
+          href="/advisor/pipeline?assessmentInProgress=1"
+          label="Client assessments"
+          description="Clients actively taking the assessment"
+          icon={ClipboardList}
+          currentTier={subscriptionTier}
+        />
+        <GatedQuickActionButton
           href="/advisor/pipeline?documentsNeeded=1"
           label="Document Requests"
           description="Outstanding mandatory uploads"
           icon={Mail}
           currentTier={subscriptionTier}
         />
-        <GatedQuickActionButton
-          href="/advisor/engagements"
-          label="Engagements"
-          description="Accepted recommendations in progress"
-          icon={Briefcase}
-          currentTier={subscriptionTier}
-          feature="IMPLEMENTATION_ENGAGEMENTS"
-        />
+        {implementationTrackingEnabled ? (
+          <GatedQuickActionButton
+            href="/advisor/engagements"
+            label="Engagements"
+            description="Accepted recommendations in progress"
+            icon={Briefcase}
+            currentTier={subscriptionTier}
+            feature="IMPLEMENTATION_ENGAGEMENTS"
+          />
+        ) : null}
       </CardContent>
     </Card>
   );

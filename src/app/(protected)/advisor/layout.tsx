@@ -10,6 +10,7 @@ import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { canAccessAdvisorBilling } from "@/lib/enterprise/billing-details";
 import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
+import { isImplementationTrackingEnabledForUser } from "@/lib/engagement/feature-flags";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -53,7 +54,7 @@ export default async function AdvisorLayout({
     }
   }
 
-  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, workspaceTitle, subscriptionTier, clientLimitStatus] =
+  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, implementationTrackingEnabled, workspaceTitle, subscriptionTier, clientLimitStatus] =
     await Promise.all([
     getPlatformFeatureFlags(),
     onBillingPage
@@ -64,6 +65,7 @@ export default async function AdvisorLayout({
       : getAdvisorDashboardData(),
     userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
     userId ? canAccessAdvisorBilling(userId) : Promise.resolve(true),
+    userId ? isImplementationTrackingEnabledForUser(userId) : Promise.resolve(true),
     resolveAdvisorWorkspaceTitleForUserId(userId),
     userId ? getAdvisorSubscriptionTier(userId) : Promise.resolve("ESSENTIALS" as const),
     userId ? getAdvisorClientLimitStatus(userId) : Promise.resolve(null),
@@ -82,6 +84,7 @@ export default async function AdvisorLayout({
       workspaceTitle={workspaceTitle}
       enterpriseTeamEnabled={enterpriseTeamEnabled}
       billingNavEnabled={billingNavEnabled}
+      implementationTrackingEnabled={implementationTrackingEnabled}
     >
       <AdvisorSrOnlyHeading />
       {children}

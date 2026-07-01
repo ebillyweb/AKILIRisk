@@ -28,6 +28,18 @@ export async function isImplementationTrackingEnabled(
   return profile.enterprise?.implementationTrackingEnabled ?? true;
 }
 
+/** Resolve implementation tracking for the signed-in advisor user. */
+export async function isImplementationTrackingEnabledForUser(
+  userId: string,
+): Promise<boolean> {
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!profile) return false;
+  return isImplementationTrackingEnabled(profile.id);
+}
+
 /**
  * Check whether tracking is active for a specific assessment.
  *

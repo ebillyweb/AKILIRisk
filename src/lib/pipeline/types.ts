@@ -45,6 +45,7 @@ export type PipelineClient = {
   } | null;
   // Assessment data (if exists)
   assessment: {
+    id: string;
     status: string;
     completedAt: Date | null;
     score: number | null;
@@ -63,9 +64,10 @@ export type PipelineMetrics = {
   total: number;
   byStage: Record<ClientWorkflowStage, number>;
   documentsNeeded: number;  // clients with unfulfilled mandatory document requirements
-  staleScores: number;     // completed assessments with post-completion answer edits
   stalled: number;          // clients with no activity in 7+ days
   intakesAwaitingReview: number; // submitted intake not yet approved/rejected
+  /** Clients in ASSESSMENT_IN_PROGRESS stage */
+  assessmentsInProgress: number;
   /** Ended workflows (INACTIVE assignments) for this advisor */
   inactive: number;
 };
@@ -77,10 +79,10 @@ export type PipelineFilters = {
   stalled?: boolean;
   /** When true, only clients with intake pending advisor approval */
   awaitingIntakeReview?: boolean;
+  /** When true, only clients actively taking the risk assessment */
+  assessmentInProgress?: boolean;
   /** When true, only clients with unfulfilled mandatory documents */
   documentsNeeded?: boolean;
-  /** When true, only clients whose completed assessment answers changed */
-  staleScores?: boolean;
   /** When true, list inactive (ended) client workflows instead of active ones */
   inactive?: boolean;
   search?: string;

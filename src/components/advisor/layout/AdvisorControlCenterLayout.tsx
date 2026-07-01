@@ -20,6 +20,7 @@ interface AdvisorControlCenterLayoutProps {
   workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
+  implementationTrackingEnabled?: boolean;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export function AdvisorControlCenterLayout({
   workspaceTitle,
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
+  implementationTrackingEnabled = true,
   className,
 }: AdvisorControlCenterLayoutProps) {
   return (
@@ -50,6 +52,7 @@ export function AdvisorControlCenterLayout({
             workspaceTitle={workspaceTitle}
             enterpriseTeamEnabled={enterpriseTeamEnabled}
             billingNavEnabled={billingNavEnabled}
+            implementationTrackingEnabled={implementationTrackingEnabled}
             className="hidden shrink-0 lg:flex"
           />
 
@@ -62,6 +65,7 @@ export function AdvisorControlCenterLayout({
               workspaceTitle={workspaceTitle}
               enterpriseTeamEnabled={enterpriseTeamEnabled}
               billingNavEnabled={billingNavEnabled}
+              implementationTrackingEnabled={implementationTrackingEnabled}
             />
 
             <main className="min-h-0 flex-1 overflow-y-auto">

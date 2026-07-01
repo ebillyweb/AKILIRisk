@@ -7,57 +7,48 @@ function advisorWorkspaceNav(page: Page) {
 }
 
 test.describe("Epic 5.4 — advisor workspace", () => {
-  test.describe("Workflows sidebar navigation", () => {
+  test.describe("Sidebar navigation", () => {
     test.beforeEach(async ({ page }) => {
       await new SignInPage(page).signInAs("advisor");
       await page.goto("/advisor");
       await expect(advisorWorkspaceNav(page)).toBeVisible();
     });
 
-    test("Intake opens the intake review queue on pipeline", async ({ page }) => {
+    test("Facilitated sessions opens the facilitate launcher from Home", async ({ page }) => {
       const nav = advisorWorkspaceNav(page);
-      await nav.getByRole("link", { name: "Intake" }).click();
+      await nav.getByRole("link", { name: "Facilitated sessions" }).click();
 
-      await expect(page).toHaveURL(/\/advisor\/pipeline\?.*awaitingReview=1/);
+      await expect(page).toHaveURL(/\/advisor\/facilitate\/?$/);
       await expect(
-        page.getByRole("heading", { name: /intake review queue/i }),
+        page.getByRole("heading", { name: /^facilitated sessions$/i }),
       ).toBeVisible();
-      await expect(page.getByText(/awaiting intake review/i)).toBeVisible();
-      await expect(nav.getByRole("link", { name: "Intake" })).toHaveAttribute(
+      await expect(nav.getByRole("link", { name: "Facilitated sessions" })).toHaveAttribute(
         "aria-current",
         "page",
       );
     });
 
-    test("Document Requests opens the documents-needed pipeline view", async ({
-      page,
-    }) => {
+    test("Engagements opens the engagements workspace from Assessment lifecycle", async ({ page }) => {
       const nav = advisorWorkspaceNav(page);
-      await nav.getByRole("link", { name: "Document Requests" }).click();
-
-      await expect(page).toHaveURL(/\/advisor\/pipeline\?.*documentsNeeded=1/);
-      await expect(
-        page.getByRole("heading", { name: /document requests/i }),
-      ).toBeVisible();
-      await expect(
-        page.getByText(/required documents outstanding/i),
-      ).toBeVisible();
-      await expect(nav.getByRole("link", { name: "Document Requests" })).toHaveAttribute(
-        "aria-current",
-        "page",
-      );
-    });
-
-    test("Engagements opens the engagements workspace", async ({ page }) => {
-      const nav = advisorWorkspaceNav(page);
-      await nav.getByRole("link", { name: "Engagements" }).click();
+      await nav.getByRole("link", { name: "Engagement Tracker" }).click();
 
       await expect(page).toHaveURL(/\/advisor\/engagements\/?$/);
       await expect(page.getByRole("heading", { name: /^engagements$/i })).toBeVisible();
       await expect(
-        page.getByText("Open engagements", { exact: true }),
+        page.getByText("In progress", { exact: true }),
       ).toBeVisible();
-      await expect(nav.getByRole("link", { name: "Engagements" })).toHaveAttribute(
+      await expect(nav.getByRole("link", { name: "Engagement Tracker" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    });
+
+    test("All clients opens the pipeline", async ({ page }) => {
+      const nav = advisorWorkspaceNav(page);
+      await nav.getByRole("link", { name: "All clients" }).click();
+
+      await expect(page).toHaveURL(/\/advisor\/pipeline\/?$/);
+      await expect(nav.getByRole("link", { name: "All clients" })).toHaveAttribute(
         "aria-current",
         "page",
       );

@@ -27,6 +27,7 @@ interface AdvisorSidebarProps {
   workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
+  implementationTrackingEnabled?: boolean;
   className?: string;
 }
 
@@ -38,6 +39,7 @@ export function AdvisorSidebar({
   workspaceTitle,
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
+  implementationTrackingEnabled = true,
   className,
 }: AdvisorSidebarProps) {
   const { collapsed, toggle } = useAdvisorSidebarCollapsed();
@@ -125,6 +127,7 @@ export function AdvisorSidebar({
           clientLimitStatus={clientLimitStatus}
           enterpriseTeamEnabled={enterpriseTeamEnabled}
           billingNavEnabled={billingNavEnabled}
+          implementationTrackingEnabled={implementationTrackingEnabled}
           collapsed={collapsed}
         />
 

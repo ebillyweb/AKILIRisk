@@ -119,12 +119,14 @@ export function usePipelineFilters(
       filtered = filtered.filter((client) => client.awaitingIntakeReview);
     }
 
-    if (filters.documentsNeeded) {
-      filtered = filtered.filter((client) => client.documentsNeeded);
+    if (filters.assessmentInProgress) {
+      filtered = filtered.filter(
+        (client) => client.stage === "ASSESSMENT_IN_PROGRESS",
+      );
     }
 
-    if (filters.staleScores) {
-      filtered = filtered.filter((client) => client.staleScores);
+    if (filters.documentsNeeded) {
+      filtered = filtered.filter((client) => client.documentsNeeded);
     }
 
     // Filter by search (name or email)

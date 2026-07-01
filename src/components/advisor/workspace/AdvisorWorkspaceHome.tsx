@@ -124,6 +124,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
     flags,
     clientLimitStatus,
     subscriptionTier,
+    implementationTrackingEnabled,
   } = data;
   const firstName = profile.user.firstName;
   const firmName = profile.firmName;
@@ -138,7 +139,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
           {workspaceTitle}
         </p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-          Today
+          Overview
         </h2>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Welcome back
@@ -157,7 +158,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
           <Button asChild variant="outline" size="sm">
             <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
               <PlayCircle className="size-4" />
-              Start client session
+              Start facilitated session
             </Link>
           </Button>
           {clientLimitStatus ? (
@@ -195,7 +196,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border/70 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Today&apos;s priorities</CardTitle>
+            <CardTitle className="text-base">Top priorities</CardTitle>
             <CardDescription>Items that need your attention first</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -281,7 +282,10 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
         </Card>
       )}
 
-      <AdvisorQuickActions subscriptionTier={subscriptionTier} />
+      <AdvisorQuickActions
+        subscriptionTier={subscriptionTier}
+        implementationTrackingEnabled={implementationTrackingEnabled}
+      />
     </div>
   );
 }

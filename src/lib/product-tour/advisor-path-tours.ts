@@ -51,7 +51,7 @@ export function getAdvisorTourIdForPath(pathname: string): TourId | null {
   if (/^\/advisor\/pipeline\/[^/]+$/.test(pathname)) return "advisor-pipeline-client";
 
   if (pathname.startsWith("/advisor/leads")) return "advisor-leads";
-  if (pathname.startsWith("/advisor/engagements") || pathname.startsWith("/advisor/engagement")) {
+  if (pathname.startsWith("/advisor/engagements")) {
     return "advisor-engagements";
   }
   if (pathname.startsWith("/advisor/signals")) return "advisor-signals";

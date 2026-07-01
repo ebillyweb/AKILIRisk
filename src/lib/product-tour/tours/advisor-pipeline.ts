@@ -32,16 +32,7 @@ export const ADVISOR_PIPELINE_TOURS = {
       popover: {
         title: "Find and focus",
         description:
-          "Search by name or email, switch between active and inactive workflows, filter by stage, or jump to clients who need documents, intake review, stale scores, or follow-up.",
-        side: "top",
-      },
-    },
-    {
-      element: '[data-tour="pipeline-stale-scores-filter"]',
-      popover: {
-        title: "Stale scores",
-        description:
-          "Shows clients who changed answers after completing the assessment. Scores and recommendations may be out of date — platform support can re-score the existing assessment. This is different from reassessment, where the client takes a new assessment to measure progress over time.",
+          "Search by name or email, switch between active and inactive workflows, filter by stage, or use the Intake chip for submitted intakes awaiting your review. Other workflow queues are in the sidebar.",
         side: "top",
       },
     },

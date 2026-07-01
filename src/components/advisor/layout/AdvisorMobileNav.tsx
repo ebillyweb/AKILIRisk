@@ -20,6 +20,7 @@ interface AdvisorMobileNavProps {
   workspaceTitle: string;
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
+  implementationTrackingEnabled?: boolean;
 }
 
 export function AdvisorMobileNav({
@@ -30,6 +31,7 @@ export function AdvisorMobileNav({
   workspaceTitle,
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
+  implementationTrackingEnabled = true,
 }: AdvisorMobileNavProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -142,9 +144,11 @@ export function AdvisorMobileNav({
               clientLimitStatus={clientLimitStatus}
               enterpriseTeamEnabled={enterpriseTeamEnabled}
               billingNavEnabled={billingNavEnabled}
+              implementationTrackingEnabled={implementationTrackingEnabled}
               collapsibleSections
+              unifiedScroll
               onNavigate={close}
-              className="overflow-y-auto"
+              className="min-h-0 flex-1"
             />
           </aside>
         </div>

@@ -392,7 +392,9 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                           href={`/advisor/pipeline/${client.id}/assessment/${assessmentDetails.id}`}
                         >
                           <FileText className="mr-2 h-4 w-4" />
-                          Review answers
+                          {assessmentDetails.status === "COMPLETED"
+                            ? "Review answers"
+                            : "Review in-progress answers"}
                         </Link>
                       </Button>
                     )}
@@ -405,6 +407,19 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     ) : null}
                   </div>
                 )}
+
+                {!assessmentDetails.completedAt && assessmentDetails.id ? (
+                  <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap">
+                    <Button variant="default" className="justify-center sm:w-auto" asChild>
+                      <Link
+                        href={`/advisor/pipeline/${client.id}/assessment/${assessmentDetails.id}`}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Review in-progress answers
+                      </Link>
+                    </Button>
+                  </div>
+                ) : null}
 
                 {assessmentDetails.id ? (
                   <ClientAssessmentLifecycleToolbar

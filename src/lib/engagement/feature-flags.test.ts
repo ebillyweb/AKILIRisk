@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => ({
 
 import {
   isImplementationTrackingEnabled,
+  isImplementationTrackingEnabledForUser,
   isTrackingActiveForAssessment,
 } from "./feature-flags";
 
@@ -74,6 +75,34 @@ describe("isImplementationTrackingEnabled", () => {
     findUniqueProfile.mockResolvedValue(null);
 
     const result = await isImplementationTrackingEnabled("nonexistent");
+    expect(result).toBe(false);
+  });
+});
+
+describe("isImplementationTrackingEnabledForUser", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("resolves tracking via the advisor user id", async () => {
+    findUniqueProfile
+      .mockResolvedValueOnce({ id: "profile-1" })
+      .mockResolvedValueOnce({
+        enterprise: { implementationTrackingEnabled: false },
+      });
+
+    const result = await isImplementationTrackingEnabledForUser("user-1");
+    expect(result).toBe(false);
+    expect(findUniqueProfile).toHaveBeenNthCalledWith(1, {
+      where: { userId: "user-1" },
+      select: { id: true },
+    });
+  });
+
+  it("returns false when the user has no advisor profile", async () => {
+    findUniqueProfile.mockResolvedValue(null);
+
+    const result = await isImplementationTrackingEnabledForUser("missing-user");
     expect(result).toBe(false);
   });
 });

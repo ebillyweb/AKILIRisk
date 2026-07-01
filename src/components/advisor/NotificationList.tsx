@@ -183,10 +183,7 @@ export function NotificationList({ notifications }: NotificationListProps) {
   if (notifications.length === 0) {
     return (
       <div className="mx-auto max-w-md rounded-xl border border-dashed border-border/80 bg-muted/20 px-6 py-14 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-          <Bell className="h-7 w-7 text-muted-foreground" aria-hidden />
-        </div>
-        <p className="mt-5 text-sm font-medium text-foreground">No notifications yet</p>
+        <p className="text-sm font-medium text-foreground">No notifications yet</p>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           When clients complete intake or assessments, updates will show up here.
         </p>
