@@ -1,11 +1,15 @@
 import "server-only";
 
-import type { UserRole } from "@prisma/client";
+import type { Prisma, UserRole } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
-import { safeDecryptUserEmail, withDecryptedEmail } from "@/lib/auth/user-email";
+import {
+  findUserByEmail,
+  safeDecryptUserEmail,
+  withDecryptedEmail,
+} from "@/lib/auth/user-email";
 
 export type ClientsAdminScope = "active" | "all";
 
@@ -129,19 +133,73 @@ export async function getAdvisorForAdmin(userId: string) {
 
 const CLIENTS_ADMIN_PAGE_SIZE = 20;
 
+function clientsAdminBaseWhere(scope: ClientsAdminScope): Prisma.UserWhereInput {
+  return {
+    role: "USER",
+    ...(scope === "active" ? { deletedAt: null } : {}),
+  };
+}
+
+async function findClientIdsByEmailSubstring(
+  needle: string,
+  baseWhere: Prisma.UserWhereInput,
+): Promise<string[]> {
+  const users = await prisma.user.findMany({
+    where: baseWhere,
+    select: { id: true, emailCiphertext: true },
+  });
+  const normalizedNeedle = needle.toLowerCase();
+  return users
+    .filter((user) => {
+      const email = safeDecryptUserEmail(user.emailCiphertext, { rowId: user.id });
+      return email?.toLowerCase().includes(normalizedNeedle) ?? false;
+    })
+    .map((user) => user.id);
+}
+
+async function buildClientsAdminWhere(
+  scope: ClientsAdminScope,
+  q?: string,
+): Promise<Prisma.UserWhereInput> {
+  const baseWhere = clientsAdminBaseWhere(scope);
+  const needle = q?.trim();
+  if (!needle) return baseWhere;
+
+  const orConditions: Prisma.UserWhereInput[] = [
+    { id: { contains: needle, mode: "insensitive" } },
+    { name: { contains: needle, mode: "insensitive" } },
+  ];
+
+  if (needle.includes("@")) {
+    const exactEmailMatch = await findUserByEmail(needle, {
+      where: baseWhere,
+      select: { id: true },
+    });
+    if (exactEmailMatch) {
+      orConditions.push({ id: exactEmailMatch.id });
+    }
+  }
+
+  const emailMatchIds = await findClientIdsByEmailSubstring(needle, baseWhere);
+  if (emailMatchIds.length > 0) {
+    orConditions.push({ id: { in: emailMatchIds } });
+  }
+
+  return { ...baseWhere, OR: orConditions };
+}
+
 export async function getClientsForAdmin(opts?: {
   scope?: ClientsAdminScope;
   page?: number;
   pageSize?: number;
+  q?: string;
 }) {
   const { userId, email, role } = await requireAdminRole();
   const scope = opts?.scope ?? "active";
   const pageSize = opts?.pageSize ?? CLIENTS_ADMIN_PAGE_SIZE;
   const requestedPage = opts?.page && opts.page > 0 ? opts.page : 1;
-  const where = {
-    role: "USER" as const,
-    ...(scope === "active" ? { deletedAt: null } : {}),
-  };
+  const q = opts?.q?.trim() || undefined;
+  const where = await buildClientsAdminWhere(scope, q);
   const totalCount = await prisma.user.count({ where });
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const page = Math.min(requestedPage, totalPages);
@@ -217,18 +275,12 @@ export async function getClientsForAdmin(opts?: {
     };
   });
 
-  // Fire-and-forget audit. writeAudit catches its own errors so a slow Prisma
-  // write can't break the page render. Metadata records the row count only —
-  // the actual user list (PII-heavy) is NOT logged. Filter params are an
-  // empty object today (the admin clients page filters client-side after
-  // loading the full list); recorded for parity with future filterable
-  // versions of these queries.
   void writeAudit({
     actor: { userId, role: role as UserRole, email },
     action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_CLIENTS_LIST,
     entityType: "User",
     entityId: null,
-    metadata: { rowCount: users.length, totalCount, filterParams: { scope, page } },
+    metadata: { rowCount: users.length, totalCount, filterParams: { scope, page, q } },
   });
 
   return { clients: users, totalCount, page, pageSize };
