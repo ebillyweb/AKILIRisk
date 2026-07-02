@@ -127,7 +127,10 @@ function ClientMagicLinkPanel({ callbackUrl }: { callbackUrl: string | null }) {
         </p>
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an advisor yet?{" "}
-          <Link href="/request-review" className="font-semibold text-foreground hover:underline">
+          <Link
+            href={scopePostAuthPath("/request-review")}
+            className="font-semibold text-foreground hover:underline"
+          >
             Get in contact with an advisor
           </Link>
         </p>
@@ -160,13 +163,16 @@ function ClientMagicLinkPanel({ callbackUrl }: { callbackUrl: string | null }) {
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         New family client?{" "}
-        <Link href="/start" className="font-semibold text-foreground hover:underline">
+        <Link href={scopePostAuthPath("/start")} className="font-semibold text-foreground hover:underline">
           Start with your invite code
         </Link>
       </p>
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an advisor yet?{" "}
-        <Link href="/request-review" className="font-semibold text-foreground hover:underline">
+        <Link
+          href={scopePostAuthPath("/request-review")}
+          className="font-semibold text-foreground hover:underline"
+        >
           Get in contact with an advisor
         </Link>
       </p>
@@ -230,9 +236,11 @@ function StaffCredentialsPanel({
     }
   };
 
-  const forgotPasswordHref = callbackUrl
-    ? `/forgot-password?callbackUrl=${encodeURIComponent(callbackUrl)}`
-    : "/forgot-password";
+  const forgotPasswordHref = scopePostAuthPath(
+    callbackUrl
+      ? `/forgot-password?callbackUrl=${encodeURIComponent(callbackUrl)}`
+      : "/forgot-password",
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -301,7 +309,7 @@ function StaffCredentialsPanel({
             <p>
               New to Akili?{" "}
               <Link
-                href={enterpriseJoinSignupHref}
+                href={scopePostAuthPath(enterpriseJoinSignupHref)}
                 className="font-semibold text-foreground hover:underline"
               >
                 Create your team member account
@@ -311,12 +319,15 @@ function StaffCredentialsPanel({
           ) : (
             <p>
               New advisor?{" "}
-              <Link href="/signup/advisor" className="font-semibold text-foreground hover:underline">
+              <Link
+                href={scopePostAuthPath("/signup/advisor")}
+                className="font-semibold text-foreground hover:underline"
+              >
                 Create an account
               </Link>
               {" · "}
               <Link
-                href="/signup/advisor/check-email"
+                href={scopePostAuthPath("/signup/advisor/check-email")}
                 className="font-semibold text-foreground hover:underline"
               >
                 Resend confirmation
@@ -377,7 +388,7 @@ function SignInHubContent() {
       if (notice) {
         url.searchParams.set("notice", notice);
       }
-      router.replace(`${url.pathname}${url.search}`, { scroll: false });
+      router.replace(scopePostAuthPath(`${url.pathname}${url.search}`), { scroll: false });
     },
     [callbackUrl, router, searchParams]
   );

@@ -2,7 +2,7 @@
 
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
 import { BrandedPortalMobileNav } from "@/components/branding/BrandedPortalMobileNav";
-import { MarketingNavAuthActions } from "@/components/marketing/MarketingNavAuthActions";
+import { BrandedPortalNavAuthActions } from "@/components/branding/BrandedPortalNavAuthActions";
 import { brandedPortalLogoImgSrc } from "@/lib/branding/branded-portal-logo";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
@@ -63,7 +63,7 @@ export function BrandedPortalHeader({
           className="hidden items-center gap-2 lg:flex"
           aria-label="Portal navigation"
         >
-          <MarketingNavAuthActions />
+          <BrandedPortalNavAuthActions />
         </nav>
 
         <BrandedPortalMobileNav primaryHex={previewHex?.primary} />

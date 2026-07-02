@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import { loadEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
+import { ensureEnterpriseRecommendationRulesReady } from "@/lib/methodology/enterprise-recommendation-queries";
 import { methodologyPillarDisplayName } from "@/lib/methodology/methodology-queries";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ export default async function EnterpriseRecommendationsIndexPage() {
   }
 
   const pillars = await loadEnterpriseMethodologyPillars(enterpriseId);
+  await ensureEnterpriseRecommendationRulesReady(enterpriseId);
+
   const ruleCounts = await prisma.enterpriseRecommendationRule.groupBy({
     by: ["pillarId"],
     where: { enterpriseId },

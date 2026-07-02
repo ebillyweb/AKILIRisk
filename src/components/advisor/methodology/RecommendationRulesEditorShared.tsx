@@ -336,6 +336,13 @@ function CreateRuleCard({
           disabled={pending}
         />
 
+        {services.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No active service recommendations are available yet. Platform administrators must
+            seed the recommendation catalog before custom rules can be added.
+          </p>
+        ) : null}
+
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
         <Button
@@ -460,7 +467,7 @@ export function RecommendationRulesEditorShared({
           pending={pending}
           onUpdate={wrappedActions.updateRule}
           onDelete={wrappedActions.deleteRule}
-          emptyMessage="No platform rules for this pillar yet. Check back after defaults sync, or add a custom rule."
+          emptyMessage="No platform rules for this pillar yet. Switch to the Custom tab to add a rule, or check back after defaults sync."
         />
       </TabsContent>
 

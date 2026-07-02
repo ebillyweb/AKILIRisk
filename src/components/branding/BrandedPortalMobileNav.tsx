@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { MarketingNavAuthActions } from "@/components/marketing/MarketingNavAuthActions";
+import { BrandedPortalNavAuthActions } from "@/components/branding/BrandedPortalNavAuthActions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -103,7 +103,7 @@ export function BrandedPortalMobileNav({
                 navLinks.length > 0 && "mt-4 border-t border-border/60 pt-4",
               )}
             >
-              <MarketingNavAuthActions layout="stacked" />
+              <BrandedPortalNavAuthActions layout="stacked" />
             </div>
           </nav>
         </div>

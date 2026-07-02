@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import {
+  backfillEnterpriseRecommendationRulePillarIds,
   cloneEnterpriseDefaultsIfNeeded,
   syncMissingPlatformEnterpriseRules,
 } from "@/lib/methodology/clone-enterprise-defaults";
@@ -11,6 +12,13 @@ async function ensureEnterpriseRulesCloned(enterpriseId: string): Promise<void> 
   if (!cloned) {
     await syncMissingPlatformEnterpriseRules(enterpriseId);
   }
+  await backfillEnterpriseRecommendationRulePillarIds(enterpriseId);
+}
+
+export async function ensureEnterpriseRecommendationRulesReady(
+  enterpriseId: string,
+): Promise<void> {
+  await ensureEnterpriseRulesCloned(enterpriseId);
 }
 
 export async function loadEnterpriseRecommendationRules(

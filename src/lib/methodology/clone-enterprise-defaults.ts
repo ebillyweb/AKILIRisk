@@ -1,5 +1,7 @@
 import { AdvisorQuestionSource, Prisma } from "@prisma/client";
+import { serviceIdFromRulePayload } from "@/lib/admin/recommendation-rule-ui";
 import { prisma } from "@/lib/db";
+import { pillarIdForRecommendationRule } from "@/lib/methodology/infer-recommendation-rule-pillar";
 
 type CloneTx = Prisma.TransactionClient;
 
@@ -58,6 +60,23 @@ export async function syncMissingPlatformEnterpriseRules(
     },
     { timeout: 60_000 },
   );
+}
+
+/**
+ * Backfill pillarId on enterprise rules cloned before pillar inference was fixed.
+ */
+export async function backfillEnterpriseRecommendationRulePillarIds(
+  enterpriseId: string,
+): Promise<number> {
+  const slugToPillarId = await buildSlugToPillarIdMap();
+
+  return prisma.$transaction(async (tx) => {
+    return backfillEnterpriseRecommendationRulePillarIdsInTx(
+      tx,
+      enterpriseId,
+      slugToPillarId,
+    );
+  });
 }
 
 /**
@@ -209,6 +228,42 @@ async function syncMissingPlatformRulesToEnterprise(
   return added;
 }
 
+async function backfillEnterpriseRecommendationRulePillarIdsInTx(
+  tx: CloneTx,
+  enterpriseId: string,
+  slugToPillarId: Map<string, string>,
+): Promise<number> {
+  const rows = await tx.enterpriseRecommendationRule.findMany({
+    where: { enterpriseId, pillarId: null },
+    select: {
+      id: true,
+      name: true,
+      triggerConditions: true,
+      servicePayload: true,
+    },
+  });
+
+  let updated = 0;
+  for (const row of rows) {
+    const pillarId = pillarIdForRecommendationRule(
+      {
+        triggerConditions: row.triggerConditions,
+        serviceRecommendationId: serviceIdFromRulePayload(row.servicePayload),
+        ruleName: row.name,
+      },
+      slugToPillarId,
+    );
+    if (!pillarId) continue;
+
+    await tx.enterpriseRecommendationRule.update({
+      where: { id: row.id },
+      data: { pillarId },
+    });
+    updated++;
+  }
+  return updated;
+}
+
 async function createPlatformEnterpriseClone(
   tx: CloneTx,
   enterpriseId: string,
@@ -221,9 +276,14 @@ async function createPlatformEnterpriseClone(
   },
   slugToPillarId: Map<string, string>,
 ): Promise<void> {
-  const conditions = rule.triggerConditions as { pillarId?: string };
-  const pillarSlug = conditions.pillarId;
-  const pillarId = pillarSlug ? slugToPillarId.get(pillarSlug) : null;
+  const pillarId = pillarIdForRecommendationRule(
+    {
+      triggerConditions: rule.triggerConditions,
+      serviceRecommendationId: rule.serviceRecommendationId,
+      ruleName: rule.ruleName,
+    },
+    slugToPillarId,
+  );
   await tx.enterpriseRecommendationRule.create({
     data: {
       enterpriseId,
