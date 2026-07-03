@@ -4,13 +4,17 @@ const { dbState } = vi.hoisted(() => ({
   dbState: {
     pending: false,
     pathname: "/dashboard",
+    tenantPrefix: null as string | null,
   },
 }));
 
 vi.mock("next/headers", () => ({
   headers: vi.fn(async () => ({
-    get: (key: string) =>
-      key === "x-akili-pathname" ? dbState.pathname : null,
+    get: (key: string) => {
+      if (key === "x-akili-pathname") return dbState.pathname;
+      if (key === "x-tenant-path-prefix") return dbState.tenantPrefix;
+      return null;
+    },
   })),
 }));
 
@@ -35,6 +39,7 @@ import {
 beforeEach(() => {
   dbState.pending = false;
   dbState.pathname = "/dashboard";
+  dbState.tenantPrefix = null;
   redirectMock.mockClear();
 });
 
@@ -42,6 +47,9 @@ describe("isConsentPendingExemptPath", () => {
   it("allows /consent/pending and nested consent routes", () => {
     expect(isConsentPendingExemptPath("/consent/pending")).toBe(true);
     expect(isConsentPendingExemptPath("/consent/other")).toBe(true);
+    expect(isConsentPendingExemptPath("/t/belvedere/consent/pending")).toBe(
+      true,
+    );
   });
 
   it("blocks workspace routes that need a resolved consent map", () => {
@@ -53,7 +61,13 @@ describe("isConsentPendingExemptPath", () => {
 describe("consentPendingHref", () => {
   it("preserves a client workspace return path", () => {
     expect(consentPendingHref("/assessment")).toBe(
-      "/consent/pending?redirectTo=%2Fassessment"
+      "/consent/pending?redirectTo=%2Fassessment",
+    );
+  });
+
+  it("scopes consent and return paths under a tenant prefix", () => {
+    expect(consentPendingHref("/assessment", "/t/belvedere")).toBe(
+      "/t/belvedere/consent/pending?redirectTo=%2Ft%2Fbelvedere%2Fassessment",
     );
   });
 
@@ -84,14 +98,16 @@ describe("redirectIfPendingConsent", () => {
   it("preserves the requested path in the consent redirect", async () => {
     dbState.pending = true;
     dbState.pathname = "/assessment";
+    dbState.tenantPrefix = "/t/belvedere";
     await expect(redirectIfPendingConsent("c-1")).rejects.toThrow(
-      "REDIRECT:/consent/pending?redirectTo=%2Fassessment"
+      "REDIRECT:/t/belvedere/consent/pending?redirectTo=%2Ft%2Fbelvedere%2Fassessment",
     );
   });
 
-  it("does not redirect on the consent page itself", async () => {
+  it("does not redirect on the tenant consent page itself", async () => {
     dbState.pending = true;
     dbState.pathname = "/consent/pending";
+    dbState.tenantPrefix = "/t/belvedere";
     await expect(redirectIfPendingConsent("c-1")).resolves.toBeUndefined();
     expect(redirectMock).not.toHaveBeenCalled();
   });

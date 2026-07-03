@@ -17,6 +17,15 @@ export function extractTenantPathPrefix(pathname: string): string | null {
   return match ? match[1] : null;
 }
 
+/** Strip a leading `/t/{slug}` segment so workspace guards see app-level paths. */
+export function stripTenantPathPrefix(pathname: string): string {
+  const prefix = extractTenantPathPrefix(pathname);
+  if (!prefix) return pathname;
+  const rest = pathname.slice(prefix.length);
+  if (!rest || rest === "") return "/";
+  return rest.startsWith("/") ? rest : `/${rest}`;
+}
+
 /**
  * Prefix a same-origin app path with a tenant prefix. No-op when prefix is null
  * or when the path is already tenant-scoped (avoids `/t/slug/t/slug/...`).

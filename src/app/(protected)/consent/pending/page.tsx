@@ -7,6 +7,11 @@ import {
   consentPendingHref,
   resolveConsentReturnPath,
 } from "@/lib/advisor/require-consent-resolved";
+import {
+  getTenantPathPrefixFromHeaders,
+  tenantPublicPath,
+} from "@/lib/client/tenant-path-prefix";
+import { stripTenantPathPrefix } from "@/lib/client/tenant-path-prefix-client";
 
 /**
  * Option D session 2.2 (BRD §5.1 amendment) — per-assignment consent
@@ -28,8 +33,13 @@ export default async function ConsentPendingPage({
   searchParams: Promise<{ redirectTo?: string }>;
 }) {
   const { redirectTo: redirectToRaw } = await searchParams;
+  const tenantPrefix = await getTenantPathPrefixFromHeaders();
   const returnTo = resolveConsentReturnPath(redirectToRaw);
-  const consentCallback = consentPendingHref(returnTo);
+  const scopedReturnTo = await tenantPublicPath(stripTenantPathPrefix(returnTo));
+  const consentCallback = consentPendingHref(
+    stripTenantPathPrefix(scopedReturnTo),
+    tenantPrefix,
+  );
 
   const session = await auth();
   if (!session?.user?.id) {
@@ -42,11 +52,13 @@ export default async function ConsentPendingPage({
 
   const assignments = await listAssignmentsAwaitingConsent(session.user.id);
   if (assignments.length === 0) {
-    redirect(returnTo);
+    redirect(scopedReturnTo);
   }
 
   const continueTarget =
-    returnTo === "/assessment" ? "your assessment" : "your dashboard";
+    stripTenantPathPrefix(scopedReturnTo) === "/assessment"
+      ? "your assessment"
+      : "your dashboard";
 
   return (
     <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
@@ -65,7 +77,7 @@ export default async function ConsentPendingPage({
 
         <ConsentDecisionForm
           assignments={assignments}
-          returnTo={returnTo}
+          returnTo={scopedReturnTo}
         />
       </div>
     </section>

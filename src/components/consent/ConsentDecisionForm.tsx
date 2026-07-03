@@ -25,6 +25,10 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { recordConsentDecision } from "@/lib/actions/consent-decision-actions";
 import {
+  scopePostAuthPath,
+  stripTenantPathPrefix,
+} from "@/lib/client/tenant-path-prefix-client";
+import {
   ELIGIBLE_PII_FIELDS,
   PII_FIELD_LABELS,
   type EligiblePiiField,
@@ -110,8 +114,7 @@ export function ConsentDecisionForm({
       }
       toast.success("Preferences saved.");
       if (assignments.length === 1) {
-        router.push(returnTo);
-        router.refresh();
+        router.push(scopePostAuthPath(returnTo));
         return;
       }
       router.refresh();
@@ -144,11 +147,17 @@ export function ConsentDecisionForm({
               <p className="text-sm leading-relaxed text-foreground/75">
                 Choose what optional details {firmLabel} may view. You can update
                 these later in{" "}
-                <Link href="/settings" className="font-medium text-primary hover:underline">
+                <Link
+                  href={scopePostAuthPath("/settings")}
+                  className="font-medium text-primary hover:underline"
+                >
                   Settings
                 </Link>{" "}
                 or{" "}
-                <Link href="/profiles" className="font-medium text-primary hover:underline">
+                <Link
+                  href={scopePostAuthPath("/profiles")}
+                  className="font-medium text-primary hover:underline"
+                >
                   Profiles
                 </Link>
                 .
@@ -211,7 +220,7 @@ export function ConsentDecisionForm({
                 ) : (
                   <Check className="mr-2 h-4 w-4" />
                 )}
-                {returnTo === "/assessment"
+                {stripTenantPathPrefix(returnTo) === "/assessment"
                   ? "Continue to assessment"
                   : "Continue to dashboard"}
               </Button>

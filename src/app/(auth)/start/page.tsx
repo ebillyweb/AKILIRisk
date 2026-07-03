@@ -1,41 +1,42 @@
-"use client";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
+import { StartAssessmentClient } from "@/app/(auth)/start/StartAssessmentClient";
+import { isTenantBrandedRequest } from "@/lib/client/branded-portal-requirements";
+import { tenantPublicPath } from "@/lib/client/tenant-path-prefix";
 
-import Link from "next/link";
-import { AuthPanel } from "@/components/auth/AuthPanel";
-import { InviteCodeForm } from "@/components/auth/InviteCodeForm";
+export default async function StartAssessmentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string; callbackUrl?: string }>;
+}) {
+  const sp = await searchParams;
+  const inviteToken = sp.invite?.trim();
 
-export default function StartAssessmentPage() {
+  if (inviteToken) {
+    const params = new URLSearchParams({ invite: inviteToken });
+    if (sp.callbackUrl?.trim()) {
+      params.set("callbackUrl", sp.callbackUrl.trim());
+    }
+    redirect(await tenantPublicPath(`/signup?${params.toString()}`));
+  }
+
+  const session = await auth();
+  if (session?.user?.role === "USER") {
+    redirect(await tenantPublicPath("/dashboard"));
+  }
+
+  const onTenantHost = await isTenantBrandedRequest();
+  const signInHref = await tenantPublicPath(
+    buildSignInHref({ role: "client" }),
+  );
+  const requestReviewHref = await tenantPublicPath("/request-review");
+
   return (
-    <AuthPanel
-      eyebrow="Personal Risk Profile"
-      title="Enter invite code"
-      description="Your advisor has provided a 6-character invite code (letters and numbers) to start the assessment. Enter it below to create your account and begin."
-      footer={
-        <div className="flex flex-col">
-          <span>
-            Already have an account?{" "}
-            <a
-              href="/signin?role=client"
-              className="font-semibold text-foreground hover:underline"
-            >
-              Sign in
-            </a>
-          </span>
-          <div className="mt-3 border-t section-divider pt-3">
-            <span>
-              Looking for an advisor?{" "}
-              <Link
-                href="/request-review"
-                className="font-semibold text-foreground hover:underline"
-              >
-                Request a review here
-              </Link>
-            </span>
-          </div>
-        </div>
-      }
-    >
-      <InviteCodeForm />
-    </AuthPanel>
+    <StartAssessmentClient
+      signInHref={signInHref}
+      requestReviewHref={requestReviewHref}
+      invitedViaEmailHint={onTenantHost}
+    />
   );
 }

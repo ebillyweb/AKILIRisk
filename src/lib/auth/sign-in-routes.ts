@@ -1,5 +1,6 @@
 import { matchesPathPrefix } from "@/lib/auth/mfa-gate";
 import { isSignInRole, type SignInRole } from "@/lib/auth/sign-in-roles";
+import { stripTenantPathPrefix } from "@/lib/client/tenant-path-prefix-client";
 
 /** Unified sign-in hub for all roles. */
 export const SIGN_IN_HUB_PATH = "/signin";
@@ -87,7 +88,7 @@ export function sanitizeMagicLinkRedirectTo(
     return fallback;
   }
   const pathOnly = raw.split("?")[0] ?? raw;
-  if (!isClientWorkspacePath(pathOnly)) {
+  if (!isClientWorkspacePath(stripTenantPathPrefix(pathOnly))) {
     return fallback;
   }
   return raw;

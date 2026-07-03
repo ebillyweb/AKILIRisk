@@ -26,6 +26,8 @@ export function BrandedPortalNavAuthActions({
   const stacked = layout === "stacked";
   const signInHref = scopePathToCurrentTenant("/signin?role=client", pathname);
   const startHref = scopePathToCurrentTenant("/start", pathname);
+  const onInviteAuthRoute =
+    /\/signup(\/|$)/.test(pathname) || /\/signin(\/|$)/.test(pathname);
 
   return (
     <div className={cn("flex items-center gap-3", stacked && "flex-col", className)}>
@@ -39,20 +41,22 @@ export function BrandedPortalNavAuthActions({
       >
         Sign In
       </Link>
-      <Button
-        size={stacked ? "lg" : "default"}
-        asChild
-        className={cn(
-          stacked
-            ? "h-12 w-full text-base"
-            : "h-9 rounded-lg px-4 text-[13px] font-semibold shadow-none",
-        )}
-      >
-        <Link href={startHref}>
-          Start Assessment
-          <ArrowRight className="size-3.5" aria-hidden />
-        </Link>
-      </Button>
+      {!onInviteAuthRoute ? (
+        <Button
+          size={stacked ? "lg" : "default"}
+          asChild
+          className={cn(
+            stacked
+              ? "h-12 w-full text-base"
+              : "h-9 rounded-lg px-4 text-[13px] font-semibold shadow-none",
+          )}
+        >
+          <Link href={startHref}>
+            Start Assessment
+            <ArrowRight className="size-3.5" aria-hidden />
+          </Link>
+        </Button>
+      ) : null}
     </div>
   );
 }

@@ -60,6 +60,9 @@ describe("sign-in routes", () => {
 
   it("sanitizes magic-link redirect targets to client workspaces", () => {
     expect(sanitizeMagicLinkRedirectTo("/assessment")).toBe("/assessment");
+    expect(sanitizeMagicLinkRedirectTo("/t/belvedere/assessment")).toBe(
+      "/t/belvedere/assessment",
+    );
     expect(sanitizeMagicLinkRedirectTo("//evil.example")).toBe("/dashboard");
     expect(sanitizeMagicLinkRedirectTo("/advisor")).toBe("/dashboard");
     expect(sanitizeMagicLinkRedirectTo(null, "/assessment")).toBe("/assessment");

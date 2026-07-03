@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getAdvisorBrandingBySubdomain } from "@/lib/advisor/subdomain";
 import { BrandedLandingHero } from "@/components/branding/BrandedLandingHero";
 import { BrandedPortalShell } from "@/components/branding/BrandedPortalShell";
@@ -7,7 +8,21 @@ import { resolveBrandedLandingCopy } from "@/lib/branding/landing-copy";
 import { withClientPortalLogoSrc } from "@/lib/client/resolve-client-portal-branding";
 import { tenantPublicPath } from "@/lib/client/tenant-path-prefix";
 
-export default async function BrandedClientPortalPage() {
+export default async function BrandedClientPortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string; callbackUrl?: string }>;
+}) {
+  const sp = await searchParams;
+  const inviteToken = sp.invite?.trim();
+  if (inviteToken) {
+    const params = new URLSearchParams({ invite: inviteToken });
+    if (sp.callbackUrl?.trim()) {
+      params.set("callbackUrl", sp.callbackUrl.trim());
+    }
+    redirect(await tenantPublicPath(`/signup?${params.toString()}`));
+  }
+
   const headersList = await headers();
   const subdomain = headersList.get("x-subdomain");
 

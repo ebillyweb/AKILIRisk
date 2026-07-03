@@ -167,6 +167,16 @@ export default async function proxy(req: NextRequest) {
   const scopeTarget = (appPath: string): string =>
     buildTenantScopedPublicPath(appPath, tenantPathPrefix);
 
+  // Invitation emails must land on /signup, not /start (self-service code entry).
+  if (
+    effectivePathname === "/start" &&
+    req.nextUrl.searchParams.has("invite")
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = scopeTarget("/signup");
+    return NextResponse.redirect(url);
+  }
+
   const proto = req.headers.get("x-forwarded-proto");
   const secureCookie = proto === "https" || req.nextUrl.protocol === "https:";
   const token = await getToken({
@@ -329,6 +339,25 @@ export default async function proxy(req: NextRequest) {
     }
     return NextResponse.next({
       request: { headers: tenantPassThroughHeaders },
+    });
+  }
+
+  // Path-portal pass-through routes (/signup, /signin, …) must still resolve
+  // when the slug is unknown or inactive — otherwise invitation links 404 and
+  // clients fall through to /start via the portal nav.
+  if (
+    pathPortalRoute &&
+    isTenantPassThroughPath(effectivePathname)
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = effectivePathname;
+    const requestHeaders = withAkiliPathname(req);
+    requestHeaders.set("x-akili-pathname", effectivePathname);
+    if (tenantPathPrefix) {
+      requestHeaders.set("x-tenant-path-prefix", tenantPathPrefix);
+    }
+    return NextResponse.rewrite(url, {
+      request: { headers: requestHeaders },
     });
   }
 
