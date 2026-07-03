@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { z } from 'zod';
@@ -60,6 +60,7 @@ export function InviteClientForm({
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>([]);
   const [messageEdited, setMessageEdited] = useState(false);
+  const domainsTouchedRef = useRef(false);
   const router = useRouter();
 
   const {
@@ -106,9 +107,14 @@ export function InviteClientForm({
       setSelectedEmphasis([]);
       setValue('includedPillars', []);
       setValue('focusAreas', []);
+      domainsTouchedRef.current = false;
       return;
     }
-    if (selectedDomains.length === 0 && assessmentDomains.length > 0) {
+    if (
+      !domainsTouchedRef.current &&
+      selectedDomains.length === 0 &&
+      assessmentDomains.length > 0
+    ) {
       const defaults = resolveDefaultAssessmentDomainSelection({
         availableDomainIds: assessmentDomains.map((d) => d.id),
       });
@@ -118,6 +124,7 @@ export function InviteClientForm({
   }, [intakeWaived, assessmentDomains, selectedDomains.length, setValue]);
 
   const handleDomainsChange = (domains: string[]) => {
+    domainsTouchedRef.current = true;
     setSelectedDomains(domains);
     setValue('includedPillars', domains, { shouldValidate: true });
     if (selectedEmphasis.some((id) => !domains.includes(id))) {
@@ -137,6 +144,7 @@ export function InviteClientForm({
     setSelectedDomains([]);
     setSelectedEmphasis([]);
     setMessageEdited(false);
+    domainsTouchedRef.current = false;
   };
 
   const onSubmit = async (data: FormData) => {

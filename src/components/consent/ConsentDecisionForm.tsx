@@ -24,10 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { recordConsentDecision } from "@/lib/actions/consent-decision-actions";
-import {
-  scopePostAuthPath,
-  stripTenantPathPrefix,
-} from "@/lib/client/tenant-path-prefix-client";
+import { stripTenantPathPrefix } from "@/lib/client/tenant-path-prefix-client";
 import {
   ELIGIBLE_PII_FIELDS,
   PII_FIELD_LABELS,
@@ -45,6 +42,8 @@ interface ConsentDecisionFormProps {
   assignments: PendingAssignmentPrompt[];
   /** Where to send the client once all consent prompts are satisfied. */
   returnTo?: string;
+  settingsHref?: string;
+  profilesHref?: string;
 }
 
 function ConsentChoice({
@@ -79,6 +78,8 @@ function ConsentChoice({
 export function ConsentDecisionForm({
   assignments,
   returnTo = "/dashboard",
+  settingsHref = "/settings",
+  profilesHref = "/profiles",
 }: ConsentDecisionFormProps) {
   const router = useRouter();
   const [decisions, setDecisions] = useState<
@@ -114,7 +115,7 @@ export function ConsentDecisionForm({
       }
       toast.success("Preferences saved.");
       if (assignments.length === 1) {
-        router.push(scopePostAuthPath(returnTo));
+        router.push(returnTo);
         return;
       }
       router.refresh();
@@ -148,14 +149,14 @@ export function ConsentDecisionForm({
                 Choose what optional details {firmLabel} may view. You can update
                 these later in{" "}
                 <Link
-                  href={scopePostAuthPath("/settings")}
+                  href={settingsHref}
                   className="font-medium text-primary hover:underline"
                 >
                   Settings
                 </Link>{" "}
                 or{" "}
                 <Link
-                  href={scopePostAuthPath("/profiles")}
+                  href={profilesHref}
                   className="font-medium text-primary hover:underline"
                 >
                   Profiles

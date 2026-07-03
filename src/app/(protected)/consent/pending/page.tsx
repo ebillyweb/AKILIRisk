@@ -36,6 +36,10 @@ export default async function ConsentPendingPage({
   const tenantPrefix = await getTenantPathPrefixFromHeaders();
   const returnTo = resolveConsentReturnPath(redirectToRaw);
   const scopedReturnTo = await tenantPublicPath(stripTenantPathPrefix(returnTo));
+  const [settingsHref, profilesHref] = await Promise.all([
+    tenantPublicPath("/settings"),
+    tenantPublicPath("/profiles"),
+  ]);
   const consentCallback = consentPendingHref(
     stripTenantPathPrefix(scopedReturnTo),
     tenantPrefix,
@@ -78,6 +82,8 @@ export default async function ConsentPendingPage({
         <ConsentDecisionForm
           assignments={assignments}
           returnTo={scopedReturnTo}
+          settingsHref={settingsHref}
+          profilesHref={profilesHref}
         />
       </div>
     </section>
