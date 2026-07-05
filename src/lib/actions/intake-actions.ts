@@ -23,6 +23,7 @@ import { personalizeIntakeScript } from '@/lib/intake/personalize-intake-questio
 import { getAssignedAdvisorFirmNameForClient } from '@/lib/client/assigned-advisor-firm-name';
 import { prisma } from '@/lib/db';
 import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
+import { tryAutoApproveSelfServiceIntakeAfterSubmit } from '@/lib/intake/auto-approve-default-pillars';
 import { syncInvitationStatusForClientEmail } from '@/lib/invitations/redeem-invitation';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 import { requireClientUserRole } from '@/lib/client/require-client-role';
@@ -249,16 +250,17 @@ export async function submitIntakeInterviewAction(interviewId: string) {
       },
     });
 
-    // Fire-and-forget advisor notification. Previously this round-tripped
-    // through `fetch /api/intake/[id]/notify-advisor`, which (a) couldn't
-    // forward the user's session cookie from a server-action context so
-    // the route always 401'd, and (b) used a `process.env.NEXTAUTH_URL ||
-    // 'http://localhost:3000'` fallback that hit localhost from the
-    // deployed function. Calling the helper directly skips both problems
-    // and inherits its in-process error handling.
-    void notifyAdvisorsOfIntake(interviewId).catch((error) => {
-      console.error('Advisor notification failed:', error);
-    });
+    const autoApproved = await tryAutoApproveSelfServiceIntakeAfterSubmit(
+      interviewId,
+      userId,
+    );
+
+    if (!autoApproved) {
+      // Fire-and-forget advisor notification when manual review is still required.
+      void notifyAdvisorsOfIntake(interviewId).catch((error) => {
+        console.error('Advisor notification failed:', error);
+      });
+    }
 
     if (actor.email) {
       const assignments = await prisma.clientAdvisorAssignment.findMany({

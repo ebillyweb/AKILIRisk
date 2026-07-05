@@ -14,7 +14,7 @@ export const ADVISOR_PIPELINE_TOURS = {
       popover: {
         title: "Add clients",
         description:
-          "Create a client directly (facilitated intake) or send an email invitation so they can register and start on their own.",
+          "Start a live session with someone in your portfolio or add a household on the spot. For self-service onboarding, send an email invitation instead.",
         side: "bottom",
       },
     },

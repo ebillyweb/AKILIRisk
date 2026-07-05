@@ -1,4 +1,4 @@
-import { Send, UserPlus } from "lucide-react";
+import { Send, PlayCircle } from "lucide-react";
 
 import { GatedClientAddButton } from "@/components/advisor/billing/ClientLimitGate";
 import type { ClientLimitSnapshot } from "@/lib/billing/client-limit";
@@ -15,8 +15,8 @@ export function PipelineClientActions({
         href="/advisor/facilitate"
         className="inline-flex items-center gap-2"
       >
-        <UserPlus className="size-4" />
-        Create New Client
+        <PlayCircle className="size-4" />
+        Start live session
       </GatedClientAddButton>
       <GatedClientAddButton
         status={clientLimitStatus}

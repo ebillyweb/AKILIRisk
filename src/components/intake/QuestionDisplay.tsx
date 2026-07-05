@@ -14,14 +14,20 @@ import type { IntakeQuestion } from "@/lib/intake/types";
 interface QuestionDisplayProps {
   question: IntakeQuestion;
   totalQuestions: number;
+  /** 1-based position in the active script (wizard step), not legacy bank numbering. */
+  scriptPosition: number;
 }
 
-export function QuestionDisplay({ question, totalQuestions }: QuestionDisplayProps) {
+export function QuestionDisplay({
+  question,
+  totalQuestions,
+  scriptPosition,
+}: QuestionDisplayProps) {
   return (
     <div className="py-8 sm:py-12 max-w-2xl mx-auto">
       {/* Question number - editorial kicker style */}
       <div className="editorial-kicker text-sm text-muted-foreground uppercase tracking-wider mb-4">
-        Question {question.questionNumber} of {totalQuestions}
+        Question {scriptPosition} of {totalQuestions}
       </div>
 
       {/* Question text - prominent heading */}
@@ -35,7 +41,7 @@ export function QuestionDisplay({ question, totalQuestions }: QuestionDisplayPro
           questionText={question.questionText}
           context={question.context}
           recordingTips={question.recordingTips}
-          questionNumber={question.questionNumber}
+          questionNumber={scriptPosition}
           totalQuestions={totalQuestions}
           className="shrink-0"
         />

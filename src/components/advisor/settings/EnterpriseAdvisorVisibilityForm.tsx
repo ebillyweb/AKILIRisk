@@ -61,6 +61,12 @@ const VISIBILITY_OPTION_GROUPS: VisibilityOptionGroup[] = [
           "Skip the governance intake step when inviting clients or managing the pipeline.",
       },
       {
+        key: "skipPostIntakeReview",
+        label: "Skip post-intake review",
+        description:
+          "After intake (self-service or live sessions), advance to assessment using firm or advisor default pillars without the review step.",
+      },
+      {
         key: "documentRequirements",
         label: "Document requirements",
         description:
@@ -625,7 +631,7 @@ export function EnterpriseAdvisorVisibilityForm({
         ) : (
           <>
             <Save className="size-4" />
-            Save team settings
+            Save Roles & Permissions settings
           </>
         )}
       </Button>

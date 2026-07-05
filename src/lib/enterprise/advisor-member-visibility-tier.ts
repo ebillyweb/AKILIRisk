@@ -23,6 +23,7 @@ export const ENTERPRISE_MEMBER_VISIBILITY_TIER_FEATURE: Record<
   productTours: null,
   hideTierLockedNav: null,
   skipIntake: null,
+  skipPostIntakeReview: null,
   documentRequirements: null,
   actionPlan: null,
 };
@@ -156,6 +157,7 @@ export function getVisibilityOptionTierState(
     key === "productTours" ||
     key === "hideTierLockedNav" ||
     key === "skipIntake" ||
+    key === "skipPostIntakeReview" ||
     key === "documentRequirements" ||
     key === "actionPlan" ||
     key === "assessmentLeads"
@@ -169,6 +171,8 @@ export function getVisibilityOptionTierState(
           ? "Applies to sidebar links for features above your firm's module tier."
           : key === "skipIntake"
             ? "Team members can skip intake on invites and in the client pipeline."
+            : key === "skipPostIntakeReview"
+              ? "Team members can skip post-intake review in self-service and live sessions and use default pillars."
             : key === "documentRequirements"
               ? "Team members can request and track mandatory client documents."
               : key === "actionPlan"
@@ -221,6 +225,7 @@ export function clampVisibilityToModuleTier(
     productTours: visibility.productTours,
     hideTierLockedNav: visibility.hideTierLockedNav,
     skipIntake: visibility.skipIntake,
+    skipPostIntakeReview: visibility.skipPostIntakeReview,
     documentRequirements: visibility.documentRequirements,
     actionPlan: visibility.actionPlan,
   };

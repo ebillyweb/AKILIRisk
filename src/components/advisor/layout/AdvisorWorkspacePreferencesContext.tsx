@@ -22,6 +22,7 @@ const defaultPreferences: AdvisorWorkspacePreferences = {
     productTours: true,
     hideTierLockedNav: false,
     skipIntake: false,
+    skipPostIntakeReview: false,
     documentRequirements: true,
     actionPlan: true,
   },

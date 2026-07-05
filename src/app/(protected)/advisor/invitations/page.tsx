@@ -12,7 +12,7 @@ import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
 import {
-  isEnterpriseMemberVisibilityEnabled,
+  isEnterpriseSkipIntakeWorkspaceEnabled,
   resolveEnterpriseMemberVisibilityContext,
 } from "@/lib/enterprise/advisor-member-visibility";
 import { getAdvisorClientDataPolicyContext } from "@/lib/enterprise/enterprise-client-data-policy";
@@ -43,10 +43,8 @@ export default async function InvitationsPage({
   const pseudonymousWorkspaceLabeling =
     policyContext.effective.pseudonymousWorkspaceLabeling;
   const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(profile.id);
-  const skipIntakeEnabled = isEnterpriseMemberVisibilityEnabled(
-    visibilityContext,
-    "skipIntake",
-  );
+  const skipIntakeEnabled =
+    isEnterpriseSkipIntakeWorkspaceEnabled(visibilityContext);
 
   if (!result.success) {
     return (

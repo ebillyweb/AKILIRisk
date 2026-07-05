@@ -13,7 +13,6 @@ import { QuestionDisplay } from "@/components/intake/QuestionDisplay";
 import { AudioRecorder } from "@/components/intake/AudioRecorder";
 import { StepIndicator } from "@/components/intake/StepIndicator";
 import { useIntakeInterview } from "@/lib/hooks/useIntakeInterview";
-import { useIntakeAutoSave } from "@/lib/hooks/useIntakeAutoSave";
 import { useIntakeStore, type InterviewResponse } from "@/lib/intake/store";
 import { isInterviewResponseComplete } from "@/lib/intake/is-response-complete";
 import type { IntakeQuestion } from "@/lib/intake/types";
@@ -31,8 +30,7 @@ import {
 /**
  * Intake Interview Wizard
  *
- * Main interview experience with one question per screen, audio recording,
- * auto-save, and automatic submission on completion.
+ * Main interview experience with one question per screen and audio recording.
  */
 
 export default function InterviewPage() {
@@ -42,6 +40,7 @@ export default function InterviewPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [responseTab, setResponseTab] = useState<"record" | "type">("type");
   const [typedDraft, setTypedDraft] = useState("");
 
@@ -58,49 +57,6 @@ export default function InterviewPage() {
   } = useIntakeInterview(interviewId || "", scriptQuestions);
 
   const { responses, setResponse, setCurrentQuestion, replaceResponses } = useIntakeStore();
-
-  const saveFn = useCallback(
-    async (params: {
-      questionId: string;
-      transcription?: string;
-      audioUrl?: string;
-      audioDuration?: number;
-      skipped?: boolean;
-    }) => {
-      if (!interviewId) {
-        return { success: false, error: "Interview not loaded" };
-      }
-
-      const result = await saveResponse(interviewId, {
-        interviewId,
-        questionId: params.questionId,
-        transcription: params.transcription,
-        audioUrl: params.audioUrl,
-        audioDuration: params.audioDuration,
-        skipped: params.skipped,
-      });
-
-      if (!result.success) {
-        return {
-          success: false,
-          error:
-            ("error" in result && result.error) ||
-            ("errors" in result && result.errors
-              ? Object.values(result.errors).flat().find(Boolean)
-              : undefined) ||
-            "Failed to save response",
-        };
-      }
-
-      return { success: true };
-    },
-    [interviewId],
-  );
-
-  const { saveTypedDraft, skipQuestion, flushPendingSaves, isSaving } = useIntakeAutoSave(
-    interviewId,
-    saveFn,
-  );
 
   useEffect(() => {
     async function loadInterview() {
@@ -199,24 +155,77 @@ export default function InterviewPage() {
           : "type",
     );
     setTypedDraft(r?.skipped ? "" : (r?.transcription ?? ""));
-  }, [
-    currentQuestion,
-    getResponseForQuestion,
-    currentResponse?.audioUrl,
-    currentResponse?.transcription,
-    currentResponse?.skipped,
-  ]);
+  }, [currentQuestion?.id, getResponseForQuestion]);
 
-  useEffect(() => {
-    if (!currentQuestion || !typedDraft.trim()) return;
-    saveTypedDraft(currentQuestion.id, typedDraft);
-  }, [typedDraft, currentQuestion, saveTypedDraft]);
+  const saveCurrentTypedAnswer = useCallback(async (): Promise<boolean> => {
+    if (!interviewId || !currentQuestion) return true;
+
+    const trimmed = typedDraft.trim();
+    if (!trimmed) return true;
+
+    const result = await saveResponse(interviewId, {
+      interviewId,
+      questionId: currentQuestion.id,
+      transcription: trimmed,
+      audioUrl: currentResponse?.audioUrl,
+      audioDuration: currentResponse?.audioDuration,
+    });
+
+    if (!result.success) {
+      const errorMessage =
+        ("error" in result && result.error) ||
+        ("errors" in result && result.errors
+          ? Object.values(result.errors).flat().find(Boolean)
+          : undefined) ||
+        "Failed to save response";
+      toast.error(errorMessage);
+      return false;
+    }
+
+    setResponse(currentQuestion.id, {
+      transcription: trimmed,
+      audioUrl: currentResponse?.audioUrl,
+      audioDuration: currentResponse?.audioDuration,
+      status: "completed",
+      skipped: false,
+    });
+    return true;
+  }, [interviewId, currentQuestion, currentResponse, typedDraft, setResponse]);
+
+  const saveSkip = useCallback(async (): Promise<boolean> => {
+    if (!interviewId || !currentQuestion) return false;
+
+    const result = await saveResponse(interviewId, {
+      interviewId,
+      questionId: currentQuestion.id,
+      skipped: true,
+    });
+
+    if (!result.success) {
+      const errorMessage =
+        ("error" in result && result.error) ||
+        ("errors" in result && result.errors
+          ? Object.values(result.errors).flat().find(Boolean)
+          : undefined) ||
+        "Failed to skip question";
+      toast.error(errorMessage);
+      return false;
+    }
+
+    setResponse(currentQuestion.id, {
+      skipped: true,
+      status: "completed",
+      transcription: undefined,
+    });
+    setTypedDraft("");
+    return true;
+  }, [interviewId, currentQuestion, setResponse]);
 
   const submitInterviewIfLast = useCallback(async () => {
     if (!interviewId) return;
     setSubmitting(true);
     try {
-      await flushPendingSaves();
+      if (!(await saveCurrentTypedAnswer())) return;
       const submitResult = await submitIntakeInterviewAction(interviewId);
       if (submitResult.success) {
         toast.success("Interview completed successfully!");
@@ -230,10 +239,10 @@ export default function InterviewPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [flushPendingSaves, interviewId, router]);
+  }, [interviewId, router, saveCurrentTypedAnswer]);
 
   const handleRecordingComplete = async (blob: Blob, duration: number) => {
-    if (!interviewId || !currentQuestion || uploading || submitting || isSaving) return;
+    if (!interviewId || !currentQuestion || uploading || submitting || saving) return;
 
     const questionId = currentQuestion.id;
     const recordedOnLastQuestion = isLastQuestion;
@@ -319,45 +328,62 @@ export default function InterviewPage() {
   };
 
   const handleSkip = async () => {
-    if (!currentQuestion || uploading || submitting || isSaving) return;
-    skipQuestion(currentQuestion.id);
-    await flushPendingSaves();
+    if (!currentQuestion || uploading || submitting || saving) return;
 
-    if (isLastQuestion) {
-      await submitInterviewIfLast();
-      return;
-    }
+    setSaving(true);
+    try {
+      if (!(await saveSkip())) return;
 
-    goToNext();
-    if (interviewId) {
-      try {
-        await updateProgress(interviewId, currentIndex + 1);
-      } catch (error) {
-        console.error("Failed to update progress:", error);
+      if (isLastQuestion) {
+        await submitInterviewIfLast();
+        return;
       }
+
+      goToNext();
+      if (interviewId) {
+        try {
+          await updateProgress(interviewId, currentIndex + 1);
+        } catch (error) {
+          console.error("Failed to update progress:", error);
+        }
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleNext = async () => {
-    if (!interviewId || !canGoNext || !hasResponseForNav()) return;
+    if (!interviewId || !hasResponseForNav()) return;
+    if (!isLastQuestion && !canGoNext) return;
 
-    await flushPendingSaves();
+    setSaving(true);
+    try {
+      if (!(await saveCurrentTypedAnswer())) return;
 
-    if (!isLastQuestion) {
-      goToNext();
+      if (!isLastQuestion) {
+        goToNext();
 
-      try {
-        await updateProgress(interviewId, currentIndex + 1);
-      } catch (error) {
-        console.error("Failed to update progress:", error);
+        try {
+          await updateProgress(interviewId, currentIndex + 1);
+        } catch (error) {
+          console.error("Failed to update progress:", error);
+        }
       }
+    } finally {
+      setSaving(false);
     }
   };
 
   const handlePrevious = async () => {
     if (!canGoPrev) return;
-    await flushPendingSaves();
-    goToPrev();
+
+    setSaving(true);
+    try {
+      if (!(await saveCurrentTypedAnswer())) return;
+      goToPrev();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleTranscriptionSave = async (transcription: string) => {
@@ -391,6 +417,7 @@ export default function InterviewPage() {
   };
 
   function hasResponseForNav() {
+    if (typedDraft.trim()) return true;
     return isInterviewResponseComplete(currentResponse);
   }
 
@@ -416,8 +443,9 @@ export default function InterviewPage() {
     );
   }
 
-  const hasResponse = isInterviewResponseComplete(currentResponse);
-  const responseBusy = uploading || isSaving || submitting;
+  const hasResponse = hasResponseForNav();
+  const responseBusy = uploading || saving || submitting;
+  const typingDisabled = uploading || submitting || saving || Boolean(currentResponse?.skipped);
 
   return (
     <div className="max-w-3xl mx-auto py-6 space-y-8">
@@ -437,7 +465,11 @@ export default function InterviewPage() {
         }
       />
 
-      <QuestionDisplay question={currentQuestion} totalQuestions={totalQuestions} />
+      <QuestionDisplay
+        question={currentQuestion}
+        totalQuestions={totalQuestions}
+        scriptPosition={currentIndex + 1}
+      />
 
       <Card className="rounded-3xl p-6 shadow-sm">
         <Tabs
@@ -459,19 +491,16 @@ export default function InterviewPage() {
           <TabsContent value="type" className="mt-4 space-y-4">
             <h3 className="font-medium">Type your response</h3>
             <p className="text-sm text-muted-foreground">
-              Your answer saves automatically as you type.
+              Your answer is saved when you go to the next or previous question.
             </p>
             <Textarea
               value={typedDraft}
               onChange={(e) => setTypedDraft(e.target.value)}
               placeholder="Write your answer here…"
               rows={8}
-              disabled={responseBusy || currentResponse?.skipped}
+              disabled={typingDisabled}
               className="min-h-[180px] resize-y text-base"
             />
-            {isSaving ? (
-              <p className="text-xs text-muted-foreground">Saving…</p>
-            ) : null}
           </TabsContent>
 
           <TabsContent value="record" className="mt-4 space-y-4">
@@ -533,7 +562,7 @@ export default function InterviewPage() {
         {!isLastQuestion ? (
           <Button
             onClick={() => void handleNext()}
-            disabled={!hasResponse || !canGoNext || responseBusy}
+            disabled={!hasResponse || responseBusy}
             className="flex items-center gap-2"
           >
             Next

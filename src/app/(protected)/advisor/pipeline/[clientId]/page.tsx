@@ -6,7 +6,7 @@ import { requireAdvisorRole } from "@/lib/advisor/auth";
 import {
   isEnterpriseActionPlanWorkspaceEnabled,
   isEnterpriseDocumentRequirementsWorkspaceEnabled,
-  isEnterpriseMemberVisibilityEnabled,
+  isEnterpriseSkipIntakeWorkspaceEnabled,
   resolveEnterpriseMemberVisibilityContext,
 } from "@/lib/enterprise/advisor-member-visibility";
 import { ClientDetailView } from "@/components/pipeline/ClientDetailView";
@@ -32,10 +32,8 @@ async function ClientDetailContent({ clientId }: { clientId: string }) {
   }
 
   const visibilityContext = await resolveEnterpriseMemberVisibilityContext(userId);
-  const canSkipIntake = isEnterpriseMemberVisibilityEnabled(
-    visibilityContext,
-    "skipIntake",
-  );
+  const canSkipIntake =
+    isEnterpriseSkipIntakeWorkspaceEnabled(visibilityContext);
   const documentRequirementsEnabled =
     isEnterpriseDocumentRequirementsWorkspaceEnabled(visibilityContext);
   const actionPlanEnabled =

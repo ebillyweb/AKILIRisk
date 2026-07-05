@@ -16,6 +16,7 @@ export const ENTERPRISE_ADVISOR_MEMBER_VISIBILITY_KEYS = [
   "productTours",
   "hideTierLockedNav",
   "skipIntake",
+  "skipPostIntakeReview",
   "documentRequirements",
   "actionPlan",
 ] as const;
@@ -37,6 +38,7 @@ const enterpriseVisibilitySelect = {
   advisorMemberProductToursVisible: true,
   advisorMemberHideTierLockedNav: true,
   advisorMemberSkipIntakeEnabled: true,
+  advisorMemberSkipPostIntakeReviewEnabled: true,
   advisorMemberDocumentRequirementsEnabled: true,
   advisorMemberActionPlanEnabled: true,
 } as const;
@@ -50,6 +52,7 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
   advisorMemberProductToursVisible: boolean;
   advisorMemberHideTierLockedNav: boolean;
   advisorMemberSkipIntakeEnabled: boolean;
+  advisorMemberSkipPostIntakeReviewEnabled: boolean;
   advisorMemberDocumentRequirementsEnabled: boolean;
   advisorMemberActionPlanEnabled: boolean;
 }): EnterpriseAdvisorMemberVisibility {
@@ -62,6 +65,7 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
     productTours: row.advisorMemberProductToursVisible,
     hideTierLockedNav: row.advisorMemberHideTierLockedNav,
     skipIntake: row.advisorMemberSkipIntakeEnabled,
+    skipPostIntakeReview: row.advisorMemberSkipPostIntakeReviewEnabled,
     documentRequirements: row.advisorMemberDocumentRequirementsEnabled,
     actionPlan: row.advisorMemberActionPlanEnabled,
   };
@@ -77,6 +81,7 @@ export const DEFAULT_ENTERPRISE_ADVISOR_MEMBER_VISIBILITY: EnterpriseAdvisorMemb
     productTours: true,
     hideTierLockedNav: false,
     skipIntake: false,
+    skipPostIntakeReview: false,
     documentRequirements: true,
     actionPlan: true,
   };
@@ -142,6 +147,18 @@ export function isEnterpriseMemberVisibilityEnabled(
 }
 
 /**
+ * Firm-level skip intake flag for invitations and pipeline waiver UI.
+ * Applies to owners/admins as well — when disabled, the feature is hidden for the whole firm.
+ * Solo advisors are unaffected.
+ */
+export function isEnterpriseSkipIntakeWorkspaceEnabled(
+  context: EnterpriseMemberVisibilityContext,
+): boolean {
+  if (!context.enterpriseId) return true;
+  return context.settings.skipIntake;
+}
+
+/**
  * Firm-level document requirements flag for advisor workspace UI and mutations.
  * Applies to owners/admins as well — when disabled, the feature is hidden for the whole firm.
  */
@@ -175,9 +192,20 @@ export type EnterpriseAdvisorMemberVisibilityInput = EnterpriseAdvisorMemberVisi
 
 export async function assertAdvisorCanSkipIntake(userId: string): Promise<void> {
   const context = await resolveEnterpriseMemberVisibilityContext(userId);
-  if (!isEnterpriseMemberVisibilityEnabled(context, "skipIntake")) {
+  if (!isEnterpriseSkipIntakeWorkspaceEnabled(context)) {
     throw new Error(
-      "Your firm administrator has not allowed team members to skip intake.",
+      "Your firm has disabled skip intake in the advisor workspace.",
+    );
+  }
+}
+
+export async function assertAdvisorCanSkipPostIntakeReview(
+  userId: string,
+): Promise<void> {
+  const context = await resolveEnterpriseMemberVisibilityContext(userId);
+  if (!isEnterpriseMemberVisibilityEnabled(context, "skipPostIntakeReview")) {
+    throw new Error(
+      "Your firm administrator has not allowed team members to skip post-intake review.",
     );
   }
 }
@@ -221,6 +249,7 @@ export function visibilityInputToEnterpriseUpdate(
     advisorMemberProductToursVisible: input.productTours,
     advisorMemberHideTierLockedNav: input.hideTierLockedNav,
     advisorMemberSkipIntakeEnabled: input.skipIntake,
+    advisorMemberSkipPostIntakeReviewEnabled: input.skipPostIntakeReview,
     advisorMemberDocumentRequirementsEnabled: input.documentRequirements,
     advisorMemberActionPlanEnabled: input.actionPlan,
   };

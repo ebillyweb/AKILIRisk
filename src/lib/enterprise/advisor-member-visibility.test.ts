@@ -20,6 +20,7 @@ import {
   isEnterpriseActionPlanWorkspaceEnabled,
   isEnterpriseDocumentRequirementsWorkspaceEnabled,
   isEnterpriseMemberVisibilityEnabled,
+  isEnterpriseSkipIntakeWorkspaceEnabled,
   mapEnterpriseAdvisorMemberVisibility,
   resolveEnterpriseMemberVisibilityContext,
   visibilityInputToEnterpriseUpdate,
@@ -40,6 +41,7 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
         advisorMemberProductToursVisible: false,
         advisorMemberHideTierLockedNav: false,
         advisorMemberSkipIntakeEnabled: false,
+        advisorMemberSkipPostIntakeReviewEnabled: false,
         advisorMemberDocumentRequirementsEnabled: true,
         advisorMemberActionPlanEnabled: true,
       }),
@@ -52,6 +54,7 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
       productTours: false,
       hideTierLockedNav: false,
       skipIntake: false,
+      skipPostIntakeReview: false,
       documentRequirements: true,
       actionPlan: true,
     });
@@ -74,6 +77,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
     expect(result.applyRestrictions).toBe(false);
     expect(result.settings).toEqual(DEFAULT_ENTERPRISE_ADVISOR_MEMBER_VISIBILITY);
+    expect(isEnterpriseSkipIntakeWorkspaceEnabled(result)).toBe(true);
   });
 
   it("applies restrictions for enterprise ADVISOR role", async () => {
@@ -93,6 +97,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberProductToursVisible: true,
       advisorMemberHideTierLockedNav: false,
       advisorMemberSkipIntakeEnabled: false,
+      advisorMemberSkipPostIntakeReviewEnabled: false,
       advisorMemberDocumentRequirementsEnabled: false,
       advisorMemberActionPlanEnabled: false,
     });
@@ -121,6 +126,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberProductToursVisible: false,
       advisorMemberHideTierLockedNav: false,
       advisorMemberSkipIntakeEnabled: false,
+      advisorMemberSkipPostIntakeReviewEnabled: false,
       advisorMemberDocumentRequirementsEnabled: false,
       advisorMemberActionPlanEnabled: false,
     });
@@ -130,6 +136,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
     expect(isEnterpriseMemberVisibilityEnabled(result, "portfolio")).toBe(true);
     expect(isEnterpriseMemberVisibilityEnabled(result, "skipIntake")).toBe(true);
     expect(isEnterpriseMemberVisibilityEnabled(result, "documentRequirements")).toBe(true);
+    expect(isEnterpriseSkipIntakeWorkspaceEnabled(result)).toBe(false);
     expect(isEnterpriseDocumentRequirementsWorkspaceEnabled(result)).toBe(false);
     expect(isEnterpriseActionPlanWorkspaceEnabled(result)).toBe(false);
   });
@@ -147,6 +154,7 @@ describe("visibilityInputToEnterpriseUpdate", () => {
         productTours: true,
         hideTierLockedNav: false,
         skipIntake: false,
+        skipPostIntakeReview: false,
         documentRequirements: false,
         actionPlan: false,
       }),
@@ -159,6 +167,7 @@ describe("visibilityInputToEnterpriseUpdate", () => {
       advisorMemberProductToursVisible: true,
       advisorMemberHideTierLockedNav: false,
       advisorMemberSkipIntakeEnabled: false,
+      advisorMemberSkipPostIntakeReviewEnabled: false,
       advisorMemberDocumentRequirementsEnabled: false,
       advisorMemberActionPlanEnabled: false,
     });

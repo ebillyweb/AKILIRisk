@@ -199,6 +199,8 @@ model AdvisorEnterprise {
   advisorMemberHideTierLockedNav    Boolean              @default(false)
   /// When true, ADVISOR-role team members may skip intake on invites and in the pipeline.
   advisorMemberSkipIntakeEnabled    Boolean              @default(false)
+  /// When true, ADVISOR-role team members may skip post-intake review in live sessions and use default pillars.
+  advisorMemberSkipPostIntakeReviewEnabled Boolean       @default(false)
   /// When true, ADVISOR-role team members may request and track client document requirements.
   advisorMemberDocumentRequirementsEnabled Boolean       @default(true)
   /// When true, show Strategic Action Plan in the client portal and advisor guidance workflows.

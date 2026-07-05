@@ -177,7 +177,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
           <Button asChild variant="outline" size="sm">
             <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
               <PlayCircle className="size-4" />
-              Start facilitated session
+              Start live session
             </Link>
           </Button>
           {clientLimitStatus ? (

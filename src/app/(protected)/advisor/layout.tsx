@@ -83,6 +83,7 @@ export default async function AdvisorLayout({
             productTours: true,
             hideTierLockedNav: false,
             skipIntake: false,
+            skipPostIntakeReview: false,
             documentRequirements: true,
             actionPlan: true,
           },

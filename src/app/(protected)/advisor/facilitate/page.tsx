@@ -25,7 +25,11 @@ export default async function FacilitateLauncherPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Sessions</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Conduct intake and assessment with a client in person or on a call — no client login
-          required for this session.
+          required for this session. To onboard someone for self-service intake, use{" "}
+          <Link href="/advisor/invitations" className="font-medium text-primary underline-offset-4 hover:underline">
+            Invitations
+          </Link>
+          .
         </p>
         <Button asChild variant="outline" size="sm" className="mt-2">
           <Link href="/advisor/pipeline">

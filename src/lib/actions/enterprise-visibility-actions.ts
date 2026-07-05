@@ -31,6 +31,7 @@ const visibilitySchema = z.object({
   productTours: z.boolean(),
   hideTierLockedNav: z.boolean(),
   skipIntake: z.boolean(),
+  skipPostIntakeReview: z.boolean(),
   documentRequirements: z.boolean(),
   actionPlan: z.boolean(),
 });

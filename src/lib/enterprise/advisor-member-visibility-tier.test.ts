@@ -22,6 +22,7 @@ describe("isVisibilityOptionAtModuleTier", () => {
     expect(isVisibilityOptionAtModuleTier("productTours", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("hideTierLockedNav", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("skipIntake", "ESSENTIALS")).toBe(true);
+    expect(isVisibilityOptionAtModuleTier("skipPostIntakeReview", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("documentRequirements", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("actionPlan", "ESSENTIALS")).toBe(true);
   });
@@ -114,6 +115,7 @@ describe("clampVisibilityToModuleTier", () => {
           productTours: true,
           hideTierLockedNav: true,
           skipIntake: true,
+          skipPostIntakeReview: true,
           documentRequirements: true,
           actionPlan: true,
         },
@@ -128,6 +130,7 @@ describe("clampVisibilityToModuleTier", () => {
       productTours: true,
       hideTierLockedNav: true,
       skipIntake: true,
+      skipPostIntakeReview: true,
       documentRequirements: true,
       actionPlan: true,
     });

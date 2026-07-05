@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { listAssignmentsAwaitingConsent } from "@/lib/advisor/pending-consent";
+import {
+  hasPendingConsent,
+  resolveConsentPromptAssignments,
+} from "@/lib/advisor/pending-consent";
 import { ConsentDecisionForm } from "@/components/consent/ConsentDecisionForm";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import {
@@ -54,9 +57,25 @@ export default async function ConsentPendingPage({
   if (role === "ADVISOR") redirect("/advisor");
   if (role === "ADMIN") redirect("/admin");
 
-  const assignments = await listAssignmentsAwaitingConsent(session.user.id);
+  const assignments = await resolveConsentPromptAssignments(session.user.id);
   if (assignments.length === 0) {
-    redirect(scopedReturnTo);
+    if (!(await hasPendingConsent(session.user.id))) {
+      redirect(scopedReturnTo);
+    }
+
+    return (
+      <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
+        <div className="mx-auto max-w-2xl space-y-4 text-sm text-foreground/80">
+          <h1 className="text-2xl font-semibold text-foreground">
+            Privacy preferences unavailable
+          </h1>
+          <p>
+            We could not load your consent preferences. Refresh the page or
+            contact your advisor if this continues.
+          </p>
+        </div>
+      </section>
+    );
   }
 
   const continueTarget =

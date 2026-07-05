@@ -80,7 +80,7 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
 
 export function ClientDetailView({
   detail,
-  canSkipIntake = true,
+  canSkipIntake = false,
   documentRequirementsEnabled = true,
   actionPlanEnabled = true,
 }: ClientDetailViewProps) {

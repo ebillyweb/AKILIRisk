@@ -4,6 +4,7 @@ import type { FacilitatedSessionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { userEmailForDisplay } from "@/lib/auth/user-email";
 import { reconcileMislabeledFacilitatedPreviewSessions } from "@/lib/facilitated/assessment-access";
+import { loadIntakeScriptForInterview } from "@/lib/intake/load-intake-script";
 import {
   OPEN_FACILITATED_STATUSES,
   type FacilitatedSessionSummary,
@@ -59,7 +60,45 @@ export async function listOpenFacilitatedSessionsForAdvisor(
     take: limit,
     select: sessionSelect,
   });
-  return rows.map(mapSessionSummary);
+  return enrichFacilitatedSessionSummaries(rows.map(mapSessionSummary));
+}
+
+async function enrichFacilitatedSessionSummaries(
+  sessions: FacilitatedSessionSummary[],
+): Promise<FacilitatedSessionSummary[]> {
+  return Promise.all(
+    sessions.map(async (session) => ({
+      ...session,
+      progressDetail: await resolveFacilitatedSessionProgressDetail(session),
+    })),
+  );
+}
+
+async function resolveFacilitatedSessionProgressDetail(
+  session: FacilitatedSessionSummary,
+): Promise<string | null> {
+  switch (session.status) {
+    case "INTAKE": {
+      if (!session.interviewId) return null;
+      const [interview, questions] = await Promise.all([
+        prisma.intakeInterview.findUnique({
+          where: { id: session.interviewId },
+          select: { currentQuestionIndex: true },
+        }),
+        loadIntakeScriptForInterview(session.interviewId),
+      ]);
+      if (!interview || questions.length === 0) return null;
+      const maxIdx = Math.max(0, questions.length - 1);
+      const idx = Math.min(interview.currentQuestionIndex ?? 0, maxIdx);
+      return `Question ${idx + 1} of ${questions.length}`;
+    }
+    case "PILLAR_SELECT":
+      return "Choosing assessment pillars";
+    case "ASSESSMENT":
+      return "Assessment in progress";
+    default:
+      return null;
+  }
 }
 
 /** @deprecated Use listOpenFacilitatedSessionsForAdvisor */
@@ -89,5 +128,8 @@ function mapSessionSummary(
     completedAt: row.completedAt,
     clientName: row.client.name,
     clientEmail: userEmailForDisplay(row.client),
+    progressDetail: null,
+    clientDisplayName: "Client",
+    clientDisplayPseudonymous: true,
   };
 }

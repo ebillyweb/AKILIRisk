@@ -27,7 +27,7 @@ function snapshotRowToIntakeQuestion(
 
   return {
     id: row.id,
-    questionNumber: row.questionNumber ? Number(row.questionNumber) || index + 1 : index + 1,
+    questionNumber: index + 1,
     questionText: row.questionText,
     whyThisMatters: row.helpText ?? undefined,
     recommendedActions: row.recommendedActions ?? undefined,

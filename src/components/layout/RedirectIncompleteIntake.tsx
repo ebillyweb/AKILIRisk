@@ -2,6 +2,10 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import {
+  scopePathToCurrentTenant,
+  stripTenantPathPrefix,
+} from "@/lib/client/tenant-path-prefix-client";
 
 interface RedirectIncompleteIntakeProps {
   restrictNavToIntake: boolean;
@@ -13,8 +17,9 @@ export function RedirectIncompleteIntake({ restrictNavToIntake }: RedirectIncomp
 
   useEffect(() => {
     if (!restrictNavToIntake) return;
-    if (pathname === "/intake" || pathname.startsWith("/intake/")) return;
-    router.replace("/intake");
+    const appPath = stripTenantPathPrefix(pathname);
+    if (appPath === "/intake" || appPath.startsWith("/intake/")) return;
+    router.replace(scopePathToCurrentTenant("/intake", pathname));
   }, [restrictNavToIntake, pathname, router]);
 
   return null;

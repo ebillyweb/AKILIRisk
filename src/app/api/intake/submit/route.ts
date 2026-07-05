@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/mobile/token";
 import { submitIntakeInterview } from "@/lib/data/intake";
+import { tryAutoApproveSelfServiceIntakeAfterSubmit } from "@/lib/intake/auto-approve-default-pillars";
 import { notifyAdvisorsOfIntakeSubmission } from "@/lib/intake/notify-advisors";
 
 const schema = z.object({ interviewId: z.string().min(1) });
@@ -29,11 +30,18 @@ export async function POST(request: NextRequest) {
 
   await submitIntakeInterview(interview.id);
 
-  // Notify assigned advisors; never let a notification failure fail the submit.
-  try {
-    await notifyAdvisorsOfIntakeSubmission(interview.id);
-  } catch (error) {
-    console.error("intake submit: advisor notification failed", error);
+  const autoApproved = await tryAutoApproveSelfServiceIntakeAfterSubmit(
+    interview.id,
+    user.id,
+  );
+
+  if (!autoApproved) {
+    // Notify assigned advisors when manual review is still required.
+    try {
+      await notifyAdvisorsOfIntakeSubmission(interview.id);
+    } catch (error) {
+      console.error("intake submit: advisor notification failed", error);
+    }
   }
 
   return NextResponse.json({ referenceId: interview.id });

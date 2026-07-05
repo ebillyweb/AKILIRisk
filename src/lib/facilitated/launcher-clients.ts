@@ -5,6 +5,8 @@ export type FacilitatedLauncherClient = {
   id: string;
   name: string;
   email: string;
+  secondary?: string | null;
+  pseudonymous?: boolean;
   openSession?: {
     id: string;
     status: FacilitatedSessionStatus;
@@ -31,8 +33,9 @@ export function mergeFacilitatedLauncherClients(
     }
     byId.set(session.clientId, {
       id: session.clientId,
-      name: session.clientName ?? "Client",
-      email: session.clientEmail ?? "",
+      name: session.clientDisplayName ?? session.clientName ?? "Client",
+      email: session.clientDisplayPseudonymous ? "" : (session.clientEmail ?? ""),
+      pseudonymous: session.clientDisplayPseudonymous,
       openSession,
     });
   }

@@ -52,7 +52,7 @@ export function InviteClientForm({
   firmName,
   assessmentDomainPicker,
   clientLimitStatus,
-  skipIntakeEnabled = true,
+  skipIntakeEnabled = false,
 }: InviteClientFormProps) {
   const assessmentDomains = assessmentDomainPicker.domains;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,6 +100,12 @@ export function InviteClientForm({
       setValue('personalMessage', suggestedPersonalMessage);
     }
   }, [messageEdited, setValue, suggestedPersonalMessage]);
+
+  useEffect(() => {
+    if (!skipIntakeEnabled && intakeWaived) {
+      setValue("intakeWaived", false);
+    }
+  }, [skipIntakeEnabled, intakeWaived, setValue]);
 
   useEffect(() => {
     if (!intakeWaived) {

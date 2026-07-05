@@ -20,7 +20,6 @@ import {
   facilitatedSubmitIntake,
   facilitatedUpdateIntakeProgress,
 } from "@/lib/actions/facilitated-intake-actions";
-import { useIntakeAutoSave } from "@/lib/hooks/useIntakeAutoSave";
 import { useIntakeInterview } from "@/lib/hooks/useIntakeInterview";
 import { isInterviewResponseComplete } from "@/lib/intake/is-response-complete";
 import { useIntakeStore, type InterviewResponse } from "@/lib/intake/store";
@@ -42,6 +41,7 @@ export function FacilitatedIntakeWizard({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [responseTab, setResponseTab] = useState<"record" | "type">("type");
   const [typedDraft, setTypedDraft] = useState("");
 
@@ -58,36 +58,6 @@ export function FacilitatedIntakeWizard({
   } = useIntakeInterview(interviewId, scriptQuestions);
 
   const { setResponse, setCurrentQuestion, replaceResponses, responses } = useIntakeStore();
-
-  const saveFn = useCallback(
-    async (params: {
-      questionId: string;
-      transcription?: string;
-      skipped?: boolean;
-    }) => {
-      const result = await facilitatedSaveIntakeResponse(sessionId, {
-        interviewId,
-        questionId: params.questionId,
-        transcription: params.transcription,
-        skipped: params.skipped,
-      });
-      if (!result.success) {
-        return {
-          success: false,
-          error:
-            result.error ??
-            ("errors" in result && result.errors
-              ? Object.values(result.errors).flat()[0]
-              : "Failed to save response"),
-        };
-      }
-      return { success: true };
-    },
-    [interviewId, sessionId],
-  );
-
-  const { saveTypedDraft, skipQuestion, flushPendingSaves, isSaving } =
-    useIntakeAutoSave(interviewId, saveFn);
 
   const loadIntakeData = useCallback(
     async (isRetry = false) => {
@@ -181,17 +151,70 @@ export function FacilitatedIntakeWizard({
           : "type",
     );
     setTypedDraft(r?.skipped ? "" : (r?.transcription ?? ""));
-  }, [currentQuestion, getResponseForQuestion, currentResponse?.audioUrl, currentResponse?.transcription, currentResponse?.skipped]);
+  }, [currentQuestion?.id, getResponseForQuestion]);
 
-  useEffect(() => {
-    if (!currentQuestion || !typedDraft.trim()) return;
-    saveTypedDraft(currentQuestion.id, typedDraft);
-  }, [typedDraft, currentQuestion, saveTypedDraft]);
+  const saveCurrentTypedAnswer = useCallback(async (): Promise<boolean> => {
+    if (!currentQuestion) return true;
+
+    const trimmed = typedDraft.trim();
+    if (!trimmed) return true;
+
+    const result = await facilitatedSaveIntakeResponse(sessionId, {
+      interviewId,
+      questionId: currentQuestion.id,
+      transcription: trimmed,
+    });
+
+    if (!result.success) {
+      toast.error(
+        result.error ??
+          ("errors" in result && result.errors
+            ? Object.values(result.errors).flat()[0]
+            : "Failed to save response"),
+      );
+      return false;
+    }
+
+    setResponse(currentQuestion.id, {
+      transcription: trimmed,
+      status: "completed",
+      skipped: false,
+    });
+    return true;
+  }, [currentQuestion, interviewId, sessionId, setResponse, typedDraft]);
+
+  const saveSkip = useCallback(async (): Promise<boolean> => {
+    if (!currentQuestion) return false;
+
+    const result = await facilitatedSaveIntakeResponse(sessionId, {
+      interviewId,
+      questionId: currentQuestion.id,
+      skipped: true,
+    });
+
+    if (!result.success) {
+      toast.error(
+        result.error ??
+          ("errors" in result && result.errors
+            ? Object.values(result.errors).flat()[0]
+            : "Failed to skip question"),
+      );
+      return false;
+    }
+
+    setResponse(currentQuestion.id, {
+      skipped: true,
+      status: "completed",
+      transcription: undefined,
+    });
+    setTypedDraft("");
+    return true;
+  }, [currentQuestion, interviewId, sessionId, setResponse]);
 
   const submitIntake = useCallback(async () => {
     setSubmitting(true);
     try {
-      await flushPendingSaves();
+      if (!(await saveCurrentTypedAnswer())) return;
       const result = await facilitatedSubmitIntake(sessionId);
       if (!result.success) {
         toast.error(result.error ?? "Failed to submit intake");
@@ -206,10 +229,10 @@ export function FacilitatedIntakeWizard({
     } finally {
       setSubmitting(false);
     }
-  }, [flushPendingSaves, router, sessionId]);
+  }, [router, saveCurrentTypedAnswer, sessionId]);
 
   const handleRecordingComplete = async (blob: Blob, duration: number) => {
-    if (!currentQuestion || uploading || submitting || isSaving) return;
+    if (!currentQuestion || uploading || submitting || saving) return;
 
     const questionId = currentQuestion.id;
     const recordedOnLastQuestion = isLastQuestion;
@@ -280,49 +303,70 @@ export function FacilitatedIntakeWizard({
 
   const handleSkip = async () => {
     if (!currentQuestion || responseBusy) return;
-    skipQuestion(currentQuestion.id);
-    await flushPendingSaves();
 
-    if (isLastQuestion) {
-      await submitIntake();
-      return;
-    }
-
-    goToNext();
+    setSaving(true);
     try {
-      await facilitatedUpdateIntakeProgress(sessionId, currentIndex + 1);
-    } catch {
-      // non-blocking
+      if (!(await saveSkip())) return;
+
+      if (isLastQuestion) {
+        await submitIntake();
+        return;
+      }
+
+      goToNext();
+      try {
+        await facilitatedUpdateIntakeProgress(sessionId, currentIndex + 1);
+      } catch {
+        // non-blocking
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleNext = async () => {
-    if (!canGoNext || !currentQuestion) return;
+    if (!currentQuestion) return;
+
     const response = getResponseForQuestion(currentQuestion.id);
-    if (!isInterviewResponseComplete(response)) {
+    const hasAnswer =
+      Boolean(typedDraft.trim()) || isInterviewResponseComplete(response);
+    if (!hasAnswer) {
       toast.error("Answer or skip this question before continuing");
       return;
     }
 
-    await flushPendingSaves();
+    if (!isLastQuestion && !canGoNext) return;
 
-    if (isLastQuestion) {
-      await submitIntake();
-      return;
-    }
-
-    goToNext();
+    setSaving(true);
     try {
-      await facilitatedUpdateIntakeProgress(sessionId, currentIndex + 1);
-    } catch {
-      // non-blocking
+      if (isLastQuestion) {
+        await submitIntake();
+        return;
+      }
+
+      if (!(await saveCurrentTypedAnswer())) return;
+
+      goToNext();
+      try {
+        await facilitatedUpdateIntakeProgress(sessionId, currentIndex + 1);
+      } catch {
+        // non-blocking
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
   const handlePrevious = async () => {
     if (!canGoPrev) return;
-    await flushPendingSaves();
-    goToPrev();
+
+    setSaving(true);
+    try {
+      if (!(await saveCurrentTypedAnswer())) return;
+      goToPrev();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const completedSteps = useMemo(() => {
@@ -334,7 +378,10 @@ export function FacilitatedIntakeWizard({
     return completed;
   }, [scriptQuestions, getResponseForQuestion, responses]);
 
-  const responseBusy = uploading || submitting || isSaving;
+  const responseBusy = uploading || submitting || saving;
+  const typingDisabled = uploading || submitting || saving || Boolean(currentResponse?.skipped);
+  const hasAnswerForNav =
+    Boolean(typedDraft.trim()) || isInterviewResponseComplete(currentResponse);
 
   if (loading) {
     return (
@@ -366,7 +413,11 @@ export function FacilitatedIntakeWizard({
         completedSteps={completedSteps}
       />
 
-      <QuestionDisplay question={currentQuestion} totalQuestions={totalQuestions} />
+      <QuestionDisplay
+        question={currentQuestion}
+        totalQuestions={totalQuestions}
+        scriptPosition={currentIndex + 1}
+      />
 
       <Card className="p-4 sm:p-6">
         <Tabs value={responseTab} onValueChange={(v) => setResponseTab(v as "record" | "type")}>
@@ -386,13 +437,11 @@ export function FacilitatedIntakeWizard({
               onChange={(e) => setTypedDraft(e.target.value)}
               rows={6}
               placeholder="Type the client's answer…"
-              disabled={responseBusy || currentResponse?.skipped}
+              disabled={typingDisabled}
             />
-            {isSaving ? (
-              <p className="text-xs text-muted-foreground">Saving…</p>
-            ) : typedDraft.trim() ? (
-              <p className="text-xs text-muted-foreground">Answer saves automatically.</p>
-            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Answer is saved when you go to the next or previous question.
+            </p>
           </TabsContent>
           <TabsContent value="record" className="mt-4">
             <AudioRecorder
@@ -424,7 +473,7 @@ export function FacilitatedIntakeWizard({
         <Button
           type="button"
           onClick={() => void handleNext()}
-          disabled={responseBusy}
+          disabled={responseBusy || !hasAnswerForNav}
         >
           {isLastQuestion ? "Submit intake" : "Next"}
           {!isLastQuestion && <ArrowRight className="size-4" />}
