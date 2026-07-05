@@ -15,6 +15,9 @@ import {
   getAssignedAdvisorProfileIdForClient,
   loadSnapshotForInterview,
 } from "@/lib/methodology/snapshot";
+import { filterIntakeQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
+import { normalizeIntakeAnswerType, intakeUsesFreeformResponse } from "@/lib/intake/intake-answer-behavior";
+import { resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
 
 const DEFAULT_RECORDING_TIPS = [
   "Speak clearly and at a normal pace",
@@ -42,13 +45,20 @@ function pillarRowsToIntakeQuestions(rows: PillarQuestionWithHierarchy[]): Intak
       id: row.id,
       questionNumber: i + 1,
       questionText: row.questionText,
+      answerType: normalizeIntakeAnswerType(row.answerType),
+      answer0: row.answer0,
+      answer1: row.answer1,
+      answer2: row.answer2,
+      answer3: row.answer3,
       whyThisMatters: why || undefined,
       recommendedActions: recommended || undefined,
       relatedPillarIds: related,
       context:
         why ||
         "Take your time; speak naturally as if in conversation with your advisor.",
-      recordingTips: recordingTipsFromRow(row),
+      recordingTips: intakeUsesFreeformResponse(row.answerType)
+        ? recordingTipsFromRow(row)
+        : [],
     };
   });
 }
@@ -58,13 +68,17 @@ export async function loadAdvisorIntakeScriptQuestions(
   advisorProfileId: string,
 ): Promise<IntakeQuestion[]> {
   await ensureAdvisorDefaultsCloned(advisorProfileId);
-  const rows = await prisma.advisorIntakeQuestion.findMany({
-    where: { advisorProfileId, isVisible: true },
-    orderBy: { displayOrder: "asc" },
-  });
-  if (rows.length === 0) return [];
+  const [mode, rows] = await Promise.all([
+    resolveAdvisorIntakeQuestionBankMode(advisorProfileId),
+    prisma.advisorIntakeQuestion.findMany({
+      where: { advisorProfileId, isVisible: true },
+      orderBy: { displayOrder: "asc" },
+    }),
+  ]);
+  const activeRows = filterIntakeQuestionsByBankMode(rows, mode);
+  if (activeRows.length === 0) return [];
 
-  return rows.map((row, i) => {
+  return activeRows.map((row, i) => {
     const context =
       row.context?.trim() ||
       row.helpText?.trim() ||
@@ -82,12 +96,21 @@ export async function loadAdvisorIntakeScriptQuestions(
       id: row.id,
       questionNumber: i + 1,
       questionText: row.questionText,
+      answerType: normalizeIntakeAnswerType(row.answerType),
+      answer0: row.answer0,
+      answer1: row.answer1,
+      answer2: row.answer2,
+      answer3: row.answer3,
       whyThisMatters: row.helpText ?? row.context ?? undefined,
       recommendedActions: recommended || undefined,
       relatedPillarIds:
         row.relatedPillarIds?.length > 0 ? [...row.relatedPillarIds] : undefined,
       context,
-      recordingTips: tips.length ? tips : DEFAULT_RECORDING_TIPS,
+      recordingTips: intakeUsesFreeformResponse(row.answerType)
+        ? tips.length
+          ? tips
+          : DEFAULT_RECORDING_TIPS
+        : [],
     };
   });
 }

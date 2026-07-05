@@ -28,6 +28,10 @@ export type SnapshotIntakeQuestion = {
   helpText: string | null;
   learnMore: string | null;
   answerType: string;
+  answer0?: string | null;
+  answer1?: string | null;
+  answer2?: string | null;
+  answer3?: string | null;
   options: unknown;
   relatedPillarIds: string[];
   recommendedActions: string | null;

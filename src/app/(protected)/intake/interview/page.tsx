@@ -11,6 +11,10 @@ import toast from "react-hot-toast";
 
 import { QuestionDisplay } from "@/components/intake/QuestionDisplay";
 import { AudioRecorder } from "@/components/intake/AudioRecorder";
+import {
+  IntakeStructuredAnswer,
+  intakeQuestionSupportsAudio,
+} from "@/components/intake/IntakeStructuredAnswer";
 import { StepIndicator } from "@/components/intake/StepIndicator";
 import { useIntakeInterview } from "@/lib/hooks/useIntakeInterview";
 import { useIntakeStore, type InterviewResponse } from "@/lib/intake/store";
@@ -446,6 +450,7 @@ export default function InterviewPage() {
   const hasResponse = hasResponseForNav();
   const responseBusy = uploading || saving || submitting;
   const typingDisabled = uploading || submitting || saving || Boolean(currentResponse?.skipped);
+  const supportsAudio = intakeQuestionSupportsAudio(currentQuestion);
 
   return (
     <div className="max-w-3xl mx-auto py-6 space-y-8">
@@ -472,50 +477,64 @@ export default function InterviewPage() {
       />
 
       <Card className="rounded-3xl p-6 shadow-sm">
-        <Tabs
-          value={responseTab}
-          onValueChange={(v) => setResponseTab(v as "record" | "type")}
-          className="gap-4"
-        >
-          <TabsList className="w-full max-w-md" variant="line">
-            <TabsTrigger value="type" className="gap-1.5">
-              <Keyboard className="size-4" />
-              Type
-            </TabsTrigger>
-            <TabsTrigger value="record" className="gap-1.5">
-              <Mic className="size-4" />
-              Voice
-            </TabsTrigger>
-          </TabsList>
+        {supportsAudio ? (
+          <Tabs
+            value={responseTab}
+            onValueChange={(v) => setResponseTab(v as "record" | "type")}
+            className="gap-4"
+          >
+            <TabsList className="w-full max-w-md" variant="line">
+              <TabsTrigger value="type" className="gap-1.5">
+                <Keyboard className="size-4" />
+                Type
+              </TabsTrigger>
+              <TabsTrigger value="record" className="gap-1.5">
+                <Mic className="size-4" />
+                Voice
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="type" className="mt-4 space-y-4">
-            <h3 className="font-medium">Type your response</h3>
+            <TabsContent value="type" className="mt-4 space-y-4">
+              <h3 className="font-medium">Type your response</h3>
+              <p className="text-sm text-muted-foreground">
+                Your answer is saved when you go to the next or previous question.
+              </p>
+              <Textarea
+                value={typedDraft}
+                onChange={(e) => setTypedDraft(e.target.value)}
+                placeholder="Write your answer here…"
+                rows={8}
+                disabled={typingDisabled}
+                className="min-h-[180px] resize-y text-base"
+              />
+            </TabsContent>
+
+            <TabsContent value="record" className="mt-4 space-y-4">
+              <h3 className="font-medium">Record your response</h3>
+              <AudioRecorder
+                onRecordingComplete={handleRecordingComplete}
+                existingAudioUrl={currentResponse?.audioUrl}
+                transcription={currentResponse?.transcription}
+                transcriptionEditedAt={currentResponse?.transcriptionEditedAt}
+                transcriptionStatus={currentResponse?.status}
+                onTranscriptionSave={handleTranscriptionSave}
+                disabled={responseBusy}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="space-y-4">
+            <IntakeStructuredAnswer
+              question={currentQuestion}
+              value={typedDraft}
+              disabled={typingDisabled}
+              onChange={setTypedDraft}
+            />
             <p className="text-sm text-muted-foreground">
               Your answer is saved when you go to the next or previous question.
             </p>
-            <Textarea
-              value={typedDraft}
-              onChange={(e) => setTypedDraft(e.target.value)}
-              placeholder="Write your answer here…"
-              rows={8}
-              disabled={typingDisabled}
-              className="min-h-[180px] resize-y text-base"
-            />
-          </TabsContent>
-
-          <TabsContent value="record" className="mt-4 space-y-4">
-            <h3 className="font-medium">Record your response</h3>
-            <AudioRecorder
-              onRecordingComplete={handleRecordingComplete}
-              existingAudioUrl={currentResponse?.audioUrl}
-              transcription={currentResponse?.transcription}
-              transcriptionEditedAt={currentResponse?.transcriptionEditedAt}
-              transcriptionStatus={currentResponse?.status}
-              onTranscriptionSave={handleTranscriptionSave}
-              disabled={responseBusy}
-            />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
 
         <div className="mt-4 text-center">
           <Button

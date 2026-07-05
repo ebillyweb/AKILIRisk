@@ -16,7 +16,8 @@ import type {
   MethodologySnapshotBlob,
   ParsedMethodologySnapshot,
 } from "@/lib/methodology/types";
-import { advisorAssessmentQuestionToWire } from "@/lib/methodology/advisor-assessment-question-config";
+import { filterIntakeQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
+import { resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
 import {
   SNAPSHOT_MAX_BYTES,
   SNAPSHOT_SCHEMA_VERSION,
@@ -126,8 +127,10 @@ export async function buildAdvisorConfigSnapshot(
     where: { advisorProfileId, isVisible: true },
     orderBy: { displayOrder: "asc" },
   });
+  const intakeBankMode = await resolveAdvisorIntakeQuestionBankMode(advisorProfileId);
+  const activeIntakeRows = filterIntakeQuestionsByBankMode(intakeRows, intakeBankMode);
 
-  const intakeQuestions = intakeRows.map((row) => ({
+  const intakeQuestions = activeIntakeRows.map((row) => ({
     id: row.id,
     displayOrder: row.displayOrder,
     questionNumber: row.questionNumber,
@@ -136,6 +139,10 @@ export async function buildAdvisorConfigSnapshot(
     helpText: row.helpText,
     learnMore: row.learnMore,
     answerType: row.answerType,
+    answer0: row.answer0,
+    answer1: row.answer1,
+    answer2: row.answer2,
+    answer3: row.answer3,
     options: row.options,
     relatedPillarIds: row.relatedPillarIds,
     recommendedActions: row.recommendedActions,

@@ -29,7 +29,7 @@ export const TIER_FEATURE_COPY: Record<
   METHODOLOGY_CUSTOMIZATION: {
     title: "Methodology customization",
     description:
-      "Customize pillars, intake scripts, assessment questions, narratives, and recommendation rules for your practice.",
+      "Customize pillars, intake question banks, assessment questions, narratives, and recommendation rules for your practice.",
   },
   ADVANCED_BRANDING: {
     title: "Advanced branding",

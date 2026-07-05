@@ -22,7 +22,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Configuration areas",
         description:
-          "Pillars, intake script, narratives, recommendation rules, preview, and version history — open any card to configure.",
+          "Pillars, intake question bank, narratives, recommendation rules, preview, and version history — open any card to configure.",
         side: "top",
       },
     },
@@ -48,17 +48,17 @@ export const ADVISOR_CONFIGURATION_TOURS = {
   "advisor-methodology-intake": [
     {
       popover: {
-        title: "Intake script",
+        title: "Intake question bank",
         description:
-          "Edit the ordered audio interview your clients hear. Edits apply to new intakes only.",
+          "Choose platform or custom intake questions for the audio interview. Edits apply to new intakes only.",
       },
     },
     {
       element: '[data-tour="config-primary-form"]',
       popover: {
-        title: "Script editor",
+        title: "Question bank editor",
         description:
-          "Reorder, hide, or customize platform questions. Add custom audio prompts for your clients.",
+          "Switch between platform and custom banks, then edit, hide, or add questions for your clients.",
         side: "top",
       },
     },

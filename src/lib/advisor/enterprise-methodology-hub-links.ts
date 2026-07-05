@@ -8,8 +8,8 @@ export const ENTERPRISE_METHODOLOGY_HUB_LINKS = [
   },
   {
     href: "/advisor/enterprise/methodology/intake",
-    title: "Intake script",
-    description: "Edit the ordered audio interview script inherited by all firm advisors.",
+    title: "Intake question bank",
+    description: "Choose platform or custom intake questions for the firm.",
   },
   {
     href: "/advisor/enterprise/methodology/narratives/governance",

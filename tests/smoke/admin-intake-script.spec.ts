@@ -24,7 +24,7 @@ test.describe("admin intake question bank", () => {
 
     await expect(
       page.locator('[data-slot="card-title"]', {
-        hasText: /Script questions \(\d+\)/i,
+        hasText: /Intake questions \(\d+\)/i,
       })
     ).toBeVisible();
 

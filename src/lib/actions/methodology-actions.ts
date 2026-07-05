@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AdvisorQuestionSource, Prisma } from "@prisma/client";
+import { AdvisorQuestionSource, IntakeQuestionBankMode, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   getAdvisorProfileOrThrow,
@@ -20,6 +20,11 @@ import {
   nextDisplayOrder,
 } from "@/lib/methodology/advisor-question-policy";
 import { defaultCustomRecommendationConditions } from "@/lib/methodology/advisor-recommendation-starter";
+import {
+  buildAdvisorIntakeQuestionWriteData,
+  parseAdvisorIntakeQuestionInput,
+} from "@/lib/methodology/advisor-intake-question-config";
+import { resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
 import { parseRecommendationTriggerConditions } from "@/lib/admin/recommendation-rule-schemas";
 import type { RecommendationCondition } from "@/lib/admin/recommendation-rule-schemas";
 
@@ -371,6 +376,11 @@ export async function updateAdvisorIntakeQuestion(
     context?: string | null;
     helpText?: string | null;
     isVisible?: boolean;
+    answerType?: string;
+    answer0?: string | null;
+    answer1?: string | null;
+    answer2?: string | null;
+    answer3?: string | null;
   },
 ) {
   try {
@@ -384,13 +394,37 @@ export async function updateAdvisorIntakeQuestion(
       return { success: false as const, error: "Question not found" };
     }
 
+    let writeData: Record<string, unknown> = {
+      ...(data.questionText !== undefined ? { questionText: data.questionText } : {}),
+      ...(data.context !== undefined ? { context: data.context } : {}),
+      ...(data.helpText !== undefined ? { helpText: data.helpText } : {}),
+      ...(data.isVisible !== undefined ? { isVisible: data.isVisible } : {}),
+    };
+
+    if (existing.sourceKind === AdvisorQuestionSource.CUSTOM && data.answerType !== undefined) {
+      const parsed = parseAdvisorIntakeQuestionInput({
+        questionText: data.questionText ?? existing.questionText,
+        whyThisMatters: data.context !== undefined ? data.context : existing.context,
+        recommendedActions: existing.recommendedActions,
+        answerType: data.answerType,
+        answer0: data.answer0,
+        answer1: data.answer1,
+        answer2: data.answer2,
+        answer3: data.answer3,
+      });
+      if (!parsed.success) {
+        return { success: false as const, error: parsed.error };
+      }
+      writeData = {
+        ...writeData,
+        ...buildAdvisorIntakeQuestionWriteData(parsed.data),
+      };
+    }
+
     await prisma.advisorIntakeQuestion.update({
       where: { id: questionId },
       data: {
-        ...(data.questionText !== undefined ? { questionText: data.questionText } : {}),
-        ...(data.context !== undefined ? { context: data.context } : {}),
-        ...(data.helpText !== undefined ? { helpText: data.helpText } : {}),
-        ...(data.isVisible !== undefined ? { isVisible: data.isVisible } : {}),
+        ...writeData,
         version: { increment: 1 },
       },
     });
@@ -459,17 +493,65 @@ export async function createAdvisorPillarQuestion(
   }
 }
 
+export async function updateAdvisorIntakeQuestionBankMode(mode: IntakeQuestionBankMode) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    if (profile.enterpriseId) {
+      return {
+        success: false as const,
+        error: "Intake question bank mode is managed in firm Practice Standards.",
+      };
+    }
+
+    await prisma.advisorProfile.update({
+      where: { id: profile.id },
+      data: { intakeQuestionBankMode: mode },
+    });
+
+    revalidatePath("/advisor/methodology/intake");
+    return { success: true as const };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: advisorHubActionErrorMessage(error, "Failed to update intake question bank"),
+    };
+  }
+}
+
 export async function createAdvisorIntakeQuestion(data: {
   questionText: string;
   context?: string | null;
+  answerType?: string;
+  answer0?: string | null;
+  answer1?: string | null;
+  answer2?: string | null;
+  answer3?: string | null;
 }) {
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
-    const text = data.questionText.trim();
-    if (!text) {
-      return { success: false as const, error: "Question text is required" };
+    const bankMode = await resolveAdvisorIntakeQuestionBankMode(profile.id);
+    if (bankMode !== IntakeQuestionBankMode.CUSTOM) {
+      return {
+        success: false as const,
+        error: "Switch to the custom question bank before adding questions.",
+      };
+    }
+
+    const parsed = parseAdvisorIntakeQuestionInput({
+      questionText: data.questionText,
+      whyThisMatters: data.context ?? null,
+      recommendedActions: null,
+      answerType: data.answerType ?? "fillable",
+      answer0: data.answer0,
+      answer1: data.answer1,
+      answer2: data.answer2,
+      answer3: data.answer3,
+    });
+    if (!parsed.success) {
+      return { success: false as const, error: parsed.error };
     }
 
     const siblings = await prisma.advisorIntakeQuestion.findMany({
@@ -484,10 +566,7 @@ export async function createAdvisorIntakeQuestion(data: {
         sourceKind: AdvisorQuestionSource.CUSTOM,
         displayOrder: order,
         questionNumber: String(order + 1),
-        questionText: text,
-        context: data.context ?? null,
-        helpText: data.context ?? null,
-        answerType: "audio",
+        ...buildAdvisorIntakeQuestionWriteData(parsed.data),
         isVisible: true,
       },
     });

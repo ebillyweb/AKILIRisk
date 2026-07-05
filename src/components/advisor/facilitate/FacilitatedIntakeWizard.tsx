@@ -6,6 +6,10 @@ import { ArrowLeft, ArrowRight, Loader2, Mic, Keyboard } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { AudioRecorder } from "@/components/intake/AudioRecorder";
+import {
+  IntakeStructuredAnswer,
+  intakeQuestionSupportsAudio,
+} from "@/components/intake/IntakeStructuredAnswer";
 import { QuestionDisplay } from "@/components/intake/QuestionDisplay";
 import { StepIndicator } from "@/components/intake/StepIndicator";
 import { Button } from "@/components/ui/button";
@@ -405,6 +409,8 @@ export function FacilitatedIntakeWizard({
     );
   }
 
+  const supportsAudio = intakeQuestionSupportsAudio(currentQuestion);
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
       <StepIndicator
@@ -420,37 +426,51 @@ export function FacilitatedIntakeWizard({
       />
 
       <Card className="p-4 sm:p-6">
-        <Tabs value={responseTab} onValueChange={(v) => setResponseTab(v as "record" | "type")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="type" className="gap-2">
-              <Keyboard className="size-4" />
-              Type
-            </TabsTrigger>
-            <TabsTrigger value="record" className="gap-2">
-              <Mic className="size-4" />
-              Record
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="type" className="mt-4 space-y-3">
-            <Textarea
+        {supportsAudio ? (
+          <Tabs value={responseTab} onValueChange={(v) => setResponseTab(v as "record" | "type")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="type" className="gap-2">
+                <Keyboard className="size-4" />
+                Type
+              </TabsTrigger>
+              <TabsTrigger value="record" className="gap-2">
+                <Mic className="size-4" />
+                Record
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="type" className="mt-4 space-y-3">
+              <Textarea
+                value={typedDraft}
+                onChange={(e) => setTypedDraft(e.target.value)}
+                rows={6}
+                placeholder="Type the client's answer…"
+                disabled={typingDisabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                Answer is saved when you go to the next or previous question.
+              </p>
+            </TabsContent>
+            <TabsContent value="record" className="mt-4">
+              <AudioRecorder
+                onRecordingComplete={handleRecordingComplete}
+                disabled={responseBusy}
+                existingAudioUrl={currentResponse?.audioUrl}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="space-y-4">
+            <IntakeStructuredAnswer
+              question={currentQuestion}
               value={typedDraft}
-              onChange={(e) => setTypedDraft(e.target.value)}
-              rows={6}
-              placeholder="Type the client's answer…"
               disabled={typingDisabled}
+              onChange={setTypedDraft}
             />
             <p className="text-xs text-muted-foreground">
               Answer is saved when you go to the next or previous question.
             </p>
-          </TabsContent>
-          <TabsContent value="record" className="mt-4">
-            <AudioRecorder
-              onRecordingComplete={handleRecordingComplete}
-              disabled={responseBusy}
-              existingAudioUrl={currentResponse?.audioUrl}
-            />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
 
         <div className="mt-4 text-center">
           <Button

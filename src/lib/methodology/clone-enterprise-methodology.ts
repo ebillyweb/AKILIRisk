@@ -489,6 +489,24 @@ export async function syncEnterpriseMethodologyToAdvisorInTx(
 ): Promise<boolean> {
   let changed = false;
 
+  const enterprise = await tx.advisorEnterprise.findUnique({
+    where: { id: enterpriseId },
+    select: { intakeQuestionBankMode: true },
+  });
+  if (enterprise) {
+    const profile = await tx.advisorProfile.findUnique({
+      where: { id: advisorProfileId },
+      select: { intakeQuestionBankMode: true },
+    });
+    if (profile?.intakeQuestionBankMode !== enterprise.intakeQuestionBankMode) {
+      await tx.advisorProfile.update({
+        where: { id: advisorProfileId },
+        data: { intakeQuestionBankMode: enterprise.intakeQuestionBankMode },
+      });
+      changed = true;
+    }
+  }
+
     const entOverrides = await tx.enterprisePillarOverride.findMany({
       where: { enterpriseId },
     });
@@ -748,6 +766,10 @@ function buildAdvisorIntakeCloneCreate(
     helpText: string | null;
     learnMore: string | null;
     answerType: string;
+    answer0: string | null;
+    answer1: string | null;
+    answer2: string | null;
+    answer3: string | null;
     options: unknown;
     relatedPillarIds: string[];
     recommendedActions: string | null;
@@ -768,6 +790,10 @@ function buildAdvisorIntakeCloneCreate(
     helpText: ent.helpText,
     learnMore: ent.learnMore,
     answerType: ent.answerType,
+    answer0: ent.answer0,
+    answer1: ent.answer1,
+    answer2: ent.answer2,
+    answer3: ent.answer3,
     options: ent.options as Prisma.InputJsonValue | undefined,
     relatedPillarIds: ent.relatedPillarIds,
     recommendedActions: ent.recommendedActions,
@@ -782,6 +808,11 @@ function buildAdvisorIntakeCloneUpdate(ent: {
   learnMore: string | null;
   isVisible: boolean;
   displayOrder: number;
+  answerType: string;
+  answer0: string | null;
+  answer1: string | null;
+  answer2: string | null;
+  answer3: string | null;
 }): Prisma.AdvisorIntakeQuestionUpdateInput {
   return {
     questionText: ent.questionText,
@@ -790,6 +821,11 @@ function buildAdvisorIntakeCloneUpdate(ent: {
     learnMore: ent.learnMore,
     isVisible: ent.isVisible,
     displayOrder: ent.displayOrder,
+    answerType: ent.answerType,
+    answer0: ent.answer0,
+    answer1: ent.answer1,
+    answer2: ent.answer2,
+    answer3: ent.answer3,
     version: { increment: 1 },
   };
 }
@@ -889,7 +925,11 @@ async function createEnterprisePlatformIntakeClone(
       context: row.whyThisMatters,
       helpText: row.whyThisMatters,
       learnMore: row.recommendedActions,
-      answerType: "audio",
+      answerType: row.answerType,
+      answer0: row.answer0,
+      answer1: row.answer1,
+      answer2: row.answer2,
+      answer3: row.answer3,
       relatedPillarIds: mapRelatedPillarIds(row.relatedPillarIds, slugToPillarId),
       recommendedActions: row.recommendedActions,
       isVisible: row.isVisible,

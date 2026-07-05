@@ -34,7 +34,7 @@ export default async function AdminIntakeQuestionEditPage({
         <Button variant="ghost" size="sm" asChild>
           <Link href="/admin/intake/questions" className="inline-flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to intake script
+            Back to intake question bank
           </Link>
         </Button>
         <Link
@@ -138,7 +138,7 @@ export default async function AdminIntakeQuestionEditPage({
                   name="isVisible"
                   defaultChecked={question.isVisible}
                   className="pt-2"
-                  label="Include in client intake script"
+                  label="Include in client intake question bank"
                 />
               </div>
             </div>

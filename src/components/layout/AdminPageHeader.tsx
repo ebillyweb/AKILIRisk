@@ -80,7 +80,7 @@ const ADMIN_HEADER_CONFIG: { path: string; config: AdminPageHeaderConfig }[] = [
       icon: FileText,
       kicker: "Assessments",
       title: "Intake management",
-      subtitle: "Review client intake interviews and open the live script editor",
+      subtitle: "Review client intake interviews and open the intake question bank",
     },
   },
   {

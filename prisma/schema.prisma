@@ -215,6 +215,8 @@ model AdvisorEnterprise {
   advisorMemberCollectClientLegalNameDefault Boolean     @default(true)
   /// When true, ADVISOR-role members follow firm client data defaults (owners/admins exempt).
   advisorMemberClientDataPolicyLocked    Boolean         @default(false)
+  /// Firm-wide intake question bank source: platform catalog or custom questions only.
+  intakeQuestionBankMode                 IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
   /// Phase 24 (D-08): enterprise-wide default reassessment frequency.
   defaultCadenceFrequency        CadenceFrequency        @default(ANNUAL)
   customDomainEnabled            Boolean                 @default(false)
@@ -1119,6 +1121,8 @@ model AdvisorProfile {
   starterContentClonedAt DateTime? @map("starter_content_cloned_at")
   /// Last platform Pillar.catalogVersion seen by this advisor.
   catalogVersionSeen     Int       @default(0) @map("catalog_version_seen")
+  /// Active intake question bank for this practice (solo advisors; synced from firm for members).
+  intakeQuestionBankMode IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
 
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt
@@ -1867,6 +1871,12 @@ enum AdvisorQuestionSource {
   CUSTOM
 }
 
+/// Active intake question bank: platform catalog or firm/advisor custom set — not both.
+enum IntakeQuestionBankMode {
+  PLATFORM
+  CUSTOM
+}
+
 /// Per-advisor assessment question bank row.
 model AdvisorPillarQuestion {
   id                 String                 @id @default(cuid())
@@ -1919,7 +1929,11 @@ model AdvisorIntakeQuestion {
   context            String?                @db.Text
   helpText           String?                @map("help_text") @db.Text
   learnMore          String?                @map("learn_more") @db.Text
-  answerType         String                 @default("audio") @map("answer_type") @db.VarChar(50)
+  answerType         String                 @default("fillable") @map("answer_type") @db.VarChar(50)
+  answer0            String?                @map("answer_0") @db.Text
+  answer1            String?                @map("answer_1") @db.Text
+  answer2            String?                @map("answer_2") @db.Text
+  answer3            String?                @map("answer_3") @db.Text
   options            Json?
   relatedPillarIds   String[]               @default([]) @map("related_pillar_ids") @db.Uuid
   recommendedActions String?                @map("recommended_actions") @db.Text
@@ -2037,7 +2051,11 @@ model EnterpriseIntakeQuestion {
   context            String?               @db.Text
   helpText           String?               @map("help_text") @db.Text
   learnMore          String?               @map("learn_more") @db.Text
-  answerType         String                @default("audio") @map("answer_type") @db.VarChar(50)
+  answerType         String                @default("fillable") @map("answer_type") @db.VarChar(50)
+  answer0            String?               @map("answer_0") @db.Text
+  answer1            String?               @map("answer_1") @db.Text
+  answer2            String?               @map("answer_2") @db.Text
+  answer3            String?               @map("answer_3") @db.Text
   options            Json?
   relatedPillarIds   String[]              @default([]) @map("related_pillar_ids") @db.Uuid
   recommendedActions String?               @map("recommended_actions") @db.Text

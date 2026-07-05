@@ -44,7 +44,7 @@ const ADMIN_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/admin/staff/admin-users", label: "Admin Users" },
   { href: "/admin/leads", label: "Assessment requests" },
   { href: "/admin/intake", label: "Intake Management" },
-  { href: "/admin/intake/questions", label: "Intake script" },
+  { href: "/admin/intake/questions", label: "Intake question bank" },
   { href: "/admin/assessment", label: "Assessment Management" },
   { href: "/admin/settings", label: "Settings" },
 ];

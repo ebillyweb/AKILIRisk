@@ -238,7 +238,7 @@ export const FIELD_HELP = {
   },
   "intake-visible": {
     title: "Interview visibility",
-    description: "Hidden questions are skipped in the client intake script for new interview loads.",
+    description: "Hidden questions are skipped in the client intake question bank for new interview loads.",
   },
 
   // Admin — assessment question bank

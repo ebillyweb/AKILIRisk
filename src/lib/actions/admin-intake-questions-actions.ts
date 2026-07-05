@@ -45,7 +45,7 @@ async function findIntakePillarQuestionOrThrow(questionId: string) {
     include: { section: { include: { category: true } } },
   });
   if (!row) {
-    throw new Error("Intake script question not found.");
+    throw new Error("Intake question bank entry not found.");
   }
   return row;
 }

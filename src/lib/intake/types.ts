@@ -9,6 +9,12 @@ export interface IntakeQuestion {
   id: string;
   questionNumber: number;
   questionText: string;
+  /** Same answer types as assessment questions (fillable, yes_no, scored_0_3, …). */
+  answerType: string;
+  answer0?: string | null;
+  answer1?: string | null;
+  answer2?: string | null;
+  answer3?: string | null;
   /** Pillar “why this matters” / risk relevance — staff review only; never shown to clients. */
   whyThisMatters?: string;
   /** Pillar recommended actions — staff review / report queue; not shown to clients. */

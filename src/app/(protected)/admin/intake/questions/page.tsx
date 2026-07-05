@@ -44,7 +44,7 @@ export default async function AdminIntakeQuestionsPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">
-              Script questions{" "}
+              Intake questions{" "}
               <span className="font-normal text-muted-foreground">({questions.length})</span>
             </CardTitle>
             <p className="text-sm text-muted-foreground">

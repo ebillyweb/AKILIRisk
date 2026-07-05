@@ -64,7 +64,7 @@ export const ADMIN_CONFIGURATION_TOURS = {
     {
       element: '[data-tour="config-primary-list"]',
       popover: {
-        title: "Script questions",
+        title: "Intake questions",
         description:
           "Each row is one interview prompt. Hide questions to skip them; edit copy and order from the edit screen.",
         side: "top",

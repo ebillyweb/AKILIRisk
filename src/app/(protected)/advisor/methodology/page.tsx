@@ -28,8 +28,8 @@ const LINKS = [
   },
   {
     href: "/advisor/methodology/intake",
-    title: "Intake script",
-    description: "Edit the ordered audio interview script shown to new intakes.",
+    title: "Intake question bank",
+    description: "Choose platform or custom intake questions for new intakes.",
     icon: ClipboardList,
   },
   {
@@ -122,7 +122,7 @@ export default async function MethodologyHubPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Platform starter content is cloned on first visit. Edit intake script, narratives,
+          Platform starter content is cloned on first visit. Edit intake question bank, narratives,
           and assessment questions here; clients receive a frozen snapshot when they begin intake.
         </CardContent>
       </Card>
