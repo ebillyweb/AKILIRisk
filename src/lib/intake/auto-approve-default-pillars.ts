@@ -96,7 +96,6 @@ export async function approveIntakeWithDefaultPillars(input: {
     includedPillars: normalizedIncluded,
     focusAreas: normalizedFocus,
     pillarRecommendations,
-    notes: null,
     approvedAt: new Date(),
   });
 

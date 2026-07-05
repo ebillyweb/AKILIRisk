@@ -442,7 +442,7 @@ export async function createEnterpriseIntakeQuestion(data: {
     });
     const order = nextDisplayOrder(siblings);
 
-    await prisma.enterpriseIntakeQuestion.create({
+    const row = await prisma.enterpriseIntakeQuestion.create({
       data: {
         enterpriseId: team.enterpriseId,
         sourceKind: AdvisorQuestionSource.CUSTOM,
@@ -454,7 +454,7 @@ export async function createEnterpriseIntakeQuestion(data: {
     });
 
     await syncAfterEnterpriseMethodologyChange(team.enterpriseId);
-    return { success: true as const };
+    return { success: true as const, questionId: row.id };
   } catch (error) {
     return {
       success: false as const,

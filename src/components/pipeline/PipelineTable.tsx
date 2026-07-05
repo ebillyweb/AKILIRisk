@@ -66,7 +66,7 @@ export function PipelineTable({
   ]);
 
   const columns = useMemo(() => {
-    const baseColumns: ColumnDef<PipelineClient, unknown>[] = [
+    const baseColumns: ColumnDef<PipelineClient, any>[] = [
       columnHelper.accessor("name", {
         header: "Client",
         cell: (info) => {

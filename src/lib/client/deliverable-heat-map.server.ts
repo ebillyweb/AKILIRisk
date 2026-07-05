@@ -25,11 +25,16 @@ function resolveScopedAssessmentMetrics(
     return { score: null, riskLevel: null };
   }
 
-  const score = Math.round(
-    calculateWeightedScoreFromPillars(
-      pillarScores.map((row) => ({ pillar: row.pillar, score: row.score })),
-    ) * 100,
-  ) / 100;
+  const scoredPillars = pillarScores
+    .filter((row): row is PillarScoreInput & { score: number } => row.score != null)
+    .map((row) => ({ pillar: row.pillar, score: row.score }));
+
+  const score =
+    scoredPillars.length === 0
+      ? null
+      : Math.round(
+          calculateWeightedScoreFromPillars(scoredPillars) * 100,
+        ) / 100;
 
   let riskLevel: string | null = null;
   let maxRank = 0;

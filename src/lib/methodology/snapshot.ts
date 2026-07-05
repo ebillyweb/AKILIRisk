@@ -18,6 +18,7 @@ import type {
 } from "@/lib/methodology/types";
 import { filterIntakeQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
 import { resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
+import { advisorAssessmentQuestionToWire } from "@/lib/methodology/advisor-assessment-question-config";
 import {
   SNAPSHOT_MAX_BYTES,
   SNAPSHOT_SCHEMA_VERSION,

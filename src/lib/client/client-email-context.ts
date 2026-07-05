@@ -185,7 +185,7 @@ export async function resolveClientEmailContextForInviteCode(
     },
   });
 
-  if (!invite?.createdBy) return null;
+  if (!invite?.createdBy || !invite.advisor) return null;
 
   const branding = await getInvitingAdvisorBrandingForInviteCode(inviteCodeId);
   const advisorName = formatAdvisorDisplayName(invite.advisor.user);

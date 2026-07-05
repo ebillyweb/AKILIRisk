@@ -15,7 +15,6 @@ interface EnhancedAdvisorBranding extends AdvisorBrandingData {
   // Fallback fields for backward compatibility
   advisorName?: string;
   advisorJobTitle?: string;
-  advisorFirmName?: string;
   advisorEmail?: string;
   advisorPhone?: string;
   advisorLicenseNumber?: string;
