@@ -93,7 +93,7 @@ async function resolveFacilitatedSessionProgressDetail(
       return `Question ${idx + 1} of ${questions.length}`;
     }
     case "PILLAR_SELECT":
-      return "Choosing assessment pillars";
+      return "Choosing risk domains";
     case "ASSESSMENT":
       return "Assessment in progress";
     default:

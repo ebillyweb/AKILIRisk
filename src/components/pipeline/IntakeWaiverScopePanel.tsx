@@ -29,7 +29,7 @@ type IntakeWaiverScopePanelProps = {
   assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
   /** When true, show the waiver + scope form (no intake submitted). */
   showWaiverAction: boolean;
-  /** When intake is waived, allow editing assessment domains / scope. */
+  /** When intake is waived, allow editing risk domains / scope. */
   canManageWaiverScope?: boolean;
   /** When true, waiver on/off cannot be changed (assessment already started). */
   waiverLocked?: boolean;
@@ -116,7 +116,7 @@ export function IntakeWaiverScopePanel({
         {!scopeSet && !editingScope ? (
           <Alert>
             <AlertDescription>
-              Select assessment domains to unlock the client&apos;s assessment. Until
+              Select risk domains to unlock the client&apos;s assessment. Until
               then, assessment stays locked.
             </AlertDescription>
           </Alert>
@@ -124,7 +124,7 @@ export function IntakeWaiverScopePanel({
 
         {scopeSet && !editingScope ? (
           <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-4">
-            <p className="text-sm font-medium">Assessment domains</p>
+            <p className="text-sm font-medium">Risk domains</p>
             <div className="flex flex-wrap gap-2">
               {includedPillars.map((id) => (
                 <Badge key={id} variant="outline">
@@ -249,7 +249,7 @@ export function IntakeWaiverScopePanel({
       ) : (
         <div className="space-y-4 rounded-lg border border-border/80 p-4">
           <p className="text-sm text-muted-foreground">
-            Choose which assessment domains to include. The client cannot start
+            Choose which risk domains to include. The client cannot start
             until you confirm.
           </p>
           <AssessmentDomainsSelector

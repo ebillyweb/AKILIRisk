@@ -507,7 +507,7 @@ function PillarSelect({
       </LabelWithHelp>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger id={id}>
-          <SelectValue placeholder="Choose a pillar" />
+          <SelectValue placeholder="Choose a risk domain" />
         </SelectTrigger>
         <SelectContent>
           {PILLAR_OPTIONS.map((option) => (

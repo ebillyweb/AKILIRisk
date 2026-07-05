@@ -28,7 +28,7 @@ interface CategoryBreakdownChartProps {
 
 export function CategoryBreakdownChart({
   data,
-  title = "Pillar score breakdown",
+  title = "Risk domain score breakdown",
 }: CategoryBreakdownChartProps) {
   const theme = useAnalyticsChartTheme();
 

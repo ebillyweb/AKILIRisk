@@ -34,7 +34,7 @@ export default async function MethodologyCatalogUpdatesPage() {
       <ConfigurationPageHeader
         tourId="advisor-methodology-catalog-updates"
         title="Catalog updates"
-        description="Platform pillar catalog version vs. what your profile has seen."
+        description="Platform risk domain catalog version vs. what your profile has seen."
       />
       <Card data-tour="config-primary-list">
         <CardHeader>
@@ -59,7 +59,7 @@ export default async function MethodologyCatalogUpdatesPage() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Platform pillars ({pillars.length})</CardTitle>
+          <CardTitle className="text-base">Platform risk domains ({pillars.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="list-disc space-y-1 pl-5 text-sm">

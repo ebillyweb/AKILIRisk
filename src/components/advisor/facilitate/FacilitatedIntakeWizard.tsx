@@ -28,7 +28,7 @@ import { useIntakeInterview } from "@/lib/hooks/useIntakeInterview";
 import { isInterviewResponseComplete } from "@/lib/intake/is-response-complete";
 import { useIntakeStore, type InterviewResponse } from "@/lib/intake/store";
 import type { IntakeQuestion } from "@/lib/intake/types";
-import { facilitatedPillarsPath } from "@/lib/facilitated/paths";
+import { facilitatedRiskDomainsPath } from "@/lib/facilitated/paths";
 
 interface FacilitatedIntakeWizardProps {
   sessionId: string;
@@ -229,7 +229,7 @@ export function FacilitatedIntakeWizard({
         router.push(result.redirectTo);
         return;
       }
-      router.push(facilitatedPillarsPath(sessionId));
+      router.push(facilitatedRiskDomainsPath(sessionId));
     } finally {
       setSubmitting(false);
     }

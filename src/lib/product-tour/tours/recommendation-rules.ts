@@ -89,8 +89,8 @@ export const RECOMMENDATION_RULES_TOURS = {
     {
       element: '[data-tour="config-page-header"]',
       popover: {
-        title: "Pillar-specific rules",
-        description: "Each risk pillar has its own rule set. Switch pillars with the pills below.",
+        title: "Risk domain-specific rules",
+        description: "Each risk domain has its own rule set. Switch pillars with the pills below.",
         side: "bottom",
       },
     },
@@ -131,7 +131,7 @@ export const RECOMMENDATION_RULES_TOURS = {
     {
       element: '[data-tour="config-page-header"]',
       popover: {
-        title: "Pillar-specific defaults",
+        title: "Risk domain-specific defaults",
         description: "Switch pillars to manage firm defaults for each risk area.",
         side: "bottom",
       },

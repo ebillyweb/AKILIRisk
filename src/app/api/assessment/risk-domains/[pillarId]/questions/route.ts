@@ -12,7 +12,7 @@ import { pillarQuestionsFromSnapshot } from "@/lib/methodology/assessment-from-s
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 /**
- * GET /api/assessment/pillars/[pillarId]/questions
+ * GET /api/assessment/risk-domains/[pillarId]/questions
  * Visible questions for one assessment pillar (snapshot-pinned when in progress).
  * Advisors facilitating a session must pass `facilitatedSessionId` + `assessmentId`.
  */

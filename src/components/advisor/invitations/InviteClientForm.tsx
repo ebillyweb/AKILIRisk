@@ -33,7 +33,7 @@ const formSchema = z
     if (!data.includedPillars?.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Select at least one assessment domain',
+        message: 'Select at least one risk domain',
         path: ['includedPillars'],
       });
     }
@@ -270,7 +270,7 @@ export function InviteClientForm({
             Personal Message
           </label>
           <p className={fieldHintClassName}>
-            Optional. Updates automatically when you select assessment domains, or edit your own message.
+            Optional. Updates automatically when you select risk domains, or edit your own message.
           </p>
           <Textarea
             id="personalMessage"
@@ -308,7 +308,7 @@ export function InviteClientForm({
           {intakeWaived ? (
             <div className="space-y-4 rounded-lg border border-border/80 bg-muted/20 p-4">
               <p className="text-sm text-muted-foreground">
-                Choose which assessment domains to include. The client can start only after
+                Choose which risk domains to include. The client can start only after
                 these are set.
               </p>
               <AssessmentDomainsSelector

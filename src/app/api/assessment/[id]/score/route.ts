@@ -151,7 +151,7 @@ export async function GET(
           {
             error: summaryAccess.allPillarsComplete
               ? "Your assessment summary will be available after your advisor publishes your Risk Profile."
-              : "Complete all assessment pillars before viewing your summary.",
+              : "Complete all risk domains before viewing your summary.",
             code: "SUMMARY_LOCKED",
           },
           { status: 403 }
@@ -292,7 +292,7 @@ export async function POST(
     if (!isPillarInAssessmentScope(pillar, assessment.includedPillars, catalog)) {
       return NextResponse.json(
         {
-          error: "This pillar is not included in your assessment scope.",
+          error: "This risk domain is not included in your assessment scope.",
           code: "PILLAR_OUT_OF_SCOPE",
         },
         { status: 400 },
@@ -307,7 +307,7 @@ export async function POST(
       pillarConfigFromSnapshot ?? (await getPillarAssessmentConfig(pillar));
     if (!pillarConfig) {
       return NextResponse.json(
-        { error: `Unsupported pillar: ${pillar}` },
+        { error: `Unsupported risk domain: ${pillar}` },
         { status: 400 }
       );
     }
@@ -337,7 +337,7 @@ export async function POST(
     // persist a fabricated "critical" result.
     if (totalVisibleQuestions === 0) {
       return NextResponse.json(
-        { error: "No applicable questions for this pillar." },
+        { error: "No applicable questions for this risk domain." },
         { status: 400 }
       );
     }

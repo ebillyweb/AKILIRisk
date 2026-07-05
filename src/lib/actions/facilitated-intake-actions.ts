@@ -229,7 +229,7 @@ export async function facilitatedSubmitIntake(facilitatedSessionId: string) {
         },
       });
       revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/intake`);
-      revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/pillars`);
+      revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/risk-domains`);
       return { success: true as const, redirectTo: advancePath };
     }
 

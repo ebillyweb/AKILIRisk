@@ -262,7 +262,7 @@ export function buildClientDashboardJourney(
           : assessmentState === "complete"
             ? "All selected domains are scored. Open the assessment hub for details."
             : assessmentState === "current"
-              ? "In progress—continue pillars and autosaved answers on the Assessment page."
+              ? "In progress—continue risk domains and autosaved answers on the Assessment page."
               : "Start your personal risk profile when intake requirements are met.",
       href: linkById.get("assessment")?.href ?? "/assessment",
       disabled: linkById.get("assessment")?.disabled,
@@ -361,7 +361,7 @@ export function buildClientDashboardDestinations(
     resultsVariant = "secondary";
     resultsDisabled = true;
     resultsDescription =
-      "Finish all selected pillars on the Assessment page to unlock your results preview.";
+      "Finish all selected risk domains on the Assessment page to unlock your results preview.";
   }
 
   const assessmentHref = "/assessment";
@@ -406,7 +406,7 @@ export function buildClientDashboardDestinations(
       icon: ClipboardCheck,
       disabled: assessmentDisabled,
       disabledReason: input.assessmentScopePending
-        ? "Your advisor is selecting assessment domains before you can begin."
+        ? "Your advisor is selecting risk domains before you can begin."
         : input.intakeWaived
           ? "Your advisor is finishing assessment setup before you can begin."
           : "Your advisor must approve intake and set assessment scope before you can begin.",

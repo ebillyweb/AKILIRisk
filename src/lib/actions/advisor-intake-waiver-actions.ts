@@ -111,7 +111,7 @@ export async function setClientIntakeWaiver(
       if (!scope) {
         return {
           success: false,
-          error: "Select at least one assessment domain before waiving intake.",
+          error: "Select at least one risk domain before waiving intake.",
         };
       }
 
@@ -214,7 +214,7 @@ export async function updateClientWaiverAssessmentScope(
     if (!assignment.intakeWaivedAt) {
       return {
         success: false,
-        error: "Intake is not waived for this client. Waive intake with assessment domains first.",
+        error: "Intake is not waived for this client. Waive intake with risk domains first.",
       };
     }
 

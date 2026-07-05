@@ -11,7 +11,7 @@ export function getAdvisorTourIdForPath(pathname: string): TourId | null {
   if (pathname === "/advisor/settings/access-control") return "advisor-settings-access-control";
 
   if (pathname === "/advisor/methodology") return "advisor-methodology-hub";
-  if (pathname === "/advisor/methodology/pillars") return "advisor-methodology-pillars";
+  if (pathname === "/advisor/methodology/risk-domains") return "advisor-methodology-pillars";
   if (pathname === "/advisor/methodology/intake") return "advisor-methodology-intake";
   if (pathname.startsWith("/advisor/methodology/questions/")) {
     return "advisor-methodology-questions";
@@ -28,7 +28,7 @@ export function getAdvisorTourIdForPath(pathname: string): TourId | null {
   }
 
   if (pathname === "/advisor/enterprise/methodology") return "advisor-methodology-hub";
-  if (pathname === "/advisor/enterprise/methodology/pillars") {
+  if (pathname === "/advisor/enterprise/methodology/risk-domains") {
     return "advisor-methodology-pillars";
   }
   if (pathname === "/advisor/enterprise/methodology/intake") {

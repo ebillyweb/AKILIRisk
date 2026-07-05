@@ -23,8 +23,8 @@ export function IntakeRelatedPillarsField({
   return (
     <fieldset className="space-y-3" disabled={disabled}>
       <legend className="flex items-center gap-1 text-sm font-medium leading-none">
-        Related assessment pillars
-        <FieldHelp helpKey="intake-related-pillars" triggerLabel="Related assessment pillars" />
+        Related risk domains
+        <FieldHelp helpKey="intake-related-pillars" triggerLabel="Related risk domains" />
       </legend>
       <p className="text-xs text-muted-foreground">
         Used to suggest which domains to include when an advisor approves intake.

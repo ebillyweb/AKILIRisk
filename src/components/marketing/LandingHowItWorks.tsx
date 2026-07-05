@@ -20,7 +20,7 @@ const STEPS: ReadonlyArray<{
     step: "2",
     title: "Analyze",
     description:
-      "Scores and pillar-level insights surface succession, authority, tax, and continuity gaps.",
+      "Scores and risk domain-level insights surface succession, authority, tax, and continuity gaps.",
     icon: LineChart,
   },
   {

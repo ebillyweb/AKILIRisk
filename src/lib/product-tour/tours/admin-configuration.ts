@@ -83,7 +83,7 @@ export const ADMIN_CONFIGURATION_TOURS = {
       popover: {
         title: "Question copy",
         description:
-          "Update the spoken question, optional context, recording tips, and which pillars this question relates to.",
+          "Update the spoken question, optional context, recording tips, and which risk domains this question relates to.",
         side: "top",
       },
     },
@@ -93,15 +93,15 @@ export const ADMIN_CONFIGURATION_TOURS = {
       popover: {
         title: "Assessment question bank",
         description:
-          "Personal risk profile questions are organized by risk pillar. Pick a pillar to manage its question set.",
+          "Personal risk profile questions are organized by risk domain. Pick a risk domain to manage its question set.",
       },
     },
     {
       element: '[data-tour="config-primary-list"]',
       popover: {
-        title: "Risk pillars",
+        title: "Risk domains",
         description:
-          "Each card shows how many questions are visible vs. total. Open a pillar to edit, reorder, or hide questions.",
+          "Each card shows how many questions are visible vs. total. Open a risk domain to edit, reorder, or hide questions.",
         side: "top",
       },
     },
@@ -109,7 +109,7 @@ export const ADMIN_CONFIGURATION_TOURS = {
   "admin-assessment-questions-area": [
     {
       popover: {
-        title: "Pillar question list",
+        title: "Risk domain question list",
         description:
           "Manage assessment questions for this risk area. Visibility and order affect new assessments.",
       },
@@ -126,7 +126,7 @@ export const ADMIN_CONFIGURATION_TOURS = {
       element: '[data-tour="config-primary-action"]',
       popover: {
         title: "Add a question",
-        description: "Create a new assessment question for this pillar.",
+        description: "Create a new assessment question for this risk domain.",
         side: "left",
       },
     },
@@ -145,7 +145,7 @@ export const ADMIN_CONFIGURATION_TOURS = {
       popover: {
         title: "Question editor",
         description:
-          "Define the assessment prompt, answer type, and scoring behavior for this pillar.",
+          "Define the assessment prompt, answer type, and scoring behavior for this risk domain.",
       },
     },
     {

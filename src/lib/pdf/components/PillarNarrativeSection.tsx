@@ -21,7 +21,7 @@ export function PillarNarrativeSection({
   }
 
   const isPositive = riskLevel.toLowerCase() === "low";
-  const header = isPositive ? "Pillar Summary" : "Pillar Assessment Summary";
+  const header = isPositive ? "Risk domain summary" : "Risk domain assessment summary";
 
   return (
     <Page size="A4" style={styles.page}>

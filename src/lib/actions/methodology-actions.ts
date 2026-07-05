@@ -81,7 +81,7 @@ export async function updateAdvisorPillarOverride(
       },
     });
 
-    revalidatePath("/advisor/methodology/pillars");
+    revalidatePath("/advisor/methodology/risk-domains");
     return { success: true as const };
   } catch (error) {
     return {

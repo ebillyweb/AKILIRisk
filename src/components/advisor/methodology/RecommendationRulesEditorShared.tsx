@@ -467,7 +467,7 @@ export function RecommendationRulesEditorShared({
           pending={pending}
           onUpdate={wrappedActions.updateRule}
           onDelete={wrappedActions.deleteRule}
-          emptyMessage="No platform rules for this pillar yet. Switch to the Custom tab to add a rule, or check back after defaults sync."
+          emptyMessage="No platform rules for this risk domain yet. Switch to the Custom tab to add a rule, or check back after defaults sync."
         />
       </TabsContent>
 
@@ -478,7 +478,7 @@ export function RecommendationRulesEditorShared({
           pending={pending}
           onUpdate={wrappedActions.updateRule}
           onDelete={wrappedActions.deleteRule}
-          emptyMessage="No custom rules for this pillar yet."
+          emptyMessage="No custom rules for this risk domain yet."
         />
 
         <CreateRuleCard

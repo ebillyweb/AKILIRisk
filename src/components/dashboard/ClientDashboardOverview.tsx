@@ -288,7 +288,7 @@ export function ClientDashboardOverview({
               aria-hidden
             />
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Need domain scores, pillar progress, or downloadable reports?
+              Need domain scores, risk domain progress, or downloadable reports?
               Continue in{" "}
               <span className="font-medium text-foreground">
                 Personal Risk Profile

@@ -29,16 +29,16 @@ export default async function AdminPillarsPage() {
         </Button>
       </div>
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Platform pillars</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Platform risk domains</h1>
         <p className="text-sm text-muted-foreground">
-          Canonical 10-pillar catalog. Advisor methodology clones from this catalog and platform
+          Canonical 10 risk domain catalog. Advisor methodology clones from this catalog and platform
           starter banks.
         </p>
       </div>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {pillars.length} pillar{pillars.length === 1 ? "" : "s"}
+            {pillars.length} risk domain{pillars.length === 1 ? "" : "s"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

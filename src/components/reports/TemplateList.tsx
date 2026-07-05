@@ -3,7 +3,7 @@
 /**
  * TemplateList Component
  *
- * Per-pillar policy downloads (Word + PDF) with individual and bulk options.
+ * Per risk domain policy downloads (Word + PDF) with individual and bulk options.
  */
 
 import { useState } from "react";
@@ -100,7 +100,7 @@ export function TemplateList({
       <div className="flex flex-col gap-3 @sm:flex-row @sm:items-center @sm:justify-between">
         <p className="editorial-kicker">
           {variant === "advisor"
-            ? "Per-pillar policy documents"
+            ? "Per risk domain policy documents"
             : "Governance Policy Templates"}
         </p>
         <div className="flex flex-col gap-2 @sm:flex-row @sm:flex-wrap">

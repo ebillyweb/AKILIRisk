@@ -33,7 +33,7 @@ export function facilitatedSessionStepPath(
     case "INTAKE":
       return `/advisor/facilitate/${sessionId}/intake`;
     case "PILLAR_SELECT":
-      return `/advisor/facilitate/${sessionId}/pillars`;
+      return `/advisor/facilitate/${sessionId}/risk-domains`;
     case "ASSESSMENT":
       return `/advisor/facilitate/${sessionId}/assessment`;
     case "PREVIEW":

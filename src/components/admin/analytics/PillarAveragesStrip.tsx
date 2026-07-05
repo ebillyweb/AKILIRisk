@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { PillarAveragesResult } from "@/lib/admin/analytics-queries";
 
 /**
- * §9.1 (BRD) — per-pillar averages across the platform.
+ * §9.1 (BRD) — per risk domain averages across the platform.
  */
 export function PillarAveragesStrip({ data }: { data: PillarAveragesResult }) {
   const empty = data.totalScored === 0;
@@ -10,7 +10,7 @@ export function PillarAveragesStrip({ data }: { data: PillarAveragesResult }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Per-pillar averages</CardTitle>
+        <CardTitle className="text-lg font-semibold">Per risk domain averages</CardTitle>
         <CardDescription>
           {empty
             ? "Averages appear once any assessment is scored."

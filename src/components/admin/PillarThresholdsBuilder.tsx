@@ -40,7 +40,7 @@ export function PillarThresholdsBuilder({
   return (
     <div className="space-y-4">
       <div>
-        <LabelWithHelp helpKey="rule-pillar-thresholds">Pillar score ranges (optional)</LabelWithHelp>
+        <LabelWithHelp helpKey="rule-pillar-thresholds">Risk domain score ranges (optional)</LabelWithHelp>
         <p className="mt-1 text-xs text-muted-foreground">
           Reference ranges for documentation. These do not change whether the rule fires today.
         </p>

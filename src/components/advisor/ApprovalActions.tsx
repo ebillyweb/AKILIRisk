@@ -58,7 +58,7 @@ export function ApprovalActions({
 
   const handleApprove = async () => {
     if (selectedIncludedPillars.length === 0) {
-      toast.error("Please select at least one assessment domain before approving");
+      toast.error("Please select at least one risk domain before approving");
       return;
     }
 
@@ -222,7 +222,7 @@ export function ApprovalActions({
             Start review
           </h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Open the intake for review to select assessment domains and approve or
+            Open the intake for review to select risk domains and approve or
             reject.
           </p>
           <Button
@@ -271,7 +271,7 @@ export function ApprovalActions({
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600"
                 aria-hidden
               />
-              Select at least one assessment domain above to enable approval.
+              Select at least one risk domain above to enable approval.
             </p>
           ) : null}
         </section>

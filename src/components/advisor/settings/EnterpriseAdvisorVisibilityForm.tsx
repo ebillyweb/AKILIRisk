@@ -64,7 +64,7 @@ const VISIBILITY_OPTION_GROUPS: VisibilityOptionGroup[] = [
         key: "skipPostIntakeReview",
         label: "Skip post-intake review",
         description:
-          "After intake (self-service or live sessions), advance to assessment using firm or advisor default pillars without the review step.",
+          "After intake (self-service or live sessions), advance to assessment using firm or advisor default risk domains without the review step.",
       },
       {
         key: "documentRequirements",

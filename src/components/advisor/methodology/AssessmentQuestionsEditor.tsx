@@ -390,7 +390,7 @@ export function AssessmentQuestionsEditor({
         <QuestionsList
           {...listProps}
           questions={stockQuestions}
-          emptyMessage="No platform questions for this pillar yet. Check back after defaults sync, or add a custom question."
+          emptyMessage="No platform questions for this risk domain yet. Check back after defaults sync, or add a custom question."
         />
       </TabsContent>
 
@@ -398,7 +398,7 @@ export function AssessmentQuestionsEditor({
         <QuestionsList
           {...listProps}
           questions={customQuestions}
-          emptyMessage="No custom questions for this pillar yet."
+          emptyMessage="No custom questions for this risk domain yet."
         />
         <CreateQuestionCard
           pillarSlug={pillarSlug}

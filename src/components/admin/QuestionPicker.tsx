@@ -124,15 +124,15 @@ export function QuestionPicker({
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by question, pillar, or ID…"
+                placeholder="Search by question, risk domain, or ID…"
                 autoFocus
               />
               <Select value={pillarFilter} onValueChange={setPillarFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All pillars" />
+                  <SelectValue placeholder="All risk domains" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL_PILLARS}>All pillars</SelectItem>
+                  <SelectItem value={ALL_PILLARS}>All risk domains</SelectItem>
                   {pillarOptions.map((pillar) => (
                     <SelectItem key={pillar.pillarId} value={pillar.pillarId}>
                       {pillar.pillarName}

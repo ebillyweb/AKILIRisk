@@ -61,7 +61,7 @@ export function FacilitatedPillarSelectForm({
 
   const handleApprove = () => {
     if (selectedDomains.length === 0) {
-      toast.error("Select at least one assessment domain");
+      toast.error("Select at least one risk domain");
       return;
     }
     startTransition(async () => {
@@ -92,9 +92,9 @@ export function FacilitatedPillarSelectForm({
     <div className="mx-auto grid max-w-5xl gap-8 px-4 py-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-semibold">Choose assessment domains</h2>
+          <h2 className="text-xl font-semibold">Choose risk domains</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Select which pillars to include in this live session. Recommendations are based on
+            Select which risk domains to include in this live session. Recommendations are based on
             intake responses.
           </p>
         </div>

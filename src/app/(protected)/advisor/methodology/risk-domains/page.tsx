@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireAdvisorRole } from "@/lib/advisor/auth";
-import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
+import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { loadAdvisorMethodologyPillars } from "@/lib/methodology/methodology-queries";
 import { DEFAULT_RISK_THRESHOLDS } from "@/lib/assessment/governance-rubric";
-import { loadEnterpriseMethodologyPillars } from "@/lib/methodology/enterprise-methodology-queries";
 import { Button } from "@/components/ui/button";
-import { EnterprisePillarManagerForm } from "@/components/advisor/enterprise/EnterprisePillarManagerForm";
+import { PillarManagerForm } from "@/components/advisor/methodology/PillarManagerForm";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 function coerceThreshold(
@@ -30,31 +29,32 @@ function coerceThreshold(
   return null;
 }
 
-export default async function EnterpriseMethodologyPillarsPage() {
-  let enterpriseId: string;
-  let enterpriseName: string;
+export default async function MethodologyPillarsPage() {
+  let profileId: string;
   try {
     const { userId } = await requireAdvisorRole();
-    const team = await requireEnterpriseTeamManager(userId);
-    enterpriseId = team.enterpriseId;
-    enterpriseName = team.enterpriseName;
+    const profile = await getAdvisorProfileOrThrow(userId);
+    profileId = profile.id;
   } catch {
     redirect("/signin");
   }
 
-  const pillars = await loadEnterpriseMethodologyPillars(enterpriseId);
+  const pillars = await loadAdvisorMethodologyPillars(profileId);
 
   return (
     <div className="space-y-6">
-      <Button variant="outline" size="sm" asChild>
-        <Link href="/advisor/enterprise/methodology">Practice Standards</Link>
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/advisor/methodology">Your methodology</Link>
+        </Button>
+      </div>
       <ConfigurationPageHeader
         tourId="advisor-methodology-pillars"
-        title={`${enterpriseName} — Pillar manager`}
-        description="Firm-wide pillar settings sync to all member advisors."
+        title="Risk domain manager"
+        description="Changes apply to new intakes only. Clients in progress keep their snapshotted config."
       />
-      <EnterprisePillarManagerForm
+      <div data-tour="config-primary-form">
+        <PillarManagerForm
         pillars={pillars.map((pillar) => ({
           pillarId: pillar.pillarId,
           slug: pillar.slug,
@@ -65,7 +65,8 @@ export default async function EnterpriseMethodologyPillarsPage() {
           displayOrder: pillar.displayOrder,
           threshold: coerceThreshold(pillar.threshold) ?? DEFAULT_RISK_THRESHOLDS,
         }))}
-      />
+        />
+      </div>
     </div>
   );
 }

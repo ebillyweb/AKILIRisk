@@ -54,7 +54,7 @@ export default async function MethodologyNarrativesPage({
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-methodology-narratives"
-        title={`Pillar narratives — ${methodologyPillarDisplayName(pillar)}`}
+        title={`Risk domain narratives — ${methodologyPillarDisplayName(pillar)}`}
         description="Outcome copy for score reports and PDFs. Snapshotted at intake start."
       />
       <div data-tour="config-primary-form">

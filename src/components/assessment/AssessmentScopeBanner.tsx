@@ -11,7 +11,7 @@ type AssessmentScopeBannerProps = {
   includedPillars: string[];
 };
 
-/** Epic 5.11 US-72: surfaces advisor-selected assessment domains on the hub. */
+/** Epic 5.11 US-72: surfaces advisor-selected risk domains on the hub. */
 export function AssessmentScopeBanner({
   includedPillars,
 }: AssessmentScopeBannerProps) {
@@ -22,7 +22,7 @@ export function AssessmentScopeBanner({
   }
 
   const domainLabel =
-    includedPillars.length === 1 ? "domain" : "domains";
+    includedPillars.length === 1 ? "risk domain" : "risk domains";
   const names = formatIncludedPillarNames(includedPillars, catalog);
 
   return (

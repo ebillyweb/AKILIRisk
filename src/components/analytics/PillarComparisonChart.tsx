@@ -67,7 +67,7 @@ export function PillarComparisonChart({ rows }: PillarComparisonChartProps) {
   if (rows.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        No pillar scores to compare.
+        No risk domain scores to compare.
       </p>
     );
   }
@@ -132,7 +132,7 @@ export function PillarComparisonChart({ rows }: PillarComparisonChartProps) {
         </BarChart>
       </ResponsiveContainer>
       <p className="mt-2 text-xs text-muted-foreground">
-        Pillar scores use the 0–3 maturity scale (higher is better).
+        Risk domain scores use the 0–3 maturity scale (higher is better).
       </p>
     </div>
   );

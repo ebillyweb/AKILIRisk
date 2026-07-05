@@ -21,9 +21,9 @@ import {
 
 const LINKS = [
   {
-    href: "/advisor/methodology/pillars",
-    title: "Pillar manager",
-    description: "Toggle pillars, rename labels, set weights and score thresholds.",
+    href: "/advisor/methodology/risk-domains",
+    title: "Risk domain manager",
+    description: "Toggle risk domains, rename labels, set weights and score thresholds.",
     icon: Layers,
   },
   {
@@ -34,14 +34,14 @@ const LINKS = [
   },
   {
     href: "/advisor/methodology/narratives/governance",
-    title: "Pillar narratives",
+    title: "Risk domain narratives",
     description: "Customize outcome copy for low, mid, and high maturity bands.",
     icon: FileText,
   },
   {
     href: "/advisor/methodology/recommendations/governance",
     title: "Recommendation rules",
-    description: "Configure service triggers per pillar.",
+    description: "Configure service triggers per risk domain.",
     icon: Sparkles,
   },
   {
@@ -53,7 +53,7 @@ const LINKS = [
   {
     href: "/advisor/methodology/catalog-updates",
     title: "Catalog updates",
-    description: "Platform pillar catalog changes since your last sync.",
+    description: "Platform risk domain catalog changes since your last sync.",
     icon: Bell,
   },
 ] as const;
@@ -81,7 +81,7 @@ export default async function MethodologyHubPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4" />
-            Assessment questions by pillar
+            Assessment questions by risk domain
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">

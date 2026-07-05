@@ -23,7 +23,7 @@ export function AssessmentComparisonView({
   if (assessments.length < 2) {
     return (
       <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-        Complete another assessment to compare scores across pillars.
+        Complete another assessment to compare scores across risk domains.
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function AssessmentComparisonView({
                 {currentAssessment.overallScore.toFixed(1)}
               </span>
               {pillarsChanged === 0
-                ? " — no pillar movement between these assessments."
+                ? " — no risk domain movement between these assessments."
                 : ` — ${pillarsChanged} pillar${pillarsChanged === 1 ? "" : "s"} shifted despite a flat average.`}
             </span>
           ) : (

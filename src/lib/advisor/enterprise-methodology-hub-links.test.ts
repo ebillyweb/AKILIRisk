@@ -9,7 +9,7 @@ describe("enterprise methodology hub links", () => {
   it("exposes the four firm methodology hub destinations", () => {
     const hrefs = ENTERPRISE_METHODOLOGY_HUB_LINKS.map((link) => link.href);
     expect(hrefs).toEqual([
-      "/advisor/enterprise/methodology/pillars",
+      "/advisor/enterprise/methodology/risk-domains",
       "/advisor/enterprise/methodology/intake",
       "/advisor/enterprise/methodology/narratives/governance",
       "/advisor/enterprise/recommendations/governance",
@@ -23,7 +23,7 @@ describe("enterprise methodology hub links", () => {
     }
   });
 
-  it("builds per-pillar assessment question paths", () => {
+  it("builds per risk domain assessment question paths", () => {
     expect(ENTERPRISE_METHODOLOGY_QUESTION_PATH("governance")).toBe(
       "/advisor/enterprise/methodology/questions/governance",
     );

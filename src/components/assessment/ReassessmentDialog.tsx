@@ -70,8 +70,8 @@ const TYPE_OPTIONS: OptionDef[] = [
   },
   {
     type: "pillar",
-    title: "Domain / Pillar Reassessment",
-    description: "Retake a single pillar",
+    title: "Risk domain reassessment",
+    description: "Retake a single risk domain",
   },
   {
     type: "targeted",
@@ -202,7 +202,7 @@ export function ReassessmentDialog({
                       onValueChange={setSelectedPillar}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a pillar" />
+                        <SelectValue placeholder="Select a risk domain" />
                       </SelectTrigger>
                       <SelectContent>
                         {PILLAR_OPTIONS.map((p) => (

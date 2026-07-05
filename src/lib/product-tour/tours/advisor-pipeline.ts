@@ -95,7 +95,7 @@ export const ADVISOR_PIPELINE_TOURS = {
       popover: {
         title: "Risk assessment",
         description:
-          "Scores, risk level, and per-pillar heat map appear here once the client progresses. Open analytics, review answers, or export results when assessment is complete.",
+          "Scores, risk level, and per risk domain heat map appear here once the client progresses. Open analytics, review answers, or export results when assessment is complete.",
         side: "top",
       },
     },

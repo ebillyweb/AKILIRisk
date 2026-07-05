@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { DEFAULT_RISK_THRESHOLDS } from "@/lib/assessment/governance-rubric";
 
 /**
- * PATCH /api/advisor/methodology/pillars/[pillarId]
+ * PATCH /api/advisor/methodology/risk-domains/[pillarId]
  * Update per-advisor pillar override (live config; does not mutate open snapshots).
  */
 export async function PATCH(

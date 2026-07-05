@@ -217,7 +217,7 @@ function AssessmentHubPageContent() {
     catalog.length > 0 && isNarrowAssessmentScope(includedPillars, catalog);
   const scopedDomainLabel = narrowScope
     ? `${includedPillars.length} risk domain${includedPillars.length === 1 ? "" : "s"}`
-    : "Six risk pillars";
+    : "Six risk domains";
 
   const assessmentPillars = useMemo(
     () =>
@@ -387,7 +387,7 @@ function AssessmentHubPageContent() {
 
       <section className="space-y-4">
         <div className="space-y-2">
-          <p className="editorial-kicker">Assessment pillars</p>
+          <p className="editorial-kicker">Risk domains</p>
           <h2 className="text-3xl font-semibold text-foreground">
             Household risk domains
           </h2>
@@ -424,11 +424,11 @@ function AssessmentHubPageContent() {
                   <p className="text-base leading-7 text-muted-foreground">
                     {summaryAccess?.canViewSummary
                       ? narrowScope
-                        ? `All ${includedPillars.length} selected domains are scored. Review your results and action plan, or download your report.`
-                        : "All six pillars are scored. Review your results and action plan, or download your report."
+                        ? `All ${includedPillars.length} selected risk domains are scored. Review your results and action plan, or download your report.`
+                        : "All risk domains are scored. Review your results and action plan, or download your report."
                       : narrowScope
-                        ? `All ${includedPillars.length} selected domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it.`
-                        : "All six pillars are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."}
+                        ? `All ${includedPillars.length} selected risk domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it.`
+                        : "All risk domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."}
                   </p>
                 ) : resumePillar ? (
                   <p className="text-base leading-7 text-muted-foreground">
@@ -437,8 +437,8 @@ function AssessmentHubPageContent() {
                 ) : (
                   <p className="text-base leading-7 text-muted-foreground">
                     {narrowScope
-                      ? `Begin with any selected domain. Each saves progress independently; complete all ${includedPillars.length} to finish the assessment.`
-                      : "Begin with any pillar. Each domain saves progress independently; complete all six to finish the assessment."}
+                      ? `Begin with any selected risk domain. Each saves progress independently; complete all ${includedPillars.length} to finish the assessment.`
+                      : "Begin with any risk domain. Each saves progress independently; complete all risk domains to finish the assessment."}
                   </p>
                 )}
               </div>
@@ -471,8 +471,8 @@ function AssessmentHubPageContent() {
                         disabled
                         title={
                           narrowScope
-                            ? `Complete all ${includedPillars.length} selected domains to continue`
-                            : "Complete all six pillars to continue"
+                            ? `Complete all ${includedPillars.length} selected risk domains to continue`
+                            : "Complete all risk domains to continue"
                         }
                       >
                         View risk preview

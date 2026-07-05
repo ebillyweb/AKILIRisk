@@ -57,7 +57,7 @@ export default async function EnterpriseMethodologyNarrativesPage({
       </Button>
       <ConfigurationPageHeader
         tourId="advisor-methodology-narratives"
-        title={`${enterpriseName} — Pillar narratives (${methodologyPillarDisplayName(pillar)})`}
+        title={`${enterpriseName} — Risk domain narratives (${methodologyPillarDisplayName(pillar)})`}
         description="Firm-wide narrative copy syncs to all member advisors."
       />
       <EnterpriseNarrativeEditor

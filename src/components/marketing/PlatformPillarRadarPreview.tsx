@@ -99,7 +99,7 @@ export function PlatformPillarRadarPreview({
         viewBox={`${-padding} ${-padding} ${size + padding * 2} ${size + padding * 2}`}
         className="h-auto w-full"
         role="img"
-        aria-label={`Platform pillar radar: ${ariaLabel}`}
+        aria-label={`Platform risk domain radar: ${ariaLabel}`}
       >
         <defs>
           <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">

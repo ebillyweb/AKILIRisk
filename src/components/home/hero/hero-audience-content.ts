@@ -109,19 +109,19 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     kicker: "How it works",
     headline: "Assess. Analyze. Act.",
     supporting:
-      "Structured intake across up to ten modular pillars — scoped and weighted per engagement — with prioritized recommendations for families and the professional firms that guide them.",
+      "Structured intake across up to ten modular risk domains — scoped and weighted per engagement — with prioritized recommendations for families and the professional firms that guide them.",
     overviewSteps: [
       {
         step: "1",
         title: "Assess",
         description:
-          "Families complete a guided profile. Firms choose which pillars are in scope and manage intake from one workspace.",
+          "Families complete a guided profile. Firms choose which risk domains are in scope and manage intake from one workspace.",
       },
       {
         step: "2",
         title: "Analyze",
         description:
-          "Scores across active pillars surface succession, authority, cyber, tax, and continuity gaps.",
+          "Scores across active risk domains surface succession, authority, cyber, tax, and continuity gaps.",
       },
       {
         step: "3",

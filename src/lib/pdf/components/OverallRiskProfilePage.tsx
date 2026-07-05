@@ -14,7 +14,7 @@ interface OverallRiskProfilePageProps {
 }
 
 /**
- * Per-pillar risk profile table (D-09 -- NO composite score).
+ * Per risk domain risk profile table (D-09 -- NO composite score).
  * Visualizations use native react-pdf View/Text primitives only (D-14).
  * A4 content width = 451pt; column widths sum to 451.
  */
@@ -35,7 +35,7 @@ export function OverallRiskProfilePage({
     <Page size="A4" style={executiveStyles.page}>
       <Text style={executiveStyles.sectionTitle}>Overall Risk Profile</Text>
       <Text style={[executiveStyles.bodyText, { marginBottom: 20 }]}>
-        Per-pillar assessment of risk exposure across all domains.
+        Per risk domain assessment of risk exposure across all domains.
       </Text>
 
       {/* Table header */}
@@ -59,7 +59,7 @@ export function OverallRiskProfilePage({
 
       {pillarReadiness.length === 0 ? (
         <Text style={executiveStyles.zeroStateText}>
-          No pillar scores are available yet. Complete an assessment to see your
+          No risk domain scores are available yet. Complete an assessment to see your
           per-domain risk profile.
         </Text>
       ) : (

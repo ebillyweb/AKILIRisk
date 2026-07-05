@@ -108,7 +108,7 @@ export function LandingProductPreview() {
         id="platform-preview"
         kicker="Platform output"
         title="Governance intelligence at a glance"
-        description={`A sample household report from a ${SAMPLE_PILLARS_IN_SCOPE.length}-pillar engagement — composite scoring, maturity across the ${PLATFORM_PILLAR_COUNT}-domain catalog, and prioritized risks advisors can review with clients.`}
+        description={`A sample household report from a ${SAMPLE_PILLARS_IN_SCOPE.length}-risk domain engagement — composite scoring, maturity across the ${PLATFORM_PILLAR_COUNT}-domain catalog, and prioritized risks advisors can review with clients.`}
         className="!space-y-8"
       >
         <div
@@ -130,7 +130,7 @@ export function LandingProductPreview() {
               <span>{SAMPLE_COMPLETED}</span>
               <span>
                 {SAMPLE_QUESTION_COUNT} questions · {SAMPLE_PILLARS_IN_SCOPE.length} of{" "}
-                {PLATFORM_PILLAR_COUNT} pillars in scope
+                {PLATFORM_PILLAR_COUNT} risk domains in scope
               </span>
             </div>
           </div>
@@ -160,7 +160,7 @@ export function LandingProductPreview() {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Aggregate maturity {SAMPLE_MATURITY.toFixed(1)} / {MATURITY_SCALE_MAX} ·
-                  scored across active pillars with firm-customized weights
+                  scored across active risk domains with firm-customized weights
                 </p>
                 <div className="h-2.5 overflow-hidden rounded-full bg-secondary/90">
                   <div
@@ -172,10 +172,10 @@ export function LandingProductPreview() {
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <p className="editorial-kicker">Active pillar breakdown</p>
+                  <p className="editorial-kicker">Active risk domain breakdown</p>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    {SAMPLE_PILLARS_IN_SCOPE.length} pillars selected for this engagement from
-                    the {PLATFORM_PILLAR_COUNT}-pillar platform catalog.
+                    {SAMPLE_PILLARS_IN_SCOPE.length} risk domains selected for this engagement from
+                    the {PLATFORM_PILLAR_COUNT}-risk domain platform catalog.
                   </p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -193,9 +193,9 @@ export function LandingProductPreview() {
 
             <div className="flex flex-col border-b border-border/60 bg-muted/10 p-6 sm:p-8 lg:border-b-0 lg:border-r">
               <div className="space-y-2">
-                <p className="editorial-kicker">Pillar coverage</p>
+                <p className="editorial-kicker">Risk domain coverage</p>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  All {PLATFORM_PILLAR_COUNT} platform pillars — active domains scored, inactive
+                  All {PLATFORM_PILLAR_COUNT} platform risk domains — active domains scored, inactive
                   domains marked not in scope for this firm-configured engagement.
                 </p>
               </div>
@@ -254,7 +254,7 @@ export function LandingProductPreview() {
 
               <p className="text-xs leading-5 text-muted-foreground">
                 Illustrative sample. Actual output reflects each household&apos;s responses,
-                firm pillar selection, and methodology settings.
+                firm risk domain selection, and methodology settings.
               </p>
             </div>
           </div>

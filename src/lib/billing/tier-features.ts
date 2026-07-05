@@ -29,7 +29,7 @@ export const TIER_FEATURE_COPY: Record<
   METHODOLOGY_CUSTOMIZATION: {
     title: "Methodology customization",
     description:
-      "Customize pillars, intake question banks, assessment questions, narratives, and recommendation rules for your practice.",
+      "Customize risk domains, intake question banks, assessment questions, narratives, and recommendation rules for your practice.",
   },
   ADVANCED_BRANDING: {
     title: "Advanced branding",
@@ -53,7 +53,7 @@ export const TIER_FEATURE_COPY: Record<
   RISK_INTELLIGENCE: {
     title: "Risk intelligence",
     description:
-      "Unified portfolio intelligence with heat maps, pillar shortcuts, and family-level risk drill-down.",
+      "Unified portfolio intelligence with heat maps, risk domain shortcuts, and family-level risk drill-down.",
   },
   CONTINUOUS_MONITORING: {
     title: "Continuous monitoring",

@@ -49,7 +49,7 @@ export function AssessmentRescoreButton({ assessmentId }: Props) {
     return (
       <div className="flex items-center gap-2 text-xs">
         <span className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-emerald-900">
-          Rescored to v{done.newVersion} · {done.pillarsChanged} pillars · {done.recommendationsCount} recs
+          Rescored to v{done.newVersion} · {done.pillarsChanged} risk domains · {done.recommendationsCount} recs
         </span>
         <Link
           href={`/admin/audit-log/entity/Assessment/${assessmentId}`}
@@ -85,7 +85,7 @@ export function AssessmentRescoreButton({ assessmentId }: Props) {
   return (
     <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 max-w-md">
       <p className="text-xs text-amber-900">
-        Rescoring overwrites the assessment&apos;s pillar scores and
+        Rescoring overwrites the assessment&apos;s risk domain scores and
         recommendations using the current rules + thresholds. The prior
         state is captured in the audit log.
       </p>

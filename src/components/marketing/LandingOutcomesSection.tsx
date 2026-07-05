@@ -31,7 +31,7 @@ const AUDIENCES = [
 
 const TRUST_POINTS = [
   { title: "Private by design", description: "Encrypted responses, firm-controlled visibility.", icon: Scale },
-  { title: "Structured methodology", description: "Governed pillars — not a generic survey.", icon: Briefcase },
+  { title: "Structured methodology", description: "Governed risk domains — not a generic survey.", icon: Briefcase },
   { title: "White-label & customizable", description: "Your branding, subdomain, intake, and methodology — clients experience your firm.", icon: Palette },
   { title: "Action-oriented", description: "Prioritized risks and tailored recommendations.", icon: Sparkles },
 ] as const;

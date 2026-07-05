@@ -42,6 +42,41 @@ const nextConfig: NextConfig = {
         destination: "/signin",
         permanent: false,
       },
+      {
+        source: "/advisor/methodology/pillars",
+        destination: "/advisor/methodology/risk-domains",
+        permanent: true,
+      },
+      {
+        source: "/advisor/enterprise/methodology/pillars",
+        destination: "/advisor/enterprise/methodology/risk-domains",
+        permanent: true,
+      },
+      {
+        source: "/admin/pillars",
+        destination: "/admin/risk-domains",
+        permanent: true,
+      },
+      {
+        source: "/advisor/facilitate/:sessionId/pillars",
+        destination: "/advisor/facilitate/:sessionId/risk-domains",
+        permanent: true,
+      },
+      {
+        source: "/api/platform/pillars",
+        destination: "/api/platform/risk-domains",
+        permanent: true,
+      },
+      {
+        source: "/api/assessment/pillars/:path*",
+        destination: "/api/assessment/risk-domains/:path*",
+        permanent: true,
+      },
+      {
+        source: "/api/advisor/methodology/pillars/:path*",
+        destination: "/api/advisor/methodology/risk-domains/:path*",
+        permanent: true,
+      },
     ];
   },
 };

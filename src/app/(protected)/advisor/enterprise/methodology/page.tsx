@@ -43,7 +43,7 @@ export default async function EnterpriseMethodologyHubPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4" />
-            Assessment questions by pillar
+            Assessment questions by risk domain
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
@@ -60,7 +60,7 @@ export default async function EnterpriseMethodologyHubPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {ENTERPRISE_METHODOLOGY_HUB_LINKS.map((item) => {
           const Icon =
-            item.href.includes("/pillars")
+            item.href.includes("/risk-domains")
               ? Layers
               : item.href.includes("/intake")
                 ? ClipboardList

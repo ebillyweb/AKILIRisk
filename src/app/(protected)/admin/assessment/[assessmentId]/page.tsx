@@ -46,7 +46,7 @@ export default async function AdminAssessmentReviewPage({
 
       <p className="text-sm text-muted-foreground">
         Review assessment answers and attach platform-admin notes. Notes are advisory only and
-        do not affect maturity scores or pillar results.
+        do not affect maturity scores or risk domain results.
       </p>
 
       <AdminAssessmentReviewView data={data} />

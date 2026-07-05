@@ -25,7 +25,7 @@ import { resolveEnterpriseIntakeQuestionBankMode } from "@/lib/methodology/intak
 
 function revalidateEnterpriseMethodologyPaths(pillarSlug?: string) {
   revalidatePath("/advisor/enterprise/methodology");
-  revalidatePath("/advisor/enterprise/methodology/pillars");
+  revalidatePath("/advisor/enterprise/methodology/risk-domains");
   revalidatePath("/advisor/enterprise/methodology/intake");
   if (pillarSlug) {
     revalidatePath(`/advisor/enterprise/methodology/questions/${pillarSlug}`);

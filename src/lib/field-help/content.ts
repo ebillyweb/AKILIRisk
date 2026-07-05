@@ -26,7 +26,7 @@ export const FIELD_HELP = {
       "Add one or more checks. The rule matches when more than half of the total importance weight is satisfied — so heavier checks count more toward a match.",
   },
   "rule-pillar-thresholds": {
-    title: "Pillar score ranges",
+    title: "Risk domain score ranges",
     description:
       "Optional reference ranges for documentation. These do not change whether the rule fires today; use trigger conditions for matching logic.",
   },
@@ -43,10 +43,10 @@ export const FIELD_HELP = {
   "condition-type": {
     title: "Check type",
     description:
-      "Pillar score and risk level use assessment results. Intake answer and missing control inspect specific questions. Household profile is for advanced profile-field comparisons.",
+      "Risk domain score and risk level use assessment results. Intake answer and missing control inspect specific questions. Household profile is for advanced profile-field comparisons.",
   },
   "condition-pillar": {
-    title: "Pillar",
+    title: "Risk domain",
     description:
       "The risk area whose score or risk label this check evaluates — for example Cyber & Digital or Family Governance.",
   },
@@ -58,17 +58,17 @@ export const FIELD_HELP = {
   "condition-score-value": {
     title: "Score value",
     description:
-      "Resilience scores use a 0–3 scale (higher is better). Example: \"below 1.8\" targets clients who scored weakly on that pillar.",
+      "Resilience scores use a 0–3 scale (higher is better). Example: \"below 1.8\" targets clients who scored weakly on that risk domain.",
   },
   "condition-risk-levels": {
     title: "Risk level",
     description:
-      "Platform labels for pillar results: Low, Medium, High, or Critical. Pick one level or several when using \"is one of\".",
+      "Platform labels for risk domain results: Low, Medium, High, or Critical. Pick one level or several when using \"is one of\".",
   },
   "condition-question": {
     title: "Question",
     description:
-      "The intake or assessment question this check inspects. Search by pillar or question text, or enter a legacy question ID manually.",
+      "The intake or assessment question this check inspects. Search by risk domain or question text, or enter a legacy question ID manually.",
   },
   "condition-answer": {
     title: "Expected answer",
@@ -86,7 +86,7 @@ export const FIELD_HELP = {
       "Weight from 1 (optional) to 10 (critical). Rules match when satisfied checks account for more than half of the total weight across all checks.",
   },
   "threshold-pillar": {
-    title: "Pillar",
+    title: "Risk domain",
     description: "Which risk area this reference range documents.",
   },
   "threshold-min-max": {
@@ -228,9 +228,9 @@ export const FIELD_HELP = {
       "Shown before the client records. Enter one tip per line (e.g. \"Speak clearly\", \"Include examples\").",
   },
   "intake-related-pillars": {
-    title: "Related assessment pillars",
+    title: "Related risk domains",
     description:
-      "Helps suggest which risk domains to include when an advisor approves intake. Select zero or more pillars.",
+      "Helps suggest which risk domains to include when an advisor approves intake. Select zero or more risk domains.",
   },
   "intake-display-order": {
     title: "Order in script",
@@ -244,7 +244,7 @@ export const FIELD_HELP = {
   // Admin — assessment question bank
   "bank-section": {
     title: "Section",
-    description: "The subsection within this risk pillar where the question appears.",
+    description: "The subsection within this risk domain where the question appears.",
   },
   "bank-answer-type": {
     title: "How clients answer",
@@ -296,22 +296,22 @@ export const FIELD_HELP = {
   "pillar-active": {
     title: "Active for new intakes",
     description:
-      "Inactive pillars are omitted from new client assessments. In-flight clients keep snapshotted pillars.",
+      "Inactive risk domains are omitted from new client assessments. In-flight clients keep snapshotted risk domains.",
   },
   "pillar-display-name": {
     title: "Display name",
     description:
-      "Optional label override shown to your clients instead of the platform pillar name.",
+      "Optional label override shown to your clients instead of the platform risk domain name.",
   },
   "pillar-weight": {
     title: "Weight",
     description:
-      "How much this pillar contributes to the overall household score relative to other active pillars.",
+      "How much this risk domain contributes to the overall household score relative to other active risk domains.",
   },
   "pillar-thresholds": {
     title: "Risk thresholds",
     description:
-      "Score cutoffs (0–100) for low, medium, and high labels on this pillar. Overrides platform defaults for your practice.",
+      "Score cutoffs (0–100) for low, medium, and high labels on this risk domain. Overrides platform defaults for your practice.",
   },
   "pillar-threshold-cutoff": {
     title: "Threshold value",
@@ -340,7 +340,7 @@ export const FIELD_HELP = {
   },
   "advisor-assessment-question-text": {
     title: "Question text",
-    description: "The assessment prompt your clients answer for this pillar.",
+    description: "The assessment prompt your clients answer for this risk domain.",
   },
   "advisor-assessment-why-matters": {
     title: "Why this matters",
@@ -364,12 +364,12 @@ export const FIELD_HELP = {
   "narrative-all-negative": {
     title: "All-negative band",
     description:
-      "Bullet points when every answer in the pillar is weak. One recommendation per line — shown in reports and PDFs.",
+      "Bullet points when every answer in the risk domain is weak. One recommendation per line — shown in reports and PDFs.",
   },
   "narrative-all-yes": {
     title: "All-yes band",
     description:
-      "Bullet points when the client answered strongly across the pillar. One line per outcome.",
+      "Bullet points when the client answered strongly across the risk domain. One line per outcome.",
   },
   "narrative-mid-band": {
     title: "Mid-band copy",
@@ -433,7 +433,7 @@ export const FIELD_HELP = {
   "assessment-stale-scores-alert": {
     title: "Re-score vs reassessment",
     description:
-      "Re-score recalculates results from the same assessment using the latest answers (admin action when answers change or scoring rules update). Reassessment starts a new linked assessment — full, single pillar, or targeted follow-up — so you can compare before/after scores and track improvement from completed recommendations.",
+      "Re-score recalculates results from the same assessment using the latest answers (admin action when answers change or scoring rules update). Reassessment starts a new linked assessment — full, single risk domain, or targeted follow-up — so you can compare before/after scores and track improvement from completed recommendations.",
   },
 } as const satisfies Record<string, FieldHelpContent>;
 

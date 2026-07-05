@@ -13,7 +13,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       element: '[data-tour="config-pillar-questions"]',
       popover: {
         title: "Assessment questions",
-        description: "Jump directly to question banks for each risk pillar.",
+        description: "Jump directly to question banks for each risk domain.",
         side: "bottom",
       },
     },
@@ -22,7 +22,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Configuration areas",
         description:
-          "Pillars, intake question bank, narratives, recommendation rules, preview, and version history — open any card to configure.",
+          "Risk domains, intake question bank, narratives, recommendation rules, preview, and version history — open any card to configure.",
         side: "top",
       },
     },
@@ -30,7 +30,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
   "advisor-methodology-pillars": [
     {
       popover: {
-        title: "Pillar manager",
+        title: "Risk domain manager",
         description:
           "Enable or disable pillars, rename labels, and set weights and score thresholds for your practice.",
       },
@@ -38,9 +38,9 @@ export const ADVISOR_CONFIGURATION_TOURS = {
     {
       element: '[data-tour="config-primary-form"]',
       popover: {
-        title: "Pillar settings",
+        title: "Risk domain settings",
         description:
-          "Toggle visibility, adjust display names, and configure how each pillar contributes to the overall score.",
+          "Toggle visibility, adjust display names, and configure how each risk domain contributes to the overall score.",
         side: "top",
       },
     },
@@ -68,7 +68,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Assessment questions",
         description:
-          "Customize the personal risk profile questions clients answer for this pillar.",
+          "Customize the personal risk profile questions clients answer for this risk domain.",
       },
     },
     {
@@ -84,7 +84,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
   "advisor-methodology-narratives": [
     {
       popover: {
-        title: "Pillar narratives",
+        title: "Risk domain narratives",
         description:
           "Outcome copy shown in score reports and PDFs for low, mid, and high maturity bands.",
       },
@@ -122,7 +122,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Catalog updates",
         description:
-          "Track platform pillar catalog changes since your profile last synced.",
+          "Track platform risk domain catalog changes since your profile last synced.",
       },
     },
     {
@@ -130,7 +130,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Sync status",
         description:
-          "Compare platform catalog version to what your profile has seen. Review new pillars when updates are available.",
+          "Compare platform catalog version to what your profile has seen. Review new risk domains when updates are available.",
         side: "top",
       },
     },
@@ -225,7 +225,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
     {
       element: '[data-tour="config-primary-list"]',
       popover: {
-        title: "Rules by pillar",
+        title: "Rules by risk domain",
         description:
           "Each pillar card shows how many firm rules exist. Open Manage to edit triggers for that risk area.",
         side: "top",

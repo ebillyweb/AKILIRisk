@@ -41,18 +41,18 @@ export const TIER_CATALOG: Record<SelfServeTier, TierCatalogEntry> = {
     clientLimit: 25,
     stripeProductName: "Essentials",
     highlights: [
-      "10-pillar personal risk profile",
+      "10 risk domain personal risk profile",
       "Branded PDF reports and client summaries",
       "Prioritized client action plan",
       "Advisor pipeline and invitations",
     ],
     cardIncludes: [
-      "10-pillar assessments, PDF reports & action plans",
+      "10 risk domain assessments, PDF reports & action plans",
       "Client pipeline, invitations & deliverables",
       "Standard Akili methodology (not customizable)",
     ],
     cardExcludes: [
-      "Custom pillars, intake & white-label branding",
+      "Custom risk domains, intake & white-label branding",
       "Implementation tracking & portfolio analytics",
     ],
   },
@@ -66,7 +66,7 @@ export const TIER_CATALOG: Record<SelfServeTier, TierCatalogEntry> = {
     featured: true,
     highlights: [
       "Everything in Essentials",
-      "Custom pillars, intake, questions, and narratives",
+      "Custom risk domains, intake, questions, and narratives",
       "Recommendation rules and methodology snapshots",
       "White-label branding and client portal",
     ],
