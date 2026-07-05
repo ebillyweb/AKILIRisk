@@ -91,6 +91,10 @@ test.describe("scoring + deliverable-phase hunt", () => {
     await expect(
       page.getByText(/accept this recommendation/i)
     ).toHaveCount(0);
+    await expect(page.getByTestId("risk-heat-map-single")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /^risk assessment$/i }),
+    ).toBeVisible();
   });
 
   // ──────────────────────────────────────────────────────────────────

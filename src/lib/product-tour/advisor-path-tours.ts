@@ -8,6 +8,7 @@ export function getAdvisorTourIdForPath(pathname: string): TourId | null {
   if (pathname === "/advisor/settings") return "advisor-settings";
   if (pathname === "/advisor/settings/pii-policy") return "advisor-settings-pii-policy";
   if (pathname === "/advisor/settings/team") return "advisor-settings-team";
+  if (pathname === "/advisor/settings/access-control") return "advisor-settings-access-control";
 
   if (pathname === "/advisor/methodology") return "advisor-methodology-hub";
   if (pathname === "/advisor/methodology/pillars") return "advisor-methodology-pillars";

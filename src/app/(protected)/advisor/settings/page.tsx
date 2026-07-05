@@ -15,6 +15,7 @@ import {
   ESSENTIALS_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
 import { loadAdvisorBrandingSettingsView } from "@/lib/enterprise/branding-access";
+import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { resolveAdvisorPersonalNameFields } from "@/lib/advisor/advisor-workspace-label";
 import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 import {
@@ -51,10 +52,12 @@ export default async function AdvisorSettingsPage({
 
   const { profile } = result.data!;
 
-  const brandingSettings = await loadAdvisorBrandingSettingsView(
-    profile.userId,
-    profile.id,
-  );
+  const [brandingSettings, showHouseholdProfilesPolicy] = await Promise.all([
+    loadAdvisorBrandingSettingsView(profile.userId, profile.id),
+    canAccessEnterpriseTeamSettings(profile.userId).then(
+      (canManageTeam) => !canManageTeam,
+    ),
+  ]);
   const initialTab = parseAdvisorSettingsTab(resolvedSearchParams.tab, {
     brandingTabVisible: brandingSettings.brandingTabVisible,
   });
@@ -128,6 +131,7 @@ export default async function AdvisorSettingsPage({
         passwordChangeRequired={passwordChangeRequired}
         changePasswordHref={changePasswordHref}
         householdProfilesEnabled={profile.householdProfilesEnabled ?? true}
+        showHouseholdProfilesPolicy={showHouseholdProfilesPolicy}
       />
     </div>
   );

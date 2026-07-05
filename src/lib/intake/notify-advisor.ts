@@ -7,10 +7,10 @@ import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import {
-  advisorClientDisplayName,
-  resolveEffectiveFieldVisibility,
+  loadAdvisorPiiPolicy,
 } from "@/lib/advisor/field-visibility";
-import { parsePiiPolicy } from "@/lib/advisor/pii-policy";
+import { resolveAdvisorClientPipelineLabels } from "@/lib/pipeline/client-display";
+import { resolveClientReferenceCode } from "@/lib/client/client-reference-code.server";
 import { safeDecryptUserName } from "@/lib/data/client-pii";
 
 /**
@@ -33,7 +33,14 @@ export async function notifyAdvisorsOfIntake(
   const interview = await prisma.intakeInterview.findUnique({
     where: { id: interviewId },
     include: {
-      user: { select: { id: true, name: true, emailCiphertext: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          emailCiphertext: true,
+          clientReferenceCode: true,
+        },
+      },
     },
   });
   if (!interview) {
@@ -59,6 +66,10 @@ export async function notifyAdvisorsOfIntake(
   const decryptedClientName = safeDecryptUserName(interview.user.name, {
     rowId: interview.user.id,
   });
+  const clientReferenceCode = await resolveClientReferenceCode(
+    interview.user.id,
+    interview.user.clientReferenceCode,
+  );
 
   // Strict env-only resolver — see comment in getPublicAppUrlStrict. Null
   // here means "we don't have a usable public origin in prod"; we still
@@ -75,14 +86,16 @@ export async function notifyAdvisorsOfIntake(
   for (const assignment of assignments) {
     const advisor = assignment.advisor;
     const advisorUser = advisor.user;
-    const clientDisplayName = advisorClientDisplayName(
-      decryptedClientName,
-      clientEmail,
-      resolveEffectiveFieldVisibility(
-        parsePiiPolicy(advisor.piiPolicy),
-        assignment.fieldVisibility
-      )
-    );
+    const advisorPolicy = await loadAdvisorPiiPolicy(advisor.id);
+    const labels = resolveAdvisorClientPipelineLabels({
+      id: interview.user.id,
+      name: decryptedClientName,
+      email: clientEmail,
+      clientReferenceCode,
+      pseudonymousWorkspaceLabeling: advisorPolicy.pseudonymousWorkspaceLabeling,
+    });
+    const clientDisplayName = labels.headline;
+    const includeClientEmailInNotification = !labels.pseudonymous;
     try {
       await createNotification(
         advisor.id,
@@ -98,7 +111,7 @@ export async function notifyAdvisorsOfIntake(
           decryptUserEmail(advisorUser.emailCiphertext),
           advisorUser.name || "Advisor",
           clientDisplayName,
-          clientEmail,
+          includeClientEmailInNotification ? clientEmail : null,
           reviewUrl
         );
       }

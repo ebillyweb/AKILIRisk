@@ -107,13 +107,33 @@ export function getStageLabel(stage: ClientWorkflowStage): string {
     REGISTERED: 'Registered',
     INTAKE_IN_PROGRESS: 'Intake In Progress',
     INTAKE_COMPLETE: 'Intake Complete',
-    ASSESSMENT_IN_PROGRESS: 'Assessment In Progress',
+    ASSESSMENT_IN_PROGRESS: 'In Progress',
     ASSESSMENT_COMPLETE: 'Assessment Complete',
     DOCUMENTS_REQUIRED: 'Documents Required',
     COMPLETE: 'Complete',
   };
 
   return labelMap[stage];
+}
+
+/** Maps document-gated stages when firm document requirements are hidden in advisor UI. */
+export function resolveAdvisorPipelineDisplayStage(
+  stage: ClientWorkflowStage,
+  documentRequirementsEnabled = true,
+): ClientWorkflowStage {
+  if (!documentRequirementsEnabled && stage === 'DOCUMENTS_REQUIRED') {
+    return 'ASSESSMENT_COMPLETE';
+  }
+  return stage;
+}
+
+export function getAdvisorPipelineStageLabel(
+  stage: ClientWorkflowStage,
+  documentRequirementsEnabled = true,
+): string {
+  return getStageLabel(
+    resolveAdvisorPipelineDisplayStage(stage, documentRequirementsEnabled),
+  );
 }
 
 /**

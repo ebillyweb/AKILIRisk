@@ -140,7 +140,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Advisor settings",
         description:
-          "General, Branding, and Security tabs organize your profile, client-facing branding, and account security including PII policy.",
+          "General, Branding, and Security tabs organize your profile, client-facing branding, and account security including client data policy.",
       },
     },
     {
@@ -156,9 +156,9 @@ export const ADVISOR_CONFIGURATION_TOURS = {
   "advisor-settings-pii-policy": [
     {
       popover: {
-        title: "PII policy",
+        title: "Client data policy",
         description:
-          "Choose which optional client PII fields future clients are asked during intake.",
+          "Choose optional intake fields and whether clients appear by legal name or Client CL-… reference in your workspace.",
       },
     },
     {
@@ -176,7 +176,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Team management",
         description:
-          "Invite team members, manage access, and monitor seat usage for your firm.",
+          "Invite team members, manage roles, and monitor seat usage for your firm.",
       },
     },
     {
@@ -195,12 +195,21 @@ export const ADVISOR_CONFIGURATION_TOURS = {
         side: "top",
       },
     },
+  ],
+  "advisor-settings-access-control": [
+    {
+      popover: {
+        title: "Access control",
+        description:
+          "Configure workspace visibility, client data defaults, household profiles, and branding for team members.",
+      },
+    },
     {
       element: '[data-tour="config-advisor-visibility"]',
       popover: {
-        title: "Advisor visibility",
+        title: "Team member settings",
         description:
-          "Choose which workspace areas team members see when they sign in. Owners and admins always retain full access.",
+          "Choose which sidebar areas team members see, how client data is labeled, and what they can customize for clients.",
         side: "top",
       },
     },

@@ -18,6 +18,8 @@ interface PipelineViewProps {
   initialMetrics: PipelineMetrics;
   initialFilters?: PipelineFilters;
   initialPage: number;
+  pseudonymousWorkspaceLabeling: boolean;
+  documentRequirementsEnabled: boolean;
 }
 
 export function PipelineView({
@@ -25,6 +27,8 @@ export function PipelineView({
   initialMetrics,
   initialFilters,
   initialPage,
+  pseudonymousWorkspaceLabeling,
+  documentRequirementsEnabled,
 }: PipelineViewProps) {
   const router = useRouter();
 
@@ -97,11 +101,16 @@ export function PipelineView({
         filteredCount={filteredClients.length}
         page={currentPage}
         pageSize={PAGE_SIZE}
+        pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
+        documentRequirementsEnabled={documentRequirementsEnabled}
       />
 
       {/* Table */}
       <div data-tour="pipeline-table">
-        <PipelineTable clients={pagedClients} />
+        <PipelineTable
+          clients={pagedClients}
+          showDocumentsColumn={documentRequirementsEnabled}
+        />
       </div>
 
       {filteredClients.length > 0 ? (

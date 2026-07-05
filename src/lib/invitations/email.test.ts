@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { PLATFORM_EMAIL_LOGO_CID } from "@/lib/email/platform-email-logo";
-import { ADVISOR_EMAIL_LOGO_CID } from "@/lib/email/advisor-email-logo";
 import { renderInvitationTemplate } from "./email";
 import { resolveInvitationEmailTheme } from "./invitation-email-theme";
 
@@ -34,7 +33,7 @@ describe("renderInvitationTemplate (US-1B)", () => {
     expect(html).toContain("background:#18181b");
   });
 
-  it("includes logo and custom CTA when branding is enabled", () => {
+  it("uses custom CTA color when branding is enabled", () => {
     const theme = resolveInvitationEmailTheme({
       brandingEnabled: true,
       advancedBrandingEnabled: true,
@@ -44,18 +43,16 @@ describe("renderInvitationTemplate (US-1B)", () => {
 
     const html = renderInvitationTemplate({
       ...baseAdvisor,
-      theme: {
-        ...theme,
-        logoEmailSrc: "https://cdn.example.com/logo.png",
-      },
+      theme,
     });
 
-    expect(html).toContain("https://cdn.example.com/logo.png");
+    expect(html).not.toContain("https://cdn.example.com/logo.png");
+    expect(html).not.toContain("<img");
     expect(html).toContain("background: #4EA5D9");
     expect(html).not.toContain("Sent via <strong>AKILI Risk Intelligence</strong>");
   });
 
-  it("embeds private S3 logos via CID instead of raw S3 URLs", () => {
+  it("does not embed advisor logos when branding is enabled", () => {
     const theme = resolveInvitationEmailTheme({
       brandingEnabled: true,
       advancedBrandingEnabled: true,
@@ -66,13 +63,10 @@ describe("renderInvitationTemplate (US-1B)", () => {
 
     const html = renderInvitationTemplate({
       ...baseAdvisor,
-      theme: {
-        ...theme,
-        logoEmailSrc: `cid:${ADVISOR_EMAIL_LOGO_CID}`,
-      },
+      theme,
     });
 
-    expect(html).toContain(`cid:${ADVISOR_EMAIL_LOGO_CID}`);
+    expect(html).not.toContain("<img");
     expect(html).not.toContain("akili-advisor-assets.s3.us-east-2.amazonaws.com");
   });
 

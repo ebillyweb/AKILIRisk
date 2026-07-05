@@ -11,6 +11,11 @@ import { countVisibleGovernanceQuestions } from "@/lib/assessment/bank/load-bank
 import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
 import { ClientDashboardOverview } from "@/components/dashboard/ClientDashboardOverview";
 import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
+import { deliverableBannerBrandingProps } from "@/lib/client/deliverable-banner-branding";
+import { loadDeliverableHeatMapData } from "@/lib/client/deliverable-heat-map.server";
+import { resolveClientPortalBrandingForUser } from "@/lib/client/resolve-client-portal-branding";
+import { isTenantBrandedRequest } from "@/lib/client/branded-portal-requirements";
+import { isClientActionPlanEnabledForUser } from "@/lib/client/client-action-plan-visibility.server";
 import {
   buildClientDashboardDestinations,
   buildClientDashboardHeadline,
@@ -55,7 +60,7 @@ export default async function DashboardPage({
 
   let intakeHeroLabel = "Not started";
 
-  const [latestIntake, intakeGate, summaryAccess, assessments, totalQuestions, intakeAnswersLocked] =
+  const [latestIntake, intakeGate, summaryAccess, assessments, totalQuestions, intakeAnswersLocked, portalBranding, actionPlanEnabled, onTenantHost] =
     await Promise.all([
       prisma.intakeInterview.findFirst({
         where: { userId: session.user.id },
@@ -88,6 +93,12 @@ export default async function DashboardPage({
       }),
       countVisibleGovernanceQuestions(),
       hasClientAssessmentStarted(session.user.id),
+      resolveClientPortalBrandingForUser({
+        userId: session.user.id,
+        email: session.user.email ?? "",
+      }),
+      isClientActionPlanEnabledForUser(session.user.id),
+      isTenantBrandedRequest(),
     ]);
 
   const assessmentUnlocked = intakeGate.assessmentUnlocked;
@@ -136,11 +147,22 @@ export default async function DashboardPage({
     assessmentComplete,
     canViewRiskPreview: summaryAccess.canViewRiskPreview,
     canViewSummary: summaryAccess.canViewSummary,
-    canViewActionPlan: summaryAccess.canViewSummary,
+    canViewActionPlan: summaryAccess.canViewSummary && actionPlanEnabled,
+    actionPlanEnabled,
     responseCount,
     totalQuestions,
     mfaEnabled: !!session.user.mfaEnabled,
+    portalCopy: portalBranding
+      ? {
+          tagline: portalBranding.tagline,
+          landingHeadline: portalBranding.landingHeadline,
+          landingSubheadline: portalBranding.landingSubheadline,
+        }
+      : undefined,
   };
+
+  const bannerBranding = deliverableBannerBrandingProps(portalBranding);
+  const isWhiteLabeledPortal = onTenantHost || Boolean(portalBranding);
 
   const { headline, subheadline } = buildClientDashboardHeadline(hubInput);
   const journeySteps = buildClientDashboardJourney(hubInput);
@@ -151,33 +173,43 @@ export default async function DashboardPage({
     assessmentUnlocked &&
     summaryAccess.canViewRiskPreview;
 
+  const deliverableHeatMap =
+    showDeliverableBanner && latestAssessment
+      ? await loadDeliverableHeatMapData(
+          latestAssessment.id,
+          summaryAccess.includedPillars,
+        )
+      : null;
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <UnauthorizedNotice error={sp.error} />
 
-      {showDeliverableBanner && latestAssessment ? (
-        <DeliverablePhaseBanner
-          assessmentId={latestAssessment.id}
-          phase={summaryAccess.deliverablePhase}
-          upsellTriggersFired={
-            Array.isArray(latestAssessment.upsellTriggersFired)
-              ? (latestAssessment.upsellTriggersFired as string[])
-              : null
-          }
-          engagement={latestAssessment.portfolioEngagement ?? null}
-          previewEnteredAt={latestAssessment.previewEnteredAt}
-          profileEnteredAt={latestAssessment.profileEnteredAt}
-        />
-      ) : null}
-
       <ClientDashboardOverview
-        firstName={
-          session.user.firstName ?? session.user.name ?? "Guest"
-        }
         headline={headline}
         subheadline={subheadline}
         journeySteps={journeySteps}
         destinations={destinations}
+        hideExplorePortalSection={isWhiteLabeledPortal}
+        deliverableBanner={
+          showDeliverableBanner && latestAssessment ? (
+            <DeliverablePhaseBanner
+              assessmentId={latestAssessment.id}
+              phase={summaryAccess.deliverablePhase}
+              upsellTriggersFired={
+                Array.isArray(latestAssessment.upsellTriggersFired)
+                  ? (latestAssessment.upsellTriggersFired as string[])
+                  : null
+              }
+              engagement={latestAssessment.portfolioEngagement ?? null}
+              previewEnteredAt={latestAssessment.previewEnteredAt}
+              profileEnteredAt={latestAssessment.profileEnteredAt}
+              advisorTeamLabel={bannerBranding.advisorTeamLabel}
+              brandHex={bannerBranding.brandHex}
+              heatMap={deliverableHeatMap}
+            />
+          ) : null
+        }
       />
     </div>
   );

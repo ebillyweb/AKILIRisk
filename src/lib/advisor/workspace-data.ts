@@ -32,9 +32,11 @@ export type AdvisorIntelligenceHighlight = {
 export function deriveAdvisorPriorities(
   clients: PipelineClient[],
   metrics: PipelineMetrics,
-  pendingInvitationsCount: number
+  pendingInvitationsCount: number,
+  options?: { documentRequirementsEnabled?: boolean },
 ): AdvisorPriorityItem[] {
   const priorities: AdvisorPriorityItem[] = [];
+  const documentRequirementsEnabled = options?.documentRequirementsEnabled !== false;
 
   const reviewsNeeded = metrics.intakesAwaitingReview ?? 0;
   if (reviewsNeeded > 0) {
@@ -51,7 +53,7 @@ export function deriveAdvisorPriorities(
     });
   }
 
-  if (metrics.documentsNeeded > 0) {
+  if (documentRequirementsEnabled && metrics.documentsNeeded > 0) {
     priorities.push({
       id: "documents",
       kind: "documents",

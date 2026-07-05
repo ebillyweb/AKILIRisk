@@ -10,6 +10,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
+import { assertAdvisorCanManageActionPlan } from "@/lib/enterprise/advisor-member-visibility";
 import { prisma } from "@/lib/db";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { updateMilestoneStatus } from "@/lib/recommendations/solution-lifecycle";
@@ -216,6 +217,7 @@ export async function publishActionPlanAction(
 ): Promise<ActionResult<void>> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertAdvisorCanManageActionPlan(userId);
     const parsed = publishActionPlanSchema.parse(input);
 
     const ownership = await verifyAssessmentOwnership(parsed.assessmentId, userId);

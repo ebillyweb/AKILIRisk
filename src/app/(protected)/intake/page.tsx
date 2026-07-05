@@ -13,6 +13,7 @@ import {
 } from "@/lib/actions/intake-actions";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { hasClientAssessmentStarted } from "@/lib/client/intake-edit-gate";
+import { clientHasIntakeReviewContent } from "@/lib/client/intake-review";
 import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { prisma } from "@/lib/db";
 import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
@@ -33,7 +34,10 @@ export default async function IntakePage() {
 
   const gate = await getClientIntakeGateState(session.user.id);
 
-  if (await hasClientAssessmentStarted(session.user.id)) {
+  if (
+    (await hasClientAssessmentStarted(session.user.id)) &&
+    (await clientHasIntakeReviewContent(session.user.id))
+  ) {
     redirect("/intake/review");
   }
 

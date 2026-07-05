@@ -136,7 +136,11 @@ describe("getActiveAdvisorNavHref", () => {
     expect(
       visible.flatMap((section) => section.items).some((item) => item.href === "/advisor/settings/team"),
     ).toBe(true);
+    expect(
+      visible.flatMap((section) => section.items).some((item) => item.href === "/advisor/settings/access-control"),
+    ).toBe(true);
     expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/team")).toBe("firm");
+    expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/access-control")).toBe("firm");
   });
 
   it("shows Firm standards for enterprise team managers when team nav is enabled", () => {

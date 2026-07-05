@@ -2,9 +2,10 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { shouldSendNotification } from "@/lib/notifications/preferences";
-import { sendNotification } from "@/lib/notifications/service";
-import { renderNotificationEmail } from "@/lib/notifications/templates";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import { resolveClientEmailContext, clientPortalUrl } from "@/lib/client/client-email-context";
+import { buildAssessmentReminderClientEmail } from "@/lib/client/client-system-email-content";
+import { sendClientSystemEmail } from "@/lib/email/client-branded-system-email";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 interface ProcessResult {
@@ -158,51 +159,36 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
         const clientName = client.name ||
           (client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : null);
 
-        // Prepare advisor name
-        const advisorName = advisor.user.name ||
-          (advisor.user.firstName && advisor.user.lastName
-            ? `${advisor.user.firstName} ${advisor.user.lastName}`
-            : 'Your Advisor');
-
-        // Prepare firm name
-        const advisorFirmName = advisor.firmName || 'Akili Risk';
-
-        // Determine assessment URL based on what's incomplete
         const hasIncompleteIntake = client.intakeInterviews?.[0]?.status === 'IN_PROGRESS';
-        const assessmentUrl = hasIncompleteIntake
-          ? `${appUrl}/intake`
-          : `${appUrl}/assessment`;
-
-        // Generate email HTML using the assessment reminder template
-        const emailHtml = renderNotificationEmail('reminder', {
-          clientName: clientName || undefined,
-          assessmentUrl,
-          advisorName,
-          firmName: advisorFirmName,
-          logoUrl: advisor.logoUrl || undefined,
+        const emailContext = await resolveClientEmailContext({
+          userId: client.id,
+          advisorProfileId: advisor.id,
         });
+        const assessmentUrl = clientPortalUrl(
+          emailContext,
+          hasIncompleteIntake ? "/intake" : "/assessment",
+        );
 
-        // Round-11 commit 2.4b: decrypt once per client.
         const clientEmail = decryptUserEmail(client.emailCiphertext);
 
-        // Send notification
-        const result = await sendNotification({
-          recipientUserId: client.id,
-          recipientEmail: clientEmail,
-          category: 'reminder',
-          title: 'Assessment Reminder',
-          message: `Your personal risk profile is ready to complete`,
-          referenceId: client.id,
-          advisorProfileId: advisor.id,
-          emailSubject: 'Your Assessment is Waiting - Akili Risk',
-          emailHtml,
-        });
+        const result = await sendClientSystemEmail(
+          clientEmail,
+          buildAssessmentReminderClientEmail(
+            emailContext,
+            clientName,
+            assessmentUrl,
+          ),
+          emailContext,
+        );
 
-        if (result.emailSent) {
+        if (result.sent) {
           clientsReminded++;
           console.log(`Sent assessment reminder to ${clientEmail}`);
         } else {
-          console.error(`Failed to send assessment reminder to ${clientEmail}`);
+          console.error(
+            `Failed to send assessment reminder to ${clientEmail}:`,
+            "reason" in result ? result.reason : "unknown",
+          );
         }
 
       } catch (clientError) {

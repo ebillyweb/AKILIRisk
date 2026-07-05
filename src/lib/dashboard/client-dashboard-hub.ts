@@ -26,9 +26,17 @@ type BuildHubInput = {
   canViewRiskPreview: boolean;
   canViewSummary: boolean;
   canViewActionPlan: boolean;
+  /** When false, hide action plan journey step and destination card. */
+  actionPlanEnabled: boolean;
   responseCount: number;
   totalQuestions: number;
   mfaEnabled: boolean;
+  /** Advisor landing copy for the default dashboard welcome state. */
+  portalCopy?: {
+    tagline?: string | null;
+    landingHeadline?: string | null;
+    landingSubheadline?: string | null;
+  };
 };
 
 function intakeJourneyState(input: BuildHubInput): JourneyStepState {
@@ -59,6 +67,22 @@ function actionPlanJourneyState(input: BuildHubInput): JourneyStepState {
   if (!input.assessmentUnlocked || !input.assessmentComplete) return "locked";
   if (input.canViewActionPlan) return "complete";
   return "waiting";
+}
+
+function resolveIntakeHref(input: BuildHubInput): string {
+  if (input.intakeWaived) {
+    return input.assessmentUnlocked ? "/assessment" : "/intake";
+  }
+  if (input.intakeAnswersLocked && input.hasSubmittedInterview) {
+    return "/intake/review";
+  }
+  if (input.restrictNavToIntake) {
+    return "/intake";
+  }
+  if (/approved|complete/i.test(input.intakeHeroLabel)) {
+    return "/intake/complete";
+  }
+  return "/intake";
 }
 
 export function buildClientDashboardHeadline(input: BuildHubInput): {
@@ -93,8 +117,9 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
     if (input.assessmentComplete && input.canViewRiskPreview) {
       return {
         headline: "Your assessment is scored—preview is available",
-        subheadline:
-          "Your advisor waived the intake interview. View your risk preview on the results pages while your advisor finalizes the full profile.",
+        subheadline: input.actionPlanEnabled
+          ? "Your advisor waived the intake interview. View your risk preview on the results pages while your advisor finalizes the full profile."
+          : "Your advisor waived the intake interview. View your risk preview on the results pages while your advisor finalizes your profile.",
       };
     }
 
@@ -143,8 +168,9 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
   if (input.assessmentComplete && input.canViewRiskPreview) {
     return {
       headline: "Your assessment is scored—preview is available",
-      subheadline:
-        "View your risk preview and domain heat map on the results pages. Your advisor will publish the full profile and action plan when ready.",
+      subheadline: input.actionPlanEnabled
+        ? "View your risk preview and domain heat map on the results pages. Your advisor will publish the full profile and action plan when ready."
+        : "View your risk preview and domain heat map on the results pages. Your advisor will publish your full profile when ready.",
     };
   }
 
@@ -159,22 +185,53 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
     };
   }
 
+  return applyDefaultPortalCopy(
+    {
+      headline: "Your household risk journey starts here",
+      subheadline:
+        "Track intake, assessment, and deliverables at a glance. Each section below links to the screen where that work happens.",
+    },
+    input.portalCopy,
+  );
+}
+
+function applyDefaultPortalCopy(
+  copy: { headline: string; subheadline: string },
+  portalCopy: BuildHubInput["portalCopy"],
+): { headline: string; subheadline: string } {
+  if (!portalCopy) return copy;
+
+  const headline = portalCopy.landingHeadline?.trim();
+  const subheadline =
+    portalCopy.landingSubheadline?.trim() || portalCopy.tagline?.trim();
+
   return {
-    headline: "Your household risk journey starts here",
-    subheadline:
-      "Track intake, assessment, and deliverables at a glance. Each section below links to the screen where that work happens.",
+    headline: headline || copy.headline,
+    subheadline: subheadline || copy.subheadline,
   };
 }
 
 export function buildClientDashboardJourney(
   input: BuildHubInput,
 ): JourneyStep[] {
+  const destinations = buildClientDashboardDestinations(input);
+  const linkById = new Map(
+    destinations.map((destination) => [
+      destination.id,
+      {
+        href: destination.href,
+        disabled: destination.disabled,
+        disabledReason: destination.disabledReason,
+      },
+    ]),
+  );
+
   const intakeState = intakeJourneyState(input);
   const assessmentState = assessmentJourneyState(input);
   const resultsState = resultsJourneyState(input);
   const planState = actionPlanJourneyState(input);
 
-  return [
+  const steps: JourneyStep[] = [
     {
       id: "intake",
       label: "Intake",
@@ -189,6 +246,9 @@ export function buildClientDashboardJourney(
               : intakeState === "waiting"
                 ? `Status: ${input.intakeHeroLabel}. Your advisor is reviewing your submission.`
                 : "Begin on the Intake page when you're ready.",
+      href: resolveIntakeHref(input),
+      disabled: false,
+      disabledReason: undefined,
     },
     {
       id: "assessment",
@@ -204,6 +264,9 @@ export function buildClientDashboardJourney(
             : assessmentState === "current"
               ? "In progress—continue pillars and autosaved answers on the Assessment page."
               : "Start your personal risk profile when intake requirements are met.",
+      href: linkById.get("assessment")?.href ?? "/assessment",
+      disabled: linkById.get("assessment")?.disabled,
+      disabledReason: linkById.get("assessment")?.disabledReason,
     },
     {
       id: "results",
@@ -217,6 +280,9 @@ export function buildClientDashboardJourney(
             : resultsState === "current"
               ? "Risk preview and heat map are on the Risk Preview page."
               : "Your advisor will publish your full risk profile soon.",
+      href: linkById.get("results")?.href ?? "/assessment/results",
+      disabled: linkById.get("results")?.disabled,
+      disabledReason: linkById.get("results")?.disabledReason,
     },
     {
       id: "action-plan",
@@ -228,34 +294,41 @@ export function buildClientDashboardJourney(
           : planState === "complete"
             ? "Review prioritized recommendations on your Action Plan page."
             : "Your advisor is preparing tailored next steps.",
+      href: linkById.get("action-plan")?.href ?? "/dashboard/action-plan",
+      disabled: linkById.get("action-plan")?.disabled,
+      disabledReason: linkById.get("action-plan")?.disabledReason,
     },
   ];
+
+  if (!input.actionPlanEnabled) {
+    return steps.filter((step) => step.id !== "action-plan");
+  }
+
+  return steps;
 }
 
 export function buildClientDashboardDestinations(
   input: BuildHubInput,
 ): DashboardDestination[] {
-  const intakeHref = input.intakeAnswersLocked
-    ? "/intake/review"
-    : input.restrictNavToIntake
-      ? "/intake"
-      : input.intakeWaived || /approved|complete/i.test(input.intakeHeroLabel)
-        ? "/intake/complete"
-        : "/intake";
+  const intakeHref = resolveIntakeHref(input);
 
-  const intakeDescription = input.intakeAnswersLocked
-    ? "Your submitted answers are read-only now that your assessment has started."
-    : input.intakeWaived
-      ? "Your advisor bypassed the family governance intake interview for your household. You can go straight to your personal risk profile."
-      : "Confidential interview about household structure and governance. Start or review your submission here.";
-
-  const intakeCta = input.intakeAnswersLocked
-    ? "View intake answers"
-    : input.restrictNavToIntake
-      ? "Continue intake"
+  const intakeDescription =
+    input.intakeAnswersLocked && input.hasSubmittedInterview
+      ? "Your submitted answers are read-only now that your assessment has started."
       : input.intakeWaived
-        ? "Learn more"
-        : "Open intake";
+        ? "Your advisor bypassed the family governance intake interview for your household. You can go straight to your personal risk profile."
+        : "Confidential interview about household structure and governance. Start or review your submission here.";
+
+  const intakeCta =
+    input.intakeAnswersLocked && input.hasSubmittedInterview
+      ? "View intake answers"
+      : input.restrictNavToIntake
+        ? "Continue intake"
+        : input.intakeWaived
+          ? input.assessmentUnlocked
+            ? "Open assessment"
+            : "Learn more"
+          : "Open intake";
 
   let resultsHref = "/assessment/results";
   let resultsDisabled = !input.assessmentUnlocked || !input.assessmentComplete;
@@ -301,7 +374,7 @@ export function buildClientDashboardDestinations(
         ? "In progress"
         : "Ready to start";
 
-  return [
+  const destinations: DashboardDestination[] = [
     {
       id: "intake",
       title: "Family Governance Intake",
@@ -392,4 +465,10 @@ export function buildClientDashboardDestinations(
       cta: "Account settings",
     },
   ];
+
+  if (!input.actionPlanEnabled) {
+    return destinations.filter((destination) => destination.id !== "action-plan");
+  }
+
+  return destinations;
 }

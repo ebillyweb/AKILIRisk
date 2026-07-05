@@ -1,16 +1,34 @@
 import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
 import { getClientDocumentRequirements } from "@/lib/actions/document-actions";
+import { isClientDocumentRequirementsEnabledForUser } from "@/lib/client/client-document-requirements-visibility.server";
 import { ClientDocumentPortal } from "@/components/documents/ClientDocumentPortal";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 
 export default async function DocumentsPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect(buildSignInHref({ callbackUrl: "/documents" }));
+  }
+
+  const role = normalizeUserRoleString(session.user.role);
+  if (role === "ADVISOR") {
+    redirect("/advisor");
+  }
+  if (isPlatformAdminRole(role)) {
+    redirect("/admin");
+  }
+
+  const documentRequirementsEnabled =
+    await isClientDocumentRequirementsEnabledForUser(session.user.id);
+  if (!documentRequirementsEnabled) {
+    redirect("/dashboard");
+  }
+
   const result = await getClientDocumentRequirements();
 
   if (!result.success) {
-    if (result.error === 'Not authenticated') {
-      redirect(buildSignInHref({ callbackUrl: '/documents' }));
-    }
-
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold text-destructive mb-2">

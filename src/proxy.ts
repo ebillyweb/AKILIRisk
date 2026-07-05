@@ -13,7 +13,6 @@ import {
   usesStagingTenantPathPortals,
 } from "@/lib/advisor/tenant-path-portals";
 import { isTenantPassThroughPath } from "@/lib/advisor/tenant-pass-through-paths";
-import { isTenantPublicSurfacePath } from "@/lib/advisor/tenant-public-surface";
 import {
   isMfaChallengePending,
   isPageMfaExempt,
@@ -45,6 +44,7 @@ function withAkiliPathname(req: NextRequest): Headers {
   h.delete("x-subdomain");
   h.delete("x-branded-mode");
   h.delete("x-tenant-path-prefix");
+  h.delete("x-tenant-force-light");
   return h;
 }
 
@@ -98,9 +98,8 @@ async function resolveAdvisorTenantRoute(
       if (options.tenantPathPrefix) {
         requestHeaders.set('x-tenant-path-prefix', options.tenantPathPrefix);
       }
-      if (isTenantPublicSurfacePath(effectivePathname)) {
-        requestHeaders.set('x-tenant-force-light', 'true');
-      }
+      // White-label tenant hosts always render light; workspace routes included.
+      requestHeaders.set('x-tenant-force-light', 'true');
 
       if (isTenantPassThroughPath(effectivePathname)) {
         // Hand back the tenant headers and let the main proxy run auth/MFA

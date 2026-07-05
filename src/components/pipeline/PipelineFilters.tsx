@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { PIPELINE_SEARCH_COPY } from "@/lib/advisor/pii-policy";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { PipelineFilters, PipelineMetrics } from "@/lib/pipeline/types";
 import type { ClientWorkflowStage } from "@prisma/client";
@@ -27,6 +28,8 @@ interface PipelineFiltersProps {
   filteredCount: number;
   page?: number;
   pageSize?: number;
+  pseudonymousWorkspaceLabeling?: boolean;
+  documentRequirementsEnabled?: boolean;
 }
 
 const stages: ClientWorkflowStage[] = [
@@ -99,7 +102,15 @@ export function PipelineFilters({
   filteredCount,
   page = 1,
   pageSize = 20,
+  pseudonymousWorkspaceLabeling = false,
+  documentRequirementsEnabled = true,
 }: PipelineFiltersProps) {
+  const searchCopy = pseudonymousWorkspaceLabeling
+    ? PIPELINE_SEARCH_COPY.pseudonymous
+    : PIPELINE_SEARCH_COPY.standard;
+  const stageOptions = documentRequirementsEnabled
+    ? stages
+    : stages.filter((stage) => stage !== "DOCUMENTS_REQUIRED");
   const pageStart = filteredCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const pageEnd = Math.min(page * pageSize, filteredCount);
   const [searchValue, setSearchValue] = useState(filters.search || "");
@@ -149,7 +160,9 @@ export function PipelineFilters({
   for (const { key, summaryLabel } of INTAKE_FILTERS) {
     if (filters[key]) activeFilterLabels.push(summaryLabel);
   }
-  if (filters.documentsNeeded) activeFilterLabels.push("Documents Needed");
+  if (filters.documentsNeeded && documentRequirementsEnabled) {
+    activeFilterLabels.push("Documents Needed");
+  }
   if (filters.assessmentInProgress) activeFilterLabels.push("Assessments In Progress");
   if (filters.stalled) activeFilterLabels.push("Stalled");
   if (filters.inactive) activeFilterLabels.push("Inactive");
@@ -167,11 +180,11 @@ export function PipelineFilters({
             aria-hidden
           />
           <Input
-            placeholder="Search by name or email..."
+            placeholder={searchCopy.placeholder}
             value={searchValue}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="h-10 pl-9"
-            aria-label="Search clients by name or email"
+            aria-label={searchCopy.ariaLabel}
           />
         </div>
 
@@ -217,7 +230,7 @@ export function PipelineFilters({
                   </Badge>
                 </div>
               </SelectItem>
-              {stages.map((stage) => (
+              {stageOptions.map((stage) => (
                 <SelectItem key={stage} value={stage}>
                   <div className="flex items-center gap-2">
                     {getStageLabel(stage)}

@@ -16,6 +16,8 @@ export const ENTERPRISE_ADVISOR_MEMBER_VISIBILITY_KEYS = [
   "productTours",
   "hideTierLockedNav",
   "skipIntake",
+  "documentRequirements",
+  "actionPlan",
 ] as const;
 
 export type EnterpriseAdvisorMemberVisibilityKey =
@@ -35,6 +37,8 @@ const enterpriseVisibilitySelect = {
   advisorMemberProductToursVisible: true,
   advisorMemberHideTierLockedNav: true,
   advisorMemberSkipIntakeEnabled: true,
+  advisorMemberDocumentRequirementsEnabled: true,
+  advisorMemberActionPlanEnabled: true,
 } as const;
 
 export function mapEnterpriseAdvisorMemberVisibility(row: {
@@ -46,6 +50,8 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
   advisorMemberProductToursVisible: boolean;
   advisorMemberHideTierLockedNav: boolean;
   advisorMemberSkipIntakeEnabled: boolean;
+  advisorMemberDocumentRequirementsEnabled: boolean;
+  advisorMemberActionPlanEnabled: boolean;
 }): EnterpriseAdvisorMemberVisibility {
   return {
     portfolio: row.advisorMemberPortfolioVisible,
@@ -56,6 +62,8 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
     productTours: row.advisorMemberProductToursVisible,
     hideTierLockedNav: row.advisorMemberHideTierLockedNav,
     skipIntake: row.advisorMemberSkipIntakeEnabled,
+    documentRequirements: row.advisorMemberDocumentRequirementsEnabled,
+    actionPlan: row.advisorMemberActionPlanEnabled,
   };
 }
 
@@ -69,6 +77,8 @@ export const DEFAULT_ENTERPRISE_ADVISOR_MEMBER_VISIBILITY: EnterpriseAdvisorMemb
     productTours: true,
     hideTierLockedNav: false,
     skipIntake: false,
+    documentRequirements: true,
+    actionPlan: true,
   };
 
 export type EnterpriseMemberVisibilityContext = {
@@ -131,6 +141,25 @@ export function isEnterpriseMemberVisibilityEnabled(
   return context.settings[key];
 }
 
+/**
+ * Firm-level document requirements flag for advisor workspace UI and mutations.
+ * Applies to owners/admins as well — when disabled, the feature is hidden for the whole firm.
+ */
+export function isEnterpriseDocumentRequirementsWorkspaceEnabled(
+  context: EnterpriseMemberVisibilityContext,
+): boolean {
+  return context.settings.documentRequirements;
+}
+
+/**
+ * Firm-level action plan flag for advisor workspace UI and client portal surfaces.
+ */
+export function isEnterpriseActionPlanWorkspaceEnabled(
+  context: EnterpriseMemberVisibilityContext,
+): boolean {
+  return context.settings.actionPlan;
+}
+
 export async function requireEnterpriseMemberVisibility(
   userId: string,
   key: EnterpriseAdvisorMemberVisibilityKey,
@@ -153,6 +182,33 @@ export async function assertAdvisorCanSkipIntake(userId: string): Promise<void> 
   }
 }
 
+export async function assertAdvisorCanManageActionPlan(
+  userId: string,
+): Promise<void> {
+  const context = await resolveEnterpriseMemberVisibilityContext(userId);
+  if (!isEnterpriseActionPlanWorkspaceEnabled(context)) {
+    throw new Error(
+      "Your firm has disabled action plans in the advisor workspace.",
+    );
+  }
+}
+
+export async function assertAdvisorCanManageDocumentRequirements(
+  userId: string,
+): Promise<void> {
+  const context = await resolveEnterpriseMemberVisibilityContext(userId);
+  if (!isEnterpriseDocumentRequirementsWorkspaceEnabled(context)) {
+    throw new Error(
+      "Your firm has disabled document requirements in the advisor workspace.",
+    );
+  }
+  if (!isEnterpriseMemberVisibilityEnabled(context, "documentRequirements")) {
+    throw new Error(
+      "Your firm administrator has not allowed team members to manage document requirements.",
+    );
+  }
+}
+
 export function visibilityInputToEnterpriseUpdate(
   input: EnterpriseAdvisorMemberVisibilityInput,
 ) {
@@ -165,5 +221,7 @@ export function visibilityInputToEnterpriseUpdate(
     advisorMemberProductToursVisible: input.productTours,
     advisorMemberHideTierLockedNav: input.hideTierLockedNav,
     advisorMemberSkipIntakeEnabled: input.skipIntake,
+    advisorMemberDocumentRequirementsEnabled: input.documentRequirements,
+    advisorMemberActionPlanEnabled: input.actionPlan,
   };
 }

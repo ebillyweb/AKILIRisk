@@ -15,6 +15,10 @@ export type PipelineClient = {
   firstName: string | null;
   lastName: string | null;
   email: string;
+  /** System-generated reference (CL-XXXX-XXXX); assigned before advisor display. */
+  clientReferenceCode: string | null;
+  /** When true, workspace UI uses Client CL-… references instead of email for clients without a legal name. */
+  pseudonymousWorkspaceLabeling: boolean;
   assignedAt: Date;
   stage: ClientWorkflowStage;
   progress: number;        // 0-100 percentage

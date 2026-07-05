@@ -98,6 +98,7 @@ function AssessmentHubPageContent() {
         allPillarsComplete: boolean;
         advisorPublishedProfile: boolean;
         includedPillars: string[];
+        actionPlanEnabled: boolean;
       }>;
     },
     staleTime: 30_000,
@@ -450,13 +451,15 @@ function AssessmentHubPageContent() {
                         <Button size="lg" onClick={() => router.push("/assessment/results")}>
                           View results
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          onClick={() => router.push("/dashboard/action-plan")}
-                        >
-                          View action plan
-                        </Button>
+                        {summaryAccess.actionPlanEnabled !== false ? (
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            onClick={() => router.push("/dashboard/action-plan")}
+                          >
+                            View action plan
+                          </Button>
+                        ) : null}
                       </>
                     ) : summaryAccess?.canViewRiskPreview ? (
                       <Button size="lg" onClick={() => router.push("/assessment/risk-preview")}>

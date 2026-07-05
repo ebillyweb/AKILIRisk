@@ -52,6 +52,7 @@ interface AdvisorSettingsTabsProps {
   passwordChangeRequired: boolean;
   changePasswordHref: string;
   householdProfilesEnabled: boolean;
+  showHouseholdProfilesPolicy?: boolean;
   showBrandingTab?: boolean;
 }
 
@@ -74,6 +75,7 @@ export function AdvisorSettingsTabs({
   passwordChangeRequired,
   changePasswordHref,
   householdProfilesEnabled,
+  showHouseholdProfilesPolicy = true,
   showBrandingTab = true,
 }: AdvisorSettingsTabsProps) {
   const router = useRouter();
@@ -163,16 +165,33 @@ export function AdvisorSettingsTabs({
           </div>
         </div>
 
-        <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight">Household profiles</h2>
-            <p className="text-sm text-muted-foreground">
-              Control whether clients can manage household members and receive personalized
-              assessment copy.
-            </p>
+        {showHouseholdProfilesPolicy ? (
+          <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight">Household profiles</h2>
+              <p className="text-sm text-muted-foreground">
+                Control whether clients can manage household members and receive personalized
+                assessment copy.
+              </p>
+            </div>
+            <HouseholdProfilesPolicyForm initialEnabled={householdProfilesEnabled} />
           </div>
-          <HouseholdProfilesPolicyForm initialEnabled={householdProfilesEnabled} />
-        </div>
+        ) : (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold tracking-tight">Household profiles</h2>
+                <p className="text-sm text-muted-foreground">
+              Firm owners and administrators manage household profiles under Firm → Access
+              control.
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="shrink-0">
+                <Link href="/advisor/settings/access-control">Access control</Link>
+              </Button>
+            </div>
+          </div>
+        )}
       </TabsContent>
 
       <TabsContent value="branding" className="mt-0 outline-none">
@@ -220,10 +239,10 @@ export function AdvisorSettingsTabs({
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold tracking-tight">PII policy</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Client data policy</h2>
               <p className="text-sm text-muted-foreground">
-                Configure which optional PII fields your future clients are asked for during
-                intake.
+                Workspace labeling (email vs Client reference) and optional intake
+                fields. Firm defaults live under Firm → Access control.
               </p>
             </div>
             <Button asChild variant="outline" size="sm" className="shrink-0">

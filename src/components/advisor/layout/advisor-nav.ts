@@ -14,6 +14,7 @@ import {
   Radio,
   Settings,
   Shield,
+  ShieldCheck,
   Sparkles,
   UserPlus,
   Users,
@@ -162,6 +163,12 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         href: "/advisor/settings/team",
         label: "Team management",
         icon: Users,
+        requiresEnterpriseTeam: true,
+      },
+      {
+        href: "/advisor/settings/access-control",
+        label: "Access control",
+        icon: ShieldCheck,
         requiresEnterpriseTeam: true,
       },
       {

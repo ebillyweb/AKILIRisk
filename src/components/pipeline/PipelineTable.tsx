@@ -6,8 +6,9 @@ import {
   getSortedRowModel,
   createColumnHelper,
   type SortingState,
+  type ColumnDef,
 } from "@tanstack/react-table";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
@@ -15,16 +16,20 @@ import { StageProgressBar } from "./StageIndicator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
-import { getStageLabel } from "@/lib/pipeline/status";
+import {
+  getAdvisorPipelineStageLabel,
+  resolveAdvisorPipelineDisplayStage,
+} from "@/lib/pipeline/status";
 import {
   formatPipelineClientRowTitle,
-  formatPipelineClientSecondaryLabel,
+  resolveAdvisorClientPipelineLabels,
 } from "@/lib/pipeline/client-display";
 import type { PipelineClient, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { cn } from "@/lib/utils";
 
 interface PipelineTableProps {
   clients: PipelineClient[];
+  showDocumentsColumn?: boolean;
 }
 
 const columnHelper = createColumnHelper<PipelineClient>();
@@ -52,143 +57,145 @@ function getStageBadgeVariant(stage: ClientWorkflowStage) {
   }
 }
 
-export function PipelineTable({ clients }: PipelineTableProps) {
+export function PipelineTable({
+  clients,
+  showDocumentsColumn = true,
+}: PipelineTableProps) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "lastActivity", desc: true },
   ]);
 
-  const [columnVisibility, setColumnVisibility] = useState<
-    Record<string, boolean>
-  >(() => {
-    if (typeof window !== "undefined") {
-      const isTablet = window.innerWidth < 1024;
-      return {
-        documents: !isTablet,
-      };
-    }
-    return { documents: true };
-  });
+  const columns = useMemo(() => {
+    const baseColumns: ColumnDef<PipelineClient, unknown>[] = [
+      columnHelper.accessor("name", {
+        header: "Client",
+        cell: (info) => {
+          const client = info.row.original;
+          const { headline, secondary } = resolveAdvisorClientPipelineLabels(client);
 
-  const columns = [
-    columnHelper.accessor("name", {
-      header: "Client",
-      cell: (info) => {
-        const client = info.row.original;
-        const displayName = client.name || "Unnamed Client";
-        const secondaryLabel = formatPipelineClientSecondaryLabel(client);
-
-        return (
-          <div className="-m-1 min-w-0 max-w-full rounded-md p-1">
-            <Link
-              href={`/advisor/pipeline/${client.id}`}
-              className="block transition-colors hover:bg-muted/50 rounded-md p-0"
-              title={formatPipelineClientRowTitle(client)}
-            >
-              <p className="truncate font-medium text-primary hover:underline">
-                {displayName}
-              </p>
-              <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                {secondaryLabel}
-              </p>
-              {client.staleScores || client.stalled ? (
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {client.staleScores ? (
-                    <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
-                      {STALE_SCORES_COPY.tableBadge}
-                    </Badge>
-                  ) : null}
-                  {client.stalled ? (
-                    <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
-                      Stalled
-                    </Badge>
-                  ) : null}
-                </div>
-              ) : null}
-            </Link>
-            {client.stage === "ASSESSMENT_IN_PROGRESS" &&
-            client.assessment?.id ? (
+          return (
+            <div className="-m-1 min-w-0 max-w-full rounded-md p-1">
               <Link
-                href={`/advisor/pipeline/${client.id}/assessment/${client.assessment.id}`}
-                className="mt-2 inline-flex text-xs font-medium text-primary hover:underline"
+                href={`/advisor/pipeline/${client.id}`}
+                className="block transition-colors hover:bg-muted/50 rounded-md p-0"
+                title={formatPipelineClientRowTitle(client)}
               >
-                Review assessment
+                <p className="truncate font-medium text-primary hover:underline">
+                  {headline}
+                </p>
+                {secondary ? (
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                    {secondary}
+                  </p>
+                ) : null}
+                {client.staleScores || client.stalled ? (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {client.staleScores ? (
+                      <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
+                        {STALE_SCORES_COPY.tableBadge}
+                      </Badge>
+                    ) : null}
+                    {client.stalled ? (
+                      <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
+                        Stalled
+                      </Badge>
+                    ) : null}
+                  </div>
+                ) : null}
               </Link>
-            ) : null}
-          </div>
-        );
-      },
-      enableSorting: true,
-    }),
-    columnHelper.accessor("stage", {
-      id: "stage",
-      header: "Stage",
-      cell: (info) => {
-        const stage = info.getValue();
-        const stageLabel = getStageLabel(stage);
-        return (
-          <div className="min-w-0 space-y-2">
-            <div className="min-w-0 overflow-hidden" title={stageLabel}>
-              <Badge
-                variant={getStageBadgeVariant(stage)}
-                className="max-w-full truncate text-[0.65rem] font-semibold uppercase tracking-wide"
-              >
-                {stageLabel}
-              </Badge>
             </div>
-            <StageProgressBar currentStage={stage} />
-          </div>
-        );
-      },
-      enableSorting: true,
-    }),
-    columnHelper.accessor("progress", {
-      header: "Progress",
-      cell: (info) => {
-        const progress = info.getValue();
-        return (
-          <div className="flex min-w-0 items-center gap-2">
-            <Progress value={progress} className="h-2 min-w-0 flex-1" />
-            <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-              {progress}%
+          );
+        },
+        enableSorting: true,
+      }),
+      columnHelper.accessor("stage", {
+        id: "stage",
+        header: "Stage",
+        cell: (info) => {
+          const stage = info.getValue();
+          const displayStage = resolveAdvisorPipelineDisplayStage(
+            stage,
+            showDocumentsColumn,
+          );
+          const stageLabel = getAdvisorPipelineStageLabel(stage, showDocumentsColumn);
+          return (
+            <div className="min-w-0 space-y-2">
+              <div className="min-w-0 overflow-hidden" title={stageLabel}>
+                <Badge
+                  variant={getStageBadgeVariant(displayStage)}
+                  className="max-w-full truncate text-[0.65rem] font-semibold uppercase tracking-wide"
+                >
+                  {stageLabel}
+                </Badge>
+              </div>
+              <StageProgressBar
+                currentStage={stage}
+                showDocumentsStage={showDocumentsColumn}
+              />
+            </div>
+          );
+        },
+        enableSorting: true,
+      }),
+      columnHelper.accessor("progress", {
+        header: "Progress",
+        cell: (info) => {
+          const progress = info.getValue();
+          return (
+            <div className="flex min-w-0 items-center gap-2">
+              <Progress value={progress} className="h-2 min-w-0 flex-1" />
+              <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                {progress}%
+              </span>
+            </div>
+          );
+        },
+        enableSorting: true,
+      }),
+      columnHelper.accessor("lastActivity", {
+        header: "Last activity",
+        cell: (info) => {
+          const date = info.getValue();
+          const label = formatDistanceToNow(date, { addSuffix: true });
+          return (
+            <span
+              className="block truncate text-sm text-foreground"
+              title={label}
+            >
+              {label}
             </span>
-          </div>
-        );
-      },
-      enableSorting: true,
-    }),
-    columnHelper.accessor("lastActivity", {
-      header: "Last activity",
-      cell: (info) => {
-        const date = info.getValue();
-        const label = formatDistanceToNow(date, { addSuffix: true });
-        return (
-          <span
-            className="block truncate text-sm text-foreground"
-            title={label}
-          >
-            {label}
-          </span>
-        );
-      },
-      enableSorting: true,
-    }),
-    columnHelper.accessor("documents", {
-      id: "documents",
-      header: "Docs",
-      cell: (info) => {
-        const docs = info.getValue();
-        if (docs.required === 0) {
-          return <span className="text-muted-foreground">—</span>;
-        }
-        return (
-          <span className="block truncate text-sm tabular-nums" title={`${docs.fulfilled}/${docs.required} documents`}>
-            {docs.fulfilled}/{docs.required}
-          </span>
-        );
-      },
-      enableSorting: false,
-    }),
-  ];
+          );
+        },
+        enableSorting: true,
+      }),
+    ];
+
+    if (showDocumentsColumn) {
+      baseColumns.push(
+        columnHelper.accessor("documents", {
+          id: "documents",
+          header: "Docs",
+          cell: (info) => {
+            const docs = info.getValue();
+            if (docs.required === 0) {
+              return <span className="text-muted-foreground">—</span>;
+            }
+            return (
+              <span
+                className="block truncate text-sm tabular-nums"
+                title={`${docs.fulfilled}/${docs.required} documents`}
+              >
+                {docs.fulfilled}/{docs.required}
+              </span>
+            );
+          },
+          enableSorting: false,
+        }),
+      );
+    }
+
+    return baseColumns;
+  }, [showDocumentsColumn]);
 
   const table = useReactTable({
     data: clients,
@@ -196,10 +203,8 @@ export function PipelineTable({ clients }: PipelineTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
-      columnVisibility,
     },
   });
 
@@ -222,10 +227,10 @@ export function PipelineTable({ clients }: PipelineTableProps) {
   }
 
   const columnWidths: Record<string, string> = {
-    name: "w-[34%]",
-    stage: "w-[22%]",
-    progress: "w-[16%]",
-    lastActivity: "w-[20%]",
+    name: showDocumentsColumn ? "w-[34%]" : "w-[38%]",
+    stage: showDocumentsColumn ? "w-[22%]" : "w-[24%]",
+    progress: showDocumentsColumn ? "w-[16%]" : "w-[18%]",
+    lastActivity: showDocumentsColumn ? "w-[20%]" : "w-[20%]",
     documents: "w-[8%]",
   };
 

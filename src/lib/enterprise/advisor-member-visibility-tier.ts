@@ -23,6 +23,8 @@ export const ENTERPRISE_MEMBER_VISIBILITY_TIER_FEATURE: Record<
   productTours: null,
   hideTierLockedNav: null,
   skipIntake: null,
+  documentRequirements: null,
+  actionPlan: null,
 };
 
 export type VisibilityOptionTierState = {
@@ -150,7 +152,14 @@ export function getVisibilityOptionTierState(
     return portfolioVisibilityTierState(moduleTier, flags);
   }
 
-  if (key === "productTours" || key === "hideTierLockedNav" || key === "skipIntake" || key === "assessmentLeads") {
+  if (
+    key === "productTours" ||
+    key === "hideTierLockedNav" ||
+    key === "skipIntake" ||
+    key === "documentRequirements" ||
+    key === "actionPlan" ||
+    key === "assessmentLeads"
+  ) {
     return {
       available: true,
       lockBadge: null,
@@ -160,9 +169,13 @@ export function getVisibilityOptionTierState(
           ? "Applies to sidebar links for features above your firm's module tier."
           : key === "skipIntake"
             ? "Team members can skip intake on invites and in the client pipeline."
-            : key === "assessmentLeads"
-              ? "Team members can view and follow up on AKILI-assigned assessment leads."
-              : "Included on all module tiers.",
+            : key === "documentRequirements"
+              ? "Team members can request and track mandatory client documents."
+              : key === "actionPlan"
+                ? "Clients see the action plan journey step and portal page when enabled."
+              : key === "assessmentLeads"
+                ? "Team members can view and follow up on AKILI-assigned assessment leads."
+                : "Included on all module tiers.",
     };
   }
 
@@ -208,5 +221,7 @@ export function clampVisibilityToModuleTier(
     productTours: visibility.productTours,
     hideTierLockedNav: visibility.hideTierLockedNav,
     skipIntake: visibility.skipIntake,
+    documentRequirements: visibility.documentRequirements,
+    actionPlan: visibility.actionPlan,
   };
 }

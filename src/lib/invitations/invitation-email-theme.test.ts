@@ -20,35 +20,25 @@ describe("resolveInvitationEmailTheme (US-1B)", () => {
     expect(theme.showPlatformAttribution).toBe(true);
   });
 
-  it("shows logo when branding enabled and HTTPS logo URL present", () => {
+  it("omits advisor logos when branding is enabled", () => {
     const theme = resolveInvitationEmailTheme({
       brandingEnabled: true,
       advancedBrandingEnabled: false,
       logoUrl: "https://cdn.example.com/logo.png",
     });
 
-    expect(theme.showAdvisorLogo).toBe(true);
-    expect(theme.logoUrl).toBe("https://cdn.example.com/logo.png");
+    expect(theme.showAdvisorLogo).toBe(false);
+    expect(theme.logoUrl).toBeUndefined();
     expect(theme.showPlatformAttribution).toBe(false);
   });
 
-  it("shows logo when branding enabled and only private S3 logo is stored", () => {
+  it("omits logos even when a private S3 logo is stored", () => {
     const theme = resolveInvitationEmailTheme({
       brandingEnabled: true,
       advancedBrandingEnabled: false,
       logoS3Key: "advisors/adv-1/logos/logo.png",
       logoUrl:
         "https://akili-advisor-assets.s3.us-east-2.amazonaws.com/advisors/adv-1/logos/logo.png",
-    });
-
-    expect(theme.showAdvisorLogo).toBe(true);
-  });
-
-  it("omits logo when branding enabled but URL is not HTTPS", () => {
-    const theme = resolveInvitationEmailTheme({
-      brandingEnabled: true,
-      advancedBrandingEnabled: true,
-      logoUrl: "http://insecure.example/logo.png",
     });
 
     expect(theme.showAdvisorLogo).toBe(false);

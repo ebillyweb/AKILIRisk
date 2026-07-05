@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export function AdvisorQuickActions({
   subscriptionTier,
   implementationTrackingEnabled = true,
+  documentRequirementsEnabled = true,
 }: {
   subscriptionTier: SubscriptionTier;
   implementationTrackingEnabled?: boolean;
+  documentRequirementsEnabled?: boolean;
 }) {
   return (
     <Card className="border-border/70 shadow-sm">
@@ -33,13 +35,15 @@ export function AdvisorQuickActions({
           icon={ClipboardList}
           currentTier={subscriptionTier}
         />
-        <GatedQuickActionButton
-          href="/advisor/pipeline?documentsNeeded=1"
-          label="Document Requests"
-          description="Outstanding mandatory uploads"
-          icon={Mail}
-          currentTier={subscriptionTier}
-        />
+        {documentRequirementsEnabled ? (
+          <GatedQuickActionButton
+            href="/advisor/pipeline?documentsNeeded=1"
+            label="Document Requests"
+            description="Outstanding mandatory uploads"
+            icon={Mail}
+            currentTier={subscriptionTier}
+          />
+        ) : null}
         {implementationTrackingEnabled ? (
           <GatedQuickActionButton
             href="/advisor/engagements"

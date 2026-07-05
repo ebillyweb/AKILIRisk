@@ -7,7 +7,7 @@ import { SignInPage } from "../page-objects/SignInPage";
  */
 test.describe("client dashboard", () => {
   test("dashboard reflects submitted intake state", async ({ page }) => {
-    await new SignInPage(page).signInAs("client");
+    await new SignInPage(page).signInAs("clientUnbranded");
 
     expect(new URL(page.url()).pathname).toBe("/dashboard");
 
@@ -15,6 +15,8 @@ test.describe("client dashboard", () => {
     await expect(
       page.getByRole("heading", { name: /Explore your portal/i })
     ).toBeVisible();
+
+    await expect(page.getByTestId("dashboard-footer")).toBeVisible();
 
     const intakeStatusPattern =
       /^(Approved|In review|Pending review|Update needed|Complete|In progress|Not started|Waived by advisor)$/;

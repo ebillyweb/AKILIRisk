@@ -384,9 +384,9 @@ export const FIELD_HELP = {
       "When off, clients won't manage household members and assessments use generic copy. Existing member data is kept.",
   },
   "pii-policy-toggle": {
-    title: "PII field",
+    title: "Client data field",
     description:
-      "Controls whether new clients are asked for this optional field during intake. Existing consented data stays visible.",
+      "Controls whether new clients are asked for this optional field. Turning off Collect client legal name enables pseudonymous Client CL-… labeling in your workspace.",
   },
   "branding-tagline": {
     title: "Tagline",

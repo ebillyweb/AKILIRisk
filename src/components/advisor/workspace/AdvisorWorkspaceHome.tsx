@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import type { getAdvisorWorkspaceHomeData } from "@/lib/actions/advisor-workspace-actions";
 import { advisorWorkspaceTitle } from "@/lib/advisor/advisor-workspace-label";
+import { cn } from "@/lib/utils";
 import { MetricCard } from "./MetricCard";
 import type {
   AdvisorActivityItem,
@@ -92,18 +93,33 @@ function IntelligenceCard({ item }: { item: AdvisorIntelligenceHighlight }) {
   );
 }
 
-function PipelineSnapshot({ metrics, pendingInvitations }: { metrics: PipelineMetrics; pendingInvitations: number }) {
+function PipelineSnapshot({
+  metrics,
+  pendingInvitations,
+  documentRequirementsEnabled = true,
+}: {
+  metrics: PipelineMetrics;
+  pendingInvitations: number;
+  documentRequirementsEnabled?: boolean;
+}) {
   const byStage = metrics.byStage;
   const activeInFlight =
     (byStage.INTAKE_IN_PROGRESS ?? 0) + (byStage.ASSESSMENT_IN_PROGRESS ?? 0);
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <div
+      className={cn(
+        "grid grid-cols-2 gap-2 sm:grid-cols-3",
+        documentRequirementsEnabled ? "lg:grid-cols-6" : "lg:grid-cols-5",
+      )}
+    >
       <MetricCard label="Assigned clients" value={metrics.total} />
       <MetricCard label="Pending invitations" value={pendingInvitations} />
       <MetricCard label="Awaiting review" value={byStage.INTAKE_COMPLETE ?? 0} />
       <MetricCard label="Intake / assessment active" value={activeInFlight} />
-      <MetricCard label="Need documents" value={metrics.documentsNeeded} />
+      {documentRequirementsEnabled ? (
+        <MetricCard label="Need documents" value={metrics.documentsNeeded} />
+      ) : null}
       <MetricCard label="Stalled (7+ days)" value={metrics.stalled} />
     </div>
   );
@@ -127,6 +143,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
     implementationTrackingEnabled,
     memberPortfolioVisible,
     memberEngagementsVisible,
+    memberDocumentRequirementsVisible,
   } = data;
   const firstName = profile.user.firstName;
   const firmName = profile.firmName;
@@ -247,6 +264,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
             <PipelineSnapshot
               metrics={metrics}
               pendingInvitations={data.pendingInvitationsCount}
+              documentRequirementsEnabled={memberDocumentRequirementsVisible}
             />
           </CardContent>
         </Card>
@@ -289,6 +307,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
         implementationTrackingEnabled={
           implementationTrackingEnabled && memberEngagementsVisible
         }
+        documentRequirementsEnabled={memberDocumentRequirementsVisible}
       />
     </div>
   );

@@ -14,6 +14,7 @@ import {
   isEnterpriseMemberVisibilityEnabled,
   resolveEnterpriseMemberVisibilityContext,
 } from "@/lib/enterprise/advisor-member-visibility";
+import { getAdvisorClientDataPolicyContext } from "@/lib/enterprise/enterprise-client-data-policy";
 
 export default async function InvitationsPage({
   searchParams,
@@ -32,11 +33,14 @@ export default async function InvitationsPage({
     requireAdvisorRole(),
     getInvitationsAction(filters, { page, pageSize }),
   ]);
-  const [profile, clientLimitStatus, visibilityContext] = await Promise.all([
+  const [profile, clientLimitStatus, visibilityContext, policyContext] = await Promise.all([
     getAdvisorProfileOrThrow(userId),
     getAdvisorClientLimitStatus(userId),
     resolveEnterpriseMemberVisibilityContext(userId),
+    getAdvisorClientDataPolicyContext(userId),
   ]);
+  const pseudonymousWorkspaceLabeling =
+    policyContext.effective.pseudonymousWorkspaceLabeling;
   const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(profile.id);
   const skipIntakeEnabled = isEnterpriseMemberVisibilityEnabled(
     visibilityContext,
@@ -72,11 +76,14 @@ export default async function InvitationsPage({
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Invitation History</h2>
         <Suspense fallback={null}>
-          <InvitationListFilters />
+          <InvitationListFilters
+            pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
+          />
         </Suspense>
         <InvitationTable
           invitations={invitations}
           hasActiveFilters={hasActiveFilters}
+          pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
         />
         <InvitationListPagination
           page={page}

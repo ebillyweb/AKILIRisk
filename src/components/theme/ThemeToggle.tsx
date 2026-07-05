@@ -16,8 +16,12 @@ export function ThemeToggle({
   /** e.g. match outline buttons on advisor-branded shell headers */
   style?: CSSProperties;
 }) {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, themeLocked } = useTheme();
   const isDark = theme === "dark";
+
+  if (themeLocked) {
+    return null;
+  }
 
   return (
     <Button

@@ -38,6 +38,7 @@ import {
   type EligiblePiiField,
   type PiiPolicy,
 } from "@/lib/advisor/pii-policy";
+import { getAdvisorClientDataPolicyContext } from "@/lib/enterprise/enterprise-client-data-policy";
 
 export type PiiPolicyActionResult<T> =
   | { ok: true; data: T }
@@ -47,7 +48,8 @@ export interface UpdatePiiPolicyInput {
   /** Partial map of field → desired boolean. Keys must be drawn from
    *  ELIGIBLE_PII_FIELDS; unknown keys cause an `invalid_field` rejection.
    *  Fields omitted from the input retain their current value. */
-  fields: Partial<Record<EligiblePiiField, boolean>>;
+  fields?: Partial<Record<EligiblePiiField, boolean>>;
+  pseudonymousWorkspaceLabeling?: boolean;
 }
 
 export async function updatePiiPolicy(
@@ -76,11 +78,23 @@ export async function updatePiiPolicy(
     }
   }
 
+  if (
+    input.pseudonymousWorkspaceLabeling !== undefined &&
+    typeof input.pseudonymousWorkspaceLabeling !== "boolean"
+  ) {
+    return {
+      ok: false,
+      code: "invalid_field",
+      message: "pseudonymousWorkspaceLabeling must be a boolean.",
+    };
+  }
+
   // 3. Read current policy + compute the diff.
   const before = parsePiiPolicy(profile.piiPolicy);
   const after: PiiPolicy = {
     schemaVersion: 1,
     fields: { ...before.fields },
+    pseudonymousWorkspaceLabeling: before.pseudonymousWorkspaceLabeling,
   };
   const flips: Array<{ field: EligiblePiiField; from: boolean; to: boolean }> = [];
 
@@ -97,8 +111,37 @@ export async function updatePiiPolicy(
     }
   }
 
+  const labelingChanged =
+    typeof input.pseudonymousWorkspaceLabeling === "boolean" &&
+    input.pseudonymousWorkspaceLabeling !== before.pseudonymousWorkspaceLabeling;
+  if (labelingChanged) {
+    after.pseudonymousWorkspaceLabeling = input.pseudonymousWorkspaceLabeling!;
+  }
+
+  const policyContext = await getAdvisorClientDataPolicyContext(session.userId);
+  if (policyContext.effective.lockedByEnterprise) {
+    if (labelingChanged) {
+      return {
+        ok: false,
+        code: "enterprise_locked",
+        message:
+          "Your firm locks workspace client labeling. Contact a firm owner or administrator to change the firm default.",
+      };
+    }
+    for (const flip of flips) {
+      if (flip.field === "User.name") {
+        return {
+          ok: false,
+          code: "enterprise_locked",
+          message:
+            "Your firm locks client legal name collection. Contact a firm owner or administrator to change the firm default.",
+        };
+      }
+    }
+  }
+
   // 4. Idempotent fast-path: nothing changed → no DB write, no audit rows.
-  if (flips.length === 0) {
+  if (flips.length === 0 && !labelingChanged) {
     return { ok: true, data: { updated: 0, policy: before } };
   }
 
@@ -139,8 +182,14 @@ export async function updatePiiPolicy(
     entityId: profile.id,
     beforeData: before,
     afterData: after,
-    metadata: { changedFieldCount: flips.length },
+    metadata: {
+      changedFieldCount: flips.length,
+      pseudonymousWorkspaceLabelingChanged: labelingChanged,
+    },
   });
 
-  return { ok: true, data: { updated: flips.length, policy: after } };
+  return {
+    ok: true,
+    data: { updated: flips.length + (labelingChanged ? 1 : 0), policy: after },
+  };
 }

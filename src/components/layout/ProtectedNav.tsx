@@ -57,6 +57,10 @@ interface ProtectedNavProps {
   assessmentUnlockedForClient?: boolean;
   /** Hide client-only Profiles & Roles link when feature is unavailable. */
   hideProfilesNav?: boolean;
+  /** Hide Documents when the assigned firm's document requirements toggle is off. */
+  hideDocumentsNav?: boolean;
+  /** Hide Intake when the advisor waived the client intake interview. */
+  hideIntakeNav?: boolean;
   /** Client portal + assigned advisor: match `BrandingPreview` nav (primary text, light active pill) */
   clientBrandHex?: PreviewBrandHex | null;
   /** When omitted for advisors, both features are shown (backward compatible). */
@@ -69,6 +73,8 @@ export function ProtectedNav({
   restrictNavToIntake = false,
   assessmentUnlockedForClient = false,
   hideProfilesNav = false,
+  hideDocumentsNav = false,
+  hideIntakeNav = false,
   clientBrandHex = null,
   advisorFeatureFlags = null,
 }: ProtectedNavProps) {
@@ -98,10 +104,18 @@ export function ProtectedNav({
     : advisorNavItems !== undefined
       ? advisorNavItems
       : CLIENT_NAV_ITEMS;
-  const items =
-    hideProfilesNav && !showAdvisor && !showAdmin
-      ? baseItems.filter((item) => item.href !== "/profiles")
-      : baseItems;
+  const items = baseItems.filter((item) => {
+    if (hideProfilesNav && !showAdvisor && !showAdmin && item.href === "/profiles") {
+      return false;
+    }
+    if (hideDocumentsNav && !showAdvisor && !showAdmin && item.href === "/documents") {
+      return false;
+    }
+    if (hideIntakeNav && !showAdvisor && !showAdmin && item.href === "/intake") {
+      return false;
+    }
+    return true;
+  });
 
   // When restrictNavToIntake (client, intake not submitted), only Intake is enabled
   const isClientRestricted = restrictNavToIntake && !showAdvisor && !showAdmin;

@@ -27,7 +27,8 @@ import {
 } from "@/lib/auth/magic-link";
 import { decryptUserEmail, findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
 import { shortEmailHash } from "@/lib/audit/redact";
-import { sendMagicLinkEmail } from "@/lib/email";
+import { buildClientMagicLinkVerifyUrl, sendMagicLinkEmail } from "@/lib/email";
+import { resolveClientEmailContext } from "@/lib/client/client-email-context";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 
 export type ActionResult<T = void> =
@@ -50,21 +51,7 @@ const reissueSchema = z.object({
   clientId: z.string().cuid(),
 });
 
-function resolvePublicBaseUrl(): string | null {
-  const configured = process.env.NEXT_PUBLIC_URL?.trim();
-  if (configured) return configured;
-  if (process.env.NODE_ENV === "production") {
-    console.error(
-      "NEXT_PUBLIC_URL is not configured; refusing to send magic-link with localhost link"
-    );
-    return null;
-  }
-  return "http://localhost:3000";
-}
-
-/** Verify the calling advisor is assigned (status=ACTIVE) to the client.
- *  Returns the assignment + advisor profile + client snapshot, or a
- *  structured failure. Mirrors the gate in advisor-intake-waiver-actions. */
+/** Verify the calling advisor is assigned (status=ACTIVE) to the client. */
 async function gateAssignedClient(clientId: string) {
   const { userId, role, email: actorEmail } = await requireAdvisorRole();
   const profile = await getAdvisorProfileOrThrow(userId);
@@ -78,7 +65,7 @@ async function gateAssignedClient(clientId: string) {
   // Round-11 commit 2.4b: column dropped; only emailCiphertext.
   const client = await prisma.user.findUnique({
     where: { id: clientId },
-    select: { id: true, emailCiphertext: true, role: true, deletedAt: true },
+    select: { id: true, emailCiphertext: true, role: true, deletedAt: true, name: true },
   });
   if (!client || client.deletedAt) return { success: false as const, error: "Client not found." };
   if (client.role !== "USER") {
@@ -183,20 +170,25 @@ export async function reissueClientMagicLink(
     const gate = await gateAssignedClient(parsed.clientId);
     if (!gate.success) return fail(gate.error);
 
-    const { actor, client } = gate;
-    const baseUrl = resolvePublicBaseUrl();
-    if (!baseUrl) return fail("Sign-in is temporarily unavailable.");
+    const { actor, client, advisorProfileId } = gate;
 
-    // Round-11 commit 2.4a: derive plaintext from ciphertext rather
-    // than the (now-optional) client.email column.
     const clientEmail = decryptUserEmail(client.emailCiphertext);
 
     await invalidatePriorMagicLinkTokens(clientEmail);
     const issued = await issueMagicLinkToken(clientEmail);
-    const verifyUrl = `${baseUrl}/auth/magic-link/verify?token=${issued.rawToken}`;
-    // Fire-and-forget the email so the action returns fast; the email
-    // helper has its own try/catch and never throws.
-    void sendMagicLinkEmail(clientEmail, verifyUrl);
+    const emailContext = await resolveClientEmailContext({
+      userId: client.id,
+      email: clientEmail,
+      advisorProfileId,
+    });
+    const verifyUrl = buildClientMagicLinkVerifyUrl(
+      emailContext,
+      issued.rawToken,
+    );
+    void sendMagicLinkEmail(clientEmail, verifyUrl, {
+      context: emailContext,
+      clientName: client.name,
+    });
 
     // metadata.email — auto-redacted to { emailHash: <hash> } by the
     // redactor's email-suffix rule, so it survives the bake window

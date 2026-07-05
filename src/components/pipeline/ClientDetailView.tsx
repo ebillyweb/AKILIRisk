@@ -22,16 +22,20 @@ import { WorkflowTimeline } from "./WorkflowTimeline";
 import { DocumentRequirements } from "./DocumentRequirements";
 import { ClientAuthControls } from "./ClientAuthControls";
 import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
-import { getStageLabel } from "@/lib/pipeline/status";
+import { getAdvisorPipelineStageLabel, resolveAdvisorPipelineDisplayStage } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
+import { resolveAdvisorClientPipelineLabels } from "@/lib/pipeline/client-display";
+import { PSEUDONYMOUS_CLIENT_LABELING_NOTE } from "@/lib/advisor/pii-policy";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { TemplateList } from "@/components/reports/TemplateList";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
   canSkipIntake?: boolean;
+  documentRequirementsEnabled?: boolean;
+  actionPlanEnabled?: boolean;
 }
 
 function getStageBadgeVariant(stage: ClientWorkflowStage) {
@@ -74,19 +78,15 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
   );
 }
 
-function clientHasDistinctName(name: string, email: string): boolean {
-  const trimmed = name.trim();
-  if (!trimmed || trimmed === "Unnamed Client") return false;
-  if (trimmed.includes("@")) return false;
-  return trimmed.toLowerCase() !== email.toLowerCase();
-}
-
-export function ClientDetailView({ detail, canSkipIntake = true }: ClientDetailViewProps) {
+export function ClientDetailView({
+  detail,
+  canSkipIntake = true,
+  documentRequirementsEnabled = true,
+  actionPlanEnabled = true,
+}: ClientDetailViewProps) {
   const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker } = detail;
   const assessmentDomains = assessmentDomainPicker.domains;
-  const displayName = client.name || "Unnamed Client";
-  const hasDistinctName = clientHasDistinctName(displayName, client.email);
-  const headline = hasDistinctName ? displayName : client.email;
+  const clientLabels = resolveAdvisorClientPipelineLabels(client);
   const assignmentActive = advisorAssignment.status === "ACTIVE";
   const intakeWaived = advisorAssignment.intakeWaivedAt != null;
   const intakeSubmitted = isIntakeFinished(intakeDetails);
@@ -96,6 +96,14 @@ export function ClientDetailView({ detail, canSkipIntake = true }: ClientDetailV
     client.awaitingIntakeReview && !assessmentCompleted;
   const intakeReviewId =
     intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    client.stage,
+    documentRequirementsEnabled,
+  );
+  const stageLabel = getAdvisorPipelineStageLabel(
+    client.stage,
+    documentRequirementsEnabled,
+  );
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -122,21 +130,27 @@ export function ClientDetailView({ detail, canSkipIntake = true }: ClientDetailV
       <div className="mb-8" data-tour="pipeline-client-header">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">{headline}</h1>
-            <Badge variant={getStageBadgeVariant(client.stage)} className="text-xs font-semibold uppercase tracking-wide">
-              {getStageLabel(client.stage)}
+            <h1 className="text-2xl font-semibold tracking-tight">{clientLabels.headline}</h1>
+            <Badge variant={getStageBadgeVariant(displayStage)} className="text-xs font-semibold uppercase tracking-wide">
+              {stageLabel}
             </Badge>
           </div>
 
           <p className="text-sm text-muted-foreground">
             {[
-              hasDistinctName ? client.email : null,
+              clientLabels.metaEmail,
               `Assigned ${format(client.assignedAt, "MMM d, yyyy")}`,
               `Active ${formatDistanceToNow(client.lastActivity, { addSuffix: true })}`,
             ]
               .filter(Boolean)
               .join(" · ")}
           </p>
+
+          {clientLabels.pseudonymous ? (
+            <p className="text-sm leading-snug text-muted-foreground">
+              {PSEUDONYMOUS_CLIENT_LABELING_NOTE}
+            </p>
+          ) : null}
 
           <div className="flex items-center gap-3 pt-1">
             <Progress
@@ -162,7 +176,11 @@ export function ClientDetailView({ detail, canSkipIntake = true }: ClientDetailV
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <WorkflowTimeline events={timeline} currentStage={client.stage} />
+              <WorkflowTimeline
+                events={timeline}
+                currentStage={client.stage}
+                documentRequirementsEnabled={documentRequirementsEnabled}
+              />
             </CardContent>
           </Card>
 
@@ -466,11 +484,15 @@ export function ClientDetailView({ detail, canSkipIntake = true }: ClientDetailV
               — email reassignment + magic-link re-issue. Server actions
               ownership-gated through ClientAdvisorAssignment. */}
           {assignmentActive ? (
-            <ClientAuthControls clientId={client.id} currentEmail={client.email} />
+            <ClientAuthControls
+              clientId={client.id}
+              currentEmail={client.email}
+              pseudonymousLabeling={clientLabels.pseudonymous}
+            />
           ) : null}
 
           {/* Document Requirements */}
-          {assignmentActive ? (
+          {assignmentActive && documentRequirementsEnabled ? (
             <div data-tour="pipeline-documents">
               <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
             </div>
@@ -503,14 +525,14 @@ export function ClientDetailView({ detail, canSkipIntake = true }: ClientDetailV
                 </Button>
               )}
 
-              {assessmentDetails?.completedAt && (
+              {assessmentDetails?.completedAt && actionPlanEnabled ? (
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <Link href={`/advisor/clients/${client.id}/guidance`}>
                     <ClipboardList className="w-4 h-4 mr-2" />
                     Client Guidance
                   </Link>
                 </Button>
-              )}
+              ) : null}
 
               {/* §4.5 commit 3: link to the versioned report view instead
                   of inline-downloading the latest published. The list page

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
 import { redirect } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { isClientActionPlanEnabledForUser } from "@/lib/client/client-action-plan-visibility.server";
 import { getClientActionPlan, getActionPlanTrackingContext } from "@/lib/actions/client-action-plan-actions";
 import { StrategicActionPlan } from "@/components/action-plan/StrategicActionPlan";
 
@@ -18,6 +19,11 @@ export default async function ActionPlanPage() {
   }
   if (isPlatformAdminRole(role)) {
     redirect("/admin");
+  }
+
+  const actionPlanEnabled = await isClientActionPlanEnabledForUser(session.user.id);
+  if (!actionPlanEnabled) {
+    redirect("/dashboard");
   }
 
   const [result, trackingContext] = await Promise.all([

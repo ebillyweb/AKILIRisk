@@ -23,6 +23,7 @@ import {
   resolvePortfolioScope,
 } from "@/lib/enterprise/portfolio-access";
 import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
+import { resolveClientReferenceCode } from "@/lib/client/client-reference-code.server";
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -267,6 +268,17 @@ export async function getClientPipeline(
     responseCountByInterview.set(row.interviewId, row._count._all);
   }
 
+  const referenceCodeByClientId = new Map<string, string>();
+  await Promise.all(
+    assignments.map(async (assignment) => {
+      const code = await resolveClientReferenceCode(
+        assignment.client.id,
+        assignment.client.clientReferenceCode,
+      );
+      referenceCodeByClientId.set(assignment.client.id, code);
+    }),
+  );
+
   // ── Per-client transform — synchronous now ──────────────────────────────
   const clients: PipelineClient[] = assignments.map((assignment) => {
     const client = assignment.client;
@@ -353,6 +365,8 @@ export async function getClientPipeline(
       firstName: client.firstName,
       lastName: client.lastName,
       email: clientEmail,
+      clientReferenceCode: referenceCodeByClientId.get(client.id)!,
+      pseudonymousWorkspaceLabeling: advisorPolicy.pseudonymousWorkspaceLabeling,
       assignedAt: assignment.assignedAt,
       stage,
       progress: computeProgress(stage),
@@ -539,6 +553,10 @@ export async function getClientDetail(
   );
   const clientEmail = clientIdentity.email;
   const clientDisplayName = clientIdentity.name;
+  const clientReferenceCode = await resolveClientReferenceCode(
+    client.id,
+    client.clientReferenceCode,
+  );
 
   // Fetch invitation data
   const invitation = await prisma.inviteCode.findFirst({
@@ -713,6 +731,8 @@ export async function getClientDetail(
     firstName: client.firstName,
     lastName: client.lastName,
     email: clientEmail,
+    clientReferenceCode,
+    pseudonymousWorkspaceLabeling: advisorPolicy.pseudonymousWorkspaceLabeling,
     assignedAt: assignment.assignedAt,
     stage,
     progress: computeProgress(stage),

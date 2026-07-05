@@ -22,6 +22,8 @@ describe("isVisibilityOptionAtModuleTier", () => {
     expect(isVisibilityOptionAtModuleTier("productTours", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("hideTierLockedNav", "ESSENTIALS")).toBe(true);
     expect(isVisibilityOptionAtModuleTier("skipIntake", "ESSENTIALS")).toBe(true);
+    expect(isVisibilityOptionAtModuleTier("documentRequirements", "ESSENTIALS")).toBe(true);
+    expect(isVisibilityOptionAtModuleTier("actionPlan", "ESSENTIALS")).toBe(true);
   });
 
   it("blocks methodology below Professional", () => {
@@ -112,6 +114,8 @@ describe("clampVisibilityToModuleTier", () => {
           productTours: true,
           hideTierLockedNav: true,
           skipIntake: true,
+          documentRequirements: true,
+          actionPlan: true,
         },
         "ESSENTIALS",
       ),
@@ -124,6 +128,8 @@ describe("clampVisibilityToModuleTier", () => {
       productTours: true,
       hideTierLockedNav: true,
       skipIntake: true,
+      documentRequirements: true,
+      actionPlan: true,
     });
   });
 });

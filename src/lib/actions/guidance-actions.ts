@@ -18,6 +18,7 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
+import { assertAdvisorCanManageActionPlan } from "@/lib/enterprise/advisor-member-visibility";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { transitionRecommendationStatus } from "@/lib/recommendations/solution-lifecycle";
 import {
@@ -175,6 +176,7 @@ export async function includeInActionPlan(
 ): Promise<ActionResult<{ results: Array<{ id: string; success: boolean; error?: string }> }>> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertAdvisorCanManageActionPlan(userId);
     const parsed = includeSchema.parse(input);
 
     const { valid, unauthorized } = await verifyAdvisorOwnsRecommendations(

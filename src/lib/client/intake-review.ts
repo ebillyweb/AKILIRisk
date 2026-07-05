@@ -27,6 +27,16 @@ export type ClientIntakeReviewPageData = {
   responses: ClientIntakeReviewResponse[];
 };
 
+/** True when the client has intake interview content for the read-only review page. */
+export async function clientHasIntakeReviewContent(
+  clientUserId: string,
+): Promise<boolean> {
+  const interviewId = await findInterviewIdForClientReview(clientUserId);
+  if (!interviewId) return false;
+  const interview = await getIntakeInterview(clientUserId, interviewId);
+  return interview != null;
+}
+
 async function findInterviewIdForClientReview(
   clientUserId: string,
 ): Promise<string | null> {

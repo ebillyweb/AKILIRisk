@@ -52,6 +52,16 @@ const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] =
     },
   },
   {
+    path: "/documents",
+    config: {
+      icon: "file-text",
+      kicker: "Document collection",
+      title: "Documents",
+      subtitle:
+        "Upload requested files and track what your advisor still needs from you",
+    },
+  },
+  {
     path: "/profiles",
     config: {
       icon: "users",

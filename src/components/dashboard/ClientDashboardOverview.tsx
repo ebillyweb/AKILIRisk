@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -33,6 +34,9 @@ export type JourneyStep = {
   label: string;
   state: JourneyStepState;
   detail: string;
+  href: string;
+  disabled?: boolean;
+  disabledReason?: string;
 };
 
 export type DashboardDestination = {
@@ -49,11 +53,13 @@ export type DashboardDestination = {
 };
 
 type Props = {
-  firstName: string;
   headline: string;
   subheadline: string;
   journeySteps: JourneyStep[];
   destinations: DashboardDestination[];
+  /** Hides the “Explore your portal” destination grid on white-label dashboards. */
+  hideExplorePortalSection?: boolean;
+  deliverableBanner?: ReactNode;
 };
 
 function journeyStepClasses(state: JourneyStepState): string {
@@ -71,34 +77,80 @@ function journeyStepClasses(state: JourneyStepState): string {
   }
 }
 
+function journeyTrackerGridClass(stepCount: number): string {
+  if (stepCount <= 1) {
+    return "grid gap-3 grid-cols-1";
+  }
+  if (stepCount === 2) {
+    return "grid gap-3 sm:grid-cols-2";
+  }
+  if (stepCount === 3) {
+    return "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
+  }
+  return "grid gap-3 sm:grid-cols-2 xl:grid-cols-4";
+}
+
 function JourneyTracker({ steps }: { steps: JourneyStep[] }) {
   return (
     <ol
-      className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      className={journeyTrackerGridClass(steps.length)}
       aria-label="Assessment journey"
       data-testid="dashboard-journey"
+      data-journey-step-count={steps.length}
     >
-      {steps.map((step, index) => (
-        <li
-          key={step.id}
-          className={cn(
-            "rounded-xl border px-4 py-3",
-            journeyStepClasses(step.state)
-          )}
-          data-journey-step={step.id}
-          data-journey-state={step.state}
-        >
-          <div className="flex items-center gap-2">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80 text-xs font-semibold tabular-nums">
-              {index + 1}
-            </span>
-            <p className="text-sm font-semibold">{step.label}</p>
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            {step.detail}
-          </p>
-        </li>
-      ))}
+      {steps.map((step, index) => {
+        const inner = (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80 text-xs font-semibold tabular-nums">
+                {index + 1}
+              </span>
+              <p className="text-sm font-semibold">{step.label}</p>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              {step.detail}
+            </p>
+          </>
+        );
+
+        const className = cn(
+          "rounded-xl border px-4 py-3 transition-colors",
+          journeyStepClasses(step.state),
+          !step.disabled && "hover:border-primary/40 hover:bg-primary/5",
+        );
+
+        if (step.disabled) {
+          return (
+            <li
+              key={step.id}
+              className={className}
+              data-journey-step={step.id}
+              data-journey-state={step.state}
+              aria-disabled="true"
+              title={step.disabledReason ?? "This step is not available yet."}
+            >
+              {inner}
+            </li>
+          );
+        }
+
+        return (
+          <li key={step.id}>
+            <Link
+              href={step.href}
+              className={cn(
+                className,
+                "block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              )}
+              data-journey-step={step.id}
+              data-journey-state={step.state}
+              data-testid={`dashboard-journey-${step.id}`}
+            >
+              {inner}
+            </Link>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -173,21 +225,18 @@ function DestinationCard({
 }
 
 export function ClientDashboardOverview({
-  firstName,
   headline,
   subheadline,
   journeySteps,
   destinations,
+  hideExplorePortalSection = false,
+  deliverableBanner,
 }: Props) {
   return (
     <div className="space-y-6 sm:space-y-8">
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
         <div className="space-y-5">
           <div className="space-y-2">
-            <p className="text-sm text-foreground/80">
-              Welcome back,{" "}
-              <span className="font-medium text-foreground">{firstName}</span>
-            </p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               {headline}
             </h2>
@@ -196,33 +245,42 @@ export function ClientDashboardOverview({
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3" data-testid="dashboard-journey-section">
             <p className="editorial-kicker">Your journey</p>
             <JourneyTracker steps={journeySteps} />
           </div>
+
+          {deliverableBanner ? (
+            <div data-testid="dashboard-deliverable-banner">{deliverableBanner}</div>
+          ) : null}
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="space-y-1">
-          <p className="editorial-kicker">Where to go next</p>
-          <h3 className="text-2xl font-semibold text-foreground">
-            Explore your portal
-          </h3>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            This dashboard is your home base. Open a section below for detailed
-            progress, questionnaires, results, and account tools.
-          </p>
-        </div>
+      {!hideExplorePortalSection ? (
+        <section className="space-y-4">
+          <div className="space-y-1">
+            <p className="editorial-kicker">Where to go next</p>
+            <h3 className="text-2xl font-semibold text-foreground">
+              Explore your portal
+            </h3>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              This dashboard is your home base. Open a section below for detailed
+              progress, questionnaires, results, and account tools.
+            </p>
+          </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {destinations.map((destination) => (
-            <DestinationCard key={destination.id} destination={destination} />
-          ))}
-        </div>
-      </section>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {destinations.map((destination) => (
+              <DestinationCard key={destination.id} destination={destination} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-      <section className="rounded-[1.25rem] border section-divider bg-muted/20 px-4 py-4 sm:px-5">
+      <section
+        className="rounded-[1.25rem] border section-divider bg-muted/20 px-4 py-4 sm:px-5"
+        data-testid="dashboard-footer"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <LayoutDashboard

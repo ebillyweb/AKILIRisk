@@ -21,6 +21,7 @@ export const TOUR_IDS = [
   "advisor-settings",
   "advisor-settings-pii-policy",
   "advisor-settings-team",
+  "advisor-settings-access-control",
   "enterprise-recommendation-rules-index",
   "enterprise-recommendation-rules",
   "advisor-pipeline",

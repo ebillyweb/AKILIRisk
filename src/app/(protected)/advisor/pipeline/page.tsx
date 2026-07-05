@@ -136,7 +136,8 @@ async function PipelineContent({
     );
   }
 
-  const { clients, metrics, profile } = result.data!;
+  const { clients, metrics, pseudonymousWorkspaceLabeling, documentRequirementsEnabled } =
+    result.data!;
 
   return (
     <div className="space-y-6">
@@ -154,6 +155,8 @@ async function PipelineContent({
         initialMetrics={metrics}
         initialFilters={initialFilters}
         initialPage={initialPage}
+        pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
+        documentRequirementsEnabled={documentRequirementsEnabled}
       />
     </div>
   );

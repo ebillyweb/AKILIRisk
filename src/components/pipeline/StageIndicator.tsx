@@ -1,7 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { getStageOrder } from "@/lib/pipeline/status";
+import {
+  getStageOrder,
+  resolveAdvisorPipelineDisplayStage,
+} from "@/lib/pipeline/status";
 import type { ClientWorkflowStage } from "@prisma/client";
 
 interface StageIndicatorProps {
@@ -9,6 +12,8 @@ interface StageIndicatorProps {
   className?: string;
   /** Table rows: badge + segment bar. Detail views can use full stepper later. */
   variant?: "bar" | "stepper";
+  /** When false, omit the documents segment from workflow visuals. */
+  showDocumentsStage?: boolean;
 }
 
 const WORKFLOW_SEGMENTS: {
@@ -28,20 +33,32 @@ const WORKFLOW_SEGMENTS: {
   { stage: "COMPLETE", label: "Complete", shortLabel: "Done" },
 ];
 
+function workflowSegments(showDocumentsStage: boolean) {
+  return showDocumentsStage
+    ? WORKFLOW_SEGMENTS
+    : WORKFLOW_SEGMENTS.filter((segment) => segment.stage !== "DOCUMENTS_REQUIRED");
+}
+
 /** Slim segmented bar for pipeline table rows. */
 export function StageProgressBar({
   currentStage,
   className,
-}: Pick<StageIndicatorProps, "currentStage" | "className">) {
-  const currentOrder = getStageOrder(currentStage);
+  showDocumentsStage = true,
+}: Pick<StageIndicatorProps, "currentStage" | "className" | "showDocumentsStage">) {
+  const segments = workflowSegments(showDocumentsStage);
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    currentStage,
+    showDocumentsStage,
+  );
+  const currentOrder = getStageOrder(displayStage);
 
   return (
     <div
       className={cn("flex w-full min-w-0 gap-0.5", className)}
       role="img"
-      aria-label={`Workflow progress: ${WORKFLOW_SEGMENTS.find((s) => getStageOrder(s.stage) === currentOrder)?.label ?? currentStage}`}
+      aria-label={`Workflow progress: ${segments.find((s) => getStageOrder(s.stage) === currentOrder)?.label ?? displayStage}`}
     >
-      {WORKFLOW_SEGMENTS.map((segment) => {
+      {segments.map((segment) => {
         const segmentOrder = getStageOrder(segment.stage);
         const isComplete = segmentOrder < currentOrder;
         const isCurrent = segmentOrder === currentOrder;
@@ -69,12 +86,18 @@ export function StageProgressBar({
 function StageStepper({
   currentStage,
   className,
-}: Pick<StageIndicatorProps, "currentStage" | "className">) {
-  const currentOrder = getStageOrder(currentStage);
+  showDocumentsStage = true,
+}: Pick<StageIndicatorProps, "currentStage" | "className" | "showDocumentsStage">) {
+  const segments = workflowSegments(showDocumentsStage);
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    currentStage,
+    showDocumentsStage,
+  );
+  const currentOrder = getStageOrder(displayStage);
 
   return (
     <div className={cn("flex items-center gap-1.5", className)}>
-      {WORKFLOW_SEGMENTS.map((segment, index) => {
+      {segments.map((segment, index) => {
         const segmentOrder = getStageOrder(segment.stage);
         const isCompleted = segmentOrder < currentOrder;
         const isCurrent = segmentOrder === currentOrder;
@@ -102,7 +125,7 @@ function StageStepper({
                 {segment.shortLabel}
               </span>
             </div>
-            {index < WORKFLOW_SEGMENTS.length - 1 ? (
+            {index < segments.length - 1 ? (
               <div
                 className={cn(
                   "mx-0.5 h-px w-2 transition-colors",
@@ -122,12 +145,23 @@ export function StageIndicator({
   currentStage,
   className,
   variant = "bar",
+  showDocumentsStage = true,
 }: StageIndicatorProps) {
   if (variant === "stepper") {
-    return <StageStepper currentStage={currentStage} className={className} />;
+    return (
+      <StageStepper
+        currentStage={currentStage}
+        className={className}
+        showDocumentsStage={showDocumentsStage}
+      />
+    );
   }
 
   return (
-    <StageProgressBar currentStage={currentStage} className={className} />
+    <StageProgressBar
+      currentStage={currentStage}
+      className={className}
+      showDocumentsStage={showDocumentsStage}
+    />
   );
 }

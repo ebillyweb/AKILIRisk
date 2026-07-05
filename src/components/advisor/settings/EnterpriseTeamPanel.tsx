@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, ShieldCheck, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,12 +17,6 @@ import {
   revokeEnterpriseTeamInviteAction,
   suspendEnterpriseTeamMemberAction,
 } from "@/lib/actions/enterprise-team-actions";
-import type { SubscriptionTier } from "@prisma/client";
-
-import { EnterpriseAdvisorVisibilityForm } from "@/components/advisor/settings/EnterpriseAdvisorVisibilityForm";
-import type { EnterpriseAdvisorMemberVisibility } from "@/lib/enterprise/advisor-member-visibility";
-import type { EnterpriseMemberBrandingPolicy } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
-import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { EnterpriseTeamMemberView } from "@/lib/enterprise/team-invite";
 import type { EnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
 
@@ -43,10 +38,6 @@ type EnterpriseTeamPanelProps = {
   role: "OWNER" | "ADMIN";
   members: EnterpriseTeamMemberView[];
   seatUsage: EnterpriseSeatUsage;
-  memberVisibility: EnterpriseAdvisorMemberVisibility;
-  memberBrandingPolicy: EnterpriseMemberBrandingPolicy;
-  moduleTier: SubscriptionTier;
-  platformFlags: AdvisorPlatformFeatureFlags;
 };
 
 export function EnterpriseTeamPanel({
@@ -54,10 +45,6 @@ export function EnterpriseTeamPanel({
   role,
   members,
   seatUsage,
-  memberVisibility,
-  memberBrandingPolicy,
-  moduleTier,
-  platformFlags,
 }: EnterpriseTeamPanelProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -275,18 +262,21 @@ export function EnterpriseTeamPanel({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="mb-4 space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">Team member access</h2>
-          <p className="text-sm text-muted-foreground">
-            Choose workspace areas and client-facing branding options for team members.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight">Access control</h2>
+            <p className="text-sm text-muted-foreground">
+              Workspace visibility, client data defaults, household profiles, and branding options
+              for team members live on a dedicated page under Firm.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link href="/advisor/settings/access-control">
+              <ShieldCheck className="size-4" />
+              Manage access
+            </Link>
+          </Button>
         </div>
-        <EnterpriseAdvisorVisibilityForm
-          initialVisibility={memberVisibility}
-          initialBrandingPolicy={memberBrandingPolicy}
-          moduleTier={moduleTier}
-          platformFlags={platformFlags}
-        />
       </div>
     </div>
   );

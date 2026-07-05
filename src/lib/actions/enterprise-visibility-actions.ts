@@ -15,6 +15,10 @@ import {
   clampBrandingPolicyToModuleTier,
   type EnterpriseMemberBrandingPolicy,
 } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
+import {
+  clientDataPolicyInputToEnterpriseUpdate,
+  type EnterpriseClientDataPolicy,
+} from "@/lib/enterprise/enterprise-client-data-policy";
 import { resolveBillingContext } from "@/lib/enterprise/billing-context";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 
@@ -27,6 +31,8 @@ const visibilitySchema = z.object({
   productTours: z.boolean(),
   hideTierLockedNav: z.boolean(),
   skipIntake: z.boolean(),
+  documentRequirements: z.boolean(),
+  actionPlan: z.boolean(),
 });
 
 const brandingPolicySchema = z.object({
@@ -34,9 +40,16 @@ const brandingPolicySchema = z.object({
   personalSubdomain: z.boolean(),
 });
 
+const clientDataPolicySchema = z.object({
+  pseudonymousLabelingDefault: z.boolean(),
+  collectClientLegalNameDefault: z.boolean(),
+  policyLocked: z.boolean(),
+});
+
 const teamPolicySchema = z.object({
   visibility: visibilitySchema,
   brandingPolicy: brandingPolicySchema,
+  clientDataPolicy: clientDataPolicySchema,
 });
 
 export async function updateEnterpriseAdvisorMemberVisibilityAction(
@@ -48,6 +61,7 @@ export async function updateEnterpriseAdvisorMemberVisibilityAction(
     const parsed = teamPolicySchema.parse(input);
     const visibility = parsed.visibility satisfies EnterpriseAdvisorMemberVisibility;
     const brandingPolicy = parsed.brandingPolicy satisfies EnterpriseMemberBrandingPolicy;
+    const clientDataPolicy = parsed.clientDataPolicy satisfies EnterpriseClientDataPolicy;
 
     const billingContext = await resolveBillingContext(userId);
     const moduleTier = billingContext?.subscription?.tier ?? "ESSENTIALS";
@@ -62,11 +76,14 @@ export async function updateEnterpriseAdvisorMemberVisibilityAction(
       data: {
         ...visibilityInputToEnterpriseUpdate(clampedVisibility),
         ...brandingPolicyInputToEnterpriseUpdate(clampedBranding),
+        ...clientDataPolicyInputToEnterpriseUpdate(clientDataPolicy),
       },
     });
 
     revalidatePath("/advisor/settings/team");
+    revalidatePath("/advisor/settings/access-control");
     revalidatePath("/advisor/settings");
+    revalidatePath("/advisor/settings/pii-policy");
     revalidatePath("/advisor");
     return { success: true };
   } catch (error) {

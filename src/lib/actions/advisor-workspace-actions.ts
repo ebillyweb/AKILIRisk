@@ -15,6 +15,7 @@ import {
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
 import { getAdvisorSubscriptionTier } from "@/lib/advisor/subscription-tier.server";
 import {
+  isEnterpriseDocumentRequirementsWorkspaceEnabled,
   isEnterpriseMemberVisibilityEnabled,
   resolveEnterpriseMemberVisibilityContext,
 } from "@/lib/enterprise/advisor-member-visibility";
@@ -51,7 +52,12 @@ export async function getAdvisorWorkspaceHomeData() {
 
   const priorities =
     pipelineOk && metrics
-      ? deriveAdvisorPriorities(clients, metrics, pendingInvitationsCount)
+      ? deriveAdvisorPriorities(clients, metrics, pendingInvitationsCount, {
+          documentRequirementsEnabled:
+            isEnterpriseDocumentRequirementsWorkspaceEnabled(
+              memberVisibilityContext,
+            ),
+        })
       : [];
 
   const activity =
@@ -73,6 +79,8 @@ export async function getAdvisorWorkspaceHomeData() {
     memberVisibilityContext,
     "engagements",
   );
+  const memberDocumentRequirementsVisible =
+    isEnterpriseDocumentRequirementsWorkspaceEnabled(memberVisibilityContext);
 
   return {
     success: true as const,
@@ -92,6 +100,7 @@ export async function getAdvisorWorkspaceHomeData() {
       implementationTrackingEnabled,
       memberPortfolioVisible,
       memberEngagementsVisible,
+      memberDocumentRequirementsVisible,
     },
   };
 }

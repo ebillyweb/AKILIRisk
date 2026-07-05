@@ -2,6 +2,7 @@
 
 import type { UserRole } from "@prisma/client";
 import { requireAdvisorRole, getAdvisorProfileOrThrow, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
+import { getAdvisorClientDataPolicyContext } from "@/lib/enterprise/enterprise-client-data-policy";
 import {
   assertCanAddClientForAdvisorProfile,
   ClientLimitError,
@@ -392,7 +393,11 @@ export async function getInvitationsAction(
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
-    const result = await getAdvisorInvitations(profile.id, filters, pagination);
+    const policyContext = await getAdvisorClientDataPolicyContext(userId);
+    const result = await getAdvisorInvitations(profile.id, filters, pagination, {
+      pseudonymousWorkspaceLabeling:
+        policyContext.effective.pseudonymousWorkspaceLabeling,
+    });
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof Error) {

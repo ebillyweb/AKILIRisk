@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { getClientDetailData } from "@/lib/actions/pipeline-actions";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import {
+  isEnterpriseActionPlanWorkspaceEnabled,
+  isEnterpriseDocumentRequirementsWorkspaceEnabled,
   isEnterpriseMemberVisibilityEnabled,
   resolveEnterpriseMemberVisibilityContext,
 } from "@/lib/enterprise/advisor-member-visibility";
@@ -34,8 +36,19 @@ async function ClientDetailContent({ clientId }: { clientId: string }) {
     visibilityContext,
     "skipIntake",
   );
+  const documentRequirementsEnabled =
+    isEnterpriseDocumentRequirementsWorkspaceEnabled(visibilityContext);
+  const actionPlanEnabled =
+    isEnterpriseActionPlanWorkspaceEnabled(visibilityContext);
 
-  return <ClientDetailView detail={result.data!} canSkipIntake={canSkipIntake} />;
+  return (
+    <ClientDetailView
+      detail={result.data!}
+      canSkipIntake={canSkipIntake}
+      documentRequirementsEnabled={documentRequirementsEnabled}
+      actionPlanEnabled={actionPlanEnabled}
+    />
+  );
 }
 
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {

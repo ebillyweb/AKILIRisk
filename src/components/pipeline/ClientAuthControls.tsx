@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Mail, Send, AlertCircle } from "lucide-react";
+import { CheckCircle2, Send, AlertCircle } from "lucide-react";
 import {
   reassignClientEmail,
   reissueClientMagicLink,
@@ -16,6 +16,8 @@ interface ClientAuthControlsProps {
   clientId: string;
   /** Current email displayed on the form. */
   currentEmail: string;
+  /** When true, email is framed as sign-in delivery only—not workspace identity. */
+  pseudonymousLabeling?: boolean;
 }
 
 type FeedbackMessage =
@@ -61,7 +63,11 @@ function AuthFeedback({ message }: { message: FeedbackMessage }) {
  * Admin-equivalent controls live on the admin pages (out of scope for
  * this commit).
  */
-export function ClientAuthControls({ clientId, currentEmail }: ClientAuthControlsProps) {
+export function ClientAuthControls({
+  clientId,
+  currentEmail,
+  pseudonymousLabeling = false,
+}: ClientAuthControlsProps) {
   const router = useRouter();
   const [emailPending, startEmailTransition] = useTransition();
   const [reissuePending, startReissueTransition] = useTransition();
@@ -83,8 +89,10 @@ export function ClientAuthControls({ clientId, currentEmail }: ClientAuthControl
       if (result.success) {
         setEmailMessage({
           kind: "ok",
-          title: "Email updated",
-          detail: result.data.newEmail,
+          title: "Delivery address saved",
+          detail: pseudonymousLabeling
+            ? "Sign-in delivery updated. No magic-link email was sent—use Send sign-in link below when the client is ready."
+            : `Account updated to ${result.data.newEmail}. No sign-in email was sent—use Send sign-in link below when the client is ready.`,
         });
         router.refresh();
       } else {
@@ -101,7 +109,9 @@ export function ClientAuthControls({ clientId, currentEmail }: ClientAuthControl
         setReissueMessage({
           kind: "ok",
           title: "Sign-in link sent",
-          detail: result.data.email,
+          detail: pseudonymousLabeling
+            ? "Magic-link email sent to this client's delivery address."
+            : result.data.email,
         });
         router.refresh();
       } else {
@@ -115,7 +125,9 @@ export function ClientAuthControls({ clientId, currentEmail }: ClientAuthControl
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Client sign-in</CardTitle>
         <p className="text-sm text-muted-foreground font-normal">
-          Manage where magic-link emails are sent and resend a fresh sign-in link.
+          {pseudonymousLabeling
+            ? "Manage sign-in delivery for this client reference. The address below is used only to send magic links—it is not shown elsewhere in your workspace."
+            : "Saving an email change updates the account only. Send a sign-in link separately when the client should receive a magic-link email."}
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -123,11 +135,12 @@ export function ClientAuthControls({ clientId, currentEmail }: ClientAuthControl
         <div className="space-y-3">
           <div className="space-y-1">
             <Label htmlFor="client-email" className="text-sm font-medium">
-              Email address
+              {pseudonymousLabeling ? "Sign-in delivery address" : "Email address"}
             </Label>
             <p className="text-sm text-muted-foreground leading-snug">
-              Magic-link sign-ins go to this address. Changing it invalidates
-              any in-flight links for the previous address.
+              {pseudonymousLabeling
+                ? "Magic-link sign-ins are delivered here. Saving updates delivery only—it does not email the client. Any unused links for the previous address stop working."
+                : "Magic-link sign-ins use this address. Saving a change updates the account only—it does not email the client. Any unused links for the previous address stop working."}
             </p>
           </div>
           <Input
@@ -145,18 +158,18 @@ export function ClientAuthControls({ clientId, currentEmail }: ClientAuthControl
             onClick={submitEmail}
             disabled={emailPending || reissuePending || emailDraft.trim() === ""}
           >
-            <Mail className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-            {emailPending ? "Saving…" : "Update email"}
+            {emailPending ? "Saving…" : pseudonymousLabeling ? "Save delivery address" : "Save email"}
           </Button>
           {emailMessage ? <AuthFeedback message={emailMessage} /> : null}
         </div>
 
         <div className="space-y-3 border-t border-border pt-5">
           <div className="space-y-1">
-            <Label className="text-sm font-medium">Sign-in link</Label>
+            <Label className="text-sm font-medium">Send sign-in link</Label>
             <p className="text-sm text-muted-foreground leading-snug">
-              Send a fresh magic-link email to the address above. Existing
-              links for this client are invalidated.
+              {pseudonymousLabeling
+                ? "Emails a magic-link sign-in to the delivery address above. The message references this Client CL-… reference; you map it to the person offline."
+                : "Emails a magic-link sign-in to the address above. Use this after saving a new email, or anytime the client needs a fresh link. Sending a new link invalidates any older ones."}
             </p>
           </div>
           <Button
@@ -167,7 +180,7 @@ export function ClientAuthControls({ clientId, currentEmail }: ClientAuthControl
             disabled={emailPending || reissuePending}
           >
             <Send className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-            {reissuePending ? "Sending…" : "Re-issue magic link"}
+            {reissuePending ? "Sending…" : "Send sign-in link"}
           </Button>
           {reissueMessage ? <AuthFeedback message={reissueMessage} /> : null}
         </div>

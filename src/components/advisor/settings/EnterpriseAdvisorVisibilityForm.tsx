@@ -7,7 +7,10 @@ import { Loader2, Lock, Save } from "lucide-react";
 import type { SubscriptionTier } from "@prisma/client";
 
 import { updateEnterpriseAdvisorMemberVisibilityAction } from "@/lib/actions/enterprise-visibility-actions";
+import { updateHouseholdProfilesPolicy } from "@/lib/actions/household-profiles-policy-actions";
+import { FieldHelp } from "@/components/ui/field-help";
 import type { EnterpriseAdvisorMemberVisibility } from "@/lib/enterprise/advisor-member-visibility";
+import type { EnterpriseClientDataPolicy } from "@/lib/enterprise/enterprise-client-data-policy";
 import {
   formatVisibilityLockBadge,
   getVisibilityOptionTierState,
@@ -15,6 +18,7 @@ import {
 } from "@/lib/enterprise/advisor-member-visibility-tier";
 import type { EnterpriseMemberBrandingPolicy } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
 import { getBrandingPolicyOptionTierState } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
+import { ENTERPRISE_CLIENT_DATA_POLICY_COPY } from "@/lib/advisor/pii-policy";
 import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
 import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 
 type VisibilityOption = {
@@ -55,6 +60,12 @@ const VISIBILITY_OPTION_GROUPS: VisibilityOptionGroup[] = [
         description:
           "Skip the governance intake step when inviting clients or managing the pipeline.",
       },
+      {
+        key: "documentRequirements",
+        label: "Document requirements",
+        description:
+          "Hide document request and tracking in the advisor workspace and the Documents link in the client portal.",
+      },
     ],
   },
   {
@@ -84,6 +95,12 @@ const VISIBILITY_OPTION_GROUPS: VisibilityOptionGroup[] = [
         key: "reassessment",
         label: "Reassessment workflow",
         description: "Scheduled reassessments and the rescoring queue.",
+      },
+      {
+        key: "actionPlan",
+        label: "Action plan",
+        description:
+          "Show the Strategic Action Plan journey step and client portal page for your firm.",
       },
     ],
   },
@@ -147,6 +164,8 @@ const BRANDING_POLICY_OPTIONS: BrandingPolicyOption[] = [
 type EnterpriseAdvisorVisibilityFormProps = {
   initialVisibility: EnterpriseAdvisorMemberVisibility;
   initialBrandingPolicy: EnterpriseMemberBrandingPolicy;
+  initialClientDataPolicy: EnterpriseClientDataPolicy;
+  initialHouseholdProfilesEnabled: boolean;
   moduleTier: SubscriptionTier;
   platformFlags: AdvisorPlatformFeatureFlags;
 };
@@ -154,6 +173,8 @@ type EnterpriseAdvisorVisibilityFormProps = {
 export function EnterpriseAdvisorVisibilityForm({
   initialVisibility,
   initialBrandingPolicy,
+  initialClientDataPolicy,
+  initialHouseholdProfilesEnabled,
   moduleTier,
   platformFlags,
 }: EnterpriseAdvisorVisibilityFormProps) {
@@ -161,7 +182,13 @@ export function EnterpriseAdvisorVisibilityForm({
   const [, startTransition] = useTransition();
   const [visibility, setVisibility] = useState(initialVisibility);
   const [brandingPolicy, setBrandingPolicy] = useState(initialBrandingPolicy);
+  const [clientDataPolicy, setClientDataPolicy] = useState(initialClientDataPolicy);
+  const [householdProfilesEnabled, setHouseholdProfilesEnabled] = useState(
+    initialHouseholdProfilesEnabled,
+  );
   const [saving, setSaving] = useState(false);
+
+  const clientDataCopy = ENTERPRISE_CLIENT_DATA_POLICY_COPY;
 
   const moduleTierLabel =
     TIER_DISPLAY_NAME[moduleTier as keyof typeof TIER_DISPLAY_NAME] ?? moduleTier;
@@ -202,17 +229,56 @@ export function EnterpriseAdvisorVisibilityForm({
     setBrandingPolicy(initialBrandingPolicy);
   }, [initialBrandingPolicy]);
 
+  useEffect(() => {
+    setClientDataPolicy(initialClientDataPolicy);
+  }, [initialClientDataPolicy]);
+
+  useEffect(() => {
+    setHouseholdProfilesEnabled(initialHouseholdProfilesEnabled);
+  }, [initialHouseholdProfilesEnabled]);
+
+  const visibilityDirty = VISIBILITY_OPTIONS.some(
+    ({ key }) => visibility[key] !== initialVisibility[key],
+  );
+  const brandingDirty = BRANDING_POLICY_OPTIONS.some(
+    ({ key }) => brandingPolicy[key] !== initialBrandingPolicy[key],
+  );
+  const clientDataDirty =
+    clientDataPolicy.pseudonymousLabelingDefault !==
+      initialClientDataPolicy.pseudonymousLabelingDefault ||
+    clientDataPolicy.collectClientLegalNameDefault !==
+      initialClientDataPolicy.collectClientLegalNameDefault ||
+    clientDataPolicy.policyLocked !== initialClientDataPolicy.policyLocked;
+  const householdProfilesDirty =
+    householdProfilesEnabled !== initialHouseholdProfilesEnabled;
+  const isDirty =
+    visibilityDirty || brandingDirty || clientDataDirty || householdProfilesDirty;
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const result = await updateEnterpriseAdvisorMemberVisibilityAction({
-        visibility,
-        brandingPolicy,
-      });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
+      if (visibilityDirty || brandingDirty || clientDataDirty) {
+        const result = await updateEnterpriseAdvisorMemberVisibilityAction({
+          visibility,
+          brandingPolicy,
+          clientDataPolicy,
+        });
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
       }
+
+      if (householdProfilesDirty) {
+        const result = await updateHouseholdProfilesPolicy({
+          householdProfilesEnabled,
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+      }
+
       toast.success("Team settings saved.");
       startTransition(() => router.refresh());
     } catch {
@@ -221,14 +287,6 @@ export function EnterpriseAdvisorVisibilityForm({
       setSaving(false);
     }
   };
-
-  const visibilityDirty = VISIBILITY_OPTIONS.some(
-    ({ key }) => visibility[key] !== initialVisibility[key],
-  );
-  const brandingDirty = BRANDING_POLICY_OPTIONS.some(
-    ({ key }) => brandingPolicy[key] !== initialBrandingPolicy[key],
-  );
-  const isDirty = visibilityDirty || brandingDirty;
 
   const renderPolicyCheckbox = (
     option: BrandingPolicyOption,
@@ -366,6 +424,45 @@ export function EnterpriseAdvisorVisibilityForm({
     );
   };
 
+  const renderHouseholdProfilesCheckbox = () => (
+    <div className="flex items-start gap-3 rounded-lg border p-4">
+      <Checkbox
+        id="household-profiles-enabled"
+        checked={householdProfilesEnabled}
+        disabled={saving}
+        onCheckedChange={(next) => setHouseholdProfilesEnabled(next === true)}
+      />
+      <div className="grid min-w-0 flex-1 gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Label
+              htmlFor="household-profiles-enabled"
+              className="text-sm font-medium leading-none"
+            >
+              Household profiles
+            </Label>
+            <FieldHelp
+              helpKey="household-profiles-enabled"
+              triggerLabel="Household profiles"
+            />
+          </div>
+          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+            Firm-wide
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Let clients document household members and personalize assessments from
+          composition and governance roles.
+        </p>
+        <p className="text-xs text-foreground/80">
+          When off, clients will not see Profiles &amp; Roles, assessments use
+          generic question text, and your portal omits household composition
+          sections. Existing member data is kept and restores if you turn this back on.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6" data-tour="config-advisor-visibility">
       <Card className="border-muted bg-muted/40">
@@ -398,9 +495,111 @@ export function EnterpriseAdvisorVisibilityForm({
             </div>
             <div className="space-y-3">
               {group.options.map((option) => renderVisibilityCheckbox(option))}
+              {group.id === "clients" ? renderHouseholdProfilesCheckbox() : null}
             </div>
           </section>
         ))}
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold tracking-tight">
+            {clientDataCopy.sectionTitle}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {clientDataCopy.sectionDescription}
+          </p>
+        </div>
+
+        <RadioGroup
+          value={
+            clientDataPolicy.pseudonymousLabelingDefault ? "client-id" : "email"
+          }
+          onValueChange={(value) =>
+            setClientDataPolicy((current) => ({
+              ...current,
+              pseudonymousLabelingDefault: value === "client-id",
+            }))
+          }
+          className="gap-3"
+          disabled={saving}
+        >
+          <div className="flex items-start gap-3 rounded-lg border p-4">
+            <RadioGroupItem value="email" id="firm-label-email" className="mt-0.5" />
+            <div className="min-w-0 space-y-1">
+              <Label htmlFor="firm-label-email" className="text-sm font-medium">
+                {clientDataCopy.workspaceLabeling.email.label}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {clientDataCopy.workspaceLabeling.email.description}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-lg border p-4">
+            <RadioGroupItem
+              value="client-id"
+              id="firm-label-client-id"
+              className="mt-0.5"
+            />
+            <div className="min-w-0 space-y-1">
+              <Label htmlFor="firm-label-client-id" className="text-sm font-medium">
+                {clientDataCopy.workspaceLabeling.clientId.label}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {clientDataCopy.workspaceLabeling.clientId.description}
+              </p>
+            </div>
+          </div>
+        </RadioGroup>
+
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 rounded-lg border p-4">
+            <Checkbox
+              id="firm-collect-legal-name"
+              checked={clientDataPolicy.collectClientLegalNameDefault}
+              disabled={saving}
+              onCheckedChange={(next) =>
+                setClientDataPolicy((current) => ({
+                  ...current,
+                  collectClientLegalNameDefault: next === true,
+                }))
+              }
+            />
+            <div className="grid min-w-0 flex-1 gap-1">
+              <Label htmlFor="firm-collect-legal-name" className="text-sm font-medium">
+                {clientDataCopy.collectLegalName.label}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {clientDataCopy.collectLegalName.description}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-lg border p-4">
+            <Checkbox
+              id="firm-lock-client-data-policy"
+              checked={clientDataPolicy.policyLocked}
+              disabled={saving}
+              onCheckedChange={(next) =>
+                setClientDataPolicy((current) => ({
+                  ...current,
+                  policyLocked: next === true,
+                }))
+              }
+            />
+            <div className="grid min-w-0 flex-1 gap-1">
+              <Label
+                htmlFor="firm-lock-client-data-policy"
+                className="text-sm font-medium"
+              >
+                {clientDataCopy.lock.label}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {clientDataCopy.lock.description}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4">

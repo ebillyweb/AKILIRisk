@@ -64,6 +64,17 @@ describe("renderAdvisorIntakeNotificationHtml", () => {
     expect(html).toContain("Hello Advisor Name,");
     expect(html).toContain("Client Name</strong>");
   });
+
+  it("omits client email when pseudonymous labeling hides it", () => {
+    const html = renderAdvisorIntakeNotificationHtml(
+      "Advisor Name",
+      "Client CL-8F3K-29QX",
+      null,
+      "https://app.example/advisor/review/abc"
+    );
+    expect(html).toContain("Client CL-8F3K-29QX</strong>");
+    expect(html).not.toContain("mailto:");
+  });
 });
 
 describe("renderIntakeApprovedMagicLinkEmailHtml", () => {

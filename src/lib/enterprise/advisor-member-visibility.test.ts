@@ -17,6 +17,8 @@ import { resolveBillingContext } from "./billing-context";
 import {
   DEFAULT_ENTERPRISE_ADVISOR_MEMBER_VISIBILITY,
   getEnterpriseAdvisorMemberVisibilityForEnterprise,
+  isEnterpriseActionPlanWorkspaceEnabled,
+  isEnterpriseDocumentRequirementsWorkspaceEnabled,
   isEnterpriseMemberVisibilityEnabled,
   mapEnterpriseAdvisorMemberVisibility,
   resolveEnterpriseMemberVisibilityContext,
@@ -38,6 +40,8 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
         advisorMemberProductToursVisible: false,
         advisorMemberHideTierLockedNav: false,
         advisorMemberSkipIntakeEnabled: false,
+        advisorMemberDocumentRequirementsEnabled: true,
+        advisorMemberActionPlanEnabled: true,
       }),
     ).toEqual({
       portfolio: false,
@@ -48,6 +52,8 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
       productTours: false,
       hideTierLockedNav: false,
       skipIntake: false,
+      documentRequirements: true,
+      actionPlan: true,
     });
   });
 });
@@ -87,12 +93,15 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberProductToursVisible: true,
       advisorMemberHideTierLockedNav: false,
       advisorMemberSkipIntakeEnabled: false,
+      advisorMemberDocumentRequirementsEnabled: false,
+      advisorMemberActionPlanEnabled: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
     expect(result.applyRestrictions).toBe(true);
     expect(result.settings.portfolio).toBe(false);
     expect(isEnterpriseMemberVisibilityEnabled(result, "skipIntake")).toBe(false);
+    expect(isEnterpriseMemberVisibilityEnabled(result, "documentRequirements")).toBe(false);
   });
 
   it("does not apply restrictions for enterprise OWNER", async () => {
@@ -112,12 +121,17 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberProductToursVisible: false,
       advisorMemberHideTierLockedNav: false,
       advisorMemberSkipIntakeEnabled: false,
+      advisorMemberDocumentRequirementsEnabled: false,
+      advisorMemberActionPlanEnabled: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
     expect(result.applyRestrictions).toBe(false);
     expect(isEnterpriseMemberVisibilityEnabled(result, "portfolio")).toBe(true);
     expect(isEnterpriseMemberVisibilityEnabled(result, "skipIntake")).toBe(true);
+    expect(isEnterpriseMemberVisibilityEnabled(result, "documentRequirements")).toBe(true);
+    expect(isEnterpriseDocumentRequirementsWorkspaceEnabled(result)).toBe(false);
+    expect(isEnterpriseActionPlanWorkspaceEnabled(result)).toBe(false);
   });
 });
 
@@ -133,6 +147,8 @@ describe("visibilityInputToEnterpriseUpdate", () => {
         productTours: true,
         hideTierLockedNav: false,
         skipIntake: false,
+        documentRequirements: false,
+        actionPlan: false,
       }),
     ).toEqual({
       advisorMemberPortfolioVisible: true,
@@ -143,6 +159,8 @@ describe("visibilityInputToEnterpriseUpdate", () => {
       advisorMemberProductToursVisible: true,
       advisorMemberHideTierLockedNav: false,
       advisorMemberSkipIntakeEnabled: false,
+      advisorMemberDocumentRequirementsEnabled: false,
+      advisorMemberActionPlanEnabled: false,
     });
   });
 });

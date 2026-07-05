@@ -7,6 +7,11 @@ import { GuidanceReviewPage } from "@/components/guidance/GuidanceReviewPage";
 import { GuidanceSummaryStrip } from "@/components/guidance/GuidanceSummaryStrip";
 import { PublishActionPlanButton } from "@/components/engagement/PublishActionPlanButton";
 import { ClientAssessmentLifecycleToolbar } from "@/components/assessment/ClientAssessmentLifecycleToolbar";
+import {
+  isEnterpriseActionPlanWorkspaceEnabled,
+  resolveEnterpriseMemberVisibilityContext,
+} from "@/lib/enterprise/advisor-member-visibility";
+
 import { getAdvisorAssessmentLifecycleContext } from "@/lib/advisor/assessment-lifecycle.server";
 
 export default async function AdvisorClientGuidancePage({
@@ -48,6 +53,11 @@ export default async function AdvisorClientGuidancePage({
     advisorProfileId = advisorProfile.id;
   } catch {
     redirect("/advisor");
+  }
+
+  const visibilityContext = await resolveEnterpriseMemberVisibilityContext(advisorUserId);
+  if (!isEnterpriseActionPlanWorkspaceEnabled(visibilityContext)) {
+    redirect(`/advisor/pipeline/${clientId}`);
   }
 
   const guidancePackage = await getGuidancePackageForClient(

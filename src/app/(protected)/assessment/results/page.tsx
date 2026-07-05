@@ -16,6 +16,8 @@ import { RiskDrivers } from "@/components/assessment/RiskDrivers";
 import { ActionPlan } from "@/components/assessment/ActionPlan";
 import { FacilitatedRecommendations } from "@/components/assessment/FacilitatedRecommendations";
 import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
+import { deliverableBannerBrandingProps } from "@/lib/client/deliverable-banner-branding";
+import { useBrandingOptional } from "@/components/providers/BrandingProvider";
 import { actionPlanDepthForPhase } from "@/lib/assessment/plan-depth";
 import type { ClientFacilitatedRecommendation } from "@/lib/client/assessment-recommendations";
 import type { DeliverablePhase, PortfolioEngagementStatus } from "@prisma/client";
@@ -88,6 +90,9 @@ export default function AssessmentResultsPage() {
       meetingAt: Date | null;
     } | null;
   } | null>(null);
+  const bannerBranding = deliverableBannerBrandingProps(
+    useBrandingOptional()?.branding ?? null,
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => setIsReadyForRedirects(true), 0);
@@ -279,6 +284,8 @@ export default function AssessmentResultsPage() {
               ? new Date(deliverableMeta.profileEnteredAt)
               : null
           }
+          advisorTeamLabel={bannerBranding.advisorTeamLabel}
+          brandHex={bannerBranding.brandHex}
         />
       ) : null}
 

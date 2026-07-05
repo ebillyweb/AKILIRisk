@@ -12,8 +12,10 @@ import {
 } from "@/lib/theme/resolve-theme";
 
 export type ThemeContextValue = {
-  /** Appearance currently applied to the document (may be locked on public tenant routes). */
+  /** Appearance currently applied to the document (may be locked on white-label routes). */
   theme: AkiliriskStoredTheme;
+  /** True when a route locked the theme (e.g. advisor white-label portal). */
+  themeLocked: boolean;
   setTheme: (theme: AkiliriskStoredTheme) => void;
   lockTheme: (theme: AkiliriskStoredTheme) => void;
   unlockTheme: () => void;
@@ -102,11 +104,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo(
     () => ({
       theme: displayedTheme,
+      themeLocked: themeLock !== null,
       setTheme,
       lockTheme,
       unlockTheme,
     }),
-    [displayedTheme, setTheme, lockTheme, unlockTheme],
+    [displayedTheme, themeLock, setTheme, lockTheme, unlockTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
