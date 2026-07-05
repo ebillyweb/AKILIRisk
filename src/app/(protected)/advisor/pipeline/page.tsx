@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ClientLimitBanner } from "@/components/advisor/billing/ClientLimitGate";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 import { PipelinePageToolbar } from "@/components/advisor/pipeline/PipelinePageToolbar";
 import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
 import { auth } from "@/lib/auth";
@@ -56,7 +57,7 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   if (filters.inactive) {
     return {
       kicker: "Clients",
-      title: "All Clients",
+      title: "Clients",
       subtitle:
         "Inactive workflows you ended. Restore any client to return them to your active pipeline.",
     };
@@ -201,11 +202,17 @@ export default async function PipelinePage({
               href="/advisor/pipeline"
               className="font-medium text-primary underline-offset-2 hover:underline"
             >
-              View full pipeline
+              View all clients
             </Link>
           </p>
         </header>
-      ) : null}
+      ) : (
+        <AdvisorScreenHeader
+          kicker="Clients"
+          title="Clients"
+          description="Assigned households, intake progress, and assessment status across your practice."
+        />
+      )}
 
       {/* Data-dependent content with Suspense streaming */}
       <Suspense fallback={<PipelineLoading />}>

@@ -4,7 +4,7 @@ export const ADVISOR_PIPELINE_TOURS = {
   "advisor-pipeline": [
     {
       popover: {
-        title: "Client pipeline",
+        title: "Clients",
         description:
           "Track every household from invitation through assessment completion. Use this view to see who needs your attention and drill into individual workflows.",
       },

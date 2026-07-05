@@ -4,6 +4,7 @@ import {
   BillingDashboard,
   EnterpriseBillingDashboard,
 } from "@/components/advisor/billing/BillingDashboard";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
@@ -52,11 +53,18 @@ export default async function AdvisorBillingPage({
 
   if (pageRes.data.mode === "enterprise") {
     return (
-      <EnterpriseBillingDashboard
-        enterprise={pageRes.data.enterprise}
-        initialInvoices={pageRes.data.invoices}
-        billingEnabled={billingEnabled}
-      />
+      <div className="space-y-8">
+        <AdvisorScreenHeader
+          kicker="Firm"
+          title="Billing"
+          description="Firm-wide subscription, seats, invoices, and payment method."
+        />
+        <EnterpriseBillingDashboard
+          enterprise={pageRes.data.enterprise}
+          initialInvoices={pageRes.data.invoices}
+          billingEnabled={billingEnabled}
+        />
+      </div>
     );
   }
 
@@ -87,26 +95,33 @@ export default async function AdvisorBillingPage({
   }
 
   return (
-    <BillingDashboard
-      key={[
-        sub?.stripeSubscriptionId ?? "no-sub",
-        sub?.tier,
-        sub?.billingCycle,
-        sub?.status,
-      ].join(":")}
-      initialSubscription={sub}
-      initialInvoices={pageRes.data.invoices}
-      checkoutNotice={checkout}
-      subscriptionRequiredNotice={subscriptionRequiredNotice}
-      billingEnabled={billingEnabled}
-      pricing={pricing}
-      configErrors={configErrors}
-      debugBilling={isAdvisorBillingDebugEnabled()}
-      checkoutPlanIntent={
-        checkoutPlan && checkoutCycle
-          ? { tier: checkoutPlan, billingCycle: checkoutCycle }
-          : null
-      }
-    />
+    <div className="space-y-8">
+      <AdvisorScreenHeader
+        kicker="Firm"
+        title="Billing"
+        description="Manage your subscription, client capacity, and billing history."
+      />
+      <BillingDashboard
+        key={[
+          sub?.stripeSubscriptionId ?? "no-sub",
+          sub?.tier,
+          sub?.billingCycle,
+          sub?.status,
+        ].join(":")}
+        initialSubscription={sub}
+        initialInvoices={pageRes.data.invoices}
+        checkoutNotice={checkout}
+        subscriptionRequiredNotice={subscriptionRequiredNotice}
+        billingEnabled={billingEnabled}
+        pricing={pricing}
+        configErrors={configErrors}
+        debugBilling={isAdvisorBillingDebugEnabled()}
+        checkoutPlanIntent={
+          checkoutPlan && checkoutCycle
+            ? { tier: checkoutPlan, billingCycle: checkoutCycle }
+            : null
+        }
+      />
+    </div>
   );
 }

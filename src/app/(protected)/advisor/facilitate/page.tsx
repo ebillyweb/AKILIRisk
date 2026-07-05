@@ -22,7 +22,7 @@ export default async function FacilitateLauncherPage() {
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Workflow
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Facilitated sessions</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Sessions</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Conduct intake and assessment with a client in person or on a call — no client login
           required for this session.

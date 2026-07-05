@@ -68,7 +68,7 @@ export const ADVISOR_HUB_TOURS = {
   "advisor-invitations": [
     {
       popover: {
-        title: "Client invitations",
+        title: "Invitations",
         description:
           "Send assessment invitations and track registration status for new households joining your pipeline.",
       },

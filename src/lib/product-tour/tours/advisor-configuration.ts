@@ -174,7 +174,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
   "advisor-settings-team": [
     {
       popover: {
-        title: "Team management",
+        title: "Team",
         description:
           "Invite team members, manage roles, and monitor seat usage for your firm.",
       },
@@ -199,7 +199,7 @@ export const ADVISOR_CONFIGURATION_TOURS = {
   "advisor-settings-access-control": [
     {
       popover: {
-        title: "Access control",
+        title: "Roles & Permissions",
         description:
           "Configure workspace visibility, client data defaults, household profiles, and branding for team members.",
       },

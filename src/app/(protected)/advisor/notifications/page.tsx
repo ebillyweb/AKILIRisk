@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 import { NotificationList } from "@/components/advisor/NotificationList";
 import {
   getAdvisorNotificationsAction,
@@ -39,6 +40,11 @@ export default async function NotificationsPage() {
 
   return (
     <div className="space-y-6">
+      <AdvisorScreenHeader
+        kicker="Home"
+        title="Notifications"
+        description="Intake submissions, assessment updates, and other activity across your practice."
+      />
       <div className="flex items-center justify-end gap-2">
         <MarkAllReadButton hasUnread={unreadCount > 0} />
         <Button variant="outline" size="icon" asChild className="h-9 w-9 shrink-0">

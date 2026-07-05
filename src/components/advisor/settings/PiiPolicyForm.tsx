@@ -99,7 +99,7 @@ export function PiiPolicyForm({
             <p className="text-sm leading-6 text-muted-foreground">
               Your firm locks workspace labeling and client legal name collection
               for team members. Firm owners and administrators can change the firm
-              default under Firm → Access control.
+              default under Firm → Roles & Permissions.
             </p>
           </CardContent>
         </Card>

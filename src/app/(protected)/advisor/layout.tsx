@@ -103,7 +103,9 @@ export default async function AdvisorLayout({
       memberVisibilityContext,
       "productTours",
     ),
-    applyEnterpriseMemberVisibility: memberVisibilityContext.applyRestrictions,
+    // Sidebar reflects firm visibility for every enterprise login; route guards still
+    // exempt OWNER/ADMIN via isEnterpriseMemberVisibilityEnabled(applyRestrictions).
+    applyEnterpriseMemberVisibility: memberVisibilityContext.enterpriseId !== null,
     enterpriseMemberVisibility: memberVisibilityContext.settings,
   };
 

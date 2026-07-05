@@ -10,7 +10,6 @@ import {
   resolveAdvisorNavSectionsForDisplay,
   isAdvisorNavItemTierLocked,
   isAdvisorNavItemClientLimitLocked,
-  getAdvisorNavItemLockReason,
   partitionAdvisorNavSections,
 } from "./advisor-nav";
 
@@ -24,7 +23,7 @@ const flags = {
 describe("getActiveAdvisorNavHref", () => {
   const sections = getVisibleAdvisorNavSections(flags);
 
-  it("highlights All clients on pipeline workflow filter URLs", () => {
+  it("highlights Clients on pipeline workflow filter URLs", () => {
     expect(
       getActiveAdvisorNavHref("/advisor/pipeline", sections, {
         awaitingReview: "1",
@@ -48,79 +47,48 @@ describe("getActiveAdvisorNavHref", () => {
     );
   });
 
-  it("highlights engagements on the engagements list", () => {
-    expect(getActiveAdvisorNavHref("/advisor/engagements", sections)).toBe(
-      "/advisor/engagements",
-    );
-  });
-
-  it("highlights facilitated sessions on the facilitate launcher", () => {
+  it("highlights Sessions on the facilitate launcher", () => {
     expect(getActiveAdvisorNavHref("/advisor/facilitate", sections)).toBe(
       "/advisor/facilitate",
     );
   });
 
-  it("exposes Home section with Overview, notifications, and facilitated sessions", () => {
+  it("exposes Home section with Overview, Sessions, and Notifications", () => {
     const home = ADVISOR_NAV_SECTIONS.find((s) => s.id === "home");
     expect(home?.title).toBe("Home");
     expect(home?.items.map((item) => item.label)).toEqual([
       "Overview",
-      "Facilitated sessions",
+      "Sessions",
       "Notifications",
     ]);
     expect(getAdvisorNavSectionForHref(sections, "/advisor/facilitate")).toBe("home");
     expect(getAdvisorNavSectionForHref(sections, "/advisor/notifications")).toBe("home");
   });
 
-  it("exposes Portfolio section with analytics, intelligence, and deliverables", () => {
-    const portfolio = ADVISOR_NAV_SECTIONS.find((s) => s.id === "portfolio");
-    expect(portfolio?.title).toBe("Portfolio");
-    expect(portfolio?.items.map((item) => item.label)).toEqual([
-      "Risk analytics",
-      "Risk intelligence",
-      "Reports",
-      "Recommendations",
-      "Signals",
-    ]);
-    expect(getAdvisorNavSectionForHref(sections, "/advisor/dashboard")).toBe("portfolio");
-    expect(getAdvisorNavSectionForHref(sections, "/advisor/reports")).toBe("portfolio");
-  });
-
-  it("exposes Assessment lifecycle section with engagements and reassessment", () => {
-    const assessmentLifecycle = ADVISOR_NAV_SECTIONS.find(
-      (s) => s.id === "assessment-lifecycle",
-    );
-    expect(assessmentLifecycle?.title).toBe("Assessment lifecycle");
-    expect(assessmentLifecycle?.items.map((item) => item.href)).toEqual([
-      "/advisor/engagements",
-      "/advisor/reassessment",
+  it("exposes Clients section with Clients and Invitations", () => {
+    const clients = ADVISOR_NAV_SECTIONS.find((s) => s.id === "clients");
+    expect(clients?.title).toBe("Clients");
+    expect(clients?.items.map((item) => item.label)).toEqual([
+      "Clients",
+      "Invitations",
     ]);
   });
 
-  it("exposes Account footer section with settings links", () => {
-    const account = ADVISOR_NAV_SECTIONS.find((s) => s.id === "account");
-    expect(account?.placement).toBe("footer");
-    expect(account?.items.map((item) => item.label)).toEqual([
-      "Account settings",
-      "Your methodology",
+  it("exposes Firm section with team, access, standards, and billing", () => {
+    const firm = ADVISOR_NAV_SECTIONS.find((s) => s.id === "firm");
+    expect(firm?.title).toBe("Firm");
+    expect(firm?.items.map((item) => item.label)).toEqual([
+      "Team",
+      "Roles & Permissions",
+      "Practice Standards",
       "Billing",
     ]);
     const { footer } = partitionAdvisorNavSections(sections);
-    expect(footer.map((section) => section.id)).toEqual(["account"]);
+    expect(footer).toHaveLength(0);
   });
 
-  it("highlights Methodology on nested methodology routes", () => {
+  it("highlights Notifications on notification settings routes", () => {
     const sections = getVisibleAdvisorNavSections(flags);
-    expect(getActiveAdvisorNavHref("/advisor/methodology/pillars", sections)).toBe(
-      "/advisor/methodology",
-    );
-  });
-
-  it("highlights Account settings on nested settings routes except notification settings", () => {
-    const sections = getVisibleAdvisorNavSections(flags);
-    expect(getActiveAdvisorNavHref("/advisor/settings/pii-policy", sections)).toBe(
-      "/advisor/settings",
-    );
     expect(getActiveAdvisorNavHref("/advisor/settings/notifications", sections)).toBe(
       "/advisor/notifications",
     );
@@ -128,7 +96,7 @@ describe("getActiveAdvisorNavHref", () => {
 
   it("shows Team nav only when enterprise team management is enabled", () => {
     const hidden = getVisibleAdvisorNavSections(flags);
-    expect(hidden.flatMap((section) => section.items).some((item) => item.label === "Team management")).toBe(
+    expect(hidden.flatMap((section) => section.items).some((item) => item.label === "Team")).toBe(
       false,
     );
 
@@ -143,88 +111,24 @@ describe("getActiveAdvisorNavHref", () => {
     expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/access-control")).toBe("firm");
   });
 
-  it("shows Firm standards for enterprise team managers when team nav is enabled", () => {
+  it("shows Practice Standards for enterprise team managers when team nav is enabled", () => {
     const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
-    const firmStandards = visible
+    const practiceStandards = visible
       .flatMap((section) => section.items)
       .find((item) => item.href === "/advisor/enterprise/methodology");
-    expect(firmStandards?.label).toBe("Firm standards");
+    expect(practiceStandards?.label).toBe("Practice Standards");
     expect(getAdvisorNavSectionForHref(visible, "/advisor/enterprise/methodology")).toBe("firm");
   });
 
-  it("hides Engagements when implementation tracking is disabled for the firm", () => {
-    const withTracking = getVisibleAdvisorNavSections(flags);
-    expect(
-      withTracking.flatMap((section) => section.items).some((item) => item.href === "/advisor/engagements"),
-    ).toBe(true);
-
-    const withoutTracking = getVisibleAdvisorNavSections(flags, {
-      implementationTrackingEnabled: false,
-    });
-    expect(
-      withoutTracking.flatMap((section) => section.items).some((item) => item.href === "/advisor/engagements"),
-    ).toBe(false);
-    expect(
-      withoutTracking.flatMap((section) => section.items).some((item) => item.href === "/advisor/reassessment"),
-    ).toBe(true);
-  });
-
-  it("moves Billing to Firm for enterprise team managers", () => {
+  it("shows Billing in Firm for advisors with billing access", () => {
     const solo = getVisibleAdvisorNavSections(flags);
-    expect(getAdvisorNavSectionForHref(solo, "/advisor/billing")).toBe("account");
+    expect(getAdvisorNavSectionForHref(solo, "/advisor/billing")).toBe("firm");
+    expect(
+      solo.find((section) => section.id === "firm")?.items.some((item) => item.href === "/advisor/billing"),
+    ).toBe(true);
 
     const enterprise = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
     expect(getAdvisorNavSectionForHref(enterprise, "/advisor/billing")).toBe("firm");
-    expect(
-      enterprise.find((section) => section.id === "account")?.items.some((item) => item.href === "/advisor/billing"),
-    ).toBe(false);
-    expect(
-      enterprise.find((section) => section.id === "firm")?.items.some((item) => item.href === "/advisor/billing"),
-    ).toBe(true);
-  });
-
-  it("hides portfolio nav for enterprise members when firm visibility is off", () => {
-    const visible = getVisibleAdvisorNavSections(flags, {
-      applyEnterpriseMemberVisibility: true,
-      enterpriseMemberVisibility: {
-        portfolio: false,
-        methodology: true,
-        engagements: true,
-        reassessment: true,
-        productTours: true,
-        hideTierLockedNav: false,
-      },
-    });
-    const portfolioItems = visible.find((section) => section.id === "portfolio")?.items ?? [];
-    expect(portfolioItems).toHaveLength(0);
-    expect(visible.some((section) => section.id === "portfolio")).toBe(false);
-  });
-
-  it("hides assessment leads nav for enterprise members when firm visibility is off", () => {
-    const visible = getVisibleAdvisorNavSections(flags, {
-      applyEnterpriseMemberVisibility: true,
-      enterpriseMemberVisibility: {
-        assessmentLeads: false,
-      },
-    });
-    const clientItems = visible.find((section) => section.id === "clients")?.items ?? [];
-    expect(clientItems.some((item) => item.href === "/advisor/leads")).toBe(false);
-  });
-
-  it("hides methodology nav for enterprise members when firm visibility is off", () => {
-    const visible = getVisibleAdvisorNavSections(flags, {
-      applyEnterpriseMemberVisibility: true,
-      enterpriseMemberVisibility: {
-        portfolio: true,
-        methodology: false,
-        engagements: true,
-        reassessment: true,
-        productTours: true,
-        hideTierLockedNav: false,
-      },
-    });
-    const accountItems = visible.find((section) => section.id === "account")?.items ?? [];
-    expect(accountItems.some((item) => item.href === "/advisor/methodology")).toBe(false);
   });
 
   it("hides Billing nav when billing access is disabled for enterprise advisors", () => {
@@ -239,80 +143,66 @@ describe("getActiveAdvisorNavHref", () => {
     ).toBe(false);
   });
 
-  it("marks tier-gated nav items as locked below the required module tier", () => {
-    const methodology = ADVISOR_NAV_SECTIONS.find((s) => s.id === "account")?.items.find(
-      (item) => item.href === "/advisor/methodology",
+  it("marks Practice Standards as tier locked below the required module tier", () => {
+    const practiceStandards = ADVISOR_NAV_SECTIONS.find((s) => s.id === "firm")?.items.find(
+      (item) => item.href === "/advisor/enterprise/methodology",
     );
-    expect(methodology?.requiresTierFeature).toBe("METHODOLOGY_CUSTOMIZATION");
-    expect(isAdvisorNavItemTierLocked(methodology!, "ESSENTIALS")).toBe(true);
-    expect(isAdvisorNavItemTierLocked(methodology!, "PROFESSIONAL")).toBe(false);
-
-    const engagements = ADVISOR_NAV_SECTIONS.find((s) => s.id === "assessment-lifecycle")?.items.find(
-      (item) => item.href === "/advisor/engagements",
-    );
-    expect(isAdvisorNavItemTierLocked(engagements!, "PROFESSIONAL")).toBe(true);
-    expect(isAdvisorNavItemTierLocked(engagements!, "BUSINESS")).toBe(false);
+    expect(practiceStandards?.requiresTierFeature).toBe("METHODOLOGY_CUSTOMIZATION");
+    expect(isAdvisorNavItemTierLocked(practiceStandards!, "ESSENTIALS")).toBe(true);
+    expect(isAdvisorNavItemTierLocked(practiceStandards!, "PROFESSIONAL")).toBe(false);
   });
 
   it("hides nav sections when every visible item is tier locked", () => {
-    const visible = getVisibleAdvisorNavSections(flags);
+    const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
     const filtered = filterAdvisorNavSectionsWithAccessibleItems(visible, "ESSENTIALS", null);
-    expect(filtered.some((section) => section.id === "assessment-lifecycle")).toBe(false);
+    expect(filtered.some((section) => section.id === "firm")).toBe(true);
     expect(filtered.some((section) => section.id === "clients")).toBe(true);
   });
 
-  it("keeps nav sections when at least one item is accessible", () => {
-    const visible = getVisibleAdvisorNavSections(flags);
-    const filtered = filterAdvisorNavSectionsWithAccessibleItems(visible, "BUSINESS", null);
-    expect(filtered.some((section) => section.id === "assessment-lifecycle")).toBe(true);
-  });
-
   it("removes tier-locked nav items when hide policy is enabled", () => {
-    const visible = getVisibleAdvisorNavSections(flags);
+    const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
     const filtered = filterTierLockedAdvisorNavItems(visible, "ESSENTIALS");
-    const accountItems = filtered.find((section) => section.id === "account")?.items ?? [];
-    expect(accountItems.some((item) => item.href === "/advisor/methodology")).toBe(false);
-    const portfolioItems = filtered.find((section) => section.id === "portfolio")?.items ?? [];
-    expect(portfolioItems.some((item) => item.href === "/advisor/dashboard")).toBe(false);
-    expect(portfolioItems.some((item) => item.href === "/advisor/reports")).toBe(true);
+    const firmItems = filtered.find((section) => section.id === "firm")?.items ?? [];
+    expect(firmItems.some((item) => item.href === "/advisor/enterprise/methodology")).toBe(false);
+    expect(firmItems.some((item) => item.href === "/advisor/billing")).toBe(true);
   });
 
   it("resolveAdvisorNavSectionsForDisplay hides tier-locked items when requested", () => {
-    const visible = getVisibleAdvisorNavSections(flags);
-    const displayed = resolveAdvisorNavSectionsForDisplay(visible, "PROFESSIONAL", null, {
+    const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
+    const displayed = resolveAdvisorNavSectionsForDisplay(visible, "ESSENTIALS", null, {
       hideTierLockedItems: true,
     });
     expect(
       displayed.some((section) =>
-        section.items.some((item) => item.href === "/advisor/engagements"),
+        section.items.some((item) => item.href === "/advisor/enterprise/methodology"),
       ),
     ).toBe(false);
     expect(
       displayed.some((section) =>
-        section.items.some((item) => item.href === "/advisor/methodology"),
+        section.items.some((item) => item.href === "/advisor/billing"),
       ),
     ).toBe(true);
   });
 
-  it("highlights All clients on client detail routes", () => {
+  it("highlights Clients on client detail routes", () => {
     expect(getActiveAdvisorNavHref("/advisor/pipeline/client-1", sections)).toBe(
       "/advisor/pipeline",
     );
   });
 
-  it("highlights All clients on client guidance routes", () => {
+  it("highlights Clients on client guidance routes", () => {
     expect(
       getActiveAdvisorNavHref("/advisor/clients/client-1/guidance", sections),
     ).toBe("/advisor/pipeline");
   });
 
-  it("highlights All clients on intake review routes", () => {
+  it("highlights Clients on intake review routes", () => {
     expect(getActiveAdvisorNavHref("/advisor/review/intake-1", sections)).toBe(
       "/advisor/pipeline",
     );
   });
 
-  it("highlights All clients on assessment review routes", () => {
+  it("highlights Clients on assessment review routes", () => {
     expect(
       getActiveAdvisorNavHref(
         "/advisor/pipeline/client-1/assessment/asmt-1",
@@ -321,19 +211,7 @@ describe("getActiveAdvisorNavHref", () => {
     ).toBe("/advisor/pipeline");
   });
 
-  it("highlights Risk intelligence on family intelligence routes", () => {
-    expect(getActiveAdvisorNavHref("/advisor/intelligence/family-1", sections)).toBe(
-      "/advisor/intelligence",
-    );
-  });
-
-  it("highlights Risk analytics on client analytics routes", () => {
-    expect(getActiveAdvisorNavHref("/advisor/analytics/client-1", sections)).toBe(
-      "/advisor/dashboard",
-    );
-  });
-
-  it("highlights Firm standards on enterprise recommendation routes", () => {
+  it("highlights Practice Standards on enterprise recommendation routes", () => {
     const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
     expect(
       getActiveAdvisorNavHref("/advisor/enterprise/recommendations/governance", visible),

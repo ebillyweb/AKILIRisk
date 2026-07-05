@@ -38,7 +38,7 @@ export default async function AdvisorReassessmentCadencePage() {
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
-        <Link href="/advisor/pipeline">All clients</Link>
+        <Link href="/advisor/pipeline">Clients</Link>
       </Button>
 
       <div className="space-y-2">

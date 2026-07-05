@@ -137,7 +137,7 @@ export function EnterpriseTeamPanel({
     <div className="space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-tour="config-page-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Team management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
           <p className="text-sm text-muted-foreground">
             Manage team members and administrators for{" "}
             <span className="font-semibold text-foreground">{enterpriseName}</span>.
@@ -264,7 +264,7 @@ export function EnterpriseTeamPanel({
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight">Access control</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Roles & Permissions</h2>
             <p className="text-sm text-muted-foreground">
               Workspace visibility, client data defaults, household profiles, and branding options
               for team members live on a dedicated page under Firm.

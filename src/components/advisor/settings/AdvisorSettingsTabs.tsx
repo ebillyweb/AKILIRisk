@@ -187,7 +187,7 @@ export function AdvisorSettingsTabs({
                 </p>
               </div>
               <Button asChild variant="outline" size="sm" className="shrink-0">
-                <Link href="/advisor/settings/access-control">Access control</Link>
+                <Link href="/advisor/settings/access-control">Roles & Permissions</Link>
               </Button>
             </div>
           </div>
@@ -242,7 +242,7 @@ export function AdvisorSettingsTabs({
               <h2 className="text-lg font-semibold tracking-tight">Client data policy</h2>
               <p className="text-sm text-muted-foreground">
                 Workspace labeling (email vs Client reference) and optional intake
-                fields. Firm defaults live under Firm → Access control.
+                fields. Firm defaults live under Firm → Roles & Permissions.
               </p>
             </div>
             <Button asChild variant="outline" size="sm" className="shrink-0">

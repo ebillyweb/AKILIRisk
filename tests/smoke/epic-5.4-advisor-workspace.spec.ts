@@ -14,41 +14,26 @@ test.describe("Epic 5.4 — advisor workspace", () => {
       await expect(advisorWorkspaceNav(page)).toBeVisible();
     });
 
-    test("Facilitated sessions opens the facilitate launcher from Home", async ({ page }) => {
+    test("Sessions opens the facilitate launcher from Home", async ({ page }) => {
       const nav = advisorWorkspaceNav(page);
-      await nav.getByRole("link", { name: "Facilitated sessions" }).click();
+      await nav.getByRole("link", { name: "Sessions" }).click();
 
       await expect(page).toHaveURL(/\/advisor\/facilitate\/?$/);
       await expect(
-        page.getByRole("heading", { name: /^facilitated sessions$/i }),
+        page.getByRole("heading", { name: /^sessions$/i }),
       ).toBeVisible();
-      await expect(nav.getByRole("link", { name: "Facilitated sessions" })).toHaveAttribute(
+      await expect(nav.getByRole("link", { name: "Sessions" })).toHaveAttribute(
         "aria-current",
         "page",
       );
     });
 
-    test("Engagements opens the engagements workspace from Assessment lifecycle", async ({ page }) => {
+    test("Clients opens the pipeline", async ({ page }) => {
       const nav = advisorWorkspaceNav(page);
-      await nav.getByRole("link", { name: "Engagement Tracker" }).click();
-
-      await expect(page).toHaveURL(/\/advisor\/engagements\/?$/);
-      await expect(page.getByRole("heading", { name: /^engagements$/i })).toBeVisible();
-      await expect(
-        page.getByText("In progress", { exact: true }),
-      ).toBeVisible();
-      await expect(nav.getByRole("link", { name: "Engagement Tracker" })).toHaveAttribute(
-        "aria-current",
-        "page",
-      );
-    });
-
-    test("All clients opens the pipeline", async ({ page }) => {
-      const nav = advisorWorkspaceNav(page);
-      await nav.getByRole("link", { name: "All clients" }).click();
+      await nav.getByRole("link", { name: "Clients" }).click();
 
       await expect(page).toHaveURL(/\/advisor\/pipeline\/?$/);
-      await expect(nav.getByRole("link", { name: "All clients" })).toHaveAttribute(
+      await expect(nav.getByRole("link", { name: "Clients" })).toHaveAttribute(
         "aria-current",
         "page",
       );

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { InviteClientForm } from "@/components/advisor/invitations/InviteClientForm";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 import { ClientLimitBanner } from "@/components/advisor/billing/ClientLimitGate";
 import { InvitationTable } from "@/components/advisor/invitations/InvitationTable";
 import { InvitationListFilters } from "@/components/advisor/invitations/InvitationListFilters";
@@ -63,6 +64,11 @@ export default async function InvitationsPage({
 
   return (
     <div className="space-y-8">
+      <AdvisorScreenHeader
+        kicker="Clients"
+        title="Invitations"
+        description="Send new client invitations and review invitation history."
+      />
       {clientLimitStatus ? <ClientLimitBanner status={clientLimitStatus} /> : null}
       <InviteClientForm
         firmName={profile.firmName}

@@ -1,5 +1,3 @@
-"use client";
-
 import type { SubscriptionTier } from "@prisma/client";
 
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
@@ -32,7 +30,7 @@ export function EnterpriseAccessControlPanel({
     <div className="space-y-8">
       <ConfigurationPageHeader
         tourId="advisor-settings-access-control"
-        title="Access control"
+        title="Roles & Permissions"
         description={`Configure workspace visibility, client data defaults, and branding options for team members at ${enterpriseName}. Owners and administrators always retain full access within your module tier.`}
       />
 
