@@ -122,3 +122,8 @@ export function useTheme(): ThemeContextValue {
   }
   return ctx;
 }
+
+/** Non-throwing variant for chrome that may render during auth shell transitions. */
+export function useOptionalTheme(): ThemeContextValue | null {
+  return React.useContext(ThemeContext);
+}
