@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ContactForm } from "@/components/marketing/ContactForm";
+import { SiteBusinessContact } from "@/components/marketing/SiteBusinessContact";
 import { MarketingPage } from "@/components/marketing/MarketingPage";
 import {
   contactUsHeroDescription,
@@ -22,7 +23,10 @@ export default function ContactUsPage() {
       layout="split"
     >
       <Suspense fallback={null}>
-        <ContactForm />
+        <div className="space-y-5">
+          <SiteBusinessContact variant="contact" />
+          <ContactForm />
+        </div>
       </Suspense>
     </MarketingPage>
   );

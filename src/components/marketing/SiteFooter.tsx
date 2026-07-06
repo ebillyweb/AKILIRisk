@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { SiteBusinessContact } from "@/components/marketing/SiteBusinessContact";
 import { SiteSocialLinks } from "@/components/marketing/SiteSocialLinks";
 import { LEGAL_ENTITY_NAME } from "@/lib/legal/documents";
 import {
@@ -77,6 +78,7 @@ export function SiteFooter({ className }: SiteFooterProps) {
                 Terms of Service
               </Link>
             </nav>
+            <SiteBusinessContact />
           </div>
         </div>
       </div>

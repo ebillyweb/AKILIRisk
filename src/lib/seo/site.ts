@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AKILI_BRAND, AKILI_TAGLINES } from "@/lib/brand/tokens";
+import { getBusinessContact } from "@/lib/marketing/business-contact";
 import { getConfiguredSocialProfileUrls } from "@/lib/marketing/social-profiles";
 import { getPublicAppUrlFromEnv } from "@/lib/public-app-url";
 
@@ -137,31 +138,58 @@ export function withCanonical(path: string, metadata: Metadata): Metadata {
 export function buildOrganizationJsonLd() {
   const siteUrl = getSeoSiteUrl();
   const sameAs = getConfiguredSocialProfileUrls();
+  const businessContact = getBusinessContact();
+
+  const graph: Record<string, unknown>[] = [
+    {
+      "@type": "Organization",
+      "@id": `${siteUrl}/#organization`,
+      name: AKILI_BRAND.legalName,
+      url: siteUrl,
+      logo: `${siteUrl}/brand/akili-email-lockup.png`,
+      email: AKILI_BRAND.contact.hello,
+      description: AKILI_TAGLINES.platform,
+      ...(businessContact ? { telephone: businessContact.phone } : {}),
+      ...(sameAs.length > 0 ? { sameAs } : {}),
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
+      url: siteUrl,
+      name: AKILI_BRAND.legalName,
+      description: AKILI_TAGLINES.platform,
+      publisher: {
+        "@id": `${siteUrl}/#organization`,
+      },
+    },
+  ];
+
+  if (businessContact) {
+    graph.push({
+      "@type": "LocalBusiness",
+      "@id": `${siteUrl}/#localbusiness`,
+      name: AKILI_BRAND.legalName,
+      url: siteUrl,
+      telephone: businessContact.phone,
+      email: AKILI_BRAND.contact.hello,
+      description: AKILI_TAGLINES.platform,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: businessContact.address.streetAddress,
+        addressLocality: businessContact.address.addressLocality,
+        addressRegion: businessContact.address.addressRegion,
+        postalCode: businessContact.address.postalCode,
+        addressCountry: businessContact.address.addressCountry,
+      },
+      parentOrganization: {
+        "@id": `${siteUrl}/#organization`,
+      },
+    });
+  }
 
   return {
     "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "@id": `${siteUrl}/#organization`,
-        name: AKILI_BRAND.legalName,
-        url: siteUrl,
-        logo: `${siteUrl}/brand/akili-email-lockup.png`,
-        email: AKILI_BRAND.contact.hello,
-        description: AKILI_TAGLINES.platform,
-        ...(sameAs.length > 0 ? { sameAs } : {}),
-      },
-      {
-        "@type": "WebSite",
-        "@id": `${siteUrl}/#website`,
-        url: siteUrl,
-        name: AKILI_BRAND.legalName,
-        description: AKILI_TAGLINES.platform,
-        publisher: {
-          "@id": `${siteUrl}/#organization`,
-        },
-      },
-    ],
+    "@graph": graph,
   };
 }
 
