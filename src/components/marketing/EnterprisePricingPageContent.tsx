@@ -6,6 +6,7 @@ import { SELF_SERVE_TIERS, TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog"
 import { isBillingEnabled } from "@/lib/billing/config";
 import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import type { EnterprisePricingFirmContext } from "@/lib/enterprise/pricing-page-access";
+import { contactIntentPath } from "@/lib/marketing/friendly-urls";
 import { Button } from "@/components/ui/button";
 
 type EnterprisePricingPageContentProps = {
@@ -76,7 +77,7 @@ export function EnterprisePricingPageContent({
             Billing
           </Link>
           . Questions about your contract?{" "}
-          <Link href="/contact?intent=enterprise" className="font-semibold text-foreground underline-offset-4 hover:underline">
+          <Link href={contactIntentPath("enterprise")} className="font-semibold text-foreground underline-offset-4 hover:underline">
             Contact sales
             <ArrowRight className="ml-0.5 inline size-3.5" aria-hidden />
           </Link>

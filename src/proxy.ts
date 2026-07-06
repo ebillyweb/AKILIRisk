@@ -59,6 +59,7 @@ function shouldHandleSubdomain(pathname: string): boolean {
     '/site.webmanifest',
     '/robots.txt',
     '/sitemap.xml',
+    '/llms.txt',
     '/.well-known',
   ];
   return !skipPaths.some(path => pathname.startsWith(path));

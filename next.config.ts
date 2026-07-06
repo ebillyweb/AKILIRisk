@@ -77,6 +77,36 @@ const nextConfig: NextConfig = {
         destination: "/api/advisor/methodology/risk-domains/:path*",
         permanent: true,
       },
+      {
+        source: "/",
+        has: [{ type: "query", key: "audience", value: "families" }],
+        destination: "/families",
+        permanent: true,
+      },
+      {
+        source: "/",
+        has: [{ type: "query", key: "audience", value: "advisors" }],
+        destination: "/firms",
+        permanent: true,
+      },
+      {
+        source: "/",
+        has: [{ type: "query", key: "audience", value: "overview" }],
+        destination: "/how-it-works",
+        permanent: true,
+      },
+      {
+        source: "/contact",
+        has: [{ type: "query", key: "intent", value: "demo" }],
+        destination: "/contact/demo",
+        permanent: true,
+      },
+      {
+        source: "/contact",
+        has: [{ type: "query", key: "intent", value: "enterprise" }],
+        destination: "/contact/enterprise",
+        permanent: true,
+      },
     ];
   },
 };

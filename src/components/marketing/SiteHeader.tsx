@@ -8,6 +8,7 @@ import type { HeroAudience } from "@/components/home/hero/hero-audience-content"
 import { SiteHeaderNav } from "@/components/marketing/nav/SiteHeaderNav";
 import { MarketingNavAuthActions } from "@/components/marketing/MarketingNavAuthActions";
 import { MobileNavMenu } from "@/components/marketing/MobileNavMenu";
+import { isMarketingHomePath } from "@/lib/marketing/friendly-urls";
 import { cn } from "@/lib/utils";
 
 type SiteHeaderProps = {
@@ -17,7 +18,7 @@ type SiteHeaderProps = {
 
 export function SiteHeader({ className, showLogo = true }: SiteHeaderProps) {
   const pathname = usePathname();
-  const isHomepage = pathname === "/";
+  const isHomepage = isMarketingHomePath(pathname);
   const heroAudience = useOptionalHeroAudience();
 
   return (

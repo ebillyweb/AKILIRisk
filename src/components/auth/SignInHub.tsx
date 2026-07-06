@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
 import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Briefcase, Shield, UserRound } from "lucide-react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,7 +17,7 @@ import {
   normalizeUserRoleString,
 } from "@/lib/auth-roles";
 import {
-  SIGN_IN_HUB_PATH,
+  buildSignInHref,
   isEnterpriseTeamJoinCallback,
   resolveSignInRole,
 } from "@/lib/auth/sign-in-routes";
@@ -344,8 +344,9 @@ function StaffCredentialsPanel({
   );
 }
 
-function SignInHubContent() {
+function SignInHubContent({ defaultRole }: { defaultRole?: SignInRole }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const brandingContext = useBrandingOptional();
   const isBrandedPortal = Boolean(brandingContext?.branding);
@@ -363,9 +364,11 @@ function SignInHubContent() {
     enterpriseTeamJoin && callbackUrl ? callbackUrl : null;
 
   const resolvedRole = resolveSignInRole({
+    pathname,
     role: searchParams.get("role"),
     portal: searchParams.get("portal"),
     callbackUrl,
+    fallback: defaultRole,
   });
   const initialRole = isBrandedPortal
     ? coerceSignInRoleForBrandedPortal(resolvedRole)
@@ -379,18 +382,19 @@ function SignInHubContent() {
 
   const syncRoleToUrl = useCallback(
     (role: SignInRole) => {
-      const url = new URL(SIGN_IN_HUB_PATH, "http://local");
-      url.searchParams.set("role", role);
-      if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
-        url.searchParams.set("callbackUrl", callbackUrl);
-      }
+      const href = buildSignInHref({
+        role,
+        callbackUrl,
+        email: prefilledEmail,
+      });
+      const url = new URL(href, "http://local");
       const notice = searchParams.get("notice");
       if (notice) {
         url.searchParams.set("notice", notice);
       }
       router.replace(scopePostAuthPath(`${url.pathname}${url.search}`), { scroll: false });
     },
-    [callbackUrl, router, searchParams]
+    [callbackUrl, prefilledEmail, router, searchParams]
   );
 
   useEffect(() => {
@@ -506,7 +510,7 @@ function SignInHubContent() {
   );
 }
 
-export function SignInHub() {
+export function SignInHub({ defaultRole }: { defaultRole?: SignInRole } = {}) {
   return (
     <Suspense
       fallback={
@@ -515,7 +519,7 @@ export function SignInHub() {
         </div>
       }
     >
-      <SignInHubContent />
+      <SignInHubContent defaultRole={defaultRole} />
     </Suspense>
   );
 }

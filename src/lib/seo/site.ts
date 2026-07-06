@@ -17,8 +17,13 @@ export type PublicSitemapEntry = {
 /** Public marketing routes included in sitemap.xml and allowed in robots.txt. */
 export const PUBLIC_SITEMAP_ENTRIES: PublicSitemapEntry[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/families", changeFrequency: "monthly", priority: 0.85 },
+  { path: "/firms", changeFrequency: "monthly", priority: 0.85 },
+  { path: "/how-it-works", changeFrequency: "monthly", priority: 0.85 },
   { path: "/about", changeFrequency: "monthly", priority: 0.8 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/contact/demo", changeFrequency: "monthly", priority: 0.75 },
+  { path: "/contact/enterprise", changeFrequency: "monthly", priority: 0.75 },
   { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.3 },

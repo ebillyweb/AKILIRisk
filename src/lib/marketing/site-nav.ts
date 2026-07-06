@@ -1,4 +1,5 @@
 import type { HeroAudience } from "@/components/home/hero/hero-audience-content";
+import { heroAudiencePath } from "@/lib/marketing/friendly-urls";
 
 export const SITE_AUDIENCE_NAV: ReadonlyArray<{
   id: HeroAudience;
@@ -22,7 +23,7 @@ export const SITE_SECONDARY_NAV_LINKS = [
 /** @deprecated Use SITE_PRIMARY_NAV_LINKS — kept for any legacy imports during migration. */
 export const SITE_NAV_LINKS = [
   ...SITE_AUDIENCE_NAV.map(({ id, label }) => ({
-    href: id === "overview" ? "/?audience=overview" : `/?audience=${id}`,
+    href: heroAudiencePath(id),
     label,
   })),
   { href: "/pricing", label: "Pricing" },
@@ -30,5 +31,5 @@ export const SITE_NAV_LINKS = [
 ] as const;
 
 export function audienceNavHref(audience: HeroAudience): string {
-  return `/?audience=${audience}`;
+  return heroAudiencePath(audience);
 }

@@ -8,6 +8,7 @@ import { SELF_SERVE_TIERS, TIER_CATALOG } from "@/lib/billing/tier-catalog";
 import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import { Button } from "@/components/ui/button";
 import { MarketingSurfaceCard } from "@/components/marketing/MarketingSurfaceCard";
+import { contactIntentPath } from "@/lib/marketing/friendly-urls";
 
 type LandingPricingPreviewProps = {
   pricing?: PublicTierPricing[];
@@ -63,7 +64,7 @@ export function LandingPricingPreview({ pricing = [] }: LandingPricingPreviewPro
           </Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="min-h-12">
-          <Link href="/contact?intent=enterprise">Enterprise pricing</Link>
+          <Link href={contactIntentPath("enterprise")}>Enterprise pricing</Link>
         </Button>
       </div>
     </MarketingSection>

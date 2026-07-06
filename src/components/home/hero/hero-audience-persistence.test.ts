@@ -30,6 +30,17 @@ describe("parseHeroAudienceHash", () => {
 });
 
 describe("resolveHeroAudience", () => {
+  it("prefers pathname over query, hash, and storage", () => {
+    expect(
+      resolveHeroAudience({
+        pathname: "/firms",
+        search: "?audience=families",
+        hash: "#advisors",
+        storage: "advisors",
+      })
+    ).toBe("advisors");
+  });
+
   it("prefers query over hash and storage", () => {
     expect(
       resolveHeroAudience({

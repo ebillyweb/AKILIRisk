@@ -1,3 +1,8 @@
+import {
+  contactIntentPath,
+  signInRolePath,
+} from "@/lib/marketing/friendly-urls";
+
 export type HeroAudience = "families" | "advisors" | "overview";
 
 export const HERO_AUDIENCE_OPTIONS: ReadonlyArray<{
@@ -47,7 +52,7 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     },
     secondaryCta: {
       label: "Sign In",
-      href: "/signin?role=client",
+      href: signInRolePath("client"),
       title: "Sign in to your client account",
     },
     helperLinks: [
@@ -73,12 +78,12 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
       "One workspace for client profiles, assessment progress, risk scoring, and structured recommendations — for wealth advisors, CPAs, estate attorneys, succession planners, and family offices.",
     primaryCta: {
       label: "Advisor Sign In",
-      href: "/signin?role=advisor",
+      href: signInRolePath("advisor"),
       title: "Sign in to your advisor workspace",
     },
     secondaryCta: {
       label: "Request Demo",
-      href: "/contact?intent=demo",
+      href: contactIntentPath("demo"),
       title: "Request a platform demonstration",
     },
     helperLinks: [
@@ -137,7 +142,7 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
     },
     secondaryCta: {
       label: "Advisor Sign In",
-      href: "/signin?role=advisor",
+      href: signInRolePath("advisor"),
       title: "Sign in to your advisor workspace",
     },
     helperLinks: [
@@ -153,7 +158,7 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
         content: "link",
         text: "Want a walkthrough?",
         linkLabel: "Request a demo",
-        href: "/contact?intent=demo",
+        href: contactIntentPath("demo"),
       },
     ],
   },

@@ -1,33 +1,32 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { ContactForm } from "@/components/marketing/ContactForm";
-import { SiteBusinessContact } from "@/components/marketing/SiteBusinessContact";
-import { MarketingPage } from "@/components/marketing/MarketingPage";
+
+import { ContactPageView } from "@/components/marketing/ContactPageView";
 import {
-  contactUsHeroDescription,
-  contactUsSections,
-} from "@/lib/marketing/content";
+  parseContactFormIntent,
+} from "@/lib/marketing/contact-form-intent";
+import { contactIntentPath } from "@/lib/marketing/friendly-urls";
 import { withCanonical } from "@/lib/seo/site";
 
 export const metadata: Metadata = withCanonical("/contact", {
   title: "Contact Us",
 });
 
-export default function ContactUsPage() {
+type ContactUsPageProps = {
+  searchParams: Promise<{ intent?: string }>;
+};
+
+export default async function ContactUsPage({ searchParams }: ContactUsPageProps) {
+  const { intent: intentParam } = await searchParams;
+  const legacyIntent = parseContactFormIntent(intentParam);
+  if (legacyIntent) {
+    redirect(contactIntentPath(legacyIntent));
+  }
+
   return (
-    <MarketingPage
-      title="Contact Us"
-      kicker="Contact"
-      heroDescription={contactUsHeroDescription}
-      sections={contactUsSections}
-      layout="split"
-    >
-      <Suspense fallback={null}>
-        <div className="space-y-5">
-          <SiteBusinessContact variant="contact" />
-          <ContactForm />
-        </div>
-      </Suspense>
-    </MarketingPage>
+    <Suspense fallback={null}>
+      <ContactPageView />
+    </Suspense>
   );
 }

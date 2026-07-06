@@ -1,6 +1,7 @@
 import { matchesPathPrefix } from "@/lib/auth/mfa-gate";
 import { isSignInRole, type SignInRole } from "@/lib/auth/sign-in-roles";
 import { stripTenantPathPrefix } from "@/lib/client/tenant-path-prefix-client";
+import { parseSignInRolePath, signInRolePath } from "@/lib/marketing/friendly-urls";
 
 /** Unified sign-in hub for all roles. */
 export const SIGN_IN_HUB_PATH = "/signin";
@@ -122,7 +123,14 @@ export function buildSignInHref(options: {
   }
 
   const url = new URL(SIGN_IN_HUB_PATH, "http://local");
-  url.searchParams.set("role", role);
+  if (role === "client") {
+    url.pathname = signInRolePath("client");
+  } else if (role === "advisor") {
+    url.pathname = signInRolePath("advisor");
+  } else {
+    url.pathname = SIGN_IN_HUB_PATH;
+    url.searchParams.set("role", role);
+  }
 
   if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
     url.searchParams.set("callbackUrl", callbackUrl);
@@ -150,12 +158,18 @@ export function isEnterpriseTeamJoinCallback(
  * Supports legacy `portal=advisor` and infers role from protected destinations.
  */
 export function resolveSignInRole(options: {
+  pathname?: string | null;
   role?: string | null;
   portal?: string | null;
   callbackUrl?: string | null;
   fallback?: SignInRole;
 }): SignInRole {
-  const { role, portal, callbackUrl, fallback = "client" } = options;
+  const { pathname, role, portal, callbackUrl, fallback = "client" } = options;
+
+  const fromPath = parseSignInRolePath(pathname ?? undefined);
+  if (fromPath) {
+    return fromPath;
+  }
 
   if (isSignInRole(role)) {
     return role;

@@ -49,6 +49,7 @@ import { PlanTierFeatureList } from "@/components/billing/PlanTierFeatureList";
 import { TierPricingConfigAlert } from "@/components/billing/TierPricingConfigAlert";
 import { PlanChangeConfirmDialog } from "@/components/advisor/billing/PlanChangeConfirmDialog";
 import { cn } from "@/lib/utils";
+import { contactIntentPath } from "@/lib/marketing/friendly-urls";
 
 export type PricingAudience = "solo" | "enterprise";
 export type PricingTierGridSurface = "marketing" | "billing";
@@ -250,7 +251,7 @@ function PricingTierActionButton({
   if (!billingEnabled) {
     return (
       <Button asChild className="w-full" variant={featured ? "default" : "outline"}>
-        <Link href={audience === "enterprise" ? "/contact?intent=enterprise" : "/contact?intent=demo"}>
+        <Link href={audience === "enterprise" ? contactIntentPath("enterprise") : contactIntentPath("demo")}>
           Request pricing
           <ArrowRight className="size-4" aria-hidden />
         </Link>
@@ -871,7 +872,7 @@ export function PricingTierGrid({
                 seats, and centralized billing under one contract.
               </p>
               <Button asChild>
-                <Link href="/contact?intent=enterprise">
+                <Link href={contactIntentPath("enterprise")}>
                   Talk to sales
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
