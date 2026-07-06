@@ -1,9 +1,10 @@
+import type { ComponentType } from "react";
 import { Facebook, Instagram, Linkedin, Youtube } from "lucide-react";
 
 import { getConfiguredSocialProfiles, type SocialProfileId } from "@/lib/marketing/social-profiles";
 import { cn } from "@/lib/utils";
 
-const SOCIAL_ICONS: Record<SocialProfileId, typeof Linkedin> = {
+const SOCIAL_ICONS: Record<SocialProfileId, ComponentType<{ className?: string }>> = {
   linkedin: Linkedin,
   facebook: Facebook,
   instagram: Instagram,
