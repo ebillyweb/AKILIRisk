@@ -8,11 +8,12 @@ import {
   advisorBillingDeepLink,
   parseSignupCheckoutIntent,
 } from "@/lib/billing/tier-catalog";
+import { withCanonical } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withCanonical("/signup/advisor", {
   title: "Advisor sign up",
   description: "Create an AKILI advisor account and subscribe to modular governance plans.",
-};
+});
 
 export const dynamic = "force-dynamic";
 

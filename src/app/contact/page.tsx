@@ -6,10 +6,11 @@ import {
   contactUsHeroDescription,
   contactUsSections,
 } from "@/lib/marketing/content";
+import { withCanonical } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withCanonical("/contact", {
   title: "Contact Us",
-};
+});
 
 export default function ContactUsPage() {
   return (

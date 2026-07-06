@@ -4,10 +4,11 @@ import {
   aboutUsHeroDescription,
   aboutUsSections,
 } from "@/lib/marketing/content";
+import { withCanonical } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withCanonical("/about", {
   title: "About",
-};
+});
 
 export default function AboutUsPage() {
   return (

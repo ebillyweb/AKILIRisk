@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
@@ -9,6 +10,13 @@ import { LandingOutcomesSection } from "@/components/marketing/LandingOutcomesSe
 import { LandingProductPreview } from "@/components/marketing/LandingProductPreview";
 import { PublicPageShell } from "@/components/marketing/PublicPageShell";
 import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
+import { withCanonical } from "@/lib/seo/site";
+
+export const metadata: Metadata = withCanonical("/", {
+  title: "AKILI Risk Intelligence",
+  description:
+    "Governance intelligence platform for modern family wealth — structured assessments, prioritized risks, and actionable recommendations for professional firms and families.",
+});
 
 type HomePageProps = {
   searchParams: Promise<{ audience?: string }>;

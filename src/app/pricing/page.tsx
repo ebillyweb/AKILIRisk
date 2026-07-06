@@ -6,12 +6,13 @@ import { auth } from "@/lib/auth";
 import { isAdvisorHubNavRole } from "@/lib/auth-roles";
 import { getSubscriptionDetails } from "@/lib/actions/billing";
 import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
+import { withCanonical } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withCanonical("/pricing", {
   title: "Pricing",
   description:
     "Compare AKILI Essentials through Platinum — see what each module tier includes, client limits, and which capabilities unlock as you upgrade.",
-};
+});
 
 export const dynamic = "force-dynamic";
 

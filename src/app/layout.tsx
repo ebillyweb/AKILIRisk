@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { auth } from "@/lib/auth";
+import { buildOrganizationJsonLd, getSeoSiteOrigin } from "@/lib/seo/site";
 import { getThemeInlineScript } from "@/lib/theme/theme-inline-script";
 
 const manrope = Manrope({
@@ -23,6 +24,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: getSeoSiteOrigin(),
   title: {
     default: "AKILI Risk Intelligence",
     template: "%s | AKILI Risk Intelligence",
@@ -72,6 +74,12 @@ export default async function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#4EA5D9" />
         <meta name="msapplication-TileColor" content="#4EA5D9" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildOrganizationJsonLd()),
+          }}
+        />
       </head>
       <body
         className={`${manrope.variable} ${geistMono.variable} ${cormorant.variable} bg-background text-foreground antialiased`}
