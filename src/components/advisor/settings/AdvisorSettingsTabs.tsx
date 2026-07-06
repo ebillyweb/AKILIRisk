@@ -1,25 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
 import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
 import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AdvisorSubdomainSettings } from "@/lib/advisor/subdomain";
 import {
   parseAdvisorSettingsTab,
   type AdvisorSettingsTab,
 } from "@/lib/advisor/settings-tabs";
-import type { SubscriptionFeatures } from "@/lib/validation/branding";
 
 export type { AdvisorSettingsTab };
 export { parseAdvisorSettingsTab };
 
-const ADVISOR_SETTINGS_TABS: AdvisorSettingsTab[] = ["general", "branding", "security"];
+const ADVISOR_SETTINGS_TABS: AdvisorSettingsTab[] = ["general", "security"];
 
 type ProfileInitialData = {
   firstName: string;
@@ -31,69 +28,28 @@ type ProfileInitialData = {
   email: string;
 };
 
-type BrandingProfile = Parameters<typeof EnhancedBrandingForm>[0]["profile"];
-
 interface AdvisorSettingsTabsProps {
   initialTab: AdvisorSettingsTab;
   profileInitialData: ProfileInitialData;
   firmNameReadOnly: boolean;
-  brandingProfile: BrandingProfile;
-  brandingReadOnly: boolean;
-  brandingReadOnlyNotice?: string;
-  subdomainReadOnly?: boolean;
-  features: SubscriptionFeatures;
-  currentSubdomain: AdvisorSubdomainSettings | null;
-  productionDomain: string;
-  tenantSubdomainSuffix: string;
-  useTenantPathPortals: boolean;
-  platformAppOrigin: string;
-  stagingPlatformHost: string;
-  platformSubdomainsAutoActivate: boolean;
   passwordChangeRequired: boolean;
   changePasswordHref: string;
   householdProfilesEnabled: boolean;
   showHouseholdProfilesPolicy?: boolean;
-  showBrandingTab?: boolean;
 }
 
 export function AdvisorSettingsTabs({
   initialTab,
   profileInitialData,
   firmNameReadOnly,
-  brandingProfile,
-  brandingReadOnly,
-  brandingReadOnlyNotice,
-  subdomainReadOnly = false,
-  features,
-  currentSubdomain,
-  productionDomain,
-  tenantSubdomainSuffix,
-  useTenantPathPortals,
-  platformAppOrigin,
-  stagingPlatformHost,
-  platformSubdomainsAutoActivate,
   passwordChangeRequired,
   changePasswordHref,
   householdProfilesEnabled,
   showHouseholdProfilesPolicy = true,
-  showBrandingTab = true,
 }: AdvisorSettingsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = parseAdvisorSettingsTab(searchParams.get("tab") ?? initialTab, {
-    brandingTabVisible: showBrandingTab,
-  });
-
-  useEffect(() => {
-    if (!showBrandingTab && searchParams.get("tab") === "branding") {
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("tab");
-      const query = params.toString();
-      router.replace(query ? `/advisor/settings?${query}` : "/advisor/settings", {
-        scroll: false,
-      });
-    }
-  }, [router, searchParams, showBrandingTab]);
+  const activeTab = parseAdvisorSettingsTab(searchParams.get("tab") ?? initialTab);
 
   const setTab = useCallback(
     (tab: AdvisorSettingsTab) => {
@@ -129,15 +85,6 @@ export function AdvisorSettingsTabs({
         <TabsTrigger value="general" className="rounded-none px-3 pb-3">
           General
         </TabsTrigger>
-        {showBrandingTab ? (
-          <TabsTrigger
-            value="branding"
-            className="rounded-none px-3 pb-3"
-            data-tour="config-branding-tab"
-          >
-            Branding
-          </TabsTrigger>
-        ) : null}
         <TabsTrigger value="security" className="gap-2 rounded-none px-3 pb-3">
           Security
           {passwordChangeRequired ? (
@@ -192,27 +139,6 @@ export function AdvisorSettingsTabs({
             </div>
           </div>
         )}
-      </TabsContent>
-
-      <TabsContent value="branding" className="mt-0 outline-none">
-        {showBrandingTab ? (
-          <div data-tour="config-primary-form">
-            <EnhancedBrandingForm
-            profile={brandingProfile}
-            readOnly={brandingReadOnly}
-            readOnlyNotice={brandingReadOnlyNotice}
-            subdomainReadOnly={subdomainReadOnly}
-            features={features}
-            currentSubdomain={currentSubdomain}
-            productionDomain={productionDomain}
-            tenantSubdomainSuffix={tenantSubdomainSuffix}
-            useTenantPathPortals={useTenantPathPortals}
-            platformAppOrigin={platformAppOrigin}
-            stagingPlatformHost={stagingPlatformHost}
-            platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
-          />
-          </div>
-        ) : null}
       </TabsContent>
 
       <TabsContent value="security" className="mt-0 space-y-6 outline-none">

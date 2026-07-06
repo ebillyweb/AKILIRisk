@@ -140,16 +140,25 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Advisor settings",
         description:
-          "General, Branding, and Security tabs organize your profile, client-facing branding, and account security including client data policy.",
+          "General and Security tabs organize your personal profile and account security including client data policy.",
+      },
+    },
+  ],
+  "advisor-settings-branding": [
+    {
+      popover: {
+        title: "Firm brand",
+        description:
+          "Edit firm name, logo, colors, landing copy, and white-label subdomain for client-facing emails and portals.",
       },
     },
     {
-      element: '[data-tour="config-branding-tab"]',
+      element: '[data-tour="config-primary-form"]',
       popover: {
-        title: "Branding tab",
+        title: "Brand sections",
         description:
-          "Open Branding to edit firm name, logo, colors, and contact details for client-facing emails and reports.",
-        side: "bottom",
+          "Work through brand identity, colors, logo, contact details, and subdomain settings with live preview.",
+        side: "top",
       },
     },
   ],

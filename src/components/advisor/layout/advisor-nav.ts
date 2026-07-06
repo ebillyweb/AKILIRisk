@@ -5,6 +5,7 @@ import {
   BookOpen,
   CreditCard,
   Home,
+  Palette,
   PlayCircle,
   ShieldCheck,
   UserPlus,
@@ -24,6 +25,8 @@ export type AdvisorNavItem = {
   comingSoonTooltip?: string;
   /** When set, item is omitted unless the flag is true. */
   requiresFlag?: keyof AdvisorPlatformFeatureFlags;
+  /** When true, item is shown only when the advisor can access branding settings. */
+  requiresBrandingNav?: boolean;
   /** When true, item is shown only for enterprise OWNER/ADMIN team managers. */
   requiresEnterpriseTeam?: boolean;
   /** When true, item is shown only when the advisor can access billing (solo or enterprise OWNER/ADMIN). */
@@ -79,6 +82,12 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
     id: "firm",
     title: "Firm",
     items: [
+      {
+        href: "/advisor/settings/branding",
+        label: "Brand",
+        icon: Palette,
+        requiresBrandingNav: true,
+      },
       {
         href: "/advisor/settings/team",
         label: "Team",
@@ -201,6 +210,7 @@ export function getVisibleAdvisorNavSections(
   options?: {
     enterpriseTeamEnabled?: boolean;
     billingNavEnabled?: boolean;
+    brandingNavEnabled?: boolean;
     implementationTrackingEnabled?: boolean;
     enterpriseMemberVisibility?: Partial<Record<EnterpriseAdvisorMemberVisibilityKey, boolean>>;
     applyEnterpriseMemberVisibility?: boolean;
@@ -208,12 +218,14 @@ export function getVisibleAdvisorNavSections(
 ): AdvisorNavSection[] {
   const enterpriseTeamEnabled = options?.enterpriseTeamEnabled === true;
   const billingNavEnabled = options?.billingNavEnabled !== false;
+  const brandingNavEnabled = options?.brandingNavEnabled === true;
   const implementationTrackingEnabled = options?.implementationTrackingEnabled !== false;
   const applyEnterpriseMemberVisibility = options?.applyEnterpriseMemberVisibility === true;
   const enterpriseMemberVisibility = options?.enterpriseMemberVisibility ?? {};
   return ADVISOR_NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
+      if (item.requiresBrandingNav && !brandingNavEnabled) return false;
       if (item.requiresEnterpriseTeam && !enterpriseTeamEnabled) return false;
       if (item.hideForEnterpriseTeam && enterpriseTeamEnabled) return false;
       if (item.requiresBillingAccess && !billingNavEnabled) return false;

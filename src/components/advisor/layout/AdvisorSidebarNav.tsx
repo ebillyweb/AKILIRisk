@@ -41,6 +41,7 @@ interface AdvisorSidebarNavProps {
   clientLimitStatus: ClientLimitSnapshot | null;
   enterpriseTeamEnabled?: boolean;
   billingNavEnabled?: boolean;
+  brandingNavEnabled?: boolean;
   implementationTrackingEnabled?: boolean;
   collapsibleSections?: boolean;
   /** Mobile drawer: one scroll area for all sections (footer included). */
@@ -306,6 +307,7 @@ export function AdvisorSidebarNav({
   clientLimitStatus,
   enterpriseTeamEnabled = false,
   billingNavEnabled = true,
+  brandingNavEnabled = false,
   implementationTrackingEnabled = true,
   collapsibleSections = false,
   unifiedScroll = false,
@@ -326,6 +328,7 @@ export function AdvisorSidebarNav({
     getVisibleAdvisorNavSections(featureFlags, {
       enterpriseTeamEnabled,
       billingNavEnabled,
+      brandingNavEnabled,
       implementationTrackingEnabled,
       applyEnterpriseMemberVisibility,
       enterpriseMemberVisibility,

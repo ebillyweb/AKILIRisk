@@ -107,6 +107,12 @@ const nextConfig: NextConfig = {
         destination: "/contact/enterprise",
         permanent: true,
       },
+      {
+        source: "/advisor/settings",
+        has: [{ type: "query", key: "tab", value: "branding" }],
+        destination: "/advisor/settings/branding",
+        permanent: true,
+      },
     ];
   },
 };

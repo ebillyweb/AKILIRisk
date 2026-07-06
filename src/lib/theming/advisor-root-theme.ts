@@ -200,3 +200,18 @@ export function buildAdvisorRootThemeCss(branding: AdvisorBrandingData): string 
 
   return `:root{${decl}}`;
 }
+
+/** Scoped advisor theme for in-app previews (does not mutate document :root). */
+export function buildAdvisorScopedThemeCss(
+  branding: AdvisorBrandingData,
+  scopeSelector: string,
+): string | null {
+  const props = buildAdvisorRootThemeProperties(branding);
+  if (!props) return null;
+
+  const decl = Object.entries(props)
+    .map(([key, value]) => `${key}:${value}`)
+    .join(";");
+
+  return `${scopeSelector}{${decl}}`;
+}

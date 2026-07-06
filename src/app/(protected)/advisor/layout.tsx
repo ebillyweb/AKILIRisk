@@ -11,6 +11,7 @@ import { canAccessAdvisorBilling } from "@/lib/enterprise/billing-details";
 import { resolveAdvisorWorkspaceTitleForUserId } from "@/lib/advisor/advisor-workspace-label.server";
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
 import { isImplementationTrackingEnabledForUser } from "@/lib/engagement/feature-flags";
+import { isAdvisorBrandingNavEnabled } from "@/lib/advisor/branding-settings-page";
 import {
   isEnterpriseMemberVisibilityEnabled,
   resolveEnterpriseMemberVisibilityContext,
@@ -58,7 +59,7 @@ export default async function AdvisorLayout({
     }
   }
 
-  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, implementationTrackingEnabled, memberVisibilityContext, workspaceTitle, subscriptionTier, clientLimitStatus] =
+  const [featureFlags, dash, enterpriseTeamEnabled, billingNavEnabled, brandingNavEnabled, implementationTrackingEnabled, memberVisibilityContext, workspaceTitle, subscriptionTier, clientLimitStatus] =
     await Promise.all([
     getPlatformFeatureFlags(),
     onBillingPage
@@ -69,6 +70,7 @@ export default async function AdvisorLayout({
       : getAdvisorDashboardData(),
     userId ? canAccessEnterpriseTeamSettings(userId) : Promise.resolve(false),
     userId ? canAccessAdvisorBilling(userId) : Promise.resolve(true),
+    userId ? isAdvisorBrandingNavEnabled(userId) : Promise.resolve(false),
     userId ? isImplementationTrackingEnabledForUser(userId) : Promise.resolve(true),
     userId
       ? resolveEnterpriseMemberVisibilityContext(userId)
@@ -119,6 +121,7 @@ export default async function AdvisorLayout({
       workspaceTitle={workspaceTitle}
       enterpriseTeamEnabled={enterpriseTeamEnabled}
       billingNavEnabled={billingNavEnabled}
+      brandingNavEnabled={brandingNavEnabled}
       implementationTrackingEnabled={implementationTrackingEnabled}
       workspacePreferences={workspacePreferences}
     >

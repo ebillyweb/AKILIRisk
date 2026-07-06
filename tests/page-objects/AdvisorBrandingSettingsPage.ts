@@ -12,7 +12,7 @@ export class AdvisorBrandingSettingsPage {
   }
 
   async openBrandingTab() {
-    await this.page.getByRole("tab", { name: /^branding$/i }).click();
+    await this.page.getByRole("link", { name: /^brand$/i }).click();
     await expect(
       this.page.getByRole("tab", { name: /^brand identity$|^brand$/i })
     ).toBeVisible({ timeout: 20_000 });

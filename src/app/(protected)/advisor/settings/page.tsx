@@ -1,27 +1,12 @@
+import { redirect } from "next/navigation";
+
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
-import { getAdvisorSubdomainSettings, getEnterpriseSubdomainSettings } from "@/lib/advisor/subdomain";
-import {
-  getProductionDomain,
-  getTenantSubdomainSuffix,
-  isSubdomainAutoActivateEnabled,
-} from "@/lib/advisor/platform-subdomain";
-import {
-  getStagingPlatformHostname,
-  resolvePlatformAppOrigin,
-  usesStagingTenantPathPortals,
-} from "@/lib/advisor/tenant-path-portals";
-import {
-  getSubscriptionFeatures,
-  ESSENTIALS_SUBSCRIPTION_FEATURES,
-} from "@/lib/subscription/validation";
-import { loadAdvisorBrandingSettingsView } from "@/lib/enterprise/branding-access";
-import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { resolveAdvisorPersonalNameFields } from "@/lib/advisor/advisor-workspace-label";
 import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
-import {
-  AdvisorSettingsTabs,
-} from "@/components/advisor/settings/AdvisorSettingsTabs";
+import { AdvisorSettingsTabs } from "@/components/advisor/settings/AdvisorSettingsTabs";
 import { parseAdvisorSettingsTab } from "@/lib/advisor/settings-tabs";
+import { loadAdvisorBrandingSettingsView } from "@/lib/enterprise/branding-access";
+import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { auth } from "@/lib/auth";
 
 const ADVISOR_SETTINGS_CALLBACK = "/advisor/settings?tab=security";
@@ -32,6 +17,10 @@ export default async function AdvisorSettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const resolvedSearchParams = await searchParams;
+
+  if (resolvedSearchParams.tab === "branding") {
+    redirect("/advisor/settings/branding");
+  }
 
   const [result, session] = await Promise.all([
     getAdvisorDashboardData(),
@@ -58,25 +47,7 @@ export default async function AdvisorSettingsPage({
       (canManageTeam) => !canManageTeam,
     ),
   ]);
-  const initialTab = parseAdvisorSettingsTab(resolvedSearchParams.tab, {
-    brandingTabVisible: brandingSettings.brandingTabVisible,
-  });
-
-  const currentSubdomain =
-    (await getAdvisorSubdomainSettings(profile.id)) ??
-    (brandingSettings.context.mode !== "solo"
-      ? await getEnterpriseSubdomainSettings(brandingSettings.context.enterpriseId)
-      : null);
-  const productionDomain = getProductionDomain() ?? "akilirisk.com";
-  const tenantSubdomainSuffix = getTenantSubdomainSuffix();
-  const useTenantPathPortals = usesStagingTenantPathPortals();
-  const platformAppOrigin = resolvePlatformAppOrigin();
-  const stagingPlatformHost =
-    getStagingPlatformHostname() ?? `preview.${productionDomain}`;
-  const platformSubdomainsAutoActivate = isSubdomainAutoActivateEnabled();
-
-  const features =
-    (await getSubscriptionFeatures(profile.userId)) ?? ESSENTIALS_SUBSCRIPTION_FEATURES;
+  const initialTab = parseAdvisorSettingsTab(resolvedSearchParams.tab);
 
   const passwordChangeRequired = Boolean(session?.user?.passwordChangeRequired);
   const changePasswordHref = `/change-password?callbackUrl=${encodeURIComponent(ADVISOR_SETTINGS_CALLBACK)}`;
@@ -104,30 +75,13 @@ export default async function AdvisorSettingsPage({
       <AdvisorScreenHeader
         kicker="Professional profile"
         title="Settings"
-        description={
-          brandingSettings.brandingTabVisible
-            ? "Manage your profile, client-facing branding, and account security."
-            : "Manage your profile and account security."
-        }
+        description="Manage your profile and account security."
       />
 
       <AdvisorSettingsTabs
         initialTab={initialTab}
         profileInitialData={profileInitialData}
         firmNameReadOnly={brandingSettings.readOnly}
-        brandingProfile={brandingSettings.profile}
-        brandingReadOnly={brandingSettings.readOnly}
-        brandingReadOnlyNotice={brandingSettings.readOnlyNotice}
-        subdomainReadOnly={!brandingSettings.subdomainEditable}
-        showBrandingTab={brandingSettings.brandingTabVisible}
-        features={features}
-        currentSubdomain={currentSubdomain}
-        productionDomain={productionDomain}
-        tenantSubdomainSuffix={tenantSubdomainSuffix}
-        useTenantPathPortals={useTenantPathPortals}
-        platformAppOrigin={platformAppOrigin}
-        stagingPlatformHost={stagingPlatformHost}
-        platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
         passwordChangeRequired={passwordChangeRequired}
         changePasswordHref={changePasswordHref}
         householdProfilesEnabled={profile.householdProfilesEnabled ?? true}

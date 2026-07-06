@@ -15,6 +15,9 @@ type BrandedPortalShellProps = {
   titleAsHeading?: boolean;
   /** `/t/{slug}` prefix when staging path portals are active */
   tenantPathPrefix?: string | null;
+  /** In-app settings preview: compact layout, no footer */
+  preview?: boolean;
+  logoSrcOverride?: string | null;
 };
 
 /**
@@ -28,12 +31,17 @@ export function BrandedPortalShell({
   variant = "auth",
   titleAsHeading = false,
   tenantPathPrefix = null,
+  preview = false,
+  logoSrcOverride,
 }: BrandedPortalShellProps) {
   const previewHex = getPreviewBrandHex(branding);
 
   return (
     <div
-      className={cn("min-h-screen pb-10 pt-2 sm:pb-12", previewHex && "branded-portal-shell")}
+      className={cn(
+        preview ? "min-h-0 pb-4 pt-1" : "min-h-screen pb-10 pt-2 sm:pb-12",
+        previewHex && "branded-portal-shell",
+      )}
       style={
         previewHex
           ? ({
@@ -43,14 +51,17 @@ export function BrandedPortalShell({
           : undefined
       }
     >
-      <a href="#main-content" className="skip-to-content">
-        Skip to main content
-      </a>
-      <div className="page-shell space-y-6 sm:space-y-8">
+      {!preview ? (
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
+      ) : null}
+      <div className={cn("page-shell", preview ? "space-y-4" : "space-y-6 sm:space-y-8")}>
         <BrandedPortalHeader
           branding={branding}
           homeHref={homeHref}
           titleAsHeading={titleAsHeading}
+          logoSrcOverride={preview ? logoSrcOverride : undefined}
         />
 
         {variant === "landing" ? (
@@ -95,7 +106,9 @@ export function BrandedPortalShell({
           </div>
         )}
 
-        <BrandedPortalFooter branding={branding} tenantPathPrefix={tenantPathPrefix} />
+        {!preview ? (
+          <BrandedPortalFooter branding={branding} tenantPathPrefix={tenantPathPrefix} />
+        ) : null}
       </div>
     </div>
   );

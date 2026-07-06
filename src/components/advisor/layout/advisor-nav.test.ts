@@ -78,6 +78,7 @@ describe("getActiveAdvisorNavHref", () => {
     const firm = ADVISOR_NAV_SECTIONS.find((s) => s.id === "firm");
     expect(firm?.title).toBe("Firm");
     expect(firm?.items.map((item) => item.label)).toEqual([
+      "Brand",
       "Team",
       "Roles & Permissions",
       "Practice Standards",
@@ -92,6 +93,19 @@ describe("getActiveAdvisorNavHref", () => {
     expect(getActiveAdvisorNavHref("/advisor/settings/notifications", sections)).toBe(
       "/advisor/notifications",
     );
+  });
+
+  it("shows Brand nav only when branding access is enabled", () => {
+    const hidden = getVisibleAdvisorNavSections(flags);
+    expect(
+      hidden.flatMap((section) => section.items).some((item) => item.href === "/advisor/settings/branding"),
+    ).toBe(false);
+
+    const visible = getVisibleAdvisorNavSections(flags, { brandingNavEnabled: true });
+    expect(
+      visible.flatMap((section) => section.items).some((item) => item.href === "/advisor/settings/branding"),
+    ).toBe(true);
+    expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/branding")).toBe("firm");
   });
 
   it("shows Team nav only when enterprise team management is enabled", () => {

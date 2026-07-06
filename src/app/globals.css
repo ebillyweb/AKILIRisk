@@ -326,6 +326,30 @@
     );
   }
 
+  /* Advisor settings: landing preview matches tenant light surfaces in dark workspace */
+  html.dark .branded-landing-page-preview-scope {
+    color-scheme: light;
+    --background: oklch(0.974 0.008 75.2);
+    --foreground: oklch(0.248 0.015 50.2);
+    --card: oklch(0.995 0.003 78.4 / 92%);
+    --card-foreground: oklch(0.248 0.015 50.2);
+    --muted: oklch(0.952 0.007 72.8);
+    --muted-foreground: oklch(0.405 0.017 47.1);
+    --border: oklch(0.867 0.012 72.5);
+    --surface: oklch(0.985 0.003 82.8 / 72%);
+    --surface-foreground: oklch(0.248 0.015 50.2);
+    --surface-strong: oklch(0.956 0.008 74.5);
+    --surface-muted: oklch(0.939 0.006 73.1);
+  }
+
+  html.dark .branded-landing-page-preview-scope .branded-portal-shell {
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--branded-portal-shell-bg, #f5f5f5) 9%, var(--card)),
+      color-mix(in srgb, var(--branded-portal-shell-bg, #f5f5f5) 4%, var(--background))
+    );
+  }
+
   .branded-portal-nav-header {
     background: color-mix(
       in srgb,

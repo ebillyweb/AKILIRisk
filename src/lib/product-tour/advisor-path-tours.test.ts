@@ -5,6 +5,9 @@ import { getAdvisorTourIdForPath } from "./advisor-path-tours";
 describe("getAdvisorTourIdForPath", () => {
   it("maps settings and methodology routes", () => {
     expect(getAdvisorTourIdForPath("/advisor/settings")).toBe("advisor-settings");
+    expect(getAdvisorTourIdForPath("/advisor/settings/branding")).toBe(
+      "advisor-settings-branding",
+    );
     expect(getAdvisorTourIdForPath("/advisor/methodology")).toBe(
       "advisor-methodology-hub",
     );

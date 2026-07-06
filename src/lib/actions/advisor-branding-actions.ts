@@ -275,6 +275,7 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
 
     // Revalidate affected pages
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {
@@ -424,6 +425,7 @@ export async function uploadLogoDirectAction(
     }
 
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {
@@ -455,6 +457,7 @@ export async function confirmLogoUploadAction(
 
     // Revalidate pages to show new logo
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {
@@ -486,6 +489,7 @@ export async function deleteLogoAction(): Promise<ActionResult> {
 
     // Revalidate pages to reflect logo deletion
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {

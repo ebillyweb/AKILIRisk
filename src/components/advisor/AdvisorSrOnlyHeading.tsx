@@ -16,6 +16,7 @@ function labelForAdvisorPath(pathname: string): string {
   if (pathname.startsWith("/advisor/question-bank")) return "Question bank";
   if (pathname.startsWith("/advisor/settings/notifications"))
     return "Notification settings";
+  if (pathname.startsWith("/advisor/settings/branding")) return "Brand";
   if (pathname.startsWith("/advisor/settings/team")) return "Team";
   if (pathname.startsWith("/advisor/settings/access-control")) return "Roles & Permissions";
   if (pathname.startsWith("/advisor/settings")) return "Account settings";

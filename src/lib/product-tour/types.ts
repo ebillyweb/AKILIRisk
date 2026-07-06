@@ -19,6 +19,7 @@ export const TOUR_IDS = [
   "advisor-methodology-catalog-updates",
   "advisor-recommendation-rules",
   "advisor-settings",
+  "advisor-settings-branding",
   "advisor-settings-pii-policy",
   "advisor-settings-team",
   "advisor-settings-access-control",

@@ -14,6 +14,8 @@ type BrandedPortalHeaderProps = {
   homeHref?: string;
   titleAsHeading?: boolean;
   className?: string;
+  /** Settings preview: same-origin logo proxy path */
+  logoSrcOverride?: string | null;
 };
 
 export function BrandedPortalHeader({
@@ -21,9 +23,10 @@ export function BrandedPortalHeader({
   homeHref = "/",
   titleAsHeading = false,
   className,
+  logoSrcOverride,
 }: BrandedPortalHeaderProps) {
   const brandTitle = clientPortalBrandingDisplayTitle(branding);
-  const logoSrc = brandedPortalLogoImgSrc(branding);
+  const logoSrc = logoSrcOverride ?? brandedPortalLogoImgSrc(branding);
   const previewHex = getPreviewBrandHex(branding);
 
   return (

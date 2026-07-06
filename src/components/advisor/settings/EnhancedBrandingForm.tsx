@@ -21,9 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import ColorPicker from '@/components/ui/color-picker';
 import { FileUpload } from '@/components/ui/file-upload';
-import { BrandingSidebarPreview } from '@/components/advisor/settings/BrandingSidebarPreview';
-import { BrandedLandingTestButton } from '@/components/advisor/settings/BrandedLandingTestButton';
-import { PreviewContainer } from '@/components/advisor/settings/BrandingPreview';
+import { BrandingLivePreview } from '@/components/advisor/settings/BrandingLivePreview';
 import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
 import { SubdomainManager } from '@/components/advisor/settings/SubdomainManager';
 import {
@@ -44,7 +42,6 @@ import {
   Image as ImageIcon,
   Phone,
   Globe,
-  Eye,
   Lock,
   Loader2,
   Check,
@@ -139,18 +136,7 @@ const FORM_SECTIONS = [
     description: 'Custom subdomain setup',
     premium: true,
   },
-  {
-    id: 'preview',
-    title: 'Live Preview',
-    shortTitle: 'Preview',
-    icon: Eye,
-    description: 'See how your branding looks',
-  },
 ] as const;
-
-const SIDEBAR_PREVIEW_TABS = new Set(['identity', 'colors', 'assets', 'contact']);
-
-type FormSectionId = (typeof FORM_SECTIONS)[number]['id'];
 
 function SettingsSection({
   title,
@@ -333,7 +319,7 @@ export function EnhancedBrandingForm({
       const result = await updateAdvisorBrandingAction(formData);
 
       if (result.success) {
-        toast.success('Branding updated successfully');
+        toast.success('Brand updated successfully');
         reset(data);
         flashSaved();
       } else {
@@ -391,39 +377,43 @@ export function EnhancedBrandingForm({
     }
   };
 
-  const showSidebarPreview = SIDEBAR_PREVIEW_TABS.has(
-    activeSection as FormSectionId
-  );
+  const showColorSwatches =
+    features.advancedBrandingEnabled &&
+    Boolean(
+      watchedValues.primaryColor ||
+        watchedValues.secondaryColor ||
+        watchedValues.accentColor,
+    );
 
   return (
-    <div
-      className={cn(
-        'grid grid-cols-1 gap-6 lg:gap-8',
-        showSidebarPreview &&
-          'xl:grid-cols-[minmax(0,1fr)_minmax(260px,300px)]'
-      )}
-    >
-      <div className="min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
-        <Tabs
-          value={activeSection}
-          onValueChange={setActiveSection}
-          orientation={xlSidebar ? 'vertical' : 'horizontal'}
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <BrandingLivePreview
+        branding={brandingForPreview}
+        readOnly={readOnly}
+        isDirty={isDirty}
+        currentSubdomain={currentSubdomain}
+        portalConfig={portalConfig}
+        customSubdomainEnabled={features.customSubdomainEnabled}
+        showColorSwatches={showColorSwatches}
+      />
+
+      <Tabs
+        value={activeSection}
+        onValueChange={setActiveSection}
+        orientation={xlSidebar ? 'vertical' : 'horizontal'}
+        className={cn('gap-0', xlSidebar && 'xl:flex xl:items-stretch')}
+      >
+        <TabsList
+          variant="line"
+          aria-label="Brand settings sections"
+          ref={mobileTabsListRef}
           className={cn(
-            'gap-0',
-            xlSidebar && 'xl:flex-row xl:items-stretch'
+            'w-full shrink-0 gap-1 rounded-none border-b border-border/60 bg-muted/15 p-2 text-muted-foreground',
+            xlSidebar
+              ? 'xl:sticky xl:top-20 xl:z-10 xl:w-56 xl:flex-col xl:border-b-0 xl:border-r xl:bg-muted/10 xl:px-3 xl:py-5'
+              : 'flex h-auto w-full overflow-x-auto',
           )}
         >
-          <TabsList
-            variant="line"
-            aria-label="Branding settings sections"
-            ref={mobileTabsListRef}
-            className={cn(
-              'w-full shrink-0 gap-0 rounded-none border-border/60 bg-muted/25 p-2 text-muted-foreground',
-              xlSidebar
-                ? 'xl:sticky xl:top-20 xl:z-10 xl:w-[13.5rem] xl:flex-col xl:border-r xl:bg-muted/20 xl:px-2 xl:py-4'
-                : '!grid !h-auto w-full grid-cols-2 gap-1.5 border-b pb-2 sm:grid-cols-3'
-            )}
-          >
               {visibleSections.map((section) => {
                 const showUpgradeHint =
                   (section.id === 'colors' &&
@@ -438,11 +428,11 @@ export function EnhancedBrandingForm({
                     key={section.id}
                     value={section.id}
                     className={cn(
-                      'min-h-10 w-full rounded-md text-left text-xs font-medium sm:text-sm',
-                      'data-[state=active]:bg-background/90 data-[state=active]:shadow-none',
+                      'min-h-10 shrink-0 rounded-lg text-left text-xs font-medium sm:text-sm',
+                      'data-[state=active]:border-border/60 data-[state=active]:bg-background data-[state=active]:shadow-sm',
                       xlSidebar
-                        ? 'h-auto flex-col items-stretch gap-1 px-3 py-2.5'
-                        : 'h-auto min-w-0 flex-none justify-center px-2 py-2.5'
+                        ? 'h-auto w-full flex-col items-stretch gap-1 px-3 py-2.5'
+                        : 'h-9 min-w-[5.5rem] justify-center px-3',
                     )}
                   >
                     <span
@@ -452,13 +442,10 @@ export function EnhancedBrandingForm({
                       )}
                     >
                       <section.icon
-                        className={cn(
-                          'size-4 shrink-0 transition-opacity',
-                          !xlSidebar && 'hidden'
-                        )}
+                        className="size-4 shrink-0"
                         aria-hidden
                       />
-                      <span className="leading-tight">
+                      <span className="leading-tight whitespace-nowrap">
                         {xlSidebar ? section.title : section.shortTitle}
                       </span>
                       {showUpgradeHint ? (
@@ -785,33 +772,6 @@ export function EnhancedBrandingForm({
                   readOnly={readOnly}
                 />
               </TabsContent>
-
-              <TabsContent value="preview" className="mt-0 outline-none">
-                <SettingsSection
-                  title="Live preview"
-                  description="Mockups for email, dashboard, and PDF touchpoints. Open your live tenant landing page to verify the full client experience."
-                  icon={Eye}
-                >
-                  <div className="flex flex-wrap items-center gap-3">
-                    <BrandedLandingTestButton
-                      currentSubdomain={currentSubdomain}
-                      portalConfig={portalConfig}
-                      customSubdomainEnabled={features.customSubdomainEnabled}
-                      hasUnsavedChanges={isDirty}
-                    />
-                    {!features.customSubdomainEnabled ? (
-                      <p className="text-sm text-muted-foreground">
-                        Custom subdomains require Professional or higher.
-                      </p>
-                    ) : !currentSubdomain?.dnsVerified ? (
-                      <p className="text-sm text-muted-foreground">
-                        Claim a subdomain under Custom Domain to test the live landing page.
-                      </p>
-                    ) : null}
-                  </div>
-                  <PreviewContainer branding={brandingForPreview} />
-                </SettingsSection>
-              </TabsContent>
               </div>
 
               {!readOnly ? (
@@ -872,56 +832,6 @@ export function EnhancedBrandingForm({
               ) : null}
             </form>
           </Tabs>
-      </div>
-
-      {showSidebarPreview ? (
-        <aside className="min-w-0 space-y-4 xl:sticky xl:top-20 xl:self-start">
-          <div className="space-y-3 px-1">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold tracking-tight">Live preview</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {readOnly
-                  ? 'Firm branding as clients see it on portals and emails.'
-                  : 'Updates as you edit. Use Test live landing page for the real tenant portal.'}
-              </p>
-            </div>
-            <BrandedLandingTestButton
-              currentSubdomain={currentSubdomain}
-              portalConfig={portalConfig}
-              customSubdomainEnabled={features.customSubdomainEnabled}
-              hasUnsavedChanges={isDirty}
-              className="w-full justify-center"
-            />
-          </div>
-          <BrandingSidebarPreview branding={brandingForPreview} />
-          {features.advancedBrandingEnabled &&
-          (watchedValues.primaryColor ||
-            watchedValues.secondaryColor ||
-            watchedValues.accentColor) ? (
-            <div className="grid grid-cols-3 gap-2 rounded-xl border border-border/60 bg-muted/20 p-3">
-              {(
-                [
-                  ['Primary', watchedValues.primaryColor],
-                  ['Secondary', watchedValues.secondaryColor],
-                  ['Accent', watchedValues.accentColor],
-                ] as const
-              ).map(([label, color]) =>
-                color ? (
-                  <div key={label} className="space-y-1">
-                    <div
-                      className="h-8 rounded-md border border-border/50"
-                      style={{ backgroundColor: color }}
-                    />
-                    <p className="text-center text-[10px] font-medium text-muted-foreground">
-                      {label}
-                    </p>
-                  </div>
-                ) : null
-              )}
-            </div>
-          ) : null}
-        </aside>
-      ) : null}
     </div>
   );
 }

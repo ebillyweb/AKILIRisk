@@ -7,16 +7,10 @@ describe("parseAdvisorSettingsTab", () => {
     expect(parseAdvisorSettingsTab(null)).toBe("general");
     expect(parseAdvisorSettingsTab("")).toBe("general");
     expect(parseAdvisorSettingsTab("unknown")).toBe("general");
+    expect(parseAdvisorSettingsTab("branding")).toBe("general");
   });
 
-  it("accepts branding and security", () => {
-    expect(parseAdvisorSettingsTab("branding")).toBe("branding");
+  it("accepts security", () => {
     expect(parseAdvisorSettingsTab("security")).toBe("security");
-  });
-
-  it("maps branding to general when the branding tab is hidden", () => {
-    expect(parseAdvisorSettingsTab("branding", { brandingTabVisible: false })).toBe(
-      "general",
-    );
   });
 });
