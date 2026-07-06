@@ -86,7 +86,18 @@ function createMethodologyTx(
       upsert: vi.fn().mockResolvedValue({}),
     },
     advisorProfile: {
-      findUnique: vi.fn().mockResolvedValue({ enterpriseId: "ent-1" }),
+      findUnique: vi.fn().mockResolvedValue({
+        enterpriseId: "ent-1",
+        intakeQuestionBankMode: "PLATFORM",
+        assessmentQuestionBankMode: "PLATFORM",
+      }),
+      update: vi.fn().mockResolvedValue({}),
+    },
+    advisorEnterprise: {
+      findUnique: vi.fn().mockResolvedValue({
+        intakeQuestionBankMode: "PLATFORM",
+        assessmentQuestionBankMode: "PLATFORM",
+      }),
     },
     pillar: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -481,6 +492,61 @@ describe("syncEnterpriseMethodologyToAdvisorInTx", () => {
         enterpriseSource: { connect: { id: "ent-intake-1" } },
         sourceKind: AdvisorQuestionSource.ENTERPRISE,
         questionText: "Firm intake question",
+      }),
+    });
+  });
+
+  it("syncs choice_list options when updating existing advisor intake clones", async () => {
+    const tx = createMethodologyTx({
+      enterpriseIntakeQuestion: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "ent-intake-choice",
+            sourceKind: AdvisorQuestionSource.CUSTOM,
+            platformSourceId: null,
+            displayOrder: 0,
+            questionNumber: "1",
+            questionText: "Employment status",
+            context: "Pick one",
+            helpText: "Pick one",
+            learnMore: null,
+            answerType: "choice_list",
+            answer0: null,
+            answer1: null,
+            answer2: null,
+            answer3: null,
+            options: [
+              { value: "0", label: "Retired" },
+              { value: "1", label: "Employed" },
+            ],
+            relatedPillarIds: [],
+            recommendedActions: null,
+            isVisible: true,
+          },
+        ]),
+      },
+      advisorIntakeQuestion: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "adv-intake-1", enterpriseSourceId: "ent-intake-choice" },
+        ]),
+      },
+    });
+
+    const changed = await syncEnterpriseMethodologyToAdvisorInTx(
+      tx,
+      "ent-1",
+      "profile-member",
+    );
+
+    expect(changed).toBe(true);
+    expect(tx.advisorIntakeQuestion.update).toHaveBeenCalledWith({
+      where: { id: "adv-intake-1" },
+      data: expect.objectContaining({
+        answerType: "choice_list",
+        options: [
+          { value: "0", label: "Retired" },
+          { value: "1", label: "Employed" },
+        ],
       }),
     });
   });

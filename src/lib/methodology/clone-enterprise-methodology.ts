@@ -491,17 +491,24 @@ export async function syncEnterpriseMethodologyToAdvisorInTx(
 
   const enterprise = await tx.advisorEnterprise.findUnique({
     where: { id: enterpriseId },
-    select: { intakeQuestionBankMode: true },
+    select: { intakeQuestionBankMode: true, assessmentQuestionBankMode: true },
   });
   if (enterprise) {
     const profile = await tx.advisorProfile.findUnique({
       where: { id: advisorProfileId },
-      select: { intakeQuestionBankMode: true },
+      select: { intakeQuestionBankMode: true, assessmentQuestionBankMode: true },
     });
     if (profile?.intakeQuestionBankMode !== enterprise.intakeQuestionBankMode) {
       await tx.advisorProfile.update({
         where: { id: advisorProfileId },
         data: { intakeQuestionBankMode: enterprise.intakeQuestionBankMode },
+      });
+      changed = true;
+    }
+    if (profile?.assessmentQuestionBankMode !== enterprise.assessmentQuestionBankMode) {
+      await tx.advisorProfile.update({
+        where: { id: advisorProfileId },
+        data: { assessmentQuestionBankMode: enterprise.assessmentQuestionBankMode },
       });
       changed = true;
     }
@@ -813,6 +820,7 @@ function buildAdvisorIntakeCloneUpdate(ent: {
   answer1: string | null;
   answer2: string | null;
   answer3: string | null;
+  options: unknown;
 }): Prisma.AdvisorIntakeQuestionUpdateInput {
   return {
     questionText: ent.questionText,
@@ -826,6 +834,7 @@ function buildAdvisorIntakeCloneUpdate(ent: {
     answer1: ent.answer1,
     answer2: ent.answer2,
     answer3: ent.answer3,
+    options: ent.options as Prisma.InputJsonValue | undefined,
     version: { increment: 1 },
   };
 }

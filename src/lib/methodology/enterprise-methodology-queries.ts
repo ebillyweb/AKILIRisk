@@ -1,5 +1,6 @@
 import "server-only";
 
+import { AdvisorQuestionSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ensureEnterprisePlatformMethodologyInTx } from "@/lib/methodology/clone-enterprise-methodology";
 import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
@@ -80,6 +81,26 @@ export async function loadEnterpriseIntakeQuestions(enterpriseId: string) {
   return prisma.enterpriseIntakeQuestion.findMany({
     where: { enterpriseId },
     orderBy: { displayOrder: "asc" },
+  });
+}
+
+export async function countEnterpriseCustomAssessmentQuestions(enterpriseId: string) {
+  await ensureEnterpriseMethodologyCloned(enterpriseId);
+  return prisma.enterprisePillarQuestion.count({
+    where: {
+      enterpriseId,
+      sourceKind: { in: [AdvisorQuestionSource.CUSTOM, AdvisorQuestionSource.ENTERPRISE] },
+    },
+  });
+}
+
+export async function countEnterpriseCustomIntakeQuestions(enterpriseId: string) {
+  await ensureEnterpriseMethodologyCloned(enterpriseId);
+  return prisma.enterpriseIntakeQuestion.count({
+    where: {
+      enterpriseId,
+      sourceKind: { in: [AdvisorQuestionSource.CUSTOM, AdvisorQuestionSource.ENTERPRISE] },
+    },
   });
 }
 

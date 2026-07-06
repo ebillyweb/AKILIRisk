@@ -4,8 +4,12 @@ import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import {
+  ensureEnterpriseAssessmentQuestionBankModeValid,
+} from "@/lib/methodology/intake-question-bank-mode.server";
+import {
   loadActiveEnterpriseMethodologyPillars,
   loadEnterpriseAssessmentQuestions,
+  countEnterpriseCustomAssessmentQuestions,
 } from "@/lib/methodology/enterprise-methodology-queries";
 import { methodologyPillarDisplayName } from "@/lib/methodology/methodology-queries";
 import { Button } from "@/components/ui/button";
@@ -38,7 +42,12 @@ export default async function EnterpriseMethodologyQuestionsPage({
   const pillar = activePillars.find((p) => p.slug === slug);
   if (!pillar) notFound();
 
-  const questions = await loadEnterpriseAssessmentQuestions(enterpriseId, slug);
+  const [questions, bankModeState, totalCustomQuestionCount] = await Promise.all([
+    loadEnterpriseAssessmentQuestions(enterpriseId, slug),
+    ensureEnterpriseAssessmentQuestionBankModeValid(enterpriseId),
+    countEnterpriseCustomAssessmentQuestions(enterpriseId),
+  ]);
+  const bankMode = bankModeState.bankMode;
 
   return (
     <div className="space-y-6">
@@ -48,15 +57,18 @@ export default async function EnterpriseMethodologyQuestionsPage({
       <ConfigurationPageHeader
         tourId="advisor-methodology-questions"
         title={`${enterpriseName} — Assessment questions (${methodologyPillarDisplayName(pillar)})`}
-        description="Firm-wide assessment questions sync to all member advisors."
+        description="Platform is the default firm bank. Combined or custom only when needed."
       />
       <Card>
         <CardContent className="pt-6" data-tour="config-primary-form">
           <EnterpriseAssessmentQuestionsEditor
             pillarSlug={slug}
+            bankMode={bankMode}
+            totalCustomQuestionCount={totalCustomQuestionCount}
             questions={questions.map((q) => ({
               id: q.id,
               sourceKind: q.sourceKind,
+              displayOrder: q.displayOrder,
               questionNumber: q.questionNumber,
               questionText: q.questionText,
               answerType: q.answerType,

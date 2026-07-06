@@ -40,7 +40,14 @@ export function buildIntakePdfData(review: IntakeReviewData): IntakePdfData {
 
   const questions = review.questions.map((question) => {
     const response = responseByQuestionId[question.id];
-    const formatted = formatIntakeAnswerDisplay(response);
+    const formatted = formatIntakeAnswerDisplay(response, {
+      answerType: question.answerType ?? question.type,
+      answer0: question.answer0,
+      answer1: question.answer1,
+      answer2: question.answer2,
+      answer3: question.answer3,
+      options: question.options,
+    });
     const num = questionNumberFor(question);
 
     return {

@@ -1,4 +1,9 @@
-import { ADVISOR_ASSESSMENT_ANSWER_TYPES } from "@/lib/methodology/advisor-assessment-question-config";
+import { ADVISOR_INTAKE_ANSWER_TYPES } from "@/lib/methodology/advisor-intake-question-config";
+import {
+  parseStoredIntakeChoiceListOptions,
+  resolveIntakeChoiceListLabel,
+} from "@/lib/intake/choice-list-options";
+import type { IntakeChoiceListOption } from "@/lib/intake/choice-list-options";
 
 /** Intake questions share assessment answer types; freeform types allow audio/typed responses. */
 export function intakeUsesFreeformResponse(answerType: string): boolean {
@@ -6,7 +11,7 @@ export function intakeUsesFreeformResponse(answerType: string): boolean {
 }
 
 export function normalizeIntakeAnswerType(answerType: string | null | undefined): string {
-  if (answerType && ADVISOR_ASSESSMENT_ANSWER_TYPES.includes(answerType as never)) {
+  if (answerType && ADVISOR_INTAKE_ANSWER_TYPES.includes(answerType as never)) {
     return answerType;
   }
   if (answerType === "audio") return "fillable";
@@ -19,6 +24,7 @@ export function intakeChoiceOptions(question: {
   answer1?: string | null;
   answer2?: string | null;
   answer3?: string | null;
+  options?: IntakeChoiceListOption[] | unknown | null;
 }): Array<{ value: string; label: string }> {
   const clean = (value: string | null | undefined, fallback: string) => {
     const trimmed = value?.trim();
@@ -26,6 +32,8 @@ export function intakeChoiceOptions(question: {
   };
 
   switch (question.answerType) {
+    case "choice_list":
+      return parseStoredIntakeChoiceListOptions(question.options);
     case "yes_no":
       return [
         { value: "yes", label: clean(question.answer1, "Yes") },
@@ -49,4 +57,28 @@ export function intakeChoiceOptions(question: {
     default:
       return [];
   }
+}
+
+/** Map a stored structured answer value to a human-readable label when possible. */
+export function formatIntakeStructuredAnswerForDisplay(
+  question: {
+    answerType: string;
+    answer0?: string | null;
+    answer1?: string | null;
+    answer2?: string | null;
+    answer3?: string | null;
+    options?: IntakeChoiceListOption[] | unknown | null;
+  },
+  storedValue: string | null | undefined,
+): string | null {
+  const value = storedValue?.trim();
+  if (!value) return null;
+
+  if (question.answerType === "choice_list") {
+    const options = parseStoredIntakeChoiceListOptions(question.options);
+    return resolveIntakeChoiceListLabel(options, value) ?? value;
+  }
+
+  const match = intakeChoiceOptions(question).find((choice) => choice.value === value);
+  return match?.label ?? value;
 }

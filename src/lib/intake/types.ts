@@ -4,17 +4,21 @@ import { Prisma } from '@prisma/client';
 export type IntakeStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'SUBMITTED';
 export type TranscriptionStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
+import type { IntakeChoiceListOption } from "@/lib/intake/choice-list-options";
+
 // Interview question structure
 export interface IntakeQuestion {
   id: string;
   questionNumber: number;
   questionText: string;
-  /** Same answer types as assessment questions (fillable, yes_no, scored_0_3, …). */
+  /** Same answer types as assessment questions plus intake-only types (e.g. choice_list). */
   answerType: string;
   answer0?: string | null;
   answer1?: string | null;
   answer2?: string | null;
   answer3?: string | null;
+  /** Custom multiple-choice options when answerType is choice_list. */
+  options?: IntakeChoiceListOption[] | null;
   /** Pillar “why this matters” / risk relevance — staff review only; never shown to clients. */
   whyThisMatters?: string;
   /** Pillar recommended actions — staff review / report queue; not shown to clients. */

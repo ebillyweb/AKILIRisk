@@ -24,7 +24,12 @@ import {
   buildAdvisorIntakeQuestionWriteData,
   parseAdvisorIntakeQuestionInput,
 } from "@/lib/methodology/advisor-intake-question-config";
-import { resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
+import { resolveAdvisorAssessmentQuestionBankMode, resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
+import {
+  countAdvisorCustomAssessmentQuestions,
+  countAdvisorCustomIntakeQuestions,
+} from "@/lib/methodology/methodology-queries";
+import { resolveBankModeForUpdate, isCustomOnlyWithoutSavedQuestions } from "@/lib/methodology/intake-question-bank-mode";
 import { parseRecommendationTriggerConditions } from "@/lib/admin/recommendation-rule-schemas";
 import type { RecommendationCondition } from "@/lib/admin/recommendation-rule-schemas";
 
@@ -381,6 +386,7 @@ export async function updateAdvisorIntakeQuestion(
     answer1?: string | null;
     answer2?: string | null;
     answer3?: string | null;
+    options?: unknown;
   },
 ) {
   try {
@@ -411,6 +417,7 @@ export async function updateAdvisorIntakeQuestion(
         answer1: data.answer1,
         answer2: data.answer2,
         answer3: data.answer3,
+        options: data.options,
       });
       if (!parsed.success) {
         return { success: false as const, error: parsed.error };
@@ -450,6 +457,8 @@ export async function createAdvisorPillarQuestion(
     answer1?: string | null;
     answer2?: string | null;
     answer3?: string | null;
+    options?: unknown;
+    switchToCombinedBank?: boolean;
   },
 ) {
   try {
@@ -461,34 +470,94 @@ export async function createAdvisorPillarQuestion(
       return { success: false as const, error: "Unknown pillar" };
     }
 
+    const bankMode = await resolveAdvisorAssessmentQuestionBankMode(profile.id);
+    const needsCombinedSwitch = bankMode === IntakeQuestionBankMode.PLATFORM;
+
+    if (needsCombinedSwitch && !data.switchToCombinedBank) {
+      return {
+        success: false as const,
+        error: "Confirm adding a custom question to the combined question bank.",
+      };
+    }
+
+    if (needsCombinedSwitch && profile.enterpriseId) {
+      return {
+        success: false as const,
+        error: "Assessment question bank mode is managed in firm Practice Standards.",
+      };
+    }
+
     const parsed = parseAdvisorAssessmentQuestionInput(data);
     if (!parsed.success) {
       return { success: false as const, error: parsed.error };
     }
 
-    const siblings = await prisma.advisorPillarQuestion.findMany({
-      where: { advisorProfileId: profile.id, pillarId: pillar.id },
-      select: { displayOrder: true },
-    });
+    const row = await prisma.$transaction(async (tx) => {
+      if (needsCombinedSwitch) {
+        await tx.advisorProfile.update({
+          where: { id: profile.id },
+          data: { assessmentQuestionBankMode: IntakeQuestionBankMode.COMBINED },
+        });
+      }
 
-    const row = await prisma.advisorPillarQuestion.create({
-      data: {
-        advisorProfileId: profile.id,
-        pillarId: pillar.id,
-        sourceKind: AdvisorQuestionSource.CUSTOM,
-        sectionCode: "CUSTOM",
-        displayOrder: nextDisplayOrder(siblings),
-        ...buildAdvisorAssessmentQuestionWriteData(parsed.data),
-        isVisible: true,
-      },
+      const siblings = await tx.advisorPillarQuestion.findMany({
+        where: { advisorProfileId: profile.id, pillarId: pillar.id },
+        select: { displayOrder: true },
+      });
+
+      return tx.advisorPillarQuestion.create({
+        data: {
+          advisorProfileId: profile.id,
+          pillarId: pillar.id,
+          sourceKind: AdvisorQuestionSource.CUSTOM,
+          sectionCode: "CUSTOM",
+          displayOrder: nextDisplayOrder(siblings),
+          ...buildAdvisorAssessmentQuestionWriteData(parsed.data),
+          isVisible: true,
+        },
+      });
     });
 
     revalidatePath(`/advisor/methodology/questions/${slug}`);
-    return { success: true as const, questionId: row.id };
+    revalidatePath("/advisor/methodology/questions", "layout");
+    return {
+      success: true as const,
+      questionId: row.id,
+      switchedToCombinedBank: needsCombinedSwitch,
+    };
   } catch (error) {
     return {
       success: false as const,
       error: advisorHubActionErrorMessage(error, "Failed to add assessment question"),
+    };
+  }
+}
+
+export async function updateAdvisorAssessmentQuestionBankMode(mode: IntakeQuestionBankMode) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    if (profile.enterpriseId) {
+      return {
+        success: false as const,
+        error: "Assessment question bank mode is managed in firm Practice Standards.",
+      };
+    }
+
+    const customCount = await countAdvisorCustomAssessmentQuestions(profile.id);
+    const { mode: resolvedMode, coercedToPlatform } = resolveBankModeForUpdate(mode, customCount);
+
+    await prisma.advisorProfile.update({
+      where: { id: profile.id },
+      data: { assessmentQuestionBankMode: resolvedMode },
+    });
+
+    revalidatePath("/advisor/methodology/questions", "layout");
+    return { success: true as const, coercedToPlatform };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: advisorHubActionErrorMessage(error, "Failed to update assessment question bank"),
     };
   }
 }
@@ -504,13 +573,16 @@ export async function updateAdvisorIntakeQuestionBankMode(mode: IntakeQuestionBa
       };
     }
 
+    const customCount = await countAdvisorCustomIntakeQuestions(profile.id);
+    const { mode: resolvedMode, coercedToPlatform } = resolveBankModeForUpdate(mode, customCount);
+
     await prisma.advisorProfile.update({
       where: { id: profile.id },
-      data: { intakeQuestionBankMode: mode },
+      data: { intakeQuestionBankMode: resolvedMode },
     });
 
     revalidatePath("/advisor/methodology/intake");
-    return { success: true as const };
+    return { success: true as const, coercedToPlatform };
   } catch (error) {
     return {
       success: false as const,
@@ -527,16 +599,27 @@ export async function createAdvisorIntakeQuestion(data: {
   answer1?: string | null;
   answer2?: string | null;
   answer3?: string | null;
+  options?: unknown;
+  switchToCombinedBank?: boolean;
 }) {
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const bankMode = await resolveAdvisorIntakeQuestionBankMode(profile.id);
-    if (bankMode !== IntakeQuestionBankMode.CUSTOM) {
+    const needsCombinedSwitch = bankMode === IntakeQuestionBankMode.PLATFORM;
+
+    if (needsCombinedSwitch && !data.switchToCombinedBank) {
       return {
         success: false as const,
-        error: "Switch to the custom question bank before adding questions.",
+        error: "Confirm adding a custom question to the combined question bank.",
+      };
+    }
+
+    if (needsCombinedSwitch && profile.enterpriseId) {
+      return {
+        success: false as const,
+        error: "Intake question bank mode is managed in firm Practice Standards.",
       };
     }
 
@@ -549,30 +632,46 @@ export async function createAdvisorIntakeQuestion(data: {
       answer1: data.answer1,
       answer2: data.answer2,
       answer3: data.answer3,
+      options: data.options,
     });
     if (!parsed.success) {
       return { success: false as const, error: parsed.error };
     }
 
-    const siblings = await prisma.advisorIntakeQuestion.findMany({
-      where: { advisorProfileId: profile.id },
-      select: { displayOrder: true },
-    });
-    const order = nextDisplayOrder(siblings);
+    const writeData = buildAdvisorIntakeQuestionWriteData(parsed.data);
 
-    const row = await prisma.advisorIntakeQuestion.create({
-      data: {
-        advisorProfileId: profile.id,
-        sourceKind: AdvisorQuestionSource.CUSTOM,
-        displayOrder: order,
-        questionNumber: String(order + 1),
-        ...buildAdvisorIntakeQuestionWriteData(parsed.data),
-        isVisible: true,
-      },
+    const row = await prisma.$transaction(async (tx) => {
+      if (needsCombinedSwitch) {
+        await tx.advisorProfile.update({
+          where: { id: profile.id },
+          data: { intakeQuestionBankMode: IntakeQuestionBankMode.COMBINED },
+        });
+      }
+
+      const siblings = await tx.advisorIntakeQuestion.findMany({
+        where: { advisorProfileId: profile.id },
+        select: { displayOrder: true },
+      });
+      const order = nextDisplayOrder(siblings);
+
+      return tx.advisorIntakeQuestion.create({
+        data: {
+          advisorProfileId: profile.id,
+          sourceKind: AdvisorQuestionSource.CUSTOM,
+          displayOrder: order,
+          questionNumber: String(order + 1),
+          ...writeData,
+          isVisible: true,
+        },
+      });
     });
 
     revalidatePath("/advisor/methodology/intake");
-    return { success: true as const, questionId: row.id };
+    return {
+      success: true as const,
+      questionId: row.id,
+      switchedToCombinedBank: needsCombinedSwitch,
+    };
   } catch (error) {
     return {
       success: false as const,
@@ -598,8 +697,23 @@ export async function deleteAdvisorPillarQuestion(questionId: string) {
     }
 
     await prisma.advisorPillarQuestion.delete({ where: { id: questionId } });
+
+    let switchedToPlatform = false;
+    if (!profile.enterpriseId) {
+      const remaining = await countAdvisorCustomAssessmentQuestions(profile.id);
+      const bankMode = await resolveAdvisorAssessmentQuestionBankMode(profile.id);
+      if (isCustomOnlyWithoutSavedQuestions(bankMode, remaining)) {
+        await prisma.advisorProfile.update({
+          where: { id: profile.id },
+          data: { assessmentQuestionBankMode: IntakeQuestionBankMode.PLATFORM },
+        });
+        switchedToPlatform = true;
+      }
+    }
+
     revalidatePath(`/advisor/methodology/questions/${existing.pillar.slug}`);
-    return { success: true as const };
+    revalidatePath("/advisor/methodology/questions", "layout");
+    return { success: true as const, switchedToPlatform };
   } catch (error) {
     return {
       success: false as const,
@@ -624,8 +738,22 @@ export async function deleteAdvisorIntakeQuestion(questionId: string) {
     }
 
     await prisma.advisorIntakeQuestion.delete({ where: { id: questionId } });
+
+    let switchedToPlatform = false;
+    if (!profile.enterpriseId) {
+      const remaining = await countAdvisorCustomIntakeQuestions(profile.id);
+      const bankMode = await resolveAdvisorIntakeQuestionBankMode(profile.id);
+      if (isCustomOnlyWithoutSavedQuestions(bankMode, remaining)) {
+        await prisma.advisorProfile.update({
+          where: { id: profile.id },
+          data: { intakeQuestionBankMode: IntakeQuestionBankMode.PLATFORM },
+        });
+        switchedToPlatform = true;
+      }
+    }
+
     revalidatePath("/advisor/methodology/intake");
-    return { success: true as const };
+    return { success: true as const, switchedToPlatform };
   } catch (error) {
     return {
       success: false as const,

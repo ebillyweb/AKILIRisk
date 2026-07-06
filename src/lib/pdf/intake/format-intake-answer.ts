@@ -1,6 +1,9 @@
+import { formatIntakeStructuredAnswerForDisplay } from "@/lib/intake/intake-answer-behavior";
+
 export type IntakeAnswerKind =
   | "missing"
   | "typed"
+  | "structured_choice"
   | "voice_transcript"
   | "voice_pending"
   | "transcription_failed";
@@ -18,9 +21,35 @@ type IntakeResponseLike = {
   transcriptionStatus?: string | null;
 };
 
+export type IntakeAnswerQuestionLike = {
+  answerType: string;
+  answer0?: string | null;
+  answer1?: string | null;
+  answer2?: string | null;
+  answer3?: string | null;
+  options?: unknown;
+};
+
+function resolveStructuredAnswerText(
+  question: IntakeAnswerQuestionLike | undefined,
+  storedValue: string,
+): { text: string; isStructuredChoice: boolean } {
+  if (!question) {
+    return { text: storedValue, isStructuredChoice: false };
+  }
+
+  const resolved =
+    formatIntakeStructuredAnswerForDisplay(question, storedValue) ?? storedValue;
+  return {
+    text: resolved,
+    isStructuredChoice: resolved !== storedValue,
+  };
+}
+
 /** Formats a client intake response for read-only display (web + PDF). */
 export function formatIntakeAnswerDisplay(
   response: IntakeResponseLike | undefined,
+  question?: IntakeAnswerQuestionLike,
 ): IntakeAnswerDisplay {
   if (!response) {
     return {
@@ -44,10 +73,21 @@ export function formatIntakeAnswerDisplay(
   }
 
   if (response.transcription?.trim()) {
+    const raw = response.transcription.trim();
+    const { text, isStructuredChoice } = resolveStructuredAnswerText(question, raw);
+
     return {
-      answerText: response.transcription.trim(),
-      answerKind: hasTypedAnswer ? "typed" : "voice_transcript",
-      answerLabel: hasTypedAnswer ? "Typed answer" : "Voice recording (transcript)",
+      answerText: text,
+      answerKind: hasTypedAnswer
+        ? isStructuredChoice
+          ? "structured_choice"
+          : "typed"
+        : "voice_transcript",
+      answerLabel: hasTypedAnswer
+        ? isStructuredChoice
+          ? "Selected option"
+          : "Typed answer"
+        : "Voice recording (transcript)",
     };
   }
 

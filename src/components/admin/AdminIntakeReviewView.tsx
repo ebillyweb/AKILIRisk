@@ -9,6 +9,7 @@ import {
   deleteIntakeResponseAdminNote,
   saveIntakeResponseAdminNote,
 } from "@/lib/actions/admin-answer-note-actions";
+import { formatIntakeAnswerDisplay } from "@/lib/pdf/intake/format-intake-answer";
 
 type Props = {
   data: AdminIntakeReviewPayload;
@@ -27,6 +28,23 @@ export function AdminIntakeReviewView({ data }: Props) {
         const num =
           question.questionNumber ??
           (parseInt(question.id.replace("intake-q", ""), 10) || 0);
+        const formatted = response
+          ? formatIntakeAnswerDisplay(
+              {
+                audioUrl: response.audioUrl,
+                transcription: response.transcription,
+                transcriptionStatus: response.transcriptionStatus,
+              },
+              {
+                answerType: question.answerType,
+                answer0: question.answer0,
+                answer1: question.answer1,
+                answer2: question.answer2,
+                answer3: question.answer3,
+                options: question.options,
+              },
+            )
+          : null;
 
         return (
           <section
@@ -46,9 +64,16 @@ export function AdminIntakeReviewView({ data }: Props) {
             {response ? (
               <>
                 <div className="space-y-3 border-t pt-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Client answer
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Client answer
+                    </p>
+                    {formatted?.answerLabel ? (
+                      <Badge variant="secondary" className="text-xs">
+                        {formatted.answerLabel}
+                      </Badge>
+                    ) : null}
+                  </div>
                   {response.audioUrl ? (
                     <AudioPlayer
                       audioUrl={response.audioUrl}
@@ -57,13 +82,13 @@ export function AdminIntakeReviewView({ data }: Props) {
                     />
                   ) : null}
                   <div className="rounded-lg bg-muted/50 p-4">
-                    {response.transcriptionStatus === "FAILED" ? (
+                    {formatted?.answerKind === "transcription_failed" ? (
                       <Badge variant="secondary" className="mb-2 text-xs">
                         Transcription failed
                       </Badge>
                     ) : null}
-                    {response.transcription ? (
-                      <p className="text-sm leading-6">{response.transcription}</p>
+                    {formatted && formatted.answerKind !== "missing" ? (
+                      <p className="text-sm leading-6">{formatted.answerText}</p>
                     ) : (
                       <p className="text-sm italic text-muted-foreground">
                         No transcription available.

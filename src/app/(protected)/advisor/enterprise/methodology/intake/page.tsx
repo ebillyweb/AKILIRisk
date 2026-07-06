@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import { requireEnterpriseTeamManager } from "@/lib/enterprise/team-access";
-import { loadEnterpriseIntakeQuestions } from "@/lib/methodology/enterprise-methodology-queries";
-import { resolveEnterpriseIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
+import { loadEnterpriseIntakeQuestions, countEnterpriseCustomIntakeQuestions } from "@/lib/methodology/enterprise-methodology-queries";
+import { ensureEnterpriseIntakeQuestionBankModeValid } from "@/lib/methodology/intake-question-bank-mode.server";
 import { Button } from "@/components/ui/button";
 import { EnterpriseIntakeScriptEditor } from "@/components/advisor/enterprise/EnterpriseIntakeScriptEditor";
 import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
@@ -20,10 +20,12 @@ export default async function EnterpriseMethodologyIntakePage() {
     redirect("/signin");
   }
 
-  const [questions, bankMode] = await Promise.all([
+  const [questions, bankModeState, savedCustomQuestionCount] = await Promise.all([
     loadEnterpriseIntakeQuestions(enterpriseId),
-    resolveEnterpriseIntakeQuestionBankMode(enterpriseId),
+    ensureEnterpriseIntakeQuestionBankModeValid(enterpriseId),
+    countEnterpriseCustomIntakeQuestions(enterpriseId),
   ]);
+  const bankMode = bankModeState.bankMode;
 
   return (
     <div className="space-y-6">
@@ -37,7 +39,7 @@ export default async function EnterpriseMethodologyIntakePage() {
       <ConfigurationPageHeader
         tourId="advisor-methodology-intake"
         title={`${enterpriseName} — Intake question bank`}
-        description="Choose platform or custom intake questions for the firm — not both."
+        description="Platform is the default firm bank. Combined or custom only when needed."
       />
       {questions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
@@ -48,6 +50,7 @@ export default async function EnterpriseMethodologyIntakePage() {
         <div data-tour="config-primary-form">
           <EnterpriseIntakeScriptEditor
             bankMode={bankMode}
+            savedCustomQuestionCount={savedCustomQuestionCount}
             questions={questions.map((q) => ({
               id: q.id,
               sourceKind: q.sourceKind,
@@ -60,6 +63,7 @@ export default async function EnterpriseMethodologyIntakePage() {
               answer1: q.answer1,
               answer2: q.answer2,
               answer3: q.answer3,
+              options: q.options,
             }))}
           />
         </div>

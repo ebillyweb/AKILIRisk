@@ -14,9 +14,12 @@ import { findUserByEmail } from "@/lib/auth/user-email";
 import {
   createIntakeInterview,
   getActiveIntakeInterview,
+  saveIntakeResponse,
   updateInterviewProgress,
 } from "@/lib/data/intake";
+import { decryptTranscription } from "@/lib/data/response-content";
 import { loadIntakeScriptForInterview } from "@/lib/intake/load-intake-script";
+import { formatIntakeAnswerDisplay } from "@/lib/pdf/intake/format-intake-answer";
 import {
   getAssignedAdvisorProfileIdForClient,
   loadSnapshotForInterview,
@@ -65,6 +68,8 @@ export async function startIntakeSnapshotForClient(clientEmail: string) {
     questions: script.map((q) => ({
       id: q.id,
       questionText: q.questionText,
+      answerType: q.answerType,
+      options: q.options ?? null,
     })),
   };
 }
@@ -330,6 +335,103 @@ export async function createCustomIntakeQuestionForAdvisor(
     },
   });
   return { questionId: row.id, questionText: row.questionText };
+}
+
+export async function createCustomChoiceListIntakeForAdvisor(
+  advisorEmail: string,
+  questionText: string,
+  optionLabels: string[],
+) {
+  const profile = await advisorProfileForEmail(advisorEmail);
+  const siblings = await prisma.advisorIntakeQuestion.findMany({
+    where: { advisorProfileId: profile.id },
+    select: { displayOrder: true },
+  });
+  const order = nextDisplayOrder(siblings);
+  const options = optionLabels.map((label, index) => ({
+    value: String(index),
+    label,
+  }));
+  const row = await prisma.advisorIntakeQuestion.create({
+    data: {
+      advisorProfileId: profile.id,
+      sourceKind: AdvisorQuestionSource.CUSTOM,
+      displayOrder: order,
+      questionNumber: String(order + 1),
+      questionText,
+      answerType: "choice_list",
+      options,
+      isVisible: true,
+    },
+  });
+  return {
+    questionId: row.id,
+    questionText: row.questionText,
+    answerType: row.answerType,
+    options,
+  };
+}
+
+export async function recordIntakeStructuredAnswer(
+  clientEmail: string,
+  questionId: string,
+  value: string,
+) {
+  const user = await findUserByEmail(clientEmail.trim().toLowerCase());
+  if (!user) throw new Error(`User not found: ${clientEmail}`);
+  const interview = await getActiveIntakeInterview(user.id);
+  if (!interview) throw new Error("No active intake interview");
+  await saveIntakeResponse(interview.id, questionId, {
+    transcription: value,
+    transcriptionStatus: "COMPLETED",
+  });
+}
+
+export async function getFormattedIntakeAnswerForClient(
+  clientEmail: string,
+  questionId: string,
+) {
+  const user = await findUserByEmail(clientEmail.trim().toLowerCase());
+  if (!user) throw new Error(`User not found: ${clientEmail}`);
+  const interview = await getActiveIntakeInterview(user.id);
+  if (!interview) throw new Error("No active intake interview");
+
+  const script = await loadIntakeScriptForInterview(interview.id);
+  const question = script.find((entry) => entry.id === questionId);
+  if (!question) throw new Error("Question not found in intake script");
+
+  const response = await prisma.intakeResponse.findUnique({
+    where: {
+      interviewId_questionId: {
+        interviewId: interview.id,
+        questionId,
+      },
+    },
+    select: {
+      transcription: true,
+      audioUrl: true,
+      transcriptionStatus: true,
+    },
+  });
+
+  const formatted = formatIntakeAnswerDisplay(
+    response
+      ? {
+          transcription: response.transcription
+            ? decryptTranscription(response.transcription)
+            : null,
+          audioUrl: response.audioUrl,
+          transcriptionStatus: response.transcriptionStatus,
+        }
+      : undefined,
+    question,
+  );
+
+  return {
+    answerText: formatted.answerText,
+    answerKind: formatted.answerKind,
+    answerLabel: formatted.answerLabel,
+  };
 }
 
 export async function hideAdvisorIntakeQuestion(

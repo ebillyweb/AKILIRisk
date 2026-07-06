@@ -16,8 +16,11 @@ import type {
   MethodologySnapshotBlob,
   ParsedMethodologySnapshot,
 } from "@/lib/methodology/types";
-import { filterIntakeQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
-import { resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
+import { filterAndOrderQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
+import {
+  resolveEffectiveAdvisorAssessmentQuestionBankMode,
+  resolveEffectiveAdvisorIntakeQuestionBankMode,
+} from "@/lib/methodology/intake-question-bank-mode.server";
 import { advisorAssessmentQuestionToWire } from "@/lib/methodology/advisor-assessment-question-config";
 import {
   SNAPSHOT_MAX_BYTES,
@@ -102,7 +105,15 @@ export async function buildAdvisorConfigSnapshot(
     orderBy: [{ pillarId: "asc" }, { displayOrder: "asc" }],
   });
 
-  for (const row of advisorQuestions) {
+  const assessmentBankMode = await resolveEffectiveAdvisorAssessmentQuestionBankMode(
+    advisorProfileId,
+  );
+  const activeAssessmentRows = filterAndOrderQuestionsByBankMode(
+    advisorQuestions,
+    assessmentBankMode,
+  );
+
+  for (const row of activeAssessmentRows) {
     if (!scopedSlugs.includes(row.pillar.slug)) continue;
     const wire = advisorAssessmentQuestionToWire({
       id: row.id,
@@ -128,8 +139,8 @@ export async function buildAdvisorConfigSnapshot(
     where: { advisorProfileId, isVisible: true },
     orderBy: { displayOrder: "asc" },
   });
-  const intakeBankMode = await resolveAdvisorIntakeQuestionBankMode(advisorProfileId);
-  const activeIntakeRows = filterIntakeQuestionsByBankMode(intakeRows, intakeBankMode);
+  const intakeBankMode = await resolveEffectiveAdvisorIntakeQuestionBankMode(advisorProfileId);
+  const activeIntakeRows = filterAndOrderQuestionsByBankMode(intakeRows, intakeBankMode);
 
   const intakeQuestions = activeIntakeRows.map((row) => ({
     id: row.id,

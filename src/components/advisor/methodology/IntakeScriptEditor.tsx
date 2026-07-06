@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { AdvisorQuestionSource, IntakeQuestionBankMode } from "@prisma/client";
@@ -12,12 +12,26 @@ import {
 } from "@/lib/actions/methodology-actions";
 import { isEnterpriseAdvisorQuestion } from "@/lib/methodology/advisor-question-policy";
 import {
-  filterIntakeQuestionsByBankMode,
+  customOnlyEmptyBankMessage,
+  filterAndOrderQuestionsByBankMode,
   isCustomIntakeQuestionSource,
 } from "@/lib/methodology/intake-question-bank-mode";
-import { labelForAdvisorAssessmentAnswerType } from "@/lib/methodology/advisor-intake-question-config";
-import { readAdvisorIntakeQuestionForm } from "@/lib/methodology/advisor-intake-question-config";
-import { AssessmentQuestionAnswerFields } from "@/components/advisor/methodology/AssessmentQuestionAnswerFields";
+import { labelForAdvisorIntakeAnswerType } from "@/lib/methodology/advisor-intake-question-config";
+import {
+  readAdvisorIntakeQuestionForm,
+  validateAdvisorIntakeQuestionFormClient,
+  type AdvisorIntakeQuestionFormPayload,
+} from "@/lib/methodology/advisor-intake-question-config";
+import { IntakeQuestionAnswerFields } from "@/components/advisor/methodology/IntakeQuestionAnswerFields";
+import { SwitchToCombinedQuestionBankDialog } from "@/components/advisor/methodology/SwitchToCustomQuestionBankDialog";
+import {
+  QuestionBankModeControls,
+  QuestionBankModeStatusBanner,
+  CustomOnlyEmptyBankNotice,
+  canDeleteCustomQuestionInBankMode,
+  questionBankModeChangeMessage,
+  questionBankModeDescription,
+} from "@/components/advisor/methodology/QuestionBankModeControls";
 import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +39,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export type IntakeQuestionRow = {
   id: string;
@@ -39,6 +52,7 @@ export type IntakeQuestionRow = {
   answer1: string | null;
   answer2: string | null;
   answer3: string | null;
+  options?: unknown;
 };
 
 type IntakeQuestionActions = {
@@ -100,7 +114,7 @@ function QuestionCard({
             <Badge variant={isCustom ? "secondary" : "outline"}>
               {sourceBadgeLabel(q.sourceKind)}
             </Badge>
-            <Badge variant="outline">{labelForAdvisorAssessmentAnswerType(q.answerType)}</Badge>
+            <Badge variant="outline">{labelForAdvisorIntakeAnswerType(q.answerType)}</Badge>
           </div>
         </div>
         {canDelete ? (
@@ -113,7 +127,16 @@ function QuestionCard({
               if (!window.confirm("Remove this custom question?")) return;
               runPending(async () => {
                 const result = await actions.deleteQuestion(q.id);
-                handleMutationResult(result, "Custom question removed");
+                if (!result.success) {
+                  toast.error(result.error ?? "Something went wrong");
+                  return;
+                }
+                if (result.switchedToPlatform) {
+                  toast.success(customOnlyEmptyBankMessage("intake"));
+                } else {
+                  toast.success("Custom question removed");
+                }
+                refreshAfterSuccess();
               });
             }}
           >
@@ -143,7 +166,14 @@ function QuestionCard({
         </div>
         <form
           className="space-y-3"
-          action={(formData) => {
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            const validationError = validateAdvisorIntakeQuestionFormClient(formData);
+            if (validationError) {
+              toast.error(validationError);
+              return;
+            }
             runPending(async () => {
               const payload = readAdvisorIntakeQuestionForm(formData);
               const result = await actions.updateQuestion(q.id, payload);
@@ -165,15 +195,20 @@ function QuestionCard({
             />
           </div>
           {isCustom ? (
-            <AssessmentQuestionAnswerFields
+            <IntakeQuestionAnswerFields
               defaultAnswerType={q.answerType}
               defaultAnswer0={q.answer0}
               defaultAnswer1={q.answer1}
               defaultAnswer2={q.answer2}
               defaultAnswer3={q.answer3}
+              defaultOptions={q.options}
             />
           ) : (
-            <AssessmentQuestionAnswerFields readOnly defaultAnswerType={q.answerType} />
+            <IntakeQuestionAnswerFields
+              readOnly
+              defaultAnswerType={q.answerType}
+              defaultOptions={q.options}
+            />
           )}
           <Button type="submit" size="sm" disabled={pending}>
             Save
@@ -187,78 +222,165 @@ function QuestionCard({
 function CreateQuestionCard({
   pending,
   createFormKey,
+  isPlatformOnlyMode,
+  savedCustomQuestionCount,
+  firmScope,
   createDescription,
   actions,
   runPending,
-  handleMutationResult,
-  onCreated,
+  onCreateSuccess,
 }: {
   pending: boolean;
   createFormKey: number;
+  isPlatformOnlyMode: boolean;
+  savedCustomQuestionCount: number;
+  firmScope: boolean;
   createDescription: string;
   actions: IntakeQuestionActions;
   runPending: (fn: () => Promise<void>) => void;
-  handleMutationResult: MutationHandlers["handleMutationResult"];
-  onCreated: () => void;
+  onCreateSuccess: (result: { switchedToCombinedBank?: boolean }, resetForm: () => void) => void;
 }) {
+  const [switchDialogOpen, setSwitchDialogOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<AdvisorIntakeQuestionFormPayload | null>(
+    null,
+  );
+
+  const submitCreate = (payload: AdvisorIntakeQuestionFormPayload, switchToCombinedBank: boolean) => {
+    runPending(async () => {
+      const result = await actions.createQuestion({
+        questionText: payload.questionText,
+        context: payload.context,
+        answerType: payload.answerType,
+        answer0: payload.answer0,
+        answer1: payload.answer1,
+        answer2: payload.answer2,
+        answer3: payload.answer3,
+        options: payload.options,
+        switchToCombinedBank,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? "Something went wrong");
+        return;
+      }
+      setSwitchDialogOpen(false);
+      setPendingPayload(null);
+      onCreateSuccess(
+        { switchedToCombinedBank: result.switchedToCombinedBank },
+        () => setSwitchDialogOpen(false),
+      );
+    });
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Add custom intake question</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="mb-3 text-sm text-muted-foreground">{createDescription}</p>
-        <form
-          key={createFormKey}
-          className="space-y-3"
-          action={(formData) => {
-            runPending(async () => {
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {isPlatformOnlyMode ? "Add custom intake questions" : "Add custom intake question"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-muted-foreground">
+            {isPlatformOnlyMode
+              ? "Add custom questions after your platform intake set. Platform questions stay first."
+              : createDescription}
+          </p>
+          <form
+            key={createFormKey}
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
+              const validationError = validateAdvisorIntakeQuestionFormClient(formData);
+              if (validationError) {
+                toast.error(validationError);
+                return;
+              }
               const payload = readAdvisorIntakeQuestionForm(formData);
-              const result = await actions.createQuestion(payload);
-              handleMutationResult(result, "Custom question added", onCreated);
-            });
-          }}
-        >
-          <div className="space-y-2">
-            <LabelWithHelp helpKey="advisor-intake-question-text">Question text</LabelWithHelp>
-            <Textarea name="questionText" placeholder="Question text" rows={3} required />
-          </div>
-          <div className="space-y-2">
-            <LabelWithHelp helpKey="advisor-intake-context">Context / coaching prompt (optional)</LabelWithHelp>
-            <Textarea name="context" placeholder="Context / coaching prompt (optional)" rows={2} />
-          </div>
-          <AssessmentQuestionAnswerFields idPrefix="create-" />
-          <Button type="submit" size="sm" disabled={pending}>
-            Add question
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+              if (!isPlatformOnlyMode) {
+                submitCreate(payload, false);
+                return;
+              }
+              setPendingPayload(payload);
+              setSwitchDialogOpen(true);
+            }}
+          >
+            <div className="space-y-2">
+              <LabelWithHelp helpKey="advisor-intake-question-text">Question text</LabelWithHelp>
+              <Textarea name="questionText" placeholder="Question text" rows={3} required />
+            </div>
+            <div className="space-y-2">
+              <LabelWithHelp helpKey="advisor-intake-context">
+                Context / coaching prompt (optional)
+              </LabelWithHelp>
+              <Textarea name="context" placeholder="Context / coaching prompt (optional)" rows={2} />
+            </div>
+            <IntakeQuestionAnswerFields idPrefix="create-" />
+            <Button type="submit" size="sm" disabled={pending}>
+              {isPlatformOnlyMode ? "Add custom question…" : "Add question"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <SwitchToCombinedQuestionBankDialog
+        bankKind="intake"
+        open={switchDialogOpen}
+        pending={pending}
+        savedCustomQuestionCount={savedCustomQuestionCount}
+        firmScope={firmScope}
+        onOpenChange={(open) => {
+          if (!pending) {
+            setSwitchDialogOpen(open);
+            if (!open) setPendingPayload(null);
+          }
+        }}
+        onConfirm={() => {
+          if (pendingPayload) {
+            submitCreate(pendingPayload, true);
+          }
+        }}
+      />
+    </>
   );
 }
 
 export function IntakeScriptEditor({
   questions,
   bankMode,
+  savedCustomQuestionCount: savedCustomQuestionCountProp,
   modeReadOnly = false,
   modeManagedByFirm = false,
+  firmScope = false,
   actions = defaultActions,
-  createDescription = "Custom questions apply to new intakes only. Switch back to platform anytime — your custom set is saved.",
+  createDescription = "Custom questions apply to new intakes only. Switch bank mode anytime — your custom set is saved.",
   platformDescription = "Use AkiliRisk platform intake questions. Edit or hide individual prompts — they cannot be deleted.",
-  customDescription = "Build your own intake question set. Platform questions are not included while custom mode is active.",
+  combinedDescription = "Platform intake questions appear first, followed by your custom prompts.",
+  customDescription = "Build your own intake question set. Platform questions are not included while custom-only mode is active.",
 }: {
   questions: IntakeQuestionRow[];
   bankMode: IntakeQuestionBankMode;
+  savedCustomQuestionCount?: number;
   modeReadOnly?: boolean;
   modeManagedByFirm?: boolean;
+  firmScope?: boolean;
   actions?: IntakeQuestionActions;
   createDescription?: string;
   platformDescription?: string;
+  combinedDescription?: string;
   customDescription?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [createFormKey, setCreateFormKey] = useState(0);
+  const [highlightBankMode, setHighlightBankMode] = useState(false);
+  const bankModeCardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!highlightBankMode) return;
+    const timer = window.setTimeout(() => setHighlightBankMode(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [highlightBankMode]);
 
   const refreshAfterSuccess = (onSuccess?: () => void) => {
     onSuccess?.();
@@ -278,8 +400,14 @@ export function IntakeScriptEditor({
     refreshAfterSuccess(onSuccess);
   };
 
-  const activeQuestions = filterIntakeQuestionsByBankMode(questions, bankMode);
-  const isCustomMode = bankMode === "CUSTOM";
+  const activeQuestions = filterAndOrderQuestionsByBankMode(questions, bankMode);
+  const isPlatformOnlyMode = bankMode === "PLATFORM";
+  const isCustomOnlyMode = bankMode === "CUSTOM";
+  const savedCustomQuestionCount =
+    savedCustomQuestionCountProp ??
+    questions.filter((q) => isCustomIntakeQuestionSource(q.sourceKind)).length;
+  const canAddCustomQuestions = !modeReadOnly;
+  const canDeleteCustom = canDeleteCustomQuestionInBankMode(bankMode);
 
   const runPending = (fn: () => Promise<void>) => {
     startTransition(async () => {
@@ -287,70 +415,82 @@ export function IntakeScriptEditor({
     });
   };
 
+  const handleCreateSuccess = (
+    result: { switchedToCombinedBank?: boolean },
+    _resetDialog: () => void,
+  ) => {
+    if (result.switchedToCombinedBank) {
+      toast.success(
+        firmScope
+          ? "Custom intake questions will now follow the firm platform set for new clients."
+          : "Custom intake questions will now follow your platform set for new clients.",
+      );
+      setHighlightBankMode(true);
+      bankModeCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      toast.success("Custom question added");
+    }
+    setCreateFormKey((key) => key + 1);
+    refreshAfterSuccess();
+  };
+
   return (
     <div className="space-y-4" data-tour="intake-questions">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Question bank source</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Choose one source for client intake interviews. Platform and custom question banks are
-            not combined.
-          </p>
-          {modeManagedByFirm ? (
-            <p className="text-sm text-muted-foreground">
-              This setting is managed in firm Practice Standards.
-            </p>
-          ) : null}
-          <RadioGroup
-            value={bankMode}
-            disabled={pending || modeReadOnly}
-            onValueChange={(value) => {
-              if (value !== "PLATFORM" && value !== "CUSTOM") return;
-              runPending(async () => {
-                const result = await actions.updateBankMode(value);
-                handleMutationResult(
-                  result,
-                  value === "CUSTOM"
-                    ? "Switched to custom question bank"
-                    : "Switched to platform question bank",
-                );
-              });
-            }}
-            className="grid gap-3 sm:grid-cols-2"
-          >
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <RadioGroupItem value="PLATFORM" className="mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Platform question bank</p>
-                <p className="text-sm text-muted-foreground">
-                  AkiliRisk catalog questions for your clients.
-                </p>
-              </div>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <RadioGroupItem value="CUSTOM" className="mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Custom question bank</p>
-                <p className="text-sm text-muted-foreground">
-                  Your own intake prompts only.
-                </p>
-              </div>
-            </label>
-          </RadioGroup>
-        </CardContent>
-      </Card>
+      <QuestionBankModeStatusBanner
+        bankMode={bankMode}
+        experienceNoun="intake"
+        savedCustomQuestionCount={savedCustomQuestionCount}
+      />
+
+      <CustomOnlyEmptyBankNotice
+        bankMode={bankMode}
+        experienceNoun="intake"
+        savedCustomQuestionCount={savedCustomQuestionCount}
+      />
+
+      <QuestionBankModeControls
+        bankMode={bankMode}
+        savedCustomQuestionCount={savedCustomQuestionCount}
+        pending={pending}
+        modeReadOnly={modeReadOnly}
+        modeManagedByFirm={modeManagedByFirm}
+        experienceNoun="intake"
+        cardTitle="What clients see during intake"
+        highlightBankMode={highlightBankMode}
+        bankModeCardRef={bankModeCardRef}
+        cardId="intake-bank-mode-card"
+        onModeChange={(value) => {
+          runPending(async () => {
+            const result = await actions.updateBankMode(value);
+            if (!result.success) {
+              toast.error(result.error ?? "Something went wrong");
+              return;
+            }
+            toast.success(
+              result.coercedToPlatform
+                ? customOnlyEmptyBankMessage("intake")
+                : questionBankModeChangeMessage(value),
+            );
+            refreshAfterSuccess();
+          });
+        }}
+      />
 
       <p className="text-sm text-muted-foreground">
-        {isCustomMode ? customDescription : platformDescription}
+        {questionBankModeDescription(bankMode, {
+          platform: platformDescription,
+          combined: combinedDescription,
+          custom: customDescription,
+        })}
       </p>
 
       {activeQuestions.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          {isCustomMode
+          {isCustomOnlyMode
             ? "No custom intake questions yet. Add your first question below."
-            : "No platform intake questions yet. Check back after defaults sync."}
+            : isPlatformOnlyMode
+              ? "No platform intake questions yet. Check back after defaults sync."
+              : "No intake questions yet for this bank mode."}
         </p>
       ) : (
         <div className="space-y-4">
@@ -364,21 +504,23 @@ export function IntakeScriptEditor({
               runPending={runPending}
               handleMutationResult={handleMutationResult}
               refreshAfterSuccess={refreshAfterSuccess}
-              canDelete={isCustomMode && isCustomIntakeQuestionSource(q.sourceKind)}
+              canDelete={canDeleteCustom && isCustomIntakeQuestionSource(q.sourceKind)}
             />
           ))}
         </div>
       )}
 
-      {isCustomMode ? (
+      {canAddCustomQuestions ? (
         <CreateQuestionCard
           pending={pending}
           createFormKey={createFormKey}
+          isPlatformOnlyMode={isPlatformOnlyMode}
+          savedCustomQuestionCount={savedCustomQuestionCount}
+          firmScope={firmScope}
           createDescription={createDescription}
           actions={actions}
           runPending={runPending}
-          handleMutationResult={handleMutationResult}
-          onCreated={() => setCreateFormKey((key) => key + 1)}
+          onCreateSuccess={handleCreateSuccess}
         />
       ) : null}
     </div>

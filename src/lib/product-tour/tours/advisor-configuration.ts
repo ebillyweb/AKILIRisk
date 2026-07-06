@@ -13,7 +13,8 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       element: '[data-tour="config-pillar-questions"]',
       popover: {
         title: "Assessment questions",
-        description: "Jump directly to question banks for each risk domain.",
+        description:
+          "Open question banks per risk domain. Platform questions are the default; switch to combined or custom only when needed.",
         side: "bottom",
       },
     },
@@ -50,15 +51,24 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Intake question bank",
         description:
-          "Choose platform or custom intake questions for the audio interview. Edits apply to new intakes only.",
+          "Platform questions are the default for new intakes. Use combined to append custom prompts after the catalog, or custom only to replace it entirely.",
       },
     },
     {
-      element: '[data-tour="config-primary-form"]',
+      element: '[data-tour="question-bank-mode"]',
       popover: {
-        title: "Question bank editor",
+        title: "Question bank mode",
         description:
-          "Switch between platform and custom banks, then edit, hide, or add questions for your clients.",
+          "Platform only uses AkiliRisk intake questions. Combined keeps platform first, then your custom set. Custom only shows firm or advisor prompts.",
+        side: "top",
+      },
+    },
+    {
+      element: '[data-tour="intake-questions"]',
+      popover: {
+        title: "Edit questions",
+        description:
+          "Edit or hide questions in the active bank, remove custom prompts, or add supplements. Changes apply to new intakes only.",
         side: "top",
       },
     },
@@ -68,15 +78,24 @@ export const ADVISOR_CONFIGURATION_TOURS = {
       popover: {
         title: "Assessment questions",
         description:
-          "Customize the personal risk profile questions clients answer for this risk domain.",
+          "Customize personal risk profile questions for this risk domain. Platform is the default bank for new assessments.",
       },
     },
     {
-      element: '[data-tour="config-primary-form"]',
+      element: '[data-tour="question-bank-mode"]',
+      popover: {
+        title: "Question bank mode",
+        description:
+          "Platform only uses the AkiliRisk catalog. Combined adds custom questions after platform prompts in this domain. Custom only replaces the catalog.",
+        side: "top",
+      },
+    },
+    {
+      element: '[data-tour="questions-existing"]',
       popover: {
         title: "Question editor",
         description:
-          "Edit, hide, or add custom questions. Changes apply to new intakes only.",
+          "Edit, hide, or delete custom questions, or add supplements. Changes apply to new assessments only.",
         side: "top",
       },
     },

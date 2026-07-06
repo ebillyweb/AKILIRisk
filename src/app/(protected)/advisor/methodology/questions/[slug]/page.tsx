@@ -3,8 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import {
+  ensureAdvisorAssessmentQuestionBankModeValid,
+  resolveAdvisorAssessmentQuestionBankMode,
+} from "@/lib/methodology/intake-question-bank-mode.server";
+import {
   loadActiveAdvisorMethodologyPillars,
   loadAdvisorAssessmentQuestions,
+  countAdvisorCustomAssessmentQuestions,
   methodologyPillarDisplayName,
 } from "@/lib/methodology/methodology-queries";
 import { Button } from "@/components/ui/button";
@@ -22,11 +27,13 @@ export default async function MethodologyQuestionsPage({
   const slug = normalizePillarSlug(rawSlug);
 
   let profileId: string;
+  let enterpriseId: string | null;
   let activePillars: Awaited<ReturnType<typeof loadActiveAdvisorMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
     profileId = profile.id;
+    enterpriseId = profile.enterpriseId;
     activePillars = await loadActiveAdvisorMethodologyPillars(profileId);
   } catch {
     redirect("/signin");
@@ -35,7 +42,17 @@ export default async function MethodologyQuestionsPage({
   const pillar = activePillars.find((p) => p.slug === slug);
   if (!pillar) notFound();
 
-  const questions = await loadAdvisorAssessmentQuestions(profileId, slug);
+  const [questions, bankModeState, totalCustomQuestionCount] = await Promise.all([
+    loadAdvisorAssessmentQuestions(profileId, slug),
+    enterpriseId
+      ? Promise.resolve({
+          bankMode: await resolveAdvisorAssessmentQuestionBankMode(profileId),
+          wasNormalized: false,
+        })
+      : ensureAdvisorAssessmentQuestionBankModeValid(profileId),
+    countAdvisorCustomAssessmentQuestions(profileId),
+  ]);
+  const bankMode = bankModeState.bankMode;
 
   return (
     <div className="space-y-6">
@@ -45,15 +62,20 @@ export default async function MethodologyQuestionsPage({
       <ConfigurationPageHeader
         tourId="advisor-methodology-questions"
         title={`Assessment questions — ${methodologyPillarDisplayName(pillar)}`}
-        description="Edit or hide platform base questions, or add custom questions for your clients. Changes apply to new intakes only."
+        description="Platform is the default. Choose combined (platform first) or custom only when needed."
       />
       <Card>
         <CardContent className="pt-6" data-tour="config-primary-form">
           <AssessmentQuestionsEditor
             pillarSlug={slug}
+            bankMode={bankMode}
+            modeReadOnly={enterpriseId !== null}
+            modeManagedByFirm={enterpriseId !== null}
+            totalCustomQuestionCount={totalCustomQuestionCount}
             questions={questions.map((q) => ({
               id: q.id,
               sourceKind: q.sourceKind,
+              displayOrder: q.displayOrder,
               questionNumber: q.questionNumber,
               questionText: q.questionText,
               answerType: q.answerType,

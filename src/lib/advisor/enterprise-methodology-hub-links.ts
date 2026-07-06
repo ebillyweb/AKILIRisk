@@ -9,7 +9,7 @@ export const ENTERPRISE_METHODOLOGY_HUB_LINKS = [
   {
     href: "/advisor/enterprise/methodology/intake",
     title: "Intake question bank",
-    description: "Choose platform or custom intake questions for the firm.",
+    description: "Platform intake by default; optional combined or custom-only banks for the firm.",
   },
   {
     href: "/advisor/enterprise/methodology/narratives/governance",

@@ -129,4 +129,34 @@ describe("custom advisor questions in snapshot runtime", () => {
     expect(intake).toHaveLength(1);
     expect(intake[0]?.questionText).toBe("Base intake question");
   });
+
+  it("round-trips choice_list options from snapshot blob", () => {
+    const snap = snapshotWithCustomQuestions();
+    snap.intakeQuestions.push({
+      id: "choice-iq",
+      displayOrder: 100,
+      questionNumber: "100",
+      questionText: "Employment status",
+      context: "Pick one",
+      helpText: null,
+      learnMore: null,
+      answerType: "choice_list",
+      options: [
+        { value: "0", label: "Retired" },
+        { value: "1", label: "Employed" },
+      ],
+      relatedPillarIds: [],
+      recommendedActions: null,
+      isVisible: true,
+      version: 1,
+    });
+
+    const intake = intakeQuestionsFromSnapshot(snap);
+    const choiceQuestion = intake.find((q) => q.id === "choice-iq");
+    expect(choiceQuestion?.answerType).toBe("choice_list");
+    expect(choiceQuestion?.options).toEqual([
+      { value: "0", label: "Retired" },
+      { value: "1", label: "Employed" },
+    ]);
+  });
 });

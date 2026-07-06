@@ -1,6 +1,7 @@
 import type { IntakeQuestion } from "@/lib/intake/types";
 import type { SnapshotIntakeQuestion } from "@/lib/methodology/types";
 import { intakeUsesFreeformResponse } from "@/lib/intake/intake-answer-behavior";
+import { parseStoredIntakeChoiceListOptions } from "@/lib/intake/choice-list-options";
 
 const DEFAULT_RECORDING_TIPS = [
   "Speak clearly and at a normal pace",
@@ -14,6 +15,7 @@ function intakeAnswerFields(row: {
   answer1?: string | null;
   answer2?: string | null;
   answer3?: string | null;
+  options?: unknown;
 }) {
   return {
     answerType: row.answerType,
@@ -21,6 +23,7 @@ function intakeAnswerFields(row: {
     answer1: row.answer1 ?? null,
     answer2: row.answer2 ?? null,
     answer3: row.answer3 ?? null,
+    options: parseStoredIntakeChoiceListOptions(row.options),
   };
 }
 

@@ -21,12 +21,24 @@ import {
   buildAdvisorIntakeQuestionWriteData,
   parseAdvisorIntakeQuestionInput,
 } from "@/lib/methodology/advisor-intake-question-config";
-import { resolveEnterpriseIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
+import {
+  resolveEnterpriseAssessmentQuestionBankMode,
+  resolveEnterpriseIntakeQuestionBankMode,
+} from "@/lib/methodology/intake-question-bank-mode.server";
+import {
+  countEnterpriseCustomAssessmentQuestions,
+  countEnterpriseCustomIntakeQuestions,
+} from "@/lib/methodology/enterprise-methodology-queries";
+import {
+  isCustomOnlyWithoutSavedQuestions,
+  resolveBankModeForUpdate,
+} from "@/lib/methodology/intake-question-bank-mode";
 
 function revalidateEnterpriseMethodologyPaths(pillarSlug?: string) {
   revalidatePath("/advisor/enterprise/methodology");
   revalidatePath("/advisor/enterprise/methodology/risk-domains");
   revalidatePath("/advisor/enterprise/methodology/intake");
+  revalidatePath("/advisor/enterprise/methodology/questions", "layout");
   if (pillarSlug) {
     revalidatePath(`/advisor/enterprise/methodology/questions/${pillarSlug}`);
     revalidatePath(`/advisor/enterprise/methodology/narratives/${pillarSlug}`);
@@ -237,6 +249,8 @@ export async function createEnterprisePillarQuestion(
     answer1?: string | null;
     answer2?: string | null;
     answer3?: string | null;
+    options?: unknown;
+    switchToCombinedBank?: boolean;
   },
 ) {
   try {
@@ -248,34 +262,80 @@ export async function createEnterprisePillarQuestion(
       return { success: false as const, error: "Unknown pillar" };
     }
 
+    const bankMode = await resolveEnterpriseAssessmentQuestionBankMode(team.enterpriseId);
+    const needsCombinedSwitch = bankMode === IntakeQuestionBankMode.PLATFORM;
+
+    if (needsCombinedSwitch && !data.switchToCombinedBank) {
+      return {
+        success: false as const,
+        error: "Confirm adding a custom question to the combined question bank.",
+      };
+    }
+
     const parsed = parseAdvisorAssessmentQuestionInput(data);
     if (!parsed.success) {
       return { success: false as const, error: parsed.error };
     }
 
-    const siblings = await prisma.enterprisePillarQuestion.findMany({
-      where: { enterpriseId: team.enterpriseId, pillarId: pillar.id },
-      select: { displayOrder: true },
-    });
+    const row = await prisma.$transaction(async (tx) => {
+      if (needsCombinedSwitch) {
+        await tx.advisorEnterprise.update({
+          where: { id: team.enterpriseId },
+          data: { assessmentQuestionBankMode: IntakeQuestionBankMode.COMBINED },
+        });
+      }
 
-    const row = await prisma.enterprisePillarQuestion.create({
-      data: {
-        enterpriseId: team.enterpriseId,
-        pillarId: pillar.id,
-        sourceKind: AdvisorQuestionSource.CUSTOM,
-        sectionCode: "CUSTOM",
-        displayOrder: nextDisplayOrder(siblings),
-        ...buildAdvisorAssessmentQuestionWriteData(parsed.data),
-        isVisible: true,
-      },
+      const siblings = await tx.enterprisePillarQuestion.findMany({
+        where: { enterpriseId: team.enterpriseId, pillarId: pillar.id },
+        select: { displayOrder: true },
+      });
+
+      return tx.enterprisePillarQuestion.create({
+        data: {
+          enterpriseId: team.enterpriseId,
+          pillarId: pillar.id,
+          sourceKind: AdvisorQuestionSource.CUSTOM,
+          sectionCode: "CUSTOM",
+          displayOrder: nextDisplayOrder(siblings),
+          ...buildAdvisorAssessmentQuestionWriteData(parsed.data),
+          isVisible: true,
+        },
+      });
     });
 
     await syncAfterEnterpriseMethodologyChange(team.enterpriseId, slug);
-    return { success: true as const, questionId: row.id };
+    return {
+      success: true as const,
+      questionId: row.id,
+      switchedToCombinedBank: needsCombinedSwitch,
+    };
   } catch (error) {
     return {
       success: false as const,
       error: advisorHubActionErrorMessage(error, "Failed to add firm assessment question"),
+    };
+  }
+}
+
+export async function updateEnterpriseAssessmentQuestionBankMode(mode: IntakeQuestionBankMode) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const team = await requireEnterpriseTeamManager(userId);
+
+    const customCount = await countEnterpriseCustomAssessmentQuestions(team.enterpriseId);
+    const { mode: resolvedMode, coercedToPlatform } = resolveBankModeForUpdate(mode, customCount);
+
+    await prisma.advisorEnterprise.update({
+      where: { id: team.enterpriseId },
+      data: { assessmentQuestionBankMode: resolvedMode },
+    });
+
+    await syncAfterEnterpriseMethodologyChange(team.enterpriseId);
+    return { success: true as const, coercedToPlatform };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: advisorHubActionErrorMessage(error, "Failed to update firm assessment question bank"),
     };
   }
 }
@@ -301,8 +361,19 @@ export async function deleteEnterprisePillarQuestion(questionId: string) {
     });
     await prisma.enterprisePillarQuestion.delete({ where: { id: questionId } });
 
+    const remaining = await countEnterpriseCustomAssessmentQuestions(team.enterpriseId);
+    const bankMode = await resolveEnterpriseAssessmentQuestionBankMode(team.enterpriseId);
+    let switchedToPlatform = false;
+    if (isCustomOnlyWithoutSavedQuestions(bankMode, remaining)) {
+      await prisma.advisorEnterprise.update({
+        where: { id: team.enterpriseId },
+        data: { assessmentQuestionBankMode: IntakeQuestionBankMode.PLATFORM },
+      });
+      switchedToPlatform = true;
+    }
+
     await syncAfterEnterpriseMethodologyChange(team.enterpriseId, existing.pillar?.slug);
-    return { success: true as const };
+    return { success: true as const, switchedToPlatform };
   } catch (error) {
     return {
       success: false as const,
@@ -316,13 +387,16 @@ export async function updateEnterpriseIntakeQuestionBankMode(mode: IntakeQuestio
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
 
+    const customCount = await countEnterpriseCustomIntakeQuestions(team.enterpriseId);
+    const { mode: resolvedMode, coercedToPlatform } = resolveBankModeForUpdate(mode, customCount);
+
     await prisma.advisorEnterprise.update({
       where: { id: team.enterpriseId },
-      data: { intakeQuestionBankMode: mode },
+      data: { intakeQuestionBankMode: resolvedMode },
     });
 
     await syncAfterEnterpriseMethodologyChange(team.enterpriseId);
-    return { success: true as const };
+    return { success: true as const, coercedToPlatform };
   } catch (error) {
     return {
       success: false as const,
@@ -343,6 +417,7 @@ export async function updateEnterpriseIntakeQuestion(
     answer1?: string | null;
     answer2?: string | null;
     answer3?: string | null;
+    options?: unknown;
   },
 ) {
   try {
@@ -373,6 +448,7 @@ export async function updateEnterpriseIntakeQuestion(
         answer1: data.answer1,
         answer2: data.answer2,
         answer3: data.answer3,
+        options: data.options,
       });
       if (!parsed.success) {
         return { success: false as const, error: parsed.error };
@@ -409,16 +485,20 @@ export async function createEnterpriseIntakeQuestion(data: {
   answer1?: string | null;
   answer2?: string | null;
   answer3?: string | null;
+  options?: unknown;
+  switchToCombinedBank?: boolean;
 }) {
   try {
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
 
     const bankMode = await resolveEnterpriseIntakeQuestionBankMode(team.enterpriseId);
-    if (bankMode !== IntakeQuestionBankMode.CUSTOM) {
+    const needsCombinedSwitch = bankMode === IntakeQuestionBankMode.PLATFORM;
+
+    if (needsCombinedSwitch && !data.switchToCombinedBank) {
       return {
         success: false as const,
-        error: "Switch to the custom question bank before adding questions.",
+        error: "Confirm adding a custom question to the combined question bank.",
       };
     }
 
@@ -431,30 +511,46 @@ export async function createEnterpriseIntakeQuestion(data: {
       answer1: data.answer1,
       answer2: data.answer2,
       answer3: data.answer3,
+      options: data.options,
     });
     if (!parsed.success) {
       return { success: false as const, error: parsed.error };
     }
 
-    const siblings = await prisma.enterpriseIntakeQuestion.findMany({
-      where: { enterpriseId: team.enterpriseId },
-      select: { displayOrder: true },
-    });
-    const order = nextDisplayOrder(siblings);
+    const writeData = buildAdvisorIntakeQuestionWriteData(parsed.data);
 
-    const row = await prisma.enterpriseIntakeQuestion.create({
-      data: {
-        enterpriseId: team.enterpriseId,
-        sourceKind: AdvisorQuestionSource.CUSTOM,
-        displayOrder: order,
-        questionNumber: String(order + 1),
-        ...buildAdvisorIntakeQuestionWriteData(parsed.data),
-        isVisible: true,
-      },
+    const row = await prisma.$transaction(async (tx) => {
+      if (needsCombinedSwitch) {
+        await tx.advisorEnterprise.update({
+          where: { id: team.enterpriseId },
+          data: { intakeQuestionBankMode: IntakeQuestionBankMode.COMBINED },
+        });
+      }
+
+      const siblings = await tx.enterpriseIntakeQuestion.findMany({
+        where: { enterpriseId: team.enterpriseId },
+        select: { displayOrder: true },
+      });
+      const order = nextDisplayOrder(siblings);
+
+      return tx.enterpriseIntakeQuestion.create({
+        data: {
+          enterpriseId: team.enterpriseId,
+          sourceKind: AdvisorQuestionSource.CUSTOM,
+          displayOrder: order,
+          questionNumber: String(order + 1),
+          ...writeData,
+          isVisible: true,
+        },
+      });
     });
 
     await syncAfterEnterpriseMethodologyChange(team.enterpriseId);
-    return { success: true as const, questionId: row.id };
+    return {
+      success: true as const,
+      questionId: row.id,
+      switchedToCombinedBank: needsCombinedSwitch,
+    };
   } catch (error) {
     return {
       success: false as const,
@@ -483,8 +579,19 @@ export async function deleteEnterpriseIntakeQuestion(questionId: string) {
     });
     await prisma.enterpriseIntakeQuestion.delete({ where: { id: questionId } });
 
+    const remaining = await countEnterpriseCustomIntakeQuestions(team.enterpriseId);
+    const bankMode = await resolveEnterpriseIntakeQuestionBankMode(team.enterpriseId);
+    let switchedToPlatform = false;
+    if (isCustomOnlyWithoutSavedQuestions(bankMode, remaining)) {
+      await prisma.advisorEnterprise.update({
+        where: { id: team.enterpriseId },
+        data: { intakeQuestionBankMode: IntakeQuestionBankMode.PLATFORM },
+      });
+      switchedToPlatform = true;
+    }
+
     await syncAfterEnterpriseMethodologyChange(team.enterpriseId);
-    return { success: true as const };
+    return { success: true as const, switchedToPlatform };
   } catch (error) {
     return {
       success: false as const,

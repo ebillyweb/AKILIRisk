@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatIntakeStructuredAnswerForDisplay,
   intakeChoiceOptions,
   intakeUsesFreeformResponse,
   normalizeIntakeAnswerType,
@@ -10,6 +11,7 @@ describe("intake answer behavior", () => {
     expect(intakeUsesFreeformResponse("fillable")).toBe(true);
     expect(intakeUsesFreeformResponse("audio")).toBe(true);
     expect(intakeUsesFreeformResponse("yes_no")).toBe(false);
+    expect(intakeUsesFreeformResponse("choice_list")).toBe(false);
   });
 
   it("normalizes legacy audio to fillable", () => {
@@ -28,5 +30,35 @@ describe("intake answer behavior", () => {
       { value: "yes", label: "Yep" },
       { value: "no", label: "Nope" },
     ]);
+  });
+
+  it("builds choice_list options from stored JSON", () => {
+    expect(
+      intakeChoiceOptions({
+        answerType: "choice_list",
+        options: [
+          { value: "0", label: "Low" },
+          { value: "1", label: "High" },
+        ],
+      }),
+    ).toEqual([
+      { value: "0", label: "Low" },
+      { value: "1", label: "High" },
+    ]);
+  });
+
+  it("formats choice_list stored values as labels", () => {
+    expect(
+      formatIntakeStructuredAnswerForDisplay(
+        {
+          answerType: "choice_list",
+          options: [
+            { value: "0", label: "Retired" },
+            { value: "1", label: "Employed" },
+          ],
+        },
+        "1",
+      ),
+    ).toBe("Employed");
   });
 });

@@ -34,6 +34,14 @@ export function ClientIntakeReviewView({ questions, responses }: Props) {
                 transcriptionStatus: response.transcriptionStatus,
               }
             : undefined,
+          {
+            answerType: question.answerType,
+            answer0: question.answer0,
+            answer1: question.answer1,
+            answer2: question.answer2,
+            answer3: question.answer3,
+            options: question.options,
+          },
         );
 
         return (

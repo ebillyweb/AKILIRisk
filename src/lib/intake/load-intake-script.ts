@@ -15,9 +15,10 @@ import {
   getAssignedAdvisorProfileIdForClient,
   loadSnapshotForInterview,
 } from "@/lib/methodology/snapshot";
-import { filterIntakeQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
+import { filterAndOrderQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
 import { normalizeIntakeAnswerType, intakeUsesFreeformResponse } from "@/lib/intake/intake-answer-behavior";
-import { resolveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
+import { parseStoredIntakeChoiceListOptions } from "@/lib/intake/choice-list-options";
+import { resolveEffectiveAdvisorIntakeQuestionBankMode } from "@/lib/methodology/intake-question-bank-mode.server";
 
 const DEFAULT_RECORDING_TIPS = [
   "Speak clearly and at a normal pace",
@@ -50,6 +51,7 @@ function pillarRowsToIntakeQuestions(rows: PillarQuestionWithHierarchy[]): Intak
       answer1: row.answer1,
       answer2: row.answer2,
       answer3: row.answer3,
+      options: null,
       whyThisMatters: why || undefined,
       recommendedActions: recommended || undefined,
       relatedPillarIds: related,
@@ -69,13 +71,13 @@ export async function loadAdvisorIntakeScriptQuestions(
 ): Promise<IntakeQuestion[]> {
   await ensureAdvisorDefaultsCloned(advisorProfileId);
   const [mode, rows] = await Promise.all([
-    resolveAdvisorIntakeQuestionBankMode(advisorProfileId),
+    resolveEffectiveAdvisorIntakeQuestionBankMode(advisorProfileId),
     prisma.advisorIntakeQuestion.findMany({
       where: { advisorProfileId, isVisible: true },
       orderBy: { displayOrder: "asc" },
     }),
   ]);
-  const activeRows = filterIntakeQuestionsByBankMode(rows, mode);
+  const activeRows = filterAndOrderQuestionsByBankMode(rows, mode);
   if (activeRows.length === 0) return [];
 
   return activeRows.map((row, i) => {
@@ -101,6 +103,7 @@ export async function loadAdvisorIntakeScriptQuestions(
       answer1: row.answer1,
       answer2: row.answer2,
       answer3: row.answer3,
+      options: parseStoredIntakeChoiceListOptions(row.options),
       whyThisMatters: row.helpText ?? row.context ?? undefined,
       recommendedActions: recommended || undefined,
       relatedPillarIds:

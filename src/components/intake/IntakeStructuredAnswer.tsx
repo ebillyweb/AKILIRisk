@@ -69,17 +69,28 @@ export function IntakeStructuredAnswer({
   }
 
   if (choices.length > 0) {
+    const useDenseLayout = choices.length > 6;
+
     return (
       <div className="space-y-3">
         <Label>Your answer</Label>
-        <div className="flex flex-wrap gap-2">
+        <div
+          className={cn(
+            useDenseLayout
+              ? "grid gap-2 sm:grid-cols-2"
+              : "flex flex-wrap gap-2",
+          )}
+        >
           {choices.map((choice) => (
             <Button
               key={choice.value}
               type="button"
               variant={value === choice.value ? "default" : "outline"}
               disabled={disabled}
-              className={cn("h-auto min-h-10 whitespace-normal px-4 py-2 text-left")}
+              className={cn(
+                "h-auto min-h-10 whitespace-normal px-4 py-2 text-left",
+                useDenseLayout && "w-full justify-start",
+              )}
               onClick={() => onChange(choice.value)}
             >
               {choice.label}

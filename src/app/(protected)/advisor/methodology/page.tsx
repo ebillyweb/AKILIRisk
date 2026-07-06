@@ -29,7 +29,7 @@ const LINKS = [
   {
     href: "/advisor/methodology/intake",
     title: "Intake question bank",
-    description: "Choose platform or custom intake questions for new intakes.",
+    description: "Platform intake by default; optional combined or custom-only banks.",
     icon: ClipboardList,
   },
   {

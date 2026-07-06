@@ -1,5 +1,6 @@
 import "server-only";
 
+import { AdvisorQuestionSource } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   ensureEnterpriseTeamMemberProvisioned,
@@ -145,6 +146,26 @@ export async function loadAdvisorIntakeQuestions(advisorProfileId: string) {
   return prisma.advisorIntakeQuestion.findMany({
     where: { advisorProfileId },
     orderBy: { displayOrder: "asc" },
+  });
+}
+
+export async function countAdvisorCustomAssessmentQuestions(advisorProfileId: string) {
+  await ensureAdvisorDefaultsCloned(advisorProfileId);
+  return prisma.advisorPillarQuestion.count({
+    where: {
+      advisorProfileId,
+      sourceKind: { in: [AdvisorQuestionSource.CUSTOM, AdvisorQuestionSource.ENTERPRISE] },
+    },
+  });
+}
+
+export async function countAdvisorCustomIntakeQuestions(advisorProfileId: string) {
+  await ensureAdvisorDefaultsCloned(advisorProfileId);
+  return prisma.advisorIntakeQuestion.count({
+    where: {
+      advisorProfileId,
+      sourceKind: { in: [AdvisorQuestionSource.CUSTOM, AdvisorQuestionSource.ENTERPRISE] },
+    },
   });
 }
 

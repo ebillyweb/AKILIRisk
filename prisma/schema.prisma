@@ -217,6 +217,8 @@ model AdvisorEnterprise {
   advisorMemberClientDataPolicyLocked    Boolean         @default(false)
   /// Firm-wide intake question bank source: platform catalog or custom questions only.
   intakeQuestionBankMode                 IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
+  /// Firm-wide assessment question bank source: platform catalog or custom questions only.
+  assessmentQuestionBankMode             IntakeQuestionBankMode @default(PLATFORM) @map("assessment_question_bank_mode")
   /// When false, automated reminder emails are not sent to firm clients (assessment, documents).
   clientReminderEmailsEnabled            Boolean                @default(true)
   /// When false, automated workflow reminder emails are not sent to firm advisors.
@@ -1127,6 +1129,8 @@ model AdvisorProfile {
   catalogVersionSeen     Int       @default(0) @map("catalog_version_seen")
   /// Active intake question bank for this practice (solo advisors; synced from firm for members).
   intakeQuestionBankMode IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
+  /// Active assessment question bank for this practice (solo advisors; synced from firm for members).
+  assessmentQuestionBankMode IntakeQuestionBankMode @default(PLATFORM) @map("assessment_question_bank_mode")
   /// When false, automated reminder emails are not sent to this practice's clients.
   clientReminderEmailsEnabled  Boolean @default(true)
   /// When false, automated workflow reminder emails are not sent to this practice's advisors.
@@ -1882,6 +1886,7 @@ enum AdvisorQuestionSource {
 /// Active intake question bank: platform catalog or firm/advisor custom set — not both.
 enum IntakeQuestionBankMode {
   PLATFORM
+  COMBINED
   CUSTOM
 }
 
