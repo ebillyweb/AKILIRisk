@@ -12,11 +12,13 @@ export default async function AdvisorBrandingSettingsPage() {
     if ("notFound" in loaded && loaded.notFound) {
       notFound();
     }
+    const errorMessage =
+      "error" in loaded ? loaded.error : "Failed to load brand settings.";
     return (
       <div className="space-y-6">
         <div className="py-12 text-center">
           <p className="text-destructive text-sm">
-            Error loading brand settings: {loaded.error}
+            Error loading brand settings: {errorMessage}
           </p>
         </div>
       </div>
