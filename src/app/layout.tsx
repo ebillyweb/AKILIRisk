@@ -3,8 +3,9 @@ import { Cormorant_Garamond, Geist_Mono, Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { FacebookPixel } from "@/components/marketing/FacebookPixel";
 import { auth } from "@/lib/auth";
-import { buildOrganizationJsonLd, getSeoSiteOrigin } from "@/lib/seo/site";
+import { buildOrganizationJsonLd, buildSocialMetadata, DEFAULT_PUBLIC_DESCRIPTION, getSeoSiteOrigin } from "@/lib/seo/site";
 import { getThemeInlineScript } from "@/lib/theme/theme-inline-script";
 
 const manrope = Manrope({
@@ -29,8 +30,11 @@ export const metadata: Metadata = {
     default: "AKILI Risk Intelligence",
     template: "%s | AKILI Risk Intelligence",
   },
-  description:
-    "Governance intelligence platform for modern family wealth — structured assessments, prioritized risks, and actionable recommendations for professional firms and families.",
+  description: DEFAULT_PUBLIC_DESCRIPTION,
+  ...buildSocialMetadata({
+    title: "AKILI Risk Intelligence",
+    description: DEFAULT_PUBLIC_DESCRIPTION,
+  }),
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -89,6 +93,7 @@ export default async function RootLayout({
         <Providers session={session}>
           <div className="relative isolate min-h-screen">{children}</div>
         </Providers>
+        <FacebookPixel />
       </body>
     </html>
   );

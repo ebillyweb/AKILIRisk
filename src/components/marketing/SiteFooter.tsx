@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { SiteSocialLinks } from "@/components/marketing/SiteSocialLinks";
 import { LEGAL_ENTITY_NAME } from "@/lib/legal/documents";
 import {
   SITE_AUDIENCE_NAV,
@@ -35,6 +36,7 @@ export function SiteFooter({ className }: SiteFooterProps) {
             Governance intelligence for modern family wealth — a shared system of record for
             professional firms and the households they serve.
           </p>
+          <SiteSocialLinks />
         </div>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:gap-x-10 lg:contents">

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 
 import { AKILI_BRAND, AKILI_TAGLINES } from "@/lib/brand/tokens";
+import { getConfiguredSocialProfileUrls } from "@/lib/marketing/social-profiles";
 import { getPublicAppUrlFromEnv } from "@/lib/public-app-url";
+
+export const DEFAULT_PUBLIC_DESCRIPTION =
+  "Governance intelligence platform for modern family wealth — structured assessments, prioritized risks, and actionable recommendations for professional firms and families.";
 
 export type PublicSitemapEntry = {
   path: string;
@@ -60,18 +64,79 @@ export function getSeoSiteOrigin(): URL {
   return new URL(getSeoSiteUrl());
 }
 
+function resolveMetadataTitle(metadata: Metadata, fallback: string): string {
+  const title = metadata.title;
+  if (typeof title === "string") return title;
+  if (title && typeof title === "object") {
+    if ("absolute" in title && title.absolute) return title.absolute;
+    if ("default" in title && title.default) return title.default;
+  }
+  return fallback;
+}
+
+function resolveOpenGraphTitle(metadata: Metadata): string {
+  const title = resolveMetadataTitle(metadata, AKILI_BRAND.legalName);
+  if (title === AKILI_BRAND.legalName || title.includes("|")) {
+    return title;
+  }
+  return `${title} | ${AKILI_BRAND.legalName}`;
+}
+
+function resolveMetadataDescription(metadata: Metadata): string {
+  if (typeof metadata.description === "string" && metadata.description.trim()) {
+    return metadata.description;
+  }
+  return DEFAULT_PUBLIC_DESCRIPTION;
+}
+
+export function buildSocialMetadata(
+  metadata: Pick<Metadata, "title" | "description" | "openGraph" | "twitter"> = {},
+): Pick<Metadata, "openGraph" | "twitter"> {
+  const title = resolveOpenGraphTitle(metadata);
+  const description = resolveMetadataDescription(metadata);
+
+  return {
+    openGraph: {
+      type: "website",
+      locale: "en_US",
+      siteName: AKILI_BRAND.legalName,
+      title,
+      description,
+      ...metadata.openGraph,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...metadata.twitter,
+    },
+  };
+}
+
 export function withCanonical(path: string, metadata: Metadata): Metadata {
+  const social = buildSocialMetadata(metadata);
+
   return {
     ...metadata,
     alternates: {
       ...metadata.alternates,
       canonical: path,
     },
+    openGraph: {
+      ...social.openGraph,
+      ...metadata.openGraph,
+      url: path,
+    },
+    twitter: {
+      ...social.twitter,
+      ...metadata.twitter,
+    },
   };
 }
 
 export function buildOrganizationJsonLd() {
   const siteUrl = getSeoSiteUrl();
+  const sameAs = getConfiguredSocialProfileUrls();
 
   return {
     "@context": "https://schema.org",
@@ -84,6 +149,7 @@ export function buildOrganizationJsonLd() {
         logo: `${siteUrl}/brand/akili-email-lockup.png`,
         email: AKILI_BRAND.contact.hello,
         description: AKILI_TAGLINES.platform,
+        ...(sameAs.length > 0 ? { sameAs } : {}),
       },
       {
         "@type": "WebSite",
