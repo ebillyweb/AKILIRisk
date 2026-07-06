@@ -1,8 +1,12 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { getReminderEmailPolicyForAdvisorProfile } from "@/lib/notifications/reminder-email-policy";
 import { decryptUserEmail } from "@/lib/auth/user-email";
-import { clientPortalUrl, resolveClientEmailContext } from "@/lib/client/client-email-context";
+import {
+  clientPortalUrl,
+  resolveClientEmailContextForClientAdvisorAssignment,
+} from "@/lib/client/client-email-context";
 import { buildDocumentReminderClientEmail } from "@/lib/client/client-system-email-content";
 import { sendClientSystemEmail } from "@/lib/email/client-branded-system-email";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
@@ -99,6 +103,11 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
         const client = firstDoc.client;
         const advisor = firstDoc.advisor;
 
+        const reminderPolicy = await getReminderEmailPolicyForAdvisorProfile(advisor.id);
+        if (!reminderPolicy.clientReminderEmailsEnabled) {
+          continue;
+        }
+
         // Prepare client name
         const clientName = client.name ||
           (client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : null);
@@ -110,9 +119,10 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
 
         const missingDocuments = clientDocs.map(doc => doc.name);
 
-        const emailContext = await resolveClientEmailContext({
-          userId: client.id,
+        const emailContext = await resolveClientEmailContextForClientAdvisorAssignment({
+          clientUserId: client.id,
           advisorProfileId: advisor.id,
+          advisorUser: advisor.user,
         });
         const clientEmail = decryptUserEmail(client.emailCiphertext);
 

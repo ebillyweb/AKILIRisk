@@ -2,10 +2,10 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { findUserByEmail } from "@/lib/auth/user-email";
-import { getAssignedAdvisorBrandingForClient } from "@/lib/client/assigned-advisor-branding";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
 import { buildAdvisorPortalOrigin } from "@/lib/client/client-portal-origin";
 import { getInvitingAdvisorBrandingForInviteCode } from "@/lib/client/resolve-client-portal-branding";
+import { resolveAdvisorBrandingForProfile } from "@/lib/enterprise/branding";
 import { getPublicAppUrlFromEnv, getPublicAppUrlStrict } from "@/lib/public-app-url";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
@@ -18,6 +18,12 @@ export type ClientEmailContext = {
   advisorName: string | null;
   portalOrigin: string;
   usesTenantHost: boolean;
+};
+
+type SubdomainRow = {
+  subdomain: string;
+  isActive: boolean;
+  dnsVerified: boolean;
 };
 
 function resolvePlatformOrigin(): string {
@@ -37,6 +43,19 @@ function formatAdvisorDisplayName(input: {
   return combined || null;
 }
 
+export function portalOriginFromSubdomainRow(
+  row: SubdomainRow | null | undefined,
+  platformOrigin: string,
+): { origin: string; usesTenantHost: boolean } {
+  if (row?.isActive && row.dnsVerified && row.subdomain) {
+    return {
+      origin: buildAdvisorPortalOrigin(row.subdomain),
+      usesTenantHost: true,
+    };
+  }
+  return { origin: platformOrigin, usesTenantHost: false };
+}
+
 async function resolvePortalOriginForAdvisor(
   advisorProfileId: string,
   brandingEnabled: boolean,
@@ -49,6 +68,7 @@ async function resolvePortalOriginForAdvisor(
   const profile = await prisma.advisorProfile.findUnique({
     where: { id: advisorProfileId },
     select: {
+      enterpriseId: true,
       subdomain: {
         select: {
           subdomain: true,
@@ -59,15 +79,27 @@ async function resolvePortalOriginForAdvisor(
     },
   });
 
-  const row = profile?.subdomain;
-  if (row?.isActive && row.dnsVerified && row.subdomain) {
-    return {
-      origin: buildAdvisorPortalOrigin(row.subdomain),
-      usesTenantHost: true,
-    };
+  const personalOrigin = portalOriginFromSubdomainRow(
+    profile?.subdomain,
+    platformOrigin,
+  );
+  if (personalOrigin.usesTenantHost) {
+    return personalOrigin;
   }
 
-  return { origin: platformOrigin, usesTenantHost: false };
+  if (profile?.enterpriseId) {
+    const enterpriseSubdomain = await prisma.advisorSubdomain.findFirst({
+      where: { enterpriseId: profile.enterpriseId },
+      select: {
+        subdomain: true,
+        isActive: true,
+        dnsVerified: true,
+      },
+    });
+    return portalOriginFromSubdomainRow(enterpriseSubdomain, platformOrigin);
+  }
+
+  return personalOrigin;
 }
 
 function buildContextFromAssignment(input: {
@@ -95,6 +127,29 @@ function buildContextFromAssignment(input: {
   };
 }
 
+async function buildClientEmailContextForAdvisorProfile(input: {
+  userId: string | null;
+  advisorProfileId: string;
+  advisorName: string | null;
+}): Promise<ClientEmailContext | null> {
+  const branding = await resolveAdvisorBrandingForProfile(input.advisorProfileId, {
+    scope: "client",
+  });
+  const { origin, usesTenantHost } = await resolvePortalOriginForAdvisor(
+    input.advisorProfileId,
+    Boolean(branding?.brandingEnabled),
+  );
+
+  return buildContextFromAssignment({
+    userId: input.userId,
+    advisorProfileId: input.advisorProfileId,
+    branding,
+    advisorName: input.advisorName,
+    portalOrigin: origin,
+    usesTenantHost,
+  });
+}
+
 export function clientPortalUrl(
   context: ClientEmailContext | null,
   path: string,
@@ -102,6 +157,29 @@ export function clientPortalUrl(
   const origin = context?.portalOrigin ?? resolvePlatformOrigin();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${origin.replace(/\/$/, "")}${normalizedPath}`;
+}
+
+/**
+ * Resolves white-label email context for an active client–advisor assignment.
+ * Used by automated client reminder crons so branding and portal links match
+ * the assigned practice (including enterprise firm branding and subdomain).
+ */
+export async function resolveClientEmailContextForClientAdvisorAssignment(input: {
+  clientUserId: string;
+  advisorProfileId: string;
+  advisorUser?: {
+    name?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  };
+}): Promise<ClientEmailContext | null> {
+  return buildClientEmailContextForAdvisorProfile({
+    userId: input.clientUserId,
+    advisorProfileId: input.advisorProfileId,
+    advisorName: input.advisorUser
+      ? formatAdvisorDisplayName(input.advisorUser)
+      : null,
+  });
 }
 
 export async function resolveClientEmailContext(input: {
@@ -148,23 +226,10 @@ export async function resolveClientEmailContext(input: {
     return null;
   }
 
-  const branding =
-    userId != null
-      ? await getAssignedAdvisorBrandingForClient(userId)
-      : null;
-
-  const { origin, usesTenantHost } = await resolvePortalOriginForAdvisor(
-    advisorProfileId,
-    Boolean(branding?.brandingEnabled),
-  );
-
-  return buildContextFromAssignment({
+  return buildClientEmailContextForAdvisorProfile({
     userId,
     advisorProfileId,
-    branding,
     advisorName,
-    portalOrigin: origin,
-    usesTenantHost,
   });
 }
 
@@ -217,23 +282,9 @@ export async function resolveClientEmailContextForAdvisorProfile(
   });
   if (!advisor) return null;
 
-  const { resolveAdvisorBrandingForProfile } = await import(
-    "@/lib/enterprise/branding"
-  );
-  const branding = await resolveAdvisorBrandingForProfile(advisorProfileId, {
-    scope: "client",
-  });
-  const { origin, usesTenantHost } = await resolvePortalOriginForAdvisor(
-    advisorProfileId,
-    Boolean(branding?.brandingEnabled),
-  );
-
-  return buildContextFromAssignment({
+  return buildClientEmailContextForAdvisorProfile({
     userId: null,
     advisorProfileId,
-    branding,
     advisorName: formatAdvisorDisplayName(advisor.user),
-    portalOrigin: origin,
-    usesTenantHost,
   });
 }

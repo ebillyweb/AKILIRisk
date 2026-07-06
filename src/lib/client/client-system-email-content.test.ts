@@ -7,6 +7,8 @@ import {
   buildPreviewAvailableClientEmail,
   buildAssessmentReminderClientEmail,
 } from "@/lib/client/client-system-email-content";
+import { renderClientSystemEmailHtml } from "@/lib/email/client-branded-system-email";
+import { PLATFORM_EMAIL_TAGLINE } from "@/lib/email/platform-brand";
 import type { ClientEmailContext } from "@/lib/client/client-email-context";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
@@ -83,5 +85,16 @@ describe("buildAssessmentReminderClientEmail", () => {
       "https://independent-wealth-staging.akilirisk.com/assessment",
     );
     expect(content.subject).toContain("Independent Wealth Group");
+  });
+
+  it("renders with white-label template when branding is enabled", () => {
+    const content = buildAssessmentReminderClientEmail(
+      brandedContext,
+      "Buddy",
+      "https://independent-wealth-staging.akilirisk.com/assessment",
+    );
+    const html = renderClientSystemEmailHtml(content, brandedContext);
+    expect(html).toContain("Independent Wealth Group");
+    expect(html).not.toContain(PLATFORM_EMAIL_TAGLINE);
   });
 });

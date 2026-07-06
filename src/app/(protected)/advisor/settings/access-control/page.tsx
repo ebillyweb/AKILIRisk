@@ -18,6 +18,7 @@ export default async function AdvisorAccessControlSettingsPage() {
       memberVisibility={data.memberVisibility}
       memberBrandingPolicy={data.memberBrandingPolicy}
       memberClientDataPolicy={data.memberClientDataPolicy}
+      reminderEmailPolicy={data.reminderEmailPolicy}
       householdProfilesEnabled={data.householdProfilesEnabled}
       moduleTier={data.moduleTier}
       platformFlags={data.platformFlags}

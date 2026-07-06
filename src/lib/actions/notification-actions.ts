@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireAdvisorRole, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
 import { getUserPreferences, updatePreferences } from '@/lib/notifications/preferences';
+import { updateAdvisorReminderEmailPolicyAction } from '@/lib/actions/reminder-email-policy-actions';
+import { prisma } from '@/lib/db';
 
 // Zod schema for notification preferences
 const timeStringSchema = z
@@ -27,11 +29,52 @@ export async function getNotificationPreferencesAction() {
   try {
     const { userId } = await requireAdvisorRole();
 
-    const preferences = await getUserPreferences(userId);
+    const [preferences, profile] = await Promise.all([
+      getUserPreferences(userId),
+      prisma.advisorProfile.findUnique({
+        where: { userId },
+        select: {
+          id: true,
+          enterpriseId: true,
+          clientReminderEmailsEnabled: true,
+          advisorReminderEmailsEnabled: true,
+          enterprise: {
+            select: {
+              clientReminderEmailsEnabled: true,
+              advisorReminderEmailsEnabled: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const isEnterpriseMember = Boolean(profile?.enterpriseId);
+    const reminderPolicy = profile
+      ? profile.enterpriseId && profile.enterprise
+        ? {
+            clientReminderEmailsEnabled: profile.enterprise.clientReminderEmailsEnabled,
+            advisorReminderEmailsEnabled: profile.enterprise.advisorReminderEmailsEnabled,
+          }
+        : {
+            clientReminderEmailsEnabled: profile.clientReminderEmailsEnabled,
+            advisorReminderEmailsEnabled: profile.advisorReminderEmailsEnabled,
+          }
+      : null;
+
+    const data =
+      profile && !profile.enterpriseId
+        ? {
+            ...preferences,
+            emailReminders: profile.clientReminderEmailsEnabled,
+            emailStalled: profile.advisorReminderEmailsEnabled,
+          }
+        : preferences;
 
     return {
       success: true,
-      data: preferences,
+      data,
+      reminderPolicy,
+      isEnterpriseMember,
     };
   } catch (error) {
     return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get notification preferences') };
@@ -66,8 +109,30 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
       };
     }
 
+    const profile = await prisma.advisorProfile.findUnique({
+      where: { userId },
+      select: { id: true, enterpriseId: true },
+    });
+
+    let preferenceUpdates = validatedData.data;
+    if (profile?.enterpriseId) {
+      const existing = await getUserPreferences(userId);
+      preferenceUpdates = {
+        ...validatedData.data,
+        emailReminders: existing.emailReminders,
+        emailStalled: existing.emailStalled,
+      };
+    }
+
     // Update preferences
-    const updatedPreferences = await updatePreferences(userId, validatedData.data);
+    const updatedPreferences = await updatePreferences(userId, preferenceUpdates);
+
+    if (profile && !profile.enterpriseId) {
+      await updateAdvisorReminderEmailPolicyAction({
+        clientReminderEmailsEnabled: validatedData.data.emailReminders,
+        advisorReminderEmailsEnabled: validatedData.data.emailStalled,
+      });
+    }
 
     revalidatePath('/advisor/settings/notifications');
     revalidatePath('/advisor/notifications');

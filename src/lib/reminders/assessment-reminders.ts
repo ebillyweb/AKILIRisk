@@ -1,9 +1,12 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import { shouldSendNotification } from "@/lib/notifications/preferences";
+import { getReminderEmailPolicyForAdvisorProfile } from "@/lib/notifications/reminder-email-policy";
 import { decryptUserEmail } from "@/lib/auth/user-email";
-import { resolveClientEmailContext, clientPortalUrl } from "@/lib/client/client-email-context";
+import {
+  clientPortalUrl,
+  resolveClientEmailContextForClientAdvisorAssignment,
+} from "@/lib/client/client-email-context";
 import { buildAssessmentReminderClientEmail } from "@/lib/client/client-system-email-content";
 import { sendClientSystemEmail } from "@/lib/email/client-branded-system-email";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
@@ -17,8 +20,8 @@ interface ProcessResult {
  *
  * Logic:
  * - Finds clients with IntakeInterview IN_PROGRESS >7 days old OR Assessment IN_PROGRESS >14 days old
- * - Checks notification preferences for each client
- * - Prevents duplicate reminders within user-configured frequency window (default 7 days)
+ * - Checks practice reminder email policy (advisor/enterprise opt-out)
+ * - Prevents duplicate reminders within advisor-configured frequency window (default 7 days)
  * - Sends reminder emails to CLIENTS (not advisors)
  * - Uses assessment reminder email template
  *
@@ -109,6 +112,7 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
             logoUrl: true,
             user: {
               select: {
+                id: true,
                 name: true,
                 firstName: true,
                 lastName: true,
@@ -124,20 +128,18 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
         const client = assignment.client;
         const advisor = assignment.advisor;
 
-        // Check if we should send notification based on preferences
-        const shouldSend = await shouldSendNotification(client.id, 'reminder', 'email');
-        if (!shouldSend) {
+        const reminderPolicy = await getReminderEmailPolicyForAdvisorProfile(advisor.id);
+        if (!reminderPolicy.clientReminderEmailsEnabled) {
           continue;
         }
 
-        // Check for recent reminders to prevent spam
-        // Use the user's reminder frequency preference, default to 7 days
-        const userPreferences = await prisma.notificationPreference.findUnique({
-          where: { userId: client.id },
+        // Use the advisor's reminder frequency preference, default to 7 days
+        const advisorPreferences = await prisma.notificationPreference.findUnique({
+          where: { userId: advisor.user.id },
           select: { reminderFrequencyDays: true },
         });
 
-        const frequencyDays = userPreferences?.reminderFrequencyDays ?? 7;
+        const frequencyDays = advisorPreferences?.reminderFrequencyDays ?? 7;
         const frequencyCutoff = new Date(Date.now() - frequencyDays * 24 * 60 * 60 * 1000);
 
         // Check for recent reminder notifications to this client
@@ -160,9 +162,10 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
           (client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : null);
 
         const hasIncompleteIntake = client.intakeInterviews?.[0]?.status === 'IN_PROGRESS';
-        const emailContext = await resolveClientEmailContext({
-          userId: client.id,
+        const emailContext = await resolveClientEmailContextForClientAdvisorAssignment({
+          clientUserId: client.id,
           advisorProfileId: advisor.id,
+          advisorUser: advisor.user,
         });
         const assessmentUrl = clientPortalUrl(
           emailContext,

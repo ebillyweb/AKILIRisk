@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { aggregateMandatoryDocumentCounts } from "@/lib/pipeline/documents";
 import { computeClientStage, getStageLabel, isWorkflowEscalation } from "@/lib/pipeline/status";
+import { getReminderEmailPolicyForAdvisorProfile } from "@/lib/notifications/reminder-email-policy";
 import { shouldSendNotification } from "@/lib/notifications/preferences";
 import { sendNotification } from "@/lib/notifications/service";
 import { renderNotificationEmail } from "@/lib/notifications/templates";
@@ -196,6 +197,11 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
         }
 
         const category = 'stalled' as const;
+
+        const reminderPolicy = await getReminderEmailPolicyForAdvisorProfile(advisorId);
+        if (!reminderPolicy.advisorReminderEmailsEnabled) {
+          continue;
+        }
 
         // Check if advisor should receive notifications
         const shouldSend = await shouldSendNotification(advisor.user.id, category, 'email');

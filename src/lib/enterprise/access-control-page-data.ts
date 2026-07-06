@@ -8,6 +8,7 @@ import { clampVisibilityToModuleTier } from "@/lib/enterprise/advisor-member-vis
 import { clampBrandingPolicyToModuleTier } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
 import { getEnterpriseMemberBrandingPolicyForEnterprise } from "@/lib/enterprise/enterprise-member-branding-policy";
 import { getEnterpriseClientDataPolicyForEnterprise } from "@/lib/enterprise/enterprise-client-data-policy";
+import { getEnterpriseReminderEmailPolicyForEnterprise } from "@/lib/enterprise/enterprise-reminder-email-policy";
 import { getEnterpriseTeamPageData } from "@/lib/enterprise/team-invite";
 import { getEnterpriseHouseholdProfilesEnabled } from "@/lib/household/profiles-policy";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
@@ -15,12 +16,14 @@ import type { AdvisorPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import type { EnterpriseAdvisorMemberVisibility } from "@/lib/enterprise/advisor-member-visibility";
 import type { EnterpriseMemberBrandingPolicy } from "@/lib/enterprise/enterprise-member-branding-policy-tier";
 import type { EnterpriseClientDataPolicy } from "@/lib/enterprise/enterprise-client-data-policy";
+import type { EnterpriseReminderEmailPolicy } from "@/lib/enterprise/enterprise-reminder-email-policy";
 
 export type EnterpriseAccessControlPageData = {
   enterpriseName: string;
   memberVisibility: EnterpriseAdvisorMemberVisibility;
   memberBrandingPolicy: EnterpriseMemberBrandingPolicy;
   memberClientDataPolicy: EnterpriseClientDataPolicy;
+  reminderEmailPolicy: EnterpriseReminderEmailPolicy;
   householdProfilesEnabled: boolean;
   moduleTier: SubscriptionTier;
   platformFlags: AdvisorPlatformFeatureFlags;
@@ -45,6 +48,7 @@ export async function loadEnterpriseAccessControlPageData(
     memberVisibility,
     memberBrandingPolicy,
     memberClientDataPolicy,
+    reminderEmailPolicy,
     householdProfilesEnabled,
   ] = await Promise.all([
     clampVisibilityToModuleTier(
@@ -56,6 +60,7 @@ export async function loadEnterpriseAccessControlPageData(
       moduleTier,
     ),
     getEnterpriseClientDataPolicyForEnterprise(data.enterpriseId),
+    getEnterpriseReminderEmailPolicyForEnterprise(data.enterpriseId),
     getEnterpriseHouseholdProfilesEnabled(data.enterpriseId),
   ]);
 
@@ -64,6 +69,7 @@ export async function loadEnterpriseAccessControlPageData(
     memberVisibility,
     memberBrandingPolicy,
     memberClientDataPolicy,
+    reminderEmailPolicy,
     householdProfilesEnabled,
     moduleTier,
     platformFlags,

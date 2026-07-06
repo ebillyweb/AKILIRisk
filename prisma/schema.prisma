@@ -217,6 +217,10 @@ model AdvisorEnterprise {
   advisorMemberClientDataPolicyLocked    Boolean         @default(false)
   /// Firm-wide intake question bank source: platform catalog or custom questions only.
   intakeQuestionBankMode                 IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
+  /// When false, automated reminder emails are not sent to firm clients (assessment, documents).
+  clientReminderEmailsEnabled            Boolean                @default(true)
+  /// When false, automated workflow reminder emails are not sent to firm advisors.
+  advisorReminderEmailsEnabled           Boolean                @default(true)
   /// Phase 24 (D-08): enterprise-wide default reassessment frequency.
   defaultCadenceFrequency        CadenceFrequency        @default(ANNUAL)
   customDomainEnabled            Boolean                 @default(false)
@@ -1123,6 +1127,10 @@ model AdvisorProfile {
   catalogVersionSeen     Int       @default(0) @map("catalog_version_seen")
   /// Active intake question bank for this practice (solo advisors; synced from firm for members).
   intakeQuestionBankMode IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
+  /// When false, automated reminder emails are not sent to this practice's clients.
+  clientReminderEmailsEnabled  Boolean @default(true)
+  /// When false, automated workflow reminder emails are not sent to this practice's advisors.
+  advisorReminderEmailsEnabled Boolean @default(true)
 
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt

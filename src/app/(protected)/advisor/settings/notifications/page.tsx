@@ -41,6 +41,8 @@ export default async function NotificationSettingsPage() {
 
       <NotificationPreferencesForm
         preferences={result.data!}
+        reminderPolicy={result.reminderPolicy}
+        isEnterpriseMember={result.isEnterpriseMember}
         updatePreferencesAction={updateNotificationPreferencesAction}
       />
     </div>
