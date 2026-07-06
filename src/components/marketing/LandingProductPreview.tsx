@@ -20,6 +20,7 @@ import {
 } from "@/lib/marketing/sample-report-preview";
 import { RISK_LEVEL_PALETTE } from "@/lib/assessment/risk-color-palette";
 import type { RiskLevel } from "@/lib/assessment/types";
+import { MarketingMeterBar } from "@/components/marketing/MarketingMeterBar";
 import { cn } from "@/lib/utils";
 
 const SAMPLE_RESILIENCE = maturityScoreToPercent(SAMPLE_MATURITY);
@@ -55,12 +56,12 @@ const SAMPLE_RISKS: SampleRisk[] = [
   },
 ];
 
-function heatBarClass(maturity: number): string {
+function heatBarFillClass(maturity: number): string {
   const heat = maturityHeatLevel(maturity);
-  if (heat === "strong") return RISK_LEVEL_PALETTE.low.bg;
-  if (heat === "fair") return RISK_LEVEL_PALETTE.medium.bg;
-  if (heat === "weak") return RISK_LEVEL_PALETTE.high.bg;
-  return RISK_LEVEL_PALETTE.critical.bg;
+  if (heat === "strong") return "fill-emerald-100";
+  if (heat === "fair") return "fill-amber-100";
+  if (heat === "weak") return "fill-orange-100";
+  return "fill-red-200";
 }
 
 function PillarBar({
@@ -87,12 +88,10 @@ function PillarBar({
           {percent}
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-secondary/90">
-        <div
-          className={cn("h-full rounded-full transition-all", heatBarClass(maturity))}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
+      <MarketingMeterBar
+        percent={percent}
+        fillClassName={cn("transition-all", heatBarFillClass(maturity))}
+      />
       <p className="text-xs text-muted-foreground">
         Maturity {maturity.toFixed(1)} / {MATURITY_SCALE_MAX}
         {emphasized ? " · Advisor focus area" : null}
@@ -162,12 +161,11 @@ export function LandingProductPreview() {
                   Aggregate maturity {SAMPLE_MATURITY.toFixed(1)} / {MATURITY_SCALE_MAX} ·
                   scored across active risk domains with firm-customized weights
                 </p>
-                <div className="h-2.5 overflow-hidden rounded-full bg-secondary/90">
-                  <div
-                    className={cn("h-full rounded-full", RISK_LEVEL_PALETTE.medium.bg)}
-                    style={{ width: `${SAMPLE_RESILIENCE}%` }}
-                  />
-                </div>
+                <MarketingMeterBar
+                  percent={SAMPLE_RESILIENCE}
+                  fillClassName="fill-amber-100"
+                  heightClassName="h-2.5"
+                />
               </div>
 
               <div className="space-y-3">
