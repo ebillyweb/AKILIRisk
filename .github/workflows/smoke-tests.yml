@@ -1,14 +1,19 @@
 # Scheduled smoke tests against the live preview environment.
 #
-# Runs the curated `@smoke`-tagged Playwright tests (see tests/smoke/) on a
-# schedule so an outage or auth regression on https://preview.akilirisk.com is
-# caught between deploys. Start scope: advisor + admin login flows.
+# Runs the curated `@smoke`-tagged Playwright tests on a schedule so an outage
+# or auth regression on https://preview.akilirisk.com is caught between deploys.
+# Start scope: advisor + admin login flows (plus negative auth cases).
+#
+# IMPORTANT: preview deploys from the `staging` branch, so the test code must
+# match what is deployed. This workflow lives on the default branch (required
+# for `schedule:` triggers) but checks out `staging` to run its tests. The
+# `@smoke` tags therefore live on `staging`, not here — see docs/smoke-tests.md.
 #
 # Setup (see docs/smoke-tests.md):
 #   - Optional repo secrets override the seeded fallback credentials:
 #       SMOKE_ADVISOR_EMAIL / SMOKE_ADVISOR_PASSWORD
 #       SMOKE_ADMIN_EMAIL   / SMOKE_ADMIN_PASSWORD
-#   - Grow the suite by tagging more tests with `{ tag: "@smoke" }`.
+#   - Grow the suite by tagging more tests on `staging` with `{ tag: "@smoke" }`.
 name: Smoke Tests (preview)
 
 on:
@@ -21,6 +26,10 @@ on:
         description: "Target base URL"
         required: false
         default: "https://preview.akilirisk.com"
+      test_ref:
+        description: "Branch/ref to run the tests from (should match the deployed branch)"
+        required: false
+        default: "staging"
 
 # Never run two smoke jobs at once; let an in-flight run finish rather than
 # cancelling it (a cancelled run would read as a false failure).
@@ -47,8 +56,12 @@ jobs:
       ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
       ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
     steps:
+      # Check out the deployed branch (staging), NOT the default branch, so the
+      # tests match the app running on preview. Override via the test_ref input.
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.test_ref || 'staging' }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
