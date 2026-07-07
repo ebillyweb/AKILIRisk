@@ -15,7 +15,7 @@ export function InviteAcceptFailure({ message }: { message: string }) {
 
         <p className="text-sm text-muted-foreground">
           Ask your advisor to resend the invitation, or{" "}
-          <Link href="/signin/magic-link" className="text-primary hover:underline">
+          <Link href="/signin?role=client" className="text-primary hover:underline">
             request a sign-in link
           </Link>{" "}
           if you already have an account.
@@ -47,7 +47,7 @@ export function ClientSignupInfoPanel() {
 
         <p className="text-sm text-muted-foreground">
           Need a new sign-in link?{" "}
-          <Link href="/signin/magic-link" className="text-primary hover:underline">
+          <Link href="/signin?role=client" className="text-primary hover:underline">
             Request one here
           </Link>
           .
@@ -56,8 +56,12 @@ export function ClientSignupInfoPanel() {
         <div className="pt-4 border-t border-border">
           <p className="text-xs text-muted-foreground">
             Are you an advisor?{" "}
-            <Link href="/signin?portal=advisor" className="text-primary hover:underline">
-              Sign in here
+            <Link href="/signup/advisor" className="text-primary hover:underline">
+              Create an account
+            </Link>
+            {" · "}
+            <Link href="/signin?role=advisor" className="text-primary hover:underline">
+              Sign in
             </Link>
             .
           </p>

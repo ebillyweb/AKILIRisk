@@ -21,7 +21,7 @@ function refineAssessmentScopeFields(
   } catch (e) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: e instanceof Error ? e.message : "Invalid pillar selection",
+      message: e instanceof Error ? e.message : "Invalid risk domain selection",
       path: ["includedPillars"],
     });
     return;
@@ -30,7 +30,7 @@ function refineAssessmentScopeFields(
   if (included.length < 1) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Select at least one assessment domain",
+      message: "Select at least one risk domain",
       path: ["includedPillars"],
     });
   }
@@ -53,7 +53,7 @@ function refineAssessmentScopeFields(
     if (!included.includes(id)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Emphasis areas must be within selected assessment domains",
+        message: "Emphasis areas must be within selected risk domains",
         path: ["focusAreas"],
       });
       break;
@@ -67,8 +67,8 @@ export const approveClientSchema = z
     interviewId: z.string().min(1),
     includedPillars: z
       .array(z.string())
-      .min(1, "Select at least one assessment domain")
-      .max(20, "Too many assessment domains"),
+      .min(1, "Select at least one risk domain")
+      .max(20, "Too many risk domains"),
     focusAreas: z.array(z.string()).max(20).optional(),
     notes: z.string().optional(),
   })
@@ -79,8 +79,8 @@ export const waiverAssessmentScopeSchema = z
   .object({
     includedPillars: z
       .array(z.string())
-      .min(1, "Select at least one assessment domain")
-      .max(20, "Too many assessment domains"),
+      .min(1, "Select at least one risk domain")
+      .max(20, "Too many risk domains"),
     focusAreas: z.array(z.string()).max(20).optional(),
   })
   .superRefine(refineAssessmentScopeFields);

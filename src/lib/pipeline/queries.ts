@@ -23,6 +23,7 @@ import {
   resolvePortfolioScope,
 } from "@/lib/enterprise/portfolio-access";
 import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
+import { resolveClientReferenceCode } from "@/lib/client/client-reference-code.server";
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -267,6 +268,17 @@ export async function getClientPipeline(
     responseCountByInterview.set(row.interviewId, row._count._all);
   }
 
+  const referenceCodeByClientId = new Map<string, string>();
+  await Promise.all(
+    assignments.map(async (assignment) => {
+      const code = await resolveClientReferenceCode(
+        assignment.client.id,
+        assignment.client.clientReferenceCode,
+      );
+      referenceCodeByClientId.set(assignment.client.id, code);
+    }),
+  );
+
   // ── Per-client transform — synchronous now ──────────────────────────────
   const clients: PipelineClient[] = assignments.map((assignment) => {
     const client = assignment.client;
@@ -343,7 +355,7 @@ export async function getClientPipeline(
       interviewId: null,
     };
     const documentsNeeded = hasUnfulfilledMandatoryDocuments(docCounts);
-    const needsRescore = latestAssessment
+    const staleScores = latestAssessment
       ? assessmentNeedsRescore(latestAssessment)
       : false;
 
@@ -353,6 +365,8 @@ export async function getClientPipeline(
       firstName: client.firstName,
       lastName: client.lastName,
       email: clientEmail,
+      clientReferenceCode: referenceCodeByClientId.get(client.id)!,
+      pseudonymousWorkspaceLabeling: advisorPolicy.pseudonymousWorkspaceLabeling,
       assignedAt: assignment.assignedAt,
       stage,
       progress: computeProgress(stage),
@@ -361,7 +375,7 @@ export async function getClientPipeline(
       awaitingIntakeReview: intakeReview.awaiting,
       intakeReviewInterviewId: intakeReview.interviewId,
       documentsNeeded,
-      needsRescore,
+      staleScores,
       invitation: invitation ? {
         status: invitation.status,
         sentAt: invitation.createdAt,
@@ -383,6 +397,7 @@ export async function getClientPipeline(
             }
           : null,
       assessment: latestAssessment ? {
+        id: latestAssessment.id,
         status: latestAssessment.status,
         completedAt: latestAssessment.completedAt,
         score: latestAssessment.scores[0]?.score || null,
@@ -428,21 +443,21 @@ export function getPipelineMetrics(clients: PipelineClient[]): PipelineMetrics {
 
   const documentsNeeded = clients.filter((client) => client.documentsNeeded).length;
 
-  const needsRescore = clients.filter((client) => client.needsRescore).length;
-
   const stalled = clients.filter((client) => client.stalled).length;
 
   const intakesAwaitingReview = clients.filter(
     (client) => client.awaitingIntakeReview,
   ).length;
 
+  const assessmentsInProgress = allStages.ASSESSMENT_IN_PROGRESS;
+
   return {
     total,
     byStage: allStages,
     documentsNeeded,
-    needsRescore,
     stalled,
     intakesAwaitingReview,
+    assessmentsInProgress,
     inactive: 0,
   };
 }
@@ -538,6 +553,10 @@ export async function getClientDetail(
   );
   const clientEmail = clientIdentity.email;
   const clientDisplayName = clientIdentity.name;
+  const clientReferenceCode = await resolveClientReferenceCode(
+    client.id,
+    client.clientReferenceCode,
+  );
 
   // Fetch invitation data
   const invitation = await prisma.inviteCode.findFirst({
@@ -702,7 +721,7 @@ export async function getClientDetail(
     { assessmentCompleted: latestAssessment?.status === "COMPLETED" },
   );
   const documentsNeededFlag = hasUnfulfilledMandatoryDocuments(docCounts);
-  const needsRescoreFlag = latestAssessment
+  const staleScoresFlag = latestAssessment
     ? assessmentNeedsRescore(latestAssessment)
     : false;
 
@@ -712,6 +731,8 @@ export async function getClientDetail(
     firstName: client.firstName,
     lastName: client.lastName,
     email: clientEmail,
+    clientReferenceCode,
+    pseudonymousWorkspaceLabeling: advisorPolicy.pseudonymousWorkspaceLabeling,
     assignedAt: assignment.assignedAt,
     stage,
     progress: computeProgress(stage),
@@ -720,7 +741,7 @@ export async function getClientDetail(
     awaitingIntakeReview,
     intakeReviewInterviewId: awaitingIntakeReview ? latestIntake?.id ?? null : null,
     documentsNeeded: documentsNeededFlag,
-    needsRescore: needsRescoreFlag,
+    staleScores: staleScoresFlag,
     invitation: invitation ? {
       status: invitation.status,
       sentAt: invitation.createdAt,
@@ -744,6 +765,7 @@ export async function getClientDetail(
           }
         : null,
     assessment: latestAssessment ? {
+      id: latestAssessment.id,
       status: latestAssessment.status,
       completedAt: latestAssessment.completedAt,
       score: latestAssessment.scores[0]?.score || null,
@@ -826,6 +848,22 @@ export async function getClientDetail(
   );
   const pillarCatalog = await getPlatformPillarCatalog();
 
+  const advisorProfile = await prisma.advisorProfile.findUnique({
+    where: { id: assignmentAdvisorProfileId },
+    select: { userId: true },
+  });
+  const { getAdvisorAssessmentLifecycleContext } = await import(
+    "@/lib/advisor/assessment-lifecycle.server"
+  );
+  const assessmentLifecycle = advisorProfile
+    ? await getAdvisorAssessmentLifecycleContext(
+        advisorProfile.userId,
+        latestAssessment
+          ? { id: latestAssessment.id, status: latestAssessment.status }
+          : null,
+      )
+    : { reassessmentEnabled: false, targetedQuestionCount: 0 };
+
   return {
     client: pipelineClient,
     assessmentDomains: assessmentDomainPicker.domains,
@@ -852,5 +890,6 @@ export async function getClientDetail(
     })),
     intakeDetails,
     assessmentDetails,
+    assessmentLifecycle,
   };
 }

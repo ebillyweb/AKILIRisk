@@ -2,11 +2,16 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
-import { loadAdvisorPillarNarrative } from "@/lib/methodology/methodology-queries";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import {
+  loadActiveAdvisorMethodologyPillars,
+  loadAdvisorPillarNarrative,
+  methodologyPillarDisplayName,
+} from "@/lib/methodology/methodology-queries";
 import { narrativeStarterForSlug } from "@/lib/methodology/narrative-starter";
 import { Button } from "@/components/ui/button";
 import { NarrativeEditor } from "@/components/advisor/methodology/NarrativeEditor";
+import { MethodologyPillarTabs } from "@/components/advisor/methodology/MethodologyPillarTabs";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyNarrativesPage({
   params,
@@ -15,18 +20,20 @@ export default async function MethodologyNarrativesPage({
 }) {
   const { slug: rawSlug } = await params;
   const slug = normalizePillarSlug(rawSlug);
-  const pillars = await loadPlatformPillars();
-  const pillar = pillars.find((p) => p.slug === slug);
-  if (!pillar) notFound();
 
   let profileId: string;
+  let activePillars: Awaited<ReturnType<typeof loadActiveAdvisorMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
     profileId = profile.id;
+    activePillars = await loadActiveAdvisorMethodologyPillars(profileId);
   } catch {
     redirect("/signin");
   }
+
+  const pillar = activePillars.find((p) => p.slug === slug);
+  if (!pillar) notFound();
 
   const row = await loadAdvisorPillarNarrative(profileId, slug);
   const starter = narrativeStarterForSlug(slug);
@@ -43,36 +50,26 @@ export default async function MethodologyNarrativesPage({
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
-        <Link href="/advisor/methodology">Methodology</Link>
+        <Link href="/advisor/methodology">Your methodology</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Pillar narratives — {pillar.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Outcome copy for score reports and PDFs. Snapshotted at intake start.
-        </p>
-      </div>
-      <NarrativeEditor
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-narratives"
+        title={`Risk domain narratives — ${methodologyPillarDisplayName(pillar)}`}
+        description="Outcome copy for score reports and PDFs. Snapshotted at intake start."
+      />
+      <div data-tour="config-primary-form">
+        <NarrativeEditor
         pillarSlug={slug}
         allNegative={allNegative}
         allYes={allYes}
         midBand={midBand as { critical: string[]; high: string[]; medium: string[]; low: string[] }}
-      />
-      <div className="flex flex-wrap gap-2">
-        {pillars.map((p) => (
-          <Button
-            key={p.id}
-            variant={p.slug === slug ? "default" : "outline"}
-            size="sm"
-            asChild
-          >
-            <Link href={`/advisor/methodology/narratives/${p.slug}`}>
-              {p.name}
-            </Link>
-          </Button>
-        ))}
+        />
       </div>
+      <MethodologyPillarTabs
+        pillars={activePillars}
+        activeSlug={slug}
+        hrefForSlug={(pillarSlug) => `/advisor/methodology/narratives/${pillarSlug}`}
+      />
     </div>
   );
 }

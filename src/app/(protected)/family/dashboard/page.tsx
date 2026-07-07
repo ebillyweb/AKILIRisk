@@ -54,7 +54,7 @@ export default async function FamilyDashboardPage() {
             <CardHeader>
               <CardTitle className="text-2xl">Current Governance Score</CardTitle>
               <CardDescription>
-                Your latest assessment results with pillar breakdown and advisor emphasis areas
+                Your latest assessment results with risk domain breakdown and advisor emphasis areas
               </CardDescription>
             </CardHeader>
             <CardContent>

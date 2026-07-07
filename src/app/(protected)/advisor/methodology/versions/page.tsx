@@ -5,6 +5,7 @@ import { loadAdvisorSnapshots } from "@/lib/methodology/methodology-queries";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
 
 export default async function MethodologyVersionsPage() {
   let profileId: string;
@@ -21,15 +22,14 @@ export default async function MethodologyVersionsPage() {
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
-        <Link href="/advisor/methodology">Methodology</Link>
+        <Link href="/advisor/methodology">Your methodology</Link>
       </Button>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Pinned versions</h1>
-        <p className="text-sm text-muted-foreground">
-          Intake snapshots frozen when clients start their interview.
-        </p>
-      </div>
-      <Card>
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-versions"
+        title="Pinned versions"
+        description="Intake snapshots frozen when clients start their interview."
+      />
+      <Card data-tour="config-primary-list">
         <CardHeader>
           <CardTitle className="text-base">
             {snapshots.length} snapshot{snapshots.length === 1 ? "" : "s"}

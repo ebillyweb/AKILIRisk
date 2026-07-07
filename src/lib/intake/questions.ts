@@ -116,7 +116,7 @@ export const INTAKE_QUESTIONS: IntakeQuestion[] = (
     ]
   },
 ] as const satisfies ReadonlyArray<
-  Omit<IntakeQuestion, "whyThisMatters">
->).map((q) => ({ ...q, whyThisMatters: q.context }));
+  Omit<IntakeQuestion, "whyThisMatters" | "answerType">
+>).map((q) => ({ ...q, whyThisMatters: q.context, answerType: "fillable" }));
 
 export const TOTAL_QUESTIONS = INTAKE_QUESTIONS.length;

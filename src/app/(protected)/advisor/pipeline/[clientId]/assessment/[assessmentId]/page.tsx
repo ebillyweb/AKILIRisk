@@ -69,7 +69,7 @@ export default async function AdvisorAssessmentReviewPage({
 
       <p className="text-sm text-muted-foreground">
         Review assessment answers and attach advisor notes. Notes are private
-        to you and platform staff and do not affect maturity scores or pillar
+        to you and platform staff and do not affect maturity scores or risk domain
         results.
       </p>
 

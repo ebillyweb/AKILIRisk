@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Files } from "lucide-react";
+import { Files, Search } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { isSuperAdmin } from "@/lib/admin/auth";
@@ -8,6 +8,7 @@ import { getClientsForAdmin, type ClientsAdminScope } from "@/lib/admin/queries"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 import { AdminClientAccountActions } from "@/components/admin/AdminClientAccountActions";
 import { AdminClientAssignSelect } from "@/components/admin/AdminClientAssignSelect";
@@ -21,10 +22,11 @@ function toPositiveInt(raw: string | undefined, fallback: number): number {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function clientsPageHref(scope: ClientsAdminScope, page: number): string {
+function clientsPageHref(scope: ClientsAdminScope, page: number, q?: string): string {
   const sp = new URLSearchParams();
   if (scope === "all") sp.set("filter", "all");
   if (page > 1) sp.set("page", String(page));
+  if (q?.trim()) sp.set("q", q.trim());
   const query = sp.toString();
   return `/admin/clients${query ? `?${query}` : ""}`;
 }
@@ -32,11 +34,12 @@ function clientsPageHref(scope: ClientsAdminScope, page: number): string {
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; page?: string }>;
+  searchParams: Promise<{ filter?: string; page?: string; q?: string }>;
 }) {
   const sp = await searchParams;
   const scope: ClientsAdminScope = sp.filter === "all" ? "all" : "active";
   const requestedPage = toPositiveInt(sp.page, 1);
+  const query = sp.q?.trim() ?? "";
   const session = await auth();
   const superUser = isSuperAdmin(session);
   const [clientsResult, assignmentTargetGroups] = await Promise.all([
@@ -44,16 +47,18 @@ export default async function AdminClientsPage({
       scope,
       page: requestedPage,
       pageSize: PAGE_SIZE,
+      q: query || undefined,
     }),
     superUser ? getClientAssignmentTargetsForAdmin() : Promise.resolve([]),
   ]);
   const { clients, totalCount, page: currentPage, pageSize } = clientsResult;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasNextPage = currentPage * pageSize < totalCount;
+  const hasActiveSearch = Boolean(query);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <h1 className="text-lg font-semibold tracking-tight">
             Client accounts{" "}
@@ -61,13 +66,39 @@ export default async function AdminClientsPage({
           </h1>
           <div className="flex flex-wrap gap-2 text-sm">
             <Button variant={scope === "active" ? "default" : "outline"} size="sm" className="h-8" asChild>
-              <Link href="/admin/clients">Active</Link>
+              <Link href={clientsPageHref("active", 1, query)}>Active</Link>
             </Button>
             <Button variant={scope === "all" ? "default" : "outline"} size="sm" className="h-8" asChild>
-              <Link href="/admin/clients?filter=all">All</Link>
+              <Link href={clientsPageHref("all", 1, query)}>All</Link>
             </Button>
           </div>
         </div>
+        <form method="GET" className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-md">
+          {scope === "all" ? <input type="hidden" name="filter" value="all" /> : null}
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              name="q"
+              defaultValue={query}
+              placeholder="Search name, ID, or email"
+              className="h-9 pl-9"
+              aria-label="Search clients by name, ID, or email"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" className="h-9">
+              Search
+            </Button>
+            {hasActiveSearch ? (
+              <Button variant="ghost" size="sm" className="h-9" asChild>
+                <Link href={clientsPageHref(scope, 1)}>Clear</Link>
+              </Button>
+            ) : null}
+          </div>
+        </form>
       </div>
 
       <Card>
@@ -76,7 +107,9 @@ export default async function AdminClientsPage({
         </CardHeader>
         <CardContent>
           {clients.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No clients found.</p>
+            <p className="text-sm text-muted-foreground">
+              {hasActiveSearch ? "No clients match your search." : "No clients found."}
+            </p>
           ) : (
             <ul className="divide-y divide-border">
               {clients.map((c) => {
@@ -119,7 +152,7 @@ export default async function AdminClientsPage({
                           </Button>
                           <DownloadReportButton
                             assessmentId={c.latestScoredAssessmentId}
-                            clientLabel={c.name || c.email}
+                            clientLabel={c.name ?? c.email ?? undefined}
                             label="Download"
                             variant="ghost"
                             size="sm"
@@ -168,12 +201,12 @@ export default async function AdminClientsPage({
           <div className="flex flex-wrap items-center gap-2">
             {currentPage > 1 ? (
               <Button variant="outline" size="sm" asChild>
-                <Link href={clientsPageHref(scope, currentPage - 1)}>← Previous page</Link>
+                <Link href={clientsPageHref(scope, currentPage - 1, query)}>← Previous page</Link>
               </Button>
             ) : null}
             {hasNextPage ? (
               <Button variant="outline" size="sm" asChild>
-                <Link href={clientsPageHref(scope, currentPage + 1)}>Next page →</Link>
+                <Link href={clientsPageHref(scope, currentPage + 1, query)}>Next page →</Link>
               </Button>
             ) : null}
           </div>

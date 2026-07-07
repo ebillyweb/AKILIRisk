@@ -10,6 +10,9 @@ import {
   resetClientIntake,
   startIntakeSnapshotForClient,
   createCustomIntakeQuestionForAdvisor,
+  createCustomChoiceListIntakeForAdvisor,
+  recordIntakeStructuredAnswer,
+  getFormattedIntakeAnswerForClient,
   hideAdvisorIntakeQuestion,
   tryDeleteAdvisorIntakeQuestion,
   createCustomRecommendationRuleForAdvisor,
@@ -57,6 +60,23 @@ const bodySchema = z.discriminatedUnion("action", [
     action: z.literal("create-custom-intake"),
     advisorEmail: z.string().email(),
     questionText: z.string().min(1),
+  }),
+  z.object({
+    action: z.literal("create-custom-choice-list-intake"),
+    advisorEmail: z.string().email(),
+    questionText: z.string().min(1),
+    optionLabels: z.array(z.string().min(1)).min(2).max(10),
+  }),
+  z.object({
+    action: z.literal("record-intake-structured-answer"),
+    clientEmail: z.string().email(),
+    questionId: z.string(),
+    value: z.string().min(1),
+  }),
+  z.object({
+    action: z.literal("get-formatted-intake-answer"),
+    clientEmail: z.string().email(),
+    questionId: z.string(),
   }),
   z.object({
     action: z.literal("hide-advisor-intake"),
@@ -160,6 +180,28 @@ export async function POST(req: NextRequest) {
         const result = await createCustomIntakeQuestionForAdvisor(
           parsed.data.advisorEmail,
           parsed.data.questionText,
+        );
+        return NextResponse.json(result);
+      }
+      case "create-custom-choice-list-intake": {
+        const result = await createCustomChoiceListIntakeForAdvisor(
+          parsed.data.advisorEmail,
+          parsed.data.questionText,
+          parsed.data.optionLabels,
+        );
+        return NextResponse.json(result);
+      }
+      case "record-intake-structured-answer":
+        await recordIntakeStructuredAnswer(
+          parsed.data.clientEmail,
+          parsed.data.questionId,
+          parsed.data.value,
+        );
+        return NextResponse.json({ ok: true });
+      case "get-formatted-intake-answer": {
+        const result = await getFormattedIntakeAnswerForClient(
+          parsed.data.clientEmail,
+          parsed.data.questionId,
         );
         return NextResponse.json(result);
       }

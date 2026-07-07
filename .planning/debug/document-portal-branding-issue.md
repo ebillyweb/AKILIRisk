@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: resolved
 trigger: "Debug the document portal branding issue from Phase 17 UAT."
 created: 2026-03-15T10:00:00Z
 updated: 2026-03-15T10:00:00Z
@@ -8,9 +8,7 @@ updated: 2026-03-15T10:00:00Z
 ## Current Focus
 
 hypothesis: CONFIRMED - Missing DocumentRequirement records in seed data
-test: verified seed script creates no document requirements
-expecting: seed data should include document requirements for branding to display
-next_action: root cause confirmed - update resolution
+resolution: Closed as seed-data-only issue. Production code is correct. The empty state renders when no DocumentRequirement records exist, which is expected behavior. Seed script needs DocumentRequirement records for local UAT testing but this does not affect production.
 
 ## Symptoms
 

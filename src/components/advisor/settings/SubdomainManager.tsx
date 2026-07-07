@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,23 +13,39 @@ import {
   Check,
   X,
   Clock,
-  ExternalLink,
   Info,
-  Crown,
+  Lock,
   Loader2,
   Copy,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
+import { BrandedLandingTestButton } from '@/components/advisor/settings/BrandedLandingTestButton';
 import { SubscriptionFeatures } from '@/lib/validation/branding';
 import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
+import {
+  buildTenantPortalHost,
+  type TenantPortalUrlConfig,
+} from '@/lib/branding/tenant-portal-url';
+import {
+  SUBDOMAIN_SLUG_INPUT_PATTERN,
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+  sanitizeSubdomainSlugInput,
+} from '@/lib/advisor/subdomain-slug-input';
 
 interface SubdomainManagerProps {
   features: SubscriptionFeatures;
   currentSubdomain?: AdvisorSubdomainSettings | null;
   productionDomain: string;
-  /** e.g. `-staging` on Preview; empty on Production */
+  /** e.g. `-staging` on Preview when hostname suffix mode is enabled; empty on Production */
   tenantSubdomainSuffix?: string;
+  /** When true, show preview.akilirisk.com/t/{slug} instead of a subdomain host */
+  useTenantPathPortals?: boolean;
+  platformAppOrigin?: string;
+  stagingPlatformHost?: string;
   platformSubdomainsAutoActivate?: boolean;
+  readOnly?: boolean;
   className?: string;
 }
 
@@ -38,13 +54,23 @@ export function SubdomainManager({
   currentSubdomain,
   productionDomain,
   tenantSubdomainSuffix = '',
+  useTenantPathPortals = false,
+  platformAppOrigin = '',
+  stagingPlatformHost = 'preview.akilirisk.com',
   platformSubdomainsAutoActivate = true,
+  readOnly = false,
   className = '',
 }: SubdomainManagerProps) {
+  const portalConfig: TenantPortalUrlConfig = {
+    productionDomain,
+    tenantSubdomainSuffix,
+    useTenantPathPortals,
+    platformAppOrigin,
+    stagingPlatformHost,
+  };
   const domainSuffix = `.${productionDomain}`;
   const portalHost = (canonicalSlug: string) =>
-    `${canonicalSlug}${tenantSubdomainSuffix}${domainSuffix}`;
-  const portalUrl = (canonicalSlug: string) => `https://${portalHost(canonicalSlug)}`;
+    buildTenantPortalHost(canonicalSlug, portalConfig);
   const [subdomain, setSubdomain] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -104,7 +130,7 @@ export function SubdomainManager({
   }, [subdomain]);
 
   const handleClaim = async () => {
-    if (!subdomain || !checkResult?.available) return;
+    if (readOnly || !subdomain || !checkResult?.available) return;
 
     setIsClaiming(true);
     try {
@@ -132,7 +158,7 @@ export function SubdomainManager({
   };
 
   const handleRelease = async () => {
-    if (!currentSubdomain) return;
+    if (readOnly || !currentSubdomain) return;
 
     setIsReleasing(true);
     try {
@@ -161,6 +187,24 @@ export function SubdomainManager({
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard');
+  };
+
+  const handleSubdomainInput = (value: string) => {
+    setSubdomain(sanitizeSubdomainSlugInput(value));
+  };
+
+  const subdomainInputProps = {
+    value: subdomain,
+    onChange: (e: ChangeEvent<HTMLInputElement>) => handleSubdomainInput(e.target.value),
+    placeholder: 'yourname',
+    className: 'rounded-r-none font-mono',
+    maxLength: SUBDOMAIN_SLUG_MAX_LENGTH,
+    pattern: SUBDOMAIN_SLUG_INPUT_PATTERN,
+    title: SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+    spellCheck: false,
+    autoComplete: 'off',
+    autoCapitalize: 'off',
+    inputMode: 'url' as const,
   };
 
   const getStatusBadge = (data: AdvisorSubdomainSettings) => {
@@ -195,7 +239,7 @@ export function SubdomainManager({
           <Globe className="h-5 w-5" />
           Custom Subdomain
           {!features.customSubdomainEnabled && (
-            <Crown className="h-4 w-4 text-amber-500" />
+            <TierFeatureLockIcon className="h-4 w-4" />
           )}
         </CardTitle>
         <CardDescription>
@@ -203,17 +247,20 @@ export function SubdomainManager({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {readOnly ? (
+          <Alert>
+            <Lock className="h-4 w-4" aria-hidden />
+            <AlertDescription>
+              Custom subdomain settings are managed by your firm owner or administrators.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {!features.customSubdomainEnabled ? (
           <Alert>
-            <Crown className="h-4 w-4 text-amber-500" />
-            <AlertDescription>
-              Custom subdomains are available on Growth and Professional plans.
-              <Button
-                variant="link"
-                className="h-auto p-0 ml-1 text-amber-600 hover:text-amber-700"
-              >
-                Upgrade your plan
-              </Button>
+            <Lock className="h-4 w-4" aria-hidden />
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>Custom subdomains are available on Professional and higher plans.</span>
+              <TierFeatureUpgradeButton feature="CUSTOM_SUBDOMAIN" size="sm" />
             </AlertDescription>
           </Alert>
         ) : currentSubdomain ? (
@@ -230,16 +277,13 @@ export function SubdomainManager({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {currentSubdomain.dnsVerified && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(portalUrl(currentSubdomain.subdomain), '_blank')}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    Visit
-                  </Button>
-                )}
+                {currentSubdomain.dnsVerified ? (
+                  <BrandedLandingTestButton
+                    currentSubdomain={currentSubdomain}
+                    portalConfig={portalConfig}
+                    customSubdomainEnabled={features.customSubdomainEnabled}
+                  />
+                ) : null}
                 <Button
                   variant="outline"
                   size="sm"
@@ -275,6 +319,8 @@ export function SubdomainManager({
 
             <Separator />
 
+            {!readOnly ? (
+            <>
             {/* Change subdomain */}
             <div className="space-y-4">
               <h4 className="font-medium">Change Subdomain</h4>
@@ -282,18 +328,12 @@ export function SubdomainManager({
                 <div className="space-y-2">
                   <Label htmlFor="new-subdomain">New Subdomain</Label>
                   <div className="flex">
-                    <Input
-                      id="new-subdomain"
-                      value={subdomain}
-                      onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
-                      placeholder="yourname"
-                      className="rounded-r-none font-mono"
-                      maxLength={20}
-                    />
+                    <Input id="new-subdomain" {...subdomainInputProps} />
                     <div className="px-3 py-2 bg-muted text-sm rounded-r-md border border-l-0 flex items-center">
-                      {domainSuffix}
+                      {useTenantPathPortals ? `/t…` : `.${productionDomain}`}
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>
                 </div>
 
                 {subdomain && (
@@ -322,7 +362,7 @@ export function SubdomainManager({
                           key={index}
                           variant="outline"
                           size="sm"
-                          onClick={() => setSubdomain(suggestion)}
+                          onClick={() => handleSubdomainInput(suggestion)}
                           className="text-xs"
                         >
                           {suggestion}
@@ -362,8 +402,10 @@ export function SubdomainManager({
                 Release Subdomain
               </Button>
             </div>
+            </>
+            ) : null}
           </div>
-        ) : (
+        ) : !readOnly ? (
           // Claim new subdomain
           <div className="space-y-4">
             <Alert>
@@ -372,7 +414,9 @@ export function SubdomainManager({
                 Claim your custom subdomain to provide clients with a fully branded portal experience.
                 Your subdomain will be:{' '}
                 <strong>
-                  yourname{tenantSubdomainSuffix}{domainSuffix}
+                  {useTenantPathPortals
+                    ? `${buildTenantPortalHost("yourname", portalConfig)}`
+                    : `yourname${tenantSubdomainSuffix}${domainSuffix}`}
                 </strong>
                 {platformSubdomainsAutoActivate && (
                   <> It will be active immediately after you claim it.</>
@@ -384,18 +428,12 @@ export function SubdomainManager({
               <div className="space-y-2">
                 <Label htmlFor="subdomain">Choose Your Subdomain</Label>
                 <div className="flex">
-                  <Input
-                    id="subdomain"
-                    value={subdomain}
-                    onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
-                    placeholder="yourname"
-                    className="rounded-r-none font-mono"
-                    maxLength={20}
-                  />
+                  <Input id="subdomain" {...subdomainInputProps} />
                   <div className="px-3 py-2 bg-muted text-sm rounded-r-md border border-l-0 flex items-center">
-                    .akiliplatform.com
+                    {useTenantPathPortals ? `/t…` : domainSuffix}
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>
               </div>
 
               {subdomain && (
@@ -424,7 +462,7 @@ export function SubdomainManager({
                         key={index}
                         variant="outline"
                         size="sm"
-                        onClick={() => setSubdomain(suggestion)}
+                        onClick={() => handleSubdomainInput(suggestion)}
                         className="text-xs"
                       >
                         {suggestion}
@@ -444,7 +482,7 @@ export function SubdomainManager({
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

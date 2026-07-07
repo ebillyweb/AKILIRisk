@@ -28,7 +28,7 @@ function richBundle(): TenantBundle {
       { id: "u-2", email: "bob@example.com" },
     ],
     clientProfiles: [{ id: "cp-1", userId: "u-1", phone: "555-1212" }],
-    subscriptions: [{ id: "s-1", userId: "u-1", tier: "GROWTH" }],
+    subscriptions: [{ id: "s-1", userId: "u-1", tier: "PROFESSIONAL" }],
     clientAdvisorAssignments: [
       { id: "a-1", clientId: "u-1", advisorId: "adv-1" },
       { id: "a-2", clientId: "u-2", advisorId: "adv-1" },

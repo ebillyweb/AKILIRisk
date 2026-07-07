@@ -42,7 +42,14 @@ export function verifyInviteToken(token: string): string | null {
   }
 }
 
-export async function validateInviteCode(code: string): Promise<{ id: string } | { error: string }> {
+export type ValidateInviteCodeResult =
+  | { id: string }
+  | { signInEmail: string }
+  | { error: string };
+
+export async function validateInviteCode(
+  code: string,
+): Promise<ValidateInviteCodeResult> {
   const normalized = code.trim().toUpperCase();
   if (!normalized) return { error: "Please enter an invite code or PIN." };
 
@@ -51,8 +58,20 @@ export async function validateInviteCode(code: string): Promise<{ id: string } |
   });
 
   if (!invite) return { error: "Invalid invite code or PIN." };
-  if (invite.expiresAt && invite.expiresAt < new Date()) return { error: "This invite has expired." };
-  if (invite.maxUses != null && invite.usedCount >= invite.maxUses) return { error: "This invite has reached its use limit." };
+  if (invite.expiresAt && invite.expiresAt < new Date()) {
+    return { error: "This invite has expired." };
+  }
+
+  const invitedEmail = invite.prefillEmail?.trim().toLowerCase() ?? "";
+  const atUseLimit =
+    invite.maxUses != null && invite.usedCount >= invite.maxUses;
+
+  if (atUseLimit) {
+    if (invitedEmail) {
+      return { signInEmail: invitedEmail };
+    }
+    return { error: "This invite has reached its use limit." };
+  }
 
   return { id: invite.id };
 }

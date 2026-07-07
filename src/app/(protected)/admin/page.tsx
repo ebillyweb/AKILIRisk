@@ -75,7 +75,7 @@ export default async function AdminControlCenterPage() {
               <WorkspaceCard
                 href="/admin/intake/questions"
                 title="Intake question bank"
-                description="Audio intake script — copy, order, and visibility"
+                description="Intake question bank — copy, order, and visibility"
                 icon={Mic}
               />
               <WorkspaceCard

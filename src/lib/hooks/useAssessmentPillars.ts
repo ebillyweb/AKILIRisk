@@ -53,7 +53,7 @@ export function usePillarQuestions(pillarId: string, options?: PillarQuestionsQu
     ],
     queryFn: async () => {
       const res = await fetch(
-        `/api/assessment/pillars/${normalized}/questions${querySuffix}`,
+        `/api/assessment/risk-domains/${normalized}/questions${querySuffix}`,
       );
       if (!res.ok) throw new Error("Failed to load pillar questions");
       return res.json();
@@ -83,7 +83,7 @@ export function useAllPillarQuestions(
       ],
       queryFn: async () => {
         const res = await fetch(
-          `/api/assessment/pillars/${p.slug}/questions${querySuffix}`,
+          `/api/assessment/risk-domains/${p.slug}/questions${querySuffix}`,
         );
         if (!res.ok) throw new Error(`Failed to load ${p.slug} questions`);
         return res.json() as Promise<{ pillarId: string; questions: Question[] }>;
@@ -126,7 +126,7 @@ export function useAssessmentPillarScores(
       const res = await fetch(
         `/api/assessment/${assessmentId}/pillar-scores${params}`,
       );
-      if (!res.ok) throw new Error("Failed to load pillar scores");
+      if (!res.ok) throw new Error("Failed to load risk domain scores");
       return res.json();
     },
     enabled: !!assessmentId,

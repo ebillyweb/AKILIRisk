@@ -39,7 +39,7 @@ export function PortfolioRiskList({
           <Alert>
             <AlertDescription className="text-sm leading-relaxed">
               No portfolio risks are tagged with <strong>{categoryLabel}</strong> yet. Older assessments
-              may roll scores up under a single comprehensive pillar instead of these six areas — try{" "}
+              may roll scores up under a single comprehensive risk domain instead of these six areas — try{" "}
               <Link href="/advisor/intelligence" className="font-medium text-primary underline underline-offset-2">
                 clearing the filter
               </Link>{" "}
@@ -126,7 +126,7 @@ export function PortfolioRiskList({
         <div className="text-center py-4 border-t">
           <p className="text-sm text-muted-foreground">
             Showing top 20 of {filtered.length} risk indicator{filtered.length === 1 ? "" : "s"}
-            {categoryFilter ? " for this pillar" : ""}
+            {categoryFilter ? " for this risk domain" : ""}
           </p>
         </div>
       )}

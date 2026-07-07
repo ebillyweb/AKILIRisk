@@ -9,9 +9,12 @@ export function facilitatedIntakePath(sessionId: string): string {
   return `${facilitatedSessionRoot(sessionId)}/intake`;
 }
 
-export function facilitatedPillarsPath(sessionId: string): string {
-  return `${facilitatedSessionRoot(sessionId)}/pillars`;
+export function facilitatedRiskDomainsPath(sessionId: string): string {
+  return `${facilitatedSessionRoot(sessionId)}/risk-domains`;
 }
+
+/** @deprecated Use facilitatedRiskDomainsPath */
+export const facilitatedPillarsPath = facilitatedRiskDomainsPath;
 
 export function facilitatedAssessmentHubPath(
   sessionId: string,

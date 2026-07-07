@@ -6,12 +6,9 @@ import { prisma } from "@/lib/db";
 import { brandedPortalLogoImgSrc } from "@/lib/branding/branded-portal-logo";
 import { getAssignedAdvisorBrandingForClient } from "@/lib/client/assigned-advisor-branding";
 import { clientPortalLogoImgSrc } from "@/lib/client/client-portal-branding";
-import {
-  ADVISOR_BRANDING_PROFILE_SELECT,
-  mapAdvisorProfileToBrandingData,
-} from "@/lib/client/advisor-branding-profile";
 import { getTenantBrandingFromRequestHeaders } from "@/lib/client/tenant-portal-branding";
 import { isTenantBrandedRequest } from "@/lib/client/branded-portal-requirements";
+import { resolveAdvisorBrandingForProfile } from "@/lib/enterprise/branding";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 const INVITING_ADVISOR_STATUSES: InvitationStatus[] = [
@@ -49,29 +46,34 @@ async function resolveClientEmailForBranding(
 }
 
 async function getInvitingAdvisorBrandingForEmail(
+  userId: string,
   clientEmail: string
 ): Promise<AdvisorBrandingData | null> {
   const normalizedEmail = clientEmail.trim().toLowerCase();
   if (!normalizedEmail) return null;
 
+  // SECURITY: `prefillEmail` is attacker-controlled (any advisor can create an
+  // invite for any email). Require the inviting advisor to also hold an ACTIVE
+  // assignment to THIS client, so a stranger's invite can never inject their
+  // firm name / logo / support contacts into the victim's portal.
   const invite = await prisma.inviteCode.findFirst({
     where: {
       prefillEmail: { equals: normalizedEmail, mode: "insensitive" },
       status: { in: INVITING_ADVISOR_STATUSES },
       createdBy: { not: null },
-      advisor: { brandingEnabled: true },
+      advisor: {
+        brandingEnabled: true,
+        clientAssignments: { some: { clientId: userId, status: "ACTIVE" } },
+      },
     },
     orderBy: { createdAt: "desc" },
     select: {
-      advisor: {
-        select: ADVISOR_BRANDING_PROFILE_SELECT,
-      },
+      createdBy: true,
     },
   });
 
-  const advisor = invite?.advisor;
-  if (!advisor?.brandingEnabled) return null;
-  return mapAdvisorProfileToBrandingData(advisor);
+  if (!invite?.createdBy) return null;
+  return resolveAdvisorBrandingForProfile(invite.createdBy, { scope: "client" });
 }
 
 /** Branding for a specific invite row (signup page on platform host). */
@@ -81,15 +83,15 @@ export async function getInvitingAdvisorBrandingForInviteCode(
   const invite = await prisma.inviteCode.findUnique({
     where: { id: inviteCodeId },
     select: {
+      createdBy: true,
       advisor: {
-        select: ADVISOR_BRANDING_PROFILE_SELECT,
+        select: { brandingEnabled: true },
       },
     },
   });
 
-  const advisor = invite?.advisor;
-  if (!advisor?.brandingEnabled) return null;
-  return mapAdvisorProfileToBrandingData(advisor);
+  if (!invite?.createdBy || !invite.advisor?.brandingEnabled) return null;
+  return resolveAdvisorBrandingForProfile(invite.createdBy, { scope: "client" });
 }
 
 /**
@@ -111,7 +113,7 @@ export async function resolveClientPortalBrandingForUser(input: {
       getAssignedAdvisorBrandingForClient(input.userId),
       getTenantBrandingFromRequestHeaders(),
       isTenantBrandedRequest(),
-      getInvitingAdvisorBrandingForEmail(clientEmail),
+      getInvitingAdvisorBrandingForEmail(input.userId, clientEmail),
     ]);
 
   const raw = onTenantHost

@@ -7,8 +7,111 @@ import { prisma } from '@/lib/db';
 import { brandingUpdateSchema } from '@/lib/validation/branding';
 import { auditBrandingUpdate } from '@/lib/audit/branding-audit';
 import { requireAdvisorBrandingAccess, checkRateLimit } from '@/lib/subscription/validation';
+import {
+  assertCanMutateAdvisorBranding,
+  resolveAdvisorBrandingSettingsContext,
+} from '@/lib/enterprise/branding-access';
 import { generateLogoUploadUrl, confirmLogoUpload, deleteLogo, uploadLogoFromBuffer } from '@/lib/s3/branding-uploads';
 import { isSubdomainReserved } from '@/lib/advisor/subdomain';
+import {
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_MIN_LENGTH,
+  SUBDOMAIN_SLUG_REGEX,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+} from '@/lib/advisor/subdomain-slug-input';
+
+const ENTERPRISE_BRANDING_MUTABLE_SELECT = {
+  brandName: true,
+  tagline: true,
+  landingKicker: true,
+  landingHeadline: true,
+  landingSubheadline: true,
+  landingSubtext: true,
+  primaryColor: true,
+  secondaryColor: true,
+  accentColor: true,
+  websiteUrl: true,
+  emailFooterText: true,
+  supportEmail: true,
+  supportPhone: true,
+  logoUrl: true,
+  logoS3Key: true,
+  logoContentType: true,
+  logoFileSize: true,
+  logoUploadedAt: true,
+} as const;
+
+type BrandingMutableRow = {
+  [K in keyof typeof ENTERPRISE_BRANDING_MUTABLE_SELECT]:
+    | string
+    | number
+    | Date
+    | null;
+};
+
+function collectBrandingFieldChanges(
+  current: BrandingMutableRow,
+  validatedData: z.infer<typeof brandingUpdateSchema>,
+) {
+  const updateData: Record<string, string | null> = {};
+  const previousValues: Record<string, unknown> = {};
+  const newValues: Record<string, unknown> = {};
+
+  Object.entries(validatedData).forEach(([key, value]) => {
+    const dbValue = value === '' ? null : value;
+    const currentValue = current[key as keyof BrandingMutableRow];
+    if (currentValue !== dbValue) {
+      updateData[key] = dbValue;
+      previousValues[key] = currentValue;
+      newValues[key] = dbValue;
+    }
+  });
+
+  return { updateData, previousValues, newValues };
+}
+
+async function syncEnterpriseLogoFromAdvisorProfile(
+  enterpriseId: string,
+  advisorId: string,
+): Promise<void> {
+  const advisor = await prisma.advisorProfile.findUnique({
+    where: { id: advisorId },
+    select: {
+      logoUrl: true,
+      logoS3Key: true,
+      logoContentType: true,
+      logoFileSize: true,
+      logoUploadedAt: true,
+    },
+  });
+  if (!advisor) return;
+
+  await prisma.advisorEnterprise.update({
+    where: { id: enterpriseId },
+    data: {
+      logoUrl: advisor.logoUrl,
+      logoS3Key: advisor.logoS3Key,
+      logoContentType: advisor.logoContentType,
+      logoFileSize: advisor.logoFileSize,
+      logoUploadedAt: advisor.logoUploadedAt,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+async function clearEnterpriseLogo(enterpriseId: string): Promise<void> {
+  await prisma.advisorEnterprise.update({
+    where: { id: enterpriseId },
+    data: {
+      logoUrl: null,
+      logoS3Key: null,
+      logoContentType: null,
+      logoFileSize: null,
+      logoUploadedAt: null,
+      updatedAt: new Date(),
+    },
+  });
+}
 
 export interface ActionResult {
   success: boolean;
@@ -22,18 +125,17 @@ export interface ActionResult {
 export async function updateAdvisorBrandingAction(formData: FormData): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId, features } = await requireAdvisorBrandingAccess(userId, 'write');
 
-    const firmRow = await prisma.advisorProfile.findUnique({
-      where: { id: advisorId },
-      select: { firmName: true },
-    });
-    const brandNameFromFirm = firmRow?.firmName?.trim() ?? '';
-
-    // Parse and validate form data (brand name always matches firm name)
+    // Parse and validate form data
     const rawData = {
-      brandName: brandNameFromFirm,
+      brandName: formData.get('brandName')?.toString() || '',
       tagline: formData.get('tagline')?.toString() || '',
+      landingKicker: formData.get('landingKicker')?.toString() || '',
+      landingHeadline: formData.get('landingHeadline')?.toString() || '',
+      landingSubheadline: formData.get('landingSubheadline')?.toString() || '',
+      landingSubtext: formData.get('landingSubtext')?.toString() || '',
       primaryColor: formData.get('primaryColor')?.toString() || '',
       secondaryColor: formData.get('secondaryColor')?.toString() || '',
       accentColor: formData.get('accentColor')?.toString() || '',
@@ -50,7 +152,14 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
     // Feature-gate advanced fields
     if (!features.advancedBrandingEnabled) {
       // Only allow basic fields for STARTER tier
-      const allowedFields = ['brandName', 'logoUrl'];
+      const allowedFields = [
+        'brandName',
+        'logoUrl',
+        'landingKicker',
+        'landingHeadline',
+        'landingSubheadline',
+        'landingSubtext',
+      ];
       const restrictedFields = Object.keys(validatedData).filter((field) => {
         if (allowedFields.includes(field)) return false;
         const v = validatedData[field as keyof typeof validatedData];
@@ -65,85 +174,113 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
       }
     }
 
-    // Get current advisor profile for audit logging
-    const currentAdvisor = await prisma.advisorProfile.findUnique({
-      where: { id: advisorId },
-      select: {
-        brandName: true,
-        tagline: true,
-        primaryColor: true,
-        secondaryColor: true,
-        accentColor: true,
-        websiteUrl: true,
-        emailFooterText: true,
-        supportEmail: true,
-        supportPhone: true,
-        logoUrl: true,
-      },
-    });
+    // Get current branding row for audit logging
+    const settingsContext = await resolveAdvisorBrandingSettingsContext(userId);
+    const isEnterpriseManage = settingsContext.mode === 'enterprise-manage';
 
-    if (!currentAdvisor) {
-      throw new Error('Advisor profile not found');
+    const currentBranding = isEnterpriseManage
+      ? await prisma.advisorEnterprise.findUnique({
+          where: { id: settingsContext.enterpriseId },
+          select: ENTERPRISE_BRANDING_MUTABLE_SELECT,
+        })
+      : await prisma.advisorProfile.findUnique({
+          where: { id: advisorId },
+          select: {
+            brandName: true,
+            firmName: true,
+            tagline: true,
+            landingKicker: true,
+            landingHeadline: true,
+            landingSubheadline: true,
+            landingSubtext: true,
+            primaryColor: true,
+            secondaryColor: true,
+            accentColor: true,
+            websiteUrl: true,
+            emailFooterText: true,
+            supportEmail: true,
+            supportPhone: true,
+            logoUrl: true,
+          },
+        });
+
+    if (!currentBranding) {
+      throw new Error(isEnterpriseManage ? 'Enterprise not found' : 'Advisor profile not found');
     }
 
-    // Prepare update data (only include fields that have changed)
-    const updateData: any = {};
-    const previousValues: any = {};
-    const newValues: any = {};
+    const { updateData, previousValues, newValues } = collectBrandingFieldChanges(
+      currentBranding as BrandingMutableRow,
+      validatedData,
+    );
 
-    Object.entries(validatedData).forEach(([key, value]) => {
-      const dbValue = value === '' ? null : value;
-      const currentValue = currentAdvisor[key as keyof typeof currentAdvisor];
-      if (currentValue !== dbValue) {
-        updateData[key] = dbValue;
-        previousValues[key] = currentValue;
-        newValues[key] = dbValue;
+    if (!isEnterpriseManage && settingsContext.mode === 'solo' && updateData.brandName !== undefined) {
+      const currentAdvisor = currentBranding as {
+        firmName: string | null;
+      };
+      const syncedFirmName = updateData.brandName;
+      if (currentAdvisor.firmName !== syncedFirmName) {
+        updateData.firmName = syncedFirmName;
+        previousValues.firmName = currentAdvisor.firmName;
+        newValues.firmName = syncedFirmName;
       }
-    });
+    }
 
     // Only proceed if there are changes
     if (Object.keys(updateData).length === 0) {
       return {
         success: true,
-        data: currentAdvisor,
+        data: currentBranding,
       };
     }
 
-    // Update the advisor profile
-    const updatedAdvisor = await prisma.advisorProfile.update({
-      where: { id: advisorId },
-      data: {
-        ...updateData,
-        updatedAt: new Date(),
-      },
-      select: {
-        brandName: true,
-        tagline: true,
-        primaryColor: true,
-        secondaryColor: true,
-        accentColor: true,
-        websiteUrl: true,
-        emailFooterText: true,
-        supportEmail: true,
-        supportPhone: true,
-        logoUrl: true,
-        logoS3Key: true,
-        logoContentType: true,
-        logoFileSize: true,
-        logoUploadedAt: true,
-      },
-    });
+    const updatedBranding = isEnterpriseManage
+      ? await prisma.advisorEnterprise.update({
+          where: { id: settingsContext.enterpriseId },
+          data: {
+            ...updateData,
+            updatedAt: new Date(),
+          },
+          select: ENTERPRISE_BRANDING_MUTABLE_SELECT,
+        })
+      : await prisma.advisorProfile.update({
+          where: { id: advisorId },
+          data: {
+            ...updateData,
+            updatedAt: new Date(),
+          },
+          select: {
+            brandName: true,
+            tagline: true,
+            landingKicker: true,
+            landingHeadline: true,
+            landingSubheadline: true,
+            landingSubtext: true,
+            primaryColor: true,
+            secondaryColor: true,
+            accentColor: true,
+            websiteUrl: true,
+            emailFooterText: true,
+            supportEmail: true,
+            supportPhone: true,
+            logoUrl: true,
+            logoS3Key: true,
+            logoContentType: true,
+            logoFileSize: true,
+            logoUploadedAt: true,
+          },
+        });
 
     // Audit the change
     await auditBrandingUpdate(advisorId, userId, previousValues, newValues);
 
     // Revalidate affected pages
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {
       success: true,
-      data: updatedAdvisor,
+      data: updatedBranding,
     };
   } catch (error) {
     console.error('Error updating advisor branding:', error);
@@ -219,6 +356,7 @@ export async function generateLogoUploadUrlAction(
 ): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId } = await requireAdvisorBrandingAccess(userId, 'write');
 
     // Validate file parameters
@@ -260,6 +398,7 @@ export async function uploadLogoDirectAction(
 ): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId } = await requireAdvisorBrandingAccess(userId, 'write');
 
     if (!fileName || !buffer.byteLength) {
@@ -280,7 +419,13 @@ export async function uploadLogoDirectAction(
     const effectiveType = fileType?.trim() ? fileType : 'application/octet-stream';
     const data = await uploadLogoFromBuffer(advisorId, fileName, effectiveType, buffer);
 
+    const settingsContext = await resolveAdvisorBrandingSettingsContext(userId);
+    if (settingsContext.mode === 'enterprise-manage') {
+      await syncEnterpriseLogoFromAdvisorProfile(settingsContext.enterpriseId, advisorId);
+    }
+
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {
@@ -301,6 +446,7 @@ export async function confirmLogoUploadAction(
 ): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     await requireAdvisorBrandingAccess(userId, 'write');
 
     const confirmResponse = await confirmLogoUpload({
@@ -311,6 +457,7 @@ export async function confirmLogoUploadAction(
 
     // Revalidate pages to show new logo
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {
@@ -330,12 +477,19 @@ export async function confirmLogoUploadAction(
 export async function deleteLogoAction(): Promise<ActionResult> {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const { advisorId } = await requireAdvisorBrandingAccess(userId, 'delete');
 
     await deleteLogo(advisorId);
 
+    const settingsContext = await resolveAdvisorBrandingSettingsContext(userId);
+    if (settingsContext.mode === 'enterprise-manage') {
+      await clearEnterpriseLogo(settingsContext.enterpriseId);
+    }
+
     // Revalidate pages to reflect logo deletion
     revalidatePath('/advisor/settings');
+    revalidatePath('/advisor/settings/branding');
     revalidatePath('/advisor');
 
     return {
@@ -357,11 +511,11 @@ export async function checkSubdomainAvailabilityAction(subdomain: string): Promi
     await requireAdvisorBrandingAccess(userId, 'read');
 
     // Validate subdomain format
-    const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
-    if (!subdomainRegex.test(subdomain) || subdomain.length < 3 || subdomain.length > 20) {
+    const subdomainRegex = SUBDOMAIN_SLUG_REGEX;
+    if (!subdomainRegex.test(subdomain) || subdomain.length < SUBDOMAIN_SLUG_MIN_LENGTH || subdomain.length > SUBDOMAIN_SLUG_MAX_LENGTH) {
       return {
         success: false,
-        error: 'Invalid subdomain format. Use 3-20 characters, lowercase letters, numbers, and hyphens only.',
+        error: SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
       };
     }
 

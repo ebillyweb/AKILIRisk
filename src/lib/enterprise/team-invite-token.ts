@@ -43,5 +43,9 @@ export function verifyEnterpriseTeamInviteToken(token: string): string | null {
 
 export function buildEnterpriseTeamInviteUrl(origin: string, token: string): string {
   const base = origin.replace(/\/$/, "");
-  return `${base}/enterprise/join?token=${encodeURIComponent(token)}`;
+  return `${base}${buildEnterpriseTeamJoinPath(token)}`;
+}
+
+export function buildEnterpriseTeamJoinPath(token: string): string {
+  return `/enterprise/join?token=${encodeURIComponent(token)}`;
 }

@@ -16,6 +16,12 @@ import type {
   MethodologySnapshotBlob,
   ParsedMethodologySnapshot,
 } from "@/lib/methodology/types";
+import { filterAndOrderQuestionsByBankMode } from "@/lib/methodology/intake-question-bank-mode";
+import {
+  resolveEffectiveAdvisorAssessmentQuestionBankMode,
+  resolveEffectiveAdvisorIntakeQuestionBankMode,
+} from "@/lib/methodology/intake-question-bank-mode.server";
+import { advisorAssessmentQuestionToWire } from "@/lib/methodology/advisor-assessment-question-config";
 import {
   SNAPSHOT_MAX_BYTES,
   SNAPSHOT_SCHEMA_VERSION,
@@ -99,9 +105,30 @@ export async function buildAdvisorConfigSnapshot(
     orderBy: [{ pillarId: "asc" }, { displayOrder: "asc" }],
   });
 
-  for (const row of advisorQuestions) {
+  const assessmentBankMode = await resolveEffectiveAdvisorAssessmentQuestionBankMode(
+    advisorProfileId,
+  );
+  const activeAssessmentRows = filterAndOrderQuestionsByBankMode(
+    advisorQuestions,
+    assessmentBankMode,
+  );
+
+  for (const row of activeAssessmentRows) {
     if (!scopedSlugs.includes(row.pillar.slug)) continue;
-    const wire = advisorQuestionToWire(row);
+    const wire = advisorAssessmentQuestionToWire({
+      id: row.id,
+      displayOrder: row.displayOrder,
+      questionText: row.questionText,
+      answerType: row.answerType,
+      scoreMap: row.scoreMap,
+      answer0: row.answer0,
+      answer1: row.answer1,
+      answer2: row.answer2,
+      answer3: row.answer3,
+      whyThisMatters: row.whyThisMatters,
+      recommendedActions: row.recommendedActions,
+      pillarSlug: row.pillar.slug,
+    });
     if (!assessmentQuestions[row.pillar.slug]) {
       assessmentQuestions[row.pillar.slug] = [];
     }
@@ -112,8 +139,10 @@ export async function buildAdvisorConfigSnapshot(
     where: { advisorProfileId, isVisible: true },
     orderBy: { displayOrder: "asc" },
   });
+  const intakeBankMode = await resolveEffectiveAdvisorIntakeQuestionBankMode(advisorProfileId);
+  const activeIntakeRows = filterAndOrderQuestionsByBankMode(intakeRows, intakeBankMode);
 
-  const intakeQuestions = intakeRows.map((row) => ({
+  const intakeQuestions = activeIntakeRows.map((row) => ({
     id: row.id,
     displayOrder: row.displayOrder,
     questionNumber: row.questionNumber,
@@ -122,6 +151,10 @@ export async function buildAdvisorConfigSnapshot(
     helpText: row.helpText,
     learnMore: row.learnMore,
     answerType: row.answerType,
+    answer0: row.answer0,
+    answer1: row.answer1,
+    answer2: row.answer2,
+    answer3: row.answer3,
     options: row.options,
     relatedPillarIds: row.relatedPillarIds,
     recommendedActions: row.recommendedActions,
@@ -182,42 +215,6 @@ export async function buildAdvisorConfigSnapshot(
     intakeQuestions,
     pillarNarratives,
     recRules,
-  };
-}
-
-function advisorQuestionToWire(
-  row: {
-    id: string;
-    displayOrder: number;
-    questionText: string;
-    answerType: string;
-    scoreMap: unknown;
-    whyThisMatters: string | null;
-    recommendedActions: string | null;
-    pillar: { slug: string };
-  },
-) {
-  const scoreMap = row.scoreMap as Record<string, number>;
-  return {
-    questionId: row.id,
-    riskAreaId: row.pillar.slug,
-    sortOrderGlobal: row.displayOrder,
-    text: row.questionText,
-    helpText: row.whyThisMatters ?? null,
-    learnMore: row.recommendedActions ?? null,
-    riskRelevance: row.whyThisMatters ?? null,
-    type: row.answerType === "likert_5" ? ("likert" as const) : ("maturity-scale" as const),
-    options: [0, 1, 2, 3].map((value) => ({
-      value,
-      label: String(value),
-    })),
-    required: true,
-    weight: 2,
-    scoreMap,
-    branchingDependsOn: null,
-    branchingPredicate: null,
-    profileConditionKey: null,
-    omitMaturityScoreWhenYes: false,
   };
 }
 

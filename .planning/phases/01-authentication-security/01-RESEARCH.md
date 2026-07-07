@@ -221,7 +221,7 @@ import { prisma } from "@/lib/db"
 
 export async function enrollMFA(userId: string) {
   const secret = speakeasy.generateSecret({
-    name: `Belvedere Risk (${userId})`,
+    name: `AKILI Risk (${userId})`,
     length: 32
   })
 
@@ -494,7 +494,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   const { data, error } = await resend.emails.send({
-    from: "Belvedere Risk <noreply@yourdomain.com>",
+    from: "AKILI Risk <noreply@yourdomain.com>",
     to: email,
     subject: "Reset your password",
     html: `

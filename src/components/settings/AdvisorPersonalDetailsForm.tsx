@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -11,9 +12,14 @@ import type { AdvisorPersonalDetailsInitialData } from '@/lib/schemas/profile';
 
 interface AdvisorPersonalDetailsFormProps {
   initialData: AdvisorPersonalDetailsInitialData;
+  /** Firm name is canonical firm branding for enterprise members. */
+  firmNameReadOnly?: boolean;
 }
 
-export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetailsFormProps) {
+export function AdvisorPersonalDetailsForm({
+  initialData,
+  firmNameReadOnly = false,
+}: AdvisorPersonalDetailsFormProps) {
   const router = useRouter();
   const [firstName, setFirstName] = useState(initialData.firstName ?? '');
   const [lastName, setLastName] = useState(initialData.lastName ?? '');
@@ -62,7 +68,11 @@ export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetai
             className="bg-muted/50"
           />
           <p className="text-xs text-muted-foreground">
-            Contact your administrator to change your sign-in email.
+            To change your sign-in email, contact AKILI using the{' '}
+            <Link href="/contact" className="font-medium text-primary underline-offset-2 hover:underline">
+              contact form
+            </Link>
+            .
           </p>
         </div>
       ) : null}
@@ -122,8 +132,15 @@ export function AdvisorPersonalDetailsForm({ initialData }: AdvisorPersonalDetai
             value={firmName}
             onChange={(e) => setFirmName(e.target.value)}
             placeholder="Firm name"
-            disabled={isSubmitting}
+            readOnly={firmNameReadOnly}
+            disabled={isSubmitting || firmNameReadOnly}
+            className={firmNameReadOnly ? 'bg-muted/40' : undefined}
           />
+          {firmNameReadOnly ? (
+            <p className="text-xs text-muted-foreground">
+              Managed by your firm owner or administrators. Edit firm branding above if you manage the firm.
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="advisor-licenseNumber">License number</Label>

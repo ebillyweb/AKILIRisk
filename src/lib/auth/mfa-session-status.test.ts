@@ -1,15 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { findManySpy, findUniqueSpy } = vi.hoisted(() => ({
-  findManySpy: vi.fn(),
+const { findUniqueSpy } = vi.hoisted(() => ({
   findUniqueSpy: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    session: {
-      findMany: (...args: unknown[]) => findManySpy(...args),
-    },
     user: {
       findUnique: (...args: unknown[]) => findUniqueSpy(...args),
     },
@@ -19,7 +15,6 @@ vi.mock("@/lib/db", () => ({
 import { isMfaChallengePendingForUser } from "./mfa-session-status";
 
 beforeEach(() => {
-  findManySpy.mockReset();
   findUniqueSpy.mockReset();
 });
 
@@ -34,7 +29,6 @@ describe("isMfaChallengePendingForUser", () => {
     });
 
     expect(pending).toBe(false);
-    expect(findManySpy).not.toHaveBeenCalled();
   });
 
   it("returns false when JWT shows MFA enabled but database has it disabled", async () => {
@@ -47,12 +41,22 @@ describe("isMfaChallengePendingForUser", () => {
     });
 
     expect(pending).toBe(false);
-    expect(findManySpy).not.toHaveBeenCalled();
   });
 
-  it("returns false when database session is verified", async () => {
+  it("returns false when the bound-session claim is verified", async () => {
     findUniqueSpy.mockResolvedValue({ mfaEnabled: true });
-    findManySpy.mockResolvedValue([{ mfaVerified: true }]);
+
+    const pending = await isMfaChallengePendingForUser({
+      id: "u1",
+      mfaEnabled: true,
+      mfaVerified: true,
+    });
+
+    expect(pending).toBe(false);
+  });
+
+  it("returns true when MFA is enabled and the bound-session claim is not verified", async () => {
+    findUniqueSpy.mockResolvedValue({ mfaEnabled: true });
 
     const pending = await isMfaChallengePendingForUser({
       id: "u1",
@@ -60,18 +64,15 @@ describe("isMfaChallengePendingForUser", () => {
       mfaVerified: false,
     });
 
-    expect(pending).toBe(false);
-    expect(findManySpy).toHaveBeenCalledOnce();
+    expect(pending).toBe(true);
   });
 
-  it("returns true when MFA is enabled and session is not verified", async () => {
+  it("fails closed when MFA is enabled and the claim omits mfaVerified", async () => {
     findUniqueSpy.mockResolvedValue({ mfaEnabled: true });
-    findManySpy.mockResolvedValue([{ mfaVerified: false }]);
 
     const pending = await isMfaChallengePendingForUser({
       id: "u1",
       mfaEnabled: true,
-      mfaVerified: false,
     });
 
     expect(pending).toBe(true);

@@ -170,6 +170,11 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("Stripe webhook signature verification failed:", err);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(
+        "[stripe-webhook] Local dev: STRIPE_WEBHOOK_SECRET must match the whsec_… printed by `stripe listen` (not the Dashboard endpoint secret). Restart `npm run dev` after updating .env.local."
+      );
+    }
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -364,13 +369,19 @@ export async function POST(request: Request) {
   } catch (e) {
     outcome = "FAILED";
     console.error("Stripe webhook handler error:", e);
-    // Mark FAILED in finally; Stripe's retry will see a FAILED row and
-    // re-claim it via claimWebhookEvent's reclaim path. Return 5xx so
-    // Stripe knows to retry.
-    await prisma.stripeWebhookEvent.update({
-      where: { id: event.id },
-      data: { status: outcome, processedAt: null },
-    });
+    // Mark FAILED so Stripe's retry sees a FAILED row and re-claims it via
+    // claimWebhookEvent's reclaim path. Guard this bookkeeping write in its own
+    // try/catch so a secondary failure (e.g. the row was concurrently reclaimed)
+    // doesn't mask the original handler error or swallow the 5xx that triggers
+    // Stripe's retry.
+    try {
+      await prisma.stripeWebhookEvent.update({
+        where: { id: event.id },
+        data: { status: outcome, processedAt: null },
+      });
+    } catch (markErr) {
+      console.error("Failed to mark Stripe webhook FAILED:", markErr);
+    }
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 
@@ -383,6 +394,10 @@ export async function POST(request: Request) {
       processedAt: new Date(),
     },
   });
+
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[stripe-webhook] ${event.type} ${event.id} → ${outcome}`);
+  }
 
   return NextResponse.json({ received: true });
 }

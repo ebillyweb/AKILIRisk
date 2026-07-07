@@ -41,6 +41,9 @@ function workflowHref(type: NotificationType, referenceId: string | null): strin
   if (type === "NEW_INTAKE" || type === "INTAKE_UPDATED") {
     return referenceId ? `/advisor/review/${referenceId}` : "/advisor/pipeline?awaitingReview=1";
   }
+  if (type === "NEW_LEAD") {
+    return referenceId ? `/advisor/leads/${referenceId}` : "/advisor/leads";
+  }
   if (type === "WORKFLOW_STALLED") {
     return "/advisor/pipeline?stalled=1";
   }

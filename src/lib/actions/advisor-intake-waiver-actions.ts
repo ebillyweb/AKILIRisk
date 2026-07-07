@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getAdvisorProfileOrThrow, requireAdvisorRole } from "@/lib/advisor/auth";
+import { assertAdvisorCanSkipIntake } from "@/lib/enterprise/advisor-member-visibility";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { persistClientEngagementScope } from "@/lib/client/engagement-scope";
 import { assertAdvisorAssessmentDomainSelection } from "@/lib/methodology/advisor-assessment-domains";
@@ -105,10 +106,12 @@ export async function setClientIntakeWaiver(
     }
 
     if (waive) {
+      await assertAdvisorCanSkipIntake(userId);
+
       if (!scope) {
         return {
           success: false,
-          error: "Select at least one assessment domain before waiving intake.",
+          error: "Select at least one risk domain before waiving intake.",
         };
       }
 
@@ -211,9 +214,11 @@ export async function updateClientWaiverAssessmentScope(
     if (!assignment.intakeWaivedAt) {
       return {
         success: false,
-        error: "Intake is not waived for this client. Waive intake with assessment domains first.",
+        error: "Intake is not waived for this client. Waive intake with risk domains first.",
       };
     }
+
+    await assertAdvisorCanSkipIntake(userId);
 
     const scopeResult = await persistWaiverScope(
       profile.id,

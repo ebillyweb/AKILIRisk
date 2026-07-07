@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getSession } from "next-auth/react";
 import {
   AUTH_SESSION_SYNC_CHANNEL,
   AUTH_SESSION_SYNC_STORAGE_KEY,
+  shouldRefreshSessionShell,
 } from "@/lib/auth/session-sync";
 
 interface SessionSyncProps {
@@ -13,22 +14,34 @@ interface SessionSyncProps {
   userId: string;
 }
 
+const MIN_REFRESH_INTERVAL_MS = 2000;
+
 /**
  * Reconciles stale RSC shells when another tab signs in or out (one JWT cookie per origin).
  */
 export function SessionSync({ userId }: SessionSyncProps) {
   const router = useRouter();
+  const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+
+    function scheduleRefresh() {
+      const now = Date.now();
+      if (now - lastRefreshAtRef.current < MIN_REFRESH_INTERVAL_MS) {
+        return;
+      }
+      lastRefreshAtRef.current = now;
+      router.refresh();
+    }
 
     async function reconcileSession() {
       const session = await getSession();
       const liveUserId = session?.user?.id;
 
       if (cancelled) return;
-      if (!liveUserId || liveUserId !== userId) {
-        router.refresh();
+      if (shouldRefreshSessionShell(userId, liveUserId)) {
+        scheduleRefresh();
       }
     }
 
@@ -51,16 +64,14 @@ export function SessionSync({ userId }: SessionSyncProps) {
         void reconcileSession();
       };
     } catch {
-      // BroadcastChannel unavailable — storage + focus still apply.
+      // BroadcastChannel unavailable — storage + visibility still apply.
     }
 
-    window.addEventListener("focus", reconcileSession);
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("storage", onStorage);
 
     return () => {
       cancelled = true;
-      window.removeEventListener("focus", reconcileSession);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("storage", onStorage);
       channel?.close();

@@ -247,35 +247,14 @@ export async function markSessionMfaVerified(
     }
   }
 
-  const [activeSession] = await prisma.session.findMany({
-    where: {
-      userId,
-      expires: { gt: new Date() },
-    },
-    orderBy: { expires: "desc" },
-    take: 1,
-    select: { id: true },
-  });
-
-  if (activeSession?.id) {
-    await prisma.session.update({
-      where: { id: activeSession.id },
-      data: { mfaVerified: true },
-    });
-    await recordUserLogin(userId);
-    return;
-  }
-
-  const newSessionToken = crypto.randomBytes(32).toString("hex");
-  await prisma.session.create({
-    data: {
-      sessionToken: newSessionToken,
-      userId,
-      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      mfaVerified: true,
-    },
-  });
-  await recordUserLogin(userId);
+  // Fail closed: with no matching bound row we do NOT mark the newest arbitrary
+  // row or fabricate a verified row — either would let verification land on a
+  // session the caller doesn't own. The auth `jwt` callback binds a session row
+  // to every login, so a missing/mismatched token here is anomalous; mark
+  // nothing and let the user be re-challenged on the correct (bound) row.
+  console.warn(
+    "[mfa] markSessionMfaVerified: no bound session row for the caller; verification not recorded."
+  );
 }
 
 /**

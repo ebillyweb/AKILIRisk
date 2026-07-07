@@ -1,8 +1,14 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import { sendDocumentReminderEmail } from "./reminder-email";
+import { getReminderEmailPolicyForAdvisorProfile } from "@/lib/notifications/reminder-email-policy";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import {
+  clientPortalUrl,
+  resolveClientEmailContextForClientAdvisorAssignment,
+} from "@/lib/client/client-email-context";
+import { buildDocumentReminderClientEmail } from "@/lib/client/client-system-email-content";
+import { sendClientSystemEmail } from "@/lib/email/client-branded-system-email";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 interface ProcessResult {
@@ -97,38 +103,40 @@ export async function processDocumentReminders(): Promise<ProcessResult> {
         const client = firstDoc.client;
         const advisor = firstDoc.advisor;
 
+        const reminderPolicy = await getReminderEmailPolicyForAdvisorProfile(advisor.id);
+        if (!reminderPolicy.clientReminderEmailsEnabled) {
+          continue;
+        }
+
         // Prepare client name
         const clientName = client.name ||
           (client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : null);
 
-        // Prepare advisor name
         const advisorName = advisor.user.name ||
           (advisor.user.firstName && advisor.user.lastName
             ? `${advisor.user.firstName} ${advisor.user.lastName}`
             : 'Your Advisor');
 
-        // Prepare firm name
-        const advisorFirmName = advisor.firmName || 'Akili Risk';
-
-        // Extract document names
         const missingDocuments = clientDocs.map(doc => doc.name);
 
-        // Portal URL (assuming standard documents path)
-        const portalUrl = `${appUrl}/documents`;
-
-        // Round-11 commit 2.4b: decrypt once per client.
+        const emailContext = await resolveClientEmailContextForClientAdvisorAssignment({
+          clientUserId: client.id,
+          advisorProfileId: advisor.id,
+          advisorUser: advisor.user,
+        });
         const clientEmail = decryptUserEmail(client.emailCiphertext);
 
-        // Send reminder email
-        const emailResult = await sendDocumentReminderEmail({
+        const emailResult = await sendClientSystemEmail(
           clientEmail,
-          clientName,
-          missingDocuments,
-          advisorName,
-          advisorFirmName,
-          advisorLogoUrl: advisor.logoUrl || undefined,
-          portalUrl,
-        });
+          buildDocumentReminderClientEmail({
+            context: emailContext,
+            clientName,
+            missingDocuments,
+            advisorName,
+            portalUrl: clientPortalUrl(emailContext, "/documents"),
+          }),
+          emailContext,
+        );
 
         if (emailResult.sent) {
           // Update lastReminderSentAt for all documents in this group

@@ -14,7 +14,7 @@ type SyncInput = {
 
 async function fetchPillarQuestions(pillarSlug: string): Promise<Question[]> {
   const normalized = normalizePillarSlug(pillarSlug);
-  const response = await fetch(`/api/assessment/pillars/${normalized}/questions`);
+  const response = await fetch(`/api/assessment/risk-domains/${normalized}/questions`);
   if (!response.ok) return [];
   const data = (await response.json()) as { questions?: Question[] };
   return data.questions ?? [];
@@ -31,7 +31,7 @@ async function resolveQuestionBank(
 
   let catalog = starterPillarCatalog();
   try {
-    const response = await fetch("/api/platform/pillars");
+    const response = await fetch("/api/platform/risk-domains");
     if (response.ok) {
       catalog = await response.json();
     }

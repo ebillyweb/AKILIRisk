@@ -3,7 +3,8 @@ import "server-only";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
 import { normalizeWaiverScopeInput } from "@/lib/client/assessment-scope";
-import { decryptUserEmail } from "@/lib/auth/user-email";
+import { decryptUserEmail, findUserByEmail } from "@/lib/auth/user-email";
+import { resolveClientReferenceCode } from "@/lib/client/client-reference-code.server";
 import { createInvitationToken, INVITATION_TTL_SEC } from "@/lib/invite";
 import {
   buildInvitationSignupUrl,
@@ -229,16 +230,18 @@ export async function createAdvisorInvitation(
 export async function getAdvisorInvitations(
   advisorId: string,
   filters?: InvitationListFilters,
-  pagination?: { page: number; pageSize: number }
+  pagination?: { page: number; pageSize: number },
+  options?: { pseudonymousWorkspaceLabeling?: boolean },
 ): Promise<InvitationListResult> {
   await reconcileAdvisorInvitationStatuses(advisorId);
+  const pseudonymousWorkspaceLabeling = options?.pseudonymousWorkspaceLabeling === true;
 
   const where: {
     createdBy: string;
     status?: InvitationStatus;
     createdAt?: { gte: Date };
     OR?: Array<{
-      prefillEmail?: { contains: string; mode: "insensitive" };
+      prefillEmail?: { contains: string; mode: "insensitive" } | { equals: string; mode: "insensitive" };
       clientName?: { contains: string; mode: "insensitive" };
     }>;
   } = {
@@ -256,10 +259,32 @@ export async function getAdvisorInvitations(
   }
 
   if (filters?.search) {
-    where.OR = [
-      { prefillEmail: { contains: filters.search, mode: "insensitive" } },
-      { clientName: { contains: filters.search, mode: "insensitive" } },
-    ];
+    const query = filters.search.trim();
+    if (pseudonymousWorkspaceLabeling) {
+      const matchingUsers = await prisma.user.findMany({
+        where: {
+          clientReferenceCode: { contains: query, mode: "insensitive" },
+          clientAssignments: {
+            some: { advisorId, status: { in: ["ACTIVE", "INACTIVE"] } },
+          },
+        },
+        select: { emailCiphertext: true },
+      });
+      const matchingEmails = matchingUsers.map((user) =>
+        decryptUserEmail(user.emailCiphertext).trim().toLowerCase(),
+      );
+      where.OR =
+        matchingEmails.length > 0
+          ? matchingEmails.map((email) => ({
+              prefillEmail: { equals: email, mode: "insensitive" as const },
+            }))
+          : [{ prefillEmail: { equals: "__no_match__", mode: "insensitive" as const } }];
+    } else {
+      where.OR = [
+        { prefillEmail: { contains: query, mode: "insensitive" } },
+        { clientName: { contains: query, mode: "insensitive" } },
+      ];
+    }
   }
 
   const page = pagination?.page ?? 1;
@@ -292,15 +317,67 @@ export async function getAdvisorInvitations(
   ]);
 
   return {
-    items: invitations.map((invitation) => ({
-      ...withDecryptedAdvisorEmail(invitation),
-      isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
-      canResend: invitationCanResend(invitation),
-    })),
+    items: await attachClientReferenceCodes(
+      invitations.map((invitation) => ({
+        ...withDecryptedAdvisorEmail(invitation),
+        isExpired: invitation.expiresAt ? invitation.expiresAt < new Date() : false,
+        canResend: invitationCanResend(invitation),
+      })),
+    ),
     totalCount,
     page,
     pageSize: pagination?.pageSize ?? totalCount,
   };
+}
+
+type RegisteredClientLookup = {
+  clientReferenceCode: string | null;
+  registeredClientId: string | null;
+};
+
+async function attachClientReferenceCodes<
+  T extends { prefillEmail: string | null },
+>(
+  invitations: T[],
+): Promise<Array<T & RegisteredClientLookup>> {
+  const uniqueEmails = [
+    ...new Set(
+      invitations
+        .map((invitation) => invitation.prefillEmail?.trim().toLowerCase())
+        .filter((email): email is string => Boolean(email)),
+    ),
+  ];
+
+  const clientByEmail = new Map<string, RegisteredClientLookup>();
+  await Promise.all(
+    uniqueEmails.map(async (email) => {
+      const user = await findUserByEmail(email, {
+        select: { id: true, clientReferenceCode: true },
+      });
+      if (!user) {
+        clientByEmail.set(email, {
+          clientReferenceCode: null,
+          registeredClientId: null,
+        });
+        return;
+      }
+      const code = await resolveClientReferenceCode(user.id, user.clientReferenceCode);
+      clientByEmail.set(email, {
+        clientReferenceCode: code,
+        registeredClientId: user.id,
+      });
+    }),
+  );
+
+  return invitations.map((invitation) => {
+    const email = invitation.prefillEmail?.trim().toLowerCase();
+    const client = email ? clientByEmail.get(email) : undefined;
+    return {
+      ...invitation,
+      clientReferenceCode: client?.clientReferenceCode ?? null,
+      registeredClientId: client?.registeredClientId ?? null,
+    };
+  });
 }
 
 export async function resendInvitation(

@@ -25,26 +25,40 @@ import {
   type CreateEnterpriseInput,
 } from "@/lib/admin/actions";
 import {
+  SELF_SERVE_TIERS,
+  TIER_CATALOG,
+  TIER_DISPLAY_NAME,
+} from "@/lib/billing/tier-catalog";
+import {
   ENTERPRISE_DEFAULT_CLIENT_LIMIT,
   ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT,
   ENTERPRISE_DEFAULT_SEAT_LIMIT,
 } from "@/lib/enterprise/constants";
+import {
+  SUBDOMAIN_SLUG_INPUT_PATTERN,
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_MIN_LENGTH,
+  SUBDOMAIN_SLUG_REGEX,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+  sanitizeSubdomainSlugInput,
+} from "@/lib/advisor/subdomain-slug-input";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   slug: z
     .string()
-    .min(3, "Slug must be at least 3 characters")
-    .max(20)
-    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers, and hyphens only"),
+    .min(SUBDOMAIN_SLUG_MIN_LENGTH, SUBDOMAIN_SLUG_VALIDATION_MESSAGE)
+    .max(SUBDOMAIN_SLUG_MAX_LENGTH)
+    .regex(SUBDOMAIN_SLUG_REGEX, SUBDOMAIN_SLUG_VALIDATION_MESSAGE),
   ownerUserId: z.string().min(1, "Select an owner"),
+  moduleTier: z.enum(["ESSENTIALS", "PROFESSIONAL", "BUSINESS", "PLATINUM"]),
   seatLimit: z.string().optional(),
   clientLimit: z.string().optional(),
   perAdvisorClientLimit: z.string().optional(),
   paymentMethod: z.enum(["WIRE", "CARD"]),
   stripeCustomerId: z.string().optional(),
   stripeSubscriptionId: z.string().optional(),
-  billingCycle: z.enum(["MONTHLY", "ANNUAL"]).optional(),
+  billingCycle: z.enum(["MONTHLY", "ANNUAL"]),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -72,6 +86,7 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
       name: "",
       slug: "",
       ownerUserId: "",
+      moduleTier: "PROFESSIONAL",
       seatLimit: String(ENTERPRISE_DEFAULT_SEAT_LIMIT),
       clientLimit: String(ENTERPRISE_DEFAULT_CLIENT_LIMIT),
       perAdvisorClientLimit: String(ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT),
@@ -81,6 +96,8 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
   });
 
   const paymentMethod = watch("paymentMethod");
+  const moduleTier = watch("moduleTier");
+  const billingCycle = watch("billingCycle");
 
   const parseOptionalLimit = (value: string | undefined, fallback: number) => {
     const parsed = Number(value);
@@ -94,6 +111,7 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
         name: data.name,
         slug: data.slug,
         ownerUserId: data.ownerUserId,
+        moduleTier: data.moduleTier,
         seatLimit: parseOptionalLimit(data.seatLimit, ENTERPRISE_DEFAULT_SEAT_LIMIT),
         clientLimit: parseOptionalLimit(data.clientLimit, ENTERPRISE_DEFAULT_CLIENT_LIMIT),
         perAdvisorClientLimit: parseOptionalLimit(
@@ -111,11 +129,19 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
       };
       const result = await createEnterpriseByAdmin(payload);
       if (!result.success) {
-        toast.error(result.error ?? "Failed to create enterprise.");
+        toast.error(result.error ?? "Failed to submit enterprise provisioning.");
         return;
       }
-      toast.success("Enterprise firm created.");
-      router.push("/admin/enterprises");
+      toast.success(
+        result.queued
+          ? "Provisioning submitted. Firm setup will complete in the background."
+          : "Enterprise firm created.",
+      );
+      router.push(
+        result.enterpriseId
+          ? `/admin/enterprises/${result.enterpriseId}`
+          : "/admin/enterprises",
+      );
       router.refresh();
     } catch {
       toast.error("Failed to create enterprise.");
@@ -149,7 +175,24 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
 
             <div className="space-y-2">
               <Label htmlFor="enterprise-slug">Subdomain slug</Label>
-              <Input id="enterprise-slug" placeholder="acme-wealth" {...register("slug")} />
+              <Input
+                id="enterprise-slug"
+                placeholder="acme-wealth"
+                maxLength={SUBDOMAIN_SLUG_MAX_LENGTH}
+                pattern={SUBDOMAIN_SLUG_INPUT_PATTERN}
+                title={SUBDOMAIN_SLUG_VALIDATION_MESSAGE}
+                spellCheck={false}
+                autoComplete="off"
+                autoCapitalize="off"
+                inputMode="url"
+                {...register("slug", {
+                  onChange: (event) => {
+                    const sanitized = sanitizeSubdomainSlugInput(event.target.value);
+                    setValue("slug", sanitized, { shouldValidate: true });
+                  },
+                })}
+              />
+              <p className="text-xs text-muted-foreground">{SUBDOMAIN_SLUG_VALIDATION_MESSAGE}</p>
               {errors.slug ? (
                 <p className="text-sm text-destructive">{errors.slug.message}</p>
               ) : null}
@@ -180,6 +223,58 @@ export function AdminCreateEnterpriseForm({ owners }: { owners: OwnerOption[] })
               {errors.ownerUserId ? (
                 <p className="text-sm text-destructive">{errors.ownerUserId.message}</p>
               ) : null}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="module-tier">Module tier</Label>
+                <Select
+                  value={moduleTier}
+                  onValueChange={(value) =>
+                    setValue(
+                      "moduleTier",
+                      value as FormData["moduleTier"],
+                      { shouldValidate: true }
+                    )
+                  }
+                >
+                  <SelectTrigger id="module-tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SELF_SERVE_TIERS.map((tier) => (
+                      <SelectItem key={tier} value={tier}>
+                        {TIER_DISPLAY_NAME[tier]} — {TIER_CATALOG[tier].modules}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.moduleTier ? (
+                  <p className="text-sm text-destructive">{errors.moduleTier.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="billing-cycle">Billing cycle</Label>
+                <Select
+                  value={billingCycle}
+                  onValueChange={(value) =>
+                    setValue(
+                      "billingCycle",
+                      value as FormData["billingCycle"],
+                      { shouldValidate: true }
+                    )
+                  }
+                >
+                  <SelectTrigger id="billing-cycle">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MONTHLY">Monthly</SelectItem>
+                    <SelectItem value="ANNUAL">Annual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">

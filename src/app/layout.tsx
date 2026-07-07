@@ -3,6 +3,9 @@ import { Cormorant_Garamond, Geist_Mono, Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { FacebookPixel } from "@/components/marketing/FacebookPixel";
+import { auth } from "@/lib/auth";
+import { buildOrganizationJsonLd, buildSocialMetadata, DEFAULT_PUBLIC_DESCRIPTION, getSeoSiteOrigin } from "@/lib/seo/site";
 import { getThemeInlineScript } from "@/lib/theme/theme-inline-script";
 
 const manrope = Manrope({
@@ -22,11 +25,16 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: getSeoSiteOrigin(),
   title: {
     default: "AKILI Risk Intelligence",
     template: "%s | AKILI Risk Intelligence",
   },
-  description: "Personal Risk Profile",
+  description: DEFAULT_PUBLIC_DESCRIPTION,
+  ...buildSocialMetadata({
+    title: "AKILI Risk Intelligence",
+    description: DEFAULT_PUBLIC_DESCRIPTION,
+  }),
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -48,6 +56,7 @@ export default async function RootLayout({
   const headersList = await headers();
   const isBrandedTenant = headersList.get("x-branded-mode") === "true";
   const forceTenantLight = headersList.get("x-tenant-force-light") === "true";
+  const session = await auth();
 
   return (
     <html
@@ -69,15 +78,22 @@ export default async function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#4EA5D9" />
         <meta name="msapplication-TileColor" content="#4EA5D9" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildOrganizationJsonLd()),
+          }}
+        />
       </head>
       <body
         className={`${manrope.variable} ${geistMono.variable} ${cormorant.variable} bg-background text-foreground antialiased`}
         data-branded-mode={isBrandedTenant ? "true" : undefined}
         suppressHydrationWarning
       >
-        <Providers>
+        <Providers session={session}>
           <div className="relative isolate min-h-screen">{children}</div>
         </Providers>
+        <FacebookPixel />
       </body>
     </html>
   );

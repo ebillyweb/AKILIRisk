@@ -137,8 +137,10 @@ export class RecommendationEngine {
       }
     }
 
-    // Rule matches if >50% of weighted conditions are met
-    const matches = satisfiedWeight / totalWeight > 0.5;
+    // Rule matches if >50% of weighted conditions are met. A rule with no
+    // conditions (totalWeight === 0) never matches — avoid 0/0 = NaN, which
+    // silently behaved the same but is easy to misread.
+    const matches = totalWeight > 0 ? satisfiedWeight / totalWeight > 0.5 : false;
 
     return { matches, triggerReasons };
   }
@@ -283,7 +285,9 @@ export class RecommendationEngine {
   }
 
   private async getServiceRecommendation(serviceId: string): Promise<ServiceRecommendation | null> {
-    const service = await prisma.serviceRecommendation.findUnique({
+    // findFirst (not findUnique): `isActive` is not part of a unique index, so
+    // findUnique throws PrismaClientValidationError at runtime.
+    const service = await prisma.serviceRecommendation.findFirst({
       where: { id: serviceId, isActive: true }
     });
 

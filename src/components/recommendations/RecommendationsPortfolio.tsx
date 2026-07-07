@@ -40,7 +40,65 @@ function tierLabel(tier: string | null): string | null {
   return tier === "ENHANCED" ? "Enhanced" : "Baseline";
 }
 
-export function RecommendationsPortfolio({ groups }: { groups: ClientRecommendationGroup[] }) {
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+type EngagementData = {
+  completedCount: number;
+  totalCount: number;
+  blockedCount: number;
+};
+
+type RecommendationsPortfolioProps = {
+  groups: ClientRecommendationGroup[];
+  engagementData?: Map<string, EngagementData>;
+  trackingEnabled?: boolean;
+};
+
+function EngagementIndicator({ data }: { data?: EngagementData }) {
+  if (!data) {
+    return (
+      <>
+        <span aria-hidden>&middot;</span>
+        <span className="text-muted-foreground">Engagement: --</span>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span aria-hidden>&middot;</span>
+      <span className="tabular-nums">
+        Engagement: {data.completedCount}/{data.totalCount}
+      </span>
+      {data.blockedCount > 0 && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full bg-destructive"
+                aria-label={`${data.blockedCount} blocked milestone${data.blockedCount === 1 ? "" : "s"}`}
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              {data.blockedCount} blocked milestone{data.blockedCount === 1 ? "" : "s"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </>
+  );
+}
+
+export function RecommendationsPortfolio({
+  groups,
+  engagementData,
+  trackingEnabled,
+}: RecommendationsPortfolioProps) {
   if (groups.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-6 py-12 text-center">
@@ -83,6 +141,11 @@ export function RecommendationsPortfolio({ groups }: { groups: ClientRecommendat
                       Draft in progress
                     </Badge>
                   ) : null}
+                  {trackingEnabled && (
+                    <EngagementIndicator
+                      data={engagementData?.get(group.clientId)}
+                    />
+                  )}
                 </CardDescription>
               </div>
               <div className="flex flex-wrap gap-2 shrink-0">

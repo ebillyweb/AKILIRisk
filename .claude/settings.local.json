@@ -25,7 +25,22 @@
       "Bash(npm run *)",
       "Bash(npx eslint *)",
       "Bash(npx tsc *)",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(git add:*)",
+      "Bash(ls -la /Users/bwoodtalton/Projects/AkiliRisk/src/app/\\\\\\(protected\\\\\\)/dashboard/)",
+      "Bash(ls -la /Users/bwoodtalton/Projects/AkiliRisk/src/app/\\\\\\(protected\\\\\\)/admin/recommendations/)",
+      "Bash(node ~/.claude/get-shit-done/bin/gsd-tools.cjs state record-session --stopped-at \"Phase 22 context gathered\" --resume-file \".planning/phases/22-recommendation-experience/22-CONTEXT.md\" 2>&1)",
+      "Bash(node -e \"\nrequire\\('dotenv'\\).config\\({ path: '.env.local' }\\);\nconst { Pool } = require\\('pg'\\);\nconst pool = new Pool\\({ connectionString: process.env.DATABASE_URL }\\);\npool.query\\('SELECT ap.id, ap.\\\\\"userId\\\\\", ap.\\\\\"firmName\\\\\", ap.\\\\\"enterpriseId\\\\\", u.name FROM \\\\\"AdvisorProfile\\\\\" ap JOIN \\\\\"User\\\\\" u ON u.id = ap.\\\\\"userId\\\\\" LIMIT 5'\\)\n  .then\\(r => { console.log\\(JSON.stringify\\(r.rows, null, 2\\)\\); pool.end\\(\\); }\\)\n  .catch\\(e => { console.error\\(e.message\\); pool.end\\(\\); }\\);\n\" 2>/dev/null)",
+      "Skill(gsd-plan-phase)",
+      "Bash(command -v gsd-sdk 2>/dev/null && echo \"found\" || echo \"not found\")",
+      "Bash(node -e ' *)",
+      "Bash(awk '/^model Report /{f=1} f&&/assessment[[:space:]]+Assessment/{print NR\": \"$0} f&&/^}/{f=0}' prisma/schema.prisma)",
+      "Bash(awk '/^model InviteCode /{f=1} f{print NR\": \"$0} f&&/^}/{f=0}' prisma/schema.prisma)",
+      "Bash(awk '/^model AdvisorProfile /{f=1} f&&/ClientAdvisorAssignment/{print NR\": \"$0} f&&/^}/{f=0}' prisma/schema.prisma)",
+      "Bash(awk '/^model ClientAdvisorAssignment /{f=1} f&&/\\(clientId|advisorId|status\\)/{print NR\": \"$0} f&&/^}/{f=0}' prisma/schema.prisma)",
+      "Bash(npx --yes knip@5 --no-progress --reporter symbols)",
+      "Bash(git rm *)",
+      "Bash(awk '{print $2}')"
     ]
   }
 }

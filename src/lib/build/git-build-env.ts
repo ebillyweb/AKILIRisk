@@ -10,7 +10,7 @@ export function defaultGitRunner(
   cwd: string
 ): string | undefined {
   try {
-    return execSync(command, { encoding: "utf8", cwd }).trim();
+    return execSync(command, { encoding: "utf8", cwd, stdio: "pipe" }).trim();
   } catch {
     return undefined;
   }

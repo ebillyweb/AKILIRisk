@@ -1,8 +1,9 @@
 import "server-only";
 
 import { InvitationStatus, type UserRole } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
+import { prisma } from "@/lib/db";
+import { generateClientReferenceCode } from "@/lib/client/client-reference-code";
 
 type TxLike = Pick<
   typeof prisma,
@@ -192,6 +193,7 @@ export async function provisionClientFromInviteCode(
         password: null,
         name: userName,
         emailVerified: new Date(),
+        clientReferenceCode: generateClientReferenceCode(),
       },
       select: { id: true },
     });

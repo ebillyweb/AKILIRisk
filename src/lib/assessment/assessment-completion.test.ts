@@ -26,6 +26,15 @@ function mockTx(overrides: {
   return { tx, assessmentUpdate, enterPreview };
 }
 
+vi.mock("@/lib/methodology/cached-pillar-catalog", async () => {
+  const { starterPillarCatalog } = await import("@/lib/methodology/pillar-catalog");
+  return {
+    getPlatformPillarCatalog: vi.fn(async () => starterPillarCatalog()),
+    getPlatformPillarSlugs: vi.fn(async () => starterPillarCatalog().map((p) => p.id)),
+    isPlatformRiskAreaSlug: vi.fn(async (slug: string) => starterPillarCatalog().some((p) => p.id === slug)),
+  };
+});
+
 vi.mock("@/lib/assessment/deliverable-phase", () => ({
   enterPreview: vi.fn().mockResolvedValue(undefined),
 }));
@@ -80,7 +89,7 @@ describe("syncAssessmentCompletionStatus", () => {
     expect(enterPreview).not.toHaveBeenCalled();
   });
 
-  it("marks COMPLETED for legacy empty includedPillars when all six scored", async () => {
+  it("marks COMPLETED for legacy empty includedPillars when all pillars scored", async () => {
     const { tx, assessmentUpdate } = mockTx({
       includedPillars: [],
       scoredPillars: [
@@ -90,6 +99,10 @@ describe("syncAssessmentCompletionStatus", () => {
         "insurance",
         "geographic-environmental",
         "reputational-social",
+        "liquidity-cash",
+        "tax-exposure",
+        "estate-succession",
+        "family-governance-behavioral",
       ],
     });
 

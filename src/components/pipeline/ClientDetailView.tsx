@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Mail, Calendar, BarChart3, FileText, CheckCircle } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, CheckCircle, ClipboardList } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
+import { ClientAssessmentLifecycleToolbar } from "@/components/assessment/ClientAssessmentLifecycleToolbar";
+import { RequestRescoreButton } from "@/components/assessment/RequestRescoreButton";
 import { IntakeWaiverScopePanel } from "@/components/pipeline/IntakeWaiverScopePanel";
 import { ExportIntakePdfButton } from "@/components/advisor/ExportIntakePdfButton";
 import { ExportAssessmentPdfButton } from "@/components/advisor/ExportAssessmentPdfButton";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FieldHelp } from "@/components/ui/field-help";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,15 +22,20 @@ import { WorkflowTimeline } from "./WorkflowTimeline";
 import { DocumentRequirements } from "./DocumentRequirements";
 import { ClientAuthControls } from "./ClientAuthControls";
 import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
-import { getStageLabel } from "@/lib/pipeline/status";
+import { getAdvisorPipelineStageLabel, resolveAdvisorPipelineDisplayStage } from "@/lib/pipeline/status";
 import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
 import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
+import { resolveAdvisorClientPipelineLabels } from "@/lib/pipeline/client-display";
+import { PSEUDONYMOUS_CLIENT_LABELING_NOTE } from "@/lib/advisor/pii-policy";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { TemplateList } from "@/components/reports/TemplateList";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
+  canSkipIntake?: boolean;
+  documentRequirementsEnabled?: boolean;
+  actionPlanEnabled?: boolean;
 }
 
 function getStageBadgeVariant(stage: ClientWorkflowStage) {
@@ -69,10 +78,15 @@ function isIntakeFinished(detail: ClientDetail['intakeDetails']) {
   );
 }
 
-export function ClientDetailView({ detail }: ClientDetailViewProps) {
+export function ClientDetailView({
+  detail,
+  canSkipIntake = false,
+  documentRequirementsEnabled = true,
+  actionPlanEnabled = true,
+}: ClientDetailViewProps) {
   const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker } = detail;
   const assessmentDomains = assessmentDomainPicker.domains;
-  const displayName = client.name || 'Unnamed Client';
+  const clientLabels = resolveAdvisorClientPipelineLabels(client);
   const assignmentActive = advisorAssignment.status === "ACTIVE";
   const intakeWaived = advisorAssignment.intakeWaivedAt != null;
   const intakeSubmitted = isIntakeFinished(intakeDetails);
@@ -82,15 +96,22 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
     client.awaitingIntakeReview && !assessmentCompleted;
   const intakeReviewId =
     intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    client.stage,
+    documentRequirementsEnabled,
+  );
+  const stageLabel = getAdvisorPipelineStageLabel(
+    client.stage,
+    documentRequirementsEnabled,
+  );
   return (
     <div className="container mx-auto py-6">
-      {/* Breadcrumb */}
       <div className="mb-6">
         <Link
           href="/advisor/pipeline"
-          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="mr-1.5 size-4" />
           Back to Pipeline
         </Link>
       </div>
@@ -106,39 +127,39 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
       ) : null}
 
       {/* Client Header */}
-      <div className="mb-8">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold">{displayName}</h1>
-            <div className="flex items-center gap-4 text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Mail className="w-4 h-4" />
-                <span>{client.email}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>Assigned {format(client.assignedAt, 'MMM d, yyyy')}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-right space-y-2">
-            <Badge variant={getStageBadgeVariant(client.stage)} className="text-sm">
-              {getStageLabel(client.stage)}
+      <div className="mb-8" data-tour="pipeline-client-header">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight">{clientLabels.headline}</h1>
+            <Badge variant={getStageBadgeVariant(displayStage)} className="text-xs font-semibold uppercase tracking-wide">
+              {stageLabel}
             </Badge>
-            <div className="text-sm text-muted-foreground">
-              Last activity {formatDistanceToNow(client.lastActivity, { addSuffix: true })}
-            </div>
           </div>
-        </div>
 
-        {/* Progress Bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-muted-foreground">Workflow Progress</span>
-            <span className="font-medium">{client.progress}%</span>
+          <p className="text-sm text-muted-foreground">
+            {[
+              clientLabels.metaEmail,
+              `Assigned ${format(client.assignedAt, "MMM d, yyyy")}`,
+              `Active ${formatDistanceToNow(client.lastActivity, { addSuffix: true })}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+
+          {clientLabels.pseudonymous ? (
+            <p className="text-sm leading-snug text-muted-foreground">
+              {PSEUDONYMOUS_CLIENT_LABELING_NOTE}
+            </p>
+          ) : null}
+
+          <div className="flex items-center gap-3 pt-1">
+            <Progress
+              value={client.progress}
+              className="h-1.5 flex-1"
+              aria-label={`Workflow progress ${client.progress}%`}
+            />
+            <span className="text-sm tabular-nums text-muted-foreground">{client.progress}%</span>
           </div>
-          <Progress value={client.progress} className="h-2" />
         </div>
       </div>
 
@@ -147,7 +168,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Workflow Timeline */}
-          <Card>
+          <Card data-tour="pipeline-workflow-timeline">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
@@ -155,11 +176,15 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <WorkflowTimeline events={timeline} currentStage={client.stage} />
+              <WorkflowTimeline
+                events={timeline}
+                currentStage={client.stage}
+                documentRequirementsEnabled={documentRequirementsEnabled}
+              />
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-tour="pipeline-intake">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
@@ -182,6 +207,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   focusAreas={advisorAssignment.focusAreas}
                   assessmentDomainPicker={assessmentDomainPicker}
                   showWaiverAction={false}
+                  canManageWaiverScope={canSkipIntake}
                   waiverLocked={assessmentStarted}
                 />
               ) : intakeDetails ? (
@@ -259,7 +285,8 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                         includedPillars={advisorAssignment.includedPillars}
                         focusAreas={advisorAssignment.focusAreas}
                         assessmentDomainPicker={assessmentDomainPicker}
-                        showWaiverAction
+                        showWaiverAction={canSkipIntake}
+                        canManageWaiverScope={canSkipIntake}
                         waiverLocked={assessmentStarted}
                       />
                     ) : null}
@@ -274,7 +301,8 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   includedPillars={advisorAssignment.includedPillars}
                   focusAreas={advisorAssignment.focusAreas}
                   assessmentDomainPicker={assessmentDomainPicker}
-                  showWaiverAction
+                  showWaiverAction={canSkipIntake}
+                  canManageWaiverScope={canSkipIntake}
                   waiverLocked={assessmentStarted}
                 />
               )}
@@ -283,7 +311,7 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
 
           {/* Assessment Summary */}
           {assessmentDetails && (
-            <Card>
+            <Card data-tour="pipeline-assessment">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" />
@@ -291,21 +319,32 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                {client.needsRescore && assessmentDetails.answersChangedAfterCompleteAt ? (
-                  <Alert variant="warning">
-                    <AlertTitle>Reassessment needed</AlertTitle>
-                    <AlertDescription>
-                      This client changed assessment answers after completion
-                      {assessmentDetails.version
-                        ? ` (currently scored as v${assessmentDetails.version})`
-                        : ""}
-                      . Answers were updated{" "}
-                      {formatDistanceToNow(
-                        new Date(assessmentDetails.answersChangedAfterCompleteAt),
-                        { addSuffix: true },
-                      )}
-                      . Request a platform re-score so scores, recommendations, and
-                      published reports reflect the latest responses.
+                {client.staleScores && assessmentDetails.answersChangedAfterCompleteAt ? (
+                  <Alert
+                    variant="warning"
+                    data-tour="pipeline-stale-scores-alert"
+                  >
+                    <AlertTitle className="flex items-center gap-1.5">
+                      {STALE_SCORES_COPY.alertTitle}
+                      <FieldHelp
+                        helpKey="assessment-stale-scores-alert"
+                        triggerLabel="Re-score vs reassessment"
+                      />
+                    </AlertTitle>
+                    <AlertDescription className="space-y-3">
+                      <p>
+                        {STALE_SCORES_COPY.alertDescription}
+                        {assessmentDetails.version
+                          ? ` Currently scored as v${assessmentDetails.version}.`
+                          : ""}{" "}
+                        Answers were updated{" "}
+                        {formatDistanceToNow(
+                          new Date(assessmentDetails.answersChangedAfterCompleteAt),
+                          { addSuffix: true },
+                        )}
+                        .
+                      </p>
+                      <RequestRescoreButton assessmentId={assessmentDetails.id} />
                     </AlertDescription>
                   </Alert>
                 ) : null}
@@ -375,7 +414,9 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                           href={`/advisor/pipeline/${client.id}/assessment/${assessmentDetails.id}`}
                         >
                           <FileText className="mr-2 h-4 w-4" />
-                          Review answers
+                          {assessmentDetails.status === "COMPLETED"
+                            ? "Review answers"
+                            : "Review in-progress answers"}
                         </Link>
                       </Button>
                     )}
@@ -388,6 +429,29 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                     ) : null}
                   </div>
                 )}
+
+                {!assessmentDetails.completedAt && assessmentDetails.id ? (
+                  <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap">
+                    <Button variant="default" className="justify-center sm:w-auto" asChild>
+                      <Link
+                        href={`/advisor/pipeline/${client.id}/assessment/${assessmentDetails.id}`}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Review in-progress answers
+                      </Link>
+                    </Button>
+                  </div>
+                ) : null}
+
+                {assessmentDetails.id ? (
+                  <ClientAssessmentLifecycleToolbar
+                    assessmentId={assessmentDetails.id}
+                    assessmentStatus={assessmentDetails.status}
+                    showStaleScoresActions={false}
+                    reassessmentEnabled={detail.assessmentLifecycle.reassessmentEnabled}
+                    targetedQuestionCount={detail.assessmentLifecycle.targetedQuestionCount}
+                  />
+                ) : null}
               </CardContent>
             </Card>
           )}
@@ -420,16 +484,22 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
               — email reassignment + magic-link re-issue. Server actions
               ownership-gated through ClientAdvisorAssignment. */}
           {assignmentActive ? (
-            <ClientAuthControls clientId={client.id} currentEmail={client.email} />
+            <ClientAuthControls
+              clientId={client.id}
+              currentEmail={client.email}
+              pseudonymousLabeling={clientLabels.pseudonymous}
+            />
           ) : null}
 
           {/* Document Requirements */}
-          {assignmentActive ? (
-            <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
+          {assignmentActive && documentRequirementsEnabled ? (
+            <div data-tour="pipeline-documents">
+              <DocumentRequirements clientId={client.id} requirements={documentRequirements} />
+            </div>
           ) : null}
 
           {/* Quick Actions */}
-          <Card>
+          <Card data-tour="pipeline-quick-actions">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
@@ -454,6 +524,15 @@ export function ClientDetailView({ detail }: ClientDetailViewProps) {
                   </Link>
                 </Button>
               )}
+
+              {assessmentDetails?.completedAt && actionPlanEnabled ? (
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link href={`/advisor/clients/${client.id}/guidance`}>
+                    <ClipboardList className="w-4 h-4 mr-2" />
+                    Client Guidance
+                  </Link>
+                </Button>
+              ) : null}
 
               {/* §4.5 commit 3: link to the versioned report view instead
                   of inline-downloading the latest published. The list page

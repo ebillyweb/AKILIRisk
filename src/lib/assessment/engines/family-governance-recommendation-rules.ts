@@ -190,6 +190,139 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     ],
     priority: 88,
   },
+
+  // Liquidity-Cash rules
+  {
+    id: "fg_ui_liquidity_reserves",
+    serviceRecommendationId: "liquidity_cash_reserve_planning",
+    ruleName: "Cash reserve planning (Belvedere)",
+    description: "No documented emergency liquidity reserve",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.liqA1, operator: "equals", value: 0, weight: 4 },
+      { type: "score_threshold", pillarId: "liquidity-cash", operator: "less_than", value: 1.5, weight: 3 },
+    ],
+    priority: 91,
+  },
+  {
+    id: "fg_ui_liquidity_credit",
+    serviceRecommendationId: "liquidity_credit_line_review",
+    ruleName: "Credit facility review (Belvedere)",
+    description: "Credit lines not documented or reviewed",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.liqA2, operator: "equals", value: 0, weight: 4 },
+    ],
+    priority: 86,
+  },
+  {
+    id: "fg_ui_liquidity_concentration",
+    serviceRecommendationId: "liquidity_concentration_stress_test",
+    ruleName: "Illiquid concentration stress test (Belvedere)",
+    description: "Illiquid concentration not stress-tested",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.liqA3, operator: "equals", value: 0, weight: 4 },
+      { type: "score_threshold", pillarId: "liquidity-cash", operator: "less_than", value: 1.8, weight: 3 },
+    ],
+    priority: 81,
+  },
+
+  // Tax-Exposure rules
+  {
+    id: "fg_ui_tax_residency",
+    serviceRecommendationId: "tax_residency_review",
+    ruleName: "Tax residency review (Belvedere)",
+    description: "Tax residency posture not documented or reviewed",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.taxA1, operator: "equals", value: 0, weight: 4 },
+    ],
+    priority: 91,
+  },
+  {
+    id: "fg_ui_tax_event_modeling",
+    serviceRecommendationId: "tax_liquidity_event_modeling",
+    ruleName: "Pre-event tax modeling (Belvedere)",
+    description: "Tax impacts not modeled before liquidity events",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.taxA2, operator: "equals", value: 0, weight: 4 },
+    ],
+    priority: 86,
+  },
+  {
+    id: "fg_ui_tax_estate_exposure",
+    serviceRecommendationId: "tax_estate_exposure_mapping",
+    ruleName: "Estate tax exposure mapping (Belvedere)",
+    description: "Estate-tax exposure not mapped across entities",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.taxA3, operator: "equals", value: 0, weight: 4 },
+      { type: "score_threshold", pillarId: "tax-exposure", operator: "less_than", value: 2.0, weight: 3 },
+    ],
+    priority: 81,
+  },
+
+  // Estate-Succession rules
+  {
+    id: "fg_ui_estate_documents",
+    serviceRecommendationId: "estate_document_review",
+    ruleName: "Estate document currency review (Belvedere)",
+    description: "Wills, trusts, or powers of attorney stale or inaccessible",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.estA1, operator: "equals", value: 0, weight: 4 },
+    ],
+    priority: 91,
+  },
+  {
+    id: "fg_ui_estate_beneficiaries",
+    serviceRecommendationId: "estate_beneficiary_audit",
+    ruleName: "Beneficiary designation audit (Belvedere)",
+    description: "Beneficiary designations not aligned across accounts",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.estA2, operator: "equals", value: 0, weight: 4 },
+    ],
+    priority: 86,
+  },
+  {
+    id: "fg_ui_estate_succession",
+    serviceRecommendationId: "estate_succession_protocol",
+    ruleName: "Business succession protocol (Belvedere)",
+    description: "No documented succession protocol for key principals",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.estA3, operator: "equals", value: 0, weight: 4 },
+      { type: "score_threshold", pillarId: "estate-succession", operator: "less_than", value: 1.5, weight: 3 },
+    ],
+    priority: 81,
+  },
+
+  // Behavioral Resilience rules
+  {
+    id: "fg_ui_behavioral_meetings",
+    serviceRecommendationId: "behavioral_family_governance_program",
+    ruleName: "Family governance meeting program (Belvedere)",
+    description: "No structured family governance meetings",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.behA1, operator: "equals", value: 0, weight: 4 },
+    ],
+    priority: 91,
+  },
+  {
+    id: "fg_ui_behavioral_decision_rights",
+    serviceRecommendationId: "behavioral_decision_rights_framework",
+    ruleName: "Decision rights framework (Belvedere)",
+    description: "Decision rights and spending authorities not documented",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.behA2, operator: "equals", value: 0, weight: 4 },
+    ],
+    priority: 86,
+  },
+  {
+    id: "fg_ui_behavioral_discipline",
+    serviceRecommendationId: "behavioral_investment_discipline",
+    ruleName: "Behavioral finance discipline program (Belvedere)",
+    description: "Behavioral finance pitfalls not addressed before major investments",
+    triggerConditions: [
+      { type: "answer_match", questionId: Q.behA3, operator: "equals", value: 0, weight: 4 },
+      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.5, weight: 3 },
+    ],
+    priority: 81,
+  },
 ];
 
 export const FAMILY_GOVERNANCE_ALL_NO_EXPECTED_SERVICE_IDS = [
@@ -209,4 +342,16 @@ export const FAMILY_GOVERNANCE_ALL_NO_EXPECTED_SERVICE_IDS = [
   "social_media_governance",
   "social_crisis_response",
   "cyber_security_uplift",
+  "liquidity_cash_reserve_planning",
+  "liquidity_credit_line_review",
+  "liquidity_concentration_stress_test",
+  "tax_residency_review",
+  "tax_liquidity_event_modeling",
+  "tax_estate_exposure_mapping",
+  "estate_document_review",
+  "estate_beneficiary_audit",
+  "estate_succession_protocol",
+  "behavioral_family_governance_program",
+  "behavioral_decision_rights_framework",
+  "behavioral_investment_discipline",
 ] as const;

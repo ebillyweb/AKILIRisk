@@ -7,7 +7,7 @@ import { Pool } from "pg";
  * (e.g. new User columns). Otherwise `globalThis.prisma` may keep a client
  * generated before `prisma generate`, causing PrismaClientValidationError on new fields.
  */
-const PRISMA_CLIENT_BUILD_ID = 4;
+const PRISMA_CLIENT_BUILD_ID = 5;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

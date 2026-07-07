@@ -16,6 +16,10 @@ export function canDeleteAdvisorQuestion(sourceKind: AdvisorQuestionSource): boo
   return sourceKind === AdvisorQuestionSource.CUSTOM;
 }
 
+export function isEnterpriseAdvisorQuestion(sourceKind: AdvisorQuestionSource): boolean {
+  return sourceKind === AdvisorQuestionSource.ENTERPRISE;
+}
+
 export function deleteAdvisorQuestionError(): string {
   return "Platform base questions cannot be deleted. Hide them instead.";
 }

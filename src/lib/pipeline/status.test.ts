@@ -6,7 +6,7 @@ import {
 } from './documents';
 import { validateStoredDocumentMime } from '@/lib/documents/validation';
 
-import { computeClientStage, isStalled, isWorkflowEscalation } from './status';
+import { computeClientStage, isStalled, isWorkflowEscalation, getAdvisorPipelineStageLabel, resolveAdvisorPipelineDisplayStage } from './status';
 
 describe('aggregateMandatoryDocumentCounts', () => {
   it('counts only required rows per client', () => {
@@ -91,6 +91,26 @@ describe('hasUnfulfilledMandatoryDocuments', () => {
 
   it('is false when all mandatory docs are done', () => {
     expect(hasUnfulfilledMandatoryDocuments({ required: 2, fulfilled: 2 })).toBe(false);
+  });
+});
+
+describe('resolveAdvisorPipelineDisplayStage', () => {
+  it('maps DOCUMENTS_REQUIRED to assessment complete when documents UI is hidden', () => {
+    expect(
+      resolveAdvisorPipelineDisplayStage('DOCUMENTS_REQUIRED', false),
+    ).toBe('ASSESSMENT_COMPLETE');
+    expect(
+      getAdvisorPipelineStageLabel('DOCUMENTS_REQUIRED', false),
+    ).toBe('Assessment Complete');
+  });
+
+  it('preserves DOCUMENTS_REQUIRED when documents UI is enabled', () => {
+    expect(
+      resolveAdvisorPipelineDisplayStage('DOCUMENTS_REQUIRED', true),
+    ).toBe('DOCUMENTS_REQUIRED');
+    expect(
+      getAdvisorPipelineStageLabel('DOCUMENTS_REQUIRED', true),
+    ).toBe('Documents Required');
   });
 });
 

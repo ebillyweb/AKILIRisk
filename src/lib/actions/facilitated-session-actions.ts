@@ -19,6 +19,7 @@ import {
   listOpenFacilitatedSessionsForAdvisor,
 } from "@/lib/facilitated/queries";
 import { mergeFacilitatedLauncherClients, type FacilitatedLauncherClient } from "@/lib/facilitated/launcher-clients";
+import { mapPipelineClientToLauncherClient } from "@/lib/facilitated/launcher-display";
 import { provisionFacilitatedClient } from "@/lib/facilitated/provision-facilitated-client";
 import {
   createFacilitatedClientSchema,
@@ -30,12 +31,84 @@ import {
   type FacilitatedSessionSummary,
 } from "@/lib/facilitated/types";
 import { getClientPipelineForAdvisorUser } from "@/lib/pipeline/queries";
+import type { PipelineClient } from "@/lib/pipeline/types";
+import { resolveAdvisorClientPipelineLabels } from "@/lib/pipeline/client-display";
+import { loadAdvisorPiiPolicy, resolveAdvisorClientIdentity } from "@/lib/advisor/field-visibility";
+import { resolveClientReferenceCode } from "@/lib/client/client-reference-code.server";
 import { tryBootstrapFacilitatedFromExistingApproval } from "@/lib/facilitated/bootstrap-assessment-from-approval";
 
 export type FacilitatedLauncherData = {
   clients: FacilitatedLauncherClient[];
   openSessions: FacilitatedSessionSummary[];
 };
+
+async function resolveSessionClientDisplay(
+  session: FacilitatedSessionSummary,
+  pipelineById: Map<string, PipelineClient>,
+  advisorProfileId: string,
+): Promise<Pick<FacilitatedSessionSummary, "clientDisplayName" | "clientDisplayPseudonymous">> {
+  const pipelineClient = pipelineById.get(session.clientId);
+  if (pipelineClient) {
+    const labels = resolveAdvisorClientPipelineLabels(pipelineClient);
+    return {
+      clientDisplayName: labels.headline,
+      clientDisplayPseudonymous: labels.pseudonymous,
+    };
+  }
+
+  const assignment = await prisma.clientAdvisorAssignment.findFirst({
+    where: {
+      clientId: session.clientId,
+      advisorId: advisorProfileId,
+      status: "ACTIVE",
+    },
+    select: {
+      fieldVisibility: true,
+      client: {
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          emailCiphertext: true,
+          clientReferenceCode: true,
+        },
+      },
+    },
+  });
+
+  if (!assignment) {
+    return {
+      clientDisplayName: "Client",
+      clientDisplayPseudonymous: true,
+    };
+  }
+
+  const advisorPolicy = await loadAdvisorPiiPolicy(advisorProfileId);
+  const identity = resolveAdvisorClientIdentity(
+    assignment.client,
+    assignment.fieldVisibility,
+    advisorPolicy,
+  );
+  const clientReferenceCode = await resolveClientReferenceCode(
+    assignment.client.id,
+    assignment.client.clientReferenceCode,
+  );
+  const labels = resolveAdvisorClientPipelineLabels({
+    id: assignment.client.id,
+    name: identity.name,
+    firstName: assignment.client.firstName,
+    lastName: assignment.client.lastName,
+    email: identity.email,
+    clientReferenceCode,
+    pseudonymousWorkspaceLabeling: advisorPolicy.pseudonymousWorkspaceLabeling,
+  });
+
+  return {
+    clientDisplayName: labels.headline,
+    clientDisplayPseudonymous: labels.pseudonymous,
+  };
+}
 
 export async function getFacilitatedLauncherData(): Promise<FacilitatedLauncherData> {
   const { userId } = await requireAdvisorRole();
@@ -44,16 +117,23 @@ export async function getFacilitatedLauncherData(): Promise<FacilitatedLauncherD
     getClientPipelineForAdvisorUser(userId, { assignmentStatus: "ACTIVE" }),
     listOpenFacilitatedSessionsForAdvisor(profile.id),
   ]);
+
+  const pipelineById = new Map(pipeline.map((client) => [client.id, client]));
+  const launcherClients = pipeline.map(mapPipelineClientToLauncherClient);
+  const openSessionsWithDisplay = await Promise.all(
+    openSessions.map(async (session) => {
+      const display = await resolveSessionClientDisplay(
+        session,
+        pipelineById,
+        profile.id,
+      );
+      return { ...session, ...display };
+    }),
+  );
+
   return {
-    clients: mergeFacilitatedLauncherClients(
-      pipeline.map((c) => ({
-        id: c.id,
-        name: c.name ?? "Client",
-        email: c.email,
-      })),
-      openSessions,
-    ),
-    openSessions,
+    clients: mergeFacilitatedLauncherClients(launcherClients, openSessionsWithDisplay),
+    openSessions: openSessionsWithDisplay,
   };
 }
 
@@ -128,6 +208,9 @@ async function createFacilitatedSessionRow(input: {
     completedAt: session.completedAt,
     clientName: session.client.name,
     clientEmail: null,
+    progressDetail: null,
+    clientDisplayName: "Client",
+    clientDisplayPseudonymous: true,
   } satisfies FacilitatedSessionSummary;
 }
 

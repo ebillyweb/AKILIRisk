@@ -20,5 +20,5 @@ export async function getAssignedAdvisorBrandingForClient(
 
   if (!assignment) return null;
 
-  return resolveAdvisorBrandingForProfile(assignment.advisorId);
+  return resolveAdvisorBrandingForProfile(assignment.advisorId, { scope: "client" });
 }

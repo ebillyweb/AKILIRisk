@@ -33,5 +33,17 @@ test.describe("client portal branding", () => {
       getComputedStyle(document.body).getPropertyValue("--advisor-primary").trim()
     );
     expect(advisorPrimary.length, "--advisor-primary CSS var is set").toBeGreaterThan(0);
+
+    await expect(page.getByTestId("dashboard-journey")).toBeVisible();
+    await expect(page.getByText("Your journey")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Explore your portal/i }),
+    ).not.toBeVisible();
+    await expect(page.getByTestId("client-portal-footer")).toBeVisible();
+    await expect(page.getByText(/Powered by AkiliRisk Platform/i)).toBeVisible();
+    await expect(page.getByTestId("dashboard-footer")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Open assessment hub/i }),
+    ).toBeVisible();
   });
 });

@@ -116,7 +116,7 @@ export function DownloadSection({ assessmentId }: DownloadSectionProps) {
         </Button>
 
         <p className="text-sm text-muted-foreground">
-          Co-branded PDF with executive summary, pillar scores, and recommendations
+          Co-branded PDF with executive summary, risk domain scores, and recommendations
         </p>
       </div>
     </div>

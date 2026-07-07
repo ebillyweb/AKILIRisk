@@ -68,6 +68,77 @@ test.describe("advisor custom methodology questions", () => {
     expect(allowedBody.deleted).toBe(true);
   });
 
+  test("choice_list custom intake round-trips options and formats selected label", async ({
+    request,
+  }) => {
+    const clientEmail = "client-fresh@test.com";
+    const advisorEmail = "advisor@test.com";
+    const customText = `CUSTOM-CHOICE-${Date.now()}`;
+
+    await request.post("/api/test/methodology/prepare", {
+      data: { action: "reset-intake", clientEmail },
+    });
+
+    const created = await request.post("/api/test/methodology/prepare", {
+      data: {
+        action: "create-custom-choice-list-intake",
+        advisorEmail,
+        questionText: customText,
+        optionLabels: ["Retired", "Employed", "Student"],
+      },
+    });
+    expect(created.status()).toBe(200);
+    const custom = (await created.json()) as {
+      questionId: string;
+      answerType: string;
+      options: Array<{ value: string; label: string }>;
+    };
+    expect(custom.answerType).toBe("choice_list");
+    expect(custom.options).toHaveLength(3);
+
+    const started = await request.post("/api/test/methodology/prepare", {
+      data: { action: "start-intake-snapshot", clientEmail },
+    });
+    expect(started.status()).toBe(200);
+    const startBody = (await started.json()) as {
+      questions: Array<{
+        id: string;
+        questionText: string;
+        answerType: string;
+        options: Array<{ value: string; label: string }> | null;
+      }>;
+    };
+    const snapQuestion = startBody.questions.find((q) => q.id === custom.questionId);
+    expect(snapQuestion?.answerType).toBe("choice_list");
+    expect(snapQuestion?.options).toEqual(custom.options);
+
+    await request.post("/api/test/methodology/prepare", {
+      data: {
+        action: "record-intake-structured-answer",
+        clientEmail,
+        questionId: custom.questionId,
+        value: "1",
+      },
+    });
+
+    const formatted = await request.post("/api/test/methodology/prepare", {
+      data: {
+        action: "get-formatted-intake-answer",
+        clientEmail,
+        questionId: custom.questionId,
+      },
+    });
+    expect(formatted.status()).toBe(200);
+    const formattedBody = (await formatted.json()) as {
+      answerText: string;
+      answerKind: string;
+      answerLabel?: string;
+    };
+    expect(formattedBody.answerText).toBe("Employed");
+    expect(formattedBody.answerKind).toBe("structured_choice");
+    expect(formattedBody.answerLabel).toBe("Selected option");
+  });
+
   test("hidden platform intake question is excluded from new client snapshot", async ({
     request,
   }) => {

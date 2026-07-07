@@ -111,6 +111,70 @@ export const REPUTATIONAL_SOCIAL_MID_BAND_NARRATIVES: PillarMidBandNarratives = 
   ],
 };
 
+/** Liquidity & cash — mixed maturity by risk tier. */
+export const LIQUIDITY_CASH_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
+  critical: [
+    "Liquidity management lacks centralized visibility across accounts, entities, and planning horizons, creating material exposure to cash-flow disruption during market stress or capital calls. Establish a consolidated liquidity map, define minimum reserve thresholds, and align short-term instruments with obligation schedules. Coordinated planning with wealth and tax advisors should be prioritized to reduce forced-sale and timing risk.",
+  ],
+  high: [
+    "Cash and liquidity practices address some near-term needs but lack consistency across the balance sheet and planning cycles. We recommend formalizing reserve policies, stress-testing liquidity under adverse scenarios, and integrating cash-flow projections with estate and investment planning. Closing the gaps identified below will improve resilience to unexpected capital demands.",
+  ],
+  medium: [
+    "Liquidity management is moderately mature with identifiable strengths in reserve discipline alongside areas that need standardization. Focus on aligning reserve targets with obligation timelines, improving visibility into entity-level cash positions, and conducting periodic liquidity stress tests. Targeted improvements in the areas flagged below will strengthen cash-flow resilience.",
+  ],
+  low: [
+    "Liquidity and cash management are well structured with only narrow gaps relative to best practice. Address the specific items noted in this assessment and maintain periodic stress-testing and reserve adequacy reviews as balance-sheet complexity and capital commitments evolve.",
+  ],
+};
+
+/** Tax exposure — mixed maturity by risk tier. */
+export const TAX_EXPOSURE_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
+  critical: [
+    "Tax planning is fragmented across entities, jurisdictions, and advisory relationships, resulting in material exposure to inefficiency, penalties, and missed optimization opportunities. A comprehensive tax-risk assessment should map current obligations, identify structural misalignment, and establish coordinated compliance and planning workflows. Prioritize consolidating advisory oversight and documenting positions to reduce exposure to audit, recharacterization, and legislative change.",
+  ],
+  high: [
+    "Tax practices address immediate compliance needs but lack integrated planning across entities, asset classes, and generational transfer strategies. We recommend benchmarking the current structure against peer families, stress-testing positions for legislative change, and formalizing coordination between tax counsel, estate planners, and investment advisors. Remediating the gaps below will reduce leakage and penalty risk.",
+  ],
+  medium: [
+    "Tax management is moderately mature with effective compliance processes alongside opportunities to improve strategic coordination. Focus on the deficiencies identified in this assessment—particularly multi-entity optimization, estimated payment discipline, and documentation standards. Annual multi-advisor tax summits will help ensure planning keeps pace with balance-sheet and regulatory changes.",
+  ],
+  low: [
+    "Tax planning and compliance are strong relative to peers, with minor enhancements available in documentation, scenario modeling, or cross-border coordination. Resolve the specific items flagged below and sustain proactive monitoring of legislative developments to protect the current structure.",
+  ],
+};
+
+/** Estate & succession — mixed maturity by risk tier. */
+export const ESTATE_SUCCESSION_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
+  critical: [
+    "Estate and succession planning is incomplete or outdated across key documents, entity structures, and beneficiary designations, creating significant exposure to unintended outcomes and tax inefficiency. Immediate action should focus on updating core documents, aligning titling with estate intent, and establishing succession protocols for family governance and business interests. Coordinated advisor review is essential to close the most consequential gaps.",
+  ],
+  high: [
+    "Estate documents and succession frameworks exist but show gaps in currency, coordination, or alignment with current family circumstances. We recommend a comprehensive document audit, beneficiary designation review, and formalization of succession plans for leadership roles, business interests, and philanthropic vehicles. Addressing the issues below will reduce probate risk and ensure intent is preserved.",
+  ],
+  medium: [
+    "Estate and succession maturity is moderate, with core documents in place but refinements needed in coordination, contingency planning, or next-generation readiness. Prioritize the gaps identified in this assessment and schedule periodic reviews with estate counsel and wealth advisors to keep plans aligned with evolving family dynamics and regulatory changes.",
+  ],
+  low: [
+    "Estate and succession planning is well established with only targeted updates needed. Address the specific items noted below and maintain regular reviews to ensure documents, structures, and designations remain current as family composition and tax law evolve.",
+  ],
+};
+
+/** Family governance & behavioral — mixed maturity by risk tier. */
+export const FAMILY_GOVERNANCE_BEHAVIORAL_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
+  critical: [
+    "Family governance and behavioral alignment lack formal structure, leaving decision-making, conflict resolution, and next-generation engagement largely informal and person-dependent. Establish a written family governance charter, define decision rights and communication protocols, and create structured forums for intergenerational dialogue. Professional facilitation and education programs should be prioritized to build alignment and reduce interpersonal risk.",
+  ],
+  high: [
+    "Governance norms and behavioral expectations are partially established but not consistently practiced across generations or family branches. We recommend formalizing meeting cadences, documenting shared values and decision frameworks, and implementing structured next-generation education. Closing the gaps below will reduce reliance on individual relationships and improve governance durability.",
+  ],
+  medium: [
+    "Family governance and behavioral practices show moderate maturity with effective elements alongside areas that need formalization. Focus on strengthening conflict resolution mechanisms, documenting governance expectations, and expanding engagement opportunities for rising-generation members. Targeted improvements in the areas flagged below will reinforce family cohesion and governance resilience.",
+  ],
+  low: [
+    "Family governance and behavioral alignment are strong overall, with minor opportunities to refine communication protocols, expand education programs, or update governance documents. Address the isolated gaps identified in this assessment and sustain regular family governance reviews to adapt practices as the family evolves.",
+  ],
+};
+
 /** Mid-band narratives keyed by pillar slug and aggregate risk tier. */
 export const PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS: Record<
   string,
@@ -122,4 +186,8 @@ export const PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS: Record<
   insurance: INSURANCE_MID_BAND_NARRATIVES,
   "geographic-environmental": GEOGRAPHIC_ENVIRONMENTAL_MID_BAND_NARRATIVES,
   "reputational-social": REPUTATIONAL_SOCIAL_MID_BAND_NARRATIVES,
+  "liquidity-cash": LIQUIDITY_CASH_MID_BAND_NARRATIVES,
+  "tax-exposure": TAX_EXPOSURE_MID_BAND_NARRATIVES,
+  "estate-succession": ESTATE_SUCCESSION_MID_BAND_NARRATIVES,
+  "family-governance-behavioral": FAMILY_GOVERNANCE_BEHAVIORAL_MID_BAND_NARRATIVES,
 };

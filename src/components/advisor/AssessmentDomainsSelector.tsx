@@ -55,12 +55,12 @@ export function AssessmentDomainsSelector({
     return (
       <section className="space-y-4" aria-labelledby="assessment-domains-heading">
         <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-          No assessment domains are active in your methodology. Enable pillars under{" "}
+          No risk domains are active in your methodology. Enable risk domains under{" "}
           <Link
-            href="/advisor/methodology/pillars"
+            href="/advisor/methodology/risk-domains"
             className="font-medium text-primary underline-offset-2 hover:underline"
           >
-            Methodology → Pillar manager
+            Methodology → Risk domain manager
           </Link>{" "}
           before approving or inviting clients.
         </div>
@@ -76,12 +76,12 @@ export function AssessmentDomainsSelector({
             id="assessment-domains-heading"
             className="text-base font-semibold tracking-tight"
           >
-            Assessment domains
+            Risk domains
           </h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Choose which pillars to include in this client&apos;s assessment (at least
+            Choose which risk domains to include in this client&apos;s assessment (at least
             one required). Showing {offeredTotal} of {platformCount} platform{" "}
-            {platformCount === 1 ? "pillar" : "pillars"} active in your methodology.
+            {platformCount === 1 ? "risk domain" : "risk domains"} active in your methodology.
           </p>
         </div>
         <Badge
@@ -96,7 +96,7 @@ export function AssessmentDomainsSelector({
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/8 px-4 py-3 text-sm text-muted-foreground">
           <p>
             <span className="font-medium text-foreground">
-              {hiddenCount} platform {hiddenCount === 1 ? "pillar is" : "pillars are"}{" "}
+              {hiddenCount} platform {hiddenCount === 1 ? "risk domain is" : "risk domains are"}{" "}
               hidden
             </span>{" "}
             because {hiddenCount === 1 ? "it is" : "they are"} turned off in your
@@ -113,10 +113,10 @@ export function AssessmentDomainsSelector({
           </p>
           <p className="mt-1">
             <Link
-              href="/advisor/methodology/pillars"
+              href="/advisor/methodology/risk-domains"
               className="font-medium text-primary underline-offset-2 hover:underline"
             >
-              Open Pillar manager
+              Open Risk domain manager
             </Link>{" "}
             to enable them for client assessments.
           </p>

@@ -26,6 +26,8 @@ export type EligiblePiiField = (typeof ELIGIBLE_PII_FIELDS)[number];
 export interface PiiPolicy {
   schemaVersion: 1;
   fields: Record<EligiblePiiField, boolean>;
+  /** When true, workspace UI shows Client CL-… references for every client. */
+  pseudonymousWorkspaceLabeling: boolean;
 }
 
 /** Default policy shape: every field ON (opt-out per round-12 sign-off).
@@ -39,7 +41,63 @@ export const DEFAULT_PII_POLICY: PiiPolicy = {
     "HouseholdMember.phone": true,
     "HouseholdMember.notes": true,
   },
+  pseudonymousWorkspaceLabeling: false,
 };
+
+export const WORKSPACE_CLIENT_LABELING_COPY = {
+  sectionTitle: "Workspace client labeling",
+  sectionDescription:
+    "How every client appears in your pipeline and detail views. Sign-in delivery is managed separately in Client sign-in.",
+  email: {
+    label: "Email address",
+    description:
+      "Show each client's sign-in email in pipeline and detail views (or their legal name when on file).",
+  },
+  clientId: {
+    label: "Client reference",
+    description:
+      "Show Client CL-… for every client (e.g. CL-8F3K-29QX). Names and emails are hidden in your workspace—you map each reference outside Akili.",
+  },
+} as const;
+
+export const ENTERPRISE_CLIENT_DATA_POLICY_COPY = {
+  sectionTitle: "Client data policy",
+  sectionDescription:
+    "Set firm defaults for how team members label clients and which intake fields they collect. Owners and administrators can still choose their own policy.",
+  workspaceLabeling: {
+    email: {
+      label: "Email address (firm default)",
+      description:
+        "Team members show sign-in email (or legal name when on file) for every client.",
+    },
+    clientId: {
+      label: "Client reference (firm default)",
+      description:
+        "Team members show Client CL-… for every client. Names and emails stay out of the advisor workspace.",
+    },
+  },
+  collectLegalName: {
+    label: "Collect client legal name (firm default)",
+    description:
+      "When enabled, team members may ask new clients for a legal name during intake.",
+  },
+  lock: {
+    label: "Lock client data policy for team members",
+    description:
+      "ADVISOR-role members follow these firm defaults. Firm owners and administrators keep full control.",
+  },
+} as const;
+
+export const PIPELINE_SEARCH_COPY = {
+  standard: {
+    placeholder: "Search by name or email…",
+    ariaLabel: "Search clients by name or email",
+  },
+  pseudonymous: {
+    placeholder: "Search by client reference…",
+    ariaLabel: "Search clients by client reference",
+  },
+} as const;
 
 /** Type guard: returns true if `key` is one of the 5 eligible fields. */
 export function isEligiblePiiField(key: string): key is EligiblePiiField {
@@ -54,7 +112,11 @@ export function parsePiiPolicy(raw: unknown): PiiPolicy {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error("piiPolicy: malformed JSON (expected object)");
   }
-  const obj = raw as { schemaVersion?: unknown; fields?: unknown };
+  const obj = raw as {
+    schemaVersion?: unknown;
+    fields?: unknown;
+    pseudonymousWorkspaceLabeling?: unknown;
+  };
   const fields: Record<EligiblePiiField, boolean> = {
     ...DEFAULT_PII_POLICY.fields,
   };
@@ -64,8 +126,22 @@ export function parsePiiPolicy(raw: unknown): PiiPolicy {
       if (typeof v === "boolean") fields[key] = v;
     }
   }
-  return { schemaVersion: 1, fields };
+
+  let pseudonymousWorkspaceLabeling = DEFAULT_PII_POLICY.pseudonymousWorkspaceLabeling;
+  if (typeof obj.pseudonymousWorkspaceLabeling === "boolean") {
+    pseudonymousWorkspaceLabeling = obj.pseudonymousWorkspaceLabeling;
+  } else if (fields["User.name"] === false) {
+    // Legacy: advisors who disabled legal-name collection before the
+    // dedicated workspace toggle existed.
+    pseudonymousWorkspaceLabeling = true;
+  }
+
+  return { schemaVersion: 1, fields, pseudonymousWorkspaceLabeling };
 }
+
+/** Shown in settings and client detail when pseudonymous labeling is active. */
+export const PSEUDONYMOUS_CLIENT_LABELING_NOTE =
+  "Every client appears as Client CL-… in your pipeline and detail views. You maintain who each reference maps to outside Akili. Sign-in delivery uses the address in Client sign-in only—it is not shown elsewhere in your workspace.";
 
 /** User-facing display copy for each eligible field. Centralized so the
  *  settings form, future audit-log readouts, and the admin observability
@@ -75,9 +151,9 @@ export const PII_FIELD_LABELS: Record<
   { label: string; description: string }
 > = {
   "User.name": {
-    label: "Client name",
+    label: "Collect client legal name",
     description:
-      "Allows clients to provide their full legal name. Without this, clients are referred to by email only.",
+      "When enabled, clients may provide a legal name during intake and optional profile details.",
   },
   "ClientProfile.phone": {
     label: "Client phone",

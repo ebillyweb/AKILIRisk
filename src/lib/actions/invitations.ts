@@ -2,6 +2,7 @@
 
 import type { UserRole } from "@prisma/client";
 import { requireAdvisorRole, getAdvisorProfileOrThrow, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
+import { getAdvisorClientDataPolicyContext } from "@/lib/enterprise/enterprise-client-data-policy";
 import {
   assertCanAddClientForAdvisorProfile,
   ClientLimitError,
@@ -17,7 +18,7 @@ import { resolveInvitationEmailTheme } from "@/lib/invitations/invitation-email-
 import { sendInvitationEmail } from "@/lib/invitations/send-invitation-email";
 import {
   getSubscriptionFeatures,
-  STARTER_SUBSCRIPTION_FEATURES,
+  ESSENTIALS_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
 import {
   createInvitationSchema,
@@ -25,6 +26,12 @@ import {
 } from "@/lib/schemas/invitation";
 import { InvitationListFilters, InvitationListResult, InvitationWithDetails } from "@/lib/invitations/types";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
+import { assertAdvisorCanSkipIntake } from "@/lib/enterprise/advisor-member-visibility";
+import {
+  mapResolvedBrandingToInvitationProfile,
+  resolveAdvisorBrandingForProfile,
+} from "@/lib/enterprise/branding";
+import type { InvitationAdvisorProfile } from "@/lib/invitations/invitation-email-branding";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -60,6 +67,33 @@ function invitationEmailThemeForProfile(
     logoS3Key: profile.logoS3Key,
     primaryColor: profile.primaryColor,
   });
+}
+
+async function resolveInvitationBrandingForAdvisor(
+  advisorProfileId: string,
+  fallbackFirmName: string | null,
+): Promise<InvitationAdvisorProfile> {
+  const resolved = await resolveAdvisorBrandingForProfile(advisorProfileId, {
+    scope: "client",
+  });
+  if (!resolved) {
+    return {
+      firmName: fallbackFirmName,
+      brandName: fallbackFirmName,
+      tagline: null,
+      primaryColor: null,
+      secondaryColor: null,
+      accentColor: null,
+      logoUrl: null,
+      logoS3Key: null,
+      websiteUrl: null,
+      emailFooterText: null,
+      supportEmail: null,
+      supportPhone: null,
+      brandingEnabled: false,
+    };
+  }
+  return mapResolvedBrandingToInvitationProfile(resolved, fallbackFirmName);
 }
 
 /**
@@ -104,6 +138,20 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
 
     await assertCanAddClientForAdvisorProfile(profile.id);
 
+    if (validatedInput.intakeWaived) {
+      try {
+        await assertAdvisorCanSkipIntake(userId);
+      } catch (e) {
+        return {
+          success: false,
+          error:
+            e instanceof Error
+              ? e.message
+              : "Your firm administrator has not allowed team members to skip intake.",
+        };
+      }
+    }
+
     if (validatedInput.intakeWaived && validatedInput.includedPillars?.length) {
       const { assertAdvisorAssessmentDomainSelection } = await import(
         "@/lib/methodology/advisor-assessment-domains"
@@ -116,8 +164,21 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
 
     const features =
       (await getSubscriptionFeatures(profile.userId)) ??
-      STARTER_SUBSCRIPTION_FEATURES;
-    const emailTheme = invitationEmailThemeForProfile(profile, features);
+      ESSENTIALS_SUBSCRIPTION_FEATURES;
+    const invitationBranding = await resolveInvitationBrandingForAdvisor(
+      profile.id,
+      profile.firmName,
+    );
+    const emailTheme = invitationEmailThemeForProfile(
+      {
+        brandingEnabled: invitationBranding.brandingEnabled,
+        logoUrl: invitationBranding.logoUrl,
+        logoS3Key: invitationBranding.logoS3Key,
+        primaryColor: invitationBranding.primaryColor,
+        userId: profile.userId,
+      },
+      features,
+    );
 
     const invitation = await createAdvisorInvitation(profile.id, invitationInput, {
       subscriptionFeatures: {
@@ -140,21 +201,7 @@ export async function sendInvitation(formData: FormData): Promise<ActionResult<I
       personalMessage: invitationInput.personalMessage,
       invitationUrl: invitation.url,
       clientName: validatedInput.clientName,
-      profile: {
-        firmName: profile.firmName,
-        brandName: profile.brandName,
-        tagline: profile.tagline,
-        primaryColor: profile.primaryColor,
-        secondaryColor: profile.secondaryColor,
-        accentColor: profile.accentColor,
-        logoUrl: profile.logoUrl,
-        logoS3Key: profile.logoS3Key,
-        websiteUrl: profile.websiteUrl,
-        emailFooterText: profile.emailFooterText,
-        supportEmail: profile.supportEmail,
-        supportPhone: profile.supportPhone,
-        brandingEnabled: profile.brandingEnabled,
-      },
+      profile: invitationBranding,
       theme: emailTheme,
     });
 
@@ -218,7 +265,7 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
     // Resend the invitation (this validates ownership and limits)
     const features =
       (await getSubscriptionFeatures(profile.userId)) ??
-      STARTER_SUBSCRIPTION_FEATURES;
+      ESSENTIALS_SUBSCRIPTION_FEATURES;
 
     const invitation = await resendInvitation(profile.id, invitationId, {
       subscriptionFeatures: {
@@ -226,7 +273,20 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
       },
     });
 
-    const emailTheme = invitationEmailThemeForProfile(profile, features);
+    const invitationBranding = await resolveInvitationBrandingForAdvisor(
+      profile.id,
+      profile.firmName,
+    );
+    const emailTheme = invitationEmailThemeForProfile(
+      {
+        brandingEnabled: invitationBranding.brandingEnabled,
+        logoUrl: invitationBranding.logoUrl,
+        logoS3Key: invitationBranding.logoS3Key,
+        primaryColor: invitationBranding.primaryColor,
+        userId: profile.userId,
+      },
+      features,
+    );
 
     const advisorInfo = {
       advisorName: profile.user.name || profile.user.firstName + " " + profile.user.lastName || "Advisor",
@@ -248,21 +308,7 @@ export async function resendInvitationAction(invitationId: string): Promise<Acti
         ),
       invitationUrl: invitation.url,
       clientName: invitation.clientName || undefined,
-      profile: {
-        firmName: profile.firmName,
-        brandName: profile.brandName,
-        tagline: profile.tagline,
-        primaryColor: profile.primaryColor,
-        secondaryColor: profile.secondaryColor,
-        accentColor: profile.accentColor,
-        logoUrl: profile.logoUrl,
-        logoS3Key: profile.logoS3Key,
-        websiteUrl: profile.websiteUrl,
-        emailFooterText: profile.emailFooterText,
-        supportEmail: profile.supportEmail,
-        supportPhone: profile.supportPhone,
-        brandingEnabled: profile.brandingEnabled,
-      },
+      profile: invitationBranding,
       theme: emailTheme,
     });
 
@@ -347,7 +393,11 @@ export async function getInvitationsAction(
   try {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
-    const result = await getAdvisorInvitations(profile.id, filters, pagination);
+    const policyContext = await getAdvisorClientDataPolicyContext(userId);
+    const result = await getAdvisorInvitations(profile.id, filters, pagination, {
+      pseudonymousWorkspaceLabeling:
+        policyContext.effective.pseudonymousWorkspaceLabeling,
+    });
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof Error) {

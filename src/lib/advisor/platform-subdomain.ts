@@ -1,3 +1,13 @@
+import {
+  buildStagingTenantPortalUrl,
+  usesStagingTenantPathPortals,
+} from '@/lib/advisor/tenant-path-portals';
+import {
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_MIN_LENGTH,
+  SUBDOMAIN_SLUG_REGEX,
+} from '@/lib/advisor/subdomain-slug-input';
+
 /**
  * Platform-owned advisor subdomains under PRODUCTION_DOMAIN (e.g. firm.akilirisk.com).
  * Platform hosts (preview, www, app) never enter tenant routing.
@@ -44,6 +54,22 @@ export function toTenantHostLabel(canonicalSlug: string): string {
 }
 
 /**
+ * Single source of truth for which canonical (suffix-stripped) slugs are valid
+ * tenant labels. Both host-based routing (`toCanonicalSubdomainSlug`) and
+ * path-portal routing (`isValidTenantPortalSlug`) delegate here so the two
+ * routing modes accept exactly the same slug set.
+ */
+export function isCanonicalSubdomainSlug(slug: string): boolean {
+  const normalized = slug.toLowerCase();
+  return (
+    normalized.length >= SUBDOMAIN_SLUG_MIN_LENGTH &&
+    normalized.length <= SUBDOMAIN_SLUG_MAX_LENGTH &&
+    SUBDOMAIN_SLUG_REGEX.test(normalized) &&
+    !isPlatformSubdomainLabel(normalized)
+  );
+}
+
+/**
  * Map incoming host label to DB slug. When a suffix is configured, only labels
  * ending with that suffix resolve (e.g. preview ignores bare `ebilly.*`).
  */
@@ -51,16 +77,14 @@ export function toCanonicalSubdomainSlug(hostLabel: string): string | null {
   const normalized = hostLabel.toLowerCase();
   const suffix = getTenantSubdomainSuffix();
 
-  if (suffix) {
-    if (!normalized.endsWith(suffix)) return null;
-    const canonical = normalized.slice(0, -suffix.length);
-    if (canonical.length < 3 || canonical.length > 20) return null;
-    if (isPlatformSubdomainLabel(canonical)) return null;
-    return canonical;
-  }
+  const canonical = suffix
+    ? normalized.endsWith(suffix)
+      ? normalized.slice(0, -suffix.length)
+      : null
+    : normalized;
 
-  if (isPlatformSubdomainLabel(normalized)) return null;
-  return normalized;
+  if (canonical === null) return null;
+  return isCanonicalSubdomainSlug(canonical) ? canonical : null;
 }
 
 export function buildAdvisorPortalHostname(canonicalSlug: string): string {
@@ -73,6 +97,9 @@ export function buildAdvisorPortalHostname(canonicalSlug: string): string {
 }
 
 export function buildAdvisorPortalUrl(subdomain: string): string {
+  if (usesStagingTenantPathPortals()) {
+    return buildStagingTenantPortalUrl(subdomain);
+  }
   return `https://${buildAdvisorPortalHostname(subdomain)}`;
 }
 

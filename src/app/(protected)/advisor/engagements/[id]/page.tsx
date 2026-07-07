@@ -20,6 +20,10 @@ import {
   ENGAGEMENT_STATUS_LABELS,
   ENGAGEMENT_STATUS_VARIANT,
 } from "../_status";
+import { ClientAssessmentLifecycleToolbar } from "@/components/assessment/ClientAssessmentLifecycleToolbar";
+import { getAdvisorAssessmentLifecycleContext } from "@/lib/advisor/assessment-lifecycle.server";
+import { getCadenceForClient } from "@/lib/cadence/review-cadence";
+import { ReviewCadencePanel } from "@/components/engagement/ReviewCadencePanel";
 import { EngagementStatusForm } from "./EngagementStatusForm";
 
 /**
@@ -46,10 +50,16 @@ export default async function AdvisorEngagementDetailPage({
     where: { id },
     include: {
       client: {
-        select: { name: true, firstName: true, lastName: true },
+        select: { id: true, name: true, firstName: true, lastName: true },
       },
       assessment: {
-        select: { id: true, completedAt: true, profileEnteredAt: true },
+        select: {
+          id: true,
+          completedAt: true,
+          profileEnteredAt: true,
+          status: true,
+          answersChangedAfterCompleteAt: true,
+        },
       },
     },
   });
@@ -57,6 +67,19 @@ export default async function AdvisorEngagementDetailPage({
   if (role === "ADVISOR" && engagement.advisorId !== session.user.id) {
     redirect("/advisor/engagements");
   }
+
+  const advisorProfile = await prisma.advisorProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { id: true },
+  });
+  const cadence =
+    advisorProfile && engagement.client.id
+      ? await getCadenceForClient(engagement.client.id, advisorProfile.id)
+      : null;
+  const assessmentLifecycle = await getAdvisorAssessmentLifecycleContext(
+    session.user.id,
+    engagement.assessment,
+  );
 
   const displayName =
     [engagement.client.firstName, engagement.client.lastName]
@@ -128,24 +151,57 @@ export default async function AdvisorEngagementDetailPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Advance status</CardTitle>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Advance status</CardTitle>
+              <CardDescription>
+                Move this engagement through scheduling, execution, and
+                completion. Only valid next states are shown for the current
+                status.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EngagementStatusForm
+                engagementId={engagement.id}
+                currentStatus={engagement.status}
+                defaultMeetingAt={engagement.meetingAt}
+                defaultNotes={engagement.notes ?? ""}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Reassessment</CardTitle>
             <CardDescription>
-              Move this engagement through scheduling, execution, and
-              completion. Only valid next states are shown for the current
-              status.
+              Schedule review cadence or start a linked reassessment to measure
+              progress after this engagement.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <EngagementStatusForm
-              engagementId={engagement.id}
-              currentStatus={engagement.status}
-              defaultMeetingAt={engagement.meetingAt}
-              defaultNotes={engagement.notes ?? ""}
-            />
+          <CardContent className="space-y-4">
+            {advisorProfile ? (
+              <ReviewCadencePanel
+                cadence={cadence}
+                clientId={engagement.client.id}
+              />
+            ) : null}
+            {engagement.assessment ? (
+              <ClientAssessmentLifecycleToolbar
+                assessmentId={engagement.assessment.id}
+                assessmentStatus={engagement.assessment.status}
+                showStaleScoresActions={
+                  engagement.assessment.status === "COMPLETED" &&
+                  engagement.assessment.answersChangedAfterCompleteAt != null
+                }
+                reassessmentEnabled={assessmentLifecycle.reassessmentEnabled}
+                targetedQuestionCount={assessmentLifecycle.targetedQuestionCount}
+                variant="stacked"
+              />
+            ) : null}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );

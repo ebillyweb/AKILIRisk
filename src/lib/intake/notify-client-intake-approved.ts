@@ -8,8 +8,8 @@ import {
   invalidatePriorMagicLinkTokens,
 } from "@/lib/auth/magic-link";
 import { decryptUserEmail } from "@/lib/auth/user-email";
-import { sendIntakeApprovedMagicLinkEmail } from "@/lib/email";
-import { getPublicAppUrlStrict } from "@/lib/public-app-url";
+import { sendIntakeApprovedMagicLinkEmail, buildClientMagicLinkVerifyUrl } from "@/lib/email";
+import { resolveClientEmailContext } from "@/lib/client/client-email-context";
 import { safeDecryptUserName } from "@/lib/data/client-pii";
 import { logSafeError } from "@/lib/log-safe-error";
 
@@ -75,14 +75,10 @@ export async function notifyClientOfIntakeApproval(params: {
       select: { firmName: true },
     });
     const advisorFirmName = advisor?.firmName?.trim() || "Your advisor";
-
-    const baseUrl = getPublicAppUrlStrict();
-    if (!baseUrl) {
-      console.warn(
-        "Intake-approved client email skipped: public app URL not configured (AUTH_URL / NEXT_PUBLIC_URL)."
-      );
-      return { sent: false };
-    }
+    const emailContext = await resolveClientEmailContext({
+      userId: interview.userId,
+      advisorProfileId,
+    });
 
     const clientEmail = decryptUserEmail(interview.user.emailCiphertext);
     const clientName =
@@ -93,15 +89,18 @@ export async function notifyClientOfIntakeApproval(params: {
     await invalidatePriorMagicLinkTokens(clientEmail);
     const issued = await issueMagicLinkToken(clientEmail);
 
-    const verifyUrl = new URL("/auth/magic-link/verify", baseUrl);
-    verifyUrl.searchParams.set("token", issued.rawToken);
-    verifyUrl.searchParams.set("redirectTo", "/assessment");
+    const verifyUrl = buildClientMagicLinkVerifyUrl(
+      emailContext,
+      issued.rawToken,
+      "/assessment",
+    );
 
     await sendIntakeApprovedMagicLinkEmail(
       clientEmail,
       clientName,
       advisorFirmName,
-      verifyUrl.toString()
+      verifyUrl,
+      emailContext,
     );
 
     await writeAudit({

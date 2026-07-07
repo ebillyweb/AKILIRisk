@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdvisorRole, isAdvisorAuthError } from '@/lib/advisor/auth';
 import { requireSubdomainAccess, checkRateLimit } from '@/lib/subscription/validation';
+import { assertCanMutateAdvisorBranding, assertCanMutateAdvisorSubdomain } from '@/lib/enterprise/branding-access';
 import {
   validateSubdomainFormat,
   isSubdomainReserved,
@@ -36,6 +37,8 @@ export async function POST(request: NextRequest) {
 
     // Verify advisor authentication and subdomain access
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
+    await assertCanMutateAdvisorSubdomain(userId);
     const { advisorId } = await requireSubdomainAccess(userId);
 
     // Parse and validate request body
@@ -200,6 +203,8 @@ export async function DELETE(request: NextRequest) {
   try {
     // Verify advisor authentication and subdomain access
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
+    await assertCanMutateAdvisorSubdomain(userId);
     const { advisorId } = await requireSubdomainAccess(userId);
 
     const deletedSubdomain = await prisma.advisorSubdomain.delete({

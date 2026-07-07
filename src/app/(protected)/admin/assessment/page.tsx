@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AssessmentRescoreButton } from "@/components/admin/AssessmentRescoreButton";
+import { assessmentNeedsRescore } from "@/lib/assessment/answers-changed-after-complete";
 
 const STATUS_COLORS: Record<string, "default" | "secondary" | "success" | "warning" | "info" | "outline"> = {
   IN_PROGRESS: "secondary",
@@ -63,7 +64,10 @@ export default async function AdminAssessmentPage() {
                       <Link href={`/admin/assessment/${a.id}`}>Review answers</Link>
                     </Button>
                     <Badge variant={STATUS_COLORS[a.status] ?? "outline"}>{a.status}</Badge>
-                    {a.status === "COMPLETED" && a._count.scores > 0 ? (
+                    {assessmentNeedsRescore({
+                      status: a.status,
+                      answersChangedAfterCompleteAt: a.answersChangedAfterCompleteAt,
+                    }) ? (
                       <AssessmentRescoreButton assessmentId={a.id} />
                     ) : null}
                   </div>

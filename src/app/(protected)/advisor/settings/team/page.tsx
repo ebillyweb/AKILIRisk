@@ -7,6 +7,7 @@ import { getEnterpriseTeamPageData } from "@/lib/enterprise/team-invite";
 export default async function AdvisorTeamSettingsPage() {
   const { userId } = await requireAdvisorRole();
   const data = await getEnterpriseTeamPageData(userId);
+
   if (!data?.seatUsage) {
     notFound();
   }

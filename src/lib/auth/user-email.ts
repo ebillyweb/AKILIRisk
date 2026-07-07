@@ -9,7 +9,12 @@ import {
   userEmailCiphertext,
 } from "@/lib/auth/user-email-crypto";
 
-export { USER_EMAIL_FIELD_KEY, decryptUserEmail, userEmailCiphertext } from "@/lib/auth/user-email-crypto";
+export {
+  USER_EMAIL_FIELD_KEY,
+  decryptUserEmail,
+  safeDecryptUserEmail,
+  userEmailCiphertext,
+} from "@/lib/auth/user-email-crypto";
 
 /**
  * Round-11 commit 2.4a (BRD §5.1.AUTH / phase B — soft-drop step 1) —

@@ -53,6 +53,7 @@ vi.mock("@/lib/db", () => ({
         }
       ),
     },
+    pillar: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 

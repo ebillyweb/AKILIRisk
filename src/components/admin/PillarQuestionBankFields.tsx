@@ -7,6 +7,7 @@ import {
 } from "@/lib/assessment/bank/question-bank-display";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -88,7 +89,9 @@ export function PillarQuestionBankFields({
       {isCreate ? (
         <>
           <div className="space-y-2">
-            <Label htmlFor="sectionId">Section</Label>
+            <LabelWithHelp htmlFor="sectionId" helpKey="bank-section">
+              Section
+            </LabelWithHelp>
             <select
               id="sectionId"
               name="sectionId"
@@ -108,7 +111,9 @@ export function PillarQuestionBankFields({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="answerType">How clients answer</Label>
+            <LabelWithHelp htmlFor="answerType" helpKey="bank-answer-type">
+              How clients answer
+            </LabelWithHelp>
             <select
               id="answerType"
               name="answerType"
@@ -130,12 +135,15 @@ export function PillarQuestionBankFields({
               defaultChecked={defaultVisible}
               label="Visible to new assessments"
             />
+            <FieldHelp helpKey="bank-visible" triggerLabel="Visible to new assessments" />
           </div>
         </>
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="text">Question</Label>
+        <LabelWithHelp htmlFor="text" helpKey="bank-question-text">
+          Question
+        </LabelWithHelp>
         <Textarea
           id="text"
           name="text"
@@ -146,7 +154,9 @@ export function PillarQuestionBankFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="helpText">Why this matters</Label>
+        <LabelWithHelp htmlFor="helpText" helpKey="bank-help-text">
+          Why this matters
+        </LabelWithHelp>
         <Textarea
           id="helpText"
           name="helpText"
@@ -157,7 +167,9 @@ export function PillarQuestionBankFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="riskRelevance">Additional context (optional)</Label>
+        <LabelWithHelp htmlFor="riskRelevance" helpKey="bank-risk-relevance">
+          Additional context (optional)
+        </LabelWithHelp>
         <Textarea
           id="riskRelevance"
           name="riskRelevance"
@@ -168,7 +180,9 @@ export function PillarQuestionBankFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="learnMore">Recommended actions</Label>
+        <LabelWithHelp htmlFor="learnMore" helpKey="bank-learn-more">
+          Recommended actions
+        </LabelWithHelp>
         <Textarea
           id="learnMore"
           name="learnMore"
@@ -202,7 +216,9 @@ export function PillarQuestionBankFields({
         </summary>
         <div className="mt-4 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="crossReference">Cross-reference (optional)</Label>
+            <LabelWithHelp htmlFor="crossReference" helpKey="bank-cross-reference">
+              Cross-reference (optional)
+            </LabelWithHelp>
             <Input
               id="crossReference"
               name="crossReference"
@@ -212,7 +228,9 @@ export function PillarQuestionBankFields({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="questionNumber">Question number (optional)</Label>
+            <LabelWithHelp htmlFor="questionNumber" helpKey="bank-question-number">
+              Question number (optional)
+            </LabelWithHelp>
             <Input
               id="questionNumber"
               name="questionNumber"
@@ -222,7 +240,9 @@ export function PillarQuestionBankFields({
 
           {!isCreate ? (
             <div className="space-y-2">
-              <Label htmlFor="displayOrder">Order in section</Label>
+              <LabelWithHelp htmlFor="displayOrder" helpKey="bank-display-order">
+                Order in section
+              </LabelWithHelp>
               <Input
                 id="displayOrder"
                 name="displayOrder"
@@ -245,6 +265,7 @@ export function PillarQuestionBankFields({
               defaultChecked={defaultIsSubQuestion}
               label="Sub-question (nested under a parent question)"
             />
+            <FieldHelp helpKey="bank-sub-question" triggerLabel="Sub-question" />
           </div>
           <div className="flex items-center gap-2">
             <FormHasCheckbox
@@ -253,6 +274,7 @@ export function PillarQuestionBankFields({
               defaultChecked={defaultIsKeyRiskIndicator}
               label="Key Risk Indicator (fires an upsell trigger at answer ≤ 1)"
             />
+            <FieldHelp helpKey="bank-key-risk-indicator" triggerLabel="Key Risk Indicator" />
           </div>
         </div>
       </details>

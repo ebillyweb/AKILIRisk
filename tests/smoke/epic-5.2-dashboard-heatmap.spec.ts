@@ -6,14 +6,15 @@ import { prepareCompletedAssessment, resetAssessmentProgress } from "../helpers/
 import { USERS } from "../fixtures/users";
 
 /**
- * Epic 5.2 — US-16 dashboard risk heat map after six-pillar scoring.
+ * Epic 5.2 — US-16 risk heat map after six-pillar scoring.
+ * Detail views live on Risk Preview; the dashboard hub links there.
  */
-test.describe("Epic 5.2 — dashboard heat map (US-16)", () => {
+test.describe("Epic 5.2 — risk preview heat map (US-16)", () => {
   test.beforeEach(async ({ request }) => {
     await skipUnlessTestAuth(request);
   });
 
-  test("client dashboard shows populated six-cell heat map after scoring", async ({
+  test("risk preview shows populated six-cell heat map after scoring", async ({
     page,
     request,
   }) => {
@@ -30,11 +31,12 @@ test.describe("Epic 5.2 — dashboard heat map (US-16)", () => {
 
     const dashboard = new ClientDashboardPage(page);
     await dashboard.goto();
+    await dashboard.gotoRiskPreview();
     await dashboard.expectHeatMapPopulated();
     await dashboard.expectTopRisksVisible();
   });
 
-  test("client dashboard shows empty heat map placeholder before scoring", async ({
+  test("risk preview shows empty heat map placeholder before scoring", async ({
     page,
     request,
   }) => {
@@ -44,7 +46,7 @@ test.describe("Epic 5.2 — dashboard heat map (US-16)", () => {
 
     await new SignInPage(page).signInAs("client");
 
-    await page.goto("/dashboard");
+    await page.goto("/assessment/risk-preview");
     await expect(
       page.getByRole("heading", { name: /risk by domain/i })
     ).toBeVisible({ timeout: 45_000 });

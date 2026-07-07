@@ -154,11 +154,13 @@ Client accounts (role `USER`) have no password — they sign in via magic link o
 ## Development Notes
 
 ### Environment Setup
+- **Local troubleshooting** (auth failures, `ENCRYPTION_KEY` / decrypt errors, env sync with Vercel Preview): [docs/LOCAL_DEVELOPMENT_TROUBLESHOOTING.md](docs/LOCAL_DEVELOPMENT_TROUBLESHOOTING.md)
 - **Identity for this repo**: Git author `buddy@ebilly.com` (`git config --local`). **AWS** for Akili is the same org: use CLI profile **`ebilly`** in `~/.aws/config` (SSO or keys for `buddy@ebilly.com`). This workspace sets `AWS_PROFILE=ebilly` for integrated terminals (`.vscode/settings.json`). Runtime S3 in `.env.local` should use IAM keys from that account too.
 - **Cursor / VS Code profile**: Import `profiles/akili-ebilly.code-profile` or rely on `.vscode/settings.json` (`AWS_PROFILE=buddy@ebilly.com`). The profile must be fully configured for SSO in `~/.aws/config` (see `profiles/aws-profile-akili.snippet`); then `aws sso login --profile buddy@ebilly.com`.
 - **Shell themes** (e.g. Starship) may export `AWS_PROFILE` for another org. The CORS script **does not** use that: it picks `AKILI_AWS_PROFILE`, or `./akili.awsprofile` (copy from `akili.awsprofile.example`), or a profile named `ebilly` if defined in `~/.aws/config`. Template: `profiles/aws-profile-akili.snippet`.
 - Copy `.env.example` to `.env.local` and configure
 - Database: PostgreSQL connection via `DATABASE_URL`
+- **Encryption:** When using the shared Preview Neon DB, set `ENCRYPTION_KEY` from Vercel Preview (must match deployed Preview). Mismatch causes sign-in edge cases and runtime decrypt errors on admin/advisor pages.
 - Auth: NextAuth secret via `AUTH_SECRET`
 - Email: Optional Resend API key for notifications
 - OpenAI: API key for AI-powered risk analysis

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AKILI_TAGLINES } from "@/lib/brand/tokens";
 import { PLATFORM_EMAIL_LOGO_CID } from "@/lib/email/platform-email-logo";
 import {
   renderPlatformEmailCta,
@@ -12,7 +13,7 @@ describe("wrapPlatformEmailContent", () => {
       bodyHtml: "<p>Body</p>",
     });
     expect(html).toContain(`cid:${PLATFORM_EMAIL_LOGO_CID}`);
-    expect(html).toContain("Intelligent governance for advisory teams");
+    expect(html).toContain(AKILI_TAGLINES.email);
     expect(html).toContain("<p>Body</p>");
   });
 

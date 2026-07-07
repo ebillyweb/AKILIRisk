@@ -1,18 +1,31 @@
-export type HeroAudience = "families" | "advisors";
+import {
+  contactIntentPath,
+  signInRolePath,
+} from "@/lib/marketing/friendly-urls";
+
+export type HeroAudience = "families" | "advisors" | "overview";
 
 export const HERO_AUDIENCE_OPTIONS: ReadonlyArray<{
   id: HeroAudience;
   label: string;
 }> = [
   { id: "families", label: "For Families" },
-  { id: "advisors", label: "For Advisors" },
+  { id: "advisors", label: "For Firms" },
+  { id: "overview", label: "Overview" },
 ] as const;
+
+export type HeroOverviewStep = {
+  step: string;
+  title: string;
+  description: string;
+};
 
 export type HeroAudienceCopy = {
   kicker: string;
   headline: string;
   supporting: string;
   subtext?: string;
+  overviewSteps?: ReadonlyArray<HeroOverviewStep>;
   primaryCta: { label: string; href: string; title: string };
   secondaryCta: { label: string; href: string; title: string };
   helperLinks: ReadonlyArray<{
@@ -26,60 +39,67 @@ export type HeroAudienceCopy = {
 
 export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
   families: {
-    kicker: "Personal Risk Profile",
+    kicker: "For families",
     headline:
       "The governance intelligence platform for modern family wealth.",
     supporting:
-      "A discreet digital personal risk profile designed to identify structural risks and strengthen family decision frameworks.",
-    subtext: "12–15 minute personal risk profile",
+      "A discreet personal risk profile that surfaces structural gaps and gives your professional team clear, actionable guidance.",
+    subtext: "12–15 minute structured assessment",
     primaryCta: {
       label: "Start Assessment",
       href: "/start",
       title: "Start your personal risk profile",
     },
     secondaryCta: {
-      label: "Sign In with Email Link",
-      href: "/signin/magic-link",
-      title: "Request a one-time sign-in link by email",
+      label: "Sign In",
+      href: signInRolePath("client"),
+      title: "Sign in to your client account",
     },
     helperLinks: [
       {
         id: "advisor-review",
         content: "link",
-        text: "Looking for an advisor?",
+        text: "Don't have an invite code?",
         linkLabel: "Request a review",
         href: "/request-review",
       },
       {
         id: "privacy",
         content: "text",
-        text: "Private and encrypted. Responses visible only to your advisor.",
+        text: "Private and encrypted. Responses visible only to your assigned professional.",
       },
     ],
   },
   advisors: {
-    kicker: "Advisor's Workspace",
+    kicker: "For firms",
     headline:
-      "A personal and intentional way to assess your clients' vulnerabilities.",
+      "Governance intelligence for modern professional practices.",
     supporting:
-      "Manage personal risk profiles, client intelligence, succession planning, and structured recommendations from a unified advisor workspace.",
+      "One workspace for client profiles, assessment progress, risk scoring, and structured recommendations — for wealth advisors, CPAs, estate attorneys, succession planners, and family offices.",
     primaryCta: {
       label: "Advisor Sign In",
-      href: "/signin?portal=advisor",
+      href: signInRolePath("advisor"),
       title: "Sign in to your advisor workspace",
     },
     secondaryCta: {
       label: "Request Demo",
-      href: "/contact?intent=demo",
+      href: contactIntentPath("demo"),
       title: "Request a platform demonstration",
     },
     helperLinks: [
       {
-        id: "platform-admin",
+        id: "pricing",
         content: "link",
-        text: "Platform administrator?",
-        linkLabel: "Sign in with password",
-        href: "/signin",
+        text: "New to AKILI?",
+        linkLabel: "View pricing",
+        href: "/pricing",
+      },
+      {
+        id: "signup",
+        content: "link",
+        text: "Ready to subscribe?",
+        linkLabel: "Create advisor account",
+        href: "/signup/advisor",
       },
       {
         id: "family-path",
@@ -88,10 +108,57 @@ export const HERO_AUDIENCE_CONTENT: Record<HeroAudience, HeroAudienceCopy> = {
         linkLabel: "Start assessment",
         href: "/start",
       },
+    ],
+  },
+  overview: {
+    kicker: "How it works",
+    headline: "Assess. Analyze. Act.",
+    supporting:
+      "Structured intake across up to ten modular risk domains — scoped and weighted per engagement — with prioritized recommendations for families and the professional firms that guide them.",
+    overviewSteps: [
       {
-        id: "workspace",
-        content: "text",
-        text: "Secure workspace for client governance profiles, scoring, and continuity planning.",
+        step: "1",
+        title: "Assess",
+        description:
+          "Families complete a guided profile. Firms choose which risk domains are in scope and manage intake from one workspace.",
+      },
+      {
+        step: "2",
+        title: "Analyze",
+        description:
+          "Scores across active risk domains surface succession, authority, cyber, tax, and continuity gaps.",
+      },
+      {
+        step: "3",
+        title: "Act",
+        description:
+          "Structured recommendations help firms and families address risks before they escalate.",
+      },
+    ],
+    primaryCta: {
+      label: "Start Assessment",
+      href: "/start",
+      title: "Start your personal risk profile",
+    },
+    secondaryCta: {
+      label: "Advisor Sign In",
+      href: signInRolePath("advisor"),
+      title: "Sign in to your advisor workspace",
+    },
+    helperLinks: [
+      {
+        id: "pricing",
+        content: "link",
+        text: "Evaluating for your firm?",
+        linkLabel: "View pricing",
+        href: "/pricing",
+      },
+      {
+        id: "demo",
+        content: "link",
+        text: "Want a walkthrough?",
+        linkLabel: "Request a demo",
+        href: contactIntentPath("demo"),
       },
     ],
   },

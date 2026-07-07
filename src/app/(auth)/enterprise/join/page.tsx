@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
 
+import { EnterpriseTeamJoinConfirmPanel } from "@/components/auth/EnterpriseTeamJoinConfirmPanel";
+import { EnterpriseTeamJoinWrongAccount } from "@/components/auth/EnterpriseTeamJoinWrongAccount";
+import { EnterpriseTeamInviteSignupForm } from "@/components/auth/EnterpriseTeamInviteSignupForm";
 import { InviteAcceptFailure } from "@/components/auth/InviteAcceptFailure";
-import { acceptEnterpriseTeamInviteAction } from "@/lib/actions/enterprise-team-actions";
 import { auth } from "@/lib/auth";
-import { verifyEnterpriseTeamInviteToken } from "@/lib/enterprise/team-invite-token";
-import { prisma } from "@/lib/db";
+import { buildSignInHref } from "@/lib/auth/sign-in-routes";
+import { resolveEnterpriseTeamInvite } from "@/lib/enterprise/team-invite";
+import { buildEnterpriseTeamJoinPath } from "@/lib/enterprise/team-invite-token";
 
 export default async function EnterpriseJoinPage({
   searchParams,
@@ -12,50 +15,59 @@ export default async function EnterpriseJoinPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const sp = await searchParams;
-  const token = sp.token?.trim();
-  if (!token) {
-    return (
-      <InviteAcceptFailure message="This team invitation link is missing a token." />
-    );
+  const token = sp.token?.trim() ?? "";
+  const invite = await resolveEnterpriseTeamInvite(token);
+
+  if (!invite.ok) {
+    return <InviteAcceptFailure message={invite.error} />;
   }
 
-  const membershipId = verifyEnterpriseTeamInviteToken(token);
-  if (!membershipId) {
-    return (
-      <InviteAcceptFailure message="This team invitation link is invalid or has expired." />
-    );
-  }
+  const joinPath = buildEnterpriseTeamJoinPath(token);
 
-  const membership = await prisma.enterpriseMembership.findUnique({
-    where: { id: membershipId },
-    select: {
-      status: true,
-      invitedEmail: true,
-      enterprise: { select: { name: true } },
-    },
-  });
-
-  if (!membership || membership.status !== "INVITED") {
+  if (invite.needsRegistration) {
     return (
-      <InviteAcceptFailure message="This team invitation is no longer valid." />
+      <EnterpriseTeamInviteSignupForm
+        token={token}
+        joinPath={joinPath}
+        enterpriseName={invite.enterpriseName}
+        inviteeEmail={invite.inviteeEmail}
+      />
     );
   }
 
   const session = await auth();
   if (!session?.user?.id) {
-    redirect(`/signin?callbackUrl=${encodeURIComponent(`/enterprise/join?token=${encodeURIComponent(token)}`)}`);
+    redirect(
+      buildSignInHref({
+        role: "advisor",
+        callbackUrl: joinPath,
+        email: invite.inviteeEmail,
+      })
+    );
   }
 
   if (session.user.role !== "ADVISOR") {
     return (
-      <InviteAcceptFailure message="Team invitations require an advisor account." />
+      <InviteAcceptFailure message="Team invitations require a team member account. Sign in with the invited email address." />
     );
   }
 
-  const result = await acceptEnterpriseTeamInviteAction(token);
-  if (!result.success) {
-    return <InviteAcceptFailure message={result.error} />;
+  const signedInEmail = session.user.email?.trim().toLowerCase();
+  if (!signedInEmail || signedInEmail !== invite.inviteeEmail) {
+    return (
+      <EnterpriseTeamJoinWrongAccount
+        inviteeEmail={invite.inviteeEmail}
+        signedInEmail={signedInEmail ?? "your current account"}
+        joinPath={joinPath}
+      />
+    );
   }
 
-  redirect("/advisor?notice=enterprise_joined");
+  return (
+    <EnterpriseTeamJoinConfirmPanel
+      token={token}
+      enterpriseName={invite.enterpriseName}
+      inviteeEmail={invite.inviteeEmail}
+    />
+  );
 }

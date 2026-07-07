@@ -38,7 +38,7 @@ describe("resolveBillingContext", () => {
       cancelAtPeriodEnd: false,
       stripeSubscriptionId: "sub_1",
       createdAt: new Date("2026-01-01"),
-      tier: "GROWTH",
+      tier: "PROFESSIONAL",
       clientLimit: 50,
     });
 
@@ -47,7 +47,7 @@ describe("resolveBillingContext", () => {
       kind: "solo",
       userId: "user-1",
       advisorProfileId: "profile-1",
-      subscription: expect.objectContaining({ tier: "GROWTH" }),
+      subscription: expect.objectContaining({ tier: "PROFESSIONAL" }),
     });
   });
 
@@ -63,7 +63,7 @@ describe("resolveBillingContext", () => {
           cancelAtPeriodEnd: false,
           stripeSubscriptionId: null,
           createdAt: new Date("2026-01-01"),
-          tier: "ENTERPRISE",
+          tier: "BUSINESS",
           clientLimit: 100,
         },
       },
@@ -94,7 +94,7 @@ describe("subscriptionForPortalFromContext", () => {
         cancelAtPeriodEnd: false,
         stripeSubscriptionId: "sub_1",
         createdAt,
-        tier: "PROFESSIONAL",
+        tier: "BUSINESS",
         clientLimit: 100,
       },
     });

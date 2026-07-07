@@ -23,9 +23,14 @@ import { personalizeIntakeScript } from '@/lib/intake/personalize-intake-questio
 import { getAssignedAdvisorFirmNameForClient } from '@/lib/client/assigned-advisor-firm-name';
 import { prisma } from '@/lib/db';
 import { notifyAdvisorsOfIntake } from '@/lib/intake/notify-advisor';
+import { tryAutoApproveSelfServiceIntakeAfterSubmit } from '@/lib/intake/auto-approve-default-pillars';
 import { syncInvitationStatusForClientEmail } from '@/lib/invitations/redeem-invitation';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 import { requireClientUserRole } from '@/lib/client/require-client-role';
+import {
+  assertClientIntakeAnswersEditable,
+  hasClientAssessmentStarted,
+} from '@/lib/client/intake-edit-gate';
 import type { UserRole } from '@prisma/client';
 
 // Helper function to get authenticated client user ID
@@ -56,6 +61,11 @@ async function getAuthActor() {
 export async function startIntakeInterview() {
   try {
     const userId = await getAuthUserId();
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
+    }
 
     const submittedInterview = await prisma.intakeInterview.findFirst({
       where: {
@@ -102,6 +112,15 @@ export async function saveResponse(interviewId: string, data: unknown) {
       return { success: false, error: 'Interview not found' };
     }
 
+    if (interview.status === 'SUBMITTED') {
+      return { success: false, error: 'Intake already submitted.' };
+    }
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
+    }
+
     const response = await saveIntakeResponse(
       interviewId,
       validatedFields.data.questionId,
@@ -130,6 +149,15 @@ export async function updateProgress(interviewId: string, questionIndex: number)
     const interview = await getIntakeInterview(userId, interviewId);
     if (!interview) {
       return { success: false, error: 'Interview not found' };
+    }
+
+    if (interview.status === 'SUBMITTED') {
+      return { success: false, error: 'Intake already submitted.' };
+    }
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
     }
 
     // Determine status based on progress
@@ -176,6 +204,15 @@ export async function submitIntakeInterviewAction(interviewId: string) {
       return { success: false, error: 'Interview not found' };
     }
 
+    if (interview.status === 'SUBMITTED') {
+      return { success: false, error: 'Intake already submitted.' };
+    }
+
+    const editable = await assertClientIntakeAnswersEditable(userId);
+    if (!editable.ok) {
+      return { success: false, error: editable.error };
+    }
+
     const script = await loadIntakeScriptForInterview(interviewId);
     const expectedIds = script.map((q) => q.id);
     const responses = await getIntakeResponsesByInterview(interviewId);
@@ -213,16 +250,17 @@ export async function submitIntakeInterviewAction(interviewId: string) {
       },
     });
 
-    // Fire-and-forget advisor notification. Previously this round-tripped
-    // through `fetch /api/intake/[id]/notify-advisor`, which (a) couldn't
-    // forward the user's session cookie from a server-action context so
-    // the route always 401'd, and (b) used a `process.env.NEXTAUTH_URL ||
-    // 'http://localhost:3000'` fallback that hit localhost from the
-    // deployed function. Calling the helper directly skips both problems
-    // and inherits its in-process error handling.
-    void notifyAdvisorsOfIntake(interviewId).catch((error) => {
-      console.error('Advisor notification failed:', error);
-    });
+    const autoApproved = await tryAutoApproveSelfServiceIntakeAfterSubmit(
+      interviewId,
+      userId,
+    );
+
+    if (!autoApproved) {
+      // Fire-and-forget advisor notification when manual review is still required.
+      void notifyAdvisorsOfIntake(interviewId).catch((error) => {
+        console.error('Advisor notification failed:', error);
+      });
+    }
 
     if (actor.email) {
       const assignments = await prisma.clientAdvisorAssignment.findMany({
@@ -285,6 +323,18 @@ export async function getLatestIntakeInterviewAction() {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to get latest interview';
     return { success: false as const, error: message, interview: null };
+  }
+}
+
+export async function getClientIntakeAnswersLockedAction() {
+  try {
+    const userId = await getAuthUserId();
+    const locked = await hasClientAssessmentStarted(userId);
+    return { success: true as const, locked };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to check intake lock state';
+    return { success: false as const, error: message, locked: false };
   }
 }
 

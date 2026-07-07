@@ -12,16 +12,8 @@ interface Props {
 }
 
 /**
- * C2 (BRD §7.2): "Rescore" button on the admin assessment list.
- *
- * Two-step UX: button opens an inline confirmation panel with a required
- * reason prompt (typed-but-optional in Zod; the form prompts for it
- * because rescoring is destructive — overwrites prior PillarScore +
- * AssessmentRecommendation rows). Submit is labeled "Rescore now" with
- * destructive styling.
- *
- * The audit row is written by the server action regardless of outcome
- * (success or rollback) — see admin-rescore-actions.ts:rescoreAssessment.
+ * Admin re-score for assessments with stale scores (answers edited after completion).
+ * Shown only when `answersChangedAfterCompleteAt` is set on a completed assessment.
  */
 export function AssessmentRescoreButton({ assessmentId }: Props) {
   const router = useRouter();
@@ -57,7 +49,7 @@ export function AssessmentRescoreButton({ assessmentId }: Props) {
     return (
       <div className="flex items-center gap-2 text-xs">
         <span className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-emerald-900">
-          Rescored to v{done.newVersion} · {done.pillarsChanged} pillars · {done.recommendationsCount} recs
+          Rescored to v{done.newVersion} · {done.pillarsChanged} risk domains · {done.recommendationsCount} recs
         </span>
         <Link
           href={`/admin/audit-log/entity/Assessment/${assessmentId}`}
@@ -93,7 +85,7 @@ export function AssessmentRescoreButton({ assessmentId }: Props) {
   return (
     <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 max-w-md">
       <p className="text-xs text-amber-900">
-        Rescoring overwrites the assessment&apos;s pillar scores and
+        Rescoring overwrites the assessment&apos;s risk domain scores and
         recommendations using the current rules + thresholds. The prior
         state is captured in the audit log.
       </p>

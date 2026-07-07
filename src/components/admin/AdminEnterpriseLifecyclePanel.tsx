@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import {
   deleteEnterpriseByAdmin,
   reactivateEnterpriseByAdmin,
+  retryEnterpriseProvisionByAdmin,
   suspendEnterpriseByAdmin,
 } from "@/lib/admin/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -25,6 +26,26 @@ export function AdminEnterpriseLifecyclePanel({ enterpriseId, slug, status }: Pr
   const [loading, setLoading] = useState(false);
   const [deleteSlug, setDeleteSlug] = useState("");
   const isSuspended = status === "SUSPENDED";
+  const isProvisioning = status === "PROVISIONING";
+
+  const onRetryProvision = async () => {
+    setLoading(true);
+    try {
+      const result = await retryEnterpriseProvisionByAdmin({ enterpriseId });
+      if (result.success) {
+        toast.success(
+          result.mode === "queue"
+            ? "Provisioning queued. Refresh in a minute to confirm Active status."
+            : "Provisioning started. Refresh in a minute to confirm Active status.",
+        );
+        router.refresh();
+      } else {
+        toast.error(result.error ?? "Failed to queue provisioning");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onSuspend = async () => {
     if (
@@ -95,6 +116,26 @@ export function AdminEnterpriseLifecyclePanel({ enterpriseId, slug, status }: Pr
 
   return (
     <div className="space-y-6">
+      {isProvisioning ? (
+        <Alert>
+          <AlertTitle>Provisioning in progress</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>
+              Background setup (methodology transfer, branding, member sync) runs on a job queue.
+              The firm owner cannot use the advisor hub until status becomes Active.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              disabled={loading}
+              onClick={() => void onRetryProvision()}
+            >
+              {loading ? "Queueing…" : "Retry provisioning"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {isSuspended ? (
         <Alert>
           <AlertTitle>Firm suspended</AlertTitle>
@@ -108,7 +149,7 @@ export function AdminEnterpriseLifecyclePanel({ enterpriseId, slug, status }: Pr
             </Button>
           </AlertDescription>
         </Alert>
-      ) : (
+      ) : !isProvisioning ? (
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -120,7 +161,7 @@ export function AdminEnterpriseLifecyclePanel({ enterpriseId, slug, status }: Pr
             Suspend firm
           </Button>
         </div>
-      )}
+      ) : null}
 
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
         <div className="space-y-1">

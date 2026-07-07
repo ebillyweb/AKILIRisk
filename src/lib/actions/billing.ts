@@ -2,11 +2,13 @@
 
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { z } from "zod";
 
 import { requireAdvisorSession, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { isBillingEnabled } from "@/lib/billing/config";
-import { TIER_LIMITS } from "@/lib/billing/constants";
+import { clientLimitForTier, TIER_LIMITS } from "@/lib/billing/constants";
+import { planTierCapacityBlockReason } from "@/lib/billing/client-limit";
 import {
   checkClientLimitForAdvisorProfile,
   reconcileAdvisorSubscriptionWithStripe,
@@ -24,7 +26,7 @@ import { resolvePublicAppUrl } from "@/lib/public-app-url";
 import { getStripe } from "@/lib/stripe";
 
 const checkoutSchema = z.object({
-  tier: z.enum(["STARTER", "GROWTH", "PROFESSIONAL"]),
+  tier: z.enum(["ESSENTIALS", "PROFESSIONAL", "BUSINESS", "PLATINUM"]),
   billingCycle: z.enum(["MONTHLY", "ANNUAL"]),
 });
 
@@ -38,6 +40,19 @@ export type BillingPortalResult =
 
 export type SwitchPlanResult = { success: true } | BillingActionError;
 
+async function assertPlanTierClientCapacity(
+  advisorProfileId: string,
+  tier: SubscriptionTier
+): Promise<BillingActionError | null> {
+  const check = await checkClientLimitForAdvisorProfile(advisorProfileId);
+  const reason = planTierCapacityBlockReason({
+    currentClientCount: check.currentCount,
+    targetTier: tier,
+  });
+  if (!reason) return null;
+  return { success: false, error: reason };
+}
+
 /**
  * Change an existing Stripe subscription's price (upgrade, downgrade, or monthly/annual switch).
  * Uses proration; does not apply when there is no active Stripe subscription (use Checkout instead).
@@ -50,7 +65,7 @@ export async function switchSubscriptionPlan(
       return { success: false, error: "Billing is disabled." };
     }
     const { userId } = await requireAdvisorSession();
-    await getAdvisorProfileOrThrow(userId);
+    const profile = await getAdvisorProfileOrThrow(userId);
 
     const parsed = checkoutSchema.safeParse(input);
     if (!parsed.success) {
@@ -60,6 +75,9 @@ export async function switchSubscriptionPlan(
     const { tier, billingCycle } = parsed.data;
     const tierEnum = tier as SubscriptionTier;
     const cycleEnum = billingCycle as BillingCycle;
+
+    const capacityError = await assertPlanTierClientCapacity(profile.id, tierEnum);
+    if (capacityError) return capacityError;
 
     const row = await prisma.subscription.findUnique({
       where: { userId },
@@ -133,6 +151,12 @@ export async function createCheckoutSession(
       billingCycle as BillingCycle
     );
 
+    const capacityError = await assertPlanTierClientCapacity(
+      profile.id,
+      tier as SubscriptionTier
+    );
+    if (capacityError) return capacityError;
+
     const existing = await prisma.subscription.findUnique({
       where: { userId },
     });
@@ -181,12 +205,137 @@ export async function createCheckoutSession(
 
     return { success: true, url: session.url };
   } catch (e) {
+    if (isRedirectError(e)) throw e;
     const message = e instanceof Error ? e.message : "Checkout failed";
     const hint =
       /url/i.test(message) && process.env.VERCEL === "1"
         ? " Check AUTH_URL / NEXT_PUBLIC_URL in Vercel (full https:// URL, no quotes or line breaks)."
         : "";
     return { success: false, error: message + hint };
+  }
+}
+
+export async function createEnterpriseCheckoutSession(
+  input: unknown
+): Promise<BillingCheckoutResult> {
+  try {
+    if (!isBillingEnabled()) {
+      return { success: false, error: "Billing is disabled." };
+    }
+    const { userId } = await requireAdvisorSession();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const billingCtx = await resolveBillingContext(userId);
+
+    if (!billingCtx || billingCtx.kind !== "enterprise") {
+      return { success: false, error: "Firm subscription checkout is for enterprise accounts only." };
+    }
+    if (billingCtx.role !== "OWNER") {
+      return {
+        success: false,
+        error: "Only the firm owner can start subscription checkout.",
+      };
+    }
+
+    const parsed = checkoutSchema.safeParse(input);
+    if (!parsed.success) {
+      return { success: false, error: "Invalid plan selection." };
+    }
+
+    const { tier, billingCycle } = parsed.data;
+    const priceId = validateCheckoutPrice(
+      tier as SubscriptionTier,
+      billingCycle as BillingCycle
+    );
+
+    const enterprise = await prisma.advisorEnterprise.findUnique({
+      where: { id: billingCtx.enterpriseId },
+      select: {
+        id: true,
+        name: true,
+        seatLimit: true,
+        paymentMethod: true,
+        subscription: {
+          select: {
+            stripeCustomerId: true,
+            stripeSubscriptionId: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!enterprise) {
+      return { success: false, error: "Enterprise firm not found." };
+    }
+    if (enterprise.paymentMethod !== "CARD") {
+      return {
+        success: false,
+        error:
+          "This firm is set up for wire transfer billing. Contact your account manager to complete payment.",
+      };
+    }
+
+    const existingSub = enterprise.subscription;
+    if (
+      existingSub?.stripeSubscriptionId?.trim() &&
+      existingSub.status !== "CANCELLED" &&
+      existingSub.status !== "UNPAID"
+    ) {
+      return {
+        success: false,
+        error: "Your firm already has an active subscription. Manage it from Billing.",
+      };
+    }
+
+    const base = await resolvePublicAppUrl();
+    const successUrl = `${base}/advisor/billing?checkout=success`;
+    const cancelUrl = `${base}/advisor/enterprise/pricing?checkout=cancel`;
+    try {
+      new URL(successUrl);
+      new URL(cancelUrl);
+    } catch {
+      return {
+        success: false,
+        error:
+          "Billing redirect URL is invalid. Set AUTH_URL to your public https origin.",
+      };
+    }
+
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: enterprise.seatLimit }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: userId,
+      metadata: {
+        userId,
+        enterpriseId: enterprise.id,
+        tier,
+        billing_cycle: billingCycle,
+      },
+      subscription_data: {
+        metadata: {
+          userId,
+          enterpriseId: enterprise.id,
+          tier,
+          billing_cycle: billingCycle,
+        },
+      },
+      ...(existingSub?.stripeCustomerId
+        ? { customer: existingSub.stripeCustomerId }
+        : { customer_email: profile.user.email ?? undefined }),
+    });
+
+    if (!session.url) {
+      return { success: false, error: "Could not start checkout session." };
+    }
+
+    return { success: true, url: session.url };
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
+    const message = e instanceof Error ? e.message : "Checkout failed";
+    return { success: false, error: message };
   }
 }
 
@@ -365,9 +514,9 @@ export async function getSubscriptionDetails(): Promise<
       return {
         success: true,
         data: {
-          tier: "STARTER",
+          tier: "ESSENTIALS",
           status: "NONE",
-          clientLimit: TIER_LIMITS.STARTER,
+          clientLimit: TIER_LIMITS.ESSENTIALS,
           billingCycle: "MONTHLY",
           currentPeriodEnd: new Date().toISOString(),
           cancelAtPeriodEnd: false,
@@ -384,7 +533,7 @@ export async function getSubscriptionDetails(): Promise<
       data: {
         tier: reconciled.tier,
         status: reconciled.status,
-        clientLimit: reconciled.clientLimit,
+        clientLimit: clientLimitForTier(reconciled.tier),
         billingCycle: reconciled.billingCycle,
         currentPeriodEnd: reconciled.currentPeriodEnd.toISOString(),
         cancelAtPeriodEnd: reconciled.cancelAtPeriodEnd,

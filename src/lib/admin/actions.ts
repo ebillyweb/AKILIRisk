@@ -14,6 +14,10 @@ import {
 } from "@/lib/billing/new-advisor-grace";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import {
+  isPrismaSchemaDriftError,
+  SCHEMA_DRIFT_USER_MESSAGE,
+} from "@/lib/db/schema-drift";
 import { sendNotification } from "@/lib/notifications/service";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
 import { requireAdminRole } from "@/lib/admin/auth";
@@ -27,7 +31,7 @@ import {
   ENTERPRISE_DEFAULT_SEAT_LIMIT,
 } from "@/lib/enterprise/constants";
 import { cancelSoloSubscriptionForEnterprise } from "@/lib/enterprise/cancel-solo-subscription";
-import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-subscription";
+import { scheduleEnterpriseProvision, queueEnterpriseProvision } from "@/lib/enterprise/schedule-enterprise-provision";
 import {
   deleteEnterpriseFirmByAdmin,
   EnterpriseLifecycleError,
@@ -40,9 +44,7 @@ import {
   validatePasswordForSet,
 } from "@/lib/auth/password-policy";
 import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
-import {
-  hashPasswordForStorage,
-} from "@/lib/auth/password-update";
+import { hashPasswordForStorage } from "@/lib/auth/password-update";
 
 // Round-11 bug-hunt fix: normalize email casing — both schemas
 // trim+lowercase so userEmailWriteData (deterministic ciphertext,
@@ -380,9 +382,9 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
       const sub = await tx.subscription.create({
         data: {
           userId: u.id,
-          tier: "GROWTH",
+          tier: "PROFESSIONAL",
           status: "GRACE_PERIOD",
-          clientLimit: TIER_LIMITS.GROWTH,
+          clientLimit: TIER_LIMITS.PROFESSIONAL,
           billingCycle: "MONTHLY",
           currentPeriodEnd: gracePeriodEnd,
         },
@@ -392,7 +394,7 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
         data: {
           subscriptionId: sub.id,
           action: "admin_new_advisor_grace",
-          newTier: "GROWTH",
+          newTier: "PROFESSIONAL",
           metadata: {
             gracePeriodEnd: gracePeriodEnd.toISOString(),
             paidSignupDeadline: paidSignupDeadline.toISOString(),
@@ -756,6 +758,8 @@ export async function restoreClientByAdmin(input: unknown) {
   }
 }
 
+const moduleTierSchema = z.enum(["ESSENTIALS", "PROFESSIONAL", "BUSINESS", "PLATINUM"]);
+
 const createEnterpriseSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   slug: z
@@ -764,6 +768,7 @@ const createEnterpriseSchema = z.object({
     .max(20)
     .transform((s) => s.trim().toLowerCase()),
   ownerUserId: z.string().cuid(),
+  moduleTier: moduleTierSchema,
   seatLimit: z.number().int().positive().optional(),
   clientLimit: z.number().int().positive().optional(),
   perAdvisorClientLimit: z.number().int().positive().optional(),
@@ -834,16 +839,16 @@ export async function createEnterpriseByAdmin(input: unknown) {
     const perAdvisorClientLimit =
       parsed.data.perAdvisorClientLimit ?? ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT;
     const billingCycle = parsed.data.billingCycle ?? "ANNUAL";
+    const moduleTier = parsed.data.moduleTier;
     const periodEnd = new Date();
     periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1);
-
-    let soloStripeSubscriptionId: string | null = null;
 
     const result = await prisma.$transaction(async (tx) => {
       const enterprise = await tx.advisorEnterprise.create({
         data: {
           name: parsed.data.name.trim(),
           slug: parsed.data.slug,
+          status: "PROVISIONING",
           seatLimit,
           clientLimit,
           perAdvisorClientLimit,
@@ -852,7 +857,7 @@ export async function createEnterpriseByAdmin(input: unknown) {
         },
       });
 
-      const soloCancel = await cancelSoloSubscriptionForEnterprise(
+      await cancelSoloSubscriptionForEnterprise(
         owner.id,
         {
           reason: "enterprise_owner_provision",
@@ -860,7 +865,6 @@ export async function createEnterpriseByAdmin(input: unknown) {
         },
         tx
       );
-      soloStripeSubscriptionId = soloCancel.stripeSubscriptionId;
 
       await tx.advisorProfile.update({
         where: { id: owner.advisorProfile!.id },
@@ -881,7 +885,7 @@ export async function createEnterpriseByAdmin(input: unknown) {
       const subscription = await tx.subscription.create({
         data: {
           enterpriseId: enterprise.id,
-          tier: "ENTERPRISE",
+          tier: moduleTier,
           status: "ACTIVE",
           clientLimit,
           billingCycle,
@@ -895,10 +899,11 @@ export async function createEnterpriseByAdmin(input: unknown) {
         data: {
           subscriptionId: subscription.id,
           action: "admin_enterprise_provision",
-          newTier: "ENTERPRISE",
+          newTier: moduleTier,
           metadata: {
             enterpriseId: enterprise.id,
             paymentMethod: parsed.data.paymentMethod,
+            moduleTier,
             seatLimit,
             clientLimit,
             perAdvisorClientLimit,
@@ -940,8 +945,6 @@ export async function createEnterpriseByAdmin(input: unknown) {
       return { enterprise, membership, subscription };
     });
 
-    await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
-
     await writeAudit({
       actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
       action: AUDIT_ACTIONS.USER_UPDATE,
@@ -955,6 +958,9 @@ export async function createEnterpriseByAdmin(input: unknown) {
         clientLimit,
         perAdvisorClientLimit,
         paymentMethod: parsed.data.paymentMethod,
+        moduleTier,
+        status: "PROVISIONING",
+        provisionSubmitted: true,
       },
     });
 
@@ -962,14 +968,26 @@ export async function createEnterpriseByAdmin(input: unknown) {
     revalidatePath("/admin/enterprises");
     revalidatePath("/admin");
 
+    const provisionActor = {
+      userId: actorUserId,
+      email: actorEmail ?? null,
+      role: actorRole as UserRole,
+    };
+
+    scheduleEnterpriseProvision(result.enterprise.id, provisionActor);
+
     return {
       success: true,
+      queued: true,
       enterpriseId: result.enterprise.id,
       subscriptionId: result.subscription.id,
       ownerMembershipId: result.membership.id,
     };
   } catch (e) {
     logSafeError("admin/createEnterprise", e);
+    if (isPrismaSchemaDriftError(e)) {
+      return { success: false, error: SCHEMA_DRIFT_USER_MESSAGE };
+    }
     return { success: false, error: safeErrorMessage(e, "Failed to create enterprise") };
   }
 }
@@ -987,6 +1005,135 @@ function revalidateEnterpriseAdminPaths(enterpriseId: string) {
   revalidatePath(`/admin/enterprises/${enterpriseId}`);
   revalidatePath("/admin/advisors");
   revalidatePath("/admin");
+}
+
+const updateEnterpriseModuleTierSchema = enterpriseIdSchema.extend({
+  moduleTier: moduleTierSchema,
+  billingCycle: z.enum(["MONTHLY", "ANNUAL"]).optional(),
+});
+
+export type UpdateEnterpriseModuleTierInput = z.infer<
+  typeof updateEnterpriseModuleTierSchema
+>;
+
+export async function updateEnterpriseModuleTierByAdmin(input: unknown) {
+  try {
+    const { userId: actorUserId, email: actorEmail, role: actorRole } =
+      await requireAdminRole();
+    const parsed = updateEnterpriseModuleTierSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    const enterprise = await prisma.advisorEnterprise.findUnique({
+      where: { id: parsed.data.enterpriseId },
+      select: {
+        id: true,
+        subscription: { select: { id: true, tier: true, billingCycle: true } },
+      },
+    });
+
+    if (!enterprise?.subscription) {
+      return { success: false, error: "Enterprise firm or subscription not found" };
+    }
+
+    const previousTier = enterprise.subscription.tier;
+    const billingCycle =
+      parsed.data.billingCycle ?? enterprise.subscription.billingCycle;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.subscription.update({
+        where: { id: enterprise.subscription!.id },
+        data: {
+          tier: parsed.data.moduleTier,
+          billingCycle,
+        },
+      });
+
+      await tx.subscriptionAuditLog.create({
+        data: {
+          subscriptionId: enterprise.subscription!.id,
+          action: "admin_enterprise_tier_update",
+          previousTier,
+          newTier: parsed.data.moduleTier,
+          metadata: {
+            enterpriseId: enterprise.id,
+            billingCycle,
+            actorUserId,
+          },
+        },
+      });
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.USER_UPDATE,
+      entityType: "AdvisorEnterprise",
+      entityId: enterprise.id,
+      afterData: {
+        moduleTier: parsed.data.moduleTier,
+        billingCycle,
+        previousTier,
+      },
+    });
+
+    revalidateEnterpriseAdminPaths(parsed.data.enterpriseId);
+    revalidatePath("/advisor/billing");
+    revalidatePath("/advisor/enterprise/pricing");
+
+    return { success: true as const };
+  } catch (e) {
+    logSafeError("admin/updateEnterpriseModuleTier", e);
+    return {
+      success: false,
+      error: safeErrorMessage(e, "Failed to update module tier"),
+    };
+  }
+}
+
+export async function retryEnterpriseProvisionByAdmin(input: unknown) {
+  try {
+    const { userId, email, role } = await requireAdminRole();
+    const parsed = enterpriseIdSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    const enterprise = await prisma.advisorEnterprise.findUnique({
+      where: { id: parsed.data.enterpriseId },
+      select: { id: true, status: true },
+    });
+    if (!enterprise) {
+      return { success: false, error: "Enterprise not found" };
+    }
+    if (enterprise.status !== "PROVISIONING") {
+      return {
+        success: false,
+        error: "Provisioning can only be retried while the firm is still provisioning",
+      };
+    }
+
+    const actor = { userId, email: email ?? null, role: role as UserRole };
+    const queued = await queueEnterpriseProvision(parsed.data.enterpriseId, actor);
+    revalidateEnterpriseAdminPaths(parsed.data.enterpriseId);
+    return { success: true as const, queued: true, mode: queued.mode };
+  } catch (e) {
+    logSafeError("admin/retryEnterpriseProvision", e);
+    return {
+      success: false,
+      error: safeErrorMessage(e, "Failed to retry provisioning"),
+    };
+  }
 }
 
 export async function suspendEnterpriseByAdmin(input: unknown) {

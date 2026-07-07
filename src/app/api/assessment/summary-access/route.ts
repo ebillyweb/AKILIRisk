@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isClientActionPlanEnabledForUser } from "@/lib/client/client-action-plan-visibility.server";
 import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 
 /**
@@ -13,7 +14,10 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const access = await getClientAssessmentSummaryAccess(session.user.id);
+  const [access, actionPlanEnabled] = await Promise.all([
+    getClientAssessmentSummaryAccess(session.user.id),
+    isClientActionPlanEnabledForUser(session.user.id),
+  ]);
 
-  return NextResponse.json(access);
+  return NextResponse.json({ ...access, actionPlanEnabled });
 }

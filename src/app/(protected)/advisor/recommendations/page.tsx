@@ -5,6 +5,10 @@ import { getPortfolioRecommendationsAction } from "@/lib/actions/advisor-actions
 import { RecommendationsPortfolio } from "@/components/recommendations/RecommendationsPortfolio";
 import { RecommendationsSummaryStrip } from "@/components/recommendations/RecommendationsSummaryStrip";
 import { redirect } from "next/navigation";
+import { requireAdvisorRole } from "@/lib/advisor/auth";
+import { prisma } from "@/lib/db";
+import { isImplementationTrackingEnabled } from "@/lib/engagement/feature-flags";
+import { getPortfolioEngagementData } from "@/lib/engagement/engagement-metrics";
 
 export default async function AdvisorRecommendationsPage({
   searchParams,
@@ -25,6 +29,25 @@ export default async function AdvisorRecommendationsPage({
   }
 
   const data = result.data!;
+
+  // Engagement column: fetch tracking state and data
+  let trackingEnabled = false;
+  let engagementData: Map<string, { completedCount: number; totalCount: number; blockedCount: number }> | undefined;
+  try {
+    const { userId } = await requireAdvisorRole();
+    const advisorProfile = await prisma.advisorProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (advisorProfile) {
+      trackingEnabled = await isImplementationTrackingEnabled(advisorProfile.id);
+      if (trackingEnabled) {
+        engagementData = await getPortfolioEngagementData(advisorProfile.id);
+      }
+    }
+  } catch {
+    // Engagement column is non-critical; if it fails, just skip it
+  }
 
   return (
     <div className="space-y-8">
@@ -87,7 +110,11 @@ export default async function AdvisorRecommendationsPage({
         </div>
       </div>
 
-      <RecommendationsPortfolio groups={data.groups} />
+      <RecommendationsPortfolio
+        groups={data.groups}
+        engagementData={engagementData}
+        trackingEnabled={trackingEnabled}
+      />
     </div>
   );
 }

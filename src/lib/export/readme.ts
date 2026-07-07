@@ -26,7 +26,7 @@ const FILE_DESCRIPTIONS: Record<string, string> = {
   "intake_approvals.csv": "Advisor approval/rejection records for intake submissions.",
   "assessments.csv": "Risk assessment instances per client.",
   "assessment_responses.csv": "Per-question assessment responses.",
-  "pillar_scores.csv": "Per-pillar scoring results (low/medium/high/critical).",
+  "pillar_scores.csv": "Per risk domain scoring results (low/medium/high/critical).",
   "document_requirements.csv": "Document checklists + S3 keys for fulfilled documents.",
   "advisor_notifications.csv": "In-app notifications for the advisor.",
   "governance_review_leads.csv": "Public lead-form submissions assigned to this advisor.",

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { requireAdvisorRole, requireAdvisorSession, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { sendEnterpriseTeamInviteEmail } from "@/lib/email/enterprise-team-invite";
 import { resolveEnterpriseTeamContext } from "@/lib/enterprise/team-access";
 import {
@@ -11,12 +11,14 @@ import {
   acceptEnterpriseTeamInvite,
   inviteEnterpriseMember,
   reactivateEnterpriseMember,
+  resendEnterpriseTeamInvite,
+  revokeEnterpriseTeamInvite,
   suspendEnterpriseMember,
 } from "@/lib/enterprise/team-invite";
+import { registerEnterpriseTeamInvitee } from "@/lib/enterprise/register-enterprise-team-invitee";
 
 const inviteSchema = z.object({
   email: z.string().email().max(254),
-  role: z.enum(["ADMIN", "ADVISOR"]),
 });
 
 const membershipIdSchema = z.object({
@@ -52,7 +54,7 @@ export async function inviteEnterpriseTeamMemberAction(input: unknown) {
       inviteeEmail: parsed.email.trim().toLowerCase(),
       enterpriseName: team.enterpriseName,
       inviterName,
-      roleLabel: parsed.role === "ADMIN" ? "a firm administrator" : "an advisor",
+      roleLabel: "a team member",
       inviteUrl: result.inviteUrl,
     });
 
@@ -87,9 +89,73 @@ export async function reactivateEnterpriseTeamMemberAction(input: unknown) {
   }
 }
 
-export async function acceptEnterpriseTeamInviteAction(token: string) {
+export async function resendEnterpriseTeamInviteAction(input: unknown) {
   try {
     const { userId } = await requireAdvisorRole();
+    const [profile, team] = await Promise.all([
+      getAdvisorProfileOrThrow(userId),
+      resolveEnterpriseTeamContext(userId),
+    ]);
+    if (!team) {
+      return { success: false as const, error: "Unauthorized" };
+    }
+
+    const { membershipId } = membershipIdSchema.parse(input);
+    const result = await resendEnterpriseTeamInvite(userId, membershipId);
+
+    const inviterName =
+      profile.user.name ||
+      [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||
+      "Your firm administrator";
+
+    const emailResult = await sendEnterpriseTeamInviteEmail({
+      inviteeEmail: result.inviteeEmail,
+      enterpriseName: team.enterpriseName,
+      inviterName,
+      roleLabel: "a team member",
+      inviteUrl: result.inviteUrl,
+    });
+    if (!emailResult.success) {
+      return { success: false as const, error: emailResult.error ?? "Failed to send invitation email" };
+    }
+
+    revalidatePath("/advisor/settings/team");
+    return { success: true as const };
+  } catch (error) {
+    return { success: false as const, error: actionError(error, "Failed to resend invitation") };
+  }
+}
+
+export async function revokeEnterpriseTeamInviteAction(input: unknown) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const { membershipId } = membershipIdSchema.parse(input);
+    await revokeEnterpriseTeamInvite(userId, membershipId);
+    revalidatePath("/advisor/settings/team");
+    return { success: true as const };
+  } catch (error) {
+    return { success: false as const, error: actionError(error, "Failed to remove invitation") };
+  }
+}
+
+export async function registerEnterpriseTeamInviteeAction(input: unknown) {
+  try {
+    const result = await registerEnterpriseTeamInvitee(input);
+    if (!result.success) {
+      return { success: false as const, error: result.error, fieldErrors: result.fieldErrors };
+    }
+    return { success: true as const, data: { email: result.email } };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: actionError(error, "Failed to create your account"),
+    };
+  }
+}
+
+export async function acceptEnterpriseTeamInviteAction(token: string) {
+  try {
+    const { userId } = await requireAdvisorSession();
     const { verifyEnterpriseTeamInviteToken } = await import(
       "@/lib/enterprise/team-invite-token"
     );

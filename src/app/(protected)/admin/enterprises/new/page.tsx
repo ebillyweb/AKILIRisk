@@ -6,12 +6,14 @@ export default async function AdminNewEnterprisePage() {
 
   return (
     <AdminCreateEnterpriseForm
-      owners={owners.map((owner) => ({
-        id: owner.id,
-        email: owner.email,
-        name: owner.name,
-        advisorProfile: owner.advisorProfile,
-      }))}
+      owners={owners
+        .filter((owner): owner is typeof owner & { email: string } => owner.email != null)
+        .map((owner) => ({
+          id: owner.id,
+          email: owner.email,
+          name: owner.name,
+          advisorProfile: owner.advisorProfile,
+        }))}
     />
   );
 }

@@ -195,6 +195,33 @@ export const conditionSchema = z.discriminatedUnion("type", [
 
 export type RecommendationCondition = z.infer<typeof conditionSchema>;
 
+const triggerConditionsArraySchema = z
+  .array(conditionSchema)
+  .min(1, "At least one condition is required");
+
+/** Parse + validate trigger conditions for admin and advisor rule forms. */
+export function parseRecommendationTriggerConditions(
+  input: unknown,
+):
+  | { success: true; data: RecommendationCondition[] }
+  | { success: false; error: string } {
+  const parsed = triggerConditionsArraySchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return {
+      success: false,
+      error: issue?.message ?? "Invalid trigger conditions",
+    };
+  }
+
+  const issues = detectContradictoryConditions(parsed.data);
+  if (issues.length > 0) {
+    return { success: false, error: issues[0].message };
+  }
+
+  return { success: true, data: parsed.data };
+}
+
 // ── Cross-condition validation ───────────────────────────────────────────
 //
 // Catch the obvious "this rule can never match" cases. We don't try to be

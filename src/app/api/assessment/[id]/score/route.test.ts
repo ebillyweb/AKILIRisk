@@ -36,6 +36,36 @@ vi.mock("@/lib/assessment/pillar-config", () => ({
 vi.mock("@/lib/assessment/pillar-answer-loader", () => ({
   loadAssessmentAnswersForQuestions: vi.fn(async () => ({})),
 }));
+vi.mock("@/lib/methodology/snapshot", () => ({
+  loadSnapshotForAssessment: vi.fn(async () => null),
+}));
+vi.mock("@/lib/methodology/assessment-from-snapshot", () => ({
+  pillarAssessmentConfigFromSnapshot: vi.fn(() => null),
+}));
+vi.mock("@/lib/assessment/pillar-outcomes", () => ({
+  resolvePillarNarratives: vi.fn(() => []),
+}));
+vi.mock("@/lib/facilitated/assessment-access", () => ({
+  authorizeAssessmentApiAccess: vi.fn(async ({ userId }: { userId: string }) => {
+    // Simple owner check matching the test fixture
+    return { isFacilitated: false, userId };
+  }),
+  markFacilitatedSessionPreviewIfComplete: vi.fn(),
+}));
+vi.mock("@/lib/client/assessment-summary-gate", () => ({
+  evaluateClientAssessmentSummaryAccess: vi.fn(() => ({
+    canViewSummary: true,
+    allPillarsComplete: true,
+  })),
+}));
+vi.mock("@/lib/methodology/cached-pillar-catalog", async () => {
+  const { starterPillarCatalog } = await import("@/lib/methodology/pillar-catalog");
+  return {
+    getPlatformPillarCatalog: vi.fn(async () => starterPillarCatalog()),
+    getPlatformPillarSlugs: vi.fn(async () => starterPillarCatalog().map((p: { id: string }) => p.id)),
+    isPlatformRiskAreaSlug: vi.fn(async () => true),
+  };
+});
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -84,6 +114,7 @@ vi.mock("@/lib/db", () => ({
         }
       ),
     },
+    pillar: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 

@@ -1,132 +1,54 @@
+---
+gsd_state_version: 1.0
+milestone: v1.5
+milestone_name: Cyber Risk Intelligence
+status: shipped
+last_updated: "2026-06-28T09:00:00.000Z"
+progress:
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 26
+  completed_plans: 26
+  percent: 100
+---
+
 # Project State
 
 ## Project Reference
 
-**Core Value:** Prevent family wealth from becoming family conflict through systematic risk assessment and actionable governance recommendations
+See: .planning/PROJECT.md (updated 2026-06-28)
 
-**Current Focus:** v1.5 Cyber Risk Intelligence — Expand beyond family governance into comprehensive family risk intelligence by adding cyber risk as distinct pillar with unified risk profiling
+**Core value:** Prevent family wealth from becoming family conflict through systematic risk assessment and actionable governance recommendations
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-**Milestone:** v1.5 Cyber Risk Intelligence
-**Phase:** 20 - Identity Risk Intelligence
-**Plan:** 3 of 3 (20-01, 20-02, 20-03 complete)
-**Status:** Complete
-
-**Progress Bar:** █░░░░░░░░░ 11% (Phase 20 of 22)
-
-### Phase 20 Goal
-Establish identity risk assessment as third pillar with threat intelligence integration
-
-**Success Criteria:**
-1. Family can complete cyber risk assessment with numerical scoring (0-10 scale matching governance)
-2. System generates automated cyber risk recommendations based on assessment results
-3. Advisor can view client cyber risk scores in separate portal section
-4. Assessment evaluates banking security practices and payment method risks with actionable feedback
-
-**Requirements:** CYBER-01, CYBER-02, FINANCE-01, FINANCE-02
+**Milestone:** v1.5 Cyber Risk Intelligence -- SHIPPED 2026-06-28
+**Next:** Run `/gsd:new-milestone` to start next milestone
 
 ## Performance Metrics
 
-### Milestone Progress
-- **Phases:** 0/4 complete
-- **Requirements:** 9 total, 0 completed
-- **Coverage:** 100% (all requirements mapped)
-
-### Development Velocity
-- **Started:** 2026-03-18 (roadmap creation)
-- **Current:** Day 1
-- **Estimated:** TBD (needs planning)
-
 ### Historical Velocity
-**Previous milestones:**
-- v1.0 (4 phases): 22 days
-- v1.1 (3 phases): 1 day
-- v1.2 (3 phases): 1 day
-- v1.3 (4 phases): 26 days
-- v1.4 (4 phases): 4 days
 
-**Technical Health:**
-- Codebase: ~2.5M lines TypeScript/TSX (comprehensive platform)
-- Architecture: Next.js 15, Prisma 7, PostgreSQL, Auth.js v5, TanStack Query & React Table, Recharts
-- Security: TOTP MFA, Argon2id password hashing, AES-256-GCM encryption, rate limiting, row-level data isolation
-- Assessment Coverage: 68 questions with household-aware personalization and advisor customization
+| Milestone | Phases | Plans | Timeline |
+|-----------|--------|-------|----------|
+| v1.0 MVP | 4 | 14 | 22 days |
+| v1.1 Household Profiles | 3 | 6 | 1 day |
+| v1.2 Intake & Triage | 3 | 16 | 1 day |
+| v1.3 Governance Intelligence | 4 | 10 | 26 days |
+| v1.4 Advisor Workflow | 4 | 14 | 4 days |
+| v1.5 Cyber Risk Intelligence | 7 | 26 | 102 days |
 
-## Accumulated Context
-
-### Key Decisions
-- **Domain Separation Strategy:** Cyber risk implemented as parallel pillar to governance, maintaining strict boundaries while enabling unified views
-- **Security Architecture:** Multi-tenant cyber risk data uses same row-level security as existing governance system
-- **Performance Model:** Async processing with cached results, avoiding blocking workflows on external APIs
-- **Scoring Consistency:** Cyber risk reuses proven calculatePillarScore engine for mathematical reliability and consistency with governance assessment
-- **Weight Distribution:** Banking Security sub-category weighted 4 (vs 3 for others) to emphasize financial risk evaluation focus
-- **AI recommendation caching in missingControls JSON field for performance**
-- **gpt-4o-mini model selection for cost-effective structured output**
-- **Identity Risk Subcategory Weighting:** Social Exposure and Public Information weighted 4 (vs 3 for Digital Footprint and Family Visibility) reflecting primary identity theft vectors
-- **Identity Risk Question Bank Size:** 21 questions providing comprehensive coverage while maintaining assessment efficiency and user experience
-
-### Architecture Approach
-- **Foundation:** Builds on proven v1.4 platform patterns (Next.js/Prisma/PostgreSQL)
-- **Data Model:** Separate schemas for cyber-specific data, materialized views for unified scoring
-- **Integration:** Leverages ae-cvss-calculator for CVSS 4.0 scoring, mathjs for composite risk calculations
-
-### Phase Dependencies
-1. Phase 19: No dependencies (builds on v1.4 foundation)
-2. Phase 20: Requires Phase 19 cyber risk foundation
-3. Phase 21: Requires Phase 20 identity assessment complete
-4. Phase 22: Requires Phase 21 unified scoring complete
-
-### Research Insights
-- **Foundation Strategy:** Must establish domain boundaries and data architecture before any implementation to prevent contamination
-- **External Integration Isolation:** Threat intelligence APIs require proper caching and tenant isolation to prevent security cascades
-- **Unified Scoring Mathematics:** Risk aggregation requires mature individual assessment systems to ensure mathematical validity
-- **User Experience Separation:** Maintain separate assessment flows, use unified dashboards for combined results only
-
-## Active TODOs
-
-### Immediate
-- [x] Execute Plan 20-01 - Identity Risk Foundation (complete)
-- [x] Execute Plan 20-02 - Assessment UI Integration (complete)
-- [x] Execute Plan 20-03 - Threat Intelligence Integration (complete)
-
-### Upcoming
-- [ ] Plan Phase 21 - Unified Risk Intelligence
-- [ ] Plan Phase 22 - Advanced Reporting
-
-### Phase 19 Complete
-- [x] CYBER-01: Independent cyber risk assessment with numerical scoring ✅
-- [x] CYBER-02: Automated cyber risk recommendations based on assessment results ✅
-- [x] Advisor visibility: Client cyber risk scores in separate portal section ✅
+**Totals:** 25 phases, 86 plans across 6 milestones
 
 ## Known Blockers
 
-None identified. Ready to proceed with Phase 19 planning.
-
-## Research Flags
-
-**Phase 20:** Complex vendor integrations require API security research and threat intelligence provider evaluation during planning
-**Phase 22:** Social media analysis and FAIR methodology implementation need domain-specific research
-
-**Phases 19, 21:** Follow established patterns, skip research-phase
+None identified.
 
 ## Session Continuity
 
-**Last Action:** Completed Plan 20-03 (Threat Intelligence Integration)
-**Files Created:**
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/lib/identity-risk/recommendations.ts`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/api/identity-risk/recommendations/route.ts`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/(protected)/advisor/identity-risk/page.tsx`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/(protected)/advisor/identity-risk/loading.tsx`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/.planning/phases/20-identity-risk-intelligence/20-03-SUMMARY.md`
-
-**Files Modified:**
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/lib/actions/advisor-actions.ts`
-- `/Users/bwoodtalton/Projects/BelvedereRiskManagement/src/app/(protected)/advisor/page.tsx`
-
-**Next Action:** Plan Phase 21 (Unified Risk Intelligence)
-
-**Context Preservation:** Identity risk intelligence complete with AI recommendations, advisor dashboard, and threat intelligence integration. Phase 20 objectives achieved.
+**Last Action:** Milestone v1.5 archived and shipped.
+**Next Action:** `/gsd:new-milestone` to define v2.0 scope.
 
 ---
-*State updated: 2026-03-19*
-*Stopped at: Completed 20-03-PLAN.md*
+*State updated: 2026-06-28*

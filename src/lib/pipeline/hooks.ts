@@ -2,14 +2,17 @@
 
 import { useState, useEffect, useMemo } from "react";
 import type { PipelineClient, PipelineFilters } from './types';
+import { pipelineClientSortSearchLabel } from './client-display';
 import { getStageOrder } from './status';
 
 export function usePipelineUpdates(initialClients: PipelineClient[]) {
   const [clients, setClients] = useState<PipelineClient[]>(initialClients);
   const [connected, setConnected] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
+    setLastUpdated(new Date());
+
     const eventSource = new EventSource('/api/advisor/status-stream');
 
     eventSource.onopen = () => {
@@ -119,20 +122,21 @@ export function usePipelineFilters(
       filtered = filtered.filter((client) => client.awaitingIntakeReview);
     }
 
+    if (filters.assessmentInProgress) {
+      filtered = filtered.filter(
+        (client) => client.stage === "ASSESSMENT_IN_PROGRESS",
+      );
+    }
+
     if (filters.documentsNeeded) {
       filtered = filtered.filter((client) => client.documentsNeeded);
     }
 
-    if (filters.needsRescore) {
-      filtered = filtered.filter((client) => client.needsRescore);
-    }
-
-    // Filter by search (name or email)
+    // Filter by search (reference, name, or email depending on labeling mode)
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(client =>
-        (client.name?.toLowerCase().includes(searchLower)) ||
-        client.email.toLowerCase().includes(searchLower)
+      filtered = filtered.filter((client) =>
+        pipelineClientSortSearchLabel(client).toLowerCase().includes(searchLower),
       );
     }
 
@@ -144,8 +148,8 @@ export function usePipelineFilters(
 
         switch (filters.sortBy) {
           case 'name':
-            aValue = a.name || a.email;
-            bValue = b.name || b.email;
+            aValue = pipelineClientSortSearchLabel(a);
+            bValue = pipelineClientSortSearchLabel(b);
             break;
           case 'stage':
             aValue = getStageOrder(a.stage);

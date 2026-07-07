@@ -6,7 +6,7 @@ import { requireAdminRole } from "@/lib/admin/auth";
 import { decryptUserEmail } from "@/lib/auth/user-email-crypto";
 import { safeDecryptTranscription } from "@/lib/data/response-content";
 import { prisma } from "@/lib/db";
-import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
+import { loadIntakeScriptForInterview } from "@/lib/intake/load-intake-script";
 import { intakeResponsePlaybackUrl } from "@/lib/intake/playback-url";
 import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
 import { getAssignedAdvisorFirmNameForClient } from "@/lib/client/assigned-advisor-firm-name";
@@ -84,7 +84,7 @@ export async function getIntakeInterviewForAdminReview(
   });
 
   const [questions, firmName] = await Promise.all([
-    loadIntakeScriptQuestions(),
+    loadIntakeScriptForInterview(interviewId),
     getAssignedAdvisorFirmNameForClient(interview.user.id),
   ]);
 

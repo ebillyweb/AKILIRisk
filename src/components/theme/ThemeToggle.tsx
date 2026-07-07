@@ -6,7 +6,7 @@ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { useTheme } from "./ThemeProvider";
+import { useOptionalTheme } from "./ThemeProvider";
 
 export function ThemeToggle({
   className,
@@ -16,8 +16,17 @@ export function ThemeToggle({
   /** e.g. match outline buttons on advisor-branded shell headers */
   style?: CSSProperties;
 }) {
-  const { theme, setTheme } = useTheme();
+  const themeContext = useOptionalTheme();
+  if (!themeContext) {
+    return null;
+  }
+
+  const { theme, setTheme, themeLocked } = themeContext;
   const isDark = theme === "dark";
+
+  if (themeLocked) {
+    return null;
+  }
 
   return (
     <Button

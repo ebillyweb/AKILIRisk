@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { getMfaUserState } from "@/lib/auth/mfa-user-state";
+import { getTenantPathPrefixFromHeaders } from "@/lib/client/tenant-path-prefix";
+import { scopePathToTenantPrefix } from "@/lib/client/tenant-path-prefix-client";
 import { MFAVerifyForm } from "./MFAVerifyForm";
 
 /**
@@ -16,8 +18,12 @@ export default async function MFAVerifyPage({
 }) {
   const session = await auth();
 
+  // Keep redirects inside the tenant portal in path-portal mode (the proxy
+  // rewrote `/t/{slug}/mfa/verify` and forwarded the prefix in this header).
+  const tenantPathPrefix = await getTenantPathPrefixFromHeaders();
+
   if (!session?.user) {
-    redirect("/signin?callbackUrl=/mfa/verify");
+    redirect(scopePathToTenantPrefix("/signin?callbackUrl=/mfa/verify", tenantPathPrefix));
   }
 
   const params = await searchParams;
@@ -27,11 +33,13 @@ export default async function MFAVerifyPage({
   const mfaState = await getMfaUserState(session.user.id);
 
   if (!mfaState?.mfaEnabled) {
-    redirect(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
+    const dest = callbackUrl.startsWith("/") ? callbackUrl : "/dashboard";
+    redirect(scopePathToTenantPrefix(dest, tenantPathPrefix));
   }
 
   if (session.user.mfaVerified) {
-    redirect(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
+    const dest = callbackUrl.startsWith("/") ? callbackUrl : "/dashboard";
+    redirect(scopePathToTenantPrefix(dest, tenantPathPrefix));
   }
 
   return (

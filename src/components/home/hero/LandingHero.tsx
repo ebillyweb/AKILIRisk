@@ -1,28 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useId, type ReactNode } from "react";
+import { useId } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
-import { HeroAudienceSwitcher } from "@/components/home/hero/HeroAudienceSwitcher";
+import { useHeroAudienceNav } from "@/components/home/hero/HeroAudienceContext";
 import { HeroFeatureCard } from "@/components/home/hero/HeroFeatureCard";
+import {
+  ADVISOR_HERO_FEATURES,
+  HOME_HERO_FEATURES,
+} from "@/components/home/hero/home-hero-features";
 import {
   HERO_AUDIENCE_CONTENT,
   type HeroAudience,
 } from "@/components/home/hero/hero-audience-content";
-import { ADVISOR_HERO_FEATURES, HOME_HERO_FEATURES } from "@/components/home/hero/home-hero-features";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useHeroAudience } from "@/components/home/hero/useHeroAudience";
 import { cn } from "@/lib/utils";
 
 type LandingHeroProps = {
-  initialAudience?: HeroAudience;
   authenticated: boolean;
   userEmail?: string | null;
   advisorWorkspaceTitle?: string;
-  authenticatedActions?: ReactNode;
   className?: string;
 };
 
@@ -32,20 +30,24 @@ const contentMotion = {
   exit: { opacity: 0, y: -8 },
 };
 
+const HERO_FEATURE_CARDS: Partial<
+  Record<HeroAudience, typeof HOME_HERO_FEATURES>
+> = {
+  families: HOME_HERO_FEATURES,
+  advisors: ADVISOR_HERO_FEATURES,
+};
+
 export function LandingHero({
-  initialAudience = "families",
   authenticated,
   userEmail,
   advisorWorkspaceTitle,
-  authenticatedActions,
   className,
 }: LandingHeroProps) {
   const baseId = useId();
   const prefersReducedMotion = useReducedMotion();
-  const { audience, setAudience } = useHeroAudience(initialAudience);
+  const { audience } = useHeroAudienceNav();
   const copy = HERO_AUDIENCE_CONTENT[audience];
-  const heroFeatures =
-    audience === "families" ? HOME_HERO_FEATURES : ADVISOR_HERO_FEATURES;
+  const featureCards = HERO_FEATURE_CARDS[audience];
   const kicker =
     audience === "advisors" && advisorWorkspaceTitle
       ? advisorWorkspaceTitle
@@ -54,205 +56,188 @@ export function LandingHero({
   const tabId = `${baseId}-tab-${audience}`;
   const transition = prefersReducedMotion
     ? { duration: 0 }
-    : { duration: 0.32, ease: [0.22, 1, 0.36, 1] as const };
+    : { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
-    <div
+    <section
       className={cn(
-        "hero-surface app-grid grid min-h-[calc(100vh-3rem)] overflow-hidden rounded-[2rem] px-6 py-8 sm:px-8 lg:grid-cols-[1.2fr_0.8fr] lg:px-12 lg:py-10",
-        className
+        "hero-surface app-grid overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-14 lg:px-14 lg:py-16",
+        className,
       )}
     >
-      <div className="flex w-full justify-start text-foreground lg:hidden">
-        <AkiliLogoLockup className="h-auto w-full max-w-[220px]" />
-      </div>
-      <section className="flex flex-col justify-between gap-8 lg:gap-10">
-        <div className="space-y-7">
-          <HeroAudienceSwitcher
-            idPrefix={baseId}
-            value={audience}
-            onChange={setAudience}
-          />
-
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={audience}
-              id={panelId}
-              role="tabpanel"
-              aria-labelledby={tabId}
-              data-testid="landing-hero-panel"
-              data-audience={audience}
-              initial={contentMotion.initial}
-              animate={contentMotion.animate}
-              exit={contentMotion.exit}
-              transition={transition}
-              className="space-y-7"
-            >
-              <div className="space-y-4">
-                <p className="editorial-kicker">{kicker}</p>
-                <div className="max-w-3xl space-y-4">
-                  <h1 className="text-4xl font-semibold leading-[1.05] text-balance sm:text-6xl lg:text-[4.5rem]">
-                    {copy.headline}
-                  </h1>
-                  <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                    {copy.supporting}
-                  </p>
-                  {copy.subtext ? (
-                    <p className="text-sm text-muted-foreground">{copy.subtext}</p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {authenticated ? (
-                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                    {authenticatedActions}
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <Button
-                        asChild
-                        size="lg"
-                        className="w-full min-h-12 sm:min-w-[13rem] sm:flex-1"
-                      >
-                        <Link
-                          href={copy.primaryCta.href}
-                          title={copy.primaryCta.title}
-                          data-testid="landing-hero-primary-cta"
-                        >
-                          {copy.primaryCta.label}
-                          <ArrowRight className="size-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        asChild
-                        size="lg"
-                        variant="outline"
-                        className="w-full min-h-12 sm:flex-1"
-                      >
-                        <Link
-                          href={copy.secondaryCta.href}
-                          title={copy.secondaryCta.title}
-                          data-testid="landing-hero-secondary-cta"
-                        >
-                          {copy.secondaryCta.label}
-                        </Link>
-                      </Button>
-                    </div>
-
-                    <ul className="space-y-2" aria-label="Additional information">
-                      {copy.helperLinks.map((item) => (
-                        <li
-                          key={item.id}
-                          className={cn(
-                            "text-sm text-muted-foreground",
-                            item.content === "text" && "text-xs"
-                          )}
-                        >
-                          {item.content === "link" && item.href && item.linkLabel ? (
-                            <>
-                              {item.text}{" "}
-                              <Link
-                                href={item.href}
-                                className="font-semibold text-foreground underline-offset-4 hover:underline"
-                              >
-                                {item.linkLabel}
-                              </Link>
-                            </>
-                          ) : (
-                            item.text
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
+      <div
+        className={cn(
+          "mx-auto flex flex-col items-center text-center",
+          featureCards ? "max-w-5xl" : "max-w-3xl",
+        )}
+      >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={`${audience}-features`}
-            role="presentation"
+            key={audience}
+            id={panelId}
+            role="tabpanel"
+            aria-labelledby={tabId}
+            data-testid="landing-hero-panel"
+            data-audience={audience}
             initial={contentMotion.initial}
             animate={contentMotion.animate}
             exit={contentMotion.exit}
-            transition={{
-              ...transition,
-              delay: prefersReducedMotion ? 0 : 0.04,
-            }}
-            className="grid gap-4 sm:grid-cols-3"
+            transition={transition}
+            className="flex w-full flex-col items-center gap-8"
           >
-            {heroFeatures.map((feature) => (
-              <HeroFeatureCard
-                key={feature.title}
-                title={feature.title}
-                description={feature.description}
-                icon={feature.icon}
-              />
-            ))}
+            <div className="space-y-4">
+              <p className="editorial-kicker">{kicker}</p>
+              <h1 className="text-4xl font-semibold leading-[1.08] text-balance sm:text-5xl lg:text-[3.25rem]">
+                {copy.headline}
+              </h1>
+              <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                {copy.supporting}
+              </p>
+              {copy.subtext ? (
+                <p className="text-sm font-medium text-muted-foreground">{copy.subtext}</p>
+              ) : null}
+            </div>
+
+            {copy.overviewSteps?.length ? (
+              <ol
+                className="grid w-full max-w-2xl gap-4 text-left sm:grid-cols-3 sm:gap-5"
+                data-testid="landing-hero-overview-steps"
+              >
+                {copy.overviewSteps.map(({ step, title, description }) => (
+                  <li
+                    key={step}
+                    className="rounded-xl border border-border/60 bg-background/50 px-4 py-3.5"
+                  >
+                    <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full border border-border/70 bg-card text-xs font-semibold tabular-nums">
+                      {step}
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">{title}</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      {description}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+
+            {authenticated ? (
+              <div className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
+                <Button asChild size="lg" className="min-h-12 w-full sm:w-auto sm:min-w-[12rem]">
+                  <Link href="/dashboard">
+                    Continue to Dashboard
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="min-h-12 w-full sm:w-auto">
+                  <Link href="/settings">Account settings</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="flex w-full max-w-lg flex-col items-center gap-4">
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="min-h-12 w-full sm:w-auto sm:min-w-[12rem]"
+                  >
+                    <Link
+                      href={copy.primaryCta.href}
+                      title={copy.primaryCta.title}
+                      data-testid="landing-hero-primary-cta"
+                    >
+                      {copy.primaryCta.label}
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="min-h-12 w-full sm:w-auto sm:min-w-[10rem]"
+                  >
+                    <Link
+                      href={copy.secondaryCta.href}
+                      title={copy.secondaryCta.title}
+                      data-testid="landing-hero-secondary-cta"
+                    >
+                      {copy.secondaryCta.label}
+                    </Link>
+                  </Button>
+                </div>
+
+                <ul
+                  className="space-y-1.5 text-sm leading-6 text-muted-foreground"
+                  aria-label="Additional information"
+                >
+                  {copy.helperLinks.map((item) => (
+                    <li key={item.id}>
+                      {item.content === "link" && item.href && item.linkLabel ? (
+                        <>
+                          {item.text}{" "}
+                          <Link
+                            href={item.href}
+                            className="font-semibold text-foreground underline-offset-4 hover:underline"
+                          >
+                            {item.linkLabel}
+                          </Link>
+                        </>
+                      ) : (
+                        item.text
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {featureCards?.length ? (
+              <ul
+                className="grid w-full gap-4 text-left sm:grid-cols-3"
+                data-testid="landing-hero-feature-cards"
+                aria-label="Platform capabilities"
+              >
+                {featureCards.map((feature) => (
+                  <li key={feature.title}>
+                    <HeroFeatureCard
+                      title={feature.title}
+                      description={feature.description}
+                      icon={feature.icon}
+                      className="h-full"
+                    />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {authenticated ? (
+              <p className="text-sm text-muted-foreground">
+                Signed in as{" "}
+                <span className="font-semibold text-foreground">{userEmail}</span>
+              </p>
+            ) : (
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+                {audience === "overview" ? (
+                  <Link
+                    href="#how-it-works"
+                    className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                    data-testid="landing-hero-workflow-link"
+                  >
+                    See full workflow ↓
+                  </Link>
+                ) : (
+                  <Link
+                    href="#platform-preview"
+                    className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                    data-testid="landing-hero-sample-link"
+                  >
+                    See sample governance output ↓
+                  </Link>
+                )}
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
-      </section>
-
-      <aside className="mt-12 flex flex-col items-stretch gap-8 lg:mt-0 lg:pl-10">
-        <div className="hidden w-full justify-end text-foreground lg:flex">
-          <AkiliLogoLockup className="h-auto w-full max-w-[280px]" />
-        </div>
-        <Card className="w-full overflow-hidden">
-          <CardContent className="space-y-8 pt-8">
-            <div className="space-y-2">
-              <p className="editorial-kicker">Our Company Ethos</p>
-              <p className="text-xl font-medium leading-8 text-balance text-foreground/90">
-                Governance requires clarity, not assumption.
-              </p>
-              <p className="border-l-2 border-brand/30 pl-4 text-base font-medium italic leading-7 text-foreground/90">
-                Wealth grows through investment.
-                <br />
-                Legacy survives through governance.
-              </p>
-              <p className="text-sm leading-7 text-muted-foreground">
-                Families often operate with informal decision structures that
-                work — until they don&apos;t.
-              </p>
-            </div>
-
-            <p className="text-sm leading-7 text-muted-foreground">
-              This assessment identifies governance gaps across succession
-              planning, authority structure, and family decision frameworks so
-              they can be addressed proactively.
-            </p>
-
-            <div className="section-divider border-t pt-6 text-sm text-muted-foreground">
-              {authenticated ? (
-                <>
-                  Signed in as{" "}
-                  <span className="font-semibold text-foreground">
-                    {userEmail}
-                  </span>
-                  . Continue to the dashboard, review recommendations, and
-                  manage account security settings.
-                </>
-              ) : audience === "advisors" ? (
-                <>
-                  Advisors sign in to manage client governance profiles,
-                  assessment progress, and structured recommendations from one
-                  workspace.
-                </>
-              ) : (
-                <>
-                  Existing clients sign in with a one-time email link to continue
-                  an assessment, review recommendations, and manage account
-                  settings.
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </aside>
-    </div>
+      </div>
+    </section>
   );
 }

@@ -6,6 +6,7 @@ import { BrandingProvider } from '@/components/providers/BrandingProvider';
 import { BrandingUnavailable } from '@/components/branding/BrandingUnavailable';
 import { ClientPortalRootTheme } from '@/components/branding/ClientPortalRootTheme';
 import { brandedPortalLogoImgSrc } from '@/lib/branding/branded-portal-logo';
+import { clientPortalBrandingDisplayTitle } from '@/lib/client/client-portal-branding';
 import { withClientPortalLogoSrc } from '@/lib/client/resolve-client-portal-branding';
 import { TenantPublicThemeLock } from '@/components/theme/TenantPublicThemeLock';
 
@@ -25,7 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
     return { title: { absolute: DEFAULT_BRANDED_TITLE } };
   }
   const branding = await getAdvisorBrandingBySubdomain(subdomain);
-  const brandName = branding?.brandName?.trim() || DEFAULT_BRANDED_TITLE;
+  const brandName = branding
+    ? clientPortalBrandingDisplayTitle(branding)
+    : DEFAULT_BRANDED_TITLE;
   const logoSrc = branding ? brandedPortalLogoImgSrc(branding) : null;
   return {
     title: { absolute: brandName },
@@ -61,7 +64,6 @@ export default async function BrandedLayout({
     {
       ...branding,
       logoUrl: logoSrc ?? branding.logoUrl ?? undefined,
-      advisorFirmName: branding.brandName,
     },
     true,
   );

@@ -6,6 +6,7 @@ import { RiskLevel } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
 import { requireAdvisorRole, getAdvisorProfileOrThrow, advisorHubActionErrorMessage } from "@/lib/advisor/auth";
+import { assertCanMutateAdvisorBranding } from '@/lib/enterprise/branding-access';
 import {
   getAssignedClients,
   getClientIntakeForReview,
@@ -822,6 +823,7 @@ export async function getIdentityRiskDashboardData() {
 export async function updateAdvisorBranding(formData: FormData) {
   try {
     const { userId } = await requireAdvisorRole();
+    await assertCanMutateAdvisorBranding(userId);
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const logoUrl = formData.get('logoUrl')?.toString();

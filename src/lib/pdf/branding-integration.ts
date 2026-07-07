@@ -1,86 +1,13 @@
 import { clientPortalBrandingDisplayTitle } from '@/lib/client/client-portal-branding';
-import { prisma } from '@/lib/db';
+import { resolveAdvisorBrandingForProfile } from '@/lib/enterprise/branding';
 import { AdvisorBrandingData } from '@/lib/validation/branding';
-import {
-  STARTER_SUBSCRIPTION_FEATURES,
-  subscriptionFeaturesFromRow,
-} from '@/lib/subscription/validation';
 
 /**
- * Fetch complete advisor branding data for PDF generation
+ * Fetch advisor branding for PDF generation (assigned-client scope).
  */
 export async function getAdvisorBrandingForPDF(advisorId: string): Promise<AdvisorBrandingData | null> {
   try {
-    const advisor = await prisma.advisorProfile.findUnique({
-      where: { id: advisorId },
-      select: {
-        brandName: true,
-        tagline: true,
-        primaryColor: true,
-        secondaryColor: true,
-        accentColor: true,
-        websiteUrl: true,
-        emailFooterText: true,
-        supportEmail: true,
-        supportPhone: true,
-        logoUrl: true,
-        logoS3Key: true,
-        logoContentType: true,
-        logoFileSize: true,
-        logoUploadedAt: true,
-        brandingEnabled: true,
-        customDomainEnabled: true,
-        // Include firm name for backward compatibility
-        firmName: true,
-        user: {
-          select: {
-            subscription: {
-              select: {
-                tier: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!advisor || !advisor.brandingEnabled) {
-      return null;
-    }
-
-    const subscription = advisor.user.subscription;
-    const subFeatures = subscription
-      ? subscriptionFeaturesFromRow(subscription)
-      : STARTER_SUBSCRIPTION_FEATURES;
-
-    if (!subFeatures.basicBrandingEnabled) {
-      return null;
-    }
-
-    // Build complete branding data
-    const branding: AdvisorBrandingData = {
-      brandName: advisor.brandName,
-      tagline: advisor.tagline,
-      primaryColor: subFeatures.advancedBrandingEnabled ? advisor.primaryColor : null,
-      secondaryColor: subFeatures.advancedBrandingEnabled ? advisor.secondaryColor : null,
-      accentColor: subFeatures.advancedBrandingEnabled ? advisor.accentColor : null,
-      websiteUrl: advisor.websiteUrl,
-      emailFooterText: advisor.emailFooterText,
-      supportEmail: advisor.supportEmail,
-      supportPhone: advisor.supportPhone,
-      logoUrl: advisor.logoUrl,
-      logoS3Key: advisor.logoS3Key,
-      logoContentType: advisor.logoContentType,
-      logoFileSize: advisor.logoFileSize,
-      logoUploadedAt: advisor.logoUploadedAt,
-      brandingEnabled: advisor.brandingEnabled,
-      customDomainEnabled: advisor.customDomainEnabled,
-
-      // Legacy compatibility
-      advisorFirmName: advisor.firmName,
-    };
-
-    return branding;
+    return await resolveAdvisorBrandingForProfile(advisorId, { scope: 'client' });
   } catch (error) {
     console.error('Error fetching advisor branding for PDF:', error);
     return null;
@@ -92,6 +19,7 @@ export async function getAdvisorBrandingForPDF(advisorId: string): Promise<Advis
  */
 export async function getAdvisorBrandingForPDFByUserId(userId: string): Promise<AdvisorBrandingData | null> {
   try {
+    const { prisma } = await import('@/lib/db');
     const advisor = await prisma.advisorProfile.findUnique({
       where: { userId },
       select: { id: true },

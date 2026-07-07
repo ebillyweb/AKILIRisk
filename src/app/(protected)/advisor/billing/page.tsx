@@ -4,22 +4,39 @@ import {
   BillingDashboard,
   EnterpriseBillingDashboard,
 } from "@/components/advisor/billing/BillingDashboard";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
-import { fetchPlanPricesForUi } from "@/lib/billing/plan-price-display";
-import { emptyPlanPricesForUi } from "@/lib/billing/plan-prices-ui";
+import { isBillingEnabled } from "@/lib/billing/config";
+import { fetchPublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import { getBillingPageData } from "@/lib/actions/billing";
 
 export default async function AdvisorBillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string; notice?: string }>;
+  searchParams: Promise<{
+    checkout?: string;
+    notice?: string;
+    checkout_plan?: string;
+    checkout_cycle?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const checkout =
     sp.checkout === "success" ? "success" : sp.checkout === "cancel" ? "cancel" : null;
   const subscriptionRequiredNotice = sp.notice === "subscription_required";
+  const checkoutPlan =
+    sp.checkout_plan === "ESSENTIALS" ||
+    sp.checkout_plan === "PROFESSIONAL" ||
+    sp.checkout_plan === "BUSINESS" ||
+    sp.checkout_plan === "PLATINUM"
+      ? sp.checkout_plan
+      : null;
+  const checkoutCycle =
+    sp.checkout_cycle === "MONTHLY" || sp.checkout_cycle === "ANNUAL"
+      ? sp.checkout_cycle
+      : null;
 
-  const billingEnabled = process.env.ENABLE_BILLING_FEATURES !== "false";
+  const billingEnabled = isBillingEnabled();
 
   const pageRes = await getBillingPageData();
   if (!pageRes.success) {
@@ -36,17 +53,24 @@ export default async function AdvisorBillingPage({
 
   if (pageRes.data.mode === "enterprise") {
     return (
-      <EnterpriseBillingDashboard
-        enterprise={pageRes.data.enterprise}
-        initialInvoices={pageRes.data.invoices}
-        billingEnabled={billingEnabled}
-      />
+      <div className="space-y-8">
+        <AdvisorScreenHeader
+          kicker="Firm"
+          title="Billing"
+          description="Firm-wide subscription, seats, invoices, and payment method."
+        />
+        <EnterpriseBillingDashboard
+          enterprise={pageRes.data.enterprise}
+          initialInvoices={pageRes.data.invoices}
+          billingEnabled={billingEnabled}
+        />
+      </div>
     );
   }
 
-  const planPrices = billingEnabled
-    ? await fetchPlanPricesForUi()
-    : emptyPlanPricesForUi();
+  const { pricing, configErrors } = billingEnabled
+    ? await fetchPublicTierPricing()
+    : { pricing: [], configErrors: [] as string[] };
   const sub = pageRes.data.subscription;
 
   if (isAdvisorBillingDebugEnabled()) {
@@ -71,20 +95,33 @@ export default async function AdvisorBillingPage({
   }
 
   return (
-    <BillingDashboard
-      key={[
-        sub?.stripeSubscriptionId ?? "no-sub",
-        sub?.tier,
-        sub?.billingCycle,
-        sub?.status,
-      ].join(":")}
-      initialSubscription={sub}
-      initialInvoices={pageRes.data.invoices}
-      checkoutNotice={checkout}
-      subscriptionRequiredNotice={subscriptionRequiredNotice}
-      billingEnabled={billingEnabled}
-      planPrices={planPrices}
-      debugBilling={isAdvisorBillingDebugEnabled()}
-    />
+    <div className="space-y-8">
+      <AdvisorScreenHeader
+        kicker="Firm"
+        title="Billing"
+        description="Manage your subscription, client capacity, and billing history."
+      />
+      <BillingDashboard
+        key={[
+          sub?.stripeSubscriptionId ?? "no-sub",
+          sub?.tier,
+          sub?.billingCycle,
+          sub?.status,
+        ].join(":")}
+        initialSubscription={sub}
+        initialInvoices={pageRes.data.invoices}
+        checkoutNotice={checkout}
+        subscriptionRequiredNotice={subscriptionRequiredNotice}
+        billingEnabled={billingEnabled}
+        pricing={pricing}
+        configErrors={configErrors}
+        debugBilling={isAdvisorBillingDebugEnabled()}
+        checkoutPlanIntent={
+          checkoutPlan && checkoutCycle
+            ? { tier: checkoutPlan, billingCycle: checkoutCycle }
+            : null
+        }
+      />
+    </div>
   );
 }

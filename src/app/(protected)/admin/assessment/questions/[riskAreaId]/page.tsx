@@ -64,11 +64,11 @@ export default async function AdminQuestionBankAreaPage({
         <Button variant="outline" size="sm" asChild>
           <Link href={`/advisor/question-bank/${riskAreaId}`}>Advisor view</Link>
         </Button>
-        <Button size="sm" asChild>
+        <Button size="sm" asChild data-tour="config-primary-action">
           <Link href={adminAssessmentQuestionsNewPath(riskAreaId)}>New question</Link>
         </Button>
         <Suspense fallback={null}>
-          <div className="flex flex-wrap items-center gap-4 border-l border-border pl-4">
+          <div className="flex flex-wrap items-center gap-4 border-l border-border pl-4" data-tour="config-filters">
             <QuestionBankRiskAreaFilter activeAreaId={riskAreaId} pillars={catalog} />
             <QuestionBankTypeFilter />
           </div>
@@ -96,7 +96,7 @@ export default async function AdminQuestionBankAreaPage({
             new assessments.
           </p>
         </CardHeader>
-        <CardContent className="space-y-0 divide-y divide-border p-0">
+        <CardContent className="space-y-0 divide-y divide-border p-0" data-tour="config-primary-list">
           {questions.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
               No questions in this area yet.

@@ -4,13 +4,25 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   recommendationRuleInputSchema,
+  type RecommendationCondition,
   type RecommendationRuleInput,
 } from "@/lib/admin/recommendation-rule-schemas";
+import {
+  parseStoredPillarThresholds,
+  parseStoredTriggerConditions,
+  pillarThresholdRowsToRecord,
+  type PillarThresholdRow,
+  type RulePickerQuestion,
+} from "@/lib/admin/recommendation-rule-ui";
 import {
   createRecommendationRule,
   updateRecommendationRule,
 } from "@/lib/actions/admin-recommendation-actions";
 import { FormOnCheckbox } from "@/components/admin/form-submission-checkbox";
+import { PillarThresholdsBuilder } from "@/components/admin/PillarThresholdsBuilder";
+import { TriggerConditionsBuilder } from "@/components/admin/TriggerConditionsBuilder";
+import { ProductTourButton } from "@/components/product-tour/ProductTourButton";
+import { FieldHelp, LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,44 +55,33 @@ interface RuleFormProps {
     | null;
   /** Active services to pick from in the parent dropdown. */
   serviceOptions: ServiceOption[];
+  /** Assessment questions for answer / missing-control conditions. */
+  questionOptions: RulePickerQuestion[];
 }
-
-const CONDITION_PLACEHOLDER = `[
-  {
-    "type": "score_threshold",
-    "pillarId": "cyber-digital",
-    "operator": "less_than",
-    "value": 1.8,
-    "weight": 3
-  },
-  {
-    "type": "risk_level",
-    "pillarId": "cyber-digital",
-    "operator": "in",
-    "value": ["high", "critical"],
-    "weight": 2
-  }
-]`;
-
-const THRESHOLDS_PLACEHOLDER = `{
-  "cyber-digital": { "min": 1.8, "max": 2.4 }
-}`;
 
 /**
  * C1 (BRD §4.4): admin form for RecommendationRule create + edit.
  *
- * `triggerConditions` and `pillarThresholds` are edited as JSON in
- * textareas. We Zod-parse on submit so format errors surface as
- * "score_threshold needs a pillarId" or "Contradictory pair on pillar
- * cybersecurity..." rather than a stack trace.
+ * Trigger conditions and pillar thresholds are edited with guided controls
+ * instead of raw JSON. Zod validation on submit surfaces friendly errors.
  */
-export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormProps) {
+export function RecommendationRuleForm({
+  existing,
+  serviceOptions,
+  questionOptions,
+}: RuleFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [topError, setTopError] = useState<string | null>(null);
   const [serviceRecommendationId, setServiceRecommendationId] = useState(
     existing?.serviceRecommendationId ?? ""
+  );
+  const [triggerConditions, setTriggerConditions] = useState<RecommendationCondition[]>(() =>
+    parseStoredTriggerConditions(existing?.triggerConditions),
+  );
+  const [pillarThresholdRows, setPillarThresholdRows] = useState<PillarThresholdRow[]>(() =>
+    parseStoredPillarThresholds(existing?.pillarThresholds),
   );
 
   const isEdit = !!existing;
@@ -89,49 +90,13 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
     setErrors({});
     setTopError(null);
 
-    const triggerConditionsRaw = String(formData.get("triggerConditions") ?? "[]").trim();
-    const pillarThresholdsRaw = String(formData.get("pillarThresholds") ?? "").trim();
-    const questionConditionsRaw = String(formData.get("questionConditions") ?? "").trim();
-
-    let triggerConditions: unknown;
-    try {
-      triggerConditions = JSON.parse(triggerConditionsRaw);
-    } catch (err) {
-      setErrors({ triggerConditions: `Invalid JSON: ${(err as Error).message}` });
-      return;
-    }
-    if (!Array.isArray(triggerConditions)) {
-      setErrors({ triggerConditions: "Expected an array of condition objects" });
-      return;
-    }
-
-    let pillarThresholds: unknown = null;
-    if (pillarThresholdsRaw) {
-      try {
-        pillarThresholds = JSON.parse(pillarThresholdsRaw);
-      } catch (err) {
-        setErrors({ pillarThresholds: `Invalid JSON: ${(err as Error).message}` });
-        return;
-      }
-    }
-
-    let questionConditions: unknown = null;
-    if (questionConditionsRaw) {
-      try {
-        questionConditions = JSON.parse(questionConditionsRaw);
-      } catch (err) {
-        setErrors({ questionConditions: `Invalid JSON: ${(err as Error).message}` });
-        return;
-      }
-    }
-
     const raw = {
       serviceRecommendationId: String(formData.get("serviceRecommendationId") ?? ""),
       ruleName: String(formData.get("ruleName") ?? ""),
       description: (formData.get("description") || null) as string | null,
       triggerConditions,
-      pillarThresholds,
-      questionConditions,
+      pillarThresholds: pillarThresholdRowsToRecord(pillarThresholdRows),
+      questionConditions: existing?.questionConditions ?? null,
       priority: Number(formData.get("priority") ?? 0),
       isActive: formData.get("isActive") === "on",
     };
@@ -140,9 +105,6 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
-        // Map nested triggerConditions[N].fieldname errors onto the
-        // textarea so admins see the message inline. Multiple errors get
-        // joined with line breaks.
         const path = issue.path.join(".") || "_";
         const key = path.startsWith("triggerConditions") ? "triggerConditions" : path;
         fieldErrors[key] = fieldErrors[key]
@@ -168,8 +130,9 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
         <CardTitle>{isEdit ? "Edit rule" : "New rule"}</CardTitle>
+        <ProductTourButton tourId="admin-recommendation-rule-form" autoStart />
       </CardHeader>
       <CardContent>
         {topError && (
@@ -177,16 +140,16 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
             {topError}
           </div>
         )}
-        <form action={onSubmit} className="space-y-4">
+        <form action={onSubmit} className="space-y-6">
           <input
             type="hidden"
             name="serviceRecommendationId"
             value={serviceRecommendationId}
           />
-          <div>
-            <label htmlFor="serviceRecommendationId" className="mb-1 block text-sm font-medium">
+          <div data-tour="rule-service">
+            <LabelWithHelp htmlFor="serviceRecommendationId" helpKey="rule-service">
               Service recommendation
-            </label>
+            </LabelWithHelp>
             <Select
               value={
                 serviceRecommendationId === "" ? SERVICE_NONE : serviceRecommendationId
@@ -219,8 +182,10 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
             )}
           </div>
 
-          <div>
-            <label htmlFor="ruleName" className="mb-1 block text-sm font-medium">Rule name</label>
+          <div data-tour="rule-name">
+            <LabelWithHelp htmlFor="ruleName" helpKey="rule-name">
+              Rule name
+            </LabelWithHelp>
             <Input
               id="ruleName"
               name="ruleName"
@@ -232,7 +197,9 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
           </div>
 
           <div>
-            <label htmlFor="description" className="mb-1 block text-sm font-medium">Description (optional)</label>
+            <LabelWithHelp htmlFor="description" helpKey="rule-description">
+              Description (optional)
+            </LabelWithHelp>
             <Textarea
               id="description"
               name="description"
@@ -243,69 +210,25 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
             />
           </div>
 
-          <div>
-            <label htmlFor="triggerConditions" className="mb-1 block text-sm font-medium">
-              Trigger conditions (JSON)
-            </label>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Array of <code>{"{ type, pillarId | questionId | field, operator, value, weight }"}</code> objects.
-              Types: score_threshold, risk_level, answer_match, missing_control, profile_condition.
-              Engine matches when &gt;50% of the weighted conditions are satisfied.
-            </p>
-            <Textarea
-              id="triggerConditions"
-              name="triggerConditions"
-              rows={12}
-              defaultValue={existing?.triggerConditions ? JSON.stringify(existing.triggerConditions, null, 2) : CONDITION_PLACEHOLDER}
-              aria-invalid={errors.triggerConditions ? true : undefined}
-              className={`font-mono text-xs ${errors.triggerConditions ? "border-destructive" : ""}`}
-            />
-            {errors.triggerConditions && (
-              <pre className="mt-1 whitespace-pre-wrap text-xs text-destructive">{errors.triggerConditions}</pre>
-            )}
-          </div>
+          <TriggerConditionsBuilder
+            value={triggerConditions}
+            onChange={setTriggerConditions}
+            questions={questionOptions}
+            disabled={pending}
+            error={errors.triggerConditions ?? null}
+          />
 
-          <div>
-            <label htmlFor="pillarThresholds" className="mb-1 block text-sm font-medium">
-              Pillar thresholds (optional, JSON)
-            </label>
-            <p className="mb-2 text-xs text-muted-foreground">
-              <code>{"{ pillarId: { min, max } }"}</code> — informational metadata; not consumed by the
-              current engine.
-            </p>
-            <Textarea
-              id="pillarThresholds"
-              name="pillarThresholds"
-              rows={5}
-              defaultValue={existing?.pillarThresholds ? JSON.stringify(existing.pillarThresholds, null, 2) : ""}
-              placeholder={THRESHOLDS_PLACEHOLDER}
-              aria-invalid={errors.pillarThresholds ? true : undefined}
-              className={`font-mono text-xs ${errors.pillarThresholds ? "border-destructive" : ""}`}
-            />
-            {errors.pillarThresholds && (
-              <pre className="mt-1 whitespace-pre-wrap text-xs text-destructive">{errors.pillarThresholds}</pre>
-            )}
-          </div>
+          <PillarThresholdsBuilder
+            value={pillarThresholdRows}
+            onChange={setPillarThresholdRows}
+            disabled={pending}
+            error={errors.pillarThresholds ?? null}
+          />
 
-          <div>
-            <label htmlFor="questionConditions" className="mb-1 block text-sm font-medium">
-              Question conditions (optional, JSON)
-            </label>
-            <Textarea
-              id="questionConditions"
-              name="questionConditions"
-              rows={3}
-              defaultValue={existing?.questionConditions ? JSON.stringify(existing.questionConditions, null, 2) : ""}
-              aria-invalid={errors.questionConditions ? true : undefined}
-              className={`font-mono text-xs ${errors.questionConditions ? "border-destructive" : ""}`}
-            />
-            {errors.questionConditions && (
-              <pre className="mt-1 whitespace-pre-wrap text-xs text-destructive">{errors.questionConditions}</pre>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="priority" className="mb-1 block text-sm font-medium">Priority (higher = surfaces first)</label>
+          <div data-tour="rule-priority">
+            <LabelWithHelp htmlFor="priority" helpKey="rule-priority">
+              Priority (higher = surfaces first)
+            </LabelWithHelp>
             <Input
               id="priority"
               name="priority"
@@ -317,13 +240,16 @@ export function RecommendationRuleForm({ existing, serviceOptions }: RuleFormPro
             {errors.priority && <p className="mt-1 text-xs text-destructive">{errors.priority}</p>}
           </div>
 
-          <FormOnCheckbox
+          <div data-tour="rule-active" className="flex items-center gap-2">
+            <FormOnCheckbox
             name="isActive"
             id="rule-is-active"
             defaultChecked={existing?.isActive !== false}
             disabled={pending}
             label="Active (engine evaluates this rule)"
           />
+            <FieldHelp helpKey="rule-active" triggerLabel="Active" />
+          </div>
 
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={pending}>

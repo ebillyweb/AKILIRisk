@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ADVISOR_EMAIL_LOGO_CID } from "@/lib/email/advisor-email-logo";
 import { renderEnhancedInvitationTemplate } from "./enhanced-email";
 
 describe("renderEnhancedInvitationTemplate", () => {
-  it("embeds private S3 logos via CID instead of raw S3 URLs", () => {
+  it("renders firm copy and colors without embedding logos", () => {
     const html = renderEnhancedInvitationTemplate({
       branding: {
         brandName: "eBilly's WebSolutions",
@@ -12,7 +11,6 @@ describe("renderEnhancedInvitationTemplate", () => {
         secondaryColor: "#dbeafe",
         logoUrl:
           "https://akili-advisor-assets.s3.us-east-2.amazonaws.com/advisors/adv-1/logos/logo.png",
-        logoEmailSrc: `cid:${ADVISOR_EMAIL_LOGO_CID}`,
         brandingEnabled: true,
         customDomainEnabled: false,
       },
@@ -21,9 +19,11 @@ describe("renderEnhancedInvitationTemplate", () => {
       clientName: "Buddy",
     });
 
-    expect(html).toContain(`cid:${ADVISOR_EMAIL_LOGO_CID}`);
+    expect(html).not.toContain("<img");
     expect(html).not.toContain("akili-advisor-assets.s3.us-east-2.amazonaws.com");
     expect(html).toContain("eBilly&#039;s WebSolutions");
     expect(html).toContain("This is a my fancy tagline.");
+    expect(html).toContain("background:#1a1a2e");
+    expect(html).toContain("border-top: 4px solid #1a1a2e");
   });
 });

@@ -27,6 +27,7 @@ const INTEGRATION_ICONS: Record<string, LucideIcon> = {
   resend: Mail,
   s3: Cloud,
   "white-label-dns": Globe,
+  "upstash-redis": Database,
 };
 
 function formatCheckedAt(iso: string): string {

@@ -12,6 +12,7 @@ import {
 } from "@/lib/actions/advisor-answer-note-actions";
 import type { IntakeReviewData } from "@/lib/advisor/types";
 import { intakeResponseHasClientAnswer } from "@/lib/intake/response-has-answer";
+import { formatIntakeStructuredAnswerForDisplay } from "@/lib/intake/intake-answer-behavior";
 
 interface AdvisorIntakeViewProps {
   interviewId: string;
@@ -57,7 +58,11 @@ export function AdvisorIntakeView({
               questionNumber={num}
               totalQuestions={totalQuestions}
             />
-            <ClientResponseBlock response={response} questionNumber={num} />
+            <ClientResponseBlock
+              response={response}
+              question={question}
+              questionNumber={num}
+            />
             <StaffQuestionContextPanels
               whyThisMatters={question.whyThisMatters}
               recommendedActions={question.recommendedActions}
@@ -132,9 +137,11 @@ function QuestionBlock({
 
 function ClientResponseBlock({
   response,
+  question,
   questionNumber,
 }: {
   response: IntakeReviewData["interview"]["responses"][0] | undefined;
+  question: IntakeReviewData["questions"][0];
   questionNumber: number;
 }) {
   if (!response || !intakeResponseHasClientAnswer(response)) {
@@ -148,6 +155,19 @@ function ClientResponseBlock({
   const hasVoiceRecording = Boolean(response.audioUrl);
   const hasTypedAnswer =
     Boolean(response.transcription?.trim()) && !hasVoiceRecording;
+  const answerType = question.answerType ?? question.type;
+  const displayAnswer =
+    formatIntakeStructuredAnswerForDisplay(
+      {
+        answerType,
+        answer0: question.answer0,
+        answer1: question.answer1,
+        answer2: question.answer2,
+        answer3: question.answer3,
+        options: question.options,
+      },
+      response.transcription,
+    ) ?? response.transcription;
 
   return (
     <div className="space-y-3 border-t pt-4">
@@ -174,8 +194,8 @@ function ClientResponseBlock({
             Transcription failed
           </Badge>
         )}
-        {response.transcription ? (
-          <p className="text-sm leading-6 text-foreground/90">{response.transcription}</p>
+        {displayAnswer ? (
+          <p className="text-sm leading-6 text-foreground/90">{displayAnswer}</p>
         ) : (
           <p className="text-sm italic text-muted-foreground">
             {hasVoiceRecording

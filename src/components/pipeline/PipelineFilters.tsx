@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { PIPELINE_SEARCH_COPY } from "@/lib/advisor/pii-policy";
 import { getStageLabel } from "@/lib/pipeline/status";
 import type { PipelineFilters, PipelineMetrics } from "@/lib/pipeline/types";
 import type { ClientWorkflowStage } from "@prisma/client";
@@ -27,6 +28,8 @@ interface PipelineFiltersProps {
   filteredCount: number;
   page?: number;
   pageSize?: number;
+  pseudonymousWorkspaceLabeling?: boolean;
+  documentRequirementsEnabled?: boolean;
 }
 
 const stages: ClientWorkflowStage[] = [
@@ -40,24 +43,20 @@ const stages: ClientWorkflowStage[] = [
   "COMPLETE",
 ];
 
-type WorkflowFilterKey =
-  | "documentsNeeded"
-  | "awaitingIntakeReview"
-  | "needsRescore"
-  | "stalled";
+type IntakeFilterKey = "awaitingIntakeReview";
 
-const WORKFLOW_FILTERS: {
-  key: WorkflowFilterKey;
+const INTAKE_FILTERS: {
+  key: IntakeFilterKey;
   label: string;
-  countKey: keyof Pick<
-    PipelineMetrics,
-    "documentsNeeded" | "intakesAwaitingReview" | "needsRescore" | "stalled"
-  >;
+  summaryLabel: string;
+  countKey: "intakesAwaitingReview";
 }[] = [
-  { key: "documentsNeeded", label: "Documents Needed", countKey: "documentsNeeded" },
-  { key: "awaitingIntakeReview", label: "Awaiting Review", countKey: "intakesAwaitingReview" },
-  { key: "needsRescore", label: "Reassessments", countKey: "needsRescore" },
-  { key: "stalled", label: "Stalled", countKey: "stalled" },
+  {
+    key: "awaitingIntakeReview",
+    label: "Awaiting review",
+    summaryLabel: "Awaiting Review",
+    countKey: "intakesAwaitingReview",
+  },
 ];
 
 function WorkflowFilterChip({
@@ -79,14 +78,15 @@ function WorkflowFilterChip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "h-auto min-h-10 w-full justify-between gap-3 px-3 py-2.5 text-left font-normal",
-        !active && "bg-background/60 hover:bg-muted/50",
+        "h-9 shrink-0 gap-2 rounded-full px-3.5 font-normal shadow-none",
+        !active && "border-border/70 bg-background/60 hover:bg-muted/50",
+        active && "shadow-sm",
       )}
     >
-      <span className="text-sm font-medium leading-snug">{label}</span>
+      <span className="whitespace-nowrap text-sm font-medium">{label}</span>
       <Badge
         variant={active ? "secondary" : "outline"}
-        className="shrink-0 tabular-nums"
+        className="h-5 min-w-5 shrink-0 rounded-full px-1.5 text-[0.65rem] tabular-nums"
       >
         {count}
       </Badge>
@@ -102,7 +102,15 @@ export function PipelineFilters({
   filteredCount,
   page = 1,
   pageSize = 20,
+  pseudonymousWorkspaceLabeling = false,
+  documentRequirementsEnabled = true,
 }: PipelineFiltersProps) {
+  const searchCopy = pseudonymousWorkspaceLabeling
+    ? PIPELINE_SEARCH_COPY.pseudonymous
+    : PIPELINE_SEARCH_COPY.standard;
+  const stageOptions = documentRequirementsEnabled
+    ? stages
+    : stages.filter((stage) => stage !== "DOCUMENTS_REQUIRED");
   const pageStart = filteredCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const pageEnd = Math.min(page * pageSize, filteredCount);
   const [searchValue, setSearchValue] = useState(filters.search || "");
@@ -132,25 +140,13 @@ export function PipelineFilters({
       inactive: inactive ? true : undefined,
       stalled: undefined,
       awaitingIntakeReview: undefined,
+      assessmentInProgress: undefined,
       documentsNeeded: undefined,
-      needsRescore: undefined,
       stage: undefined,
     });
   };
 
-  const toggleFlag = (key: WorkflowFilterKey | "inactive") => {
-    if (key === "inactive") {
-      onFilterChange({
-        ...filters,
-        inactive: filters.inactive ? undefined : true,
-        stalled: undefined,
-        awaitingIntakeReview: undefined,
-        documentsNeeded: undefined,
-        needsRescore: undefined,
-        stage: undefined,
-      });
-      return;
-    }
+  const toggleIntakeFilter = (key: IntakeFilterKey) => {
     onFilterChange({
       ...filters,
       [key]: filters[key] ? undefined : true,
@@ -161,14 +157,21 @@ export function PipelineFilters({
   const activeFilterLabels: string[] = [];
   if (filters.stage) activeFilterLabels.push(getStageLabel(filters.stage));
   if (filters.search) activeFilterLabels.push(`"${filters.search}"`);
+  for (const { key, summaryLabel } of INTAKE_FILTERS) {
+    if (filters[key]) activeFilterLabels.push(summaryLabel);
+  }
+  if (filters.documentsNeeded && documentRequirementsEnabled) {
+    activeFilterLabels.push("Documents Needed");
+  }
+  if (filters.assessmentInProgress) activeFilterLabels.push("Assessments In Progress");
   if (filters.stalled) activeFilterLabels.push("Stalled");
-  if (filters.awaitingIntakeReview) activeFilterLabels.push("Awaiting Review");
-  if (filters.documentsNeeded) activeFilterLabels.push("Documents Needed");
-  if (filters.needsRescore) activeFilterLabels.push("Reassessments");
   if (filters.inactive) activeFilterLabels.push("Inactive");
 
   return (
-    <div className="space-y-4 rounded-lg border border-border/70 bg-card p-4 shadow-sm">
+    <div
+      className="space-y-4 rounded-lg border border-border/70 bg-card p-4 shadow-sm"
+      data-tour="pipeline-filters"
+    >
       {/* Toolbar: search, active/inactive, stage */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative min-w-0 flex-1">
@@ -177,11 +180,11 @@ export function PipelineFilters({
             aria-hidden
           />
           <Input
-            placeholder="Search by name or email..."
+            placeholder={searchCopy.placeholder}
             value={searchValue}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="h-10 pl-9"
-            aria-label="Search clients by name or email"
+            aria-label={searchCopy.ariaLabel}
           />
         </div>
 
@@ -227,7 +230,7 @@ export function PipelineFilters({
                   </Badge>
                 </div>
               </SelectItem>
-              {stages.map((stage) => (
+              {stageOptions.map((stage) => (
                 <SelectItem key={stage} value={stage}>
                   <div className="flex items-center gap-2">
                     {getStageLabel(stage)}
@@ -242,19 +245,19 @@ export function PipelineFilters({
         </div>
       </div>
 
-      {/* Workflow attention filters — equal-width grid */}
+      {/* Intake-only quick filter; other workflow queues live in the sidebar */}
       <div className="space-y-2 border-t border-border/50 pt-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Needs attention
+          Intake
         </p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {WORKFLOW_FILTERS.map(({ key, label, countKey }) => (
+        <div className="flex flex-wrap gap-2">
+          {INTAKE_FILTERS.map(({ key, label, countKey }) => (
             <WorkflowFilterChip
               key={key}
               label={label}
               count={metrics[countKey]}
               active={Boolean(filters[key])}
-              onClick={() => toggleFlag(key)}
+              onClick={() => toggleIntakeFilter(key)}
             />
           ))}
         </div>

@@ -1,14 +1,28 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getAdvisorBrandingBySubdomain } from "@/lib/advisor/subdomain";
-import { AuthPanel } from "@/components/auth/AuthPanel";
-import { InviteCodeForm } from "@/components/auth/InviteCodeForm";
+import { BrandedLandingHero } from "@/components/branding/BrandedLandingHero";
 import { BrandedPortalShell } from "@/components/branding/BrandedPortalShell";
-import { HeroFeatureCard } from "@/components/home/hero/HeroFeatureCard";
-import { HOME_HERO_FEATURES } from "@/components/home/hero/home-hero-features";
+import { resolveBrandedLandingCopy } from "@/lib/branding/landing-copy";
 import { withClientPortalLogoSrc } from "@/lib/client/resolve-client-portal-branding";
+import { tenantPublicPath } from "@/lib/client/tenant-path-prefix";
 
-export default async function BrandedClientPortalPage() {
+export default async function BrandedClientPortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string; callbackUrl?: string }>;
+}) {
+  const sp = await searchParams;
+  const inviteToken = sp.invite?.trim();
+  if (inviteToken) {
+    const params = new URLSearchParams({ invite: inviteToken });
+    if (sp.callbackUrl?.trim()) {
+      params.set("callbackUrl", sp.callbackUrl.trim());
+    }
+    redirect(await tenantPublicPath(`/signup?${params.toString()}`));
+  }
+
   const headersList = await headers();
   const subdomain = headersList.get("x-subdomain");
 
@@ -23,64 +37,36 @@ export default async function BrandedClientPortalPage() {
   }
 
   const branding = withClientPortalLogoSrc(brandingRaw, true);
-  const kicker = branding.tagline?.trim() || "Personal Risk Profile";
+  const copy = resolveBrandedLandingCopy(branding);
+  const homeHref = await tenantPublicPath("/");
+  const startHref = await tenantPublicPath("/start");
+  const signInHref = await tenantPublicPath("/signin?role=client");
+  const advisorSignInHref = await tenantPublicPath("/signin?role=advisor");
+  const requestReviewHref = await tenantPublicPath("/request-review");
+  const tenantPathPrefix = headersList.get("x-tenant-path-prefix");
 
   return (
     <BrandedPortalShell
       branding={branding}
-      homeHref="/"
+      homeHref={homeHref}
+      tenantPathPrefix={tenantPathPrefix}
       variant="landing"
-      titleAsHeading
     >
-      <div className="space-y-10">
-        <div className="space-y-3 text-center">
-          <p className="editorial-kicker">{kicker}</p>
-          <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Comprehensive Family Risk Assessment
-          </h2>
-          <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground">
-            Protect what matters most with a professional risk analysis and governance
-            recommendations tailored to your family&apos;s unique situation.
-          </p>
-        </div>
-
-        <div className="mx-auto w-full max-w-md">
-          <AuthPanel
-            eyebrow="Get started"
-            title="Access your assessment"
-            description="Enter the invite code from your advisor, or use your invitation link to sign up."
-            footer={
-              <span>
-                Already have an account?{" "}
-                <Link
-                  href="/signin/magic-link"
-                  className="font-semibold text-foreground hover:underline"
-                >
-                  Sign in
-                </Link>
-              </span>
-            }
-          >
-            <InviteCodeForm submitLabel="Continue assessment" />
-          </AuthPanel>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-center text-lg font-semibold tracking-tight">
-            What to expect
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {HOME_HERO_FEATURES.map((feature) => (
-              <HeroFeatureCard
-                key={feature.title}
-                title={feature.title}
-                description={feature.description}
-                icon={feature.icon}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <BrandedLandingHero
+        copy={copy}
+        startHref={startHref}
+        signInHref={signInHref}
+        requestReviewHref={requestReviewHref}
+      />
+      <p className="mt-8 text-center text-sm text-muted-foreground">
+        Advisor or firm team member?{" "}
+        <Link
+          href={advisorSignInHref}
+          className="font-semibold text-foreground underline-offset-4 hover:underline"
+        >
+          Sign in to your workspace
+        </Link>
+      </p>
     </BrandedPortalShell>
   );
 }

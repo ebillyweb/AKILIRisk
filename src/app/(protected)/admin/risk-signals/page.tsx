@@ -72,7 +72,7 @@ export default async function AdminRiskSignalsPage() {
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Severity mix</CardTitle>
                 <CardDescription>
-                  Pillar-level indicators on latest assessments (critical ≤ 3.0,
+                  Risk domain-level indicators on latest assessments (critical ≤ 3.0,
                   moderate ≤ 5.0).
                 </CardDescription>
               </CardHeader>
@@ -118,7 +118,7 @@ export default async function AdminRiskSignalsPage() {
                   Families at risk by domain
                 </CardTitle>
                 <CardDescription>
-                  Count of families with critical or moderate scores in each pillar.
+                  Count of families with critical or moderate scores in each risk domain.
                 </CardDescription>
               </CardHeader>
               <CardContent>

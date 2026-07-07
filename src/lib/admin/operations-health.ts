@@ -4,6 +4,10 @@ import {
   integrationProbesToDependencies,
   runIntegrationProbes,
 } from "@/lib/admin/integration-probes";
+import {
+  getBackgroundJobsHealth,
+  type BackgroundJobsHealth,
+} from "@/lib/admin/provisioning-health";
 import { prisma } from "@/lib/db";
 
 /**
@@ -86,6 +90,8 @@ export interface OperationsHealthSnapshot {
   /** External dependencies (Stripe, OpenAI, Resend, S3, white-label DNS).
    *  Actively probed on each snapshot via {@link runIntegrationProbes}. */
   dependencies: ServiceHealth[];
+  /** BullMQ / enterprise provisioning worker health. */
+  backgroundJobs: BackgroundJobsHealth;
   /** StripeWebhookEvent rows with status=FAILED (last 7 days). */
   failedIntegrations: FailedIntegrationRow[];
   /** Auth-failure / magic-link-failure audit rows (last 24 h) — the
@@ -304,11 +310,13 @@ export async function getOperationsHealthSnapshot(): Promise<OperationsHealthSna
 
   // Run DB-backed listings and outbound integration probes in parallel.
   // Each helper swallows its own errors so a single probe never blocks the page.
-  const [failedIntegrations, recentErrors, probeResults] = await Promise.all([
-    loadFailedIntegrations(),
-    loadRecentErrors(),
-    runIntegrationProbes(),
-  ]);
+  const [failedIntegrations, recentErrors, probeResults, backgroundJobs] =
+    await Promise.all([
+      loadFailedIntegrations(),
+      loadRecentErrors(),
+      runIntegrationProbes(),
+      getBackgroundJobsHealth(),
+    ]);
   const dependencies = integrationProbesToDependencies(probeResults);
 
   // Strip the rttMs helper field before returning so the public shape
@@ -325,10 +333,14 @@ export async function getOperationsHealthSnapshot(): Promise<OperationsHealthSna
       app.status,
       databaseHealth.status,
       auth.status,
+      backgroundJobs.redis.status,
+      backgroundJobs.cronSecret.status,
+      backgroundJobs.enterpriseProvision.status,
       ...dependencies.map((d) => d.status)
     ),
     core: { app, database: databaseHealth, auth },
     dependencies,
+    backgroundJobs,
     failedIntegrations,
     recentErrors,
     lastSuccessfulHealthCheck:

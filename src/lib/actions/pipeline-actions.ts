@@ -12,6 +12,12 @@ import {
   getPipelineMetrics,
 } from '@/lib/pipeline/queries';
 import { findPortfolioAssignmentForClient, listAdvisorProfileIdsForScope, resolvePortfolioScope } from '@/lib/enterprise/portfolio-access';
+import { getAdvisorClientDataPolicyContext } from '@/lib/enterprise/enterprise-client-data-policy';
+import {
+  assertAdvisorCanManageDocumentRequirements,
+  isEnterpriseDocumentRequirementsWorkspaceEnabled,
+  resolveEnterpriseMemberVisibilityContext,
+} from '@/lib/enterprise/advisor-member-visibility';
 import { prisma } from '@/lib/db';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 
@@ -27,10 +33,23 @@ export async function getClientPipelineData(options?: { inactive?: boolean }) {
       countInactiveClientAssignmentsForAdvisorUser(userId),
     ]);
     const metrics = { ...getPipelineMetrics(clients), inactive: inactiveCount };
+    const [profile, policyContext, visibilityContext] = await Promise.all([
+      getAdvisorProfileOrThrow(userId),
+      getAdvisorClientDataPolicyContext(userId),
+      resolveEnterpriseMemberVisibilityContext(userId),
+    ]);
 
     return {
       success: true,
-      data: { clients, metrics, profile: await getAdvisorProfileOrThrow(userId) },
+      data: {
+        clients,
+        metrics,
+        profile,
+        pseudonymousWorkspaceLabeling:
+          policyContext.effective.pseudonymousWorkspaceLabeling,
+        documentRequirementsEnabled:
+          isEnterpriseDocumentRequirementsWorkspaceEnabled(visibilityContext),
+      },
     };
   } catch (error) {
     return { success: false, error: advisorHubActionErrorMessage(error, 'Failed to get client pipeline data') };
@@ -47,6 +66,7 @@ const documentRequirementSchema = z.object({
 export async function addDocumentRequirement(data: unknown) {
   try {
     const { userId, role, email } = await requireAdvisorRole();
+    await assertAdvisorCanManageDocumentRequirements(userId);
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = documentRequirementSchema.safeParse(data);
@@ -109,6 +129,7 @@ export async function addDocumentRequirement(data: unknown) {
 export async function removeDocumentRequirement(requirementId: string) {
   try {
     const { userId, role, email } = await requireAdvisorRole();
+    await assertAdvisorCanManageDocumentRequirements(userId);
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const validatedFields = z.object({

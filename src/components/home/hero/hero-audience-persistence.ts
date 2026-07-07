@@ -1,4 +1,9 @@
 import type { HeroAudience } from "@/components/home/hero/hero-audience-content";
+import {
+  heroAudiencePath,
+  isMarketingHomePath,
+  parseHeroAudiencePath,
+} from "@/lib/marketing/friendly-urls";
 
 export const HERO_AUDIENCE_STORAGE_KEY = "akili:hero-audience";
 export const HERO_AUDIENCE_QUERY_KEY = "audience";
@@ -6,6 +11,7 @@ export const HERO_AUDIENCE_QUERY_KEY = "audience";
 const VALID_AUDIENCES: ReadonlySet<HeroAudience> = new Set([
   "families",
   "advisors",
+  "overview",
 ]);
 
 export function isHeroAudience(value: string): value is HeroAudience {
@@ -55,19 +61,24 @@ export function writeHeroAudienceToStorage(audience: HeroAudience): void {
 }
 
 export type ResolveHeroAudienceInput = {
+  pathname?: string;
   search?: string;
   hash?: string;
   storage?: HeroAudience | null;
   defaultAudience?: HeroAudience;
 };
 
-/** Query param beats hash beats sessionStorage; then default. */
+/** Pathname beats query; query beats hash beats sessionStorage; then default. */
 export function resolveHeroAudience({
+  pathname = "/",
   search = "",
   hash = "",
   storage = null,
   defaultAudience = "families",
 }: ResolveHeroAudienceInput): HeroAudience {
+  const fromPath = parseHeroAudiencePath(pathname);
+  if (fromPath) return fromPath;
+
   const params = new URLSearchParams(
     search.startsWith("?") ? search.slice(1) : search
   );
@@ -92,9 +103,11 @@ export function buildHeroAudienceSearch(audience: HeroAudience): string {
 
 export function syncHeroAudienceToUrl(audience: HeroAudience): void {
   if (typeof window === "undefined") return;
+  const targetPath = heroAudiencePath(audience);
   const url = new URL(window.location.href);
-  url.searchParams.set(HERO_AUDIENCE_QUERY_KEY, audience);
-  url.hash = "";
-  const next = `${url.pathname}${url.search}`;
-  window.history.replaceState(window.history.state, "", next);
+  if (!isMarketingHomePath(url.pathname)) return;
+  if (url.pathname === targetPath && !url.searchParams.has(HERO_AUDIENCE_QUERY_KEY)) {
+    return;
+  }
+  window.history.replaceState(window.history.state, "", targetPath);
 }

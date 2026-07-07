@@ -2,6 +2,7 @@ import "server-only";
 
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin/auth";
+import { isMfaChallengePendingForUser } from "@/lib/auth/mfa-session-status";
 import { normalizeUserRoleString } from "@/lib/auth-roles";
 
 /**
@@ -22,6 +23,10 @@ export async function getAuditAdminActorOrNull(): Promise<{
   const session = await auth();
   if (!session?.user?.id) return null;
   if (!isAdmin(session)) return null;
+  // Match the MFA enforcement that `requireAdminRole()` applies to admin pages:
+  // an MFA-enabled admin who hasn't completed the challenge must not stream
+  // system-wide exports/audit data. Return null to keep the 404 wire posture.
+  if (await isMfaChallengePendingForUser(session.user)) return null;
   return {
     userId: session.user.id,
     email: session.user.email ?? null,

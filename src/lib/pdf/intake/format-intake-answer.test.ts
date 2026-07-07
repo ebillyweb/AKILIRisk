@@ -45,4 +45,41 @@ describe("formatIntakeAnswerDisplay", () => {
     });
     expect(result.answerKind).toBe("transcription_failed");
   });
+
+  it("resolves choice_list stored values to option labels", () => {
+    const result = formatIntakeAnswerDisplay(
+      {
+        transcription: "1",
+        audioUrl: null,
+      },
+      {
+        answerType: "choice_list",
+        options: [
+          { value: "0", label: "Retired" },
+          { value: "1", label: "Employed" },
+        ],
+      },
+    );
+    expect(result.answerKind).toBe("structured_choice");
+    expect(result.answerLabel).toBe("Selected option");
+    expect(result.answerText).toBe("Employed");
+  });
+
+  it("leaves free-form text unchanged when no structured match exists", () => {
+    const result = formatIntakeAnswerDisplay(
+      {
+        transcription: "We meet quarterly.",
+        audioUrl: null,
+      },
+      {
+        answerType: "choice_list",
+        options: [
+          { value: "0", label: "Retired" },
+          { value: "1", label: "Employed" },
+        ],
+      },
+    );
+    expect(result.answerKind).toBe("typed");
+    expect(result.answerText).toBe("We meet quarterly.");
+  });
 });
