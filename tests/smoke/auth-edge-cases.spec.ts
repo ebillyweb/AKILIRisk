@@ -3,7 +3,7 @@ import { SignInPage } from "../page-objects/SignInPage";
 import { USERS } from "../fixtures/users";
 
 test.describe("auth edge cases", () => {
-  test("wrong password shows the credential error and stays on /signin", async ({ page }) => {
+  test("wrong password shows the credential error and stays on /signin", { tag: "@smoke" }, async ({ page }) => {
     // Round-11 session-2: this test originally drove the credentials
     // form with a CLIENT email + wrong password. Post-219c52e the
     // credentials provider rejects role=USER unconditionally, so the
@@ -27,7 +27,7 @@ test.describe("auth edge cases", () => {
     expect(new URL(page.url()).pathname).toBe("/signin");
   });
 
-  test("unauthenticated user hitting /dashboard is sent to magic-link sign-in with callbackUrl", async ({ page }) => {
+  test("unauthenticated user hitting /dashboard is sent to magic-link sign-in with callbackUrl", { tag: "@smoke" }, async ({ page }) => {
     await page.goto("/dashboard");
     const url = new URL(page.url());
     expect(url.pathname).toBe("/signin");
@@ -68,7 +68,7 @@ test.describe("auth edge cases", () => {
     ).not.toBeVisible();
   });
 
-  test("advisor sees an unauthorized notice after attempting /admin", async ({ page }) => {
+  test("advisor sees an unauthorized notice after attempting /admin", { tag: "@smoke" }, async ({ page }) => {
     await new SignInPage(page).signInAs("advisor");
     await page.goto("/admin");
     expect(new URL(page.url()).pathname).toBe("/advisor");
