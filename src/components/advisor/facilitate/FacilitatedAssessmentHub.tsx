@@ -17,7 +17,7 @@ import {
 } from "@/lib/assessment/included-pillars";
 import { normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import {
-  lastUnansweredQuestionIndex,
+  firstUnansweredQuestionIndex,
   resolveResumePillarSlug,
 } from "@/lib/assessment/resolve-resume-index";
 import { useAssessmentStore } from "@/lib/assessment/store";
@@ -184,9 +184,10 @@ export function FacilitatedAssessmentHub({
   const resolveQuestionIndex = (pillarSlug: string) => {
     const pillarQs = questionsByPillarId.get(pillarSlug) ?? [];
     const visible = getVisibleQuestions(answers, pillarQs, householdProfile);
-    return (
-      lastUnansweredQuestionIndex(visible, answers, skippedQuestions) ?? 0
-    );
+    // Enter/resume a pillar at its FIRST unanswered question. For a brand-new
+    // assessment this is question 1; jumping to the last unanswered question
+    // dropped users at the end of the section.
+    return firstUnansweredQuestionIndex(visible, answers, skippedQuestions);
   };
 
   const goToPillar = (pillarSlug: string, questionIndex?: number) => {
@@ -219,12 +220,11 @@ export function FacilitatedAssessmentHub({
       pillarQuestions,
       householdProfile,
     );
-    const index =
-      lastUnansweredQuestionIndex(
-        visibleQuestions,
-        store.answers,
-        store.skippedQuestions,
-      ) ?? 0;
+    const index = firstUnansweredQuestionIndex(
+      visibleQuestions,
+      store.answers,
+      store.skippedQuestions,
+    );
     setCurrentPosition(resumePillarSlug, index);
     router.replace(
       facilitatedAssessmentQuestionPath(sessionId, resumePillarSlug, index, {

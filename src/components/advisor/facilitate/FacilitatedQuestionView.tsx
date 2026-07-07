@@ -4,6 +4,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 
 import { NavigationButtons } from "@/components/assessment/NavigationButtons";
 import { QuestionCard } from "@/components/assessment/QuestionCard";
@@ -256,15 +257,20 @@ export function FacilitatedQuestionView({
   };
 
   const handleSkip = () => {
-    const nextIndex = currentIndex + 1;
-    saveAnswer({
-      questionId: currentQuestion.id,
-      pillar: pillarSlug,
-      subCategory: currentQuestion.subCategory,
-      answer: null,
-      skipped: true,
-      currentQuestionIndex: nextIndex,
-    });
+    // If the question already has an answer, "Skip" simply advances and keeps
+    // the saved answer. Only record a real skip (which clears the response) when
+    // the question is still unanswered.
+    const hasAnswer = currentAnswer !== null && currentAnswer !== undefined;
+    if (!hasAnswer) {
+      saveAnswer({
+        questionId: currentQuestion.id,
+        pillar: pillarSlug,
+        subCategory: currentQuestion.subCategory,
+        answer: null,
+        skipped: true,
+        currentQuestionIndex: currentIndex + 1,
+      });
+    }
     void (async () => {
       await flushPendingSaves();
       goNext();
@@ -315,6 +321,23 @@ export function FacilitatedQuestionView({
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
+        <div className="mb-4 flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              void (async () => {
+                await flushPendingSaves();
+                router.push(facilitatedAssessmentHubPath(sessionId));
+              })();
+            }}
+          >
+            <X className="h-4 w-4" />
+            {pillarHasScore ? "Exit review" : "Save & exit"}
+          </Button>
+        </div>
         <SectionProgress
           answeredCount={progress.answered}
           totalCount={progress.total}

@@ -69,18 +69,15 @@ export function IntakeStructuredAnswer({
   }
 
   if (choices.length > 0) {
-    const useDenseLayout = choices.length > 6;
-
     return (
       <div className="space-y-3">
         <Label>Your answer</Label>
-        <div
-          className={cn(
-            useDenseLayout
-              ? "grid gap-2 sm:grid-cols-2"
-              : "flex flex-wrap gap-2",
-          )}
-        >
+        {/*
+         * Always render choices as a single, top-to-bottom ordered column so the
+         * progression of options reads clearly. A multi-column layout (grid /
+         * flex-wrap) reorders options across columns and is confusing to follow.
+         */}
+        <div className="flex flex-col gap-2">
           {choices.map((choice) => (
             <Button
               key={choice.value}
@@ -88,8 +85,7 @@ export function IntakeStructuredAnswer({
               variant={value === choice.value ? "default" : "outline"}
               disabled={disabled}
               className={cn(
-                "h-auto min-h-10 whitespace-normal px-4 py-2 text-left",
-                useDenseLayout && "w-full justify-start",
+                "h-auto min-h-10 w-full justify-start whitespace-normal px-4 py-2 text-left",
               )}
               onClick={() => onChange(choice.value)}
             >

@@ -288,6 +288,10 @@ export function QuestionCard({
     }
   };
 
+  // "Why this matters" / risk-relevance copy, shown only when authored on the
+  // question. Prefer the dedicated risk-relevance column, fall back to help text.
+  const whyThisMatters = question.riskRelevance ?? question.helpText;
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
       <div className="space-y-4 sm:space-y-5">
@@ -323,6 +327,17 @@ export function QuestionCard({
           <p className="text-sm uppercase tracking-[0.14em] text-muted-foreground">
             {question.subCategory.replace(/-/g, " ")}
           </p>
+        ) : null}
+
+        {whyThisMatters ? (
+          <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Why this matters
+            </p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              {whyThisMatters}
+            </p>
+          </div>
         ) : null}
 
       </div>
