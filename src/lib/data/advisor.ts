@@ -128,11 +128,12 @@ function isMissingIntakeResponseAdvisorNoteTable(error: unknown): boolean {
 async function findIntakeInterviewForReview(
   interviewId: string,
   advisorUserId?: string,
+  firmScope = false,
 ) {
   try {
     return await prisma.intakeInterview.findUnique({
       where: { id: interviewId },
-      include: intakeReviewInclude(advisorUserId),
+      include: intakeReviewInclude(advisorUserId, firmScope),
     });
   } catch (error) {
     if (advisorUserId && isMissingIntakeResponseAdvisorNoteTable(error)) {
@@ -141,14 +142,14 @@ async function findIntakeInterviewForReview(
       );
       return prisma.intakeInterview.findUnique({
         where: { id: interviewId },
-        include: intakeReviewInclude(undefined),
+        include: intakeReviewInclude(undefined, false),
       });
     }
     throw error;
   }
 }
 
-const intakeReviewInclude = (advisorUserId?: string) => ({
+const intakeReviewInclude = (advisorUserId?: string, firmScope = false) => ({
   user: {
     select: {
       id: true,
@@ -161,9 +162,17 @@ const intakeReviewInclude = (advisorUserId?: string) => ({
     include: advisorUserId
       ? {
           advisorNotes: {
-            where: { advisorId: advisorUserId },
-            select: { id: true, body: true, updatedAt: true },
-            take: 1,
+            // Firm (enterprise OWNER/ADMIN) viewers see every advisor's note;
+            // a regular advisor sees only their own.
+            where: firmScope ? {} : { advisorId: advisorUserId },
+            select: {
+              id: true,
+              advisorId: true,
+              body: true,
+              updatedAt: true,
+              advisor: { select: { name: true } },
+            },
+            orderBy: { updatedAt: "desc" as const },
           },
         }
       : undefined,
@@ -225,17 +234,37 @@ async function mapIntakeInterviewForReview(
       },
       responses: interview.responses.map((r) => {
         const row = r as IntakeResponse & {
-          advisorNotes?: Array<{ id: string; body: string; updatedAt: Date }>;
+          advisorNotes?: Array<{
+            id: string;
+            advisorId?: string;
+            body: string;
+            updatedAt: Date;
+            advisor?: { name: string | null } | null;
+          }>;
         };
-        const firstNote =
-          row.advisorNotes && row.advisorNotes.length > 0 ? row.advisorNotes[0] : null;
-        const advisorNote = firstNote
+        const notes = row.advisorNotes ?? [];
+        // Own note is editable; notes by other advisors are read-only and only
+        // present for firm-scope (enterprise) viewers (the query filters them
+        // out otherwise).
+        const ownNote =
+          advisorUserId != null
+            ? (notes.find((n) => n.advisorId === advisorUserId) ?? null)
+            : (notes[0] ?? null);
+        const advisorNote = ownNote
           ? {
-              id: firstNote.id,
-              body: firstNote.body,
-              updatedAt: firstNote.updatedAt.toISOString(),
+              id: ownNote.id,
+              body: ownNote.body,
+              updatedAt: ownNote.updatedAt.toISOString(),
             }
           : null;
+        const otherAdvisorNotes = notes
+          .filter((n) => n.advisorId !== advisorUserId)
+          .map((n) => ({
+            id: n.id,
+            body: n.body,
+            updatedAt: n.updatedAt.toISOString(),
+            authorName: n.advisor?.name ?? "Advisor",
+          }));
         return {
           ...row,
           audioUrl: row.audioS3Key
@@ -246,6 +275,7 @@ async function mapIntakeInterviewForReview(
             column: "IntakeResponse.transcription",
           }),
           advisorNote,
+          otherAdvisorNotes,
         };
       }),
     },
@@ -311,7 +341,20 @@ export async function getClientIntakeForReview(
     );
   }
 
-  const interview = await findIntakeInterviewForReview(interviewId, advisorUserId);
+  // Resolve scope up front: firm-scope (enterprise OWNER/ADMIN) viewers get
+  // every advisor's note on each response; regular advisors get only their own.
+  let scope: Awaited<ReturnType<typeof resolvePortfolioScope>> = null;
+  if (advisorUserId) {
+    scope = await resolvePortfolioScope(advisorUserId);
+    if (!scope) return null;
+  }
+  const firmScope = scope?.mode === "firm";
+
+  const interview = await findIntakeInterviewForReview(
+    interviewId,
+    advisorUserId,
+    firmScope,
+  );
 
   if (!interview) {
     return null;
@@ -319,10 +362,7 @@ export async function getClientIntakeForReview(
 
   let assignmentAdvisorProfileId = advisorProfileId;
 
-  if (advisorUserId) {
-    const scope = await resolvePortfolioScope(advisorUserId);
-    if (!scope) return null;
-
+  if (advisorUserId && scope) {
     const access = await findPortfolioAssignmentForClient(scope, interview.userId);
     if (!access) return null;
 

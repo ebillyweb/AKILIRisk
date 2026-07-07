@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getAdvisorProfileOrThrow, requireAdvisorRole } from "@/lib/advisor/auth";
 import {
   assessmentAnswerAdvisorNoteInputSchema,
+  assessmentQuestionAdvisorNoteInputSchema,
   intakeAnswerAdvisorNoteInputSchema,
   intakeQuestionAdvisorNoteInputSchema,
 } from "@/lib/advisor/advisor-note-schemas";
@@ -215,6 +216,77 @@ async function loadAssignedAssessmentResponse(
     clientId: response.assessment.userId,
     existing,
   };
+}
+
+/**
+ * Confirm an ACTIVE assignment between the calling advisor and the client who
+ * owns the assessment. Returns the client id on success; `null` otherwise (so
+ * callers can't distinguish missing-assessment from no-assignment).
+ */
+async function loadAssignedAssessment(
+  assessmentId: string,
+  advisorProfileId: string,
+) {
+  const assessment = await prisma.assessment.findUnique({
+    where: { id: assessmentId },
+    select: { id: true, userId: true },
+  });
+  if (!assessment) return null;
+
+  const assignment = await prisma.clientAdvisorAssignment.findFirst({
+    where: {
+      advisorId: advisorProfileId,
+      clientId: assessment.userId,
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  });
+  if (!assignment) return null;
+
+  return { assessmentId: assessment.id, clientId: assessment.userId };
+}
+
+/**
+ * Ensure an AssessmentResponse row exists for (assessment, question) so an
+ * advisor note can attach during live facilitation. A placeholder created this
+ * way has a null answer and `skipped = false`; scoring ignores null answers, so
+ * the row never affects the client's score or progress.
+ */
+async function ensureAssessmentResponseForAdvisorNote(
+  assessmentId: string,
+  questionId: string,
+  pillar: string,
+  subCategory: string,
+): Promise<string> {
+  const response = await prisma.assessmentResponse.upsert({
+    where: { assessmentId_questionId: { assessmentId, questionId } },
+    create: { assessmentId, questionId, pillar, subCategory },
+    update: {},
+    select: { id: true },
+  });
+  return response.id;
+}
+
+/** Remove a note-only placeholder response once its last note is deleted. */
+async function deleteAssessmentNotePlaceholderResponseIfEmpty(
+  assessmentResponseId: string,
+): Promise<void> {
+  const response = await prisma.assessmentResponse.findUnique({
+    where: { id: assessmentResponseId },
+    select: {
+      id: true,
+      answer: true,
+      skipped: true,
+      advisorNotes: { select: { id: true }, take: 1 },
+      adminNote: { select: { id: true } },
+    },
+  });
+  if (!response) return;
+  // Only reclaim rows that carry no client answer/skip and no remaining notes.
+  if (response.answer !== null || response.skipped) return;
+  if (response.advisorNotes.length > 0 || response.adminNote) return;
+
+  await prisma.assessmentResponse.delete({ where: { id: response.id } });
 }
 
 export async function saveIntakeResponseAdvisorNote(input: {
@@ -595,4 +667,144 @@ export async function deleteAssessmentResponseAdvisorNote(
   } catch (e) {
     return { success: false, error: formatActionError(e) };
   }
+}
+
+/**
+ * Live-facilitation entry point: save/replace the calling advisor's note on an
+ * assessment question, creating the response row if the client hasn't answered
+ * yet. Delegates to saveAssessmentResponseAdvisorNote once the row exists.
+ */
+export async function saveAssessmentQuestionAdvisorNote(input: {
+  assessmentId: string;
+  questionId: string;
+  pillar: string;
+  subCategory: string;
+  body: string;
+}): Promise<AdvisorAnswerNoteActionResult> {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const parsed = assessmentQuestionAdvisorNoteInputSchema.parse(input);
+
+    const assessment = await loadAssignedAssessment(parsed.assessmentId, profile.id);
+    if (!assessment) {
+      return { success: false, error: "Not found." };
+    }
+
+    const assessmentResponseId = await ensureAssessmentResponseForAdvisorNote(
+      parsed.assessmentId,
+      parsed.questionId,
+      parsed.pillar,
+      parsed.subCategory,
+    );
+
+    return saveAssessmentResponseAdvisorNote({
+      assessmentResponseId,
+      body: parsed.body,
+    });
+  } catch (e) {
+    return { success: false, error: formatActionError(e) };
+  }
+}
+
+export async function deleteAssessmentQuestionAdvisorNote(input: {
+  assessmentId: string;
+  questionId: string;
+}): Promise<AdvisorAnswerNoteActionResult> {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+    const parsed = assessmentQuestionAdvisorNoteInputSchema
+      .pick({ assessmentId: true, questionId: true })
+      .parse(input);
+
+    const assessment = await loadAssignedAssessment(parsed.assessmentId, profile.id);
+    if (!assessment) {
+      return { success: false, error: "Not found." };
+    }
+
+    const response = await prisma.assessmentResponse.findUnique({
+      where: {
+        assessmentId_questionId: {
+          assessmentId: parsed.assessmentId,
+          questionId: parsed.questionId,
+        },
+      },
+      select: { id: true },
+    });
+    if (!response) {
+      return { success: false, error: "No advisor note on this response." };
+    }
+
+    const result = await deleteAssessmentResponseAdvisorNote(response.id);
+    if (result.success) {
+      await deleteAssessmentNotePlaceholderResponseIfEmpty(response.id);
+    }
+    return result;
+  } catch (e) {
+    return { success: false, error: formatActionError(e) };
+  }
+}
+
+/** Read the calling advisor's own note for a live assessment question. */
+export async function getAssessmentQuestionAdvisorNote(input: {
+  assessmentId: string;
+  questionId: string;
+}): Promise<{ body: string } | null> {
+  const { userId } = await requireAdvisorRole();
+  const profile = await getAdvisorProfileOrThrow(userId);
+  const assessment = await loadAssignedAssessment(input.assessmentId, profile.id);
+  if (!assessment) return null;
+
+  const response = await prisma.assessmentResponse.findUnique({
+    where: {
+      assessmentId_questionId: {
+        assessmentId: input.assessmentId,
+        questionId: input.questionId,
+      },
+    },
+    select: {
+      advisorNotes: {
+        where: { advisorId: userId },
+        select: { body: true },
+        take: 1,
+      },
+    },
+  });
+  const note = response?.advisorNotes[0];
+  return note ? { body: note.body } : null;
+}
+
+/** Read the calling advisor's own note for a live intake question. */
+export async function getIntakeQuestionAdvisorNote(input: {
+  interviewId: string;
+  questionId: string;
+}): Promise<{ body: string } | null> {
+  const { userId } = await requireAdvisorRole();
+  const profile = await getAdvisorProfileOrThrow(userId);
+  const question = await loadAssignedIntakeQuestion(
+    input.interviewId,
+    input.questionId,
+    profile.id,
+    userId,
+  );
+  if (!question) return null;
+
+  const response = await prisma.intakeResponse.findUnique({
+    where: {
+      interviewId_questionId: {
+        interviewId: input.interviewId,
+        questionId: input.questionId,
+      },
+    },
+    select: {
+      advisorNotes: {
+        where: { advisorId: userId },
+        select: { body: true },
+        take: 1,
+      },
+    },
+  });
+  const note = response?.advisorNotes[0];
+  return note ? { body: note.body } : null;
 }

@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 import { NavigationButtons } from "@/components/assessment/NavigationButtons";
+import { FacilitatedAnswerNote } from "@/components/advisor/facilitate/FacilitatedAnswerNote";
 import { QuestionCard } from "@/components/assessment/QuestionCard";
 import { SectionProgress } from "@/components/assessment/ProgressBar";
 import { SkipToLastUnansweredQuestion } from "@/components/assessment/SkipToLastUnansweredQuestion";
@@ -388,6 +389,16 @@ export function FacilitatedQuestionView({
             isLastQuestion={isLastQuestion}
             isValid={isValid}
             isSaving={isSaving}
+          />
+
+          <FacilitatedAnswerNote
+            key={currentQuestion.id}
+            mode="assessment"
+            assessmentId={assessmentId}
+            questionId={currentQuestion.id}
+            pillar={pillarSlug}
+            subCategory={currentQuestion.subCategory}
+            targetLabel={`Question ${currentIndex + 1}`}
           />
         </CardContent>
       </Card>

@@ -29,6 +29,15 @@ export type AdvisorIntakeResponseNoteView = {
   updatedAt: string;
 };
 
+/** US-46c: a note authored by another advisor, shown read-only to firm
+ *  (enterprise OWNER/ADMIN) viewers. */
+export type AdvisorIntakeResponseOtherNoteView = {
+  id: string;
+  body: string;
+  updatedAt: string;
+  authorName: string;
+};
+
 /** Payload returned by intake review data loaders before script personalization. */
 export type IntakeInterviewReviewBundle = {
   interview: IntakeInterview & {
@@ -38,7 +47,10 @@ export type IntakeInterviewReviewBundle = {
       email: string;
     };
     responses: Array<
-      IntakeResponse & { advisorNote: AdvisorIntakeResponseNoteView | null }
+      IntakeResponse & {
+        advisorNote: AdvisorIntakeResponseNoteView | null;
+        otherAdvisorNotes: AdvisorIntakeResponseOtherNoteView[];
+      }
     >;
   };
   approval: IntakeApproval | null;

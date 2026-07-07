@@ -31,3 +31,18 @@ export const assessmentAnswerAdvisorNoteInputSchema = z.object({
   assessmentResponseId: z.string().min(1),
   body: answerAdvisorNoteBodySchema,
 });
+
+/**
+ * Note keyed by (assessment, question) rather than an existing response id —
+ * used during live facilitation, where the advisor may add a note before an
+ * answer row exists. `pillar`/`subCategory` seed the placeholder response.
+ */
+export const assessmentQuestionAdvisorNoteInputSchema = z.object({
+  assessmentId: z.string().min(1),
+  questionId: z.string().min(1),
+  pillar: z.string().min(1),
+  // Some questions carry an empty subCategory; mirror how answers are saved
+  // rather than rejecting a note the equivalent answer would accept.
+  subCategory: z.string(),
+  body: answerAdvisorNoteBodySchema,
+});
