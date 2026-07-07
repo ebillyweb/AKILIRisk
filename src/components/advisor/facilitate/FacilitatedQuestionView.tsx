@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 import { NavigationButtons } from "@/components/assessment/NavigationButtons";
+import { QuestionQuickNav } from "@/components/assessment/QuestionQuickNav";
 import { FacilitatedAnswerNote } from "@/components/advisor/facilitate/FacilitatedAnswerNote";
 import { QuestionCard } from "@/components/assessment/QuestionCard";
 import { SectionProgress } from "@/components/assessment/ProgressBar";
@@ -364,6 +365,16 @@ export function FacilitatedQuestionView({
           />
         ) : null}
       </section>
+
+      <QuestionQuickNav
+        onBack={handleBack}
+        onSkip={handleSkip}
+        onNext={handleNext}
+        canGoBack={canGoBack}
+        isLastQuestion={isLastQuestion}
+        isSaving={isSaving}
+        showSkip={!pillarHasScore && currentQuestion.type !== "document-upload"}
+      />
 
       <Card>
         <CardContent className="space-y-6 p-4 sm:p-8">
