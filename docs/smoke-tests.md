@@ -8,7 +8,19 @@ auth regressions between deploys.
 - **Schedule:** every 6 hours (UTC), plus manual runs via **Actions → Smoke
   Tests (preview) → Run workflow**.
 - **Selection:** `playwright test --grep @smoke` — only tests tagged `@smoke`.
+- **Test code comes from `staging`** (see below).
 - **Current scope:** advisor + admin login, plus negative auth cases.
+
+## How it works (branch model)
+
+Preview deploys from the **`staging`** branch, so the tests must match the code
+running there. But `schedule:` triggers only fire from the **default branch**.
+So the workflow file lives on the default branch and its checkout step pulls
+**`staging`**, then runs `playwright test --grep @smoke` against preview.
+
+Consequence: the `@smoke` **tags live on `staging`**, not on the default branch.
+Add or change tagged tests on `staging`. Override the tested ref with the
+`test_ref` dispatch input if preview ever deploys from a different branch.
 
 ### Covered cases
 
@@ -20,8 +32,8 @@ Positive (`tests/smoke/auth.spec.ts`):
 Negative (`tests/smoke/auth-edge-cases.spec.ts`):
 
 - Wrong password shows the credential error and stays on `/signin`.
-- An unauthenticated visit to `/dashboard` is redirected to magic-link
-  sign-in with the `callbackUrl` preserved.
+- An unauthenticated visit to `/dashboard` is redirected to the client
+  sign-in (`/signin?role=client`) with the `callbackUrl` preserved.
 - An advisor navigating directly to `/admin` is bounced with
   `error=unauthorized` and sees the "Access denied" notice.
 
@@ -36,7 +48,7 @@ start the app (`playwright.config.ts` has no `webServer`). It defaults to
 
 ## Adding a test to the scheduled suite
 
-Tag it `@smoke`:
+On the **`staging`** branch (the one deployed to preview), tag the test `@smoke`:
 
 ```ts
 test("something critical still works", { tag: "@smoke" }, async ({ page }) => {
@@ -85,4 +97,5 @@ suite:
 
 1. Set `ENABLE_TEST_AUTH=1` on the Vercel **Preview** environment and redeploy
    (never enable in production).
-2. Change the client entry's `smoke` flag to `true` in `tests/smoke/auth.spec.ts`.
+2. On `staging`, change the client entry's `smoke` flag to `true` in
+   `tests/smoke/auth.spec.ts`.
