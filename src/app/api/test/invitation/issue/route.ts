@@ -8,7 +8,7 @@ import { createAdvisorInvitation } from "@/lib/invitations/service";
 import { buildDefaultInvitationPersonalMessage } from "@/lib/schemas/invitation";
 import {
   getSubscriptionFeatures,
-  STARTER_SUBSCRIPTION_FEATURES,
+  ESSENTIALS_SUBSCRIPTION_FEATURES,
 } from "@/lib/subscription/validation";
 
 /**
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
   const features =
     (await getSubscriptionFeatures(advisorUser.id)) ??
-    STARTER_SUBSCRIPTION_FEATURES;
+    ESSENTIALS_SUBSCRIPTION_FEATURES;
 
   try {
     const invitation = await createAdvisorInvitation(

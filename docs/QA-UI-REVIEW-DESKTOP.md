@@ -95,7 +95,7 @@ Screens: Home, Auth (sign-in/sign-up), Dashboard, Intake (landing, interview, co
 
 ### 2.2 Typography & hierarchy
 
-- **Kicker:** `editorial-kicker` used for “Belvedere Risk Management”, “Client Dashboard”, “Assessment Workspace”, etc.  
+- **Kicker:** `editorial-kicker` used for AKILI Risk Management”, “Client Dashboard”, “Assessment Workspace”, etc.  
 - **H1:** Large (e.g. `text-3xl sm:text-5xl`), `text-balance` where used.  
 - **Body:** `text-muted-foreground` for secondary copy; descriptions under cards.  
 

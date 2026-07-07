@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { EnterprisePaymentMethod, EnterpriseRole } from "@prisma/client";
+import type { EnterprisePaymentMethod, EnterpriseRole, SubscriptionTier } from "@prisma/client";
 
 import { checkClientLimitForAdvisorProfile } from "@/lib/billing/subscription-service";
 import { resolveBillingContext } from "@/lib/enterprise/billing-context";
@@ -14,7 +14,7 @@ export type EnterpriseBillingSummary = {
   enterpriseId: string;
   enterpriseName: string;
   paymentMethod: EnterprisePaymentMethod;
-  tier: "ENTERPRISE";
+  tier: SubscriptionTier;
   status: string;
   billingCycle: string;
   currentPeriodEnd: string;
@@ -57,6 +57,7 @@ export async function getEnterpriseBillingSummary(
       where: { enterpriseId: ctx.enterpriseId },
       select: {
         status: true,
+        tier: true,
         billingCycle: true,
         currentPeriodEnd: true,
         cancelAtPeriodEnd: true,
@@ -74,7 +75,7 @@ export async function getEnterpriseBillingSummary(
     enterpriseId: enterprise.id,
     enterpriseName: enterprise.name,
     paymentMethod: enterprise.paymentMethod,
-    tier: "ENTERPRISE",
+    tier: subscription?.tier ?? "ESSENTIALS",
     status: subscription?.status ?? "NONE",
     billingCycle: subscription?.billingCycle ?? "ANNUAL",
     currentPeriodEnd: (subscription?.currentPeriodEnd ?? new Date()).toISOString(),

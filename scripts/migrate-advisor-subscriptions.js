@@ -22,7 +22,7 @@ const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { Pool } = require("pg");
 
-const TIER_LIMITS = { GROWTH: 50, PROFESSIONAL: 100 };
+const TIER_LIMITS = { PROFESSIONAL: 50, BUSINESS: 100 };
 
 function newAdvisorGracePeriodEndsAt(from = new Date()) {
   const y = from.getUTCFullYear();
@@ -68,7 +68,7 @@ async function main() {
       where: { advisorId: user.advisorProfile.id, status: "ACTIVE" },
     });
 
-    const tier = clientCount > 25 ? "PROFESSIONAL" : "GROWTH";
+    const tier = clientCount > 25 ? "BUSINESS" : "PROFESSIONAL";
     const clientLimit = TIER_LIMITS[tier];
 
     await prisma.subscription.create({

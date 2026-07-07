@@ -105,6 +105,7 @@ describe("getEnterpriseBillingSummary", () => {
     });
     prismaSpies.subscription.findUnique.mockResolvedValue({
       status: "ACTIVE",
+      tier: "PROFESSIONAL",
       billingCycle: "ANNUAL",
       currentPeriodEnd: new Date("2027-06-01"),
       cancelAtPeriodEnd: false,
@@ -140,5 +141,11 @@ describe("getEnterpriseBillingSummary", () => {
       subscription: null,
     });
     await expect(getEnterpriseBillingSummary("user-1")).resolves.toBeNull();
+  });
+
+  it("defaults module tier to Essentials when subscription row is missing", async () => {
+    prismaSpies.subscription.findUnique.mockResolvedValue(null);
+    const summary = await getEnterpriseBillingSummary("owner-1");
+    expect(summary?.tier).toBe("ESSENTIALS");
   });
 });

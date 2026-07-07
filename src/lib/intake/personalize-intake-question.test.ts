@@ -10,6 +10,7 @@ const sampleQuestion: IntakeQuestion = {
   questionNumber: 1,
   questionText:
     "How did your financial advisor describe what we do at {{firmName}}?",
+  answerType: "fillable",
   context: "Speak with {{firmName}} in mind.",
   whyThisMatters: "Helps us align with {{firmName}}.",
   recordingTips: ["Speak clearly"],

@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AssessmentDomainsSelector } from '@/components/advisor/AssessmentDomainsSelector';
 import { EmphasisAreasSelector } from '@/components/advisor/EmphasisAreasSelector';
 import type { AdvisorAssessmentDomainPickerData } from '@/lib/advisor/assessment-domain-option';
+import type { ClientLimitSnapshot } from '@/lib/billing/client-limit';
 import { resolveDefaultAssessmentDomainSelection } from '@/lib/advisor/assessment-domain-option';
 import { sendInvitation } from '@/lib/actions/invitations';
 import { buildDefaultInvitationPersonalMessage } from '@/lib/schemas/invitation';
@@ -32,7 +33,7 @@ const formSchema = z
     if (!data.includedPillars?.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Select at least one assessment domain',
+        message: 'Select at least one risk domain',
         path: ['includedPillars'],
       });
     }
@@ -43,15 +44,23 @@ type FormData = z.infer<typeof formSchema>;
 interface InviteClientFormProps {
   firmName: string | null;
   assessmentDomainPicker: AdvisorAssessmentDomainPickerData;
+  clientLimitStatus: ClientLimitSnapshot | null;
+  skipIntakeEnabled?: boolean;
 }
 
-export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteClientFormProps) {
+export function InviteClientForm({
+  firmName,
+  assessmentDomainPicker,
+  clientLimitStatus,
+  skipIntakeEnabled = false,
+}: InviteClientFormProps) {
   const assessmentDomains = assessmentDomainPicker.domains;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string; emailSent: boolean; reason?: string } | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [selectedEmphasis, setSelectedEmphasis] = useState<string[]>([]);
   const [messageEdited, setMessageEdited] = useState(false);
+  const domainsTouchedRef = useRef(false);
   const router = useRouter();
 
   const {
@@ -93,14 +102,25 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
   }, [messageEdited, setValue, suggestedPersonalMessage]);
 
   useEffect(() => {
+    if (!skipIntakeEnabled && intakeWaived) {
+      setValue("intakeWaived", false);
+    }
+  }, [skipIntakeEnabled, intakeWaived, setValue]);
+
+  useEffect(() => {
     if (!intakeWaived) {
       setSelectedDomains([]);
       setSelectedEmphasis([]);
       setValue('includedPillars', []);
       setValue('focusAreas', []);
+      domainsTouchedRef.current = false;
       return;
     }
-    if (selectedDomains.length === 0 && assessmentDomains.length > 0) {
+    if (
+      !domainsTouchedRef.current &&
+      selectedDomains.length === 0 &&
+      assessmentDomains.length > 0
+    ) {
       const defaults = resolveDefaultAssessmentDomainSelection({
         availableDomainIds: assessmentDomains.map((d) => d.id),
       });
@@ -110,6 +130,7 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
   }, [intakeWaived, assessmentDomains, selectedDomains.length, setValue]);
 
   const handleDomainsChange = (domains: string[]) => {
+    domainsTouchedRef.current = true;
     setSelectedDomains(domains);
     setValue('includedPillars', domains, { shouldValidate: true });
     if (selectedEmphasis.some((id) => !domains.includes(id))) {
@@ -129,6 +150,7 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
     setSelectedDomains([]);
     setSelectedEmphasis([]);
     setMessageEdited(false);
+    domainsTouchedRef.current = false;
   };
 
   const onSubmit = async (data: FormData) => {
@@ -177,6 +199,8 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
   const fieldHintClassName = 'text-xs leading-5 text-muted-foreground';
   const errorClassName = 'text-sm text-destructive';
 
+  const atClientLimit = clientLimitStatus ? !clientLimitStatus.canAddClient : false;
+
   return (
     <div className="rounded-lg border bg-card p-6">
       <div className="space-y-2 mb-6">
@@ -186,6 +210,12 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
         </p>
       </div>
 
+      {atClientLimit ? (
+        <p className="text-sm text-muted-foreground">
+          New invitations are unavailable until you upgrade or free up an active client slot.
+        </p>
+      ) : (
+      <>
       {createdLink && !createdLink.emailSent && (
         <ShareableInvitationLinkAlert
           url={createdLink.url}
@@ -240,7 +270,7 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
             Personal Message
           </label>
           <p className={fieldHintClassName}>
-            Optional. Updates automatically when you select assessment domains, or edit your own message.
+            Optional. Updates automatically when you select risk domains, or edit your own message.
           </p>
           <Textarea
             id="personalMessage"
@@ -260,6 +290,7 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
           </div>
         </div>
 
+        {skipIntakeEnabled ? (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <input
@@ -277,7 +308,7 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
           {intakeWaived ? (
             <div className="space-y-4 rounded-lg border border-border/80 bg-muted/20 p-4">
               <p className="text-sm text-muted-foreground">
-                Choose which assessment domains to include. The client can start only after
+                Choose which risk domains to include. The client can start only after
                 these are set.
               </p>
               <AssessmentDomainsSelector
@@ -301,6 +332,7 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
             </div>
           ) : null}
         </div>
+        ) : null}
 
         <div className="flex justify-end">
           <Button
@@ -313,6 +345,8 @@ export function InviteClientForm({ firmName, assessmentDomainPicker }: InviteCli
           </Button>
         </div>
       </form>
+      </>
+      )}
     </div>
   );
 }

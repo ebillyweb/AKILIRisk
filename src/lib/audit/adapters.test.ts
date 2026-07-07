@@ -83,8 +83,8 @@ describe("subscriptionAuditRowToGeneric", () => {
       id: "sublog1",
       subscriptionId: "sub1",
       action: "stripe_sync",
-      previousTier: "STARTER" as const,
-      newTier: "GROWTH" as const,
+      previousTier: "ESSENTIALS" as const,
+      newTier: "PROFESSIONAL" as const,
       metadata: { stripeSubscriptionId: "sub_xx" },
       timestamp: TS,
     };
@@ -98,8 +98,8 @@ describe("subscriptionAuditRowToGeneric", () => {
     expect(out.action).toBe("subscription.stripe_sync");
     expect(out.entityType).toBe("Subscription");
     expect(out.entityId).toBe("sub1");
-    expect(out.beforeData).toEqual({ tier: "STARTER" });
-    expect(out.afterData).toEqual({ tier: "GROWTH" });
+    expect(out.beforeData).toEqual({ tier: "ESSENTIALS" });
+    expect(out.afterData).toEqual({ tier: "PROFESSIONAL" });
     expect(out.metadata).toEqual({
       source: "stripe_webhook_or_admin",
       legacyAction: "stripe_sync",
@@ -115,12 +115,12 @@ describe("subscriptionAuditRowToGeneric", () => {
       subscriptionId: "sub2",
       action: "created",
       previousTier: null,
-      newTier: "STARTER" as const,
+      newTier: "ESSENTIALS" as const,
       metadata: null,
       timestamp: TS,
     });
     expect(out.beforeData).toBeNull();
-    expect(out.afterData).toEqual({ tier: "STARTER" });
+    expect(out.afterData).toEqual({ tier: "ESSENTIALS" });
   });
 
   it("sets afterData=null when newTier is missing (delete-style event)", () => {
@@ -128,12 +128,12 @@ describe("subscriptionAuditRowToGeneric", () => {
       id: "id3",
       subscriptionId: "sub3",
       action: "payment_failed",
-      previousTier: "GROWTH" as const,
+      previousTier: "PROFESSIONAL" as const,
       newTier: null,
       metadata: { invoiceId: "in_x" },
       timestamp: TS,
     });
-    expect(out.beforeData).toEqual({ tier: "GROWTH" });
+    expect(out.beforeData).toEqual({ tier: "PROFESSIONAL" });
     expect(out.afterData).toBeNull();
     expect(out.metadata).toMatchObject({ invoiceId: "in_x" });
   });

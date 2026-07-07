@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { sendMagicLinkEmail } from "@/lib/email";
+import { buildClientMagicLinkVerifyUrl, sendMagicLinkEmail } from "@/lib/email";
+import {
+  resolveClientEmailContext,
+  resolveClientEmailContextForInviteCode,
+} from "@/lib/client/client-email-context";
 import { rateLimit } from "@/lib/rate-limit";
 import { clientIpFromRequest } from "@/lib/request-ip";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -103,7 +107,7 @@ export async function POST(req: NextRequest) {
     const [user, inviteCode] = await Promise.all([
       findUserByEmail(email, {
         where: { deletedAt: null },
-        select: { id: true, emailCiphertext: true, role: true },
+        select: { id: true, emailCiphertext: true, role: true, name: true },
       }),
       prisma.inviteCode.findFirst({
         where: {
@@ -144,7 +148,11 @@ export async function POST(req: NextRequest) {
     const isClientUser = user?.role === "USER";
     if (isClientUser || (!user && inviteCode)) {
       scheduleAfterResponse(() =>
-        issueMagicLinkInBackground(email, baseUrl, inviteCode?.id ?? null)
+        issueMagicLinkInBackground(
+          email,
+          inviteCode?.id ?? null,
+          isClientUser ? user : null,
+        )
       );
     }
 
@@ -166,18 +174,25 @@ export async function POST(req: NextRequest) {
 
 async function issueMagicLinkInBackground(
   email: string,
-  baseUrl: string,
-  inviteCodeId: string | null
+  inviteCodeId: string | null,
+  user: { id: string; name: string | null } | null,
 ): Promise<void> {
   try {
-    // Invalidate any prior unexpired tokens for this email so a fresh
-    // request supersedes an in-flight one. Mirrors forgot-password.
     await invalidatePriorMagicLinkTokens(email);
 
     const issued = await issueMagicLinkToken(email, { inviteCodeId });
 
-    const verifyUrl = `${baseUrl}/auth/magic-link/verify?token=${issued.rawToken}`;
-    await sendMagicLinkEmail(email, verifyUrl);
+    const context = user
+      ? await resolveClientEmailContext({ userId: user.id, email })
+      : inviteCodeId
+        ? await resolveClientEmailContextForInviteCode(inviteCodeId)
+        : null;
+
+    const verifyUrl = buildClientMagicLinkVerifyUrl(context, issued.rawToken);
+    await sendMagicLinkEmail(email, verifyUrl, {
+      context,
+      clientName: user?.name,
+    });
   } catch (e) {
     console.error("Background magic-link issuance failed:", e);
   }

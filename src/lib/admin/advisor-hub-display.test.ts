@@ -10,7 +10,7 @@ describe("getAdminAdvisorHubDisplay", () => {
       billingEnabled: true,
       subscription: {
         status: "GRACE_PERIOD",
-        tier: "GROWTH",
+        tier: "PROFESSIONAL",
         billingCycle: "MONTHLY",
         currentPeriodEnd: "2026-05-27T00:00:00.000Z",
         cancelAtPeriodEnd: false,
@@ -56,5 +56,31 @@ describe("getAdminAdvisorHubDisplay", () => {
     expect(display.hubLabel).toBe("Subscribe required");
     expect(display.subscriptionStatusLabel).toBe("No subscription");
     expect(display.needsAttention).toBe(true);
+    expect(display.showSubscriptionBadges).toBe(true);
+  });
+
+  it("shows Enterprise for firm members without solo subscription badges", () => {
+    const display = getAdminAdvisorHubDisplay({
+      deletedAt: null,
+      advisorPortalAccessEnabled: true,
+      billingEnabled: true,
+      enterpriseId: "ent_123",
+      enterpriseName: "Belvedere Risk",
+      enterpriseStatus: "ACTIVE",
+      enterpriseMembershipStatus: "ACTIVE",
+      subscription: {
+        status: "CANCELLED",
+        currentPeriodEnd: "2026-05-27T00:00:00.000Z",
+        cancelAtPeriodEnd: true,
+        stripeSubscriptionId: "sub_old",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+
+    expect(display.hubLabel).toBe("Enterprise");
+    expect(display.hubAllowed).toBe(true);
+    expect(display.needsAttention).toBe(false);
+    expect(display.showSubscriptionBadges).toBe(false);
+    expect(display.hubDetail).toContain("Belvedere Risk");
   });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'react-hot-toast';
@@ -9,17 +10,20 @@ import { InvitationStatusBadge } from './InvitationStatusBadge';
 import { ShareableInvitationLinkAlert } from './ShareableInvitationLinkAlert';
 import { resendInvitationAction, expireInvitationAction } from '@/lib/actions/invitations';
 import { InvitationWithDetails } from '@/lib/invitations/types';
+import { formatInvitationHistoryClientLabel } from '@/lib/invitations/invitation-client-display';
 import { InvitationStatus } from '@prisma/client';
-import { Loader2, RotateCcw, X } from 'lucide-react';
+import { ExternalLink, Loader2, RotateCcw, X } from 'lucide-react';
 
 interface InvitationTableProps {
   invitations: InvitationWithDetails[];
   hasActiveFilters?: boolean;
+  pseudonymousWorkspaceLabeling?: boolean;
 }
 
 export function InvitationTable({
   invitations,
   hasActiveFilters = false,
+  pseudonymousWorkspaceLabeling = false,
 }: InvitationTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [resendLinkFallback, setResendLinkFallback] = useState<{
@@ -136,8 +140,16 @@ export function InvitationTable({
           <table className="w-full">
             <thead className="border-b bg-muted/50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
+                {pseudonymousWorkspaceLabeling ? (
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                    Client reference
+                  </th>
+                ) : (
+                  <>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Email</th>
+                  </>
+                )}
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Sent</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Expires</th>
@@ -145,18 +157,36 @@ export function InvitationTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {invitations.map((invitation) => (
+              {invitations.map((invitation) => {
+                const clientLabel = formatInvitationHistoryClientLabel({
+                  pseudonymousWorkspaceLabeling,
+                  clientName: invitation.clientName,
+                  prefillEmail: invitation.prefillEmail,
+                  clientReferenceCode: invitation.clientReferenceCode,
+                });
+
+                return (
                 <tr key={invitation.id} className="hover:bg-muted/30">
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-foreground">
-                      {invitation.clientName || 'Not provided'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-foreground">
-                      {invitation.prefillEmail}
-                    </div>
-                  </td>
+                  {pseudonymousWorkspaceLabeling ? (
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-foreground">
+                        {clientLabel.primary}
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-foreground">
+                          {clientLabel.primary}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-foreground">
+                          {clientLabel.secondary}
+                        </div>
+                      </td>
+                    </>
+                  )}
                   <td className="px-6 py-4">
                     <InvitationStatusBadge status={invitation.status} />
                   </td>
@@ -172,6 +202,15 @@ export function InvitationTable({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
+                      {invitation.status === InvitationStatus.REGISTERED &&
+                        invitation.registeredClientId && (
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href={`/advisor/pipeline/${invitation.registeredClientId}`}>
+                              <ExternalLink className="h-3 w-3" />
+                              View client
+                            </Link>
+                          </Button>
+                        )}
                       {invitation.canResend && (
                         <Button
                           size="sm"
@@ -205,7 +244,8 @@ export function InvitationTable({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

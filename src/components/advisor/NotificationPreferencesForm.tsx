@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import type { NotificationPreference } from '@prisma/client';
+import type { ReminderEmailPolicy } from '@/lib/notifications/reminder-email-policy';
 import {
   localTimeStringToUtc,
   utcTimeStringToLocal,
@@ -31,6 +32,8 @@ type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 interface NotificationPreferencesFormProps {
   preferences: NotificationPreference;
+  reminderPolicy?: ReminderEmailPolicy | null;
+  isEnterpriseMember?: boolean;
   updatePreferencesAction: (formData: FormData) => Promise<{
     success: boolean;
     error?: string;
@@ -41,6 +44,8 @@ interface NotificationPreferencesFormProps {
 
 export function NotificationPreferencesForm({
   preferences,
+  reminderPolicy = null,
+  isEnterpriseMember = false,
   updatePreferencesAction
 }: NotificationPreferencesFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +75,7 @@ export function NotificationPreferencesForm({
   });
 
   const emailEnabled = watch('emailEnabled');
+  const firmControlsReminders = isEnterpriseMember && reminderPolicy != null;
 
   const onSubmit = async (data: PreferencesFormData) => {
     setIsSubmitting(true);
@@ -114,6 +120,11 @@ export function NotificationPreferencesForm({
         <p className="text-sm text-muted-foreground">
           Control which notifications you receive and how often.
         </p>
+        {firmControlsReminders ? (
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Client and advisor reminder emails are managed by your firm in Roles &amp; Permissions.
+          </p>
+        ) : null}
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -182,7 +193,12 @@ export function NotificationPreferencesForm({
               <Checkbox
                 id="emailReminders"
                 {...register('emailReminders')}
-                disabled={!emailEnabled}
+                disabled={!emailEnabled || firmControlsReminders}
+                checked={
+                  firmControlsReminders
+                    ? reminderPolicy?.clientReminderEmailsEnabled
+                    : watch('emailReminders')
+                }
                 onCheckedChange={(checked) => setValue('emailReminders', checked as boolean)}
               />
               <Label
@@ -202,7 +218,12 @@ export function NotificationPreferencesForm({
               <Checkbox
                 id="emailStalled"
                 {...register('emailStalled')}
-                disabled={!emailEnabled}
+                disabled={!emailEnabled || firmControlsReminders}
+                checked={
+                  firmControlsReminders
+                    ? reminderPolicy?.advisorReminderEmailsEnabled
+                    : watch('emailStalled')
+                }
                 onCheckedChange={(checked) => setValue('emailStalled', checked as boolean)}
               />
               <Label

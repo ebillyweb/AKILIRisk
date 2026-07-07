@@ -3,7 +3,11 @@ import { redirect } from "next/navigation";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { loadPlatformPillars } from "@/lib/methodology/platform-pillars";
+import { ConfigurationPageHeader } from "@/components/product-tour/ConfigurationPageHeader";
+import {
+  loadActiveAdvisorMethodologyPillars,
+  methodologyPillarDisplayName,
+} from "@/lib/methodology/methodology-queries";
 import {
   BookOpen,
   ClipboardList,
@@ -11,41 +15,34 @@ import {
   Layers,
   ListChecks,
   Sparkles,
-  Eye,
   History,
   Bell,
 } from "lucide-react";
 
 const LINKS = [
   {
-    href: "/advisor/methodology/pillars",
-    title: "Pillar manager",
-    description: "Toggle pillars, rename labels, set weights and score thresholds.",
+    href: "/advisor/methodology/risk-domains",
+    title: "Risk domain manager",
+    description: "Toggle risk domains, rename labels, set weights and score thresholds.",
     icon: Layers,
   },
   {
     href: "/advisor/methodology/intake",
-    title: "Intake script",
-    description: "Edit the ordered audio interview script shown to new intakes.",
+    title: "Intake question bank",
+    description: "Platform intake by default; optional combined or custom-only banks.",
     icon: ClipboardList,
   },
   {
     href: "/advisor/methodology/narratives/governance",
-    title: "Pillar narratives",
+    title: "Risk domain narratives",
     description: "Customize outcome copy for low, mid, and high maturity bands.",
     icon: FileText,
   },
   {
     href: "/advisor/methodology/recommendations/governance",
     title: "Recommendation rules",
-    description: "Configure service triggers per pillar.",
+    description: "Configure service triggers per risk domain.",
     icon: Sparkles,
-  },
-  {
-    href: "/advisor/methodology/preview",
-    title: "Preview as client",
-    description: "Dry-run your live methodology without starting an intake.",
-    icon: Eye,
   },
   {
     href: "/advisor/methodology/versions",
@@ -56,50 +53,49 @@ const LINKS = [
   {
     href: "/advisor/methodology/catalog-updates",
     title: "Catalog updates",
-    description: "Platform pillar catalog changes since your last sync.",
+    description: "Platform risk domain catalog changes since your last sync.",
     icon: Bell,
   },
 ] as const;
 
 export default async function MethodologyHubPage() {
+  let profile: Awaited<ReturnType<typeof getAdvisorProfileOrThrow>>;
   try {
     const { userId } = await requireAdvisorRole();
-    await getAdvisorProfileOrThrow(userId);
+    profile = await getAdvisorProfileOrThrow(userId);
   } catch {
     redirect("/signin");
   }
 
-  const pillars = await loadPlatformPillars();
+  const pillars = await loadActiveAdvisorMethodologyPillars(profile.id);
 
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Methodology</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Configure your household risk methodology. Changes apply to new intakes only;
-          in-flight clients keep the configuration snapshotted at intake start.
-        </p>
-      </div>
+      <ConfigurationPageHeader
+        tourId="advisor-methodology-hub"
+        title="Your methodology"
+        description="Your advisor profile. New intakes use this; in-flight clients keep their snapshot."
+      />
 
-      <Card>
+      <Card data-tour="config-pillar-questions">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4" />
-            Assessment questions by pillar
+            Assessment questions by risk domain
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {pillars.map((pillar) => (
-            <Button key={pillar.id} variant="outline" size="sm" asChild>
+            <Button key={pillar.pillarId} variant="outline" size="sm" asChild>
               <Link href={`/advisor/methodology/questions/${pillar.slug}`}>
-                {pillar.name}
+                {methodologyPillarDisplayName(pillar)}
               </Link>
             </Button>
           ))}
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2" data-tour="config-primary-list">
         {LINKS.map((item) => (
           <Card key={item.href} className="h-full">
             <CardHeader>
@@ -126,7 +122,7 @@ export default async function MethodologyHubPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Platform starter content is cloned on first visit. Edit intake script, narratives,
+          Platform starter content is cloned on first visit. Edit intake question bank, narratives,
           and assessment questions here; clients receive a frozen snapshot when they begin intake.
         </CardContent>
       </Card>

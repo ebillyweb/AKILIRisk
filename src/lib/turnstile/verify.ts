@@ -10,7 +10,7 @@ export function isTurnstileConfigured(): boolean {
   );
 }
 
-/** Dev-only escape hatch when Turnstile keys are not set locally. */
+/** Dev-only escape hatch when Turnstile keys are not set locally (public forms). */
 export function isContactCaptchaBypassEnabled(): boolean {
   return (
     process.env.NODE_ENV !== "production" &&

@@ -29,7 +29,7 @@ export function PillarNarrativeSummary({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-2xl font-semibold text-foreground">Pillar Summary</h3>
+      <h3 className="text-2xl font-semibold text-foreground">Risk domain summary</h3>
       {narratives.map((text, index) => (
         <Card key={index} className={cardClass}>
           <CardContent className="pt-6">

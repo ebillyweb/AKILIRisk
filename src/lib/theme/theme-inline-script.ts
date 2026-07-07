@@ -2,7 +2,7 @@ import { AKILIRISK_THEME_STORAGE_KEY } from "./constants";
 
 /**
  * Runs before first paint to avoid light/dark flash. Keep in sync with ThemeProvider.
- * When `data-tenant-force-light="true"` on `<html>`, public tenant surfaces always load light.
+ * When `data-tenant-force-light="true"` on `<html>`, white-label tenant surfaces always load light.
  */
 export function getThemeInlineScript(): string {
   const key = JSON.stringify(AKILIRISK_THEME_STORAGE_KEY);

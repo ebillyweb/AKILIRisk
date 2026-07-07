@@ -30,8 +30,8 @@ export function parsePipelineFiltersFromSearchParams(
     stage,
     stalled: single("stalled") === "1" ? true : undefined,
     awaitingIntakeReview: single("awaitingReview") === "1" ? true : undefined,
+    assessmentInProgress: single("assessmentInProgress") === "1" ? true : undefined,
     documentsNeeded: single("documentsNeeded") === "1" ? true : undefined,
-    needsRescore: single("needsRescore") === "1" ? true : undefined,
     inactive: single("inactive") === "1" ? true : undefined,
     search: single("search"),
     sortBy: "lastActivity",
@@ -47,6 +47,26 @@ export function parsePipelinePageFromSearchParams(
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
+/** Strip removed `staleScores` / `needsRescore` query bookmarks. */
+export function legacyPipelineSearchRedirect(
+  searchParams: Record<string, string | string[] | undefined>,
+): string | null {
+  const single = (key: string) => {
+    const v = searchParams[key];
+    return typeof v === "string" ? v : undefined;
+  };
+
+  if (single("staleScores") === "1" || single("needsRescore") === "1") {
+    const cleaned = { ...searchParams };
+    delete cleaned.staleScores;
+    delete cleaned.needsRescore;
+    const page = parsePipelinePageFromSearchParams(cleaned);
+    return buildPipelineHref(parsePipelineFiltersFromSearchParams(cleaned), page);
+  }
+
+  return null;
+}
+
 export function buildPipelineHref(
   filters: PipelineFilters,
   page: number,
@@ -55,8 +75,8 @@ export function buildPipelineHref(
   if (filters.stage) sp.set("stage", filters.stage);
   if (filters.stalled) sp.set("stalled", "1");
   if (filters.awaitingIntakeReview) sp.set("awaitingReview", "1");
+  if (filters.assessmentInProgress) sp.set("assessmentInProgress", "1");
   if (filters.documentsNeeded) sp.set("documentsNeeded", "1");
-  if (filters.needsRescore) sp.set("needsRescore", "1");
   if (filters.inactive) sp.set("inactive", "1");
   if (filters.search?.trim()) sp.set("search", filters.search.trim());
   if (page > 1) sp.set("page", String(page));

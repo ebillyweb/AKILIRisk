@@ -6,6 +6,8 @@ import {
   pickAdvisorBrandPrimary,
   pickAdvisorBrandSecondary,
 } from "@/components/admin/admin-advisor-list-styles";
+import { resolveAdminAdvisorListBranding } from "@/lib/admin/advisor-list-branding";
+import { isEnterpriseLinkedAdvisor } from "@/lib/admin/advisor-list-filters";
 import { getAdminAdvisorHubDisplay } from "@/lib/admin/advisor-hub-display";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { getAdvisorsForAdmin, type AdvisorsAdminScope } from "@/lib/admin/queries";
@@ -23,7 +25,7 @@ function humanizeEnumToken(value: string) {
     .join(" ");
 }
 
-export type AdvisorsAdminFilter = AdvisorsAdminScope | "attention";
+export type AdvisorsAdminFilter = AdvisorsAdminScope | "attention" | "enterprise";
 
 export default async function AdminAdvisorsPage({
   searchParams,
@@ -36,7 +38,9 @@ export default async function AdminAdvisorsPage({
       ? "all"
       : sp.filter === "attention"
         ? "attention"
-        : "active";
+        : sp.filter === "enterprise"
+          ? "enterprise"
+          : "active";
   const billingEnabled = isBillingEnabled();
   const allAdvisors = await getAdvisorsForAdmin({
     scope: filter === "all" ? "all" : "active",
@@ -48,6 +52,10 @@ export default async function AdminAdvisorsPage({
       deletedAt: a.deletedAt,
       advisorPortalAccessEnabled: a.advisorPortalAccessEnabled,
       billingEnabled,
+      enterpriseId: a.advisorProfile?.enterpriseId ?? null,
+      enterpriseName: a.advisorProfile?.enterprise?.name ?? null,
+      enterpriseStatus: a.advisorProfile?.enterprise?.status ?? null,
+      enterpriseMembershipStatus: a.enterpriseMembership?.status ?? null,
       subscription: a.subscription,
     }),
   }));
@@ -55,9 +63,14 @@ export default async function AdminAdvisorsPage({
   const advisors =
     filter === "attention"
       ? advisorsWithStatus.filter(({ hub }) => hub.needsAttention)
-      : advisorsWithStatus;
+      : filter === "enterprise"
+        ? advisorsWithStatus.filter(({ advisor }) => isEnterpriseLinkedAdvisor(advisor))
+        : advisorsWithStatus;
 
   const attentionCount = advisorsWithStatus.filter(({ hub }) => hub.needsAttention).length;
+  const enterpriseCount = advisorsWithStatus.filter(({ advisor }) =>
+    isEnterpriseLinkedAdvisor(advisor),
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -85,6 +98,17 @@ export default async function AdminAdvisorsPage({
               <Link href="/admin/advisors?filter=attention">
                 Needs attention
                 {attentionCount > 0 ? ` (${attentionCount})` : ""}
+              </Link>
+            </Button>
+            <Button
+              variant={filter === "enterprise" ? "default" : "outline"}
+              size="sm"
+              className="h-8"
+              asChild
+            >
+              <Link href="/admin/advisors?filter=enterprise">
+                Enterprise
+                {enterpriseCount > 0 ? ` (${enterpriseCount})` : ""}
               </Link>
             </Button>
             <Button
@@ -130,7 +154,9 @@ export default async function AdminAdvisorsPage({
             <p className="text-center text-sm text-muted-foreground">
               {filter === "attention"
                 ? "No advisors need attention right now."
-                : "No advisors found."}
+                : filter === "enterprise"
+                  ? "No enterprise advisors found."
+                  : "No advisors found."}
             </p>
           </CardContent>
         </Card>
@@ -140,24 +166,48 @@ export default async function AdminAdvisorsPage({
             const isDeactivated = Boolean(a.deletedAt);
             const isWhiteLabel = Boolean(a.subscription?.whiteLabel);
             const profile = a.advisorProfile;
-            const primary = pickAdvisorBrandPrimary(profile?.primaryColor, profile?.accentColor);
-            const secondary = pickAdvisorBrandSecondary(
-              profile?.secondaryColor,
-              profile?.primaryColor,
-              profile?.accentColor
+            const displayBranding = profile
+              ? resolveAdminAdvisorListBranding(
+                  {
+                    firmName: profile.firmName,
+                    brandName: profile.brandName,
+                    primaryColor: profile.primaryColor,
+                    secondaryColor: profile.secondaryColor,
+                    accentColor: profile.accentColor,
+                    logoUrl: profile.logoUrl,
+                    logoS3Key: profile.logoS3Key,
+                  },
+                  profile.enterprise,
+                  { linkedToEnterprise: Boolean(profile.enterpriseId) },
+                )
+              : null;
+            const primary = pickAdvisorBrandPrimary(
+              displayBranding?.primaryColor,
+              displayBranding?.accentColor,
             );
-            const rawLogo = profile?.logoUrl?.trim() || "";
+            const secondary = pickAdvisorBrandSecondary(
+              displayBranding?.secondaryColor,
+              displayBranding?.primaryColor,
+              displayBranding?.accentColor,
+            );
+            const rawLogo = displayBranding?.logoUrl?.trim() || "";
             const showPublicLogo =
               Boolean(rawLogo) && !looksLikeAdvisorBrandingS3Url(rawLogo) && /^https?:\/\//i.test(rawLogo);
-            const hasS3Logo = Boolean(profile?.logoS3Key);
+            const hasS3Logo = Boolean(displayBranding?.logoS3Key);
             const adminLogoSrc = `/api/admin/advisors/${a.id}/logo`;
-            const initials = profile
-              ? advisorBrandInitials(profile.brandName, profile.firmName, a.name ?? a.email)
+            const initials = displayBranding
+              ? advisorBrandInitials(
+                  displayBranding.brandName,
+                  displayBranding.firmName,
+                  a.name ?? a.email,
+                )
               : (a.name ?? a.email).slice(0, 2).toUpperCase();
 
             const hasBrandColors = Boolean(primary);
             const brandDisplayName =
-              profile?.brandName?.trim() || profile?.firmName?.trim() || null;
+              displayBranding?.brandName?.trim() ||
+              displayBranding?.firmName?.trim() ||
+              null;
 
             const cardSurfaceStyle: CSSProperties | undefined =
               !isDeactivated && hasBrandColors && primary
@@ -311,13 +361,13 @@ export default async function AdminAdvisorsPage({
                         <AlertTriangle
                           className={cn(
                             "size-3 shrink-0 opacity-80",
-                            hub.hubAllowed && "hidden"
+                            (hub.hubAllowed || !hub.showSubscriptionBadges) && "hidden"
                           )}
                           aria-hidden
                         />
                         <span className="truncate">{hub.hubLabel}</span>
                       </Badge>
-                      {a.subscription ? (
+                      {hub.showSubscriptionBadges && a.subscription ? (
                         <Badge
                           variant="outline"
                           className="inline-flex max-w-[min(100%,16rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
@@ -332,14 +382,16 @@ export default async function AdminAdvisorsPage({
                           </span>
                         </Badge>
                       ) : null}
-                      <Badge
-                        variant={hub.subscriptionStatusVariant}
-                        className="inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
-                        title={hub.hubDetail ?? "Subscription status"}
-                      >
-                        <CreditCard className="size-3 shrink-0 opacity-80" aria-hidden />
-                        <span className="truncate">{hub.subscriptionStatusLabel}</span>
-                      </Badge>
+                      {hub.showSubscriptionBadges ? (
+                        <Badge
+                          variant={hub.subscriptionStatusVariant}
+                          className="inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 text-xs font-medium normal-case tracking-normal"
+                          title={hub.hubDetail ?? "Subscription status"}
+                        >
+                          <CreditCard className="size-3 shrink-0 opacity-80" aria-hidden />
+                          <span className="truncate">{hub.subscriptionStatusLabel}</span>
+                        </Badge>
+                      ) : null}
                     </div>
                     <Button variant="outline" size="icon" className="h-9 w-9" asChild>
                       <Link href={`/admin/advisors/${a.id}/edit`} aria-label={`Edit ${a.name ?? a.email}`}>

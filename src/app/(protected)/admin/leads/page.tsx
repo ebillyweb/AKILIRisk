@@ -11,18 +11,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatFamilyComplexity } from "@/lib/governance/family-complexity";
+import { formatInvestableAssetsRange } from "@/lib/governance/investable-assets-range";
 
 function advisorOptionLabel(a: {
   firmName: string | null;
-  user: { email: string; name: string | null };
+  user: { email: string | null; name: string | null };
 }) {
+  const email = a.user.email ?? "No email";
   const parts = [a.firmName, a.user.name].filter(Boolean) as string[];
-  if (parts.length === 0) return a.user.email;
-  return `${parts.join(" · ")} (${a.user.email})`;
-}
-
-function formatComplexity(c: string) {
-  return c.replace(/_/g, " ").toLowerCase();
+  if (parts.length === 0) return email;
+  return `${parts.join(" · ")} (${email})`;
 }
 
 export default async function AdminGovernanceLeadsPage() {
@@ -71,17 +70,15 @@ export default async function AdminGovernanceLeadsPage() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">{lead.email}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Household: {lead.familyOfficeName}
+                    <p className="text-xs text-muted-foreground">
+                      Complexity: {formatFamilyComplexity(lead.familyComplexity)}
                     </p>
-                    {lead.primaryAdvisor ? (
-                      <p className="text-sm text-muted-foreground">
-                        Named advisor (optional): {lead.primaryAdvisor}
+                    {lead.investableAssetsRange ? (
+                      <p className="text-xs text-muted-foreground">
+                        Investable assets:{" "}
+                        {formatInvestableAssetsRange(lead.investableAssetsRange)}
                       </p>
                     ) : null}
-                    <p className="text-xs text-muted-foreground">
-                      Complexity: {formatComplexity(lead.familyComplexity)}
-                    </p>
                     {lead.promptedInterest ? (
                       <p className="text-sm leading-6 text-muted-foreground">
                         Note: {lead.promptedInterest}

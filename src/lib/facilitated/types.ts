@@ -11,6 +11,11 @@ export type FacilitatedSessionSummary = {
   completedAt: Date | null;
   clientName: string | null;
   clientEmail: string | null;
+  /** Human-readable in-progress detail for launcher cards (e.g. "Question 3 of 15"). */
+  progressDetail: string | null;
+  /** Advisor-facing label respecting client data visibility settings. */
+  clientDisplayName: string;
+  clientDisplayPseudonymous: boolean;
 };
 
 /** Resumable in-progress steps only — not PREVIEW (formal review / finish flow). */
@@ -28,7 +33,7 @@ export function facilitatedSessionStepPath(
     case "INTAKE":
       return `/advisor/facilitate/${sessionId}/intake`;
     case "PILLAR_SELECT":
-      return `/advisor/facilitate/${sessionId}/pillars`;
+      return `/advisor/facilitate/${sessionId}/risk-domains`;
     case "ASSESSMENT":
       return `/advisor/facilitate/${sessionId}/assessment`;
     case "PREVIEW":

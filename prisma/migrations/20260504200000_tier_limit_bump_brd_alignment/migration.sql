@@ -22,23 +22,23 @@ SELECT
   s.tier AS tier,
   s."clientLimit" AS old_limit,
   CASE s.tier
-    WHEN 'STARTER'      THEN 25
-    WHEN 'GROWTH'       THEN 50
-    WHEN 'PROFESSIONAL' THEN 100
+    WHEN 'ESSENTIALS'      THEN 25
+    WHEN 'PROFESSIONAL'       THEN 50
+    WHEN 'BUSINESS' THEN 100
   END AS new_limit
 FROM "Subscription" s
 WHERE s."clientLimit" != CASE s.tier
-    WHEN 'STARTER'      THEN 25
-    WHEN 'GROWTH'       THEN 50
-    WHEN 'PROFESSIONAL' THEN 100
+    WHEN 'ESSENTIALS'      THEN 25
+    WHEN 'PROFESSIONAL'       THEN 50
+    WHEN 'BUSINESS' THEN 100
   END;
 
 -- 2. Apply the bump.
 UPDATE "Subscription"
 SET "clientLimit" = CASE tier
-    WHEN 'STARTER'      THEN 25
-    WHEN 'GROWTH'       THEN 50
-    WHEN 'PROFESSIONAL' THEN 100
+    WHEN 'ESSENTIALS'      THEN 25
+    WHEN 'PROFESSIONAL'       THEN 50
+    WHEN 'BUSINESS' THEN 100
   END
 WHERE id IN (SELECT subscription_id FROM _tier_limit_audit_snapshot);
 

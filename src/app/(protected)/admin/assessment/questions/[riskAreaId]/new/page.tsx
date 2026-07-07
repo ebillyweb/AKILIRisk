@@ -73,7 +73,7 @@ export default async function AdminQuestionBankNewPage({
         </Alert>
       ) : null}
 
-      <Card>
+      <Card data-tour="config-primary-form">
         <CardHeader>
           <CardTitle className="text-base">New question</CardTitle>
           <p className="text-sm text-muted-foreground">{area.name}</p>

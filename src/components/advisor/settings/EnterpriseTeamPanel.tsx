@@ -1,28 +1,37 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, ShieldCheck, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { LabelWithHelp } from "@/components/ui/field-help";
 import {
   inviteEnterpriseTeamMemberAction,
   reactivateEnterpriseTeamMemberAction,
+  resendEnterpriseTeamInviteAction,
+  revokeEnterpriseTeamInviteAction,
   suspendEnterpriseTeamMemberAction,
 } from "@/lib/actions/enterprise-team-actions";
 import type { EnterpriseTeamMemberView } from "@/lib/enterprise/team-invite";
 import type { EnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
+
+function formatEnterpriseTeamRole(role: EnterpriseTeamMemberView["role"]): string {
+  switch (role) {
+    case "ADVISOR":
+      return "Team member";
+    case "ADMIN":
+      return "Admin";
+    case "OWNER":
+      return "Owner";
+    default:
+      return role;
+  }
+}
 
 type EnterpriseTeamPanelProps = {
   enterpriseName: string;
@@ -40,7 +49,6 @@ export function EnterpriseTeamPanel({
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [email, setEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"ADMIN" | "ADVISOR">("ADVISOR");
   const [inviting, setInviting] = useState(false);
   const [pendingMemberId, setPendingMemberId] = useState<string | null>(null);
 
@@ -50,10 +58,7 @@ export function EnterpriseTeamPanel({
     event.preventDefault();
     setInviting(true);
     try {
-      const result = await inviteEnterpriseTeamMemberAction({
-        email,
-        role: inviteRole,
-      });
+      const result = await inviteEnterpriseTeamMemberAction({ email });
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -98,13 +103,44 @@ export function EnterpriseTeamPanel({
     }
   };
 
+  const handleResendInvite = async (membershipId: string) => {
+    setPendingMemberId(membershipId);
+    try {
+      const result = await resendEnterpriseTeamInviteAction({ membershipId });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Invitation resent.");
+      startTransition(() => router.refresh());
+    } finally {
+      setPendingMemberId(null);
+    }
+  };
+
+  const handleRemoveInvite = async (membershipId: string) => {
+    setPendingMemberId(membershipId);
+    try {
+      const result = await revokeEnterpriseTeamInviteAction({ membershipId });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Invitation removed.");
+      startTransition(() => router.refresh());
+    } finally {
+      setPendingMemberId(null);
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-tour="config-page-header">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
           <p className="text-sm text-muted-foreground">
-            Manage advisors and administrators for {enterpriseName}.
+            Manage team members and administrators for{" "}
+            <span className="font-semibold text-foreground">{enterpriseName}</span>.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -117,36 +153,26 @@ export function EnterpriseTeamPanel({
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm" data-tour="config-primary-action">
         <div className="mb-4 space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">Invite teammate</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Invite team member</h2>
           <p className="text-sm text-muted-foreground">
-            Invited advisors receive their own login. Seat overage is reported but not blocked in v1.
+            Invited team members receive their own login. Seat overage is reported but not blocked in v1.
           </p>
         </div>
-        <form onSubmit={handleInvite} className="grid gap-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
+        <form onSubmit={handleInvite} className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <div className="space-y-2">
-            <Label htmlFor="team-invite-email">Email</Label>
+            <LabelWithHelp htmlFor="team-invite-email" helpKey="team-invite-email">
+              Email
+            </LabelWithHelp>
             <Input
               id="team-invite-email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="advisor@firm.com"
+              placeholder="member@firm.com"
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="team-invite-role">Role</Label>
-            <Select value={inviteRole} onValueChange={(value) => setInviteRole(value as "ADMIN" | "ADVISOR")}>
-              <SelectTrigger id="team-invite-role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ADVISOR">Advisor</SelectItem>
-                <SelectItem value="ADMIN">Admin</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <Button type="submit" disabled={inviting}>
             {inviting ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
@@ -155,7 +181,7 @@ export function EnterpriseTeamPanel({
         </form>
       </div>
 
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden" data-tour="config-primary-list">
         <div className="border-b px-6 py-4">
           <h2 className="text-lg font-semibold tracking-tight">Members</h2>
         </div>
@@ -176,7 +202,7 @@ export function EnterpriseTeamPanel({
                   <p className="text-sm text-muted-foreground">{member.email}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{member.role}</Badge>
+                  <Badge variant="outline">{formatEnterpriseTeamRole(member.role)}</Badge>
                   <Badge
                     variant={
                       member.status === "ACTIVE"
@@ -188,6 +214,26 @@ export function EnterpriseTeamPanel({
                   >
                     {member.status}
                   </Badge>
+                  {canManageMember && member.status === "INVITED" ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => handleResendInvite(member.id)}
+                      >
+                        Resend invite
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => handleRemoveInvite(member.id)}
+                      >
+                        Remove
+                      </Button>
+                    </>
+                  ) : null}
                   {canManageMember && member.status === "ACTIVE" ? (
                     <Button
                       variant="outline"
@@ -212,6 +258,24 @@ export function EnterpriseTeamPanel({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight">Roles & Permissions</h2>
+            <p className="text-sm text-muted-foreground">
+              Workspace visibility, client data defaults, household profiles, and branding options
+              for team members live on a dedicated page under Firm.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link href="/advisor/settings/access-control">
+              <ShieldCheck className="size-4" />
+              Manage access
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

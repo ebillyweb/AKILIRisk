@@ -44,6 +44,14 @@ export function useIntakeInterview(
 
   const n = scriptQuestions.length;
 
+  useEffect(() => {
+    if (n === 0) return;
+    const maxIdx = n - 1;
+    if (currentQuestionIndex > maxIdx) {
+      setCurrentQuestion(maxIdx);
+    }
+  }, [n, currentQuestionIndex, setCurrentQuestion]);
+
   const currentQuestion = useMemo(
     () => (n > 0 ? (scriptQuestions[currentQuestionIndex] ?? null) : null),
     [n, scriptQuestions, currentQuestionIndex]

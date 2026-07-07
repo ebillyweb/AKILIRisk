@@ -95,4 +95,6 @@ Open `logo-export-preview.html` in a browser to:
 
 ## Support
 
-For questions about logo usage or additional format needs, please refer to the brand guidelines or contact the design team.
+For logo files and export tooling, see this folder. For the full brand kit (colors, typography, messaging, decks), see **[docs/brand/README.md](../docs/brand/README.md)**.
+
+Canonical code tokens: **`src/lib/brand/tokens.ts`**

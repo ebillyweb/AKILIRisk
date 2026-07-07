@@ -6,6 +6,7 @@ export const TENANT_PUBLIC_PREFIXES = [
   "/signin",
   "/consent",
   "/mfa",
+  "/change-password",
   "/forgot-password",
   "/reset-password",
   "/request-review",

@@ -44,14 +44,14 @@ export default async function AdminIntakeQuestionsPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">
-              Script questions{" "}
+              Intake questions{" "}
               <span className="font-normal text-muted-foreground">({questions.length})</span>
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Order matches the live interview. Hidden questions are skipped for clients.
             </p>
           </CardHeader>
-          <CardContent className="space-y-0 divide-y divide-border p-0">
+          <CardContent className="space-y-0 divide-y divide-border p-0" data-tour="config-primary-list">
             {questions.map((q) => (
               <div
                 key={q.id}

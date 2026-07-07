@@ -11,6 +11,7 @@ import {
 } from '@/lib/s3/intake-audio-uploads';
 import { prisma } from '@/lib/db';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
+import { assertClientIntakeAnswersEditable } from '@/lib/client/intake-edit-gate';
 import {
   isAllowedAudioMime,
   normalizeAudioMimeType,
@@ -95,6 +96,22 @@ export async function POST(
         { success: false, error: 'Interview not found' },
         { status: 404 }
       );
+    }
+
+    if (ownerUserId === session.user.id) {
+      if (interview.status === 'SUBMITTED') {
+        return NextResponse.json(
+          { success: false, error: 'Intake already submitted.' },
+          { status: 409 },
+        );
+      }
+      const editable = await assertClientIntakeAnswersEditable(ownerUserId);
+      if (!editable.ok) {
+        return NextResponse.json(
+          { success: false, error: editable.error },
+          { status: 409 },
+        );
+      }
     }
 
     // Parse form data

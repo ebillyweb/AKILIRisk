@@ -1,6 +1,7 @@
 import type { AdvisorNotification } from "@prisma/client";
 import type { PipelineClient, PipelineMetrics } from "@/lib/pipeline/types";
 import type { PortfolioIntelligence } from "@/lib/intelligence/types";
+import { advisorNotificationHref } from "@/lib/advisor/notification-links";
 
 export type AdvisorPriorityItem = {
   id: string;
@@ -31,9 +32,11 @@ export type AdvisorIntelligenceHighlight = {
 export function deriveAdvisorPriorities(
   clients: PipelineClient[],
   metrics: PipelineMetrics,
-  pendingInvitationsCount: number
+  pendingInvitationsCount: number,
+  options?: { documentRequirementsEnabled?: boolean },
 ): AdvisorPriorityItem[] {
   const priorities: AdvisorPriorityItem[] = [];
+  const documentRequirementsEnabled = options?.documentRequirementsEnabled !== false;
 
   const reviewsNeeded = metrics.intakesAwaitingReview ?? 0;
   if (reviewsNeeded > 0) {
@@ -50,7 +53,7 @@ export function deriveAdvisorPriorities(
     });
   }
 
-  if (metrics.documentsNeeded > 0) {
+  if (documentRequirementsEnabled && metrics.documentsNeeded > 0) {
     priorities.push({
       id: "documents",
       kind: "documents",
@@ -58,17 +61,6 @@ export function deriveAdvisorPriorities(
       description: `${metrics.documentsNeeded} client${metrics.documentsNeeded === 1 ? "" : "s"} have unfulfilled required documents.`,
       href: "/advisor/pipeline?documentsNeeded=1",
       count: metrics.documentsNeeded,
-    });
-  }
-
-  if (metrics.needsRescore > 0) {
-    priorities.push({
-      id: "rescore",
-      kind: "in_progress",
-      title: "Reassessment needed",
-      description: `${metrics.needsRescore} client${metrics.needsRescore === 1 ? "" : "s"} changed answers after completing the assessment.`,
-      href: "/advisor/pipeline?needsRescore=1",
-      count: metrics.needsRescore,
     });
   }
 
@@ -97,6 +89,23 @@ export function deriveAdvisorPriorities(
   const inFlight =
     (metrics.byStage.INTAKE_IN_PROGRESS ?? 0) +
     (metrics.byStage.ASSESSMENT_IN_PROGRESS ?? 0);
+  const assessmentsInProgress = metrics.assessmentsInProgress ?? 0;
+  if (assessmentsInProgress > 0) {
+    const firstAssessment = clients.find(
+      (c) => c.stage === "ASSESSMENT_IN_PROGRESS" && c.assessment?.id,
+    );
+    priorities.push({
+      id: "assessments",
+      kind: "in_progress",
+      title: "Client assessments in progress",
+      description: `${assessmentsInProgress} client${assessmentsInProgress === 1 ? "" : "s"} actively taking the risk assessment.`,
+      href: firstAssessment?.assessment?.id
+        ? `/advisor/pipeline/${firstAssessment.id}/assessment/${firstAssessment.assessment.id}`
+        : "/advisor/pipeline?assessmentInProgress=1",
+      count: assessmentsInProgress,
+    });
+  }
+
   if (inFlight > 0 && priorities.length < 5) {
     const names = clients
       .filter(
@@ -130,7 +139,7 @@ export function mapNotificationsToActivity(
     message: n.message,
     createdAt: n.createdAt,
     read: n.read,
-    href: "/advisor/notifications",
+    href: advisorNotificationHref(n),
   }));
 }
 

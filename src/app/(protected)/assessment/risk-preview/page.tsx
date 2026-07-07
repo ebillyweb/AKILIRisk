@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
+import { deliverableBannerBrandingProps } from "@/lib/client/deliverable-banner-branding";
+import { resolveClientPortalBrandingForUser } from "@/lib/client/resolve-client-portal-branding";
 import { resolveTopRisks } from "@/lib/dashboard/client-summary";
 import {
   formatNarrowScopePreviewCopy,
@@ -33,8 +35,9 @@ export default async function AssessmentPreviewPage() {
     redirect("/assessment/results");
   }
 
-  const assessment = access.assessmentId
-    ? await prisma.assessment.findFirst({
+  const [assessment, portalBranding] = await Promise.all([
+    access.assessmentId
+      ? prisma.assessment.findFirst({
         where: { id: access.assessmentId, userId: session.user.id },
         select: {
           id: true,
@@ -51,7 +54,12 @@ export default async function AssessmentPreviewPage() {
           },
         },
       })
-    : null;
+      : Promise.resolve(null),
+    resolveClientPortalBrandingForUser({
+      userId: session.user.id,
+      email: session.user.email ?? "",
+    }),
+  ]);
 
   if (!assessment) {
     redirect("/assessment");
@@ -71,6 +79,7 @@ export default async function AssessmentPreviewPage() {
     includedSet.has(normalizePillarSlug(row.pillar)),
   );
   const topRisks = resolveTopRisks(scopedScores, catalog);
+  const bannerBranding = deliverableBannerBrandingProps(portalBranding);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
@@ -85,6 +94,8 @@ export default async function AssessmentPreviewPage() {
         engagement={assessment.portfolioEngagement}
         previewEnteredAt={assessment.previewEnteredAt}
         profileEnteredAt={assessment.profileEnteredAt}
+        advisorTeamLabel={bannerBranding.advisorTeamLabel}
+        brandHex={bannerBranding.brandHex}
       />
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">

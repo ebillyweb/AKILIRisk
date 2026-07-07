@@ -30,6 +30,7 @@ const { prismaSpies, writeAuditSpy, requireAdminRoleSpy, scoringSpies, engineCto
       createMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     clientAdvisorAssignment: { findMany: vi.fn() },
+    pillar: { findMany: vi.fn().mockResolvedValue([]) },
     $transaction: vi.fn(),
   };
   const writeAuditSpy = vi.fn().mockResolvedValue(undefined);
@@ -90,6 +91,13 @@ vi.mock("@/lib/methodology/assessment-runtime", () => ({
 vi.mock("@/lib/assessment/engines/recommendation-engine", () => ({
   RecommendationEngine: engineCtorSpy,
 }));
+vi.mock("@/lib/data/assessment-customization", () => ({
+  getScoringCustomizationForClient: vi.fn(async () => null),
+}));
+vi.mock("@/lib/assessment/customization", () => ({
+  getEmphasisMultipliers: vi.fn(() => ({})),
+  getCustomizationConfig: vi.fn(),
+}));
 
 import {
   rescoreAssessment,
@@ -138,11 +146,19 @@ beforeEach(() => {
 
 const VALID_ASSESSMENT_ID = "ckabcdefghij1234567890klmn";
 
-function fakeAssessment(overrides: Partial<{ scores: unknown[]; recommendations: unknown[]; version: number }> = {}) {
+function fakeAssessment(overrides: Partial<{
+  scores: unknown[];
+  recommendations: unknown[];
+  version: number;
+  status: string;
+  answersChangedAfterCompleteAt: Date | null;
+}> = {}) {
   return {
     id: VALID_ASSESSMENT_ID,
     userId: "u-1",
     version: 1,
+    status: "COMPLETED",
+    answersChangedAfterCompleteAt: new Date("2026-06-01T12:00:00.000Z"),
     approvalId: null,
     scores: [
       { pillar: "family-governance", score: 65, riskLevel: "MEDIUM", calculatedAt: new Date() },
@@ -170,6 +186,28 @@ describe("rescoreAssessment", () => {
     const r = await rescoreAssessment({ assessmentId: VALID_ASSESSMENT_ID });
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error).toMatch(/no existing pillar scores/i);
+  });
+
+  it("returns failure when answers were not changed after completion", async () => {
+    prismaSpies.assessment.findUnique.mockResolvedValue(
+      fakeAssessment({ answersChangedAfterCompleteAt: null }),
+    );
+    const r = await rescoreAssessment({ assessmentId: VALID_ASSESSMENT_ID });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error).toMatch(/changed answers after the assessment was marked complete/i);
+    }
+  });
+
+  it("returns failure when the assessment is not completed", async () => {
+    prismaSpies.assessment.findUnique.mockResolvedValue(
+      fakeAssessment({ status: "IN_PROGRESS" }),
+    );
+    const r = await rescoreAssessment({ assessmentId: VALID_ASSESSMENT_ID });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error).toMatch(/changed answers after the assessment was marked complete/i);
+    }
   });
 
   it("re-runs scoring + persists + bumps version + audits with before/after on success", async () => {

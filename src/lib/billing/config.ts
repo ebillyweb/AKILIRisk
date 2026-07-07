@@ -2,33 +2,27 @@ import "server-only";
 
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
 
+import { SELF_SERVE_TIERS, tierEnvKey, type SelfServeTier } from "./tier-catalog";
+
 export { TIER_LIMITS } from "./constants";
 
 export type TierBillingKey = `${SubscriptionTier}_${BillingCycle}`;
 
-/** Map env-backed Stripe Price IDs to tier + billing cycle (set in Dashboard). */
+/** Map configured Stripe Price IDs to tier + billing cycle (set in Dashboard). */
 export function getPriceIdPlanMap(): Record<
   string,
   { tier: SubscriptionTier; billingCycle: BillingCycle }
 > {
   const entries: [string, { tier: SubscriptionTier; billingCycle: BillingCycle }][] = [];
 
-  const add = (
-    envVal: string | undefined,
-    tier: SubscriptionTier,
-    billingCycle: BillingCycle
-  ) => {
-    if (envVal?.trim()) {
-      entries.push([envVal.trim(), { tier, billingCycle }]);
+  for (const tier of SELF_SERVE_TIERS) {
+    for (const billingCycle of ["MONTHLY", "ANNUAL"] as const) {
+      const priceId = getPriceIdForTier(tier, billingCycle);
+      if (priceId) {
+        entries.push([priceId, { tier, billingCycle }]);
+      }
     }
-  };
-
-  add(process.env.STRIPE_PRICE_STARTER_MONTHLY, "STARTER", "MONTHLY");
-  add(process.env.STRIPE_PRICE_STARTER_ANNUAL, "STARTER", "ANNUAL");
-  add(process.env.STRIPE_PRICE_GROWTH_MONTHLY, "GROWTH", "MONTHLY");
-  add(process.env.STRIPE_PRICE_GROWTH_ANNUAL, "GROWTH", "ANNUAL");
-  add(process.env.STRIPE_PRICE_PROFESSIONAL_MONTHLY, "PROFESSIONAL", "MONTHLY");
-  add(process.env.STRIPE_PRICE_PROFESSIONAL_ANNUAL, "PROFESSIONAL", "ANNUAL");
+  }
 
   return Object.fromEntries(entries);
 }
@@ -37,20 +31,10 @@ export function getPriceIdForTier(
   tier: SubscriptionTier,
   billingCycle: BillingCycle
 ): string | undefined {
-  const key =
-    tier === "STARTER"
-      ? billingCycle === "MONTHLY"
-        ? "STRIPE_PRICE_STARTER_MONTHLY"
-        : "STRIPE_PRICE_STARTER_ANNUAL"
-      : tier === "GROWTH"
-        ? billingCycle === "MONTHLY"
-          ? "STRIPE_PRICE_GROWTH_MONTHLY"
-          : "STRIPE_PRICE_GROWTH_ANNUAL"
-        : billingCycle === "MONTHLY"
-          ? "STRIPE_PRICE_PROFESSIONAL_MONTHLY"
-          : "STRIPE_PRICE_PROFESSIONAL_ANNUAL";
-
-  return process.env[key]?.trim() || undefined;
+  if (!SELF_SERVE_TIERS.includes(tier as SelfServeTier)) return undefined;
+  const envKey = tierEnvKey(tier as SelfServeTier, billingCycle);
+  const value = process.env[envKey]?.trim();
+  return value || undefined;
 }
 
 export function isBillingEnabled(): boolean {

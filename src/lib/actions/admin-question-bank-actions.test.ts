@@ -13,6 +13,7 @@ const { prismaSpies, writeAuditSpy, requireAdminRoleSpy, redirectSpy, reorderSpy
       pillarSection: {
         findUnique: vi.fn(),
       },
+      pillar: { findMany: vi.fn().mockResolvedValue([]) },
     },
     writeAuditSpy: vi.fn().mockResolvedValue(undefined),
     requireAdminRoleSpy: vi.fn().mockResolvedValue({

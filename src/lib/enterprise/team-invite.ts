@@ -7,10 +7,15 @@ import { decryptUserEmail } from "@/lib/auth/user-email-crypto";
 import { prisma } from "@/lib/db";
 import { cancelSoloSubscriptionForEnterprise } from "@/lib/enterprise/cancel-solo-subscription";
 import { cancelStripeSubscriptionBestEffort } from "@/lib/billing/cancel-stripe-subscription";
+import { transferAdvisorAssetsToEnterprise } from "@/lib/enterprise/transfer-advisor-assets";
+import { syncEnterpriseRulesToMembers } from "@/lib/methodology/clone-enterprise-defaults";
+import { syncEnterpriseMethodologyToMembers } from "@/lib/methodology/clone-enterprise-methodology";
+import { provisionEnterpriseTeamMemberContent } from "@/lib/enterprise/provision-team-member-content";
 import { getEnterpriseSeatUsage } from "@/lib/enterprise/seat-reporting";
 import {
   buildEnterpriseTeamInviteUrl,
   createEnterpriseTeamInviteToken,
+  verifyEnterpriseTeamInviteToken,
 } from "@/lib/enterprise/team-invite-token";
 import { requireEnterpriseTeamManager, resolveEnterpriseTeamContext } from "@/lib/enterprise/team-access";
 
@@ -23,7 +28,6 @@ export class EnterpriseTeamInviteError extends Error {
 
 export type InviteEnterpriseMemberInput = {
   email: string;
-  role: Extract<EnterpriseRole, "ADMIN" | "ADVISOR">;
 };
 
 export type EnterpriseTeamMemberView = {
@@ -112,7 +116,7 @@ export async function inviteEnterpriseMember(
   }
 
   if (existingByEmail && existingByEmail.role !== "ADVISOR") {
-    throw new EnterpriseTeamInviteError("Team invites require an advisor account email.");
+    throw new EnterpriseTeamInviteError("This email cannot be invited as a team member.");
   }
 
   const inviteeUser =
@@ -132,7 +136,7 @@ export async function inviteEnterpriseMember(
       enterpriseId: team.enterpriseId,
       userId: inviteeUser.id,
       advisorProfileId: existingByEmail?.advisorProfile?.id ?? null,
-      role: input.role,
+      role: "ADVISOR",
       status: "INVITED",
       invitedEmail: normalizedEmail,
       invitedAt: new Date(),
@@ -143,6 +147,130 @@ export async function inviteEnterpriseMember(
   const inviteUrl = buildEnterpriseTeamInviteUrl(resolveInviteOrigin(), token);
 
   return { membershipId: membership.id, status: "INVITED", inviteUrl };
+}
+
+export type ResolvedEnterpriseTeamInvite =
+  | {
+      ok: true;
+      membershipId: string;
+      enterpriseName: string;
+      inviteeEmail: string;
+      needsRegistration: boolean;
+    }
+  | { ok: false; error: string };
+
+export async function resolveEnterpriseTeamInvite(
+  token: string
+): Promise<ResolvedEnterpriseTeamInvite> {
+  const trimmed = token.trim();
+  if (!trimmed) {
+    return { ok: false, error: "This team invitation link is missing a token." };
+  }
+
+  const membershipId = verifyEnterpriseTeamInviteToken(trimmed);
+  if (!membershipId) {
+    return { ok: false, error: "This team invitation link is invalid or has expired." };
+  }
+
+  const membership = await prisma.enterpriseMembership.findUnique({
+    where: { id: membershipId },
+    select: {
+      status: true,
+      invitedEmail: true,
+      user: {
+        select: {
+          password: true,
+          emailCiphertext: true,
+        },
+      },
+      enterprise: { select: { name: true } },
+    },
+  });
+
+  if (!membership || membership.status !== "INVITED") {
+    return { ok: false, error: "This team invitation is no longer valid." };
+  }
+
+  const inviteeEmail =
+    membership.invitedEmail?.trim().toLowerCase() ??
+    decryptUserEmail(membership.user.emailCiphertext);
+
+  return {
+    ok: true,
+    membershipId,
+    enterpriseName: membership.enterprise.name,
+    inviteeEmail,
+    needsRegistration: !membership.user.password,
+  };
+}
+
+async function requirePendingInviteMembership(
+  actorUserId: string,
+  membershipId: string
+): Promise<{
+  enterpriseId: string;
+  enterpriseName: string;
+  membershipId: string;
+  inviteeEmail: string;
+}> {
+  const team = await requireEnterpriseTeamManager(actorUserId);
+  const membership = await prisma.enterpriseMembership.findFirst({
+    where: { id: membershipId, enterpriseId: team.enterpriseId },
+    select: {
+      id: true,
+      status: true,
+      role: true,
+      invitedEmail: true,
+      user: { select: { emailCiphertext: true } },
+      enterprise: { select: { name: true } },
+    },
+  });
+
+  if (!membership) {
+    throw new EnterpriseTeamInviteError("Team member not found.");
+  }
+  if (membership.status !== "INVITED") {
+    throw new EnterpriseTeamInviteError("Only pending invitations can be resent or removed.");
+  }
+  if (membership.role === "OWNER") {
+    throw new EnterpriseTeamInviteError("The firm owner cannot be removed.");
+  }
+
+  const inviteeEmail =
+    membership.invitedEmail?.trim().toLowerCase() ??
+    decryptUserEmail(membership.user.emailCiphertext);
+
+  return {
+    enterpriseId: team.enterpriseId,
+    enterpriseName: membership.enterprise.name,
+    membershipId: membership.id,
+    inviteeEmail,
+  };
+}
+
+export async function resendEnterpriseTeamInvite(
+  actorUserId: string,
+  membershipId: string
+): Promise<{ inviteUrl: string; inviteeEmail: string }> {
+  const pending = await requirePendingInviteMembership(actorUserId, membershipId);
+
+  await prisma.enterpriseMembership.update({
+    where: { id: pending.membershipId },
+    data: { invitedAt: new Date() },
+  });
+
+  const token = createEnterpriseTeamInviteToken(pending.membershipId);
+  const inviteUrl = buildEnterpriseTeamInviteUrl(resolveInviteOrigin(), token);
+
+  return { inviteUrl, inviteeEmail: pending.inviteeEmail };
+}
+
+export async function revokeEnterpriseTeamInvite(
+  actorUserId: string,
+  membershipId: string
+): Promise<void> {
+  const pending = await requirePendingInviteMembership(actorUserId, membershipId);
+  await prisma.enterpriseMembership.delete({ where: { id: pending.membershipId } });
 }
 
 export async function acceptEnterpriseTeamInvite(
@@ -168,6 +296,7 @@ export async function acceptEnterpriseTeamInvite(
   }
 
   let soloStripeSubscriptionId: string | null = null;
+  let acceptedAdvisorProfileId: string | null = null;
 
   await prisma.$transaction(async (tx) => {
     const soloCancel = await cancelSoloSubscriptionForEnterprise(
@@ -211,9 +340,29 @@ export async function acceptEnterpriseTeamInvite(
         acceptedAt: new Date(),
       },
     });
+
+    acceptedAdvisorProfileId = profile.id;
+
+    if (membership.role === "ADMIN") {
+      await transferAdvisorAssetsToEnterprise(
+        tx,
+        profile.id,
+        membership.enterpriseId,
+      );
+    }
   });
 
   await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
+
+  if (acceptedAdvisorProfileId) {
+    await provisionEnterpriseTeamMemberContent(
+      membership.enterpriseId,
+      acceptedAdvisorProfileId,
+    );
+  } else {
+    await syncEnterpriseRulesToMembers(membership.enterpriseId);
+    await syncEnterpriseMethodologyToMembers(membership.enterpriseId);
+  }
 
   return {
     enterpriseId: membership.enterprise.id,

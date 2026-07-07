@@ -38,6 +38,10 @@ export interface InvitationWithDetails {
   } | null;
   isExpired: boolean;
   canResend: boolean;
+  /** Set when the invited client has registered and has a reference code. */
+  clientReferenceCode?: string | null;
+  /** Set when the invited client has registered (links to pipeline detail). */
+  registeredClientId?: string | null;
 }
 
 export interface InvitationListFilters {

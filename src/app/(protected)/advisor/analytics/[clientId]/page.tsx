@@ -48,7 +48,7 @@ async function AnalyticsContent({ clientId }: { clientId: string }) {
         <div className="flex flex-wrap items-center gap-4">
           <div>
             <span className="text-3xl font-bold">{latestAssessment.overallScore.toFixed(1)}</span>
-            <span className="text-sm text-muted-foreground ml-1">/ 10</span>
+            <span className="text-sm text-muted-foreground ml-1">/ 3 avg</span>
           </div>
           <TrendIndicator direction={latestAssessment.trendDirection} />
           <div className="text-sm text-muted-foreground">

@@ -1,25 +1,27 @@
+import { redirect } from "next/navigation";
+
 import { getAdvisorDashboardData } from "@/lib/actions/advisor-actions";
-import { getAdvisorSubdomainSettings } from "@/lib/advisor/subdomain";
-import {
-  getProductionDomain,
-  getTenantSubdomainSuffix,
-  isSubdomainAutoActivateEnabled,
-} from "@/lib/advisor/platform-subdomain";
-import {
-  getSubscriptionFeatures,
-  STARTER_SUBSCRIPTION_FEATURES,
-} from "@/lib/subscription/validation";
-import { EnhancedBrandingForm } from "@/components/advisor/settings/EnhancedBrandingForm";
-import { HouseholdProfilesPolicyForm } from "@/components/advisor/settings/HouseholdProfilesPolicyForm";
-import { AdvisorPersonalDetailsForm } from "@/components/settings/AdvisorPersonalDetailsForm";
+import { resolveAdvisorPersonalNameFields } from "@/lib/advisor/advisor-workspace-label";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
+import { AdvisorSettingsTabs } from "@/components/advisor/settings/AdvisorSettingsTabs";
+import { parseAdvisorSettingsTab } from "@/lib/advisor/settings-tabs";
+import { loadAdvisorBrandingSettingsView } from "@/lib/enterprise/branding-access";
+import { canAccessEnterpriseTeamSettings } from "@/lib/enterprise/team-access";
 import { auth } from "@/lib/auth";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
-const ADVISOR_SETTINGS_CALLBACK = "/advisor/settings";
+const ADVISOR_SETTINGS_CALLBACK = "/advisor/settings?tab=security";
 
-export default async function AdvisorSettingsPage() {
+export default async function AdvisorSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+
+  if (resolvedSearchParams.tab === "branding") {
+    redirect("/advisor/settings/branding");
+  }
+
   const [result, session] = await Promise.all([
     getAdvisorDashboardData(),
     auth(),
@@ -39,150 +41,52 @@ export default async function AdvisorSettingsPage() {
 
   const { profile } = result.data!;
 
-  const currentSubdomain = await getAdvisorSubdomainSettings(profile.id);
-  const productionDomain = getProductionDomain() ?? "akilirisk.com";
-  const tenantSubdomainSuffix = getTenantSubdomainSuffix();
-  const platformSubdomainsAutoActivate = isSubdomainAutoActivateEnabled();
-
-  // Subscription flags gate premium tabs; missing Subscription row should not hide the full branding UI
-  const features =
-    (await getSubscriptionFeatures(profile.userId)) ?? STARTER_SUBSCRIPTION_FEATURES;
+  const [brandingSettings, showHouseholdProfilesPolicy] = await Promise.all([
+    loadAdvisorBrandingSettingsView(profile.userId, profile.id),
+    canAccessEnterpriseTeamSettings(profile.userId).then(
+      (canManageTeam) => !canManageTeam,
+    ),
+  ]);
+  const initialTab = parseAdvisorSettingsTab(resolvedSearchParams.tab);
 
   const passwordChangeRequired = Boolean(session?.user?.passwordChangeRequired);
   const changePasswordHref = `/change-password?callbackUrl=${encodeURIComponent(ADVISOR_SETTINGS_CALLBACK)}`;
 
+  const { firstName, lastName } = resolveAdvisorPersonalNameFields(profile.user);
+
   const profileInitialData = {
-    firstName: profile.user.firstName ?? "",
-    lastName: profile.user.lastName ?? "",
+    firstName,
+    lastName,
     phone: profile.phone ?? "",
     jobTitle: profile.jobTitle ?? "",
-    firmName: profile.firmName ?? "",
+    firmName:
+      brandingSettings.readOnly
+        ? (brandingSettings.profile.firmName ??
+          brandingSettings.profile.brandName ??
+          profile.firmName ??
+          "")
+        : (profile.firmName ?? ""),
     licenseNumber: profile.licenseNumber ?? "",
     email: profile.user.email,
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-     
+    <div className="space-y-6 sm:space-y-8">
+      <AdvisorScreenHeader
+        kicker="Professional profile"
+        title="Settings"
+        description="Manage your profile and account security."
+      />
 
-        <Badge
-          variant={features.tier === 'PROFESSIONAL' ? 'default' : 'secondary'}
-          className="w-fit shrink-0 px-3 py-1 text-xs font-semibold uppercase tracking-wide"
-        >
-          {features.tier} plan
-        </Badge>
-      </div>
-
-      <div className="space-y-6">
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold tracking-tight">Risk methodology</h2>
-              <p className="text-sm text-muted-foreground">
-                Pillars, intake script, assessment questions, narratives, and recommendation
-                rules for your practice. Changes apply to new intakes only.
-              </p>
-            </div>
-            <Button asChild variant="default" size="sm" className="shrink-0">
-              <Link href="/advisor/methodology">Open methodology</Link>
-            </Button>
-          </div>
-        </div>
-
-        {/* Branding Section (page title: sr-only "Settings" in advisor layout) */}
-        <EnhancedBrandingForm
-          profile={{
-            firmName: profile.firmName,
-            brandName: profile.brandName,
-            tagline: profile.tagline,
-            primaryColor: profile.primaryColor,
-            secondaryColor: profile.secondaryColor,
-            accentColor: profile.accentColor,
-            websiteUrl: profile.websiteUrl,
-            emailFooterText: profile.emailFooterText,
-            supportEmail: profile.supportEmail,
-            supportPhone: profile.supportPhone,
-            logoUrl: profile.logoUrl,
-            logoS3Key: profile.logoS3Key,
-            logoContentType: profile.logoContentType,
-            logoFileSize: profile.logoFileSize,
-            logoUploadedAt: profile.logoUploadedAt,
-          }}
-          features={features}
-          currentSubdomain={currentSubdomain}
-          productionDomain={productionDomain}
-          tenantSubdomainSuffix={tenantSubdomainSuffix}
-          platformSubdomainsAutoActivate={platformSubdomainsAutoActivate}
-        />
-
-        {/* Advisor profile — self-service except email */}
-        <div className="rounded-xl border border-border/70 bg-card p-6 shadow-sm">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight">Your profile</h2>
-            <p className="text-sm text-muted-foreground">
-              Your name and firm as shown in client invitation emails. Email changes
-              require your administrator.
-            </p>
-          </div>
-          <div className="mt-6">
-            <AdvisorPersonalDetailsForm initialData={profileInitialData} />
-          </div>
-        </div>
-
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold tracking-tight">Account security</h2>
-                {passwordChangeRequired ? (
-                  <Badge variant="warning">Password update required</Badge>
-                ) : null}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                You sign in with your email and password. Update your password here
-                to match the current platform security policy.
-              </p>
-            </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link href={changePasswordHref}>Change password</Link>
-            </Button>
-          </div>
-        </div>
-
-        {/* Option D session 1: PII policy navigation card. Links to the
-            sub-route at /advisor/settings/pii-policy. Mirrors the
-            existing pattern where /advisor/settings/notifications is
-            linked from outside this page (it's reachable but the main
-            settings page doesn't currently surface it inline). */}
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold tracking-tight">PII policy</h2>
-              <p className="text-sm text-muted-foreground">
-                Configure which optional PII fields your future clients are
-                asked for during intake.
-              </p>
-            </div>
-            <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link href="/advisor/settings/pii-policy">Manage policy</Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight">Household profiles</h2>
-            <p className="text-sm text-muted-foreground">
-              Control whether clients can manage household members and receive
-              personalized assessment copy.
-            </p>
-          </div>
-          <HouseholdProfilesPolicyForm
-            initialEnabled={profile.householdProfilesEnabled ?? true}
-          />
-        </div>
-      </div>
+      <AdvisorSettingsTabs
+        initialTab={initialTab}
+        profileInitialData={profileInitialData}
+        firmNameReadOnly={brandingSettings.readOnly}
+        passwordChangeRequired={passwordChangeRequired}
+        changePasswordHref={changePasswordHref}
+        householdProfilesEnabled={profile.householdProfilesEnabled ?? true}
+        showHouseholdProfilesPolicy={showHouseholdProfilesPolicy}
+      />
     </div>
   );
 }

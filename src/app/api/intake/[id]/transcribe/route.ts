@@ -5,6 +5,7 @@ import { isAdvisorHubNavRole } from '@/lib/auth-roles';
 import { getIntakeInterview, saveIntakeResponse } from '@/lib/data/intake';
 import { getFacilitatedSessionForAdvisor } from '@/lib/facilitated/session-access';
 import { getIntakeAudioObjectBytes } from '@/lib/s3/intake-audio-uploads';
+import { assertClientIntakeAnswersEditable } from '@/lib/client/intake-edit-gate';
 
 export async function POST(
   request: NextRequest,
@@ -55,6 +56,22 @@ export async function POST(
         { success: false, error: 'Interview not found' },
         { status: 404 }
       );
+    }
+
+    if (ownerUserId === session.user.id) {
+      if (interview.status === 'SUBMITTED') {
+        return NextResponse.json(
+          { success: false, error: 'Intake already submitted.' },
+          { status: 409 },
+        );
+      }
+      const editable = await assertClientIntakeAnswersEditable(ownerUserId);
+      if (!editable.ok) {
+        return NextResponse.json(
+          { success: false, error: editable.error },
+          { status: 409 },
+        );
+      }
     }
 
     // Parse request body

@@ -2,7 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { isAdvisorHubNavRole } from "@/lib/auth-roles";
+import { isAdvisorHubNavRole, isPlatformAdminRole } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
 import { getOrCreateDraft } from "@/lib/actions/report-actions";
 import {
@@ -16,6 +16,30 @@ export type PillarActionQueueResult<T> =
   | { ok: false; code: string; message: string };
 
 const ACTION_TEXT_MAX = 2000;
+
+/**
+ * Authorize a staff caller to mutate a report: platform admins always, advisors
+ * only for clients in an ACTIVE assignment. Mirrors `authorizeForAssessment` in
+ * report-actions.ts so the remove path is gated like the queue path.
+ */
+async function callerMayMutateAssessmentReport(
+  callerUserId: string,
+  role: string,
+  assessmentUserId: string,
+): Promise<boolean> {
+  if (isPlatformAdminRole(role)) return true;
+  if (role !== "ADVISOR") return false;
+  const advisor = await prisma.advisorProfile.findUnique({
+    where: { userId: callerUserId },
+    select: { id: true },
+  });
+  if (!advisor) return false;
+  const assignment = await prisma.clientAdvisorAssignment.findFirst({
+    where: { advisorId: advisor.id, clientId: assessmentUserId, status: "ACTIVE" },
+    select: { id: true },
+  });
+  return Boolean(assignment);
+}
 
 export async function queuePillarActionForClient(input: {
   clientUserId: string;
@@ -115,10 +139,26 @@ export async function removeQueuedPillarAction(input: {
 
   const draft = await prisma.report.findUnique({
     where: { id: input.reportId },
-    select: { id: true, status: true, queuedPillarActions: true },
+    select: {
+      id: true,
+      status: true,
+      queuedPillarActions: true,
+      assessment: { select: { userId: true } },
+    },
   });
   if (!draft || draft.status !== "DRAFT") {
     return { ok: false, code: "not_draft", message: "Only draft reports can be edited." };
+  }
+
+  // Scope the mutation to the report's owning client — without this any staff
+  // session could edit another advisor's draft by guessing its reportId.
+  const authorized = await callerMayMutateAssessmentReport(
+    session.user.id,
+    session.user.role ?? "USER",
+    draft.assessment.userId,
+  );
+  if (!authorized) {
+    return { ok: false, code: "forbidden", message: "You do not have access to this report." };
   }
 
   const existing = parseQueuedPillarActions(draft.queuedPillarActions);

@@ -3,16 +3,14 @@
  * brandingEnabled and subscription entitlements.
  */
 
-import { resolveBrandingLogoS3Key } from "@/lib/branding/advisor-logo-display";
-
 export const PLATFORM_INVITATION_CTA_COLOR = "#18181b";
 
 export type InvitationEmailTheme = {
   brandingEnabled: boolean;
-  /** When false, logo must not appear even if profile still has logoUrl. */
+  /** @deprecated Advisor logos are not embedded in emails; copy + colors only. */
   showAdvisorLogo: boolean;
   logoUrl?: string;
-  /** Resolved at send time (CID for private S3 logos, HTTPS for public URLs). */
+  /** @deprecated */
   logoEmailSrc?: string;
   /** CTA button + accent border; platform default when branding off or no advanced color. */
   accentColor: string;
@@ -27,15 +25,6 @@ export type InvitationEmailThemeInput = {
   logoS3Key?: string | null;
   primaryColor?: string | null;
 };
-
-function isValidHttpsLogoUrl(url: string | null | undefined): boolean {
-  if (!url?.trim()) return false;
-  try {
-    return new URL(url.trim()).protocol === "https:";
-  } catch {
-    return false;
-  }
-}
 
 function isHexColor(value: string | null | undefined): boolean {
   return !!value && /^#[0-9A-Fa-f]{6}$/.test(value.trim());
@@ -53,16 +42,6 @@ export function resolveInvitationEmailTheme(
     };
   }
 
-  const logoUrl = isValidHttpsLogoUrl(input.logoUrl)
-    ? input.logoUrl!.trim()
-    : undefined;
-  const hasStoredLogo = Boolean(
-    resolveBrandingLogoS3Key({
-      logoS3Key: input.logoS3Key,
-      logoUrl: input.logoUrl,
-    }) || logoUrl
-  );
-
   const accentColor =
     input.advancedBrandingEnabled &&
     isHexColor(input.primaryColor)
@@ -71,8 +50,7 @@ export function resolveInvitationEmailTheme(
 
   return {
     brandingEnabled: true,
-    showAdvisorLogo: hasStoredLogo,
-    logoUrl,
+    showAdvisorLogo: false,
     accentColor,
     showPlatformAttribution: false,
   };

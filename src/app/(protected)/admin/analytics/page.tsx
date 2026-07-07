@@ -39,9 +39,9 @@ import { RecentActivityPanel } from "@/components/admin/analytics/RecentActivity
  * test in `analytics-queries.test.ts` enforces this structurally.
  *
  * Five v1 cards (per §9.1 design proposal sign-off):
- *   1. KPI strip (advisors / clients / assessments / reports / subs).
+ *   1. KPI strip (advisors / enterprises / subscriptions / clients / assessments / reports).
  *   2. Risk-level distribution bar.
- *   3. Per-pillar averages strip.
+ *   3. Per risk domain averages strip.
  *   4. Top tenants by client count.
  *   5. Common missing controls (top 10).
  *
@@ -147,7 +147,7 @@ export default async function AdminAnalyticsPage() {
         {pillars ? (
           <PillarAveragesStrip data={pillars} />
         ) : (
-          <CardLoadFailed label="Per-pillar averages failed to load." />
+          <CardLoadFailed label="Per risk domain averages failed to load." />
         )}
       </div>
 

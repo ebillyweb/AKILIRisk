@@ -191,8 +191,8 @@ export default function AssessmentCompletePage() {
             </h1>
             <p className="text-muted-foreground">
               {isCalculating
-                ? 'Saving your responses and calculating your pillar score...'
-                : 'This section is complete. Return to the assessment hub to continue other pillars.'}
+                ? 'Saving your responses and calculating your risk domain score...'
+                : 'This section is complete. Return to the assessment hub to continue other risk domains.'}
             </p>
           </div>
 

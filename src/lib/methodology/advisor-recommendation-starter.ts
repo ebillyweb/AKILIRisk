@@ -1,4 +1,4 @@
-import type { RecommendationCondition } from "@/lib/assessment/engines/recommendation-engine";
+import type { RecommendationCondition } from "@/lib/admin/recommendation-rule-schemas";
 
 /** Default trigger for advisor-authored custom recommendation rules. */
 export function defaultCustomRecommendationConditions(
@@ -10,6 +10,7 @@ export function defaultCustomRecommendationConditions(
       pillarId: pillarSlug,
       operator: "in",
       value: ["high", "critical"],
+      weight: 1,
     },
   ];
 }

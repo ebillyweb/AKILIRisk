@@ -45,41 +45,6 @@ beforeEach(() => {
 });
 
 describe("markSessionMfaVerified", () => {
-  it("updates the most recent active session when one exists", async () => {
-    findManySpy.mockResolvedValue([{ id: "sess-1" }]);
-    updateSpy.mockResolvedValue({});
-
-    await markSessionMfaVerified("user-1");
-
-    expect(updateSpy).toHaveBeenCalledWith({
-      where: { id: "sess-1" },
-      data: { mfaVerified: true },
-    });
-    expect(userUpdateSpy).toHaveBeenCalledWith({
-      where: { id: "user-1" },
-      data: { lastLoginAt: expect.any(Date) },
-    });
-    expect(createSpy).not.toHaveBeenCalled();
-  });
-
-  it("creates a session row when none is active", async () => {
-    findManySpy.mockResolvedValue([]);
-    createSpy.mockResolvedValue({});
-
-    await markSessionMfaVerified("user-2");
-
-    expect(createSpy).toHaveBeenCalledOnce();
-    const data = createSpy.mock.calls[0][0].data;
-    expect(data.userId).toBe("user-2");
-    expect(data.mfaVerified).toBe(true);
-    expect(typeof data.sessionToken).toBe("string");
-    expect(data.sessionToken.length).toBeGreaterThan(0);
-    expect(userUpdateSpy).toHaveBeenCalledWith({
-      where: { id: "user-2" },
-      data: { lastLoginAt: expect.any(Date) },
-    });
-  });
-
   it("updates the bound session row when sessionToken is supplied", async () => {
     findUniqueSpy.mockResolvedValue({ id: "sess-bound", userId: "user-1" });
     updateSpy.mockResolvedValue({});
@@ -94,22 +59,31 @@ describe("markSessionMfaVerified", () => {
       where: { id: "sess-bound" },
       data: { mfaVerified: true },
     });
-    // Bound path short-circuits the newest-row fallback.
-    expect(findManySpy).not.toHaveBeenCalled();
+    expect(userUpdateSpy).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { lastLoginAt: expect.any(Date) },
+    });
   });
 
-  it("falls back to newest row when the bound token belongs to another user", async () => {
+  it("fails closed (marks nothing) when no sessionToken is supplied", async () => {
+    await markSessionMfaVerified("user-1");
+
+    // No bound token → never touch the newest arbitrary row or fabricate one.
+    expect(findManySpy).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(userUpdateSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the bound token belongs to another user", async () => {
     findUniqueSpy.mockResolvedValue({ id: "sess-other", userId: "intruder" });
-    findManySpy.mockResolvedValue([{ id: "sess-newest" }]);
-    updateSpy.mockResolvedValue({});
 
     await markSessionMfaVerified("user-1", "token-mismatch");
 
-    expect(findManySpy).toHaveBeenCalledOnce();
-    expect(updateSpy).toHaveBeenCalledWith({
-      where: { id: "sess-newest" },
-      data: { mfaVerified: true },
-    });
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(findManySpy).not.toHaveBeenCalled();
+    expect(userUpdateSpy).not.toHaveBeenCalled();
   });
 });
 

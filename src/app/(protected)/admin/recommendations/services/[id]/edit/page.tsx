@@ -47,7 +47,7 @@ export default async function EditRecommendationPage({
           href={`/admin/audit-log/entity/ServiceRecommendation/${id}`}
           className="text-sm text-muted-foreground hover:text-foreground hover:underline"
         >
-          View history (BRD §7.2)
+          View change history
         </Link>
       </div>
       <RecommendationServiceForm existing={existing} knownCategories={categories} />

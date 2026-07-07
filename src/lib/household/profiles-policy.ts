@@ -34,3 +34,35 @@ export async function getAdvisorHouseholdProfilesEnabled(
   });
   return row?.householdProfilesEnabled ?? true;
 }
+
+/** Firm-wide household profiles toggle for enterprise team settings (defaults true). */
+export async function getEnterpriseHouseholdProfilesEnabled(
+  enterpriseId: string,
+): Promise<boolean> {
+  const ownerProfile = await prisma.advisorProfile.findFirst({
+    where: {
+      enterpriseId,
+      enterpriseMembership: { role: "OWNER", status: "ACTIVE" },
+    },
+    select: { householdProfilesEnabled: true },
+  });
+  if (ownerProfile) {
+    return ownerProfile.householdProfilesEnabled;
+  }
+
+  const anyProfile = await prisma.advisorProfile.findFirst({
+    where: { enterpriseId },
+    select: { householdProfilesEnabled: true },
+  });
+  return anyProfile?.householdProfilesEnabled ?? true;
+}
+
+export async function setEnterpriseHouseholdProfilesEnabled(
+  enterpriseId: string,
+  enabled: boolean,
+): Promise<void> {
+  await prisma.advisorProfile.updateMany({
+    where: { enterpriseId },
+    data: { householdProfilesEnabled: enabled },
+  });
+}

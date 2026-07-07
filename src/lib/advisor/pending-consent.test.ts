@@ -73,13 +73,26 @@ vi.mock("@/lib/db", () => ({
           ).length;
         }
       ),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
 
+const recordConsentDecisionMock = vi.fn(async () => ({ ok: true, updated: 0 }));
+
+vi.mock("@/lib/actions/consent-decision-actions", () => ({
+  recordConsentDecision: (...args: unknown[]) => recordConsentDecisionMock(...args),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn(async () => ({ user: { id: "c-1", role: "USER", email: "c@test.com" } })),
+}));
+
 import {
-  listAssignmentsAwaitingConsent,
   hasPendingConsent,
+  listAssignmentsAwaitingConsent,
+  resolveConsentPromptAssignments,
 } from "./pending-consent";
 
 const ALL_TRUE_POLICY = {
@@ -95,6 +108,7 @@ const ALL_TRUE_POLICY = {
 
 beforeEach(() => {
   dbState.rows.length = 0;
+  recordConsentDecisionMock.mockClear();
 });
 
 describe("listAssignmentsAwaitingConsent", () => {
@@ -177,5 +191,52 @@ describe("hasPendingConsent", () => {
       advisor: { firmName: "Firm A", piiPolicy: ALL_TRUE_POLICY },
     });
     expect(await hasPendingConsent("c-1")).toBe(true);
+  });
+});
+
+describe("resolveConsentPromptAssignments", () => {
+  it("auto-records consent when the advisor collects no optional PII fields", async () => {
+    const noPiiPolicy = {
+      schemaVersion: 1,
+      fields: {
+        "User.name": false,
+        "ClientProfile.phone": false,
+        "HouseholdMember.fullName": false,
+        "HouseholdMember.phone": false,
+        "HouseholdMember.notes": false,
+      },
+    };
+    dbState.rows.push({
+      id: "asn-1",
+      clientId: "c-1",
+      advisorId: "adv-1",
+      status: "ACTIVE",
+      fieldVisibility: null,
+      advisor: { firmName: "Firm A", piiPolicy: noPiiPolicy },
+    });
+
+    const result = await resolveConsentPromptAssignments("c-1");
+
+    expect(result).toEqual([]);
+    expect(recordConsentDecisionMock).toHaveBeenCalledWith({
+      assignmentId: "asn-1",
+      decisions: {},
+    });
+  });
+
+  it("returns assignments that still need explicit prompts", async () => {
+    dbState.rows.push({
+      id: "asn-1",
+      clientId: "c-1",
+      advisorId: "adv-1",
+      status: "ACTIVE",
+      fieldVisibility: null,
+      advisor: { firmName: "Firm A", piiPolicy: ALL_TRUE_POLICY },
+    });
+
+    const result = await resolveConsentPromptAssignments("c-1");
+
+    expect(result).toHaveLength(1);
+    expect(recordConsentDecisionMock).not.toHaveBeenCalled();
   });
 });

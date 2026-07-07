@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { Lock } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Download, ExternalLink, AlertCircle } from "lucide-react";
 
@@ -12,8 +14,30 @@ import {
   type SubscriptionDetailsDTO,
 } from "@/lib/actions/billing";
 import { isAdvisorBillingDebugEnabled } from "@/lib/billing/advisor-billing-debug";
+import { billingPlanNavigationLabel } from "@/lib/billing/billing-plan-cta";
 import { TIER_LIMITS } from "@/lib/billing/constants";
-import type { PlanPricesForUi } from "@/lib/billing/plan-prices-ui";
+import {
+  ADVISOR_PIPELINE_HREF,
+  analyzeDowngradeCapacity,
+  clientLimitBillingHref,
+  clientLimitUpgradeMessage,
+  clientsOverTierCapacity,
+  downgradeCapacityBannerMessage,
+  suggestedTierForMoreClients,
+  type ClientLimitSnapshot,
+  type DowngradeCapacityStatus,
+} from "@/lib/billing/client-limit";
+import {
+  buildPlanChangeExplainer,
+  shouldConfirmPlanChange,
+} from "@/lib/billing/plan-change-explainer";
+import {
+  enterprisePricingDeepLink,
+  TIER_DISPLAY_NAME,
+  type SelfServeTier,
+} from "@/lib/billing/tier-catalog";
+import { isModuleTier } from "@/lib/billing/plan-prices-ui";
+import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
 import type { EnterpriseBillingSummary } from "@/lib/enterprise/billing-details";
 import type { BillingCycle, SubscriptionTier } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -29,22 +53,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EnterpriseSalesContactDialog } from "@/components/advisor/billing/EnterpriseSalesContactDialog";
+import { PlanChangeConfirmDialog } from "@/components/advisor/billing/PlanChangeConfirmDialog";
+import { PricingTierGrid } from "@/components/marketing/PricingTierGrid";
 
-const TIER_ORDER: SubscriptionTier[] = ["STARTER", "GROWTH", "PROFESSIONAL"];
-
-const TIER_RANK: Record<SubscriptionTier, number> = {
-  STARTER: 0,
-  GROWTH: 1,
-  PROFESSIONAL: 2,
-  ENTERPRISE: 3,
-};
-
-const TIER_LABEL: Record<SubscriptionTier, string> = {
-  STARTER: "Starter",
-  GROWTH: "Growth",
-  PROFESSIONAL: "Professional",
-  ENTERPRISE: "Enterprise",
-};
+const TIER_LABEL = TIER_DISPLAY_NAME;
 
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, {
@@ -130,18 +142,36 @@ function UsageBar({
   limit,
   description,
   atLimit,
+  currentTier,
 }: {
   label: string;
   current: number;
   limit: number;
   description?: string;
   atLimit?: boolean;
+  currentTier?: SubscriptionTier;
 }) {
   const pct = Math.min(100, limit > 0 ? (current / limit) * 100 : 0);
+  const upgradeStatus: ClientLimitSnapshot | null =
+    atLimit && currentTier
+      ? {
+          canAddClient: false,
+          currentCount: current,
+          limit,
+          currentTier,
+          suggestedUpgradeTier: suggestedTierForMoreClients(currentTier),
+          isEnterprise: false,
+          canSelfServeUpgrade: true,
+        }
+      : null;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{label}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          {label}
+          {atLimit ? <Lock className="size-4 text-destructive" aria-hidden /> : null}
+        </CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </CardHeader>
       <CardContent className="space-y-3">
@@ -151,7 +181,7 @@ function UsageBar({
             <span className="text-muted-foreground"> / {limit}</span>
           </span>
           {atLimit ? (
-            <span className="text-destructive font-medium">At limit</span>
+            <span className="font-medium text-destructive">At limit</span>
           ) : (
             <span className="text-muted-foreground">Room available</span>
           )}
@@ -164,8 +194,27 @@ function UsageBar({
           aria-valuemax={limit}
           aria-label={label}
         >
-          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          <div
+            className={cn("h-full transition-all", atLimit ? "bg-destructive" : "bg-primary")}
+            style={{ width: `${pct}%` }}
+          />
         </div>
+        {upgradeStatus ? (
+          <div className="space-y-3 rounded-lg border border-dashed border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-sm text-muted-foreground">
+              {clientLimitUpgradeMessage(upgradeStatus)}
+            </p>
+            {upgradeStatus.suggestedUpgradeTier ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={clientLimitBillingHref(upgradeStatus)}>
+                  {billingPlanNavigationLabel(upgradeStatus.suggestedUpgradeTier)}
+                </Link>
+              </Button>
+            ) : (
+              <EnterpriseSalesContactDialog />
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -179,261 +228,79 @@ function UsageMonitor({ data }: { data: SubscriptionDetailsDTO }) {
       limit={data.clientLimit}
       description="Active clients linked to your practice versus your plan limit."
       atLimit={!data.canAddClient}
+      currentTier={data.tier}
     />
+  );
+}
+
+function DowngradeCapacityBanner({ status }: { status: DowngradeCapacityStatus }) {
+  const message = downgradeCapacityBannerMessage(status);
+  if (!message) return null;
+
+  return (
+    <Alert variant="warning">
+      <AlertCircle className="size-4" />
+      <AlertTitle>Downgrade requires fewer active clients</AlertTitle>
+      <AlertDescription className="space-y-3">
+        <p>{message}</p>
+        <Button asChild size="sm" variant="outline">
+          <Link href={ADVISOR_PIPELINE_HREF}>Open Pipeline</Link>
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 
 function EnterpriseContactSalesCard() {
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-card/50 p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold">{TIER_LABEL.ENTERPRISE}</h3>
-        <Badge
-          variant="outline"
-          className="shrink-0 text-[0.65rem] font-semibold normal-case tracking-normal"
-        >
-          Sales only
-        </Badge>
+    <section
+      className="mt-2 flex flex-col gap-4 rounded-[1.25rem] border border-border/70 bg-muted/15 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+      aria-labelledby="billing-enterprise-heading"
+    >
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 id="billing-enterprise-heading" className="font-semibold text-foreground">
+            Enterprise
+          </h3>
+          <Badge
+            variant="outline"
+            className="text-[0.65rem] font-semibold normal-case tracking-normal"
+          >
+            Firms
+          </Badge>
+        </div>
+        <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+          Same Essentials–Platinum modules with shared branding, multiple advisor seats, and
+          centralized billing. Talk to sales for firm pricing.
+        </p>
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Up to {TIER_LIMITS.ENTERPRISE} firm clients
-      </p>
-      <p className="mt-3 text-lg font-semibold tracking-tight text-foreground">
-        Custom pricing
-      </p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Multi-advisor firms with shared branding and custom contracts.
-      </p>
-      <div className="mt-auto flex min-h-10 items-end pt-4">
+      <div className="shrink-0">
         <EnterpriseSalesContactDialog />
       </div>
-    </div>
+    </section>
   );
 }
 
 type CommittedPlan = { tier: SubscriptionTier; billingCycle: BillingCycle };
 
-function PlanSelector({
-  billingCycle,
-  onBillingCycleChange,
-  onSelectPlan,
-  busy,
-  error,
-  planPrices,
-  changePlanMode,
-  committedPlan,
-  subscriptionStatus,
-  debugBilling,
-}: {
-  billingCycle: BillingCycle;
-  onBillingCycleChange: (c: BillingCycle) => void;
-  onSelectPlan: (tier: SubscriptionTier) => void;
-  busy: boolean;
-  error: string | null;
-  planPrices: PlanPricesForUi;
-  changePlanMode: "checkout" | "stripe_update";
-  committedPlan: CommittedPlan | null;
-  subscriptionStatus: string;
-  debugBilling: boolean;
-}) {
+function advisorPlanGridDescription(
+  changePlanMode: "checkout" | "stripe_update",
+  committedPlan: CommittedPlan | null,
+  subscriptionStatus: string,
+): string {
   const awaitingCheckoutOnly =
     changePlanMode === "checkout" &&
     committedPlan !== null &&
     subscriptionStatus !== "CANCELLED" &&
     subscriptionStatus !== "NONE";
 
-  const description =
-    changePlanMode === "stripe_update"
-      ? "Higher tiers show Upgrade. Your active tier and interval is marked Current plan and is not selectable. Use other cards to change tier or monthly/annual billing (Stripe proration). Download receipts below or in Manage billing."
-      : awaitingCheckoutOnly
-        ? `You have a plan on file (${TIER_LABEL[committedPlan!.tier]}, ${committedPlan!.billingCycle === "ANNUAL" ? "annual" : "monthly"} billing) but payment is not linked yet. Pick any tier or interval, then complete Checkout—you can downgrade before paying.`
-        : "Choose a tier and billing interval. You will complete payment securely on Stripe Checkout.";
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Plans</CardTitle>
-        <CardDescription>{description}</CardDescription>
-        <div className="flex gap-2 pt-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={billingCycle === "MONTHLY" ? "default" : "outline"}
-            onClick={() => onBillingCycleChange("MONTHLY")}
-          >
-            Monthly
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={billingCycle === "ANNUAL" ? "default" : "outline"}
-            onClick={() => onBillingCycleChange("ANNUAL")}
-          >
-            Annual (1 month free)
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {TIER_ORDER.map((tier) => {
-          const hasCommitted = committedPlan !== null;
-          const isSameTier = hasCommitted && tier === committedPlan!.tier;
-          const isSamePlan =
-            hasCommitted &&
-            tier === committedPlan!.tier &&
-            billingCycle === committedPlan!.billingCycle;
-          const committedRank = hasCommitted ? TIER_RANK[committedPlan!.tier] : -1;
-          const tierRank = TIER_RANK[tier];
-
-          const isCurrentSelection =
-            changePlanMode === "stripe_update" && isSamePlan;
-
-          let buttonLabel = "Subscribe";
-          if (isSamePlan && awaitingCheckoutOnly) {
-            buttonLabel = "Add payment in Stripe";
-          } else if (isSamePlan && subscriptionStatus === "CANCELLED") {
-            buttonLabel = "Resubscribe";
-          } else if (hasCommitted && isSameTier && !isSamePlan) {
-            buttonLabel = "Switch billing";
-          } else if (hasCommitted && tierRank > committedRank) {
-            buttonLabel = "Upgrade";
-          } else if (hasCommitted && tierRank < committedRank) {
-            buttonLabel = "Downgrade";
-          }
-
-          const planButtonVariant: "billingUpgrade" | "billingDowngrade" | "default" = (() => {
-            if (hasCommitted && tierRank > committedRank) {
-              return "billingUpgrade";
-            }
-            if (hasCommitted && tierRank < committedRank) {
-              return "billingDowngrade";
-            }
-            return "default";
-          })();
-
-          const disabled = busy;
-
-          const busyLabel =
-            changePlanMode === "stripe_update" ? "Updating…" : "Redirecting…";
-
-          if (debugBilling) {
-            const whyNotCurrent: string[] = [];
-            if (changePlanMode !== "stripe_update") {
-              whyNotCurrent.push(
-                `changePlanMode is "${changePlanMode}" (isCurrentSelection only when "stripe_update")`
-              );
-            }
-            if (!hasCommitted) {
-              whyNotCurrent.push("no committedPlan (subscription status is NONE)");
-            } else if (tier !== committedPlan!.tier) {
-              whyNotCurrent.push(`tier mismatch: card=${tier} committed=${committedPlan!.tier}`);
-            } else if (billingCycle !== committedPlan!.billingCycle) {
-              whyNotCurrent.push(
-                `billing interval mismatch: uiCycle=${billingCycle} committedCycle=${committedPlan!.billingCycle} (toggle Monthly/Annual above)`
-              );
-            }
-            console.debug("[advisor-billing] plan-card", {
-              tier,
-              uiBillingCycle: billingCycle,
-              changePlanMode,
-              subscriptionStatus,
-              committedPlan,
-              hasCommitted,
-              isSameTier,
-              isSamePlan,
-              isCurrentSelection,
-              awaitingCheckoutOnly,
-              buttonLabel,
-              planButtonVariant,
-              showsNonSelectableCurrentBlock: isCurrentSelection,
-              whyNotCurrent: isCurrentSelection ? [] : whyNotCurrent,
-            });
-          }
-
-          const priceLine =
-            billingCycle === "MONTHLY"
-              ? planPrices[tier].monthly
-              : planPrices[tier].annual;
-
-          return (
-            <div
-              key={tier}
-              className={cn(
-                "flex h-full flex-col rounded-lg border bg-card/50 p-4 shadow-sm",
-                isCurrentSelection &&
-                  "border-primary/35 bg-muted/25 ring-1 ring-primary/25 shadow-none"
-              )}
-              aria-current={isCurrentSelection ? "true" : undefined}
-            >
-              <div className="space-y-2">
-                <h3 className="font-semibold">{TIER_LABEL[tier]}</h3>
-                {isCurrentSelection ? (
-                  <Badge
-                    variant="secondary"
-                    className="w-fit text-[0.65rem] font-semibold normal-case tracking-normal"
-                  >
-                    Current plan
-                  </Badge>
-                ) : isSameTier &&
-                  hasCommitted &&
-                  changePlanMode === "stripe_update" &&
-                  !isSamePlan ? (
-                  <Badge
-                    variant="outline"
-                    className="w-fit text-[0.65rem] font-semibold normal-case tracking-normal"
-                  >
-                    Other interval
-                  </Badge>
-                ) : isSameTier && hasCommitted && awaitingCheckoutOnly ? (
-                  <span className="inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                    Your plan
-                  </span>
-                ) : null}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Up to {TIER_LIMITS[tier]} clients
-              </p>
-              {priceLine ? (
-                <p className="mt-3 text-lg font-semibold tabular-nums tracking-tight">
-                  {priceLine}
-                </p>
-              ) : (
-                <p className="mt-3 text-lg font-semibold tracking-tight text-muted-foreground">
-                  Price unavailable
-                </p>
-              )}
-              <div className="mt-auto flex min-h-10 items-end pt-4">
-                {isCurrentSelection ? (
-                  <div className="w-full rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-2.5">
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      Your current plan. Pick another tier or switch monthly/annual above to change.
-                    </p>
-                  </div>
-                ) : (
-                  <Button
-                    className="w-full"
-                    type="button"
-                    variant={planButtonVariant}
-                    disabled={disabled}
-                    onClick={() => onSelectPlan(tier)}
-                  >
-                    {busy ? busyLabel : buttonLabel}
-                  </Button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        <EnterpriseContactSalesCard />
-      </CardContent>
-      {error ? (
-        <CardFooter>
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        </CardFooter>
-      ) : null}
-    </Card>
-  );
+  if (changePlanMode === "stripe_update") {
+    return "Your active plan is highlighted. Change tier or billing interval below—Stripe applies proration on upgrades and downgrades. To downgrade, active clients must fit the new plan limit—end workflows in Pipeline first.";
+  }
+  if (awaitingCheckoutOnly && committedPlan) {
+    return `Plan on file: ${TIER_LABEL[committedPlan.tier as SelfServeTier]} (${committedPlan.billingCycle === "ANNUAL" ? "annual" : "monthly"}). Complete checkout to activate, or pick a different tier first.`;
+  }
+  return "Choose a tier and billing interval, then complete payment on Stripe Checkout.";
 }
 
 function BillingHistory({
@@ -540,6 +407,21 @@ export function EnterpriseBillingDashboard({
   const periodEnd = new Date(enterprise.currentPeriodEnd);
   const seatOverage = enterprise.seatOverage > 0;
   const isOwner = enterprise.role === "OWNER";
+  const needsCardCheckout =
+    isOwner &&
+    enterprise.paymentMethod === "CARD" &&
+    !enterprise.stripeSubscriptionId?.trim();
+  const planLabel =
+    TIER_DISPLAY_NAME[enterprise.tier as SelfServeTier] ??
+    enterprise.tier.replace(/_/g, " ");
+  const checkoutHref =
+    isModuleTier(enterprise.tier) &&
+    (enterprise.billingCycle === "MONTHLY" || enterprise.billingCycle === "ANNUAL")
+      ? enterprisePricingDeepLink(
+          enterprise.tier,
+          enterprise.billingCycle as BillingCycle
+        )
+      : "/advisor/enterprise/pricing";
 
   const onPortal = useCallback(() => {
     setPortalError(null);
@@ -575,24 +457,32 @@ export function EnterpriseBillingDashboard({
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">
-            {enterprise.enterpriseName} · Enterprise plan (sales-assisted)
+            {enterprise.enterpriseName} · {planLabel} module tier
           </p>
           <p className="max-w-prose text-sm text-muted-foreground">
-            Plan changes require contacting your account manager. Usage below reflects firm-wide
-            limits and your assigned clients.
+            {needsCardCheckout
+              ? "Your agreement is in place. Complete checkout for your contracted module tier to activate firm billing."
+              : "Firm-wide usage, seats, and payment method. Plan changes after activation require your account manager."}
           </p>
         </div>
-        {enterprise.canManageStripePortal ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pending}
-            onClick={onPortal}
-            className="shrink-0"
-          >
-            Manage billing & receipts
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {needsCardCheckout ? (
+            <Button asChild className="shrink-0">
+              <Link href={checkoutHref}>Complete checkout</Link>
+            </Button>
+          ) : null}
+          {enterprise.canManageStripePortal ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onPortal}
+              className="shrink-0"
+            >
+              Manage billing & receipts
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {portalError ? (
@@ -616,7 +506,7 @@ export function EnterpriseBillingDashboard({
         <CardContent className="space-y-2 text-sm">
           <div className="flex flex-wrap justify-between gap-2">
             <span className="text-muted-foreground">Plan</span>
-            <span className="font-medium">Enterprise</span>
+            <span className="font-medium">{planLabel}</span>
           </div>
           <div className="flex flex-wrap justify-between gap-2">
             <span className="text-muted-foreground">Status</span>
@@ -699,20 +589,27 @@ export function BillingDashboard({
   checkoutNotice,
   subscriptionRequiredNotice = false,
   billingEnabled,
-  planPrices,
+  pricing,
+  configErrors = [],
   debugBilling = isAdvisorBillingDebugEnabled(),
+  checkoutPlanIntent = null,
 }: {
   initialSubscription: SubscriptionDetailsDTO | null;
   initialInvoices: BillingInvoiceDTO[];
   checkoutNotice: "success" | "cancel" | null;
   subscriptionRequiredNotice?: boolean;
   billingEnabled: boolean;
-  planPrices: PlanPricesForUi;
+  pricing: PublicTierPricing[];
+  configErrors?: string[];
   /** Prefer pass-through from server page; falls back to env gate when omitted (e.g. Storybook). */
   debugBilling?: boolean;
+  checkoutPlanIntent?: { tier: SelfServeTier; billingCycle: BillingCycle } | null;
 }) {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
+    if (checkoutPlanIntent?.billingCycle) {
+      return checkoutPlanIntent.billingCycle;
+    }
     const sub = initialSubscription;
     if (sub && sub.status !== "NONE" && sub.status !== "CANCELLED") {
       return sub.billingCycle;
@@ -720,14 +617,16 @@ export function BillingDashboard({
     return "MONTHLY";
   });
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [pendingPlanTier, setPendingPlanTier] = useState<SelfServeTier | null>(null);
+  const [planChangeDialogOpen, setPlanChangeDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const data =
     initialSubscription ??
     ({
-      tier: "STARTER",
+      tier: "ESSENTIALS",
       status: "NONE",
-      clientLimit: TIER_LIMITS.STARTER,
+      clientLimit: TIER_LIMITS.ESSENTIALS,
       billingCycle: "MONTHLY",
       currentPeriodEnd: new Date().toISOString(),
       cancelAtPeriodEnd: false,
@@ -767,6 +666,14 @@ export function BillingDashboard({
       data.status === "NONE" ? null : { tier: data.tier, billingCycle: data.billingCycle },
     [data.status, data.tier, data.billingCycle]
   );
+
+  const downgradeCapacity = useMemo(() => {
+    if (data.status === "NONE" || data.status === "CANCELLED") return null;
+    return analyzeDowngradeCapacity({
+      currentTier: data.tier,
+      currentClientCount: data.currentClientCount,
+    });
+  }, [data.status, data.tier, data.currentClientCount]);
 
   useEffect(() => {
     if (!debugBilling) return;
@@ -824,8 +731,8 @@ export function BillingDashboard({
     committedPlan,
   ]);
 
-  const onSelectPlan = useCallback(
-    (tier: SubscriptionTier) => {
+  const executePlanChange = useCallback(
+    (tier: SelfServeTier) => {
       setCheckoutError(null);
       startTransition(async () => {
         if (changePlanMode === "stripe_update") {
@@ -855,8 +762,82 @@ export function BillingDashboard({
         window.location.href = res.url;
       });
     },
-    [billingCycle, changePlanMode, router]
+    [billingCycle, changePlanMode, router],
   );
+
+  const requestPlanChange = useCallback(
+    (tier: SubscriptionTier) => {
+      const selfServeTier = tier as SelfServeTier;
+      const input = {
+        targetTier: selfServeTier,
+        targetBillingCycle: billingCycle,
+        committedPlan,
+        changePlanMode,
+        subscriptionStatus: data.status,
+        currentClientCount: data.currentClientCount,
+      };
+      if (shouldConfirmPlanChange(input)) {
+        setPendingPlanTier(selfServeTier);
+        setPlanChangeDialogOpen(true);
+        return;
+      }
+      executePlanChange(selfServeTier);
+    },
+    [
+      billingCycle,
+      changePlanMode,
+      committedPlan,
+      data.currentClientCount,
+      data.status,
+      executePlanChange,
+    ],
+  );
+
+  const planChangeExplainer = useMemo(() => {
+    if (!pendingPlanTier) return null;
+    return buildPlanChangeExplainer({
+      targetTier: pendingPlanTier,
+      targetBillingCycle: billingCycle,
+      committedPlan,
+      changePlanMode,
+      subscriptionStatus: data.status,
+      currentClientCount: data.currentClientCount,
+    });
+  }, [
+    pendingPlanTier,
+    billingCycle,
+    committedPlan,
+    changePlanMode,
+    data.status,
+    data.currentClientCount,
+  ]);
+
+  const planChangeConfirmDisabled = pendingPlanTier
+    ? clientsOverTierCapacity(data.currentClientCount, pendingPlanTier) > 0
+    : false;
+
+  const onConfirmPlanChange = useCallback(() => {
+    if (!pendingPlanTier) return;
+    const tier = pendingPlanTier;
+    setPlanChangeDialogOpen(false);
+    setPendingPlanTier(null);
+    executePlanChange(tier);
+  }, [executePlanChange, pendingPlanTier]);
+
+  const onSelectPlan = requestPlanChange;
+
+  const checkoutIntentStarted = useRef(false);
+
+  useEffect(() => {
+    if (!checkoutPlanIntent || !billingEnabled || checkoutIntentStarted.current) return;
+    checkoutIntentStarted.current = true;
+    if (changePlanMode === "stripe_update") {
+      router.replace("/advisor/billing", { scroll: false });
+      return;
+    }
+    onSelectPlan(checkoutPlanIntent.tier);
+    router.replace("/advisor/billing", { scroll: false });
+  }, [billingEnabled, changePlanMode, checkoutPlanIntent, onSelectPlan, router]);
 
   const onPortal = useCallback(() => {
     setCheckoutError(null);
@@ -956,22 +937,59 @@ export function BillingDashboard({
         <UsageMonitor data={data} />
       </div>
 
-      <PlanSelector
-        billingCycle={billingCycle}
-        onBillingCycleChange={setBillingCycle}
-        onSelectPlan={onSelectPlan}
-        busy={pending}
-        error={checkoutError}
-        planPrices={planPrices}
-        changePlanMode={changePlanMode}
-        committedPlan={committedPlan}
-        subscriptionStatus={data.status}
-        debugBilling={debugBilling}
-      />
+      {downgradeCapacity?.showBanner ? (
+        <DowngradeCapacityBanner status={downgradeCapacity} />
+      ) : null}
+
+      <Card>
+        <CardHeader className="space-y-1.5">
+          <CardTitle className="text-lg">Plans</CardTitle>
+          <CardDescription>
+            {advisorPlanGridDescription(changePlanMode, committedPlan, data.status)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 overflow-x-auto">
+          <PricingTierGrid
+            surface="billing"
+            pricing={pricing}
+            configErrors={configErrors}
+            billingEnabled={billingEnabled}
+            canSubscribe
+            advisorSubscription={data}
+            billingCycle={billingCycle}
+            onBillingCycleChange={setBillingCycle}
+            onRequestPlanChange={(tier) => onSelectPlan(tier)}
+            planChangePending={pending}
+            planChangeError={checkoutError}
+            suppressPlanChangeDialog
+            suppressCheckoutIntent
+          />
+          <EnterpriseContactSalesCard />
+        </CardContent>
+        {checkoutError ? (
+          <CardFooter>
+            <p className="text-sm text-destructive" role="alert">
+              {checkoutError}
+            </p>
+          </CardFooter>
+        ) : null}
+      </Card>
 
       <BillingHistory
         invoices={initialInvoices}
         canUseBillingPortal={Boolean(data.stripeCustomerId?.trim())}
+      />
+
+      <PlanChangeConfirmDialog
+        explainer={planChangeExplainer}
+        open={planChangeDialogOpen}
+        onOpenChange={(open) => {
+          setPlanChangeDialogOpen(open);
+          if (!open) setPendingPlanTier(null);
+        }}
+        onConfirm={onConfirmPlanChange}
+        pending={pending}
+        confirmDisabled={planChangeConfirmDisabled}
       />
     </div>
   );

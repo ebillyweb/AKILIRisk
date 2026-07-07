@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { auth, signOut } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -8,14 +9,19 @@ import { ClientPageHeaderSlot } from "@/components/layout/ClientPageHeaderSlot";
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
 import { RedirectIncompleteIntake } from "@/components/layout/RedirectIncompleteIntake";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
-import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { AkiliHeaderLockup } from "@/components/home/AkiliLogoLockup";
 import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
+import { BrandedPortalFooter } from "@/components/branding/BrandedPortalFooter";
 import { ClientPortalRootTheme } from "@/components/branding/ClientPortalRootTheme";
 import { clientPortalBrandingDisplayTitle, clientPortalLogoImgSrc } from "@/lib/client/client-portal-branding";
+import { buildClientPortalMetadata } from "@/lib/client/client-portal-metadata";
 import { resolveClientPortalBrandingForUser } from "@/lib/client/resolve-client-portal-branding";
-import { clientExpectsBrandedPortal, getTenantSubdomainFromHeaders } from "@/lib/client/branded-portal-requirements";
+import { clientExpectsBrandedPortal, getTenantSubdomainFromHeaders, isTenantBrandedRequest } from "@/lib/client/branded-portal-requirements";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { getClientHouseholdProfilesEnabled } from "@/lib/household/profiles-policy";
+import { isClientDocumentRequirementsEnabledForUser } from "@/lib/client/client-document-requirements-visibility.server";
+import { getClientPortalSignedInLabel } from "@/lib/client/client-portal-identity.server";
+import { getTenantPathPrefixFromHeaders } from "@/lib/client/tenant-path-prefix";
 import { getPreviewBrandHex } from "@/lib/branding/preview-hex";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
 import { prisma } from "@/lib/db";
@@ -25,16 +31,51 @@ import {
 } from "@/lib/auth-roles";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { TenantPublicThemeLock } from "@/components/theme/TenantPublicThemeLock";
 import { WorkspaceSlimHeader } from "@/components/layout/WorkspaceSlimHeader";
 import { redirectIfMfaChallengePending } from "@/lib/auth/require-mfa-verified";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { redirectIfPendingConsent } from "@/lib/advisor/require-consent-resolved";
+import { getClientPageHeaderConfig } from "@/components/layout/client-page-header-config";
 import { SessionSync } from "@/components/auth/SessionSync";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
 const BRANDED_CLIENT_HEADER_KICKER = "Brought to you by AKILI Risk Intelligence";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return {};
+  }
+
+  const role = session.user.role?.toString().toUpperCase();
+  if (role !== "USER") {
+    return {};
+  }
+
+  const headersList = await headers();
+  const pathname = headersList.get("x-akili-pathname") ?? "";
+  const pageConfig = getClientPageHeaderConfig(pathname);
+
+  const [branding, onTenantHost] = await Promise.all([
+    resolveClientPortalBrandingForUser({
+      userId: session.user.id,
+      email: session.user.email ?? "",
+    }),
+    isTenantBrandedRequest(),
+  ]);
+
+  if (!branding) {
+    return {};
+  }
+
+  return buildClientPortalMetadata(branding, {
+    onTenantHost,
+    pageTitle: pageConfig?.title ?? null,
+  });
+}
 
 export default async function ProtectedLayout({
   children,
@@ -75,14 +116,25 @@ export default async function ProtectedLayout({
   let assessmentUnlockedForClient = false;
   let clientIntakeWaived = false;
   let hideProfilesNav = false;
+  let hideDocumentsNav = false;
+  let hideIntakeNav = false;
   let clientAdvisorBranding: Awaited<
     ReturnType<typeof resolveClientPortalBrandingForUser>
   > = null;
   let clientPortalSubdomain: string | null = null;
   let requiresBrandedPortal = false;
+  let clientPortalSignedInLabel: string | null = null;
 
   if (role === "USER" && session.user.id) {
-    const [gate, portalBranding, householdProfilesEnabled, expectsBranded, tenantSubdomain] =
+    const [
+      gate,
+      portalBranding,
+      householdProfilesEnabled,
+      documentRequirementsEnabled,
+      expectsBranded,
+      tenantSubdomain,
+      signedInLabel,
+    ] =
       await Promise.all([
         getClientIntakeGateState(session.user.id),
         resolveClientPortalBrandingForUser({
@@ -90,19 +142,27 @@ export default async function ProtectedLayout({
           email: session.user.email ?? "",
         }),
         getClientHouseholdProfilesEnabled(session.user.id),
+        isClientDocumentRequirementsEnabledForUser(session.user.id),
         clientExpectsBrandedPortal({
           userId: session.user.id,
           email: session.user.email ?? "",
         }),
         getTenantSubdomainFromHeaders(),
+        getClientPortalSignedInLabel({
+          clientUserId: session.user.id,
+          clientEmail: session.user.email ?? "",
+        }),
       ]);
     clientAdvisorBranding = portalBranding;
     requiresBrandedPortal = expectsBranded;
     clientPortalSubdomain = tenantSubdomain;
+    clientPortalSignedInLabel = signedInLabel;
     restrictNavToIntake = gate.restrictNavToIntake;
     assessmentUnlockedForClient = gate.assessmentUnlocked;
     clientIntakeWaived = gate.intakeWaived;
     hideProfilesNav = !householdProfilesEnabled;
+    hideDocumentsNav = !documentRequirementsEnabled;
+    hideIntakeNav = gate.intakeWaived;
   }
 
   if (role === "USER" && requiresBrandedPortal && !clientAdvisorBranding) {
@@ -125,15 +185,23 @@ export default async function ProtectedLayout({
   const compactWorkspaceHeader = showAdvisor && !clientAdvisorBranding;
 
   const pathname = (await headers()).get("x-akili-pathname") ?? "";
+  const tenantPathPrefix = await getTenantPathPrefixFromHeaders();
+  const onTenantHost = await isTenantBrandedRequest();
+  const isWhiteLabeledPortal = onTenantHost || Boolean(clientAdvisorBranding);
   const isAdvisorWorkspaceRoute =
     showAdvisor && !clientAdvisorBranding && pathname.startsWith("/advisor");
   const isAdminWorkspaceRoute = showAdmin && pathname.startsWith("/admin");
   const isWorkspaceSlimHeaderRoute = isAdvisorWorkspaceRoute || isAdminWorkspaceRoute;
 
   const advisorFeatureFlags = showAdvisor ? await getPlatformFeatureFlags() : null;
+  const clientSignedInIdentity =
+    role === "USER" ? (clientPortalSignedInLabel ?? session.user.email ?? "") : null;
+  const showClientBrandedFooter =
+    role === "USER" && !!clientAdvisorBranding && !isWorkspaceSlimHeaderRoute;
 
   const shell = (
     <>
+      {isWhiteLabeledPortal ? <TenantPublicThemeLock /> : null}
       {session.user.id ? <SessionSync userId={session.user.id} /> : null}
       <div className="min-h-screen py-3 sm:py-6">
       {restrictNavToIntake && (
@@ -188,10 +256,10 @@ export default async function ProtectedLayout({
                       ) : (
                         <Link
                           href="/"
-                          className="block text-foreground"
+                          className="inline-flex shrink-0 leading-none text-foreground transition-opacity duration-200 hover:opacity-80"
                           aria-label="AKILI home"
                         >
-                          <AkiliLogoLockup className="h-auto w-full max-w-[190px] lg:max-w-[220px]" />
+                          <AkiliHeaderLockup height={40} />
                         </Link>
                       )}
 
@@ -210,14 +278,14 @@ export default async function ProtectedLayout({
                               className="font-semibold break-all"
                               style={{ color: previewHex.primary }}
                             >
-                              {session.user.email}
+                              {clientSignedInIdentity}
                             </span>
                           </p>
                         ) : (
                           <p className="text-sm text-muted-foreground">
                             Signed in as{" "}
                             <span className="font-semibold text-foreground break-all">
-                              {session.user.email}
+                              {clientSignedInIdentity}
                             </span>
                           </p>
                         )}
@@ -285,7 +353,7 @@ export default async function ProtectedLayout({
                           previewHex ? { color: previewHex.primary } : undefined
                         }
                       >
-                        Personal Risk Profile Workspace
+                        Client Workspace
                       </h1>
                     </div>
                   </div>
@@ -304,6 +372,8 @@ export default async function ProtectedLayout({
                       restrictNavToIntake={restrictNavToIntake}
                       assessmentUnlockedForClient={assessmentUnlockedForClient}
                       hideProfilesNav={hideProfilesNav}
+                      hideDocumentsNav={hideDocumentsNav}
+                      hideIntakeNav={hideIntakeNav}
                       clientBrandHex={previewHex}
                       advisorFeatureFlags={advisorFeatureFlags}
                     />
@@ -332,6 +402,24 @@ export default async function ProtectedLayout({
               {children}
             </div>
           </main>
+
+          {showClientBrandedFooter && clientAdvisorBranding ? (
+            <div
+              className={cn(
+                "px-4 lg:px-10",
+                isWorkspaceSlimHeaderRoute
+                  ? "py-3 sm:px-6 sm:py-4"
+                  : "pb-5 sm:px-8 sm:pb-8 lg:pb-10",
+              )}
+              data-testid="client-portal-footer"
+            >
+              <BrandedPortalFooter
+                branding={clientAdvisorBranding}
+                tenantPathPrefix={tenantPathPrefix}
+                className="mt-0"
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -160,7 +160,7 @@ Add nullable `enterpriseId String? @unique`.
 | Path | `userId` | `enterpriseId` | `tier` |
 |------|----------|----------------|--------|
 | Solo advisor | set | null | STARTER / GROWTH / PROFESSIONAL |
-| Enterprise firm | null | set | ENTERPRISE |
+| Enterprise firm | null | set | ESSENTIALS / PROFESSIONAL / BUSINESS / PLATINUM |
 
 Keep existing columns (`clientLimit`, Stripe ids, branding flags, status, etc.). For enterprise rows, `clientLimit` mirrors `AdvisorEnterprise.clientLimit` (denormalized for existing read paths).
 
@@ -268,10 +268,10 @@ Re-inviting same client email within the firm: if an ACTIVE assignment already e
 
 1. Sales closes custom quote (defaults: **25 seats**, 100 firm clients, 25 per advisor unless negotiated).
 2. Admin creates `AdvisorEnterprise` + OWNER membership with `clientLimit`, `perAdvisorClientLimit`, `seatLimit`, and `paymentMethod`.
-3. **Wire (primary):** Finance confirms payment offline → admin sets `Subscription` to `ACTIVE` with `tier = ENTERPRISE`, `enterpriseId`, optional null `stripeSubscriptionId`. Record wire reference in admin notes / audit metadata.
+3. **Wire (primary):** Finance confirms payment offline → admin sets `Subscription` to `ACTIVE` with `tier = <module tier>`, `enterpriseId`, optional null `stripeSubscriptionId`. Record wire reference in admin notes / audit metadata.
 4. **Card (secondary):** Admin creates Stripe Customer + Subscription (Dashboard or script) → webhooks sync via existing `upsertSubscriptionFromStripe` (extended for `enterpriseId` metadata). Owner may use Stripe Customer Portal for card updates and invoices.
 
-**No** self-serve `createCheckoutSession` path for `ENTERPRISE` tier in v1.
+**No** self-serve signup for enterprise **provisioning** in v1. Card firms may complete module-tier checkout after admin provision.
 
 ### Billing UI (`/advisor/billing`)
 
@@ -295,7 +295,7 @@ Enterprise subscriptions should carry:
 ```json
 {
   "enterpriseId": "<cuid>",
-  "tier": "ENTERPRISE",
+  "tier": "PROFESSIONAL",
   "billing_cycle": "MONTHLY|ANNUAL"
 }
 ```
@@ -304,18 +304,7 @@ Webhook handler resolves row by `enterpriseId` when `userId` absent.
 
 ### Tier features
 
-Add to `TIER_FEATURES` in `src/lib/subscription/validation.ts`:
-
-```typescript
-ENTERPRISE: {
-  basicBrandingEnabled: true,
-  advancedBrandingEnabled: true,
-  customSubdomainEnabled: true,
-  whiteLabel: true,
-}
-```
-
-Feature resolution for enterprise members uses **enterprise subscription**, not personal user subscription.
+Enterprise members inherit the firm's **module tier** (`ESSENTIALS`–`PLATINUM`) from the enterprise `Subscription` row. Feature resolution uses `tierIncludesFeature` on that tier — not a separate `ENTERPRISE` subscription tier.
 
 ---
 
@@ -501,7 +490,7 @@ type BillingContext =
 ### Phase 1
 
 - [ ] AC-1: Admin can create an `AdvisorEnterprise` with owner, `seatLimit`, and `clientLimit`.
-- [ ] AC-2: Enterprise has `Subscription` with `tier = ENTERPRISE`, `enterpriseId` set, `userId` null.
+- [ ] AC-2: Enterprise has `Subscription` with module tier (`ESSENTIALS`–`PLATINUM`), `enterpriseId` set, `userId` null.
 - [ ] AC-3: Owner with ACTIVE membership and qualifying subscription passes `getAdvisorHubAccessForUserId`.
 - [ ] AC-4: Solo advisors without enterprise membership behave exactly as before (regression).
 - [ ] AC-5: Stripe webhook updates enterprise subscription by `enterpriseId` metadata.

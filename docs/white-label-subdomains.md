@@ -7,7 +7,7 @@ Advisors claim a **canonical slug** stored in `AdvisorSubdomain.subdomain` (e.g.
 | Type | Example (staging) | Example (production) | Routing |
 |------|-------------------|----------------------|---------|
 | **Platform** | `preview.akilirisk.com` | `www.akilirisk.com` | Main app (advisor hub, admin, sign-in). Never tenant-branded. |
-| **Tenant** | `ebilly-staging.akilirisk.com` | `ebilly.akilirisk.com` | Branded client portal when `isActive && dnsVerified`. |
+| **Tenant (preview)** | `preview.akilirisk.com/t/ebilly` | `ebilly.akilirisk.com` | Branded client portal when `isActive && dnsVerified`. |
 
 Platform labels (`preview`, `www`, `app`, `api`, `admin`, …) cannot be claimed. See `PLATFORM_SUBDOMAIN_LABELS` in `src/lib/advisor/platform-subdomain.ts`.
 
@@ -16,7 +16,8 @@ Platform labels (`preview`, `www`, `app`, `api`, `admin`, …) cannot be claimed
 | Variable | Preview / staging | Production |
 |----------|-------------------|------------|
 | `PRODUCTION_DOMAIN` | `akilirisk.com` (required) | Same |
-| `TENANT_SUBDOMAIN_SUFFIX` | `-staging` (→ `{slug}-staging.akilirisk.com`) | **Unset** |
+| `TENANT_PATH_PORTALS` | default on Preview (`preview…/t/{slug}`) | **Unset** (use subdomains) |
+| `TENANT_SUBDOMAIN_SUFFIX` | legacy hostname suffix if `TENANT_PATH_PORTALS=false` | **Unset** |
 | `SUBDOMAIN_AUTO_ACTIVATE` | `true` (recommended on Preview) | Default on (omit or `true`) |
 | `AUTH_URL` / `NEXT_PUBLIC_URL` | `https://preview.akilirisk.com` | `https://www.akilirisk.com` (or canonical) |
 
@@ -37,10 +38,10 @@ Implementation: `src/lib/advisor/platform-subdomain.ts`, `src/proxy.ts`, `src/co
 
 | Domain | Purpose |
 |--------|---------|
-| `preview.akilirisk.com` | Platform app |
-| `*.akilirisk.com` | All tenant hosts (`{slug}-staging.akilirisk.com` with suffix env) |
+| `preview.akilirisk.com` | Platform app + staging tenant portals at `/t/{slug}` |
+| `*.akilirisk.com` | Optional; production white-label only (keep on Production at launch) |
 
-Do **not** add per-slug domains (`independent-wealth.akilirisk.com`, etc.) unless debugging; wildcard covers them. Bare `{slug}.akilirisk.com` on staging hits the deployment but **does not** resolve as a tenant when `TENANT_SUBDOMAIN_SUFFIX=-staging`.
+Staging tenants use **`https://preview.akilirisk.com/t/{slug}`** — no per-firm DNS or wildcard on Preview required.
 
 ### Production
 
@@ -68,6 +69,8 @@ You control the `akilirisk.com` zone. Typical setup:
 | Advisor | Slug | DB flags | Staging URL (with `-staging`) |
 |---------|------|----------|-------------------------------|
 | advisor2 | `independent-wealth` | active + verified | `https://independent-wealth-staging.akilirisk.com` |
+
+**Branded invitation URLs** (tenant signup links) also require a subscription tier with `customSubdomainEnabled` (e.g. `PROFESSIONAL` or above). The seed script sets advisor2 to `PROFESSIONAL`; `ESSENTIALS` alone is not enough even when the subdomain row is verified.
 | advisor3 | `inactive-tenant` | active, not DNS-verified | `https://inactive-tenant-staging.akilirisk.com` → "Subdomain Not Available" |
 | advisor4 | `disabled-tenant` | verified, not active | `https://disabled-tenant-staging.akilirisk.com` → "Subdomain Not Available" |
 

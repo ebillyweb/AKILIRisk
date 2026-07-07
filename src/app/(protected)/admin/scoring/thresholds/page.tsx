@@ -9,7 +9,7 @@ export default async function AdminRiskThresholdsPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card data-tour="config-primary-form">
         <CardHeader>
           <CardTitle className="text-base">When is a client in good shape?</CardTitle>
           <CardDescription>

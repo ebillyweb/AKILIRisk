@@ -3,12 +3,12 @@ import { auth } from "@/lib/auth";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
 import { verifyInviteToken } from "@/lib/invite";
 import { redeemInvitationFromToken } from "@/lib/invitations/redeem-invitation";
+import { buildInvitationMagicLinkVerifyPath } from "@/lib/invitations/invitation-signup-redirect";
 import { prisma } from "@/lib/db";
 import {
   ClientSignupInfoPanel,
   InviteAcceptFailure,
 } from "@/components/auth/InviteAcceptFailure";
-import { SignupInviteProcessor } from "@/components/auth/SignupInviteProcessor";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { BrandedAuthShell } from "@/components/auth/BrandedAuthShell";
 import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
@@ -21,6 +21,7 @@ import {
   inviteSignupExpectsBranding,
   isTenantBrandedRequest,
 } from "@/lib/client/branded-portal-requirements";
+import { tenantPublicPath } from "@/lib/client/tenant-path-prefix";
 
 /**
  * Advisor invitation links land here (`/signup?invite=…&callbackUrl=…`).
@@ -63,7 +64,11 @@ export default async function SignupPage({
       const redeemed = await redeemInvitationFromToken(inviteToken);
       if (redeemed.ok) {
         const defaultCallback = invite?.intakeWaived ? "/assessment" : "/intake";
-        redirect(safeAfterSignInPath(sp.callbackUrl, defaultCallback));
+        redirect(
+          await tenantPublicPath(
+            safeAfterSignInPath(sp.callbackUrl, defaultCallback),
+          ),
+        );
       }
     }
 
@@ -73,7 +78,9 @@ export default async function SignupPage({
       );
     }
 
-    redirect(safeAfterSignInPath(sp.callbackUrl, "/dashboard"));
+    redirect(
+      await tenantPublicPath(safeAfterSignInPath(sp.callbackUrl, "/dashboard")),
+    );
   }
 
   const onTenantHost = await isTenantBrandedRequest();
@@ -93,9 +100,8 @@ export default async function SignupPage({
         <BrandingProvider branding={branding} subdomain={null}>
           <ClientPortalRootTheme branding={branding} />
           <BrandedAuthShell branding={branding}>
-            <SignupInviteProcessor
-              inviteCodeId={inviteCodeId}
-              token={inviteToken}
+            <InviteSignupRedirect
+              inviteToken={inviteToken}
               callbackUrl={sp.callbackUrl}
             />
           </BrandedAuthShell>
@@ -105,10 +111,27 @@ export default async function SignupPage({
   }
 
   return (
-    <SignupInviteProcessor
-      inviteCodeId={inviteCodeId}
-      token={inviteToken}
+    <InviteSignupRedirect
+      inviteToken={inviteToken}
       callbackUrl={sp.callbackUrl}
     />
   );
+}
+
+async function InviteSignupRedirect({
+  inviteToken,
+  callbackUrl,
+}: {
+  inviteToken: string;
+  callbackUrl?: string;
+}) {
+  const completion = await buildInvitationMagicLinkVerifyPath(
+    inviteToken,
+    callbackUrl,
+  );
+  if (!completion.ok) {
+    return <InviteAcceptFailure message={completion.error} />;
+  }
+
+  redirect(completion.verifyPath);
 }

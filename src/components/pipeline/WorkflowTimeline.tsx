@@ -2,14 +2,23 @@
 
 import { format } from "date-fns";
 import { type WorkflowEvent, type ClientWorkflowStage } from "@/lib/pipeline/types";
-import { getStageLabel } from "@/lib/pipeline/status";
+import { getStageLabel, resolveAdvisorPipelineDisplayStage } from "@/lib/pipeline/status";
 
 interface WorkflowTimelineProps {
   events: WorkflowEvent[];
   currentStage: ClientWorkflowStage;
+  documentRequirementsEnabled?: boolean;
 }
 
-function getEventColor(stage: ClientWorkflowStage, currentStage: ClientWorkflowStage) {
+function getEventColor(
+  stage: ClientWorkflowStage,
+  currentStage: ClientWorkflowStage,
+  documentRequirementsEnabled: boolean,
+) {
+  const displayCurrentStage = resolveAdvisorPipelineDisplayStage(
+    currentStage,
+    documentRequirementsEnabled,
+  );
   const stageOrder: Record<ClientWorkflowStage, number> = {
     'INVITED': 1,
     'REGISTERED': 2,
@@ -22,7 +31,7 @@ function getEventColor(stage: ClientWorkflowStage, currentStage: ClientWorkflowS
   };
 
   const eventOrder = stageOrder[stage];
-  const currentOrder = stageOrder[currentStage];
+  const currentOrder = stageOrder[displayCurrentStage];
 
   if (eventOrder <= currentOrder) {
     return 'bg-green-500'; // Completed
@@ -30,14 +39,22 @@ function getEventColor(stage: ClientWorkflowStage, currentStage: ClientWorkflowS
   return 'bg-gray-300'; // Future
 }
 
-function getCurrentStageColor(stage: ClientWorkflowStage, currentStage: ClientWorkflowStage) {
+function getCurrentStageColor(
+  stage: ClientWorkflowStage,
+  currentStage: ClientWorkflowStage,
+  documentRequirementsEnabled: boolean,
+) {
   if (stage === currentStage) {
     return 'bg-primary ring-4 ring-primary/20'; // Current stage with pulse effect
   }
-  return getEventColor(stage, currentStage);
+  return getEventColor(stage, currentStage, documentRequirementsEnabled);
 }
 
-export function WorkflowTimeline({ events, currentStage }: WorkflowTimelineProps) {
+export function WorkflowTimeline({
+  events,
+  currentStage,
+  documentRequirementsEnabled = true,
+}: WorkflowTimelineProps) {
   if (events.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -61,7 +78,7 @@ export function WorkflowTimeline({ events, currentStage }: WorkflowTimelineProps
           {/* Timeline dot */}
           <div className={`
             relative z-10 w-8 h-8 rounded-full flex items-center justify-center
-            ${getCurrentStageColor(event.stage, currentStage)}
+            ${getCurrentStageColor(event.stage, currentStage, documentRequirementsEnabled)}
             ${event.stage === currentStage ? 'animate-pulse' : ''}
           `}>
             {event.stage === currentStage && (
@@ -74,7 +91,12 @@ export function WorkflowTimeline({ events, currentStage }: WorkflowTimelineProps
             <div className="flex items-center space-x-2">
               <h3 className="font-semibold text-foreground">{event.label}</h3>
               <span className="text-xs px-2 py-1 bg-muted text-muted-foreground rounded-full">
-                {getStageLabel(event.stage)}
+                {getStageLabel(
+                  resolveAdvisorPipelineDisplayStage(
+                    event.stage,
+                    documentRequirementsEnabled,
+                  ),
+                )}
               </span>
             </div>
 

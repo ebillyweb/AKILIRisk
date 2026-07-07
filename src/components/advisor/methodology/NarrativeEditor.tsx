@@ -2,10 +2,10 @@
 
 import { useTransition } from "react";
 import { updateAdvisorPillarNarrative } from "@/lib/actions/methodology-actions";
+import { LabelWithHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 
 type NarrativeFormProps = {
   pillarSlug: string;
@@ -56,7 +56,9 @@ export function NarrativeEditor({
           <CardTitle className="text-base">All-negative band</CardTitle>
         </CardHeader>
         <CardContent>
-          <Label htmlFor="allNegative">One recommendation per line</Label>
+          <LabelWithHelp htmlFor="allNegative" helpKey="narrative-all-negative">
+            One recommendation per line
+          </LabelWithHelp>
           <Textarea
             id="allNegative"
             name="allNegative"
@@ -71,7 +73,8 @@ export function NarrativeEditor({
           <CardTitle className="text-base">All-yes band</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea name="allYes" defaultValue={lines(allYes)} rows={6} />
+          <LabelWithHelp helpKey="narrative-all-yes">One recommendation per line</LabelWithHelp>
+          <Textarea name="allYes" defaultValue={lines(allYes)} rows={6} className="mt-2" />
         </CardContent>
       </Card>
       {(["critical", "high", "medium", "low"] as const).map((tier) => (
@@ -80,7 +83,10 @@ export function NarrativeEditor({
             <CardTitle className="text-base capitalize">{tier} mid-band</CardTitle>
           </CardHeader>
           <CardContent>
-            <Textarea name={tier} defaultValue={lines(midBand[tier])} rows={4} />
+            <LabelWithHelp helpKey="narrative-mid-band">
+              {tier} tier — one recommendation per line
+            </LabelWithHelp>
+            <Textarea name={tier} defaultValue={lines(midBand[tier])} rows={4} className="mt-2" />
           </CardContent>
         </Card>
       ))}

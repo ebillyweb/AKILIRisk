@@ -1,15 +1,20 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Send, UserPlus } from "lucide-react";
+import { redirect } from "next/navigation";
 
+import { ClientLimitBanner } from "@/components/advisor/billing/ClientLimitGate";
+import { AdvisorScreenHeader } from "@/components/advisor/layout/AdvisorScreenHeader";
+import { PipelinePageToolbar } from "@/components/advisor/pipeline/PipelinePageToolbar";
+import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
+import { auth } from "@/lib/auth";
 import { getClientPipelineData } from "@/lib/actions/pipeline-actions";
 import {
+  legacyPipelineSearchRedirect,
   parsePipelineFiltersFromSearchParams,
   parsePipelinePageFromSearchParams,
 } from "@/lib/pipeline/parse-pipeline-filters";
 import type { PipelineFilters } from "@/lib/pipeline/types";
 import { MetricCard } from "@/components/advisor/workspace/MetricCard";
-import { Button } from "@/components/ui/button";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
 
@@ -26,20 +31,20 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
         "Clients who submitted intake and are waiting for your approval before assessment.",
     };
   }
+  if (filters.assessmentInProgress) {
+    return {
+      kicker: "Workflow",
+      title: "Client assessments",
+      subtitle:
+        "Households actively working through the risk assessment. Open a client to review progress or answers.",
+    };
+  }
   if (filters.documentsNeeded) {
     return {
       kicker: "Workflow",
       title: "Document Requests",
       subtitle:
         "Clients with mandatory document requirements still outstanding.",
-    };
-  }
-  if (filters.needsRescore) {
-    return {
-      kicker: "Workflow",
-      title: "Reassessment",
-      subtitle:
-        "Clients who changed assessment answers after completion and need a fresh score.",
     };
   }
   if (filters.stalled) {
@@ -52,7 +57,7 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   if (filters.inactive) {
     return {
       kicker: "Clients",
-      title: "All Clients",
+      title: "Clients",
       subtitle:
         "Inactive workflows you ended. Restore any client to return them to your active pipeline.",
     };
@@ -108,25 +113,6 @@ function MetricsSummary({ metrics }: { metrics: any }) {
   );
 }
 
-function PipelineClientActions() {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Button asChild size="sm">
-        <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
-          <UserPlus className="size-4" />
-          Create New Client
-        </Link>
-      </Button>
-      <Button asChild variant="outline" size="sm">
-        <Link href="/advisor/invitations" className="inline-flex items-center gap-2">
-          <Send className="size-4" />
-          Send New Invitation
-        </Link>
-      </Button>
-    </div>
-  );
-}
-
 // Async component for data-dependent content
 async function PipelineContent({
   initialFilters,
@@ -151,12 +137,13 @@ async function PipelineContent({
     );
   }
 
-  const { clients, metrics, profile } = result.data!;
+  const { clients, metrics, pseudonymousWorkspaceLabeling, documentRequirementsEnabled } =
+    result.data!;
 
   return (
     <div className="space-y-6">
       {/* Metrics summary */}
-      <div className="rounded-lg border bg-card p-4">
+      <div className="rounded-lg border bg-card p-4" data-tour="pipeline-overview">
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">
           Pipeline Overview
         </h2>
@@ -169,6 +156,8 @@ async function PipelineContent({
         initialMetrics={metrics}
         initialFilters={initialFilters}
         initialPage={initialPage}
+        pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
+        documentRequirementsEnabled={documentRequirementsEnabled}
       />
     </div>
   );
@@ -180,13 +169,24 @@ export default async function PipelinePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const resolvedSearchParams = await searchParams;
+  const legacyRedirect = legacyPipelineSearchRedirect(resolvedSearchParams);
+  if (legacyRedirect) {
+    redirect(legacyRedirect);
+  }
+
   const initialFilters = parsePipelineFiltersFromSearchParams(resolvedSearchParams);
   const initialPage = parsePipelinePageFromSearchParams(resolvedSearchParams);
+
   const workflowHeading = pipelineWorkflowHeading(initialFilters);
+  const session = await auth();
+  const clientLimitStatus = session?.user?.id
+    ? await getAdvisorClientLimitStatus(session.user.id)
+    : null;
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <PipelineClientActions />
+      {clientLimitStatus ? <ClientLimitBanner status={clientLimitStatus} /> : null}
+      {clientLimitStatus ? <PipelinePageToolbar clientLimitStatus={clientLimitStatus} /> : null}
 
       {workflowHeading ? (
         <header className="space-y-1 border-b border-border/50 pb-5">
@@ -202,11 +202,17 @@ export default async function PipelinePage({
               href="/advisor/pipeline"
               className="font-medium text-primary underline-offset-2 hover:underline"
             >
-              View full pipeline
+              View all clients
             </Link>
           </p>
         </header>
-      ) : null}
+      ) : (
+        <AdvisorScreenHeader
+          kicker="Clients"
+          title="Clients"
+          description="Assigned households, intake progress, and assessment status across your practice."
+        />
+      )}
 
       {/* Data-dependent content with Suspense streaming */}
       <Suspense fallback={<PipelineLoading />}>

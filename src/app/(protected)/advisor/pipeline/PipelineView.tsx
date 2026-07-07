@@ -18,6 +18,8 @@ interface PipelineViewProps {
   initialMetrics: PipelineMetrics;
   initialFilters?: PipelineFilters;
   initialPage: number;
+  pseudonymousWorkspaceLabeling: boolean;
+  documentRequirementsEnabled: boolean;
 }
 
 export function PipelineView({
@@ -25,6 +27,8 @@ export function PipelineView({
   initialMetrics,
   initialFilters,
   initialPage,
+  pseudonymousWorkspaceLabeling,
+  documentRequirementsEnabled,
 }: PipelineViewProps) {
   const router = useRouter();
 
@@ -70,13 +74,20 @@ export function PipelineView({
     <div className="space-y-6">
       {/* Connection status indicator */}
       {!viewingInactive ? (
-        <div className="flex items-center justify-between">
+        <div
+          className="flex items-center justify-between"
+          data-tour="pipeline-live-status"
+        >
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div
               className={`h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
             />
             <span>{connected ? "Live updates" : "Connection lost"}</span>
-            <span className="text-xs">Last updated: {lastUpdated.toLocaleTimeString()}</span>
+            {lastUpdated ? (
+              <span className="text-xs">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -90,10 +101,17 @@ export function PipelineView({
         filteredCount={filteredClients.length}
         page={currentPage}
         pageSize={PAGE_SIZE}
+        pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
+        documentRequirementsEnabled={documentRequirementsEnabled}
       />
 
       {/* Table */}
-      <PipelineTable clients={pagedClients} />
+      <div data-tour="pipeline-table">
+        <PipelineTable
+          clients={pagedClients}
+          showDocumentsColumn={documentRequirementsEnabled}
+        />
+      </div>
 
       {filteredClients.length > 0 ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

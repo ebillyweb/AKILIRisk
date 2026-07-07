@@ -35,7 +35,7 @@ export async function facilitatedApproveScope(
     if (facilitated.status !== "PILLAR_SELECT" || !facilitated.interviewId) {
       return {
         success: false as const,
-        error: "Pillar selection is not available for this session",
+        error: "Risk domain selection is not available for this session",
       };
     }
 
@@ -128,7 +128,7 @@ export async function facilitatedApproveScope(
       },
     });
 
-    revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/pillars`);
+    revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/risk-domains`);
     revalidatePath("/assessment", "layout");
 
     const firstPillar = resolveIncludedPillars(normalizedIncluded, catalog)[0];

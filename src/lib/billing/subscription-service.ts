@@ -11,12 +11,13 @@ import type Stripe from "stripe";
 
 import { prisma } from "@/lib/db";
 
-import { TIER_LIMITS } from "./constants";
+import { clientLimitForTier, TIER_LIMITS } from "./constants";
 import {
   getPriceIdForTier,
   getPriceIdPlanMap,
   isBillingEnabled,
 } from "./config";
+import { SELF_SERVE_TIERS, tierEnvKey, type SelfServeTier } from "./tier-catalog";
 import { currentPeriodEndFromStripeSubscription } from "./stripe-subscription-period";
 import { mapStripeSubscriptionStatus } from "./stripe-status";
 
@@ -67,7 +68,7 @@ export async function countActiveClientsForAdvisor(
  * until the advisor completes Stripe Checkout (admin portal access still requires a qualifying subscription).
  */
 function defaultLimitWhenMissingSubscription(): number {
-  return TIER_LIMITS.STARTER;
+  return clientLimitForTier("ESSENTIALS");
 }
 
 export async function checkClientLimitForAdvisorProfile(
@@ -147,7 +148,9 @@ export async function checkClientLimitForAdvisorProfile(
     where: { userId: profile.userId },
   });
 
-  const limit = subscription?.clientLimit ?? defaultLimitWhenMissingSubscription();
+  const limit = subscription
+    ? clientLimitForTier(subscription.tier)
+    : defaultLimitWhenMissingSubscription();
 
   if (!subscription) {
     const canAdd = currentCount < limit;
@@ -264,10 +267,10 @@ function tierFromStripeSubscription(
   if (
     metaTier &&
     metaCycle &&
-    (metaTier === "STARTER" ||
-      metaTier === "GROWTH" ||
+    (metaTier === "ESSENTIALS" ||
       metaTier === "PROFESSIONAL" ||
-      metaTier === "ENTERPRISE") &&
+      metaTier === "BUSINESS" ||
+      metaTier === "PLATINUM") &&
     (metaCycle === "MONTHLY" || metaCycle === "ANNUAL")
   ) {
     return { tier: metaTier, billingCycle: metaCycle, priceId };
@@ -276,18 +279,17 @@ function tierFromStripeSubscription(
   // Fallback path: price ID isn't in the env-configured map AND Stripe
   // metadata didn't carry a usable tier/cycle. This typically means the
   // subscription was created out-of-band (Stripe Dashboard, legacy import).
-  // Default to STARTER (lowest paid tier) — never GROWTH — so we don't
-  // silently over-grant entitlements. Existing rows keep their tier so we
-  // don't downgrade a paying customer because of a one-off webhook
-  // hiccup. The warning is grep-friendly so we can audit how often this
-  // path fires in production.
+  // Default to ESSENTIALS (lowest paid tier) so we don't silently over-grant
+  // entitlements. Existing rows keep their tier so we don't downgrade a paying
+  // customer because of a one-off webhook hiccup. The warning is grep-friendly
+  // so we can audit how often this path fires in production.
   if (!existingTier) {
     console.warn(
-      `[subscription-service] Unmapped Stripe price ID, defaulting to STARTER tier: ${priceId ?? "<no price id>"}`
+      `[subscription-service] Unmapped Stripe price ID, defaulting to ESSENTIALS tier: ${priceId ?? "<no price id>"}`
     );
   }
   return {
-    tier: existingTier ?? "STARTER",
+    tier: existingTier ?? "ESSENTIALS",
     billingCycle: "MONTHLY",
     priceId,
   };
@@ -499,11 +501,10 @@ export async function upsertEnterpriseSubscriptionFromStripe(
   }
 
   const existing = await db.subscription.findUnique({ where: { enterpriseId } });
-  const { billingCycle, priceId } = tierFromStripeSubscription(
+  const { tier, billingCycle, priceId } = tierFromStripeSubscription(
     sub,
-    existing?.tier ?? "ENTERPRISE"
+    existing?.tier ?? "ESSENTIALS"
   );
-  const tier: SubscriptionTier = "ENTERPRISE";
   const clientLimit = enterprise.clientLimit;
   const status = mapStripeSubscriptionStatus(sub.status);
   const currentPeriodEnd = currentPeriodEndFromStripeSubscription(sub);
@@ -786,10 +787,15 @@ export function validateCheckoutPrice(
   tier: SubscriptionTier,
   billingCycle: BillingCycle
 ): string {
+  if (!SELF_SERVE_TIERS.includes(tier as SelfServeTier)) {
+    throw new Error(`Billing is not configured for tier ${tier}.`);
+  }
+  const selfServeTier = tier as SelfServeTier;
+  const envKey = tierEnvKey(selfServeTier, billingCycle);
   const priceId = getPriceIdForTier(tier, billingCycle);
   if (!priceId) {
     throw new Error(
-      `Missing Stripe price env for ${tier} ${billingCycle}. Configure STRIPE_PRICE_* in the environment.`
+      `Missing ${envKey} for ${tier} ${billingCycle}. Set this Stripe price ID in the environment — legacy fallbacks are not supported.`
     );
   }
   return priceId;

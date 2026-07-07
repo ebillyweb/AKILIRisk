@@ -201,6 +201,170 @@ const SERVICE_RECOMMENDATIONS = [
     }
   },
   CYBER_SECURITY_UPLIFT_SERVICE,
+
+  // Liquidity-Cash Services
+  {
+    id: 'liquidity_cash_reserve_planning',
+    name: 'Cash Reserve and Liquidity Planning',
+    description: 'Professional facilitation to establish documented emergency liquidity reserves and replenishment protocols',
+    category: 'financial',
+    priority: 1,
+    estimatedCost: '$10,000 - $25,000',
+    timeframe: '2-4 weeks',
+    metadata: {
+      services: ['Reserve account setup', 'Replenishment rules documentation', 'Stress-test modeling', 'Advisor coordination'],
+      deliverables: ['Liquidity reserve policy', 'Replenishment protocol', 'Stress-test report']
+    }
+  },
+  {
+    id: 'liquidity_credit_line_review',
+    name: 'Credit Facility Review and Optimization',
+    description: 'Review and optimization of committed credit lines to ensure availability under stress conditions',
+    category: 'financial',
+    priority: 2,
+    estimatedCost: '$5,000 - $15,000',
+    timeframe: '2-3 weeks',
+    metadata: {
+      services: ['Covenant review', 'Maturity date analysis', 'Draw procedure documentation', 'Banking team coordination'],
+      deliverables: ['Credit facility summary', 'Covenant compliance report', 'Draw procedure manual']
+    }
+  },
+  {
+    id: 'liquidity_concentration_stress_test',
+    name: 'Illiquid Concentration Stress Testing',
+    description: 'Stress-testing of illiquid wealth concentration against near-term capital calls and tax obligations',
+    category: 'financial',
+    priority: 3,
+    estimatedCost: '$15,000 - $40,000',
+    timeframe: '1-2 months',
+    metadata: {
+      services: ['Illiquid position analysis', 'Capital call scenario modeling', 'Tax obligation mapping', '12-36 month horizon projections'],
+      deliverables: ['Concentration risk report', 'Liquidity gap analysis', 'Mitigation recommendations']
+    }
+  },
+
+  // Tax-Exposure Services
+  {
+    id: 'tax_residency_review',
+    name: 'Tax Residency and Filing Posture Review',
+    description: 'Annual documentation and review of tax residency posture with qualified counsel to prevent unexpected obligations',
+    category: 'financial',
+    priority: 1,
+    estimatedCost: '$10,000 - $30,000',
+    timeframe: '2-4 weeks',
+    metadata: {
+      services: ['Residency dossier creation', 'Filing obligation review', 'Multi-state analysis', 'Advisor coordination'],
+      deliverables: ['Residency posture report', 'Filing obligation calendar', 'Counsel engagement memo']
+    }
+  },
+  {
+    id: 'tax_liquidity_event_modeling',
+    name: 'Pre-Event Tax Impact Modeling',
+    description: 'Proactive modeling of AMT, NIIT, and state-tax impacts before major liquidity events',
+    category: 'financial',
+    priority: 2,
+    estimatedCost: '$8,000 - $25,000',
+    timeframe: '2-3 weeks',
+    metadata: {
+      services: ['AMT scenario modeling', 'NIIT analysis', 'State tax impact review', 'Equity compensation analysis'],
+      deliverables: ['Pre-event tax model', 'Scenario comparison report', 'Optimization recommendations']
+    }
+  },
+  {
+    id: 'tax_estate_exposure_mapping',
+    name: 'Estate Tax Exposure Mapping',
+    description: 'Comprehensive mapping of estate-tax exposure across entities, trusts, and beneficiary designations',
+    category: 'financial',
+    priority: 3,
+    estimatedCost: '$15,000 - $50,000',
+    timeframe: '1-3 months',
+    metadata: {
+      services: ['Entity chart reconciliation', 'Beneficiary form audit', 'Trust funding review', 'Transfer-tax analysis'],
+      deliverables: ['Estate tax exposure map', 'Funding alignment report', 'Annual review protocol']
+    }
+  },
+
+  // Estate-Succession Services
+  {
+    id: 'estate_document_review',
+    name: 'Estate Document Currency Review',
+    description: 'Review of wills, trusts, and powers of attorney to confirm currency, signatures, and accessible storage',
+    category: 'legal',
+    priority: 1,
+    estimatedCost: '$5,000 - $20,000',
+    timeframe: '2-4 weeks',
+    metadata: {
+      services: ['Document dating review', 'Successor fiduciary confirmation', 'Secure storage verification', 'Update coordination'],
+      deliverables: ['Document status report', 'Storage location register', 'Update action plan']
+    }
+  },
+  {
+    id: 'estate_beneficiary_audit',
+    name: 'Beneficiary Designation Audit',
+    description: 'Audit of beneficiary designations across retirement accounts, insurance, and transfer-on-death registrations',
+    category: 'legal',
+    priority: 2,
+    estimatedCost: '$3,000 - $10,000',
+    timeframe: '1-2 weeks',
+    metadata: {
+      services: ['Retirement account audit', 'Insurance beneficiary review', 'TOD registration check', 'Life-event trigger protocol'],
+      deliverables: ['Beneficiary alignment report', 'Discrepancy list', 'Update instructions']
+    }
+  },
+  {
+    id: 'estate_succession_protocol',
+    name: 'Business Succession Protocol Development',
+    description: 'Development of documented business or family-enterprise succession protocol for key principals',
+    category: 'legal',
+    priority: 3,
+    estimatedCost: '$25,000 - $75,000',
+    timeframe: '3-6 months',
+    metadata: {
+      services: ['Succession trigger documentation', 'Voting control mapping', 'Interim leadership planning', 'Contingency protocol'],
+      deliverables: ['Succession protocol document', 'Decision rights matrix', 'Contingency plan']
+    }
+  },
+
+  // Behavioral Resilience Services
+  {
+    id: 'behavioral_family_governance_program',
+    name: 'Family Governance Meeting Program',
+    description: 'Structured program establishing regular family meetings with documented agendas and decision logs',
+    category: 'advisory',
+    priority: 1,
+    estimatedCost: '$10,000 - $30,000',
+    timeframe: '1-3 months',
+    metadata: {
+      services: ['Meeting structure design', 'Agenda template creation', 'Decision log setup', 'Facilitation support'],
+      deliverables: ['Governance meeting framework', 'Agenda templates', 'Decision log system']
+    }
+  },
+  {
+    id: 'behavioral_decision_rights_framework',
+    name: 'Decision Rights Framework Development',
+    description: 'Development and publication of decision-rights matrix for spouses, children, and trusted advisors',
+    category: 'advisory',
+    priority: 2,
+    estimatedCost: '$8,000 - $20,000',
+    timeframe: '2-4 weeks',
+    metadata: {
+      services: ['Authority mapping', 'Spending limit documentation', 'Matrix publication', 'Review trigger protocol'],
+      deliverables: ['Decision rights matrix', 'Spending authority schedule', 'Update protocol']
+    }
+  },
+  {
+    id: 'behavioral_investment_discipline',
+    name: 'Behavioral Finance Discipline Program',
+    description: 'Pre-commitment checklist and education program to address behavioral-finance pitfalls in major investment decisions',
+    category: 'advisory',
+    priority: 3,
+    estimatedCost: '$15,000 - $40,000',
+    timeframe: '2-4 months',
+    metadata: {
+      services: ['Behavioral bias assessment', 'Checklist development', 'Family education sessions', 'Decision process design'],
+      deliverables: ['Pre-commitment checklist', 'Decision process guide', 'Education curriculum']
+    }
+  },
 ];
 
 const LEGACY_RECOMMENDATION_RULES = [
@@ -501,6 +665,142 @@ const LEGACY_RECOMMENDATION_RULES = [
       }
     ],
     priority: 75
+  },
+
+  // Liquidity-Cash Rules
+  {
+    id: 'liquidity_reserve_planning_needed',
+    serviceRecommendationId: 'liquidity_cash_reserve_planning',
+    ruleName: 'Cash Reserve Planning',
+    description: 'Families without documented emergency liquidity need reserve planning',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'liquidity_cash_reserves', operator: 'in', value: ['none', 'informal'], weight: 4 },
+      { type: 'score_threshold', pillarId: 'liquidity-cash', operator: 'less_than', value: 1.5, weight: 3 }
+    ],
+    priority: 90
+  },
+  {
+    id: 'liquidity_credit_line_review_needed',
+    serviceRecommendationId: 'liquidity_credit_line_review',
+    ruleName: 'Credit Facility Review',
+    description: 'Families with untested credit lines need facility review and optimization',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'liquidity_credit_facilities', operator: 'in', value: ['none', 'informal'], weight: 4 }
+    ],
+    priority: 85
+  },
+  {
+    id: 'liquidity_concentration_stress_test_needed',
+    serviceRecommendationId: 'liquidity_concentration_stress_test',
+    ruleName: 'Illiquid Concentration Stress Testing',
+    description: 'Families with untested illiquid concentration need stress testing',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'liquidity_concentration', operator: 'equals', value: 'concentrated', weight: 4 },
+      { type: 'score_threshold', pillarId: 'liquidity-cash', operator: 'less_than', value: 1.8, weight: 3 }
+    ],
+    priority: 80
+  },
+
+  // Tax-Exposure Rules
+  {
+    id: 'tax_residency_review_needed',
+    serviceRecommendationId: 'tax_residency_review',
+    ruleName: 'Tax Residency Review',
+    description: 'Families without documented tax residency posture need professional review',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'tax_residency_posture', operator: 'in', value: ['none', 'ad_hoc'], weight: 4 },
+      { type: 'score_threshold', pillarId: 'tax-exposure', operator: 'less_than', value: 1.5, weight: 3 }
+    ],
+    priority: 90
+  },
+  {
+    id: 'tax_event_modeling_needed',
+    serviceRecommendationId: 'tax_liquidity_event_modeling',
+    ruleName: 'Pre-Event Tax Impact Modeling',
+    description: 'Families without pre-event tax modeling face unexpected obligations at liquidity events',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'tax_event_modeling', operator: 'in', value: ['none', 'ad_hoc'], weight: 4 }
+    ],
+    priority: 85
+  },
+  {
+    id: 'tax_estate_mapping_needed',
+    serviceRecommendationId: 'tax_estate_exposure_mapping',
+    ruleName: 'Estate Tax Exposure Mapping',
+    description: 'Families with unmapped estate-tax exposure need comprehensive mapping',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'tax_estate_mapping', operator: 'in', value: ['none', 'ad_hoc'], weight: 4 },
+      { type: 'score_threshold', pillarId: 'tax-exposure', operator: 'less_than', value: 2.0, weight: 3 }
+    ],
+    priority: 80
+  },
+
+  // Estate-Succession Rules
+  {
+    id: 'estate_document_review_needed',
+    serviceRecommendationId: 'estate_document_review',
+    ruleName: 'Estate Document Currency Review',
+    description: 'Families with stale or inaccessible estate documents need currency review',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'estate_document_currency', operator: 'in', value: ['none_outdated', 'partial'], weight: 4 },
+      { type: 'score_threshold', pillarId: 'estate-succession', operator: 'less_than', value: 1.5, weight: 3 }
+    ],
+    priority: 90
+  },
+  {
+    id: 'estate_beneficiary_audit_needed',
+    serviceRecommendationId: 'estate_beneficiary_audit',
+    ruleName: 'Beneficiary Designation Audit',
+    description: 'Families with unreviewed beneficiary designations risk unintended transfers',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'estate_beneficiary_alignment', operator: 'in', value: ['none', 'partial'], weight: 4 }
+    ],
+    priority: 85
+  },
+  {
+    id: 'estate_succession_protocol_needed',
+    serviceRecommendationId: 'estate_succession_protocol',
+    ruleName: 'Business Succession Protocol Development',
+    description: 'Families without succession protocols face failed transitions at key events',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'estate_succession_protocol', operator: 'in', value: ['none', 'partial'], weight: 4 },
+      { type: 'score_threshold', pillarId: 'estate-succession', operator: 'less_than', value: 1.5, weight: 3 }
+    ],
+    priority: 80
+  },
+
+  // Behavioral Resilience Rules
+  {
+    id: 'behavioral_governance_program_needed',
+    serviceRecommendationId: 'behavioral_family_governance_program',
+    ruleName: 'Family Governance Meeting Program',
+    description: 'Families without structured governance meetings need a formal program',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'behavioral_family_meetings', operator: 'in', value: ['none', 'informal'], weight: 4 },
+      { type: 'score_threshold', pillarId: 'family-governance-behavioral', operator: 'less_than', value: 1.5, weight: 3 }
+    ],
+    priority: 90
+  },
+  {
+    id: 'behavioral_decision_rights_needed',
+    serviceRecommendationId: 'behavioral_decision_rights_framework',
+    ruleName: 'Decision Rights Framework Development',
+    description: 'Families with ambiguous authority need a decision-rights matrix',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'behavioral_decision_rights', operator: 'in', value: ['none', 'informal'], weight: 4 }
+    ],
+    priority: 85
+  },
+  {
+    id: 'behavioral_investment_discipline_needed',
+    serviceRecommendationId: 'behavioral_investment_discipline',
+    ruleName: 'Behavioral Finance Discipline Program',
+    description: 'Families without behavioral discipline protocols are vulnerable to emotionally driven investment decisions',
+    triggerConditions: [
+      { type: 'answer_match', questionId: 'behavioral_investment_discipline', operator: 'in', value: ['none', 'informal'], weight: 4 },
+      { type: 'score_threshold', pillarId: 'family-governance-behavioral', operator: 'less_than', value: 1.8, weight: 3 }
+    ],
+    priority: 80
   }
 ];
 

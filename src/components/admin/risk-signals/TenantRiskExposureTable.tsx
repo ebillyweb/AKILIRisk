@@ -15,7 +15,7 @@ export function TenantRiskExposureTable({ rows }: { rows: TenantRiskExposureRow[
         <CardDescription>
           {empty
             ? "No advisors with assessed clients yet."
-            : "Top advisors by families at elevated risk (critical or moderate pillar scores). Advisor identity only — no client names."}
+            : "Top advisors by families at elevated risk (critical or moderate risk domain scores). Advisor identity only — no client names."}
         </CardDescription>
       </CardHeader>
       <CardContent>

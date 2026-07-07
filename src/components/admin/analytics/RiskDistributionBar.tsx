@@ -14,7 +14,7 @@ export function RiskDistributionBar({ distribution }: { distribution: RiskDistri
         <CardTitle className="text-lg font-semibold">Risk-level distribution</CardTitle>
         <CardDescription>
           {empty
-            ? "No scored pillars yet — distribution appears after the first assessment is scored."
+            ? "No scored risk domains yet — distribution appears after the first assessment is scored."
             : `Based on ${total} scored pillar${total === 1 ? "" : "s"} across the platform.`}
         </CardDescription>
       </CardHeader>

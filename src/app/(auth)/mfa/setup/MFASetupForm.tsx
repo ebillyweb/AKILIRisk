@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resolvePostMfaSetupRedirect } from "@/lib/auth/mfa-setup-redirect";
+import { scopePostAuthPath } from "@/lib/client/tenant-path-prefix-client";
 
 export function MFASetupForm({
   required = false,
@@ -47,11 +48,13 @@ export function MFASetupForm({
         if (res.status === 409) {
           await updateSession();
           router.replace(
-            resolvePostMfaSetupRedirect({
-              role: session?.user?.role,
-              mfaVerified: session?.user?.mfaVerified,
-              callbackUrl,
-            })
+            scopePostAuthPath(
+              resolvePostMfaSetupRedirect({
+                role: session?.user?.role,
+                mfaVerified: session?.user?.mfaVerified,
+                callbackUrl,
+              })
+            )
           );
           return;
         }
@@ -107,11 +110,13 @@ export function MFASetupForm({
   }
 
   function handleConfirm() {
-    const destination = resolvePostMfaSetupRedirect({
-      role: session?.user?.role,
-      mfaVerified: true,
-      callbackUrl,
-    });
+    const destination = scopePostAuthPath(
+      resolvePostMfaSetupRedirect({
+        role: session?.user?.role,
+        mfaVerified: true,
+        callbackUrl,
+      })
+    );
     router.push(destination);
     router.refresh();
   }

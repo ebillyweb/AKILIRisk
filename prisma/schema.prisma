@@ -27,6 +27,8 @@ model User {
   /// directly. The plaintext `email` column was dropped in this
   /// commit's migration.
   emailCiphertext String    @unique
+  /// Pseudonymous workspace label for client (USER) accounts, e.g. CL-8F3K-29QX.
+  clientReferenceCode String? @unique
   emailVerified DateTime?
   /// Round-11 commit 3 (BRD §5.1.AUTH): nullable so client (role=USER)
   /// accounts can exist without a password. Advisor + admin accounts
@@ -95,6 +97,12 @@ model User {
   enterpriseMembership          EnterpriseMembership?
   /// Firms where this user is the billing contact (typically the OWNER).
   billingContactEnterprises     AdvisorEnterprise[]   @relation("EnterpriseBillingContact")
+  /// Phase 24: review cadence entries where this user is the client.
+  reviewCadences                ReviewCadence[]
+  /// Phase 25: executive reports where this user is the client.
+  executiveReports              ExecutiveReport[] @relation("ExecutiveReportClient")
+  /// Phase 25: executive reports this user has published (advisor/admin).
+  publishedExecutiveReports     ExecutiveReport[] @relation("ExecutiveReportPublisher")
 
   /// Round-11 commit 2.4a: @@index([email]) + the phase-A
   /// User_emailCiphertext_idx are dropped at the SQL level by
@@ -105,10 +113,10 @@ model User {
 }
 
 enum SubscriptionTier {
-  STARTER
-  GROWTH
+  ESSENTIALS
   PROFESSIONAL
-  ENTERPRISE
+  BUSINESS
+  PLATINUM
 }
 
 enum SubscriptionStatus {
@@ -143,6 +151,7 @@ enum EnterprisePaymentMethod {
 
 enum AdvisorEnterpriseStatus {
   ACTIVE
+  PROVISIONING
   SUSPENDED
 }
 
@@ -161,6 +170,10 @@ model AdvisorEnterprise {
   /// member profiles carry `enterpriseId`.
   brandName             String?
   tagline               String?
+  landingKicker         String?
+  landingHeadline       String?
+  landingSubheadline    String?
+  landingSubtext        String?
   primaryColor          String?
   secondaryColor        String?
   accentColor           String?
@@ -173,15 +186,59 @@ model AdvisorEnterprise {
   logoContentType       String?
   logoFileSize          Int?
   logoUploadedAt        DateTime?
-  brandingEnabled       Boolean                 @default(true)
-  customDomainEnabled   Boolean                 @default(false)
+  brandingEnabled                Boolean                 @default(true)
+  implementationTrackingEnabled  Boolean                 @default(true)
+  /// Enterprise OWNER/ADMIN: what ADVISOR-role team members see in the workspace.
+  advisorMemberPortfolioVisible     Boolean              @default(true)
+  advisorMemberAssessmentLeadsVisible Boolean            @default(true)
+  advisorMemberMethodologyVisible   Boolean              @default(true)
+  advisorMemberEngagementsVisible   Boolean              @default(true)
+  advisorMemberReassessmentVisible  Boolean              @default(true)
+  advisorMemberProductToursVisible  Boolean              @default(true)
+  /// When true, hide tier-gated sidebar items from ADVISOR-role members (vs showing locked).
+  advisorMemberHideTierLockedNav    Boolean              @default(false)
+  /// When true, ADVISOR-role team members may skip intake on invites and in the pipeline.
+  advisorMemberSkipIntakeEnabled    Boolean              @default(false)
+  /// When true, ADVISOR-role team members may skip post-intake review in live sessions and use default pillars.
+  advisorMemberSkipPostIntakeReviewEnabled Boolean       @default(false)
+  /// When true, ADVISOR-role team members may request and track client document requirements.
+  advisorMemberDocumentRequirementsEnabled Boolean       @default(true)
+  /// When true, show Strategic Action Plan in the client portal and advisor guidance workflows.
+  advisorMemberActionPlanEnabled             Boolean       @default(true)
+  /// When true, ADVISOR-role members may edit personal branding for assigned clients.
+  advisorMemberPersonalBrandingEnabled Boolean           @default(false)
+  /// When true (and personal branding enabled), members may claim their own subdomain.
+  advisorMemberSubdomainEditable       Boolean           @default(false)
+  /// Firm default: show Client reference codes instead of email in member workspaces.
+  advisorMemberPseudonymousLabelingDefault Boolean       @default(false)
+  /// Firm default: whether members collect client legal names on intake.
+  advisorMemberCollectClientLegalNameDefault Boolean     @default(true)
+  /// When true, ADVISOR-role members follow firm client data defaults (owners/admins exempt).
+  advisorMemberClientDataPolicyLocked    Boolean         @default(false)
+  /// Firm-wide intake question bank source: platform catalog or custom questions only.
+  intakeQuestionBankMode                 IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
+  /// Firm-wide assessment question bank source: platform catalog or custom questions only.
+  assessmentQuestionBankMode             IntakeQuestionBankMode @default(PLATFORM) @map("assessment_question_bank_mode")
+  /// When false, automated reminder emails are not sent to firm clients (assessment, documents).
+  clientReminderEmailsEnabled            Boolean                @default(true)
+  /// When false, automated workflow reminder emails are not sent to firm advisors.
+  advisorReminderEmailsEnabled           Boolean                @default(true)
+  /// Phase 24 (D-08): enterprise-wide default reassessment frequency.
+  defaultCadenceFrequency        CadenceFrequency        @default(ANNUAL)
+  customDomainEnabled            Boolean                 @default(false)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 
-  subscription    Subscription?
-  memberships     EnterpriseMembership[]
-  advisorProfiles AdvisorProfile[]
-  subdomain       AdvisorSubdomain?
+  subscription          Subscription?
+  memberships           EnterpriseMembership[]
+  advisorProfiles       AdvisorProfile[]
+  subdomain                     AdvisorSubdomain?
+  recommendationRules           EnterpriseRecommendationRule[]
+  solutionCustomizations        EnterpriseSolutionCustomization[]
+  pillarOverrides               EnterprisePillarOverride[]
+  pillarQuestions               EnterprisePillarQuestion[]
+  intakeQuestions               EnterpriseIntakeQuestion[]
+  pillarNarratives              EnterprisePillarNarrative[]
 
   @@index([billingContactUserId])
   @@index([status])
@@ -436,7 +493,15 @@ model Assessment {
   /// time the assessment was scored / re-scored. Array of typed codes such
   /// as `"score_threshold:overall"`, `"domain_flag:cyber-digital"`, or
   /// `"kri:<questionId>"`.
-  upsellTriggersFired Json?
+  upsellTriggersFired    Json?
+  actionPlanPublishedAt  DateTime? @map("action_plan_published_at")
+
+  /// Phase 24 (D-04): self-referential link for reassessment versioning.
+  /// Each reassessment creates a new Assessment row linked to its predecessor.
+  /// Reassessment sequence number is derived from chain length (not `version`).
+  previousAssessmentId String? @map("previous_assessment_id")
+  previousAssessment   Assessment?  @relation("AssessmentChain", fields: [previousAssessmentId], references: [id], onDelete: SetNull)
+  nextAssessments      Assessment[] @relation("AssessmentChain")
 
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   responses     AssessmentResponse[]
@@ -449,11 +514,16 @@ model Assessment {
   reports        Report[]
   portfolioEngagement PortfolioEngagement?
   snapshot            IntakeSnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  /// Phase 24 (D-11): assessment-scoped intelligence events (not tied to a recommendation).
+  intelligenceEvents  SolutionActivity[] @relation("AssessmentIntelligenceEvents")
+  /// Phase 24 (D-08): review cadence entries pointing to this as last completed assessment.
+  reviewCadences      ReviewCadence[]
 
   @@index([userId])
   @@index([status])
   @@index([deliverablePhase])
   @@index([snapshotId])
+  @@index([previousAssessmentId])
 }
 
 model AssessmentResponse {
@@ -618,6 +688,8 @@ model PillarQuestion {
   section PillarSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   advisorAssessmentClones AdvisorPillarQuestion[] @relation("AdvisorAssessmentPlatformSource")
   advisorIntakeClones     AdvisorIntakeQuestion[] @relation("AdvisorIntakePlatformSource")
+  enterpriseAssessmentClones EnterprisePillarQuestion[] @relation("EnterpriseAssessmentPlatformSource")
+  enterpriseIntakeClones     EnterpriseIntakeQuestion[] @relation("EnterpriseIntakePlatformSource")
 
   @@unique([sectionId, questionNumber])
   @@unique([sectionId, displayOrder])
@@ -806,6 +878,7 @@ model IntakeResponse {
   id                  String              @id @default(cuid())
   interviewId         String
   questionId          String
+  textResponse        String?
   audioUrl            String?
   audioS3Key          String?
   audioContentType    String?
@@ -927,13 +1000,20 @@ enum FamilyComplexity {
   FAMILY_BUSINESS_INVOLVED
 }
 
+enum InvestableAssetsRange {
+  UNDER_5M
+  FROM_5M_TO_25M
+  FROM_25M_TO_100M
+  OVER_100M
+  PREFER_NOT_TO_SAY
+}
+
 model GovernanceReviewLead {
-  id                    String            @id @default(cuid())
+  id                    String                 @id @default(cuid())
   name                  String
   email                 String
-  familyOfficeName      String
-  primaryAdvisor        String?
   familyComplexity      FamilyComplexity
+  investableAssetsRange InvestableAssetsRange?
   promptedInterest      String?
   assignedAdvisorId     String?
   assignedAt            DateTime?
@@ -994,6 +1074,10 @@ model AdvisorProfile {
   // Enhanced Branding Fields
   brandName        String?
   tagline          String?
+  landingKicker    String?
+  landingHeadline  String?
+  landingSubheadline String?
+  landingSubtext   String?
   primaryColor     String?
   secondaryColor   String?
   accentColor      String?
@@ -1043,6 +1127,14 @@ model AdvisorProfile {
   starterContentClonedAt DateTime? @map("starter_content_cloned_at")
   /// Last platform Pillar.catalogVersion seen by this advisor.
   catalogVersionSeen     Int       @default(0) @map("catalog_version_seen")
+  /// Active intake question bank for this practice (solo advisors; synced from firm for members).
+  intakeQuestionBankMode IntakeQuestionBankMode @default(PLATFORM) @map("intake_question_bank_mode")
+  /// Active assessment question bank for this practice (solo advisors; synced from firm for members).
+  assessmentQuestionBankMode IntakeQuestionBankMode @default(PLATFORM) @map("assessment_question_bank_mode")
+  /// When false, automated reminder emails are not sent to this practice's clients.
+  clientReminderEmailsEnabled  Boolean @default(true)
+  /// When false, automated workflow reminder emails are not sent to this practice's advisors.
+  advisorReminderEmailsEnabled Boolean @default(true)
 
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt
@@ -1061,8 +1153,13 @@ model AdvisorProfile {
   pillarQuestions       AdvisorPillarQuestion[]
   intakeQuestions       AdvisorIntakeQuestion[]
   pillarNarratives      AdvisorPillarNarrative[]
-  recommendationRules   AdvisorRecommendationRule[]
-  intakeSnapshots       IntakeSnapshot[]
+  recommendationRules        AdvisorRecommendationRule[]
+  solutionCustomizations     AdvisorSolutionCustomization[]
+  intakeSnapshots            IntakeSnapshot[]
+  /// Phase 24: review cadence entries managed by this advisor.
+  reviewCadences             ReviewCadence[]
+  /// Phase 25: executive reports this advisor has generated.
+  executiveReports           ExecutiveReport[]
 
   @@index([userId])
   @@index([enterpriseId])
@@ -1398,11 +1495,30 @@ model ServiceRecommendation {
   complexity         RecommendationComplexity?
   /// C1 (BRD §4.4): nullable so existing rows render as "—" in admin filters.
   implementationType ImplementationType?
+
+  /// Risk Solutions Library (Phase 22): enriched catalog fields
+  slug               String?               @unique
+  shortDescription   String?               @db.VarChar(280)
+  icon               String?               @db.VarChar(60)
+  expectedOutcome    String?               @db.Text
+  tags               String[]              @default([])
+  /// Ordered list of implementation steps (platform playbook).
+  /// Shape: { steps: [{ title, description, estimatedDuration?, sortOrder }] }
+  playbook           Json?
+  externalUrl        String?
+  /// Comma-separated service IDs that should be completed first.
+  prerequisites      String[]              @default([])
+  /// Phase 22 (D-09/D-11): per-field override policy declarations.
+  /// Shape: [{ field: string, tier: "PROTECTED" | "CONFIGURABLE" | "ADDITION" }]
+  overridePolicies   Json?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  recommendationRules         RecommendationRule[]
-  assessmentRecommendations AssessmentRecommendation[]
+  recommendationRules               RecommendationRule[]
+  assessmentRecommendations         AssessmentRecommendation[]
+  enterpriseSolutionCustomizations   EnterpriseSolutionCustomization[]
+  advisorSolutionCustomizations      AdvisorSolutionCustomization[]
 
   @@index([category, priority])
   @@index([isActive])
@@ -1440,6 +1556,7 @@ model RecommendationRule {
 
   serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id], onDelete: Cascade)
   advisorClones         AdvisorRecommendationRule[] @relation("AdvisorRecRulePlatformSource")
+  enterpriseClones      EnterpriseRecommendationRule[] @relation("EnterpriseRecRulePlatformSource")
 
   @@index([serviceRecommendationId])
   @@index([isActive, priority])
@@ -1451,6 +1568,34 @@ enum RecommendationStatus {
   ACCEPTED
   DECLINED
   COMPLETED
+  /// Phase 22: implementation-focused lifecycle states
+  GENERATED
+  INCLUDED
+  DEFERRED
+  IN_PROGRESS
+}
+
+/// Phase 22 (D-21): client-managed task progress
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  WAITING
+  READY_FOR_REVIEW
+  COMPLETED
+}
+
+/// Phase 22 (D-21): advisor-managed validation
+enum ValidationStatus {
+  PENDING_REVIEW
+  VERIFIED
+  NEEDS_FOLLOWUP
+}
+
+/// Phase 22 (D-06): advisor priority override
+enum AdvisorPriority {
+  HIGH
+  MEDIUM
+  LOW
 }
 
 model AssessmentRecommendation {
@@ -1462,15 +1607,58 @@ model AssessmentRecommendation {
   priority                Int
   status                  RecommendationStatus   @default(PENDING)
   advisorNotes            String?
+
+  /// Risk Solutions Library: lifecycle timestamp tracking
+  statusUpdatedAt         DateTime?
+  acceptedAt              DateTime?
+  startedAt               DateTime?
+  completedAt             DateTime?
+  declinedAt              DateTime?
+  declinedReason          String?               @db.Text
+  implementationNotes     String?               @db.Text
+  /// Engine-computed urgency (0-100) based on risk level and trigger severity.
+  urgencyScore            Float?
+  /// Expected risk-score improvement if this solution is implemented.
+  projectedImpact         Float?
+  /// Records which layers (platform/enterprise/advisor) contributed at match time.
+  /// Shape: { platform: bool, enterprise: { id, name } | null, advisor: { id, name } | null }
+  sourceLayerSummary      Json?                 @map("source_layer_summary")
+
+  /// Phase 22 (D-21): client-managed task progress
+  taskStatus              TaskStatus             @default(NOT_STARTED)
+  /// Phase 22 (D-21): advisor-managed validation
+  validationStatus        ValidationStatus       @default(PENDING_REVIEW)
+  /// Phase 22 (D-22): whether this action requires advisor validation
+  requiresValidation      Boolean                @default(false)
+  /// Phase 22 (D-06): advisor override of urgencyScore priority
+  advisorPriority         AdvisorPriority?
+  /// Phase 22 (D-05): hide recommendation from client view
+  hiddenFromClient        Boolean                @default(false)
+  /// Phase 22 (D-08): reason for deferring
+  deferredReason          String?                @db.Text
+  /// Phase 22 (D-08): optional revisit date for deferred items
+  deferredRevisitDate     DateTime?
+  /// Phase 22 (D-08): trigger event for deferred items (e.g., "After business valuation")
+  deferredTriggerEvent    String?                @db.Text
+  /// Phase 22 (D-20): platform-defined responsible roles
+  responsibleRoles        String[]               @default([])
+  /// Phase 22 (D-20): freeform assignee list. Shape: [{ name, role, org }]
+  assignees               Json?
+  /// Phase 22: time horizon for SAP grouping: "immediate", "strategic", "ongoing"
+  timeHorizon             String?                @db.VarChar(20)
+
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
   assessment            Assessment            @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id])
+  milestones            SolutionMilestone[]
+  activities            SolutionActivity[]
 
   @@unique([assessmentId, serviceRecommendationId])
   @@index([assessmentId])
   @@index([status])
+  @@index([taskStatus, hiddenFromClient])
 }
 
 /// §4.5 commit 3 (BRD §4.5): Reporting Engine — choice of cover layout
@@ -1646,10 +1834,14 @@ model Pillar {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  overrides           AdvisorPillarOverride[]
-  assessmentQuestions AdvisorPillarQuestion[]
-  narratives          AdvisorPillarNarrative[]
-  recommendationRules AdvisorRecommendationRule[]
+  overrides                     AdvisorPillarOverride[]
+  assessmentQuestions           AdvisorPillarQuestion[]
+  narratives                    AdvisorPillarNarrative[]
+  recommendationRules           AdvisorRecommendationRule[]
+  enterpriseRecommendationRules EnterpriseRecommendationRule[]
+  enterpriseOverrides           EnterprisePillarOverride[]
+  enterpriseAssessmentQuestions EnterprisePillarQuestion[]
+  enterpriseNarratives          EnterprisePillarNarrative[]
 
   @@index([defaultOrder])
   @@index([archivedAt])
@@ -1660,6 +1852,146 @@ model Pillar {
 model AdvisorPillarOverride {
   id                 String   @id @default(cuid())
   advisorProfileId   String   @map("advisor_profile_id")
+  pillarId           String   @map("pillar_id") @db.Uuid
+  enterpriseSourceId String?  @map("enterprise_source_id")
+  isActive           Boolean  @default(true) @map("is_active")
+  displayName        String?  @map("display_name") @db.VarChar(200)
+  weight             Float    @default(10)
+  threshold          Json
+  sectionWeights     Json?    @map("section_weights")
+  emphasisMultiplier Float    @default(1.5) @map("emphasis_multiplier")
+  displayOrder       Int      @default(0) @map("display_order")
+  version            Int      @default(1)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  advisorProfile   AdvisorProfile           @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar           Pillar                   @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  enterpriseSource EnterprisePillarOverride? @relation("AdvisorPillarOverrideEnterpriseSource", fields: [enterpriseSourceId], references: [id], onDelete: SetNull)
+
+  @@unique([advisorProfileId, pillarId])
+  @@index([advisorProfileId])
+  @@index([pillarId])
+  @@index([enterpriseSourceId])
+  @@map("advisor_pillar_overrides")
+}
+
+/// Source of an advisor-owned question row.
+enum AdvisorQuestionSource {
+  PLATFORM
+  ENTERPRISE
+  CUSTOM
+}
+
+/// Active intake question bank: platform catalog or firm/advisor custom set — not both.
+enum IntakeQuestionBankMode {
+  PLATFORM
+  COMBINED
+  CUSTOM
+}
+
+/// Per-advisor assessment question bank row.
+model AdvisorPillarQuestion {
+  id                 String                 @id @default(cuid())
+  advisorProfileId   String                 @map("advisor_profile_id")
+  pillarId           String                 @map("pillar_id") @db.Uuid
+  sourceKind         AdvisorQuestionSource  @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?                @map("platform_source_id") @db.Uuid
+  enterpriseSourceId String?                @map("enterprise_source_id")
+  sectionCode        String                 @default("") @map("section_code") @db.VarChar(20)
+  displayOrder       Int                    @default(0) @map("display_order")
+  questionNumber     String?                @map("question_number") @db.VarChar(20)
+  questionText       String                 @map("question_text") @db.Text
+  answerType         String                 @default("scored_0_3") @map("answer_type") @db.VarChar(50)
+  scoreMap           Json                   @map("score_map")
+  answer0            String?                @map("answer_0") @db.Text
+  answer1            String?                @map("answer_1") @db.Text
+  answer2            String?                @map("answer_2") @db.Text
+  answer3            String?                @map("answer_3") @db.Text
+  whyThisMatters     String?                @map("why_this_matters") @db.Text
+  recommendedActions String?                @map("recommended_actions") @db.Text
+  isVisible          Boolean                @default(true) @map("is_visible")
+  isKeyRiskIndicator Boolean                @default(false) @map("is_key_risk_indicator")
+  relatedPillarIds   String[]               @default([]) @map("related_pillar_ids") @db.Uuid
+  version            Int                    @default(1)
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+
+  advisorProfile   AdvisorProfile            @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar           Pillar                    @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  platformSource   PillarQuestion?           @relation("AdvisorAssessmentPlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  enterpriseSource EnterprisePillarQuestion? @relation("AdvisorAssessmentEnterpriseSource", fields: [enterpriseSourceId], references: [id], onDelete: SetNull)
+
+  @@index([advisorProfileId, pillarId])
+  @@index([advisorProfileId])
+  @@index([advisorProfileId, sourceKind])
+  @@index([enterpriseSourceId])
+  @@map("advisor_pillar_questions")
+}
+
+/// Per-advisor intake audio script question.
+model AdvisorIntakeQuestion {
+  id                 String                 @id @default(cuid())
+  advisorProfileId   String                 @map("advisor_profile_id")
+  sourceKind         AdvisorQuestionSource  @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?                @map("platform_source_id") @db.Uuid
+  enterpriseSourceId String?                @map("enterprise_source_id")
+  displayOrder       Int                    @default(0) @map("display_order")
+  questionNumber     String?                @map("question_number") @db.VarChar(20)
+  questionText       String                 @map("question_text") @db.Text
+  context            String?                @db.Text
+  helpText           String?                @map("help_text") @db.Text
+  learnMore          String?                @map("learn_more") @db.Text
+  answerType         String                 @default("fillable") @map("answer_type") @db.VarChar(50)
+  answer0            String?                @map("answer_0") @db.Text
+  answer1            String?                @map("answer_1") @db.Text
+  answer2            String?                @map("answer_2") @db.Text
+  answer3            String?                @map("answer_3") @db.Text
+  options            Json?
+  relatedPillarIds   String[]               @default([]) @map("related_pillar_ids") @db.Uuid
+  recommendedActions String?                @map("recommended_actions") @db.Text
+  isVisible          Boolean                @default(true) @map("is_visible")
+  version            Int                    @default(1)
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+
+  advisorProfile   AdvisorProfile           @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  platformSource   PillarQuestion?          @relation("AdvisorIntakePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  enterpriseSource EnterpriseIntakeQuestion? @relation("AdvisorIntakeEnterpriseSource", fields: [enterpriseSourceId], references: [id], onDelete: SetNull)
+
+  @@index([advisorProfileId, displayOrder])
+  @@index([advisorProfileId, sourceKind])
+  @@index([enterpriseSourceId])
+  @@map("advisor_intake_questions")
+}
+
+/// Per-advisor pillar narrative copy for reports and score API.
+model AdvisorPillarNarrative {
+  id                 String   @id @default(cuid())
+  advisorProfileId   String   @map("advisor_profile_id")
+  pillarId           String   @map("pillar_id") @db.Uuid
+  enterpriseSourceId String?  @map("enterprise_source_id")
+  allNegative        Json     @map("all_negative")
+  allYes             Json     @map("all_yes")
+  midBand            Json     @map("mid_band")
+  version            Int      @default(1)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  advisorProfile   AdvisorProfile            @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar           Pillar                    @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  enterpriseSource EnterprisePillarNarrative? @relation("AdvisorNarrativeEnterpriseSource", fields: [enterpriseSourceId], references: [id], onDelete: SetNull)
+
+  @@unique([advisorProfileId, pillarId])
+  @@index([advisorProfileId])
+  @@index([enterpriseSourceId])
+  @@map("advisor_pillar_narratives")
+}
+
+/// Firm-wide pillar toggle, rename, weight, and thresholds.
+model EnterprisePillarOverride {
+  id                 String   @id @default(cuid())
+  enterpriseId       String   @map("enterprise_id")
   pillarId           String   @map("pillar_id") @db.Uuid
   isActive           Boolean  @default(true) @map("is_active")
   displayName        String?  @map("display_name") @db.VarChar(200)
@@ -1672,100 +2004,135 @@ model AdvisorPillarOverride {
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
-  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
-  pillar         Pillar         @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  enterprise    AdvisorEnterprise       @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  pillar        Pillar                  @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  advisorClones AdvisorPillarOverride[] @relation("AdvisorPillarOverrideEnterpriseSource")
 
-  @@unique([advisorProfileId, pillarId])
-  @@index([advisorProfileId])
+  @@unique([enterpriseId, pillarId])
+  @@index([enterpriseId])
   @@index([pillarId])
-  @@map("advisor_pillar_overrides")
+  @@map("enterprise_pillar_overrides")
 }
 
-/// Source of an advisor-owned question row.
-enum AdvisorQuestionSource {
-  PLATFORM
-  CUSTOM
+/// Firm-wide assessment question bank row.
+model EnterprisePillarQuestion {
+  id                 String                @id @default(cuid())
+  enterpriseId       String                @map("enterprise_id")
+  pillarId           String                @map("pillar_id") @db.Uuid
+  sourceKind         AdvisorQuestionSource @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?               @map("platform_source_id") @db.Uuid
+  sectionCode        String                @default("") @map("section_code") @db.VarChar(20)
+  displayOrder       Int                   @default(0) @map("display_order")
+  questionNumber     String?               @map("question_number") @db.VarChar(20)
+  questionText       String                @map("question_text") @db.Text
+  answerType         String                @default("scored_0_3") @map("answer_type") @db.VarChar(50)
+  scoreMap           Json                  @map("score_map")
+  answer0            String?               @map("answer_0") @db.Text
+  answer1            String?               @map("answer_1") @db.Text
+  answer2            String?               @map("answer_2") @db.Text
+  answer3            String?               @map("answer_3") @db.Text
+  whyThisMatters     String?               @map("why_this_matters") @db.Text
+  recommendedActions String?               @map("recommended_actions") @db.Text
+  isVisible          Boolean               @default(true) @map("is_visible")
+  isKeyRiskIndicator Boolean               @default(false) @map("is_key_risk_indicator")
+  relatedPillarIds   String[]              @default([]) @map("related_pillar_ids") @db.Uuid
+  version            Int                   @default(1)
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  enterprise     AdvisorEnterprise         @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  pillar         Pillar                    @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  platformSource PillarQuestion?           @relation("EnterpriseAssessmentPlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  advisorClones  AdvisorPillarQuestion[]   @relation("AdvisorAssessmentEnterpriseSource")
+
+  @@index([enterpriseId, pillarId])
+  @@index([enterpriseId])
+  @@index([enterpriseId, sourceKind])
+  @@index([platformSourceId])
+  @@map("enterprise_pillar_questions")
 }
 
-/// Per-advisor assessment question bank row.
-model AdvisorPillarQuestion {
-  id                 String                 @id @default(cuid())
-  advisorProfileId   String                 @map("advisor_profile_id")
-  pillarId           String                 @map("pillar_id") @db.Uuid
-  sourceKind         AdvisorQuestionSource  @default(PLATFORM) @map("source_kind")
-  platformSourceId   String?                @map("platform_source_id") @db.Uuid
-  sectionCode        String                 @default("") @map("section_code") @db.VarChar(20)
-  displayOrder       Int                    @default(0) @map("display_order")
-  questionNumber     String?                @map("question_number") @db.VarChar(20)
-  questionText       String                 @map("question_text") @db.Text
-  answerType         String                 @default("scored_0_3") @map("answer_type") @db.VarChar(50)
-  scoreMap           Json                   @map("score_map")
-  whyThisMatters     String?                @map("why_this_matters") @db.Text
-  recommendedActions String?                @map("recommended_actions") @db.Text
-  isVisible          Boolean                @default(true) @map("is_visible")
-  isKeyRiskIndicator Boolean                @default(false) @map("is_key_risk_indicator")
-  relatedPillarIds   String[]               @default([]) @map("related_pillar_ids") @db.Uuid
-  version            Int                    @default(1)
-  createdAt          DateTime               @default(now()) @map("created_at")
-  updatedAt          DateTime               @updatedAt @map("updated_at")
-
-  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
-  pillar         Pillar         @relation(fields: [pillarId], references: [id], onDelete: Restrict)
-  platformSource PillarQuestion? @relation("AdvisorAssessmentPlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
-
-  @@index([advisorProfileId, pillarId])
-  @@index([advisorProfileId])
-  @@index([advisorProfileId, sourceKind])
-  @@map("advisor_pillar_questions")
-}
-
-/// Per-advisor intake audio script question.
-model AdvisorIntakeQuestion {
-  id                 String                 @id @default(cuid())
-  advisorProfileId   String                 @map("advisor_profile_id")
-  sourceKind         AdvisorQuestionSource  @default(PLATFORM) @map("source_kind")
-  platformSourceId   String?                @map("platform_source_id") @db.Uuid
-  displayOrder       Int                    @default(0) @map("display_order")
-  questionNumber     String?                @map("question_number") @db.VarChar(20)
-  questionText       String                 @map("question_text") @db.Text
-  context            String?                @db.Text
-  helpText           String?                @map("help_text") @db.Text
-  learnMore          String?                @map("learn_more") @db.Text
-  answerType         String                 @default("audio") @map("answer_type") @db.VarChar(50)
+/// Firm-wide intake audio script question.
+model EnterpriseIntakeQuestion {
+  id                 String                @id @default(cuid())
+  enterpriseId       String                @map("enterprise_id")
+  sourceKind         AdvisorQuestionSource @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?               @map("platform_source_id") @db.Uuid
+  displayOrder       Int                   @default(0) @map("display_order")
+  questionNumber     String?               @map("question_number") @db.VarChar(20)
+  questionText       String                @map("question_text") @db.Text
+  context            String?               @db.Text
+  helpText           String?               @map("help_text") @db.Text
+  learnMore          String?               @map("learn_more") @db.Text
+  answerType         String                @default("fillable") @map("answer_type") @db.VarChar(50)
+  answer0            String?               @map("answer_0") @db.Text
+  answer1            String?               @map("answer_1") @db.Text
+  answer2            String?               @map("answer_2") @db.Text
+  answer3            String?               @map("answer_3") @db.Text
   options            Json?
-  relatedPillarIds   String[]               @default([]) @map("related_pillar_ids") @db.Uuid
-  recommendedActions String?                @map("recommended_actions") @db.Text
-  isVisible          Boolean                @default(true) @map("is_visible")
-  version            Int                    @default(1)
-  createdAt          DateTime               @default(now()) @map("created_at")
-  updatedAt          DateTime               @updatedAt @map("updated_at")
+  relatedPillarIds   String[]              @default([]) @map("related_pillar_ids") @db.Uuid
+  recommendedActions String?               @map("recommended_actions") @db.Text
+  isVisible          Boolean               @default(true) @map("is_visible")
+  version            Int                   @default(1)
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
 
-  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
-  platformSource PillarQuestion? @relation("AdvisorIntakePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  enterprise     AdvisorEnterprise       @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  platformSource PillarQuestion?         @relation("EnterpriseIntakePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  advisorClones  AdvisorIntakeQuestion[] @relation("AdvisorIntakeEnterpriseSource")
 
-  @@index([advisorProfileId, displayOrder])
-  @@index([advisorProfileId, sourceKind])
-  @@map("advisor_intake_questions")
+  @@index([enterpriseId, displayOrder])
+  @@index([enterpriseId, sourceKind])
+  @@index([platformSourceId])
+  @@map("enterprise_intake_questions")
 }
 
-/// Per-advisor pillar narrative copy for reports and score API.
-model AdvisorPillarNarrative {
-  id               String   @id @default(cuid())
-  advisorProfileId String   @map("advisor_profile_id")
-  pillarId         String   @map("pillar_id") @db.Uuid
-  allNegative      Json     @map("all_negative")
-  allYes           Json     @map("all_yes")
-  midBand          Json     @map("mid_band")
-  version          Int      @default(1)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+/// Firm-wide pillar narrative copy for reports and score API.
+model EnterprisePillarNarrative {
+  id           String   @id @default(cuid())
+  enterpriseId String   @map("enterprise_id")
+  pillarId     String   @map("pillar_id") @db.Uuid
+  allNegative  Json     @map("all_negative")
+  allYes       Json     @map("all_yes")
+  midBand      Json     @map("mid_band")
+  version      Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  advisorProfile AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
-  pillar         Pillar         @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  enterprise    AdvisorEnterprise        @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  pillar        Pillar                   @relation(fields: [pillarId], references: [id], onDelete: Restrict)
+  advisorClones AdvisorPillarNarrative[] @relation("AdvisorNarrativeEnterpriseSource")
 
-  @@unique([advisorProfileId, pillarId])
-  @@index([advisorProfileId])
-  @@map("advisor_pillar_narratives")
+  @@unique([enterpriseId, pillarId])
+  @@index([enterpriseId])
+  @@map("enterprise_pillar_narratives")
+}
+
+/// Enterprise-level recommendation rule override (between platform and advisor).
+model EnterpriseRecommendationRule {
+  id                 String                     @id @default(cuid())
+  enterpriseId       String                     @map("enterprise_id")
+  pillarId           String?                    @map("pillar_id") @db.Uuid
+  sourceKind         AdvisorQuestionSource      @default(PLATFORM) @map("source_kind")
+  platformSourceId   String?                    @map("platform_source_id")
+  name               String                     @db.VarChar(200)
+  triggerConditions  Json                       @map("trigger_conditions")
+  servicePayload     Json                       @map("service_payload")
+  priority           Int                        @default(1)
+  isActive           Boolean                    @default(true) @map("is_active")
+  version            Int                        @default(1)
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  enterprise     AdvisorEnterprise  @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  pillar         Pillar?            @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  platformSource RecommendationRule? @relation("EnterpriseRecRulePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  advisorClones  AdvisorRecommendationRule[] @relation("AdvisorRecRuleEnterpriseSource")
+
+  @@index([enterpriseId])
+  @@index([enterpriseId, isActive])
+  @@index([enterpriseId, sourceKind])
+  @@map("enterprise_recommendation_rules")
 }
 
 /// Per-advisor recommendation rule (triggers platform ServiceRecommendation).
@@ -1775,6 +2142,7 @@ model AdvisorRecommendationRule {
   pillarId           String?               @map("pillar_id") @db.Uuid
   sourceKind         AdvisorQuestionSource @default(PLATFORM) @map("source_kind")
   platformSourceId   String?               @map("platform_source_id")
+  enterpriseSourceId String?               @map("enterprise_source_id")
   name               String                @db.VarChar(200)
   triggerConditions  Json                  @map("trigger_conditions")
   servicePayload     Json                  @map("service_payload")
@@ -1784,14 +2152,153 @@ model AdvisorRecommendationRule {
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
-  advisorProfile AdvisorProfile     @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
-  pillar         Pillar?            @relation(fields: [pillarId], references: [id], onDelete: SetNull)
-  platformSource RecommendationRule? @relation("AdvisorRecRulePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  advisorProfile   AdvisorProfile              @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  pillar           Pillar?                     @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+  platformSource   RecommendationRule?         @relation("AdvisorRecRulePlatformSource", fields: [platformSourceId], references: [id], onDelete: SetNull)
+  enterpriseSource EnterpriseRecommendationRule? @relation("AdvisorRecRuleEnterpriseSource", fields: [enterpriseSourceId], references: [id], onDelete: SetNull)
 
   @@index([advisorProfileId])
   @@index([advisorProfileId, isActive])
   @@index([advisorProfileId, sourceKind])
+  @@index([enterpriseSourceId])
   @@map("advisor_recommendation_rules")
+}
+
+// ---------------------------------------------------------------------------
+// Risk Solutions Library: compose-at-read customization overlays
+// ---------------------------------------------------------------------------
+
+/// Enterprise-level overlay on a platform ServiceRecommendation.
+/// Additive only: can override cost/timeframe/provider and append playbook
+/// steps and notes, but cannot remove or hide platform content.
+model EnterpriseSolutionCustomization {
+  id                      String            @id @default(cuid())
+  enterpriseId            String            @map("enterprise_id")
+  serviceRecommendationId String            @map("service_recommendation_id")
+  /// Override fields (null = inherit platform value)
+  costOverride            String?           @map("cost_override")
+  timeframeOverride       String?           @map("timeframe_override")
+  providerOverride        String?           @map("provider_override")
+  /// Additional playbook steps appended after platform steps.
+  /// Shape: { steps: [{ title, description, estimatedDuration?, sortOrder }] }
+  additionalPlaybook      Json?             @map("additional_playbook")
+  /// Free-form notes visible to all advisors in the enterprise.
+  notes                   String?           @db.Text
+  isActive                Boolean           @default(true) @map("is_active")
+  /// Phase 22 (D-14): whether this recommendation is required for the enterprise
+  isRequired              Boolean           @default(false) @map("is_required")
+  /// Phase 22 (D-14): enterprise priority adjustment (-N to +N relative to platform priority)
+  priorityAdjustment      Int?              @map("priority_adjustment")
+  /// Phase 22 (D-14): enterprise-specific compliance disclosures
+  complianceDisclosures   String?           @db.Text @map("compliance_disclosures")
+  /// Phase 22 (D-14): enterprise-specific implementation guidance
+  customGuidance          String?           @db.Text @map("custom_guidance")
+  /// Phase 22 (D-14): enterprise internal links. Shape: [{ url, label }]
+  internalLinks           Json?             @map("internal_links")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+
+  enterprise            AdvisorEnterprise     @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([enterpriseId, serviceRecommendationId])
+  @@index([enterpriseId])
+  @@map("enterprise_solution_customizations")
+}
+
+/// Per-advisor overlay on a platform ServiceRecommendation.
+/// Same additive-only semantics as the enterprise layer.
+model AdvisorSolutionCustomization {
+  id                      String            @id @default(cuid())
+  advisorProfileId        String            @map("advisor_profile_id")
+  serviceRecommendationId String            @map("service_recommendation_id")
+  /// Override fields (null = inherit from enterprise or platform)
+  costOverride            String?           @map("cost_override")
+  timeframeOverride       String?           @map("timeframe_override")
+  providerOverride        String?           @map("provider_override")
+  /// Additional playbook steps appended after enterprise steps.
+  additionalPlaybook      Json?             @map("additional_playbook")
+  notes                   String?           @db.Text
+  isActive                Boolean           @default(true) @map("is_active")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+
+  advisorProfile        AdvisorProfile        @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  serviceRecommendation ServiceRecommendation @relation(fields: [serviceRecommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([advisorProfileId, serviceRecommendationId])
+  @@index([advisorProfileId])
+  @@map("advisor_solution_customizations")
+}
+
+enum MilestoneSource {
+  PLATFORM
+  ENTERPRISE
+  ADVISOR
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+  BLOCKED
+  DEFERRED
+}
+
+/// Materialized playbook step for an accepted recommendation.
+/// Created when status transitions to ACCEPTED; each row is tagged
+/// with the source layer that contributed it.
+model SolutionMilestone {
+  id                         String          @id @default(cuid())
+  assessmentRecommendationId String          @map("assessment_recommendation_id")
+  title                      String          @db.VarChar(200)
+  description                String?         @db.Text
+  estimatedDuration          String?         @map("estimated_duration") @db.VarChar(60)
+  sortOrder                  Int             @default(0) @map("sort_order")
+  source                     MilestoneSource @default(PLATFORM)
+  status                     MilestoneStatus @default(NOT_STARTED)
+  completedAt                DateTime?       @map("completed_at")
+  dueDate                    DateTime?       @map("due_date")
+  blockedReason              String?         @map("blocked_reason") @db.VarChar(500)
+  deferredReason             String?         @map("deferred_reason") @db.VarChar(500)
+  deferredRevisitDate        DateTime?       @map("deferred_revisit_date")
+  createdAt                  DateTime        @default(now()) @map("created_at")
+  updatedAt                  DateTime        @updatedAt @map("updated_at")
+
+  assessmentRecommendation AssessmentRecommendation @relation(fields: [assessmentRecommendationId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentRecommendationId])
+  @@index([assessmentRecommendationId, sortOrder])
+  @@map("solution_milestones")
+}
+
+/// Activity log entry for recommendation lifecycle events (status changes,
+/// notes, milestone completions) and Phase 24 intelligence events (assessment
+/// completions, score changes, cadence triggers). Append-only — never updated
+/// or deleted.
+model SolutionActivity {
+  id                         String   @id @default(cuid())
+  /// Nullable (Phase 24 D-11): intelligence events may not be tied to a
+  /// specific recommendation. Existing recommendation-scoped events still
+  /// populate this field; assessment-scoped events leave it null and use
+  /// assessmentId instead.
+  assessmentRecommendationId String?  @map("assessment_recommendation_id")
+  /// Phase 24 (D-11): optional FK for assessment-scoped intelligence events
+  /// (e.g., assessment_completed, score_calculated, cadence triggers).
+  assessmentId               String?  @map("assessment_id")
+  actorId                    String?  @map("actor_id")
+  action                     String   @db.VarChar(60)
+  detail                     Json?
+  createdAt                  DateTime @default(now()) @map("created_at")
+
+  assessmentRecommendation AssessmentRecommendation? @relation(fields: [assessmentRecommendationId], references: [id], onDelete: Cascade)
+  assessment               Assessment?               @relation("AssessmentIntelligenceEvents", fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentRecommendationId])
+  @@index([assessmentRecommendationId, createdAt])
+  @@index([assessmentId])
+  @@map("solution_activities")
 }
 
 /// Immutable advisor methodology frozen at intake start.
@@ -1811,4 +2318,112 @@ model IntakeSnapshot {
   @@index([advisorProfileId])
   @@index([takenAt])
   @@map("intake_snapshots")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 24: Continuous Risk Improvement
+// ---------------------------------------------------------------------------
+
+/// Phase 24 (D-08): reassessment frequency options.
+enum CadenceFrequency {
+  QUARTERLY    // 90 days
+  SEMI_ANNUAL  // 180 days
+  ANNUAL       // 365 days
+}
+
+/// Phase 24 (D-08, D-09, D-10): per-client reassessment scheduling state.
+/// The Review Cadence Engine manages the reassessment lifecycle — not just
+/// reminders, but active scheduling and system-recommended reassessments.
+model ReviewCadence {
+  id                          String           @id @default(cuid())
+  clientId                    String
+  advisorProfileId            String
+  frequency                   CadenceFrequency @default(ANNUAL)
+  nextDueDate                 DateTime         @map("next_due_date")
+  lastAssessmentId            String?          @map("last_assessment_id")
+  /// Pitfall 5: track last reminder to prevent duplicate sends.
+  lastReminderSentAt          DateTime?        @map("last_reminder_sent_at")
+  /// true = advisor explicitly set; false = inherited from enterprise default.
+  isOverridden                Boolean          @default(false) @map("is_overridden")
+  /// true = AKILI system-initiated recommendation (D-09).
+  systemRecommended           Boolean          @default(false) @map("system_recommended")
+  systemRecommendationReason  String?          @map("system_recommendation_reason")
+  createdAt                   DateTime         @default(now()) @map("created_at")
+  updatedAt                   DateTime         @updatedAt @map("updated_at")
+
+  client          User            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  advisorProfile  AdvisorProfile  @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  lastAssessment  Assessment?     @relation(fields: [lastAssessmentId], references: [id], onDelete: SetNull)
+
+  @@unique([clientId, advisorProfileId])
+  @@index([nextDueDate])
+  @@map("review_cadences")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 25: Executive Reporting
+// ---------------------------------------------------------------------------
+
+/// Phase 25 (D-01, D-03): Multi-assessment executive report with Draft ->
+/// Published -> Superseded lifecycle. Scoped to (client, advisor) pair, not
+/// a single assessment, because executive reports span the full risk story
+/// across multiple assessments (D-22). The frozen executiveSnapshotData is
+/// populated at publish time from buildExecutiveReportSnapshot(). Null on
+/// DRAFT rows -- DRAFT preview renders from live data with a watermark.
+///
+/// Cascade rules (mirror Report model):
+///   * client ON DELETE CASCADE -- RTBF on a client wipes every executive
+///     report for them. Snapshot data includes client PII.
+///   * advisorProfile ON DELETE CASCADE -- removing an advisor profile
+///     removes their executive reports (orphaned without the advisor context).
+///   * publishedBy ON DELETE SET NULL -- deleted advisor preserves report
+///     attribution-as-null rather than orphaning published rows.
+///
+/// Partial unique index (one DRAFT per (clientId, advisorProfileId)):
+///   Enforced by raw SQL in the migration -- Prisma DSL does not support
+///   partial unique indexes. The index is:
+///   CREATE UNIQUE INDEX "ExecutiveReport_clientId_advisorProfileId_draft_unique"
+///       ON "ExecutiveReport"("clientId", "advisorProfileId") WHERE "status" = 'DRAFT';
+model ExecutiveReport {
+  id                     String       @id @default(cuid())
+  /// Scoped to client, not assessment -- executive reports span multiple assessments (D-22).
+  clientId               String
+  advisorProfileId       String
+  /// Monotonic per (clientId, advisorProfileId). DRAFT rows hold the next
+  /// version value pre-emptively; publish transitions DRAFT -> PUBLISHED.
+  version                Int
+  /// Reuses existing ReportStatus enum (DRAFT/PUBLISHED/SUPERSEDED) per D-03.
+  status                 ReportStatus @default(DRAFT)
+
+  /// Reporting window. Advisor can override per D-23; default is "since last published."
+  reportingPeriodStart   DateTime
+  reportingPeriodEnd     DateTime
+
+  /// Frozen multi-assessment snapshot at publish time. Null on DRAFT rows.
+  executiveSnapshotData  Json?
+  /// Frozen advisor branding at publish time. Null on DRAFT rows.
+  brandingSnapshot       Json?
+
+  /// Advisor-authored editorial fields. Editable freely on DRAFT rows;
+  /// frozen into executiveSnapshotData at publish time (D-18).
+  advisorNotes           String?
+  meetingAgenda          String?
+  /// String[] stored as Json (Prisma does not have a native String[] Json column).
+  discussionPrompts      Json?
+
+  publishedAt            DateTime?
+  /// User id of whoever clicked Publish. Null on DRAFT rows and when publisher deleted.
+  publishedById          String?
+
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  client          User          @relation("ExecutiveReportClient", fields: [clientId], references: [id], onDelete: Cascade)
+  advisorProfile  AdvisorProfile @relation(fields: [advisorProfileId], references: [id], onDelete: Cascade)
+  publishedBy     User?         @relation("ExecutiveReportPublisher", fields: [publishedById], references: [id], onDelete: SetNull)
+
+  /// Natural per-(client, advisor, version) uniqueness. Catches concurrent publish races.
+  @@unique([clientId, advisorProfileId, version])
+  /// Covers "fetch DRAFT for this client+advisor" and "fetch PUBLISHED history" at index speed.
+  @@index([clientId, advisorProfileId, status])
 }

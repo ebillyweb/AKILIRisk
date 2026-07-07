@@ -1,10 +1,14 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import { shouldSendNotification } from "@/lib/notifications/preferences";
-import { sendNotification } from "@/lib/notifications/service";
-import { renderNotificationEmail } from "@/lib/notifications/templates";
+import { getReminderEmailPolicyForAdvisorProfile } from "@/lib/notifications/reminder-email-policy";
 import { decryptUserEmail } from "@/lib/auth/user-email";
+import {
+  clientPortalUrl,
+  resolveClientEmailContextForClientAdvisorAssignment,
+} from "@/lib/client/client-email-context";
+import { buildAssessmentReminderClientEmail } from "@/lib/client/client-system-email-content";
+import { sendClientSystemEmail } from "@/lib/email/client-branded-system-email";
 import { getPublicAppUrlStrict } from "@/lib/public-app-url";
 
 interface ProcessResult {
@@ -16,8 +20,8 @@ interface ProcessResult {
  *
  * Logic:
  * - Finds clients with IntakeInterview IN_PROGRESS >7 days old OR Assessment IN_PROGRESS >14 days old
- * - Checks notification preferences for each client
- * - Prevents duplicate reminders within user-configured frequency window (default 7 days)
+ * - Checks practice reminder email policy (advisor/enterprise opt-out)
+ * - Prevents duplicate reminders within advisor-configured frequency window (default 7 days)
  * - Sends reminder emails to CLIENTS (not advisors)
  * - Uses assessment reminder email template
  *
@@ -108,6 +112,7 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
             logoUrl: true,
             user: {
               select: {
+                id: true,
                 name: true,
                 firstName: true,
                 lastName: true,
@@ -123,20 +128,18 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
         const client = assignment.client;
         const advisor = assignment.advisor;
 
-        // Check if we should send notification based on preferences
-        const shouldSend = await shouldSendNotification(client.id, 'reminder', 'email');
-        if (!shouldSend) {
+        const reminderPolicy = await getReminderEmailPolicyForAdvisorProfile(advisor.id);
+        if (!reminderPolicy.clientReminderEmailsEnabled) {
           continue;
         }
 
-        // Check for recent reminders to prevent spam
-        // Use the user's reminder frequency preference, default to 7 days
-        const userPreferences = await prisma.notificationPreference.findUnique({
-          where: { userId: client.id },
+        // Use the advisor's reminder frequency preference, default to 7 days
+        const advisorPreferences = await prisma.notificationPreference.findUnique({
+          where: { userId: advisor.user.id },
           select: { reminderFrequencyDays: true },
         });
 
-        const frequencyDays = userPreferences?.reminderFrequencyDays ?? 7;
+        const frequencyDays = advisorPreferences?.reminderFrequencyDays ?? 7;
         const frequencyCutoff = new Date(Date.now() - frequencyDays * 24 * 60 * 60 * 1000);
 
         // Check for recent reminder notifications to this client
@@ -158,51 +161,37 @@ export async function processAssessmentReminders(): Promise<ProcessResult> {
         const clientName = client.name ||
           (client.firstName && client.lastName ? `${client.firstName} ${client.lastName}` : null);
 
-        // Prepare advisor name
-        const advisorName = advisor.user.name ||
-          (advisor.user.firstName && advisor.user.lastName
-            ? `${advisor.user.firstName} ${advisor.user.lastName}`
-            : 'Your Advisor');
-
-        // Prepare firm name
-        const advisorFirmName = advisor.firmName || 'Akili Risk';
-
-        // Determine assessment URL based on what's incomplete
         const hasIncompleteIntake = client.intakeInterviews?.[0]?.status === 'IN_PROGRESS';
-        const assessmentUrl = hasIncompleteIntake
-          ? `${appUrl}/intake`
-          : `${appUrl}/assessment`;
-
-        // Generate email HTML using the assessment reminder template
-        const emailHtml = renderNotificationEmail('reminder', {
-          clientName: clientName || undefined,
-          assessmentUrl,
-          advisorName,
-          firmName: advisorFirmName,
-          logoUrl: advisor.logoUrl || undefined,
+        const emailContext = await resolveClientEmailContextForClientAdvisorAssignment({
+          clientUserId: client.id,
+          advisorProfileId: advisor.id,
+          advisorUser: advisor.user,
         });
+        const assessmentUrl = clientPortalUrl(
+          emailContext,
+          hasIncompleteIntake ? "/intake" : "/assessment",
+        );
 
-        // Round-11 commit 2.4b: decrypt once per client.
         const clientEmail = decryptUserEmail(client.emailCiphertext);
 
-        // Send notification
-        const result = await sendNotification({
-          recipientUserId: client.id,
-          recipientEmail: clientEmail,
-          category: 'reminder',
-          title: 'Assessment Reminder',
-          message: `Your personal risk profile is ready to complete`,
-          referenceId: client.id,
-          advisorProfileId: advisor.id,
-          emailSubject: 'Your Assessment is Waiting - Akili Risk',
-          emailHtml,
-        });
+        const result = await sendClientSystemEmail(
+          clientEmail,
+          buildAssessmentReminderClientEmail(
+            emailContext,
+            clientName,
+            assessmentUrl,
+          ),
+          emailContext,
+        );
 
-        if (result.emailSent) {
+        if (result.sent) {
           clientsReminded++;
           console.log(`Sent assessment reminder to ${clientEmail}`);
         } else {
-          console.error(`Failed to send assessment reminder to ${clientEmail}`);
+          console.error(
+            `Failed to send assessment reminder to ${clientEmail}:`,
+            "reason" in result ? result.reason : "unknown",
+          );
         }
 
       } catch (clientError) {

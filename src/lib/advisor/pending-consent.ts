@@ -25,7 +25,9 @@ import "server-only";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { recordConsentDecision } from "@/lib/actions/consent-decision-actions";
 import {
+  ELIGIBLE_PII_FIELDS,
   parsePiiPolicy,
   type PiiPolicy,
 } from "@/lib/advisor/pii-policy";
@@ -77,6 +79,35 @@ export async function listAssignmentsAwaitingConsent(
     firmName: r.advisor.firmName,
     advisorPolicy: parsePiiPolicy(r.advisor.piiPolicy),
   }));
+}
+
+function assignmentNeedsConsentPrompt(advisorPolicy: PiiPolicy): boolean {
+  return ELIGIBLE_PII_FIELDS.some((field) => advisorPolicy.fields[field]);
+}
+
+/**
+ * Returns assignments that still need an explicit consent prompt, auto-recording
+ * consent for advisors that do not collect optional PII fields.
+ */
+export async function resolveConsentPromptAssignments(
+  clientUserId: string,
+): Promise<PendingConsentAssignment[]> {
+  const pending = await listAssignmentsAwaitingConsent(clientUserId);
+  const needsPrompt: PendingConsentAssignment[] = [];
+
+  for (const assignment of pending) {
+    if (assignmentNeedsConsentPrompt(assignment.advisorPolicy)) {
+      needsPrompt.push(assignment);
+      continue;
+    }
+
+    await recordConsentDecision({
+      assignmentId: assignment.assignmentId,
+      decisions: {},
+    });
+  }
+
+  return needsPrompt;
 }
 
 /** Convenience: returns true when the client has at least one

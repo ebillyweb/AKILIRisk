@@ -45,7 +45,7 @@ test.describe("Epic 5.6 — PII policy & consent (US-50 / US-51)", () => {
 
       await page.goto("/advisor/settings/pii-policy");
       await expect(
-        page.getByRole("heading", { name: /^PII policy$/i })
+        page.getByRole("heading", { name: /^Client data policy$/i })
       ).toBeVisible();
       await expect(page.getByText("Client phone")).toBeVisible();
 

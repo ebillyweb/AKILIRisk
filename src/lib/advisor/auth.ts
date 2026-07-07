@@ -88,7 +88,16 @@ function advisorHubAccessFromRow(
 export const ADVISOR_ENTERPRISE_SUSPENDED_MESSAGE =
   "Your firm access has been suspended. Contact your firm administrator.";
 
-export type AdvisorHubBlockReason = "deactivated" | "disabled" | "subscription" | "suspended";
+/** Thrown while async enterprise provisioning is still running. */
+export const ADVISOR_ENTERPRISE_PROVISIONING_MESSAGE =
+  "Your firm is still being set up. Try again in a few minutes.";
+
+export type AdvisorHubBlockReason =
+  | "deactivated"
+  | "disabled"
+  | "subscription"
+  | "suspended"
+  | "provisioning";
 
 export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
   allowed: boolean;
@@ -124,6 +133,9 @@ export async function getAdvisorHubAccessForUserId(userId: string): Promise<{
   }
   if (membership?.enterprise.status === "SUSPENDED") {
     return { allowed: false, blockReason: "suspended" };
+  }
+  if (membership?.enterprise.status === "PROVISIONING") {
+    return { allowed: false, blockReason: "provisioning" };
   }
 
   const billingCtx = await resolveBillingContext(userId);
@@ -161,7 +173,9 @@ async function assertAdvisorPortalAccessForAdvisorRole(userId: string): Promise<
           ? ADVISOR_PORTAL_DISABLED_MESSAGE
           : blockReason === "suspended"
             ? ADVISOR_ENTERPRISE_SUSPENDED_MESSAGE
-            : ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE
+            : blockReason === "provisioning"
+              ? ADVISOR_ENTERPRISE_PROVISIONING_MESSAGE
+              : ADVISOR_SUBSCRIPTION_REQUIRED_MESSAGE
     );
   }
 }

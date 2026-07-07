@@ -1,21 +1,20 @@
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   ArrowRight,
-  Briefcase,
-  ClipboardList,
   GitBranch,
-  Mail,
   PlayCircle,
   Radio,
   UserPlus,
 } from "lucide-react";
 import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
+import { GatedClientAddButton } from "@/components/advisor/billing/ClientLimitGate";
+import { AdvisorQuickActions } from "@/components/advisor/workspace/AdvisorQuickActions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { getAdvisorWorkspaceHomeData } from "@/lib/actions/advisor-workspace-actions";
 import { advisorWorkspaceTitle } from "@/lib/advisor/advisor-workspace-label";
+import { cn } from "@/lib/utils";
 import { MetricCard } from "./MetricCard";
 import type {
   AdvisorActivityItem,
@@ -94,44 +93,35 @@ function IntelligenceCard({ item }: { item: AdvisorIntelligenceHighlight }) {
   );
 }
 
-function PipelineSnapshot({ metrics, pendingInvitations }: { metrics: PipelineMetrics; pendingInvitations: number }) {
+function PipelineSnapshot({
+  metrics,
+  pendingInvitations,
+  documentRequirementsEnabled = true,
+}: {
+  metrics: PipelineMetrics;
+  pendingInvitations: number;
+  documentRequirementsEnabled?: boolean;
+}) {
   const byStage = metrics.byStage;
   const activeInFlight =
     (byStage.INTAKE_IN_PROGRESS ?? 0) + (byStage.ASSESSMENT_IN_PROGRESS ?? 0);
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <div
+      className={cn(
+        "grid grid-cols-2 gap-2 sm:grid-cols-3",
+        documentRequirementsEnabled ? "lg:grid-cols-6" : "lg:grid-cols-5",
+      )}
+    >
       <MetricCard label="Assigned clients" value={metrics.total} />
       <MetricCard label="Pending invitations" value={pendingInvitations} />
       <MetricCard label="Awaiting review" value={byStage.INTAKE_COMPLETE ?? 0} />
       <MetricCard label="Intake / assessment active" value={activeInFlight} />
-      <MetricCard label="Need documents" value={metrics.documentsNeeded} />
+      {documentRequirementsEnabled ? (
+        <MetricCard label="Need documents" value={metrics.documentsNeeded} />
+      ) : null}
       <MetricCard label="Stalled (7+ days)" value={metrics.stalled} />
     </div>
-  );
-}
-
-function QuickActionButton({
-  href,
-  label,
-  description,
-  icon: Icon,
-}: {
-  href: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Button asChild variant="outline" className="h-auto min-h-[4.5rem] justify-start px-4 py-3">
-      <Link href={href} className="flex w-full items-start gap-3 text-left">
-        <Icon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-        <span className="min-w-0">
-          <span className="block text-sm font-medium">{label}</span>
-          <span className="block text-xs font-normal text-muted-foreground">{description}</span>
-        </span>
-      </Link>
-    </Button>
   );
 }
 
@@ -141,7 +131,20 @@ interface AdvisorWorkspaceHomeProps {
 }
 
 export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps) {
-  const { profile, metrics, priorities, activity, intelligenceHighlights, flags } = data;
+  const {
+    profile,
+    metrics,
+    priorities,
+    activity,
+    intelligenceHighlights,
+    flags,
+    clientLimitStatus,
+    subscriptionTier,
+    implementationTrackingEnabled,
+    memberPortfolioVisible,
+    memberEngagementsVisible,
+    memberDocumentRequirementsVisible,
+  } = data;
   const firstName = profile.user.firstName;
   const firmName = profile.firmName;
   const workspaceTitle = advisorWorkspaceTitle(profile.user);
@@ -155,7 +158,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
           {workspaceTitle}
         </p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-          Today
+          Overview
         </h2>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Welcome back
@@ -172,17 +175,30 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href="/advisor/invitations" className="inline-flex items-center gap-2">
-              <UserPlus className="size-4" />
-              Invite client
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
             <Link href="/advisor/facilitate" className="inline-flex items-center gap-2">
               <PlayCircle className="size-4" />
-              Start client session
+              Start live session
             </Link>
           </Button>
+          {clientLimitStatus ? (
+            <GatedClientAddButton
+              status={clientLimitStatus}
+              href="/advisor/invitations"
+              variant="outline"
+              size="sm"
+              className="inline-flex items-center gap-2"
+            >
+              <UserPlus className="size-4" />
+              Invite client
+            </GatedClientAddButton>
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/advisor/invitations" className="inline-flex items-center gap-2">
+                <UserPlus className="size-4" />
+                Invite client
+              </Link>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -199,7 +215,7 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border/70 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Today&apos;s priorities</CardTitle>
+            <CardTitle className="text-base">Top priorities</CardTitle>
             <CardDescription>Items that need your attention first</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -248,12 +264,13 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
             <PipelineSnapshot
               metrics={metrics}
               pendingInvitations={data.pendingInvitationsCount}
+              documentRequirementsEnabled={memberDocumentRequirementsVisible}
             />
           </CardContent>
         </Card>
       )}
 
-      {flags.riskIntelligenceEnabled && (
+      {flags.riskIntelligenceEnabled && memberPortfolioVisible && (
         <Card className="border-border/70 shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
             <div>
@@ -285,31 +302,13 @@ export function AdvisorWorkspaceHome({ data, error }: AdvisorWorkspaceHomeProps)
         </Card>
       )}
 
-      <Card className="border-border/70 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quick actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <QuickActionButton
-            href="/advisor/pipeline?awaitingReview=1"
-            label="Intake queue"
-            description="Review submitted client intakes"
-            icon={ClipboardList}
-          />
-          <QuickActionButton
-            href="/advisor/pipeline?documentsNeeded=1"
-            label="Document Requests"
-            description="Outstanding mandatory uploads"
-            icon={Mail}
-          />
-          <QuickActionButton
-            href="/advisor/engagements"
-            label="Engagements"
-            description="Accepted recommendations in progress"
-            icon={Briefcase}
-          />
-        </CardContent>
-      </Card>
+      <AdvisorQuickActions
+        subscriptionTier={subscriptionTier}
+        implementationTrackingEnabled={
+          implementationTrackingEnabled && memberEngagementsVisible
+        }
+        documentRequirementsEnabled={memberDocumentRequirementsVisible}
+      />
     </div>
   );
 }

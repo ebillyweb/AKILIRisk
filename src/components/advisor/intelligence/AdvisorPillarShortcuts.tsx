@@ -15,12 +15,12 @@ export function AdvisorPillarShortcuts({ shortcuts }: AdvisorPillarShortcutsProp
       <Card className="border-0 bg-transparent shadow-none">
         <CardHeader className="px-0 pt-0">
           <CardTitle id="advisor-pillar-shortcuts-heading" className="text-base">
-            Assessment pillars
+            Risk domains
           </CardTitle>
           <CardDescription>
             Household risk domains for intake and scoring. Configure your methodology in{" "}
             <Link href="/advisor/methodology" className="font-medium text-primary underline-offset-4 hover:underline">
-              Configuration → Methodology
+              Account → Your methodology
             </Link>
             .
           </CardDescription>
@@ -28,7 +28,7 @@ export function AdvisorPillarShortcuts({ shortcuts }: AdvisorPillarShortcutsProp
         <CardContent className="grid gap-4 px-0 pb-0 sm:grid-cols-2 lg:grid-cols-3">
           {shortcuts.length === 0 ? (
             <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">
-              No pillars are active in your methodology. Enable pillars under Methodology → Pillar manager.
+              No risk domains are active in your methodology. Enable risk domains under Methodology → Risk domain manager.
             </p>
           ) : (
             shortcuts.map(({ id, name, summary, icon: PillarIcon }) => {

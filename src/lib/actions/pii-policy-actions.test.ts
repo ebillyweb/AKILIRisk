@@ -19,6 +19,7 @@ const { dbState, fakes } = vi.hoisted(() => {
   const state = {
     advisorPiiPolicy: {
       schemaVersion: 1,
+      pseudonymousWorkspaceLabeling: false,
       fields: {
         "User.name": true,
         "ClientProfile.phone": true,
@@ -119,6 +120,7 @@ import { updatePiiPolicy } from "./pii-policy-actions";
 beforeEach(() => {
   dbState.advisorPiiPolicy = {
     schemaVersion: 1,
+    pseudonymousWorkspaceLabeling: false,
     fields: {
       "User.name": true,
       "ClientProfile.phone": true,
@@ -283,5 +285,17 @@ describe("updatePiiPolicy", () => {
       schemaVersion: 1,
       fields: { "User.name": false },
     });
+  });
+
+  it("persists pseudonymous workspace labeling independently of intake fields", async () => {
+    const result = await updatePiiPolicy({
+      pseudonymousWorkspaceLabeling: true,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.updated).toBe(1);
+    expect(result.data.policy.pseudonymousWorkspaceLabeling).toBe(true);
+    expect(result.data.policy.fields["User.name"]).toBe(true);
   });
 });

@@ -15,6 +15,9 @@ function session(
     completedAt: null,
     clientName: "Test Client",
     clientEmail: "test@example.com",
+    progressDetail: null,
+    clientDisplayName: "Test Client",
+    clientDisplayPseudonymous: false,
     ...overrides,
   };
 }
@@ -30,6 +33,27 @@ describe("mergeFacilitatedLauncherClients", () => {
       id: "client-1",
       name: "Test Client",
       openSession: { id: "sess-1", status: "ASSESSMENT" },
+    });
+  });
+
+  it("uses pseudonymous display labels for session-only clients", () => {
+    const merged = mergeFacilitatedLauncherClients(
+      [],
+      [
+        session({
+          clientId: "client-1",
+          clientName: "Buddy Northbridge Brand Client 1",
+          clientEmail: "buddy@example.com",
+          clientDisplayName: "Client CL-8F3K-29QX",
+          clientDisplayPseudonymous: true,
+        }),
+      ],
+    );
+    expect(merged[0]).toMatchObject({
+      id: "client-1",
+      name: "Client CL-8F3K-29QX",
+      email: "",
+      pseudonymous: true,
     });
   });
 

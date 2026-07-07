@@ -1,4 +1,7 @@
+"use client";
+
 import { Checkbox } from "@/components/ui/checkbox";
+import { FieldHelp } from "@/components/ui/field-help";
 import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 import { sortPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import { cn } from "@/lib/utils";
@@ -19,8 +22,9 @@ export function IntakeRelatedPillarsField({
 
   return (
     <fieldset className="space-y-3" disabled={disabled}>
-      <legend className="text-sm font-medium leading-none">
-        Related assessment pillars
+      <legend className="flex items-center gap-1 text-sm font-medium leading-none">
+        Related risk domains
+        <FieldHelp helpKey="intake-related-pillars" triggerLabel="Related risk domains" />
       </legend>
       <p className="text-xs text-muted-foreground">
         Used to suggest which domains to include when an advisor approves intake.

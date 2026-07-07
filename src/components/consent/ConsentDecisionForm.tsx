@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { recordConsentDecision } from "@/lib/actions/consent-decision-actions";
+import { stripTenantPathPrefix } from "@/lib/client/tenant-path-prefix-client";
 import {
   ELIGIBLE_PII_FIELDS,
   PII_FIELD_LABELS,
@@ -41,6 +42,8 @@ interface ConsentDecisionFormProps {
   assignments: PendingAssignmentPrompt[];
   /** Where to send the client once all consent prompts are satisfied. */
   returnTo?: string;
+  settingsHref?: string;
+  profilesHref?: string;
 }
 
 function ConsentChoice({
@@ -75,6 +78,8 @@ function ConsentChoice({
 export function ConsentDecisionForm({
   assignments,
   returnTo = "/dashboard",
+  settingsHref = "/settings",
+  profilesHref = "/profiles",
 }: ConsentDecisionFormProps) {
   const router = useRouter();
   const [decisions, setDecisions] = useState<
@@ -111,7 +116,6 @@ export function ConsentDecisionForm({
       toast.success("Preferences saved.");
       if (assignments.length === 1) {
         router.push(returnTo);
-        router.refresh();
         return;
       }
       router.refresh();
@@ -144,11 +148,17 @@ export function ConsentDecisionForm({
               <p className="text-sm leading-relaxed text-foreground/75">
                 Choose what optional details {firmLabel} may view. You can update
                 these later in{" "}
-                <Link href="/settings" className="font-medium text-primary hover:underline">
+                <Link
+                  href={settingsHref}
+                  className="font-medium text-primary hover:underline"
+                >
                   Settings
                 </Link>{" "}
                 or{" "}
-                <Link href="/profiles" className="font-medium text-primary hover:underline">
+                <Link
+                  href={profilesHref}
+                  className="font-medium text-primary hover:underline"
+                >
                   Profiles
                 </Link>
                 .
@@ -211,7 +221,7 @@ export function ConsentDecisionForm({
                 ) : (
                   <Check className="mr-2 h-4 w-4" />
                 )}
-                {returnTo === "/assessment"
+                {stripTenantPathPrefix(returnTo) === "/assessment"
                   ? "Continue to assessment"
                   : "Continue to dashboard"}
               </Button>

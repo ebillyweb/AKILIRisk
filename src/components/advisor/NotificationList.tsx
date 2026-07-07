@@ -5,6 +5,7 @@ import { Bell, RefreshCw, Info } from "lucide-react";
 import { formatDistanceToNow, isToday, isThisWeek } from "date-fns";
 import { useRouter } from "next/navigation";
 import { markNotificationReadAction } from "@/lib/actions/advisor-actions";
+import { advisorNotificationHref } from "@/lib/advisor/notification-links";
 import type { AdvisorNotification } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -173,18 +174,16 @@ export function NotificationList({ notifications }: NotificationListProps) {
       }
     }
 
-    if (notification.referenceId && notification.type === "NEW_INTAKE") {
-      router.push(`/advisor/review/${notification.referenceId}`);
+    const href = advisorNotificationHref(notification);
+    if (href !== "/advisor/notifications") {
+      router.push(href);
     }
   };
 
   if (notifications.length === 0) {
     return (
       <div className="mx-auto max-w-md rounded-xl border border-dashed border-border/80 bg-muted/20 px-6 py-14 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-          <Bell className="h-7 w-7 text-muted-foreground" aria-hidden />
-        </div>
-        <p className="mt-5 text-sm font-medium text-foreground">No notifications yet</p>
+        <p className="text-sm font-medium text-foreground">No notifications yet</p>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           When clients complete intake or assessments, updates will show up here.
         </p>

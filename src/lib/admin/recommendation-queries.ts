@@ -12,6 +12,10 @@ import "server-only";
  */
 
 import { prisma } from "@/lib/db";
+import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
+import { loadGovernanceQuestionWires } from "@/lib/assessment/bank/load-bank";
+import type { RulePickerQuestion } from "@/lib/admin/recommendation-rule-ui";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 
 export interface ServiceRecommendationListFilter {
   category?: string;
@@ -111,6 +115,68 @@ export async function listServiceRecommendationsForRulePicker(): Promise<
     select: { id: true, name: true, category: true },
   });
   return rows;
+}
+
+/** All assessment questions for the recommendation rule form picker. */
+export async function listQuestionsForRulePicker(): Promise<RulePickerQuestion[]> {
+  const [wires, catalog] = await Promise.all([
+    loadGovernanceQuestionWires({ onlyVisible: false }),
+    getPlatformPillarCatalog(),
+  ]);
+  const pillarNames = new Map(catalog.map((pillar) => [pillar.id, pillar.name]));
+
+  return wires
+    .filter((wire): wire is typeof wire & { riskAreaId: string } => Boolean(wire.riskAreaId))
+    .map((wire) => ({
+      questionId: wire.questionId,
+      text: formatQuestionTextForDisplay(wire.text),
+      pillarId: wire.riskAreaId,
+      pillarName: pillarNames.get(wire.riskAreaId) ?? wire.riskAreaId,
+      type: wire.type,
+      answerOptions: answerOptionsFromWire(wire),
+    }))
+    .sort((a, b) => {
+      const byPillar = a.pillarName.localeCompare(b.pillarName);
+      if (byPillar !== 0) return byPillar;
+      return a.text.localeCompare(b.text);
+    });
+}
+
+function answerOptionsFromWire(
+  wire: {
+    type: string;
+    options: unknown;
+    scoreMap: Record<string, unknown>;
+  },
+): Array<{ value: string; label: string }> {
+  if (Array.isArray(wire.options) && wire.options.length > 0) {
+    return wire.options
+      .map((option) => {
+        if (!option || typeof option !== "object") return null;
+        const row = option as { value?: unknown; label?: unknown };
+        if (row.value === undefined || row.value === null) return null;
+        return {
+          value: String(row.value),
+          label:
+            typeof row.label === "string" && row.label.trim()
+              ? row.label.trim()
+              : String(row.value),
+        };
+      })
+      .filter((option): option is { value: string; label: string } => option !== null);
+  }
+
+  if (wire.type === "yes-no") {
+    return [
+      { value: "no", label: "No" },
+      { value: "yes", label: "Yes" },
+    ];
+  }
+
+  return Object.keys(wire.scoreMap ?? {}).map((value) => ({
+    value,
+    label: value,
+  }));
 }
 
 /** Distinct category values for the catalog filter datalist. Cheap query —

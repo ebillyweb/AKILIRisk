@@ -1,11 +1,15 @@
 import "server-only";
 
-import type { UserRole } from "@prisma/client";
+import type { Prisma, UserRole } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
-import { decryptUserEmail, withDecryptedEmail } from "@/lib/auth/user-email";
+import {
+  findUserByEmail,
+  safeDecryptUserEmail,
+  withDecryptedEmail,
+} from "@/lib/auth/user-email";
 
 export type ClientsAdminScope = "active" | "all";
 
@@ -60,8 +64,25 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
           primaryColor: true,
           secondaryColor: true,
           accentColor: true,
+          enterpriseId: true,
+          enterprise: {
+            select: {
+              name: true,
+              status: true,
+              brandName: true,
+              primaryColor: true,
+              secondaryColor: true,
+              accentColor: true,
+              logoUrl: true,
+              logoS3Key: true,
+              brandingEnabled: true,
+            },
+          },
           _count: { select: { clientAssignments: true } },
         },
+      },
+      enterpriseMembership: {
+        select: { status: true },
       },
     },
     orderBy: { createdAt: "asc" },
@@ -112,19 +133,73 @@ export async function getAdvisorForAdmin(userId: string) {
 
 const CLIENTS_ADMIN_PAGE_SIZE = 20;
 
+function clientsAdminBaseWhere(scope: ClientsAdminScope): Prisma.UserWhereInput {
+  return {
+    role: "USER",
+    ...(scope === "active" ? { deletedAt: null } : {}),
+  };
+}
+
+async function findClientIdsByEmailSubstring(
+  needle: string,
+  baseWhere: Prisma.UserWhereInput,
+): Promise<string[]> {
+  const users = await prisma.user.findMany({
+    where: baseWhere,
+    select: { id: true, emailCiphertext: true },
+  });
+  const normalizedNeedle = needle.toLowerCase();
+  return users
+    .filter((user) => {
+      const email = safeDecryptUserEmail(user.emailCiphertext, { rowId: user.id });
+      return email?.toLowerCase().includes(normalizedNeedle) ?? false;
+    })
+    .map((user) => user.id);
+}
+
+async function buildClientsAdminWhere(
+  scope: ClientsAdminScope,
+  q?: string,
+): Promise<Prisma.UserWhereInput> {
+  const baseWhere = clientsAdminBaseWhere(scope);
+  const needle = q?.trim();
+  if (!needle) return baseWhere;
+
+  const orConditions: Prisma.UserWhereInput[] = [
+    { id: { contains: needle, mode: "insensitive" } },
+    { name: { contains: needle, mode: "insensitive" } },
+  ];
+
+  if (needle.includes("@")) {
+    const exactEmailMatch = await findUserByEmail(needle, {
+      where: baseWhere,
+      select: { id: true },
+    });
+    if (exactEmailMatch) {
+      orConditions.push({ id: exactEmailMatch.id });
+    }
+  }
+
+  const emailMatchIds = await findClientIdsByEmailSubstring(needle, baseWhere);
+  if (emailMatchIds.length > 0) {
+    orConditions.push({ id: { in: emailMatchIds } });
+  }
+
+  return { ...baseWhere, OR: orConditions };
+}
+
 export async function getClientsForAdmin(opts?: {
   scope?: ClientsAdminScope;
   page?: number;
   pageSize?: number;
+  q?: string;
 }) {
   const { userId, email, role } = await requireAdminRole();
   const scope = opts?.scope ?? "active";
   const pageSize = opts?.pageSize ?? CLIENTS_ADMIN_PAGE_SIZE;
   const requestedPage = opts?.page && opts.page > 0 ? opts.page : 1;
-  const where = {
-    role: "USER" as const,
-    ...(scope === "active" ? { deletedAt: null } : {}),
-  };
+  const q = opts?.q?.trim() || undefined;
+  const where = await buildClientsAdminWhere(scope, q);
   const totalCount = await prisma.user.count({ where });
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const page = Math.min(requestedPage, totalPages);
@@ -149,7 +224,7 @@ export async function getClientsForAdmin(opts?: {
           advisor: {
             select: {
               id: true,
-              user: { select: { emailCiphertext: true, name: true } },
+              user: { select: { id: true, emailCiphertext: true, name: true } },
               firmName: true,
             },
           },
@@ -183,7 +258,7 @@ export async function getClientsForAdmin(opts?: {
         : null;
     return {
       ...u,
-      email: decryptUserEmail(u.emailCiphertext),
+      email: safeDecryptUserEmail(u.emailCiphertext, { rowId: u.id }),
       latestScoredAssessmentId,
       clientAssignments: u.clientAssignments.map((a) => ({
         ...a,
@@ -191,25 +266,21 @@ export async function getClientsForAdmin(opts?: {
           ...a.advisor,
           user: {
             ...a.advisor.user,
-            email: decryptUserEmail(a.advisor.user.emailCiphertext),
+            email: safeDecryptUserEmail(a.advisor.user.emailCiphertext, {
+              rowId: a.advisor.user.id,
+            }),
           },
         },
       })),
     };
   });
 
-  // Fire-and-forget audit. writeAudit catches its own errors so a slow Prisma
-  // write can't break the page render. Metadata records the row count only —
-  // the actual user list (PII-heavy) is NOT logged. Filter params are an
-  // empty object today (the admin clients page filters client-side after
-  // loading the full list); recorded for parity with future filterable
-  // versions of these queries.
   void writeAudit({
     actor: { userId, role: role as UserRole, email },
     action: AUDIT_ACTIONS.DATA_ACCESS_ADMIN_CLIENTS_LIST,
     entityType: "User",
     entityId: null,
-    metadata: { rowCount: users.length, totalCount, filterParams: { scope, page } },
+    metadata: { rowCount: users.length, totalCount, filterParams: { scope, page, q } },
   });
 
   return { clients: users, totalCount, page, pageSize };
@@ -232,7 +303,12 @@ export async function getIntakeForAdmin() {
         select: {
           id: true,
           status: true,
-          advisor: { select: { user: { select: { emailCiphertext: true } } } },
+          advisor: {
+            select: {
+              id: true,
+              user: { select: { emailCiphertext: true } },
+            },
+          },
         },
       },
       _count: { select: { responses: true } },
@@ -241,7 +317,10 @@ export async function getIntakeForAdmin() {
   });
   const interviews = interviewsRaw.map((i) => ({
     ...i,
-    user: { ...i.user, email: decryptUserEmail(i.user.emailCiphertext) },
+    user: {
+      ...i.user,
+      email: safeDecryptUserEmail(i.user.emailCiphertext, { rowId: i.user.id }),
+    },
     approval: i.approval
       ? {
           ...i.approval,
@@ -249,7 +328,10 @@ export async function getIntakeForAdmin() {
             ...i.approval.advisor,
             user: {
               ...i.approval.advisor.user,
-              email: decryptUserEmail(i.approval.advisor.user.emailCiphertext),
+              email: safeDecryptUserEmail(
+                i.approval.advisor.user.emailCiphertext,
+                { rowId: i.approval.advisor.id }
+              ),
             },
           },
         }
@@ -276,6 +358,7 @@ export async function getAssessmentsForAdmin() {
       userId: true,
       version: true,
       status: true,
+      answersChangedAfterCompleteAt: true,
       currentPillar: true,
       currentQuestionIndex: true,
       startedAt: true,
@@ -288,7 +371,10 @@ export async function getAssessmentsForAdmin() {
   });
   const assessments = assessmentsRaw.map((a) => ({
     ...a,
-    user: { ...a.user, email: decryptUserEmail(a.user.emailCiphertext) },
+    user: {
+      ...a.user,
+      email: safeDecryptUserEmail(a.user.emailCiphertext, { rowId: a.user.id }),
+    },
   }));
 
   void writeAudit({
@@ -312,7 +398,7 @@ export async function getGovernanceReviewLeadsForAdmin() {
         select: {
           id: true,
           firmName: true,
-          user: { select: { emailCiphertext: true, name: true } },
+          user: { select: { id: true, emailCiphertext: true, name: true } },
         },
       },
     },
@@ -324,7 +410,9 @@ export async function getGovernanceReviewLeadsForAdmin() {
           ...l.assignedAdvisor,
           user: {
             ...l.assignedAdvisor.user,
-            email: decryptUserEmail(l.assignedAdvisor.user.emailCiphertext),
+            email: safeDecryptUserEmail(l.assignedAdvisor.user.emailCiphertext, {
+              rowId: l.assignedAdvisor.id,
+            }),
           },
         }
       : null,
@@ -339,13 +427,16 @@ export async function getAdvisorProfilesForLeadAssignment() {
     select: {
       id: true,
       firmName: true,
-      user: { select: { emailCiphertext: true, name: true } },
+      user: { select: { id: true, emailCiphertext: true, name: true } },
     },
     orderBy: { id: "asc" },
   });
   return profiles.map((p) => ({
     ...p,
-    user: { ...p.user, email: decryptUserEmail(p.user.emailCiphertext) },
+    user: {
+      ...p.user,
+      email: safeDecryptUserEmail(p.user.emailCiphertext, { rowId: p.user.id }),
+    },
   }));
 }
 
@@ -361,6 +452,7 @@ export type AdminEnterpriseListRow = {
   activeSeats: number;
   seatOverage: number;
   subscriptionStatus: string | null;
+  moduleTier: string | null;
   ownerName: string | null;
   ownerEmail: string | null;
 };
@@ -377,12 +469,12 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       clientLimit: true,
       paymentMethod: true,
       createdAt: true,
-      subscription: { select: { status: true } },
+      subscription: { select: { status: true, tier: true } },
       memberships: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
         select: {
-          user: { select: { name: true, emailCiphertext: true } },
+          user: { select: { id: true, name: true, emailCiphertext: true } },
         },
       },
       _count: {
@@ -408,8 +500,11 @@ export async function getEnterprisesForAdmin(): Promise<AdminEnterpriseListRow[]
       activeSeats: enterprise._count.memberships,
       seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
       subscriptionStatus: enterprise.subscription?.status ?? null,
+      moduleTier: enterprise.subscription?.tier ?? null,
       ownerName: owner?.name ?? null,
-      ownerEmail: owner ? decryptUserEmail(owner.emailCiphertext) : null,
+      ownerEmail: owner
+        ? safeDecryptUserEmail(owner.emailCiphertext, { rowId: owner.id })
+        : null,
     };
   });
 }
@@ -427,6 +522,8 @@ export type AdminEnterpriseDetail = {
   activeSeats: number;
   seatOverage: number;
   subscriptionStatus: string | null;
+  moduleTier: string | null;
+  billingCycle: string | null;
   ownerName: string | null;
   ownerEmail: string | null;
   ownerUserId: string | null;
@@ -448,7 +545,7 @@ export async function getEnterpriseDetailForAdmin(
       perAdvisorClientLimit: true,
       paymentMethod: true,
       createdAt: true,
-      subscription: { select: { status: true } },
+      subscription: { select: { status: true, tier: true, billingCycle: true } },
       memberships: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
@@ -480,8 +577,12 @@ export async function getEnterpriseDetailForAdmin(
     activeSeats: enterprise._count.memberships,
     seatOverage: Math.max(0, enterprise._count.memberships - enterprise.seatLimit),
     subscriptionStatus: enterprise.subscription?.status ?? null,
+    moduleTier: enterprise.subscription?.tier ?? null,
+    billingCycle: enterprise.subscription?.billingCycle ?? null,
     ownerName: owner?.name ?? null,
-    ownerEmail: owner ? decryptUserEmail(owner.emailCiphertext) : null,
+    ownerEmail: owner
+      ? safeDecryptUserEmail(owner.emailCiphertext, { rowId: owner.id })
+      : null,
     ownerUserId: owner?.id ?? null,
   };
 }
@@ -511,7 +612,7 @@ export async function getAdvisorsEligibleForEnterpriseOwner() {
     const { emailCiphertext, advisorProfile, ...rest } = advisor;
     return {
       ...rest,
-      email: decryptUserEmail(emailCiphertext),
+      email: safeDecryptUserEmail(emailCiphertext, { rowId: advisor.id }),
       advisorProfile,
     };
   });

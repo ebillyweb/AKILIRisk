@@ -21,6 +21,7 @@ import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { requireFacilitatedSessionForAdvisor } from "@/lib/facilitated/session-access";
 import { getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
 import { tryBootstrapFacilitatedFromExistingApproval } from "@/lib/facilitated/bootstrap-assessment-from-approval";
+import { tryAdvanceFacilitatedPastPostIntakeReview } from "@/lib/facilitated/post-intake-advance";
 
 async function getFacilitatorActor() {
   const session = await auth();
@@ -198,6 +199,38 @@ export async function facilitatedSubmitIntake(facilitatedSessionId: string) {
       });
       revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/intake`);
       return { success: true as const, redirectTo: bootstrapPath };
+    }
+
+    const profile = await getAdvisorProfileOrThrow(actor.userId);
+    const advancePath = await tryAdvanceFacilitatedPastPostIntakeReview({
+      facilitatedSessionId,
+      clientUserId: facilitated.clientId,
+      interviewId: facilitated.interviewId,
+      advisorProfileId: profile.id,
+      advisorUserId: actor.userId,
+      actor,
+    });
+    if (advancePath) {
+      await writeAudit({
+        actor,
+        action: AUDIT_ACTIONS.FACILITATED_SESSION_INTAKE_SUBMIT,
+        entityType: "FacilitatedSession",
+        entityId: facilitatedSessionId,
+        beforeData: { status: facilitated.status },
+        afterData: {
+          status: "ASSESSMENT",
+          interviewStatus: submitted.status,
+          skippedPostIntakeReview: true,
+        },
+        metadata: {
+          clientId: facilitated.clientId,
+          facilitatedSessionId,
+          interviewId: facilitated.interviewId,
+        },
+      });
+      revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/intake`);
+      revalidatePath(`/advisor/facilitate/${facilitatedSessionId}/risk-domains`);
+      return { success: true as const, redirectTo: advancePath };
     }
 
     await prisma.facilitatedSession.update({

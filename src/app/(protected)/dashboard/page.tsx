@@ -1,38 +1,26 @@
 import { auth } from "@/lib/auth";
-import {
-  ADVISOR_SUBSCRIPTION_BILLING_HREF,
-  getAdvisorHubAccessForUserId,
-} from "@/lib/advisor/auth";
+import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
+import { resolveAdvisorCheckoutBillingHref } from "@/lib/advisor/checkout-billing-redirect";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
+import { hasClientAssessmentStarted } from "@/lib/client/intake-edit-gate";
+import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { prisma } from "@/lib/db";
 import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { formatDistanceToNow, format } from "date-fns";
 import { countVisibleGovernanceQuestions } from "@/lib/assessment/bank/load-bank";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
-import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
-import {
-  resolveOverallRisk,
-  resolveTopRisks,
-} from "@/lib/dashboard/client-summary";
-import { ChevronRight } from "lucide-react";
+import { ClientDashboardOverview } from "@/components/dashboard/ClientDashboardOverview";
 import { DeliverablePhaseBanner } from "@/components/deliverable/DeliverablePhaseBanner";
+import { deliverableBannerBrandingProps } from "@/lib/client/deliverable-banner-branding";
+import { loadDeliverableHeatMapData } from "@/lib/client/deliverable-heat-map.server";
+import { resolveClientPortalBrandingForUser } from "@/lib/client/resolve-client-portal-branding";
+import { isTenantBrandedRequest } from "@/lib/client/branded-portal-requirements";
+import { isClientActionPlanEnabledForUser } from "@/lib/client/client-action-plan-visibility.server";
 import {
-  evaluateClientAssessmentSummaryAccess,
-  isAssessmentSummaryUnlockedFromStatus,
-} from "@/lib/client/assessment-summary-gate";
-import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
+  buildClientDashboardDestinations,
+  buildClientDashboardHeadline,
+  buildClientDashboardJourney,
+} from "@/lib/dashboard/client-dashboard-hub";
 
 export default async function DashboardPage({
   searchParams,
@@ -46,12 +34,9 @@ export default async function DashboardPage({
   }
 
   const sp = await searchParams;
-  // Forward to the role-appropriate landing while preserving the
-  // ?error=unauthorized signal so the destination can surface a notice.
   const errorSuffix =
     sp.error === "unauthorized" ? "?error=unauthorized" : "";
 
-  // Advisors and admins land on the advisor hub instead of the client dashboard
   const role = normalizeUserRoleString(session.user.role);
   if (role === "ADVISOR") {
     const hub = await getAdvisorHubAccessForUserId(session.user.id);
@@ -64,7 +49,7 @@ export default async function DashboardPage({
       redirect(
         hub.blockReason === "disabled"
           ? "/settings?notice=advisor_portal_disabled"
-          : ADVISOR_SUBSCRIPTION_BILLING_HREF
+          : await resolveAdvisorCheckoutBillingHref(session.user.id)
       );
     }
     redirect(`/advisor${errorSuffix}`);
@@ -73,21 +58,55 @@ export default async function DashboardPage({
     redirect(`/admin${errorSuffix}`);
   }
 
-  // Latest intake (any status) for hero; assessment access from gate (approve or advisor waiver)
   let intakeHeroLabel = "Not started";
 
-  const [latestIntake, intakeGate] = await Promise.all([
-    prisma.intakeInterview.findFirst({
-      where: { userId: session.user.id },
-      orderBy: { updatedAt: "desc" },
-      select: { id: true, status: true },
-    }),
-    getClientIntakeGateState(session.user.id),
-  ]);
+  const [latestIntake, intakeGate, summaryAccess, assessments, totalQuestions, intakeAnswersLocked, portalBranding, actionPlanEnabled, onTenantHost] =
+    await Promise.all([
+      prisma.intakeInterview.findFirst({
+        where: { userId: session.user.id },
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, status: true },
+      }),
+      getClientIntakeGateState(session.user.id),
+      getClientAssessmentSummaryAccess(session.user.id),
+      prisma.assessment.findMany({
+        where: { userId: session.user.id },
+        select: {
+          id: true,
+          status: true,
+          deliverablePhase: true,
+          upsellTriggersFired: true,
+          previewEnteredAt: true,
+          profileEnteredAt: true,
+          updatedAt: true,
+          portfolioEngagement: {
+            select: {
+              status: true,
+              meetingScheduledAt: true,
+              meetingAt: true,
+            },
+          },
+          _count: { select: { responses: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+      }),
+      countVisibleGovernanceQuestions(),
+      hasClientAssessmentStarted(session.user.id),
+      resolveClientPortalBrandingForUser({
+        userId: session.user.id,
+        email: session.user.email ?? "",
+      }),
+      isClientActionPlanEnabledForUser(session.user.id),
+      isTenantBrandedRequest(),
+    ]);
 
   const assessmentUnlocked = intakeGate.assessmentUnlocked;
+  const latestAssessment = assessments[0] ?? null;
 
-  if (latestIntake) {
+  if (intakeGate.intakeWaived) {
+    intakeHeroLabel = "Bypassed by advisor";
+  } else if (latestIntake) {
     if (latestIntake.status === "NOT_STARTED") {
       intakeHeroLabel = "Not started";
     } else if (latestIntake.status === "IN_PROGRESS") {
@@ -111,523 +130,87 @@ export default async function DashboardPage({
     }
   }
 
-  if (intakeGate.intakeWaived && !intakeGate.intakeApproved) {
-    intakeHeroLabel = "Waived by advisor";
-  }
+  const assessmentComplete = latestAssessment?.status === "COMPLETED";
+  const assessmentInProgress =
+    !!latestAssessment && latestAssessment.status !== "COMPLETED";
+  const responseCount = latestAssessment?._count.responses ?? 0;
 
-  // Fetch assessments with responses and scores
-  const assessments = await prisma.assessment.findMany({
-    where: { userId: session.user.id },
-    include: {
-      _count: { select: { responses: true } },
-      scores: {
-        orderBy: { calculatedAt: "desc" },
-        take: 1,
-      },
-      // BRD §6.3 / Epic 5.10: surface engagement state to the dashboard
-      // so the Phase 3 banner can render meeting / status copy.
-      portfolioEngagement: {
-        select: {
-          status: true,
-          meetingScheduledAt: true,
-          meetingAt: true,
-        },
-      },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  const hubInput = {
+    intakeHeroLabel,
+    intakeWaived: intakeGate.intakeWaived,
+    hasSubmittedInterview: intakeGate.hasSubmittedInterview,
+    intakeAnswersLocked,
+    restrictNavToIntake: intakeGate.restrictNavToIntake,
+    assessmentUnlocked,
+    assessmentScopePending: intakeGate.assessmentScopePending,
+    assessmentInProgress,
+    assessmentComplete,
+    canViewRiskPreview: summaryAccess.canViewRiskPreview,
+    canViewSummary: summaryAccess.canViewSummary,
+    canViewActionPlan: summaryAccess.canViewSummary && actionPlanEnabled,
+    actionPlanEnabled,
+    responseCount,
+    totalQuestions,
+    mfaEnabled: !!session.user.mfaEnabled,
+    portalCopy: portalBranding
+      ? {
+          tagline: portalBranding.tagline,
+          landingHeadline: portalBranding.landingHeadline,
+          landingSubheadline: portalBranding.landingSubheadline,
+        }
+      : undefined,
+  };
 
-  const assessmentHeroLabel =
-    assessments[0]?.status === "COMPLETED"
-      ? "Complete"
-      : assessments.length
-        ? "In progress"
-        : "None yet";
+  const bannerBranding = deliverableBannerBrandingProps(portalBranding);
+  const isWhiteLabeledPortal = onTenantHost || Boolean(portalBranding);
 
-  const totalQuestions = await countVisibleGovernanceQuestions();
+  const { headline, subheadline } = buildClientDashboardHeadline(hubInput);
+  const journeySteps = buildClientDashboardJourney(hubInput);
+  const destinations = buildClientDashboardDestinations(hubInput);
 
-  // §4.3 close-out: load every PillarScore for the latest assessment so
-  // the dashboard can render the 6-cell heat map + the top-risks list.
-  // Cheap query — at most 6 rows per assessment, indexed on assessmentId.
-  const latestAssessmentForHeatMap = assessments[0];
-  const allPillarScores = latestAssessmentForHeatMap
-    ? await prisma.pillarScore.findMany({
-        where: { assessmentId: latestAssessmentForHeatMap.id },
-        select: { pillar: true, score: true, riskLevel: true },
-        orderBy: { pillar: "asc" },
-      })
-    : [];
+  const showDeliverableBanner =
+    latestAssessment?.status === "COMPLETED" &&
+    assessmentUnlocked &&
+    summaryAccess.canViewRiskPreview;
 
-  const overallRisk = resolveOverallRisk({
-    score: latestAssessmentForHeatMap?.scores[0]?.score ?? null,
-    riskLevel: latestAssessmentForHeatMap?.scores[0]?.riskLevel ?? null,
-  });
-  const pillarCatalog = await getPlatformPillarCatalog();
-  const topRisks = resolveTopRisks(allPillarScores, pillarCatalog);
-  const showHeatMap = assessmentUnlocked && allPillarScores.length > 0;
-  const summaryAccess = latestAssessmentForHeatMap
-    ? evaluateClientAssessmentSummaryAccess({
-        pillarScores: allPillarScores,
-        deliverablePhase: latestAssessmentForHeatMap.deliverablePhase,
-        includedPillars: latestAssessmentForHeatMap.includedPillars,
-        catalog: pillarCatalog,
-      })
-    : null;
-  const summaryUnlocked = summaryAccess?.canViewSummary ?? false;
+  const deliverableHeatMap =
+    showDeliverableBanner && latestAssessment
+      ? await loadDeliverableHeatMapData(
+          latestAssessment.id,
+          summaryAccess.includedPillars,
+        )
+      : null;
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <UnauthorizedNotice error={sp.error} />
-      <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
-        <div className="space-y-5">
-          <p className="text-sm text-foreground/80">
-            Welcome back,{" "}
-            <span className="font-medium text-foreground">
-              {session.user.firstName ?? session.user.name ?? "Guest"}
-            </span>
-          </p>
 
-          <Card className="border-border/80 bg-background/60 shadow-sm">
-            <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-5 lg:grid-cols-3">
-              <div
-                className="rounded-xl border border-border/70 bg-card/40 p-4 sm:col-span-2 lg:col-span-1"
-                data-testid="hero-overall-risk"
-              >
-                <p className="editorial-kicker">Overall risk</p>
-                {assessmentUnlocked && overallRisk ? (
-                  <div className="mt-2 space-y-2">
-                    <p className="text-2xl font-semibold tabular-nums leading-none tracking-tight sm:text-3xl">
-                      {overallRisk.score.toFixed(1)} / 10
-                    </p>
-                    <Badge
-                      variant="outline"
-                      className={`${overallRisk.palette.bg} ${overallRisk.palette.text} ${overallRisk.palette.border}`}
-                    >
-                      {overallRisk.palette.label}
-                    </Badge>
-                  </div>
-                ) : (
-                  // The hero score sources from PillarScore rows directly;
-                  // the "Your Assessments" card below gates the assessment
-                  // results on `assessmentUnlocked` (i.e. the client's
-                  // current IntakeApproval is APPROVED, or intake was
-                  // waived with pillar scope). Without this gate, the hero
-                  // could show a score from a prior approval after an
-                  // advisor reverts approval status — contradicting the
-                  // body card that tells the client to wait for re-approval.
-                  // See INVENTORY "Fixed".
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Complete your assessment to see your overall risk score.
-                  </p>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
-                <p className="editorial-kicker">Intake</p>
-                <Badge variant="secondary" className="mt-2 max-w-full whitespace-normal text-left">
-                  {intakeHeroLabel}
-                </Badge>
-              </div>
-
-              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
-                <p className="editorial-kicker">Assessment</p>
-                <Badge
-                  variant={
-                    assessmentHeroLabel === "Complete" ? "success" : "secondary"
-                  }
-                  className="mt-2"
-                >
-                  {assessmentHeroLabel}
-                </Badge>
-              </div>
-
-              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
-                <p className="editorial-kicker">Assessments</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums leading-none">
-                  {assessments.length}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-border/70 bg-card/40 p-4">
-                <p className="editorial-kicker">MFA</p>
-                <Badge
-                  variant={session?.user?.mfaEnabled ? "success" : "outline"}
-                  className="mt-2"
-                >
-                  {session?.user?.mfaEnabled ? "On" : "Off"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* BRD §6.3 / Epic 5.10: deliverable-phase status banner. Shown
-          once the assessment is COMPLETED (deliverablePhase is set).
-          Adapts copy and call-to-action per phase; surfaces the
-          Accept-the-recommendation button when upsell triggers fired. */}
-      {latestAssessmentForHeatMap?.status === "COMPLETED" &&
-      showHeatMap ? (
-        <section>
-          <DeliverablePhaseBanner
-            assessmentId={latestAssessmentForHeatMap.id}
-            phase={latestAssessmentForHeatMap.deliverablePhase}
-            upsellTriggersFired={
-              Array.isArray(latestAssessmentForHeatMap.upsellTriggersFired)
-                ? (latestAssessmentForHeatMap.upsellTriggersFired as string[])
-                : null
-            }
-            engagement={latestAssessmentForHeatMap.portfolioEngagement ?? null}
-            previewEnteredAt={latestAssessmentForHeatMap.previewEnteredAt}
-            profileEnteredAt={latestAssessmentForHeatMap.profileEnteredAt}
-          />
-        </section>
-      ) : null}
-
-      {/* §4.3 close-out: Risk by Domain heat map + Top Risks. The heat
-          map is the same component the advisor side uses, fed by the
-          per-pillar PillarScore rows for the latest assessment.
-          - assessmentUnlocked=false (intake not yet approved) → hidden
-            so the locked banner above is the only signal.
-          - assessmentUnlocked=true but no scored pillars → empty heat
-            map with "Complete your assessment" placeholder copy.
-          - scored → full heat map + top-risks list when at least one
-            pillar has a non-unassessed level. */}
-      {assessmentUnlocked && (
-        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Risk by domain</CardTitle>
-              <CardDescription>
-                {showHeatMap
-                  ? "Snapshot of your six risk domains. Each cell shows the maturity score and the risk level."
-                  : "Complete your assessment to populate the heat map."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RiskHeatMap
-                mode="single-client"
-                pillarScores={allPillarScores}
-                catalog={pillarCatalog}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Top risks</CardTitle>
-              <CardDescription>
-                {topRisks.length > 0
-                  ? "Highest-priority domains based on your most recent scoring."
-                  : "No risks to surface yet — complete your assessment to see prioritized domains."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {topRisks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Once your assessment is scored, the highest-priority
-                  domains appear here so you can review them in order.
-                </p>
-              ) : (
-                <ul className="divide-y divide-border" data-testid="top-risks">
-                  {topRisks.map((risk) => (
-                    <li
-                      key={risk.pillarId}
-                      className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                      data-pillar-id={risk.pillarId}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{risk.pillarName}</p>
-                          <Badge
-                            variant="outline"
-                            className={`${risk.palette.bg} ${risk.palette.text} ${risk.palette.border} text-xs`}
-                          >
-                            {risk.palette.label}
-                          </Badge>
-                          <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                            {risk.score.toFixed(1)} / 3
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm leading-snug text-muted-foreground line-clamp-2">
-                          {risk.summary}
-                        </p>
-                      </div>
-                      {summaryUnlocked ? (
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          className="shrink-0"
-                        >
-                          <Link
-                            href={`/assessment/results?pillar=${encodeURIComponent(risk.pillarId)}`}
-                          >
-                            Review
-                            <ChevronRight className="ml-1 h-4 w-4" />
-                          </Link>
-                        </Button>
-                      ) : (
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          Summary pending
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className={!assessmentUnlocked ? "opacity-75" : undefined}>
-          <CardHeader>
-            <CardTitle className="text-3xl">Your Assessments</CardTitle>
-            <CardDescription>
-              {assessmentUnlocked
-                ? "Monitor progress and continue or review the latest personal risk profile."
-                : "Assessment unlocks after your advisor reviews and approves your intake."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!assessmentUnlocked ? (
-              <div className="rounded-[1.5rem] border section-divider bg-muted/40 px-6 py-10 text-center">
-                <p className="mx-auto max-w-2xl text-sm leading-7 text-muted-foreground">
-                  Complete your intake and wait for your advisor to approve it.
-                  The assessment will then become available here.
-                </p>
-              </div>
-            ) : assessments.length === 0 ? (
-              <div className="rounded-[1.5rem] border section-divider bg-background/55 px-6 py-10 text-center">
-                <p className="mx-auto mb-5 max-w-2xl text-sm leading-7 text-muted-foreground">
-                  No assessments yet. Start your first risk assessment to
-                  receive personalized governance recommendations.
-                </p>
-                <Button asChild size="lg">
-                  <Link href="/assessment">Start Assessment</Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {assessments.map((assessment) => {
-                  const isCompleted = assessment.status === "COMPLETED";
-                  const cardSummaryUnlocked = isAssessmentSummaryUnlockedFromStatus(
-                    assessment,
-                  );
-                  const responseCount = assessment._count.responses;
-                  const progressPercentage =
-                    (responseCount / totalQuestions) * 100;
-                  const latestScore = assessment.scores[0];
-
-                  return (
-                    <Card key={assessment.id} className="bg-background/55">
-                      <CardHeader className="pb-3">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="space-y-1">
-                            <CardTitle className="text-2xl">
-                              Personal Risk Profile
-                            </CardTitle>
-                            <CardDescription>
-                              Updated{" "}
-                              {formatDistanceToNow(
-                                new Date(assessment.updatedAt),
-                                { addSuffix: true },
-                              )}
-                            </CardDescription>
-                          </div>
-                          <Badge
-                            variant={isCompleted ? "success" : "info"}
-                            className="w-fit"
-                          >
-                            {isCompleted ? "Completed" : "In Progress"}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-5">
-                        {!isCompleted ? (
-                          <>
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">
-                                  Progress
-                                </span>
-                                <span className="font-medium text-foreground">
-                                  {responseCount} of {totalQuestions} questions
-                                  answered
-                                </span>
-                              </div>
-                              <Progress
-                                value={progressPercentage}
-                                className="h-2.5"
-                              />
-                              <p className="text-xs text-muted-foreground">
-                                {Math.round(progressPercentage)}% complete
-                              </p>
-                            </div>
-
-                            <div className="rounded-[1.25rem] border section-divider bg-card/50 px-4 py-4">
-                              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                                Section Status
-                              </p>
-                              <div className="mt-3 flex items-center gap-3">
-                                <div className="flex-1">
-                                  <Progress
-                                    value={progressPercentage}
-                                    className="h-2"
-                                  />
-                                </div>
-                                <span className="text-sm text-muted-foreground">
-                                  Family Governance
-                                </span>
-                              </div>
-                            </div>
-
-                            {assessmentUnlocked ? (
-                              <Button asChild className="w-full" size="lg">
-                                <Link href="/assessment">
-                                  Continue Assessment
-                                </Link>
-                              </Button>
-                            ) : (
-                              <Button
-                                className="w-full"
-                                size="lg"
-                                disabled
-                                title="Assessment unlocks after your advisor approves your intake."
-                              >
-                                Continue Assessment
-                              </Button>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {latestScore && (
-                              <div className="space-y-4">
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">
-                                      Overall Score
-                                    </p>
-                                    <p className="text-4xl font-semibold">
-                                      {latestScore.score.toFixed(1)} / 3
-                                    </p>
-                                  </div>
-                                  <Badge
-                                    variant={
-                                      latestScore.riskLevel === "LOW"
-                                        ? "success"
-                                        : latestScore.riskLevel === "MEDIUM"
-                                          ? "warning"
-                                          : latestScore.riskLevel === "HIGH"
-                                            ? "warning"
-                                            : "outline"
-                                    }
-                                    className="w-fit"
-                                  >
-                                    {latestScore.riskLevel} Risk
-                                  </Badge>
-                                </div>
-
-                                <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-4 text-sm text-muted-foreground">
-                                  Completed on{" "}
-                                  {format(
-                                    new Date(
-                                      assessment.completedAt ||
-                                        assessment.updatedAt,
-                                    ),
-                                    "MMM d, yyyy",
-                                  )}
-                                </div>
-
-                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                  {!assessmentUnlocked ? (
-                                    <p className="col-span-full text-sm text-muted-foreground">
-                                      Assessment actions unlock after your advisor approves your intake.
-                                    </p>
-                                  ) : cardSummaryUnlocked ? (
-                                    <>
-                                      <Button asChild size="lg">
-                                        <Link href="/assessment/results">
-                                          View Results
-                                        </Link>
-                                      </Button>
-                                      <Button asChild size="lg" variant="outline">
-                                        <a
-                                          href={`/api/reports/${assessment.id}/pdf?pillar=${encodeURIComponent(latestScore.pillar)}`}
-                                          download
-                                        >
-                                          Download Report
-                                        </a>
-                                      </Button>
-                                      <Button asChild size="lg" variant="outline">
-                                        <Link href="/assessment/results">
-                                          Get Templates
-                                        </Link>
-                                      </Button>
-                                      <Button asChild size="lg" variant="outline">
-                                        <Link href="/assessment">Start New</Link>
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <p className="col-span-full text-sm text-muted-foreground">
-                                      Your assessment summary, report download, and templates
-                                      will be available after your advisor publishes your Risk
-                                      Profile.
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl">Account Settings</CardTitle>
-            <CardDescription>
-              Review identity and account protection details.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-4">
-              <p className="editorial-kicker">Email</p>
-              <p className="mt-2 text-base font-semibold">
-                {session?.user?.email}
-              </p>
-            </div>
-
-            <div className="rounded-[1.25rem] border section-divider bg-background/55 px-4 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="editorial-kicker">Two-Factor Auth</p>
-                  <p className="mt-2 text-base font-semibold">
-                    {session?.user?.mfaEnabled ? "Enabled" : "Disabled"}
-                  </p>
-                </div>
-                <Badge
-                  variant={session?.user?.mfaEnabled ? "success" : "secondary"}
-                >
-                  {session?.user?.mfaEnabled ? "Protected" : "Recommended"}
-                </Badge>
-              </div>
-            </div>
-
-            <Button asChild variant="outline" size="lg" className="w-full">
-              <Link href="/settings">Manage Settings</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <ClientDashboardOverview
+        headline={headline}
+        subheadline={subheadline}
+        journeySteps={journeySteps}
+        destinations={destinations}
+        hideExplorePortalSection={isWhiteLabeledPortal}
+        deliverableBanner={
+          showDeliverableBanner && latestAssessment ? (
+            <DeliverablePhaseBanner
+              assessmentId={latestAssessment.id}
+              phase={summaryAccess.deliverablePhase}
+              upsellTriggersFired={
+                Array.isArray(latestAssessment.upsellTriggersFired)
+                  ? (latestAssessment.upsellTriggersFired as string[])
+                  : null
+              }
+              engagement={latestAssessment.portfolioEngagement ?? null}
+              previewEnteredAt={latestAssessment.previewEnteredAt}
+              profileEnteredAt={latestAssessment.profileEnteredAt}
+              advisorTeamLabel={bannerBranding.advisorTeamLabel}
+              brandHex={bannerBranding.brandHex}
+              heatMap={deliverableHeatMap}
+            />
+          ) : null
+        }
+      />
     </div>
   );
 }

@@ -38,7 +38,7 @@ export async function GET(
       {
         error: access.allPillarsComplete
           ? "Your Risk Profile must be published before viewing recommendations."
-          : "Complete all assessment pillars first.",
+          : "Complete all risk domains first.",
         code: "SUMMARY_LOCKED",
       },
       { status: 403 },

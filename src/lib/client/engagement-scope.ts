@@ -26,7 +26,7 @@ export async function normalizeEngagementScopeInput(input: {
   const catalog = await getPlatformPillarCatalog();
   const includedPillars = normalizeIncludedPillarIds(input.includedPillars, catalog);
   if (includedPillars.length < 1) {
-    throw new Error("Select at least one assessment domain");
+    throw new Error("Select at least one risk domain");
   }
 
   const focusAreas = input.focusAreas?.length

@@ -46,7 +46,7 @@ vi.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => findManySpy(...args),
     },
     serviceRecommendation: {
-      findUnique: (...args: unknown[]) => findUniqueSpy(...args),
+      findFirst: (...args: unknown[]) => findUniqueSpy(...args),
     },
     assessmentRecommendation: {
       createMany: vi.fn().mockResolvedValue({ count: 0 }),

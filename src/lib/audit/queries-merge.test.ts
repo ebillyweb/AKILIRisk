@@ -65,8 +65,8 @@ const subRow = (id: string, ts: string, action = "stripe_sync") => ({
   id,
   subscriptionId: "sub1",
   action,
-  previousTier: "STARTER" as const,
-  newTier: "GROWTH" as const,
+  previousTier: "ESSENTIALS" as const,
+  newTier: "PROFESSIONAL" as const,
   metadata: null,
   timestamp: T(ts),
 });

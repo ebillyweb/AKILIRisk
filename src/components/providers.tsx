@@ -1,5 +1,6 @@
 'use client';
 
+import type { Session } from "next-auth";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
 import { Toaster } from 'react-hot-toast';
@@ -13,7 +14,13 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider';
  * Wraps the app with TanStack Query and toast notifications.
  */
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  session?: Session | null;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -27,8 +34,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <SessionProvider refetchOnWindowFocus>
-      <ThemeProvider>
+    <ThemeProvider>
+      {/* SessionProvider only reads its `session` prop on mount, so a server-action
+          sign-out (soft RSC navigation) would leave useSession() stale. Keying by the
+          server session's user id remounts auth context only — ThemeProvider stays mounted. */}
+      <SessionProvider
+        key={session?.user?.id ?? "unauthenticated"}
+        session={session}
+        refetchOnWindowFocus
+      >
         <QueryClientProvider client={queryClient}>
           {children}
         <Toaster
@@ -58,7 +72,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           }}
         />
         </QueryClientProvider>
-      </ThemeProvider>
-    </SessionProvider>
+      </SessionProvider>
+    </ThemeProvider>
   );
 }

@@ -1,30 +1,25 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { signIn } from "@/lib/auth";
-import { acceptInvitationFromToken } from "@/lib/invitations/accept-invitation";
+import { buildInvitationMagicLinkVerifyPath } from "@/lib/invitations/invitation-signup-redirect";
 
 export type CompleteInvitationSignupResult =
   | { ok: true }
   | { ok: false; error: string };
 
 /**
- * Provisions the client from an invite token and signs them in via magic link.
- * Used after the client-side opened beacon hits the tracking API.
+ * @deprecated Prefer server-side redirect from `/signup` via
+ * `buildInvitationMagicLinkVerifyPath`. Kept for callers that still
+ * invoke this action directly.
  */
 export async function completeInvitationSignup(
   token: string,
   callbackUrl?: string | null
 ): Promise<CompleteInvitationSignupResult> {
-  const accepted = await acceptInvitationFromToken(token, callbackUrl);
-  if (!accepted.ok) {
-    return { ok: false, error: accepted.error };
+  const result = await buildInvitationMagicLinkVerifyPath(token, callbackUrl);
+  if (!result.ok) {
+    return { ok: false, error: result.error };
   }
 
-  await signIn("magic-link", {
-    token: accepted.magicLinkToken,
-    redirectTo: accepted.redirectTo,
-  });
-
-  redirect(accepted.redirectTo);
+  redirect(result.verifyPath);
 }

@@ -1,5 +1,7 @@
 import type { IntakeQuestion } from "@/lib/intake/types";
-import type { MethodologySnapshotBlob, SnapshotIntakeQuestion } from "@/lib/methodology/types";
+import type { SnapshotIntakeQuestion } from "@/lib/methodology/types";
+import { intakeUsesFreeformResponse } from "@/lib/intake/intake-answer-behavior";
+import { parseStoredIntakeChoiceListOptions } from "@/lib/intake/choice-list-options";
 
 const DEFAULT_RECORDING_TIPS = [
   "Speak clearly and at a normal pace",
@@ -7,13 +9,25 @@ const DEFAULT_RECORDING_TIPS = [
   "It's fine to pause and gather your thoughts",
 ];
 
-export function intakeQuestionsFromSnapshot(
-  snapshot: MethodologySnapshotBlob,
-): IntakeQuestion[] {
-  return snapshot.intakeQuestions.map((row, i) => snapshotRowToIntakeQuestion(row, i));
+function intakeAnswerFields(row: {
+  answerType: string;
+  answer0?: string | null;
+  answer1?: string | null;
+  answer2?: string | null;
+  answer3?: string | null;
+  options?: unknown;
+}) {
+  return {
+    answerType: row.answerType,
+    answer0: row.answer0 ?? null,
+    answer1: row.answer1 ?? null,
+    answer2: row.answer2 ?? null,
+    answer3: row.answer3 ?? null,
+    options: parseStoredIntakeChoiceListOptions(row.options),
+  };
 }
 
-function snapshotRowToIntakeQuestion(
+export function snapshotRowToIntakeQuestion(
   row: SnapshotIntakeQuestion,
   index: number,
 ): IntakeQuestion {
@@ -27,8 +41,9 @@ function snapshotRowToIntakeQuestion(
 
   return {
     id: row.id,
-    questionNumber: row.questionNumber ? Number(row.questionNumber) || index + 1 : index + 1,
+    questionNumber: index + 1,
     questionText: row.questionText,
+    ...intakeAnswerFields(row),
     whyThisMatters: row.helpText ?? undefined,
     recommendedActions: row.recommendedActions ?? undefined,
     relatedPillarIds:
@@ -37,6 +52,16 @@ function snapshotRowToIntakeQuestion(
       row.context ??
       row.helpText ??
       "Take your time; speak naturally as if in conversation with your advisor.",
-    recordingTips: tips.length ? tips : DEFAULT_RECORDING_TIPS,
+    recordingTips: intakeUsesFreeformResponse(row.answerType)
+      ? tips.length
+        ? tips
+        : DEFAULT_RECORDING_TIPS
+      : [],
   };
+}
+
+export function intakeQuestionsFromSnapshot(
+  snapshot: { intakeQuestions: SnapshotIntakeQuestion[] },
+): IntakeQuestion[] {
+  return snapshot.intakeQuestions.map((row, i) => snapshotRowToIntakeQuestion(row, i));
 }

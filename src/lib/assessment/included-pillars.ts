@@ -24,7 +24,7 @@ export const TOTAL_ASSESSMENT_PILLAR_COUNT = DEFAULT_INCLUDED_PILLARS.length;
  * platform pillars in the supplied catalog.
  */
 export function resolveIncludedPillars(
-  includedPillars: string[] | null | undefined,
+  includedPillars: readonly string[] | null | undefined,
   catalog: readonly PillarCatalogEntry[],
 ): string[] {
   if (!includedPillars || includedPillars.length === 0) {
@@ -59,10 +59,14 @@ export function normalizeIncludedPillarIds(
 /** True when every pillar in scope has a score row. */
 export function isAssessmentScopeComplete(
   scoredPillarIds: Iterable<string>,
-  includedPillars: string[] | null | undefined,
+  includedPillars: readonly string[] | null | undefined,
   catalog: readonly PillarCatalogEntry[],
 ): boolean {
   const scoped = resolveIncludedPillars(includedPillars, catalog);
+  // An empty resolved scope (e.g. catalog failed to load) must NOT report
+  // complete — `[].every()` is vacuously true and would mark an assessment
+  // COMPLETED with zero scored pillars.
+  if (scoped.length === 0) return false;
   const scored = new Set(
     [...scoredPillarIds].map((id) => normalizePillarSlug(id)),
   );
@@ -72,7 +76,7 @@ export function isAssessmentScopeComplete(
 /** True when a pillar slug is within the assessment's included scope. */
 export function isPillarInAssessmentScope(
   pillarSlug: string,
-  includedPillars: string[] | null | undefined,
+  includedPillars: readonly string[] | null | undefined,
   catalog: readonly PillarCatalogEntry[],
 ): boolean {
   const normalized = normalizePillarSlug(pillarSlug);
@@ -81,7 +85,7 @@ export function isPillarInAssessmentScope(
 
 /** True when the resolved scope is fewer than all platform pillars. */
 export function isNarrowAssessmentScope(
-  includedPillars: string[],
+  includedPillars: readonly string[],
   catalog: readonly PillarCatalogEntry[],
 ): boolean {
   return includedPillars.length < totalPlatformPillarCount(catalog);
@@ -97,7 +101,7 @@ export function pillarDisplayName(
 
 /** Comma-separated pillar names in scope order. */
 export function formatIncludedPillarNames(
-  includedPillars: string[],
+  includedPillars: readonly string[],
   catalog: readonly PillarCatalogEntry[],
 ): string {
   return includedPillars.map((id) => pillarDisplayName(id, catalog)).join(", ");
@@ -113,7 +117,7 @@ export function formatEnglishList(items: string[]): string {
 
 /** Client-facing risk preview scope summary (US-72). */
 export function formatNarrowScopePreviewCopy(
-  includedPillars: string[],
+  includedPillars: readonly string[],
   catalog: readonly PillarCatalogEntry[],
 ): string {
   const count = includedPillars.length;

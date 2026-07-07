@@ -4,6 +4,8 @@ import dns from "node:dns/promises";
 import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import Stripe from "stripe";
 import { resolveAwsCredentials } from "@/lib/s3/aws-credentials";
+import { getEnterpriseProvisionQueueCounts } from "@/lib/queue/enterprise-provision-queue";
+import { isRedisConfigured } from "@/lib/queue/redis-connection";
 import type { HealthStatus, ServiceHealth } from "@/lib/admin/operations-health";
 
 /** Per-probe wall-clock budget (ms). */
@@ -46,6 +48,10 @@ const INTEGRATION_LABELS: Record<
   "white-label-dns": {
     label: "White-label DNS",
     description: "Advisor subdomain CNAME targets and apex domain",
+  },
+  "upstash-redis": {
+    label: "Upstash Redis",
+    description: "BullMQ queue for async enterprise provisioning",
   },
 };
 
@@ -596,11 +602,78 @@ export async function probeWhiteLabelDns(): Promise<IntegrationProbeResult> {
   }
 }
 
+function resolveUpstashConfigSource(): string {
+  if (process.env.REDIS_URL?.trim()) return "REDIS_URL";
+  if (
+    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim()
+  ) {
+    return "UPSTASH_REDIS_REST_* (Vercel integration)";
+  }
+  if (
+    process.env.KV_REST_API_URL?.trim() &&
+    process.env.KV_REST_API_TOKEN?.trim()
+  ) {
+    return "KV_REST_* (legacy Vercel KV)";
+  }
+  return "not configured";
+}
+
+export async function probeUpstashRedis(): Promise<IntegrationProbeResult> {
+  const id = "upstash-redis";
+  if (!isRedisConfigured()) {
+    return notConfigured(
+      id,
+      "Set REDIS_URL or connect Upstash on Vercel (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN).",
+    );
+  }
+
+  const source = resolveUpstashConfigSource();
+  const checkedAt = checkedNow();
+  const start = Date.now();
+
+  try {
+    const counts = await withTimeout(
+      getEnterpriseProvisionQueueCounts(),
+      INTEGRATION_PROBE_TIMEOUT_MS,
+      "Upstash Redis",
+    );
+    const rttMs = Date.now() - start;
+    const depth = counts
+      ? `${counts.waiting} waiting, ${counts.active} active, ${counts.failed} failed`
+      : "queue reachable";
+
+    if (rttMs > 2000) {
+      return {
+        id,
+        status: "degraded",
+        message: `Upstash Redis responded in ${rttMs} ms via ${source} — slower than usual. BullMQ enterprise-provision: ${depth}.`,
+        checkedAt,
+      };
+    }
+
+    return {
+      id,
+      status: "healthy",
+      message: `Upstash Redis reachable via ${source} (${rttMs} ms). BullMQ enterprise-provision: ${depth}.`,
+      checkedAt,
+    };
+  } catch (err) {
+    return {
+      id,
+      status: "down",
+      message: sanitizeProbeError(err),
+      checkedAt,
+    };
+  }
+}
+
 const PROBE_RUNNERS: Array<() => Promise<IntegrationProbeResult>> = [
   probeStripe,
   probeOpenAI,
   probeResend,
   probeS3,
+  probeUpstashRedis,
   probeWhiteLabelDns,
 ];
 
@@ -619,6 +692,7 @@ export async function runIntegrationProbes(): Promise<IntegrationProbeResult[]> 
       "openai",
       "resend",
       "s3",
+      "upstash-redis",
       "white-label-dns",
     ][index];
     if (result.status === "fulfilled") return result.value;
@@ -669,7 +743,14 @@ export function probeResultToServiceHealth(
 export function integrationProbesToDependencies(
   probes: IntegrationProbeResult[]
 ): ServiceHealth[] {
-  const order = ["stripe", "openai", "resend", "s3", "white-label-dns"];
+  const order = [
+    "stripe",
+    "openai",
+    "resend",
+    "s3",
+    "upstash-redis",
+    "white-label-dns",
+  ];
   const byId = new Map(probes.map((p) => [p.id, probeResultToServiceHealth(p)]));
   return order
     .map((id) => byId.get(id))

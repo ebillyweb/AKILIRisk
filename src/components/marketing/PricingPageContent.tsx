@@ -1,0 +1,44 @@
+import { MarketingPageHero } from "@/components/marketing/MarketingPageHero";
+import { PricingTierGrid } from "@/components/marketing/PricingTierGrid";
+import { PublicPageShell } from "@/components/marketing/PublicPageShell";
+import { isBillingEnabled } from "@/lib/billing/config";
+import type { SubscriptionDetailsDTO } from "@/lib/actions/billing";
+import type { PublicTierPricing } from "@/lib/billing/public-tier-pricing";
+import type { BillingCycle } from "@prisma/client";
+
+type PricingPageContentProps = {
+  pricing: PublicTierPricing[];
+  configErrors?: string[];
+  canSubscribe: boolean;
+  advisorSubscription?: SubscriptionDetailsDTO | null;
+  initialBillingCycle?: BillingCycle;
+};
+
+export function PricingPageContent({
+  pricing,
+  configErrors = [],
+  canSubscribe,
+  advisorSubscription = null,
+  initialBillingCycle,
+}: PricingPageContentProps) {
+  const billingEnabled = isBillingEnabled();
+
+  return (
+    <PublicPageShell maxWidth="wide">
+      <MarketingPageHero
+        kicker="Pricing"
+        title="Modular governance intelligence, priced to scale with your practice"
+        description="Compare Essentials through Platinum side by side — each card shows what is included and what unlocks on higher tiers. Solo practitioners subscribe self-serve; enterprise firms license the same modules with shared branding and multiple team seats."
+      />
+
+      <PricingTierGrid
+        pricing={pricing}
+        configErrors={configErrors}
+        billingEnabled={billingEnabled}
+        canSubscribe={canSubscribe}
+        advisorSubscription={advisorSubscription}
+        initialBillingCycle={initialBillingCycle}
+      />
+    </PublicPageShell>
+  );
+}

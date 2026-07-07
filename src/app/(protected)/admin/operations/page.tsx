@@ -1,5 +1,6 @@
 import { requireAdminRole } from "@/lib/admin/auth";
 import { getOperationsHealthSnapshot } from "@/lib/admin/operations-health";
+import { BackgroundJobsSection } from "@/components/admin/operations/BackgroundJobsSection";
 import { StatusCard } from "@/components/admin/operations/StatusCard";
 import { ServiceHealthCard } from "@/components/admin/operations/ServiceHealthCard";
 import { DependencyStatusList } from "@/components/admin/operations/DependencyStatusList";
@@ -16,8 +17,9 @@ import { RecentErrorList } from "@/components/admin/operations/RecentErrorList";
  *
  *   1. Overall platform status hero (top).
  *   2. Core services grid (app / database / auth).
- *   3. External dependencies list.
- *   4. Recent errors + failed integrations.
+ *   3. Background jobs (Redis queue, CRON_SECRET, enterprise provisioning).
+ *   4. External dependencies list.
+ *   5. Recent errors + failed integrations.
  *   5. Footer with build + last-successful-check timestamp.
  *
  * Force dynamic rendering — every load takes a fresh DB round-trip
@@ -87,6 +89,8 @@ export default async function AdminOperationsPage() {
           <ServiceHealthCard service={snapshot.core.auth} />
         </div>
       </section>
+
+      <BackgroundJobsSection backgroundJobs={snapshot.backgroundJobs} />
 
       <section aria-labelledby="ops-deps" className="space-y-3">
         <header className="space-y-1">

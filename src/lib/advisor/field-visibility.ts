@@ -9,6 +9,7 @@ import {
   type EligiblePiiField,
   type PiiPolicy,
 } from "@/lib/advisor/pii-policy";
+import { resolveEffectivePolicyForAdvisorProfile } from "@/lib/enterprise/enterprise-client-data-policy";
 
 /** Consent map stored on `ClientAdvisorAssignment.fieldVisibility`.
  *  Omitted keys and null assignment visibility mean no opt-in yet. */
@@ -60,7 +61,16 @@ export async function loadAdvisorPiiPolicy(
     where: { id: advisorProfileId },
     select: { piiPolicy: true },
   });
-  return parsePiiPolicy(row?.piiPolicy);
+  const advisorPolicy = parsePiiPolicy(row?.piiPolicy);
+  const effective = await resolveEffectivePolicyForAdvisorProfile(
+    advisorProfileId,
+    advisorPolicy,
+  );
+  return {
+    schemaVersion: 1,
+    fields: effective.fields,
+    pseudonymousWorkspaceLabeling: effective.pseudonymousWorkspaceLabeling,
+  };
 }
 
 export function buildEffectiveVisibilityByClientId(

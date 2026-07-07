@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { buildInvitationsListHref } from "@/lib/invitations/parse-invitation-list-params";
+import { INVITATION_SEARCH_COPY } from "@/lib/invitations/invitation-client-display";
 import { Loader2, Search } from "lucide-react";
 
 const STATUS_OPTIONS: { value: InvitationStatus | "all"; label: string }[] = [
@@ -30,10 +31,17 @@ const SENT_WITHIN_OPTIONS: { value: "all" | "7" | "30" | "90"; label: string }[]
   { value: "90", label: "Last 90 days" },
 ];
 
-export function InvitationListFilters() {
+export function InvitationListFilters({
+  pseudonymousWorkspaceLabeling = false,
+}: {
+  pseudonymousWorkspaceLabeling?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const searchCopy = pseudonymousWorkspaceLabeling
+    ? INVITATION_SEARCH_COPY.pseudonymous
+    : INVITATION_SEARCH_COPY.standard;
 
   const [status, setStatus] = useState(searchParams.get("status") ?? "all");
   const [sentWithin, setSentWithin] = useState(searchParams.get("sentWithin") ?? "all");
@@ -123,7 +131,8 @@ export function InvitationListFilters() {
         <Input
           id="invitation-search"
           type="search"
-          placeholder="Client email or name"
+          placeholder={searchCopy.placeholder}
+          aria-label={searchCopy.ariaLabel}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => {

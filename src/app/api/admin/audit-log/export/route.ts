@@ -46,10 +46,13 @@ function toFilter(req: NextRequest): AuditLogFilter {
  */
 function csvEscape(value: string): string {
   if (value === "") return "";
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // Neutralize spreadsheet formula injection: a cell beginning with = + - @
+  // (or tab/CR) can execute when opened in Excel/Sheets. Prefix with a quote.
+  const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  if (/[",\n\r]/.test(guarded)) {
+    return `"${guarded.replace(/"/g, '""')}"`;
   }
-  return value;
+  return guarded;
 }
 
 const CSV_HEADER = [

@@ -7,6 +7,12 @@ import {
   isSubdomainAutoActivateEnabled,
   toTenantHostLabel,
 } from '@/lib/advisor/platform-subdomain';
+import {
+  SUBDOMAIN_SLUG_MAX_LENGTH,
+  SUBDOMAIN_SLUG_MIN_LENGTH,
+  SUBDOMAIN_SLUG_REGEX,
+  SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
+} from '@/lib/advisor/subdomain-slug-input';
 
 /** Shape passed from the server into SubdomainManager after a claim. */
 export interface AdvisorSubdomainSettings {
@@ -39,13 +45,21 @@ export interface AdvisorSubdomainData {
  */
 const subdomainCache = new Map<string, AdvisorSubdomainData | null>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Errors are cached only briefly: a transient DB blip should not make an active
+// tenant 404 for the full TTL after the DB recovers. Short enough to recover
+// fast, long enough to dampen hammering during an outage.
+const CACHE_ERROR_TTL = 5 * 1000; // 5 seconds
 
 /**
  * Clear cache entry after TTL
  */
-function setCacheWithTTL(key: string, value: AdvisorSubdomainData | null) {
+function setCacheWithTTL(
+  key: string,
+  value: AdvisorSubdomainData | null,
+  ttl: number = CACHE_TTL
+) {
   subdomainCache.set(key, value);
-  setTimeout(() => subdomainCache.delete(key), CACHE_TTL);
+  setTimeout(() => subdomainCache.delete(key), ttl);
 }
 
 /**
@@ -103,8 +117,9 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
   } catch (error) {
     console.error('Error resolving subdomain:', error);
 
-    // Cache null result for failed lookups to prevent hammering DB
-    setCacheWithTTL(subdomain, null);
+    // Cache the failure only briefly (not the full TTL) so a recovered DB
+    // resolves the tenant again right away instead of serving a stale 404.
+    setCacheWithTTL(subdomain, null, CACHE_ERROR_TTL);
     return null;
   }
 }
@@ -129,7 +144,12 @@ export async function getAdvisorBrandingBySubdomain(
   }
 
   try {
-    return await resolveAdvisorBrandingForProfile(advisorData.advisorId);
+    const subdomainRow = await prisma.advisorSubdomain.findUnique({
+      where: { subdomain },
+      select: { enterpriseId: true },
+    });
+    const scope = subdomainRow?.enterpriseId ? "firm" : "client";
+    return await resolveAdvisorBrandingForProfile(advisorData.advisorId, { scope });
   } catch (error) {
     console.error('Error fetching advisor branding:', error);
     return null;
@@ -162,15 +182,14 @@ export function getSubdomainCacheStats() {
  */
 export function validateSubdomainFormat(subdomain: string): { valid: boolean; error?: string } {
   // Check length
-  if (subdomain.length < 3 || subdomain.length > 20) {
-    return { valid: false, error: 'Subdomain must be 3-20 characters long' };
+  if (subdomain.length < SUBDOMAIN_SLUG_MIN_LENGTH || subdomain.length > SUBDOMAIN_SLUG_MAX_LENGTH) {
+    return { valid: false, error: SUBDOMAIN_SLUG_VALIDATION_MESSAGE };
   }
 
-  const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
-  if (!subdomainRegex.test(subdomain)) {
+  if (!SUBDOMAIN_SLUG_REGEX.test(subdomain)) {
     return {
       valid: false,
-      error: 'Subdomain can only contain lowercase letters, numbers, and hyphens (not at start/end)'
+      error: SUBDOMAIN_SLUG_VALIDATION_MESSAGE,
     };
   }
 
@@ -293,20 +312,12 @@ function subdomainSettingsStatus(row: {
   return 'inactive';
 }
 
-/**
- * Load the advisor's claimed subdomain for settings UI.
- */
-export async function getAdvisorSubdomainSettings(
-  advisorId: string
-): Promise<AdvisorSubdomainSettings | null> {
-  const row = await prisma.advisorSubdomain.findUnique({
-    where: { advisorId },
-  });
-
-  if (!row) {
-    return null;
-  }
-
+function mapSubdomainRowToSettings(row: {
+  subdomain: string;
+  isActive: boolean;
+  dnsVerified: boolean;
+  sslProvisioned: boolean;
+}): AdvisorSubdomainSettings {
   let verificationInstructions: AdvisorSubdomainSettings['verificationInstructions'];
   if (!row.dnsVerified && !isSubdomainAutoActivateEnabled()) {
     try {
@@ -323,4 +334,38 @@ export async function getAdvisorSubdomainSettings(
     sslProvisioned: row.sslProvisioned,
     verificationInstructions,
   };
+}
+
+/**
+ * Load the advisor's claimed subdomain for settings UI.
+ */
+export async function getAdvisorSubdomainSettings(
+  advisorId: string
+): Promise<AdvisorSubdomainSettings | null> {
+  const row = await prisma.advisorSubdomain.findUnique({
+    where: { advisorId },
+  });
+
+  if (!row) {
+    return null;
+  }
+
+  return mapSubdomainRowToSettings(row);
+}
+
+/**
+ * Firm-wide subdomain claimed by an enterprise owner/admin (shared portal URL).
+ */
+export async function getEnterpriseSubdomainSettings(
+  enterpriseId: string,
+): Promise<AdvisorSubdomainSettings | null> {
+  const row = await prisma.advisorSubdomain.findFirst({
+    where: { enterpriseId },
+  });
+
+  if (!row) {
+    return null;
+  }
+
+  return mapSubdomainRowToSettings(row);
 }

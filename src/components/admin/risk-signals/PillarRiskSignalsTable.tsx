@@ -13,7 +13,7 @@ export function PillarRiskSignalsTable({ pillars }: { pillars: PillarRiskSignal[
         <CardTitle className="text-2xl">Risk by domain</CardTitle>
         <CardDescription>
           {empty
-            ? "No pillar-level signals yet."
+            ? "No risk domain-level signals yet."
             : "Domains ranked by how many families show critical or moderate scores (latest assessment per family)."}
         </CardDescription>
       </CardHeader>

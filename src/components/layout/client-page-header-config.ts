@@ -28,7 +28,7 @@ const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] =
       kicker: "Client Portal",
       title: "Dashboard",
       subtitle:
-        "Assessment progress, results, and secure account management",
+        "Your home base for intake status, next steps, and links to detailed work areas",
     },
   },
   {
@@ -49,6 +49,16 @@ const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] =
       title: "Personal Risk Profile",
       subtitle:
         "Comprehensive evaluation of governance structure and family decision-making practices",
+    },
+  },
+  {
+    path: "/documents",
+    config: {
+      icon: "file-text",
+      kicker: "Document collection",
+      title: "Documents",
+      subtitle:
+        "Upload requested files and track what your advisor still needs from you",
     },
   },
   {

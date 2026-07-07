@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Loader2, Save } from "lucide-react";
 
+import { FieldHelp } from "@/components/ui/field-help";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,9 +68,12 @@ export function HouseholdProfilesPolicyForm({
           onCheckedChange={(v) => setEnabled(v === true)}
         />
         <div className="grid gap-1">
-          <Label htmlFor="household-profiles-enabled" className="text-sm font-medium leading-none">
-            Household profiles
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="household-profiles-enabled" className="text-sm font-medium leading-none">
+              Household profiles
+            </Label>
+            <FieldHelp helpKey="household-profiles-enabled" triggerLabel="Household profiles" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Let clients document household members and personalize assessments
             from composition and governance roles.

@@ -54,6 +54,10 @@ const { db } = vi.hoisted(() => {
       id: string;
       status: "ACTIVE" | "PAST_DUE" | "CANCELLED" | "UNPAID" | "GRACE_PERIOD";
     }>,
+    enterprises: [] as Array<{
+      id: string;
+      status: "ACTIVE" | "PROVISIONING" | "SUSPENDED";
+    }>,
     assessmentRecommendations: [] as Array<{
       assessmentId: string;
       serviceRecommendationId: string;
@@ -204,6 +208,11 @@ vi.mock("@/lib/db", () => ({
         }
       ),
     },
+    advisorEnterprise: {
+      count: vi.fn(async ({ where }: { where: { status: string } }) => {
+        return db.enterprises.filter((e) => e.status === where.status).length;
+      }),
+    },
     clientAdvisorAssignment: {
       groupBy: vi.fn(
         async ({
@@ -285,6 +294,7 @@ vi.mock("@/lib/db", () => ({
         }
       ),
     },
+    pillar: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -309,6 +319,7 @@ beforeEach(() => {
   db.pillarScores.length = 0;
   db.reports.length = 0;
   db.subscriptions.length = 0;
+  db.enterprises.length = 0;
   db.assessmentRecommendations.length = 0;
   db.serviceRecommendations.length = 0;
 });
@@ -391,6 +402,19 @@ describe("getPlatformKpis", () => {
     expect(kpis.activeSubscriptions).toBe(2);
   });
 
+  it("counts enterprises by status", async () => {
+    db.enterprises.push(
+      { id: "e1", status: "ACTIVE" },
+      { id: "e2", status: "ACTIVE" },
+      { id: "e3", status: "PROVISIONING" },
+      { id: "e4", status: "SUSPENDED" }
+    );
+    const kpis = await getPlatformKpis();
+    expect(kpis.enterprisesActive).toBe(2);
+    expect(kpis.enterprisesProvisioning).toBe(1);
+    expect(kpis.enterprisesSuspended).toBe(1);
+  });
+
   it("scoredAssessments counts distinct assessments with ≥ 1 PillarScore", async () => {
     seedClientWithLatestPillar("c1", "governance", 7, "LOW");
     seedClientWithLatestPillar("c1", "cyber-digital", 5, "MEDIUM"); // same client, two pillars on same assessment-key naming would diverge — let's keep simple
@@ -431,7 +455,7 @@ describe("getPillarAverages", () => {
   it("returns 6 unassessed cells when no scores exist", async () => {
     const result = await getPillarAverages();
     expect(result.totalScored).toBe(0);
-    expect(result.pillars).toHaveLength(6);
+    expect(result.pillars).toHaveLength(10);
     expect(result.pillars.every((p) => p.dominantLevel === "unassessed")).toBe(true);
     expect(result.pillars.every((p) => p.avgScore === null)).toBe(true);
   });

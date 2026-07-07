@@ -72,7 +72,12 @@ export type IntakeQuestion = {
   helpText?: string;
   learnMore?: string;
   type: string;
-  options?: Array<{ value: number; label: string; description?: string }>;
+  answerType?: string;
+  answer0?: string | null;
+  answer1?: string | null;
+  answer2?: string | null;
+  answer3?: string | null;
+  options?: Array<{ value: number | string; label: string; description?: string }>;
   /** Full intake form fields for advisor read-only review */
   questionNumber?: number;
   questionText?: string;

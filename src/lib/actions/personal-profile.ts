@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
+import { resolveAdvisorPersonalNameFields } from '@/lib/advisor/advisor-workspace-label';
 import {
   advisorPersonalDetailsSchema,
   clientPersonalDetailsSchema,
@@ -10,18 +11,19 @@ import {
   type ClientPersonalDetailsFormData,
 } from '@/lib/schemas/profile';
 import { revalidatePath } from 'next/cache';
+import { isAdvisorBrandingReadOnly } from '@/lib/enterprise/branding-access';
 
 export async function getAdvisorPersonalDetails() {
   const session = await auth();
   if (!session?.user?.id) return { success: false, data: null, error: 'Not authenticated' };
   try {
     const profile = await getAdvisorProfileOrThrow(session.user.id);
-    const user = profile.user as { firstName?: string | null; lastName?: string | null };
+    const { firstName, lastName } = resolveAdvisorPersonalNameFields(profile.user);
     return {
       success: true,
       data: {
-        firstName: user?.firstName ?? '',
-        lastName: user?.lastName ?? '',
+        firstName,
+        lastName,
         phone: profile.phone ?? '',
         jobTitle: profile.jobTitle ?? '',
         firmName: profile.firmName ?? '',
@@ -43,7 +45,18 @@ export async function updateAdvisorPersonalDetails(data: unknown) {
   }
   try {
     const profile = await getAdvisorProfileOrThrow(session.user.id);
+    const brandingReadOnly = await isAdvisorBrandingReadOnly(session.user.id);
     const { firstName, lastName, phone, jobTitle, firmName, licenseNumber } = parsed.data;
+    const trimmedFirmName = firmName?.trim() || null;
+    if (
+      brandingReadOnly &&
+      trimmedFirmName !== (profile.firmName?.trim() || null)
+    ) {
+      return {
+        success: false,
+        error: 'Firm name is managed by your firm owner or administrators.',
+      };
+    }
     const displayName = [firstName, lastName]
       .map((part) => part?.trim())
       .filter(Boolean)
@@ -62,7 +75,7 @@ export async function updateAdvisorPersonalDetails(data: unknown) {
         data: {
           phone: phone?.trim() || null,
           jobTitle: jobTitle?.trim() || null,
-          firmName: firmName?.trim() || null,
+          firmName: brandingReadOnly ? profile.firmName?.trim() || null : trimmedFirmName,
           licenseNumber: licenseNumber?.trim() || null,
         },
       }),

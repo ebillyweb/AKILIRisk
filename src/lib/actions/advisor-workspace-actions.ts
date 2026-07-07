@@ -12,17 +12,32 @@ import {
   deriveIntelligenceHighlights,
   mapNotificationsToActivity,
 } from "@/lib/advisor/workspace-data";
+import { getAdvisorClientLimitStatus } from "@/lib/advisor/client-limit-status.server";
+import { getAdvisorSubscriptionTier } from "@/lib/advisor/subscription-tier.server";
+import {
+  isEnterpriseDocumentRequirementsWorkspaceEnabled,
+  isEnterpriseMemberVisibilityEnabled,
+  resolveEnterpriseMemberVisibilityContext,
+} from "@/lib/enterprise/advisor-member-visibility";
+import { requireAdvisorRole } from "@/lib/advisor/auth";
+import { isImplementationTrackingEnabledForUser } from "@/lib/engagement/feature-flags";
 
 export async function getAdvisorWorkspaceHomeData() {
   const flags = await getPlatformFeatureFlags();
+  const { userId } = await requireAdvisorRole();
 
-  const [dash, pipelineRes, notificationsRes, intelligenceRes] = await Promise.all([
+  const [dash, pipelineRes, notificationsRes, intelligenceRes, clientLimitStatus, subscriptionTier, implementationTrackingEnabled, memberVisibilityContext] =
+    await Promise.all([
     getAdvisorDashboardData(),
     getClientPipelineData(),
     getAdvisorNotificationsAction(),
     flags.riskIntelligenceEnabled
       ? getPortfolioIntelligenceData()
       : Promise.resolve({ success: false as const, error: "disabled" }),
+    getAdvisorClientLimitStatus(userId),
+    getAdvisorSubscriptionTier(userId),
+    isImplementationTrackingEnabledForUser(userId),
+    resolveEnterpriseMemberVisibilityContext(userId),
   ]);
 
   if (!dash.success) {
@@ -37,7 +52,12 @@ export async function getAdvisorWorkspaceHomeData() {
 
   const priorities =
     pipelineOk && metrics
-      ? deriveAdvisorPriorities(clients, metrics, pendingInvitationsCount)
+      ? deriveAdvisorPriorities(clients, metrics, pendingInvitationsCount, {
+          documentRequirementsEnabled:
+            isEnterpriseDocumentRequirementsWorkspaceEnabled(
+              memberVisibilityContext,
+            ),
+        })
       : [];
 
   const activity =
@@ -47,8 +67,20 @@ export async function getAdvisorWorkspaceHomeData() {
 
   const intelligenceHighlights = deriveIntelligenceHighlights(
     intelligenceRes.success ? intelligenceRes.data! : null,
-    flags.riskIntelligenceEnabled
+    flags.riskIntelligenceEnabled &&
+      isEnterpriseMemberVisibilityEnabled(memberVisibilityContext, "portfolio"),
   );
+
+  const memberPortfolioVisible = isEnterpriseMemberVisibilityEnabled(
+    memberVisibilityContext,
+    "portfolio",
+  );
+  const memberEngagementsVisible = isEnterpriseMemberVisibilityEnabled(
+    memberVisibilityContext,
+    "engagements",
+  );
+  const memberDocumentRequirementsVisible =
+    isEnterpriseDocumentRequirementsWorkspaceEnabled(memberVisibilityContext);
 
   return {
     success: true as const,
@@ -63,6 +95,12 @@ export async function getAdvisorWorkspaceHomeData() {
       activity,
       intelligenceHighlights,
       flags,
+      clientLimitStatus,
+      subscriptionTier,
+      implementationTrackingEnabled,
+      memberPortfolioVisible,
+      memberEngagementsVisible,
+      memberDocumentRequirementsVisible,
     },
   };
 }

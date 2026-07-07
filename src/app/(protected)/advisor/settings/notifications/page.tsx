@@ -12,9 +12,9 @@ export default async function NotificationSettingsPage() {
       <div className="space-y-6">
         <div>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/advisor/settings" className="inline-flex items-center gap-2">
+            <Link href="/advisor/notifications" className="inline-flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Settings
+              Back to Notifications
             </Link>
           </Button>
         </div>
@@ -32,15 +32,17 @@ export default async function NotificationSettingsPage() {
     <div className="space-y-8">
       <div>
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/advisor/settings" className="inline-flex items-center gap-2">
+          <Link href="/advisor/notifications" className="inline-flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Back to Settings
+            Back to Notifications
           </Link>
         </Button>
       </div>
 
       <NotificationPreferencesForm
         preferences={result.data!}
+        reminderPolicy={result.reminderPolicy}
+        isEnterpriseMember={result.isEnterpriseMember}
         updatePreferencesAction={updateNotificationPreferencesAction}
       />
     </div>

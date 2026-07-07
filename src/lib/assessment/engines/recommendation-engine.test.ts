@@ -120,7 +120,7 @@ const fakeServices = [
 ];
 
 const findManySpy = vi.fn();
-const findUniqueSpy = vi.fn();
+const findServiceSpy = vi.fn();
 const createManySpy = vi.fn().mockResolvedValue({ count: 0 });
 
 vi.mock("@/lib/db", () => ({
@@ -129,7 +129,7 @@ vi.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => findManySpy(...args),
     },
     serviceRecommendation: {
-      findUnique: (...args: unknown[]) => findUniqueSpy(...args),
+      findFirst: (...args: unknown[]) => findServiceSpy(...args),
     },
     assessmentRecommendation: {
       createMany: (...args: unknown[]) => createManySpy(...args),
@@ -141,13 +141,22 @@ import { RecommendationEngine } from "./recommendation-engine";
 
 beforeEach(() => {
   findManySpy.mockReset();
-  findUniqueSpy.mockReset();
+  findServiceSpy.mockReset();
   createManySpy.mockClear();
 
   findManySpy.mockResolvedValue(fakeRules);
-  findUniqueSpy.mockImplementation(({ where }: { where: { id: string } }) => {
-    return Promise.resolve(fakeServices.find((s) => s.id === where.id) ?? null);
-  });
+  findServiceSpy.mockImplementation(
+    ({ where }: { where: { id: string; isActive?: boolean } }) => {
+      const svc = fakeServices.find((s) => s.id === where.id);
+      // Honor the isActive filter the engine passes (regression guard for the
+      // findUnique→findFirst fix).
+      if (!svc) return Promise.resolve(null);
+      if (where.isActive !== undefined && svc.isActive !== where.isActive) {
+        return Promise.resolve(null);
+      }
+      return Promise.resolve(svc);
+    }
+  );
 });
 
 describe("RecommendationEngine — C1 schema-additions regression", () => {
@@ -233,7 +242,7 @@ describe("RecommendationEngine — C1 schema-additions regression", () => {
     // ServiceRecommendation row. The engine MUST NOT branch on these —
     // matching is rules-only. To prove it, swap every service's tier to
     // ENHANCED and complexity to HIGH and verify the same matches surface.
-    findUniqueSpy.mockImplementation(({ where }: { where: { id: string } }) => {
+    findServiceSpy.mockImplementation(({ where }: { where: { id: string } }) => {
       const original = fakeServices.find((s) => s.id === where.id);
       if (!original) return Promise.resolve(null);
       return Promise.resolve({ ...original, tier: "ENHANCED", complexity: "HIGH", implementationType: "DIY" });
