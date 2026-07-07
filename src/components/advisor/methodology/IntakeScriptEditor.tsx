@@ -459,19 +459,23 @@ export function IntakeScriptEditor({
         highlightBankMode={highlightBankMode}
         bankModeCardRef={bankModeCardRef}
         cardId="intake-bank-mode-card"
-        onModeChange={(value) => {
-          runPending(async () => {
-            const result = await actions.updateBankMode(value);
-            if (!result.success) {
-              toast.error(result.error ?? "Something went wrong");
-              return;
-            }
-            toast.success(
-              result.coercedToPlatform
-                ? customOnlyEmptyBankMessage("intake")
-                : questionBankModeChangeMessage(value),
-            );
-            refreshAfterSuccess();
+        onModeChange={async (value) => {
+          return await new Promise<{ success: boolean }>((resolve) => {
+            runPending(async () => {
+              const result = await actions.updateBankMode(value);
+              if (!result.success) {
+                toast.error(result.error ?? "Something went wrong");
+                resolve({ success: false });
+                return;
+              }
+              toast.success(
+                result.coercedToPlatform
+                  ? customOnlyEmptyBankMessage("intake")
+                  : questionBankModeChangeMessage(value),
+              );
+              refreshAfterSuccess();
+              resolve({ success: true });
+            });
           });
         }}
       />

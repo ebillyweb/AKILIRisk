@@ -1,6 +1,7 @@
 "use client";
 
 import type { IntakeQuestionBankMode } from "@prisma/client";
+import { useEffect, useState } from "react";
 import {
   bankModeSwitchSuccessMessage,
   customOnlyEmptyBankMessage,
@@ -8,6 +9,7 @@ import {
   isCustomOnlyWithoutSavedQuestions,
 } from "@/lib/methodology/intake-question-bank-mode";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 
@@ -22,13 +24,41 @@ type QuestionBankModeControlsProps = {
   highlightBankMode: boolean;
   bankModeCardRef: React.RefObject<HTMLDivElement | null>;
   cardId: string;
-  onModeChange: (mode: IntakeQuestionBankMode) => void;
+  onModeChange: (
+    mode: IntakeQuestionBankMode,
+  ) => void | Promise<{ success: boolean } | undefined>;
 };
 
 const MODE_VALUES: IntakeQuestionBankMode[] = ["PLATFORM", "COMBINED", "CUSTOM"];
 
+const MODE_OPTIONS: Array<{
+  value: IntakeQuestionBankMode;
+  label: string;
+  description: (experienceNoun: "intake" | "assessment") => string;
+}> = [
+  {
+    value: "PLATFORM",
+    label: "Platform only",
+    description: () => "AkiliRisk catalog questions for your clients.",
+  },
+  {
+    value: "COMBINED",
+    label: "Combined",
+    description: () => "Platform questions first, then your custom prompts.",
+  },
+  {
+    value: "CUSTOM",
+    label: "Custom only",
+    description: (experienceNoun) => `Your own ${experienceNoun} prompts only.`,
+  },
+];
+
 function isBankMode(value: string): value is IntakeQuestionBankMode {
   return MODE_VALUES.includes(value as IntakeQuestionBankMode);
+}
+
+function modeOptionId(cardId: string, mode: IntakeQuestionBankMode): string {
+  return `${cardId}-${mode.toLowerCase()}`;
 }
 
 export function QuestionBankModeStatusBanner({
@@ -103,7 +133,12 @@ export function QuestionBankModeControls({
   cardId,
   onModeChange,
 }: QuestionBankModeControlsProps) {
-  const displayedMode = effectiveQuestionBankMode(bankMode, savedCustomQuestionCount);
+  const isDisabled = pending || modeReadOnly;
+  const [selectedMode, setSelectedMode] = useState(bankMode);
+
+  useEffect(() => {
+    setSelectedMode(bankMode);
+  }, [bankMode]);
 
   return (
     <div
@@ -130,41 +165,53 @@ export function QuestionBankModeControls({
             </p>
           ) : null}
           <RadioGroup
-            value={displayedMode}
-            disabled={pending || modeReadOnly}
+            value={selectedMode}
+            disabled={isDisabled}
             onValueChange={(value) => {
-              if (!isBankMode(value)) return;
-              onModeChange(value);
+              if (!isBankMode(value) || value === selectedMode || isDisabled) return;
+              const previousMode = selectedMode;
+              setSelectedMode(value);
+              void Promise.resolve(onModeChange(value)).then((result) => {
+                if (result && !result.success) {
+                  setSelectedMode(previousMode);
+                }
+              });
             }}
             className="grid gap-3 lg:grid-cols-3"
           >
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <RadioGroupItem value="PLATFORM" className="mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Platform only</p>
-                <p className="text-sm text-muted-foreground">
-                  AkiliRisk catalog questions for your clients.
-                </p>
-              </div>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <RadioGroupItem value="COMBINED" className="mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Combined</p>
-                <p className="text-sm text-muted-foreground">
-                  Platform questions first, then your custom prompts.
-                </p>
-              </div>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <RadioGroupItem value="CUSTOM" className="mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Custom only</p>
-                <p className="text-sm text-muted-foreground">
-                  Your own {experienceNoun} prompts only.
-                </p>
-              </div>
-            </label>
+            {MODE_OPTIONS.map((option) => {
+              const optionId = modeOptionId(cardId, option.value);
+              const isSelected = selectedMode === option.value;
+              return (
+                <div
+                  key={option.value}
+                  className={cn(
+                    "flex items-start gap-3 rounded-lg border border-border p-4",
+                    isSelected && "border-primary bg-primary/5",
+                  )}
+                >
+                  <RadioGroupItem
+                    value={option.value}
+                    id={optionId}
+                    className="mt-0.5"
+                  />
+                  <div className="min-w-0 space-y-1">
+                    <Label
+                      htmlFor={optionId}
+                      className={cn(
+                        "text-sm font-medium leading-snug",
+                        isDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer",
+                      )}
+                    >
+                      {option.label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {option.description(experienceNoun)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </RadioGroup>
         </CardContent>
       </Card>
