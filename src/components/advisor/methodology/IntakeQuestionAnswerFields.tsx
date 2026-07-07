@@ -5,8 +5,10 @@ import { Minus, Plus } from "lucide-react";
 
 import {
   ADVISOR_INTAKE_ANSWER_TYPE_OPTIONS,
+  intakeAnswerTypeCarriesOptions,
   type AdvisorIntakeAnswerType,
 } from "@/lib/methodology/advisor-intake-question-config";
+import { MAX_PROPERTY_ENTRIES } from "@/lib/intake/structured-answer-values";
 import { getAnswerOptionFields } from "@/lib/assessment/bank/question-bank-display";
 import {
   INTAKE_CHOICE_LIST_MAX,
@@ -88,7 +90,7 @@ export function IntakeQuestionAnswerFields({
   );
 
   const choiceListError =
-    answerType === "choice_list" && choiceListTouched
+    intakeAnswerTypeCarriesOptions(answerType) && choiceListTouched
       ? choiceListValidationError(choiceLabels)
       : null;
 
@@ -96,10 +98,9 @@ export function IntakeQuestionAnswerFields({
     const label =
       ADVISOR_INTAKE_ANSWER_TYPE_OPTIONS.find((option) => option.value === initialType)?.label ??
       initialType;
-    const choicePreview =
-      initialType === "choice_list"
-        ? parseStoredIntakeChoiceListOptions(defaultOptions)
-        : [];
+    const choicePreview = intakeAnswerTypeCarriesOptions(initialType)
+      ? parseStoredIntakeChoiceListOptions(defaultOptions)
+      : [];
 
     return (
       <div className="space-y-2">
@@ -116,7 +117,8 @@ export function IntakeQuestionAnswerFields({
     );
   }
 
-  const showChoiceListEditor = answerType === "choice_list";
+  const showChoiceListEditor = intakeAnswerTypeCarriesOptions(answerType);
+  const isMultiSelect = answerType === "multi_select";
 
   return (
     <>
@@ -131,7 +133,10 @@ export function IntakeQuestionAnswerFields({
             const next = value as AdvisorIntakeAnswerType;
             setAnswerType(next);
             setChoiceListTouched(false);
-            if (next === "choice_list" && choiceLabels.length < INTAKE_CHOICE_LIST_MIN) {
+            if (
+              intakeAnswerTypeCarriesOptions(next) &&
+              choiceLabels.length < INTAKE_CHOICE_LIST_MIN
+            ) {
               setChoiceLabels(["", "", ""]);
             }
           }}
@@ -154,8 +159,10 @@ export function IntakeQuestionAnswerFields({
           <div className="space-y-1">
             <Label>Answer options</Label>
             <p className="text-xs text-muted-foreground">
-              Clients pick one option. Add between {INTAKE_CHOICE_LIST_MIN} and{" "}
-              {INTAKE_CHOICE_LIST_MAX} choices.
+              {isMultiSelect
+                ? "Clients can select any that apply."
+                : "Clients pick one option."}{" "}
+              Add between {INTAKE_CHOICE_LIST_MIN} and {INTAKE_CHOICE_LIST_MAX} choices.
             </p>
           </div>
           <div className="space-y-2">
@@ -212,6 +219,11 @@ export function IntakeQuestionAnswerFields({
             Add option
           </Button>
         </div>
+      ) : answerType === "property_list" ? (
+        <p className="text-xs text-muted-foreground">
+          Clients add up to {MAX_PROPERTY_ENTRIES} properties, each with a ZIP code
+          and an optional label. No preset answer labels are needed for this type.
+        </p>
       ) : answerOptions.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {answerOptions.map((field) => (

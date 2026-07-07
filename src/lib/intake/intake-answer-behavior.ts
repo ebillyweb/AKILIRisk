@@ -4,6 +4,10 @@ import {
   resolveIntakeChoiceListLabel,
 } from "@/lib/intake/choice-list-options";
 import type { IntakeChoiceListOption } from "@/lib/intake/choice-list-options";
+import {
+  formatMultiSelectForDisplay,
+  formatPropertyListForDisplay,
+} from "@/lib/intake/structured-answer-values";
 
 /** Intake questions share assessment answer types; freeform types allow audio/typed responses. */
 export function intakeUsesFreeformResponse(answerType: string): boolean {
@@ -33,6 +37,7 @@ export function intakeChoiceOptions(question: {
 
   switch (question.answerType) {
     case "choice_list":
+    case "multi_select":
       return parseStoredIntakeChoiceListOptions(question.options);
     case "yes_no":
       return [
@@ -77,6 +82,15 @@ export function formatIntakeStructuredAnswerForDisplay(
   if (question.answerType === "choice_list") {
     const options = parseStoredIntakeChoiceListOptions(question.options);
     return resolveIntakeChoiceListLabel(options, value) ?? value;
+  }
+
+  if (question.answerType === "multi_select") {
+    const options = parseStoredIntakeChoiceListOptions(question.options);
+    return formatMultiSelectForDisplay(options, value);
+  }
+
+  if (question.answerType === "property_list") {
+    return formatPropertyListForDisplay(value);
   }
 
   const match = intakeChoiceOptions(question).find((choice) => choice.value === value);
