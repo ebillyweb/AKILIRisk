@@ -20,18 +20,22 @@ test.describe("auth edge cases", () => {
     await expect(
       page.getByText(/Invalid email or password/i)
     ).toBeVisible();
+    // The advisor credentials form points users at the email confirmation /
+    // account-recovery hint (SignInHub CredentialsPanel copy for role=advisor).
     await expect(
-      page.getByText(/email sign-in link/i)
+      page.getByText(/confirmation link/i)
     ).toBeVisible();
 
     expect(new URL(page.url()).pathname).toBe("/signin");
   });
 
-  test("unauthenticated user hitting /dashboard is sent to magic-link sign-in with callbackUrl", { tag: "@smoke" }, async ({ page }) => {
+  test("unauthenticated user hitting /dashboard is sent to client sign-in with callbackUrl", { tag: "@smoke" }, async ({ page }) => {
     await page.goto("/dashboard");
     const url = new URL(page.url());
-    expect(url.pathname).toBe("/signin");
-    expect(url.searchParams.get("role")).toBe("client");
+    // buildSignInHref routes unauthenticated users to the client sign-in path
+    // (role is encoded in the path, not a query param). See
+    // src/lib/auth/sign-in-routes.test.ts.
+    expect(url.pathname).toBe("/signin/client");
     expect(url.searchParams.get("callbackUrl")).toBe("/dashboard");
   });
 
