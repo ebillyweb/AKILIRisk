@@ -11,6 +11,7 @@ import { getPersonalizedText } from '@/lib/assessment/personalization';
 import { hasDocumentUploadFiles } from '@/lib/assessment/question-upload';
 import { QuestionCard } from '@/components/assessment/QuestionCard';
 import { NavigationButtons } from '@/components/assessment/NavigationButtons';
+import { QuestionQuickNav } from '@/components/assessment/QuestionQuickNav';
 import { SectionProgress } from '@/components/assessment/ProgressBar';
 import { SkipToLastUnansweredQuestion } from '@/components/assessment/SkipToLastUnansweredQuestion';
 import { Card, CardContent } from '@/components/ui/card';
@@ -277,6 +278,20 @@ export default function QuestionPage({ params }: QuestionPageProps) {
           />
         ) : null}
       </section>
+
+      <QuestionQuickNav
+        onBack={handleBack}
+        onSkip={handleSkip}
+        onNext={handleNext}
+        canGoBack={canGoBack}
+        isLastQuestion={isLastQuestion}
+        isSaving={isSaving}
+        showSkip={
+          !isReviewingPillar &&
+          !currentQuestion.required &&
+          currentQuestion.type !== "document-upload"
+        }
+      />
 
       <Card className="overflow-hidden">
         <CardContent className="space-y-6 pt-6 sm:space-y-8 sm:pt-8">
