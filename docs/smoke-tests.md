@@ -8,7 +8,26 @@ auth regressions between deploys.
 - **Schedule:** every 6 hours (UTC), plus manual runs via **Actions → Smoke
   Tests (preview) → Run workflow**.
 - **Selection:** `playwright test --grep @smoke` — only tests tagged `@smoke`.
-- **Current scope:** advisor + admin login (`tests/smoke/auth.spec.ts`).
+- **Current scope:** advisor + admin login, plus negative auth cases.
+
+### Covered cases
+
+Positive (`tests/smoke/auth.spec.ts`):
+
+- Advisor signs in with a password and lands on `/advisor`.
+- Admin signs in with a password and lands on `/admin`.
+
+Negative (`tests/smoke/auth-edge-cases.spec.ts`):
+
+- Wrong password shows the credential error and stays on `/signin`.
+- An unauthenticated visit to `/dashboard` is redirected to magic-link
+  sign-in with the `callbackUrl` preserved.
+- An advisor navigating directly to `/admin` is bounced with
+  `error=unauthorized` and sees the "Access denied" notice.
+
+The client-role negative cases (client blocked from `/admin` and `/advisor`)
+are left untagged because they sign in as a client, which needs
+`ENABLE_TEST_AUTH=1` on preview — see [Extending scope](#extending-scope-later).
 
 The job runs Playwright against the *live* deployment; it does not build or
 start the app (`playwright.config.ts` has no `webServer`). It defaults to
