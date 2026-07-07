@@ -53,7 +53,9 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 22+: a transitive dep (@prisma/streams-local) requires >=22,
+          # and .npmrc sets engine-strict=true so npm ci hard-fails on Node 20.
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
