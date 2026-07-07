@@ -12,6 +12,7 @@ import {
 } from "@/components/intake/IntakeStructuredAnswer";
 import { QuestionDisplay } from "@/components/intake/QuestionDisplay";
 import { StepIndicator } from "@/components/intake/StepIndicator";
+import { FacilitatedAnswerNote } from "@/components/advisor/facilitate/FacilitatedAnswerNote";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -461,6 +462,7 @@ export function FacilitatedIntakeWizard({
         ) : (
           <div className="space-y-4">
             <IntakeStructuredAnswer
+              key={currentQuestion.id}
               question={currentQuestion}
               value={typedDraft}
               disabled={typingDisabled}
@@ -482,6 +484,16 @@ export function FacilitatedIntakeWizard({
           >
             Skip this question
           </Button>
+        </div>
+
+        <div className="mt-4">
+          <FacilitatedAnswerNote
+            key={currentQuestion.id}
+            mode="intake"
+            interviewId={interviewId}
+            questionId={currentQuestion.id}
+            targetLabel={`Question ${currentIndex + 1}`}
+          />
         </div>
       </Card>
 

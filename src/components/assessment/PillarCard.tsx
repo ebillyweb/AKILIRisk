@@ -23,6 +23,14 @@ interface PillarCardProps {
   onClick: () => void;
 }
 
+/** Rough pace used to estimate how long a domain takes, based on its question count. */
+const SECONDS_PER_QUESTION = 40;
+
+function estimatedMinutesForDomain(totalQuestions: number, fallbackMinutes: number): number {
+  if (totalQuestions <= 0) return fallbackMinutes;
+  return Math.max(1, Math.round((totalQuestions * SECONDS_PER_QUESTION) / 60));
+}
+
 export function PillarCard({
   pillar,
   status,
@@ -58,6 +66,11 @@ export function PillarCard({
     ? (questionsAnswered / totalQuestions) * 100
     : 0;
 
+  const estimatedMinutes = estimatedMinutesForDomain(
+    totalQuestions,
+    pillar.estimatedMinutes,
+  );
+
   return (
     <Card
       data-testid={`pillar-card-${pillar.slug}`}
@@ -78,7 +91,12 @@ export function PillarCard({
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
-          <span>~{pillar.estimatedMinutes} min</span>
+          <span>
+            ~{estimatedMinutes} min
+            {totalQuestions > 0
+              ? ` · ${totalQuestions} question${totalQuestions === 1 ? "" : "s"}`
+              : ""}
+          </span>
         </div>
 
         {status === 'in-progress' && (

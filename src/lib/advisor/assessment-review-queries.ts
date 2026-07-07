@@ -31,6 +31,14 @@ export type AdvisorAssessmentResponseNoteView = {
   updatedAt: string;
 };
 
+/** A note authored by another advisor, shown read-only to firm (enterprise) viewers. */
+export type AdvisorAssessmentResponseOtherNoteView = {
+  id: string;
+  body: string;
+  updatedAt: string;
+  authorName: string;
+};
+
 export type AdvisorAssessmentReviewRow = {
   responseId: string;
   questionId: string;
@@ -40,6 +48,8 @@ export type AdvisorAssessmentReviewRow = {
   skipped: boolean;
   answeredAt: string;
   advisorNote: AdvisorAssessmentResponseNoteView | null;
+  /** Notes left by other advisors — populated only for firm-scope (enterprise) viewers. */
+  otherAdvisorNotes: AdvisorAssessmentResponseOtherNoteView[];
 };
 
 export type AdvisorAssessmentReviewPayload = {
@@ -95,9 +105,17 @@ export async function getAssessmentForAdvisorReview(
           skipped: true,
           answeredAt: true,
           advisorNotes: {
-            where: { advisorId: userId },
-            select: { id: true, body: true, updatedAt: true },
-            take: 1,
+            // Firm (enterprise OWNER/ADMIN) viewers see every advisor's note on
+            // the answer; a regular advisor sees only their own.
+            where: scope.mode === "firm" ? {} : { advisorId: userId },
+            select: {
+              id: true,
+              advisorId: true,
+              body: true,
+              updatedAt: true,
+              advisor: { select: { name: true } },
+            },
+            orderBy: { updatedAt: "desc" },
           },
         },
       },
@@ -121,7 +139,15 @@ export async function getAssessmentForAdvisorReview(
         email: decryptUserEmail(assessment.user.emailCiphertext),
       },
       responses: assessment.responses.map((r) => {
-        const note = r.advisorNotes && r.advisorNotes.length > 0 ? r.advisorNotes[0] : null;
+        const ownNote = r.advisorNotes.find((n) => n.advisorId === userId) ?? null;
+        const otherAdvisorNotes = r.advisorNotes
+          .filter((n) => n.advisorId !== userId)
+          .map((n) => ({
+            id: n.id,
+            body: n.body,
+            updatedAt: n.updatedAt.toISOString(),
+            authorName: n.advisor?.name ?? "Advisor",
+          }));
         return {
           responseId: r.id,
           questionId: r.questionId,
@@ -133,13 +159,14 @@ export async function getAssessmentForAdvisorReview(
           }),
           skipped: r.skipped,
           answeredAt: r.answeredAt.toISOString(),
-          advisorNote: note
+          advisorNote: ownNote
             ? {
-                id: note.id,
-                body: note.body,
-                updatedAt: note.updatedAt.toISOString(),
+                id: ownNote.id,
+                body: ownNote.body,
+                updatedAt: ownNote.updatedAt.toISOString(),
               }
             : null,
+          otherAdvisorNotes,
         };
       }),
     },

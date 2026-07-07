@@ -19,7 +19,18 @@ import {
   type IntakeChoiceListOption,
 } from "@/lib/intake/choice-list-options";
 
-export const ADVISOR_INTAKE_ONLY_ANSWER_TYPES = ["choice_list"] as const;
+export const ADVISOR_INTAKE_ONLY_ANSWER_TYPES = [
+  "choice_list",
+  "multi_select",
+  "property_list",
+] as const;
+
+/** Intake-only choice types whose option labels are stored in `options` JSON. */
+export const INTAKE_OPTION_ANSWER_TYPES = ["choice_list", "multi_select"] as const;
+
+export function intakeAnswerTypeCarriesOptions(answerType: string): boolean {
+  return (INTAKE_OPTION_ANSWER_TYPES as readonly string[]).includes(answerType);
+}
 
 export type AdvisorIntakeOnlyAnswerType =
   (typeof ADVISOR_INTAKE_ONLY_ANSWER_TYPES)[number];
@@ -38,7 +49,9 @@ export const ADVISOR_INTAKE_ANSWER_TYPE_OPTIONS: ReadonlyArray<{
   label: string;
 }> = [
   ...ADVISOR_ASSESSMENT_ANSWER_TYPE_OPTIONS,
-  { value: "choice_list", label: "Multiple choice (2–10 options)" },
+  { value: "choice_list", label: "Multiple choice — pick one (2–10 options)" },
+  { value: "multi_select", label: "Select all that apply (2–10 options)" },
+  { value: "property_list", label: "Properties — ZIP codes (up to 5)" },
 ];
 
 const intakeChoiceListOptionSchema = z.object({
@@ -52,7 +65,7 @@ const advisorIntakeQuestionInputSchema = advisorAssessmentQuestionInputSchema
     options: z.array(intakeChoiceListOptionSchema).optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    if (data.answerType !== "choice_list") return;
+    if (!intakeAnswerTypeCarriesOptions(data.answerType)) return;
 
     const options = data.options ?? [];
     if (options.length < INTAKE_CHOICE_LIST_MIN) {
@@ -107,10 +120,9 @@ export function readAdvisorIntakeQuestionForm(
     .getAll("optionLabel")
     .map((entry) => entry.toString().trim())
     .filter(Boolean);
-  const options =
-    answerType === "choice_list"
-      ? normalizeIntakeChoiceListOptions(optionLabels)
-      : null;
+  const options = intakeAnswerTypeCarriesOptions(answerType)
+    ? normalizeIntakeChoiceListOptions(optionLabels)
+    : null;
 
   return {
     questionText: assessment.questionText,
@@ -131,7 +143,7 @@ export function validateAdvisorIntakeQuestionFormClient(formData: FormData): str
     return "Question text is required";
   }
 
-  if (payload.answerType === "choice_list") {
+  if (intakeAnswerTypeCarriesOptions(payload.answerType)) {
     const optionCount = payload.options?.length ?? 0;
     if (optionCount < INTAKE_CHOICE_LIST_MIN) {
       return `Provide at least ${INTAKE_CHOICE_LIST_MIN} non-empty options`;
@@ -163,7 +175,7 @@ export function parseAdvisorIntakeQuestionInput(
 export function buildAdvisorIntakeQuestionWriteData(input: AdvisorIntakeQuestionInput) {
   const context = input.whyThisMatters ?? null;
 
-  if (input.answerType === "choice_list") {
+  if (intakeAnswerTypeCarriesOptions(input.answerType)) {
     return {
       questionText: input.questionText,
       context,
@@ -174,6 +186,22 @@ export function buildAdvisorIntakeQuestionWriteData(input: AdvisorIntakeQuestion
       answer2: input.answer2 ?? null,
       answer3: input.answer3 ?? null,
       options: input.options?.length ? input.options : Prisma.JsonNull,
+      ...(input.isVisible !== undefined ? { isVisible: input.isVisible } : {}),
+    };
+  }
+
+  if (input.answerType === "property_list") {
+    // Fixed-shape repeatable input — no author-defined options or answer labels.
+    return {
+      questionText: input.questionText,
+      context,
+      helpText: context,
+      answerType: input.answerType,
+      answer0: null,
+      answer1: null,
+      answer2: null,
+      answer3: null,
+      options: Prisma.JsonNull,
       ...(input.isVisible !== undefined ? { isVisible: input.isVisible } : {}),
     };
   }

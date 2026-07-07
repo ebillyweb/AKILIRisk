@@ -71,8 +71,8 @@ export function AnswerAdvisorNotePanel({
         Advisor note — {targetLabel}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Visible only to you and platform staff. Does not change the client
-        answer or any score.
+        Visible to you, your firm&apos;s admins, and platform staff — never the
+        client. Does not change the client answer or any score.
       </p>
       {hasNote && !dirty ? (
         <p

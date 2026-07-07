@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { pillarDefinitionFor } from "@/lib/assessment/pillar-registry";
@@ -28,10 +27,27 @@ export function FacilitatedAssessmentComplete({
   const { data: catalog = [] } = usePlatformPillarCatalog();
   const [isCalculating, setIsCalculating] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Safety net: if scoring hangs, surface a manual "Back to assessment" button
+  // so the advisor is never stranded on the "Calculating results" spinner.
+  const [showManualExit, setShowManualExit] = useState(false);
+
+  const goToNextAssessment = useCallback(
+    (allPillarsScored?: boolean) => {
+      if (allPillarsScored) {
+        router.push(facilitatedPreviewPath(sessionId));
+      } else {
+        // Resume routing sends the advisor straight into the next unscored
+        // domain instead of dropping them back on the hub to pick manually.
+        router.push(facilitatedAssessmentHubPath(sessionId, { resume: true }));
+      }
+    },
+    [router, sessionId],
+  );
 
   const runScoreCalculation = useCallback(async () => {
     try {
       setIsCalculating(true);
+      setShowManualExit(false);
       setError(null);
 
       const pillar = await resolveScoringPillar(assessmentId, currentPillar);
@@ -57,21 +73,24 @@ export function FacilitatedAssessmentComplete({
       }
 
       setTimeout(() => {
-        if (data.allPillarsScored) {
-          router.push(facilitatedPreviewPath(sessionId));
-        } else {
-          router.push(facilitatedAssessmentHubPath(sessionId));
-        }
+        goToNextAssessment(data.allPillarsScored);
       }, 1500);
     } catch (err) {
       setIsCalculating(false);
       setError(err instanceof Error ? err.message : "An error occurred");
     }
-  }, [assessmentId, currentPillar, router, sessionId]);
+  }, [assessmentId, currentPillar, sessionId, goToNextAssessment]);
 
   useEffect(() => {
     void runScoreCalculation();
   }, [runScoreCalculation]);
+
+  // Reveal the manual escape hatch if we're still calculating after ~8s.
+  useEffect(() => {
+    if (!isCalculating) return;
+    const timer = setTimeout(() => setShowManualExit(true), 8000);
+    return () => clearTimeout(timer);
+  }, [isCalculating]);
 
   const pillarLabel = currentPillar
     ? pillarDefinitionFor(currentPillar, catalog).name
@@ -117,6 +136,20 @@ export function FacilitatedAssessmentComplete({
               ? `Scoring ${pillarLabel.toLowerCase()}…`
               : "Returning to the assessment hub…"}
           </p>
+          {isCalculating && showManualExit ? (
+            <div className="space-y-2 pt-2">
+              <p className="text-xs text-muted-foreground">
+                Taking longer than expected. Your answers are saved — you can
+                head back and continue.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => router.push(facilitatedAssessmentHubPath(sessionId, { resume: true }))}
+              >
+                Back to assessment
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

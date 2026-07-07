@@ -1,0 +1,159 @@
+# Scheduled smoke tests against the live preview environment.
+#
+# Runs the curated `@smoke`-tagged Playwright tests on a schedule so an outage
+# or auth regression on https://preview.akilirisk.com is caught between deploys.
+# Start scope: advisor + admin login flows (plus negative auth cases).
+#
+# IMPORTANT: preview deploys from the `staging` branch, so the test code must
+# match what is deployed. This workflow lives on the default branch (required
+# for `schedule:` triggers) but checks out `staging` to run its tests. The
+# `@smoke` tags therefore live on `staging`, not here — see docs/smoke-tests.md.
+#
+# Setup (see docs/smoke-tests.md):
+#   - Optional repo secrets override the seeded fallback credentials:
+#       SMOKE_ADVISOR_EMAIL / SMOKE_ADVISOR_PASSWORD
+#       SMOKE_ADMIN_EMAIL   / SMOKE_ADMIN_PASSWORD
+#   - Grow the suite by tagging more tests on `staging` with `{ tag: "@smoke" }`.
+name: Smoke Tests (preview)
+
+on:
+  schedule:
+    # Every 6 hours, on the hour (UTC).
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Target base URL"
+        required: false
+        default: "https://preview.akilirisk.com"
+      test_ref:
+        description: "Branch/ref to run the tests from (should match the deployed branch)"
+        required: false
+        default: "staging"
+
+# Never run two smoke jobs at once; let an in-flight run finish rather than
+# cancelling it (a cancelled run would read as a false failure).
+concurrency:
+  group: smoke-tests
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  login-smoke:
+    name: Login smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      PLAYWRIGHT_BASE_URL: ${{ github.event.inputs.base_url || 'https://preview.akilirisk.com' }}
+      # Credentials fall back to the seeded preview test users when the secrets
+      # are unset (tests/fixtures/users.ts reads these env vars).
+      ADVISOR_EMAIL: ${{ secrets.SMOKE_ADVISOR_EMAIL }}
+      ADVISOR_PASSWORD: ${{ secrets.SMOKE_ADVISOR_PASSWORD }}
+      ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+    steps:
+      # Check out the deployed branch (staging), NOT the default branch, so the
+      # tests match the app running on preview. Override via the test_ref input.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.test_ref || 'staging' }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Node 22+: a transitive dep (@prisma/streams-local) requires >=22,
+          # and .npmrc sets engine-strict=true so npm ci hard-fails on Node 20.
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run login smoke tests
+        run: npx playwright test --grep @smoke
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      # On a scheduled failure, open a tracking issue (or comment on the open
+      # one) so the red run is visible without watching the Actions tab.
+      - name: File failure issue
+        if: ${{ failure() && github.event_name == 'schedule' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = "smoke-failure";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "The scheduled login smoke run failed against preview.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              "- Download the `playwright-report` artifact for traces, screenshots, and video.",
+              "",
+              "This issue auto-resolves when a later scheduled run passes.",
+            ].join("\n");
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: label,
+            });
+            if (open.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.data[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "🚨 Scheduled login smoke failing against preview",
+                labels: [label],
+                body,
+              });
+            }
+
+      # On a scheduled pass, close any open failure issue so it reflects live state.
+      - name: Resolve failure issue on success
+        if: ${{ success() && github.event_name == 'schedule' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = "smoke-failure";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: label,
+            });
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ Login smoke passed again — auto-resolving. Run: ${runUrl}`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "closed",
+                state_reason: "completed",
+              });
+            }

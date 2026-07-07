@@ -1,6 +1,7 @@
 "use client";
 
 import { AnswerAdvisorNotePanel } from "@/components/advisor/AnswerAdvisorNotePanel";
+import { OtherAdvisorNotes } from "@/components/advisor/OtherAdvisorNotes";
 import { StaffQuestionContextPanels } from "@/components/staff/StaffQuestionContextPanels";
 import { formatAssessmentAnswerForDisplay } from "@/lib/admin/format-assessment-answer";
 import { DocumentUploadReviewerFlag } from "@/components/assessment/DocumentUploadReviewerFlag";
@@ -87,6 +88,7 @@ export function AdvisorAssessmentReviewView({ data }: Props) {
               }
               onDelete={() => deleteAssessmentResponseAdvisorNote(row.responseId)}
             />
+            <OtherAdvisorNotes notes={row.otherAdvisorNotes} />
           </section>
         );
       })}

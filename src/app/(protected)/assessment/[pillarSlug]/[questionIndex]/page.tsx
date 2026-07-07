@@ -14,6 +14,8 @@ import { NavigationButtons } from '@/components/assessment/NavigationButtons';
 import { SectionProgress } from '@/components/assessment/ProgressBar';
 import { SkipToLastUnansweredQuestion } from '@/components/assessment/SkipToLastUnansweredQuestion';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { CustomizationConfig } from '@/lib/assessment/customization';
 import {
@@ -175,15 +177,20 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   };
 
   const handleSkip = () => {
-    const nextIndex = currentIndex + 1;
-    saveAnswer({
-      questionId: currentQuestion.id,
-      pillar: pillarSlug,
-      subCategory: currentQuestion.subCategory,
-      answer: null,
-      skipped: true,
-      currentQuestionIndex: nextIndex,
-    });
+    // If the question already has an answer, "Skip" simply advances and keeps
+    // the saved answer. Only record a real skip (which clears the response) when
+    // the question is still unanswered.
+    const hasAnswer = currentAnswer !== null && currentAnswer !== undefined;
+    if (!hasAnswer) {
+      saveAnswer({
+        questionId: currentQuestion.id,
+        pillar: pillarSlug,
+        subCategory: currentQuestion.subCategory,
+        answer: null,
+        skipped: true,
+        currentQuestionIndex: currentIndex + 1,
+      });
+    }
     void (async () => {
       await flushPendingSaves();
       goNext();
@@ -225,6 +232,23 @@ export default function QuestionPage({ params }: QuestionPageProps) {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <section className="hero-surface rounded-[1.75rem] p-4 sm:p-8">
+        <div className="mb-4 flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              void (async () => {
+                await flushPendingSaves();
+                router.push('/assessment');
+              })();
+            }}
+          >
+            <X className="h-4 w-4" />
+            {isReviewingPillar ? "Exit review" : "Save & exit"}
+          </Button>
+        </div>
         <SectionProgress
           answeredCount={progress.answered}
           totalCount={progress.total}
