@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { Button } from "@/components/ui/button";
 import { AnswerAdvisorNotePanel } from "@/components/advisor/AnswerAdvisorNotePanel";
 import {
   deleteAssessmentQuestionAdvisorNote,
@@ -36,7 +37,7 @@ type FacilitatedAnswerNoteProps =
     };
 
 export function FacilitatedAnswerNote(props: FacilitatedAnswerNoteProps) {
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey:
       props.mode === "assessment"
         ? ["advisor-note", "assessment", props.assessmentId, props.questionId]
@@ -58,6 +59,19 @@ export function FacilitatedAnswerNote(props: FacilitatedAnswerNoteProps) {
     return (
       <div className="rounded-lg border border-dashed border-sky-300/60 bg-sky-50/40 p-4 text-xs text-muted-foreground dark:border-sky-700/40 dark:bg-sky-950/20">
         Loading advisor note…
+      </div>
+    );
+  }
+
+  // Don't render an editable (empty) panel if the existing note failed to load —
+  // saving from a blank box would overwrite a note the advisor can't see.
+  if (isError) {
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-sky-300/60 bg-sky-50/40 p-4 text-xs text-muted-foreground dark:border-sky-700/40 dark:bg-sky-950/20">
+        <span>Couldn&apos;t load the advisor note.</span>
+        <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
       </div>
     );
   }

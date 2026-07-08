@@ -5,6 +5,7 @@ import { Prisma, type IntakeInterview, type IntakeResponse } from "@prisma/clien
 import { prisma } from "@/lib/db";
 import {
   findPortfolioAssignmentForClient,
+  listAdvisorUserIdsForScope,
   resolvePortfolioScope,
 } from "@/lib/enterprise/portfolio-access";
 import type { AdvisorDashboardClient, IntakeInterviewReviewBundle } from "@/lib/advisor/types";
@@ -128,12 +129,12 @@ function isMissingIntakeResponseAdvisorNoteTable(error: unknown): boolean {
 async function findIntakeInterviewForReview(
   interviewId: string,
   advisorUserId?: string,
-  firmScope = false,
+  firmAdvisorUserIds?: string[],
 ) {
   try {
     return await prisma.intakeInterview.findUnique({
       where: { id: interviewId },
-      include: intakeReviewInclude(advisorUserId, firmScope),
+      include: intakeReviewInclude(advisorUserId, firmAdvisorUserIds),
     });
   } catch (error) {
     if (advisorUserId && isMissingIntakeResponseAdvisorNoteTable(error)) {
@@ -142,14 +143,17 @@ async function findIntakeInterviewForReview(
       );
       return prisma.intakeInterview.findUnique({
         where: { id: interviewId },
-        include: intakeReviewInclude(undefined, false),
+        include: intakeReviewInclude(undefined, undefined),
       });
     }
     throw error;
   }
 }
 
-const intakeReviewInclude = (advisorUserId?: string, firmScope = false) => ({
+const intakeReviewInclude = (
+  advisorUserId?: string,
+  firmAdvisorUserIds?: string[],
+) => ({
   user: {
     select: {
       id: true,
@@ -162,9 +166,11 @@ const intakeReviewInclude = (advisorUserId?: string, firmScope = false) => ({
     include: advisorUserId
       ? {
           advisorNotes: {
-            // Firm (enterprise OWNER/ADMIN) viewers see every advisor's note;
-            // a regular advisor sees only their own.
-            where: firmScope ? {} : { advisorId: advisorUserId },
+            // Firm (enterprise OWNER/ADMIN) viewers see notes from advisors IN
+            // THEIR FIRM only; a regular advisor sees only their own.
+            where: firmAdvisorUserIds
+              ? { advisorId: { in: firmAdvisorUserIds } }
+              : { advisorId: advisorUserId },
             select: {
               id: true,
               advisorId: true,
@@ -348,12 +354,13 @@ export async function getClientIntakeForReview(
     scope = await resolvePortfolioScope(advisorUserId);
     if (!scope) return null;
   }
-  const firmScope = scope?.mode === "firm";
+  const firmAdvisorUserIds =
+    scope?.mode === "firm" ? await listAdvisorUserIdsForScope(scope) : undefined;
 
   const interview = await findIntakeInterviewForReview(
     interviewId,
     advisorUserId,
-    firmScope,
+    firmAdvisorUserIds,
   );
 
   if (!interview) {
