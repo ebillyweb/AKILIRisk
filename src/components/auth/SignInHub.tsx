@@ -162,12 +162,6 @@ function ClientMagicLinkPanel({ callbackUrl }: { callbackUrl: string | null }) {
         {isLoading ? "Sending…" : "Send me a sign-in link"}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        New family client?{" "}
-        <Link href={scopePostAuthPath("/start")} className="font-semibold text-foreground hover:underline">
-          Start with your invite code
-        </Link>
-      </p>
-      <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an advisor yet?{" "}
         <Link
           href={scopePostAuthPath("/request-review")}
