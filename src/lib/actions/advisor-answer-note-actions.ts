@@ -520,6 +520,110 @@ export async function deleteIntakeQuestionAdvisorNote(input: {
   }
 }
 
+/**
+ * Persist (create/update) the calling advisor's note on an already-authorized
+ * assessment response, with audit + revalidation. Callers MUST authorize the
+ * (advisor, client) relationship before invoking this — it performs no auth of
+ * its own. Shared by the response-keyed and question-keyed save actions so the
+ * write/audit path lives in one place and neither re-runs the assignment check.
+ */
+async function writeAssessmentResponseAdvisorNoteAuthorized(
+  response: {
+    id: string;
+    assessmentId: string;
+    clientId: string;
+    existing: { id: string; body: string } | null;
+  },
+  body: string,
+  actor: { userId: string; email: string | null; role: string | undefined },
+): Promise<AdvisorAnswerNoteActionResult> {
+  const { userId, email, role } = actor;
+  const existing = response.existing;
+  if (existing) {
+    const updated = await prisma.assessmentResponseAdvisorNote.update({
+      where: { id: existing.id },
+      data: { body, updatedByUserId: userId },
+    });
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email },
+      action: AUDIT_ACTIONS.ASSESSMENT_RESPONSE_ADVISOR_NOTE_UPDATE,
+      entityType: "AssessmentResponseAdvisorNote",
+      entityId: updated.id,
+      beforeData: { body: existing.body },
+      afterData: { body: updated.body },
+      metadata: {
+        assessmentResponseId: response.id,
+        assessmentId: response.assessmentId,
+        clientId: response.clientId,
+        advisorId: userId,
+      },
+    });
+  } else {
+    try {
+      const created = await prisma.assessmentResponseAdvisorNote.create({
+        data: {
+          assessmentResponseId: response.id,
+          advisorId: userId,
+          body,
+          createdByUserId: userId,
+          updatedByUserId: userId,
+        },
+      });
+      await writeAudit({
+        actor: { userId, role: role as UserRole, email },
+        action: AUDIT_ACTIONS.ASSESSMENT_RESPONSE_ADVISOR_NOTE_CREATE,
+        entityType: "AssessmentResponseAdvisorNote",
+        entityId: created.id,
+        beforeData: null,
+        afterData: { body: created.body },
+        metadata: {
+          assessmentResponseId: response.id,
+          assessmentId: response.assessmentId,
+          clientId: response.clientId,
+          advisorId: userId,
+        },
+      });
+    } catch (e: unknown) {
+      if (
+        typeof e === "object" &&
+        e !== null &&
+        "code" in e &&
+        (e as { code?: string }).code === "P2002"
+      ) {
+        const updated = await prisma.assessmentResponseAdvisorNote.update({
+          where: {
+            assessmentResponseId_advisorId: {
+              assessmentResponseId: response.id,
+              advisorId: userId,
+            },
+          },
+          data: { body, updatedByUserId: userId },
+        });
+        await writeAudit({
+          actor: { userId, role: role as UserRole, email },
+          action: AUDIT_ACTIONS.ASSESSMENT_RESPONSE_ADVISOR_NOTE_UPDATE,
+          entityType: "AssessmentResponseAdvisorNote",
+          entityId: updated.id,
+          beforeData: null,
+          afterData: { body: updated.body },
+          metadata: {
+            assessmentResponseId: response.id,
+            assessmentId: response.assessmentId,
+            clientId: response.clientId,
+            advisorId: userId,
+            raceRecovery: true,
+          },
+        });
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  revalidateAssessmentReviewPaths(response.clientId);
+  return { success: true };
+}
+
 export async function saveAssessmentResponseAdvisorNote(input: {
   assessmentResponseId: string;
   body: string;
@@ -538,90 +642,11 @@ export async function saveAssessmentResponseAdvisorNote(input: {
       return { success: false, error: "Not found." };
     }
 
-    const existing = response.existing;
-    if (existing) {
-      const updated = await prisma.assessmentResponseAdvisorNote.update({
-        where: { id: existing.id },
-        data: { body: parsed.body, updatedByUserId: userId },
-      });
-      await writeAudit({
-        actor: { userId, role: role as UserRole, email },
-        action: AUDIT_ACTIONS.ASSESSMENT_RESPONSE_ADVISOR_NOTE_UPDATE,
-        entityType: "AssessmentResponseAdvisorNote",
-        entityId: updated.id,
-        beforeData: { body: existing.body },
-        afterData: { body: updated.body },
-        metadata: {
-          assessmentResponseId: response.id,
-          assessmentId: response.assessmentId,
-          clientId: response.clientId,
-          advisorId: userId,
-        },
-      });
-    } else {
-      try {
-        const created = await prisma.assessmentResponseAdvisorNote.create({
-          data: {
-            assessmentResponseId: response.id,
-            advisorId: userId,
-            body: parsed.body,
-            createdByUserId: userId,
-            updatedByUserId: userId,
-          },
-        });
-        await writeAudit({
-          actor: { userId, role: role as UserRole, email },
-          action: AUDIT_ACTIONS.ASSESSMENT_RESPONSE_ADVISOR_NOTE_CREATE,
-          entityType: "AssessmentResponseAdvisorNote",
-          entityId: created.id,
-          beforeData: null,
-          afterData: { body: created.body },
-          metadata: {
-            assessmentResponseId: response.id,
-            assessmentId: response.assessmentId,
-            clientId: response.clientId,
-            advisorId: userId,
-          },
-        });
-      } catch (e: unknown) {
-        if (
-          typeof e === "object" &&
-          e !== null &&
-          "code" in e &&
-          (e as { code?: string }).code === "P2002"
-        ) {
-          const updated = await prisma.assessmentResponseAdvisorNote.update({
-            where: {
-              assessmentResponseId_advisorId: {
-                assessmentResponseId: response.id,
-                advisorId: userId,
-              },
-            },
-            data: { body: parsed.body, updatedByUserId: userId },
-          });
-          await writeAudit({
-            actor: { userId, role: role as UserRole, email },
-            action: AUDIT_ACTIONS.ASSESSMENT_RESPONSE_ADVISOR_NOTE_UPDATE,
-            entityType: "AssessmentResponseAdvisorNote",
-            entityId: updated.id,
-            beforeData: null,
-            afterData: { body: updated.body },
-            metadata: {
-              assessmentResponseId: response.id,
-              assessmentId: response.assessmentId,
-              clientId: response.clientId,
-              advisorId: userId,
-              raceRecovery: true,
-            },
-          });
-        } else {
-          throw e;
-        }
-      }
-    }
-
-    revalidateAssessmentReviewPaths(response.clientId);
-    return { success: true };
+    return writeAssessmentResponseAdvisorNoteAuthorized(response, parsed.body, {
+      userId,
+      email,
+      role,
+    });
   } catch (e) {
     return { success: false, error: formatActionError(e) };
   }
@@ -672,7 +697,7 @@ export async function deleteAssessmentResponseAdvisorNote(
 /**
  * Live-facilitation entry point: save/replace the calling advisor's note on an
  * assessment question, creating the response row if the client hasn't answered
- * yet. Delegates to saveAssessmentResponseAdvisorNote once the row exists.
+ * yet. Authorizes then writes via writeAssessmentResponseAdvisorNoteAuthorized.
  */
 export async function saveAssessmentQuestionAdvisorNote(input: {
   assessmentId: string;
@@ -682,10 +707,11 @@ export async function saveAssessmentQuestionAdvisorNote(input: {
   body: string;
 }): Promise<AdvisorAnswerNoteActionResult> {
   try {
-    const { userId } = await requireAdvisorRole();
+    const { userId, email, role } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
     const parsed = assessmentQuestionAdvisorNoteInputSchema.parse(input);
 
+    // Authorize (ACTIVE assignment) before creating the response row.
     const assessment = await loadAssignedAssessment(parsed.assessmentId, profile.id);
     if (!assessment) {
       return { success: false, error: "Not found." };
@@ -698,10 +724,28 @@ export async function saveAssessmentQuestionAdvisorNote(input: {
       parsed.subCategory,
     );
 
-    return saveAssessmentResponseAdvisorNote({
-      assessmentResponseId,
-      body: parsed.body,
+    const existing = await prisma.assessmentResponseAdvisorNote.findUnique({
+      where: {
+        assessmentResponseId_advisorId: {
+          assessmentResponseId,
+          advisorId: userId,
+        },
+      },
+      select: { id: true, body: true },
     });
+
+    // Already authorized above — write directly rather than re-running auth via
+    // saveAssessmentResponseAdvisorNote.
+    return writeAssessmentResponseAdvisorNoteAuthorized(
+      {
+        id: assessmentResponseId,
+        assessmentId: parsed.assessmentId,
+        clientId: assessment.clientId,
+        existing,
+      },
+      parsed.body,
+      { userId, email, role },
+    );
   } catch (e) {
     return { success: false, error: formatActionError(e) };
   }
