@@ -525,6 +525,7 @@ export default function InterviewPage() {
         ) : (
           <div className="space-y-4">
             <IntakeStructuredAnswer
+              key={currentQuestion.id}
               question={currentQuestion}
               value={typedDraft}
               disabled={typingDisabled}

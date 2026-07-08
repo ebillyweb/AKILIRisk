@@ -142,7 +142,10 @@ export async function buildReportSnapshot(
   }
 
   const responseCount = await prisma.assessmentResponse.count({
-    where: { assessmentId, skipped: false },
+    // Count answered responses only. `skipped: false` alone would also count
+    // note-only placeholder rows (answer = null, created when an advisor notes
+    // an unanswered question), inflating completion %.
+    where: { assessmentId, skipped: false, answer: { not: null } },
   });
   // Identical estimate the live route uses (68 questions). Stable for
   // snapshots — future routes that compute completion% differently will

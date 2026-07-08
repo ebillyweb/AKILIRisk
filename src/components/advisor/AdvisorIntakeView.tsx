@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { StaffQuestionContextPanels } from "@/components/staff/StaffQuestionContextPanels";
 import { AudioPlayer } from "./AudioPlayer";
 import { AnswerAdvisorNotePanel } from "./AnswerAdvisorNotePanel";
+import { OtherAdvisorNotes } from "./OtherAdvisorNotes";
 import {
   deleteIntakeResponseAdvisorNote,
   deleteIntakeQuestionAdvisorNote,
@@ -102,6 +103,7 @@ export function AdvisorIntakeView({
                 }
               />
             )}
+            <OtherAdvisorNotes notes={response?.otherAdvisorNotes ?? []} />
           </section>
         );
       })}
