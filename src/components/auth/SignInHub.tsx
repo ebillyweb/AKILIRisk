@@ -110,12 +110,14 @@ function ClientMagicLinkPanel({ callbackUrl }: { callbackUrl: string | null }) {
       <div className="space-y-4">
         <Alert>
           <AlertDescription>
-            If an account exists for <strong>{email}</strong>, a sign-in link is on
-            its way. The link expires in 15 minutes and can only be used once.
+            If an account exists for <strong>{email}</strong>, a secure sign-in
+            link is on its way — check your inbox and spam. It expires in 15
+            minutes and can be used once.
           </AlertDescription>
         </Alert>
         <p className="text-sm text-muted-foreground">
-          Didn&apos;t receive an email? Check your spam folder, then{" "}
+          Didn&apos;t get it? Make sure you used the same email your advisor
+          invited, then{" "}
           <button
             type="button"
             onClick={() => setSubmitted(false)}
@@ -123,7 +125,7 @@ function ClientMagicLinkPanel({ callbackUrl }: { callbackUrl: string | null }) {
           >
             try again
           </button>
-          .
+          . Not invited yet? Ask your advisor to send your invitation.
         </p>
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an advisor yet?{" "}
