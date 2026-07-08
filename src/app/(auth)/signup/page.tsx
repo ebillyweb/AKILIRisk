@@ -3,12 +3,13 @@ import { auth } from "@/lib/auth";
 import { safeAfterSignInPath } from "@/lib/auth-callback-path";
 import { verifyInviteToken } from "@/lib/invite";
 import { redeemInvitationFromToken } from "@/lib/invitations/redeem-invitation";
-import { buildInvitationMagicLinkVerifyPath } from "@/lib/invitations/invitation-signup-redirect";
+import { markInvitationOpened } from "@/lib/invitations/mark-opened";
 import { prisma } from "@/lib/db";
 import {
   ClientSignupInfoPanel,
   InviteAcceptFailure,
 } from "@/components/auth/InviteAcceptFailure";
+import { InviteSignupStart } from "@/components/auth/InviteSignupStart";
 import { BrandingProvider } from "@/components/providers/BrandingProvider";
 import { BrandedAuthShell } from "@/components/auth/BrandedAuthShell";
 import { BrandingUnavailable } from "@/components/branding/BrandingUnavailable";
@@ -83,6 +84,11 @@ export default async function SignupPage({
     );
   }
 
+  // Record the open (US-5) on the GET. Account provisioning and the single-use
+  // magic-link mint are deferred to the "Start" button (InviteSignupStart) so a
+  // link-scanner's GET can't provision or burn the login token.
+  await markInvitationOpened(inviteCodeId);
+
   const onTenantHost = await isTenantBrandedRequest();
   if (!onTenantHost) {
     const expectsBranding = await inviteSignupExpectsBranding(inviteCodeId);
@@ -100,7 +106,7 @@ export default async function SignupPage({
         <BrandingProvider branding={branding} subdomain={null}>
           <ClientPortalRootTheme branding={branding} />
           <BrandedAuthShell branding={branding}>
-            <InviteSignupRedirect
+            <InviteSignupStart
               inviteToken={inviteToken}
               callbackUrl={sp.callbackUrl}
             />
@@ -111,27 +117,9 @@ export default async function SignupPage({
   }
 
   return (
-    <InviteSignupRedirect
+    <InviteSignupStart
       inviteToken={inviteToken}
       callbackUrl={sp.callbackUrl}
     />
   );
-}
-
-async function InviteSignupRedirect({
-  inviteToken,
-  callbackUrl,
-}: {
-  inviteToken: string;
-  callbackUrl?: string;
-}) {
-  const completion = await buildInvitationMagicLinkVerifyPath(
-    inviteToken,
-    callbackUrl,
-  );
-  if (!completion.ok) {
-    return <InviteAcceptFailure message={completion.error} />;
-  }
-
-  redirect(completion.verifyPath);
 }
