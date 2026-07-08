@@ -2,52 +2,52 @@
 
 import Link from "next/link";
 import { AuthPanel } from "@/components/auth/AuthPanel";
-import { InviteCodeForm } from "@/components/auth/InviteCodeForm";
+import { Button } from "@/components/ui/button";
 
 type StartAssessmentClientProps = {
   signInHref: string;
   requestReviewHref: string;
-  /** When true, copy clarifies that email invitation links bypass this form. */
-  invitedViaEmailHint?: boolean;
 };
 
+/**
+ * Public "Start Assessment" entry point. Clients are onboarded by their advisor
+ * via an emailed invitation (one click → account created → assessment), so this
+ * page routes people to that link or to email sign-in — there is no self-service
+ * code entry.
+ */
 export function StartAssessmentClient({
   signInHref,
   requestReviewHref,
-  invitedViaEmailHint = false,
 }: StartAssessmentClientProps) {
   return (
     <AuthPanel
       eyebrow="Personal Risk Profile"
-      title="Enter invite code"
-      description={
-        invitedViaEmailHint
-          ? "Your advisor may have sent a 6-character code separately. If you received an email invitation, open that link instead — you do not need to enter a code here."
-          : "Your advisor has provided a 6-character invite code (letters and numbers) to start the assessment. Enter it below to create your account and begin."
-      }
+      title="Start your risk profile"
+      description="Your advisor sets up your risk profile and emails you a secure invitation. Open that link to create your account and begin — no code to enter."
       footer={
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-3">
           <span>
-            Already have an account?{" "}
-            <a href={signInHref} className="font-semibold text-foreground hover:underline">
-              Sign in
-            </a>
+            Don&apos;t have an advisor yet?{" "}
+            <Link
+              href={requestReviewHref}
+              className="font-semibold text-foreground hover:underline"
+            >
+              Request a review here
+            </Link>
           </span>
-          <div className="mt-3 border-t section-divider pt-3">
-            <span>
-              Looking for an advisor?{" "}
-              <Link
-                href={requestReviewHref}
-                className="font-semibold text-foreground hover:underline"
-              >
-                Request a review here
-              </Link>
-            </span>
-          </div>
         </div>
       }
     >
-      <InviteCodeForm />
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Didn&apos;t get an invitation? Check your email (including spam), or ask
+          your advisor to resend it. If you&apos;ve already started, sign in with
+          your email and we&apos;ll send you a secure link.
+        </p>
+        <Button asChild size="lg" className="w-full">
+          <a href={signInHref}>Sign in with your email</a>
+        </Button>
+      </div>
     </AuthPanel>
   );
 }
