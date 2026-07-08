@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { StartAssessmentClient } from "@/app/(auth)/start/StartAssessmentClient";
-import { isTenantBrandedRequest } from "@/lib/client/branded-portal-requirements";
 import { tenantPublicPath } from "@/lib/client/tenant-path-prefix";
 
 export default async function StartAssessmentPage({
@@ -26,7 +25,6 @@ export default async function StartAssessmentPage({
     redirect(await tenantPublicPath("/dashboard"));
   }
 
-  const onTenantHost = await isTenantBrandedRequest();
   const signInHref = await tenantPublicPath(
     buildSignInHref({ role: "client" }),
   );
@@ -36,7 +34,6 @@ export default async function StartAssessmentPage({
     <StartAssessmentClient
       signInHref={signInHref}
       requestReviewHref={requestReviewHref}
-      invitedViaEmailHint={onTenantHost}
     />
   );
 }
