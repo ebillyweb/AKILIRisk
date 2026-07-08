@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import type { AdvisorAnswerNoteActionResult } from "@/lib/actions/advisor-answer-note-actions";
 import { AnswerAdvisorNotePanel } from "@/components/advisor/AnswerAdvisorNotePanel";
 import {
   deleteAssessmentQuestionAdvisorNote,
@@ -37,11 +38,14 @@ type FacilitatedAnswerNoteProps =
     };
 
 export function FacilitatedAnswerNote(props: FacilitatedAnswerNoteProps) {
+  const queryClient = useQueryClient();
+  const queryKey =
+    props.mode === "assessment"
+      ? ["advisor-note", "assessment", props.assessmentId, props.questionId]
+      : ["advisor-note", "intake", props.interviewId, props.questionId];
+
   const { data, isPending, isError, refetch } = useQuery({
-    queryKey:
-      props.mode === "assessment"
-        ? ["advisor-note", "assessment", props.assessmentId, props.questionId]
-        : ["advisor-note", "intake", props.interviewId, props.questionId],
+    queryKey,
     queryFn: () =>
       props.mode === "assessment"
         ? getAssessmentQuestionAdvisorNote({
@@ -52,7 +56,9 @@ export function FacilitatedAnswerNote(props: FacilitatedAnswerNoteProps) {
             interviewId: props.interviewId,
             questionId: props.questionId,
           }),
-    staleTime: 0,
+    // Cache per question so navigating back doesn't refetch; save/delete below
+    // invalidate this key so a later visit re-reads the latest note.
+    staleTime: 60_000,
   });
 
   if (isPending) {
@@ -76,8 +82,17 @@ export function FacilitatedAnswerNote(props: FacilitatedAnswerNoteProps) {
     );
   }
 
+  const invalidateOnSuccess = async (
+    result: AdvisorAnswerNoteActionResult,
+  ): Promise<AdvisorAnswerNoteActionResult> => {
+    if (result.success) {
+      await queryClient.invalidateQueries({ queryKey });
+    }
+    return result;
+  };
+
   const onSave = (body: string) =>
-    props.mode === "assessment"
+    (props.mode === "assessment"
       ? saveAssessmentQuestionAdvisorNote({
           assessmentId: props.assessmentId,
           questionId: props.questionId,
@@ -89,10 +104,11 @@ export function FacilitatedAnswerNote(props: FacilitatedAnswerNoteProps) {
           interviewId: props.interviewId,
           questionId: props.questionId,
           body,
-        });
+        })
+    ).then(invalidateOnSuccess);
 
   const onDelete = () =>
-    props.mode === "assessment"
+    (props.mode === "assessment"
       ? deleteAssessmentQuestionAdvisorNote({
           assessmentId: props.assessmentId,
           questionId: props.questionId,
@@ -100,7 +116,8 @@ export function FacilitatedAnswerNote(props: FacilitatedAnswerNoteProps) {
       : deleteIntakeQuestionAdvisorNote({
           interviewId: props.interviewId,
           questionId: props.questionId,
-        });
+        })
+    ).then(invalidateOnSuccess);
 
   return (
     <AnswerAdvisorNotePanel

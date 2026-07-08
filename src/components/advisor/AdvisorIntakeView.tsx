@@ -103,9 +103,7 @@ export function AdvisorIntakeView({
                 }
               />
             )}
-            {response?.otherAdvisorNotes?.length ? (
-              <OtherAdvisorNotes notes={response.otherAdvisorNotes} />
-            ) : null}
+            <OtherAdvisorNotes notes={response?.otherAdvisorNotes ?? []} />
           </section>
         );
       })}

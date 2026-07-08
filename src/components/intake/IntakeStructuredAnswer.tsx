@@ -20,6 +20,10 @@ import {
 } from "@/lib/intake/structured-answer-values";
 import { cn } from "@/lib/utils";
 
+/** Shared styling for the full-width, single-column option buttons. */
+const OPTION_BUTTON_CLASS =
+  "h-auto min-h-10 w-full justify-start whitespace-normal px-4 py-2 text-left";
+
 type IntakeStructuredAnswerProps = {
   question: IntakeQuestion;
   value: string;
@@ -105,7 +109,7 @@ export function IntakeStructuredAnswer({
                 variant={isChecked ? "default" : "outline"}
                 disabled={disabled}
                 aria-pressed={isChecked}
-                className="h-auto min-h-10 w-full justify-start gap-3 whitespace-normal px-4 py-2 text-left"
+                className={cn(OPTION_BUTTON_CLASS, "gap-3")}
                 onClick={() => toggle(choice.value)}
               >
                 <span
@@ -150,9 +154,7 @@ export function IntakeStructuredAnswer({
               type="button"
               variant={value === choice.value ? "default" : "outline"}
               disabled={disabled}
-              className={cn(
-                "h-auto min-h-10 w-full justify-start whitespace-normal px-4 py-2 text-left",
-              )}
+              className={OPTION_BUTTON_CLASS}
               onClick={() => onChange(choice.value)}
             >
               {choice.label}

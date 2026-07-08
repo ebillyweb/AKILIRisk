@@ -55,7 +55,7 @@ export function QuestionQuickNav({
           </Button>
         ) : null}
         <Button type="button" size="sm" onClick={onNext} disabled={isSaving}>
-          {isLastQuestion ? "Complete section" : "Continue"}
+          {isLastQuestion ? "Complete Section" : "Continue"}
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
