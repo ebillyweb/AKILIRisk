@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         message:
-          "If an account exists for that email, a sign-in link has been sent.",
+          "If an account exists for that email, a secure sign-in link has been sent. Check your inbox and spam.",
       },
       { status: 200 }
     );
