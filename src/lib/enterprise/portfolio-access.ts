@@ -63,6 +63,31 @@ export async function listAdvisorProfileIdsForScope(
 }
 
 /**
+ * Advisor **User** ids in scope — the identity that authors advisory notes
+ * (`*AdvisorNote.advisorId`). For firm scope this is every advisor in the
+ * enterprise, so note reads can be limited to the firm rather than leaking
+ * notes authored by advisors outside it.
+ */
+export async function listAdvisorUserIdsForScope(
+  scope: PortfolioScope
+): Promise<string[]> {
+  if (scope.mode === "assigned") {
+    const profile = await prisma.advisorProfile.findUnique({
+      where: { id: scope.advisorProfileId },
+      select: { userId: true },
+    });
+    return profile?.userId ? [profile.userId] : [];
+  }
+  const profiles = await prisma.advisorProfile.findMany({
+    where: { enterpriseId: scope.enterpriseId },
+    select: { userId: true },
+  });
+  return profiles
+    .map((p) => p.userId)
+    .filter((id): id is string => Boolean(id));
+}
+
+/**
  * Returns the assignment's advisor profile id when the caller may access the client.
  */
 export async function findPortfolioAssignmentForClient(

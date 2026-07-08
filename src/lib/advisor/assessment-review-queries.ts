@@ -3,6 +3,7 @@ import "server-only";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
 import {
   listAdvisorProfileIdsForScope,
+  listAdvisorUserIdsForScope,
   findPortfolioAssignmentForClient,
   resolvePortfolioScope,
 } from "@/lib/enterprise/portfolio-access";
@@ -73,6 +74,14 @@ export async function getAssessmentForAdvisorReview(
 
   const advisorProfileIds = await listAdvisorProfileIdsForScope(scope);
 
+  // Firm (enterprise OWNER/ADMIN) viewers see notes from advisors IN THEIR FIRM
+  // only — never notes an out-of-firm/independent advisor left before the client
+  // was reassigned. Regular advisors see only their own note.
+  const noteAdvisorFilter =
+    scope.mode === "firm"
+      ? { advisorId: { in: await listAdvisorUserIdsForScope(scope) } }
+      : { advisorId: userId };
+
   // Tenant gate: the assessment's owner must have an ACTIVE assignment within
   // the caller's portfolio scope. Anything else returns null so non-assigned
   // advisors can't probe assessment existence.
@@ -105,9 +114,7 @@ export async function getAssessmentForAdvisorReview(
           skipped: true,
           answeredAt: true,
           advisorNotes: {
-            // Firm (enterprise OWNER/ADMIN) viewers see every advisor's note on
-            // the answer; a regular advisor sees only their own.
-            where: scope.mode === "firm" ? {} : { advisorId: userId },
+            where: noteAdvisorFilter,
             select: {
               id: true,
               advisorId: true,

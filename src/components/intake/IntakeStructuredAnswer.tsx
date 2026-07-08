@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { IntakeQuestion } from "@/lib/intake/types";
 import { intakeChoiceOptions, intakeUsesFreeformResponse } from "@/lib/intake/intake-answer-behavior";
 import {
+  isValidZip,
   MAX_PROPERTY_ENTRIES,
   parseMultiSelectValue,
   parsePropertyListValue,
@@ -199,6 +200,19 @@ function PropertyListAnswer({
     return parsed.length ? parsed : [{ zip: "", label: "" }];
   });
 
+  // Re-sync when `value` arrives/changes from outside — e.g. the saved answer
+  // loads via the parent's effect after this mounts, or navigation swaps in a
+  // different question. The guard (value already equals our serialized rows)
+  // prevents clobbering the user's in-progress edits, since our own commit sets
+  // value === serialize(rows).
+  useEffect(() => {
+    setRows((prev) => {
+      if (value === serializePropertyListValue(prev)) return prev;
+      const parsed = parsePropertyListValue(value);
+      return parsed.length ? parsed : [{ zip: "", label: "" }];
+    });
+  }, [value]);
+
   const commit = (next: PropertyEntry[]) => {
     setRows(next);
     onChange(serializePropertyListValue(next));
@@ -225,7 +239,9 @@ function PropertyListAnswer({
         Add up to {MAX_PROPERTY_ENTRIES} properties. A ZIP code is required for each.
       </p>
       <div className="space-y-3">
-        {rows.map((row, index) => (
+        {rows.map((row, index) => {
+          const zipInvalid = row.zip.trim().length > 0 && !isValidZip(row.zip);
+          return (
           <div
             key={index}
             className="grid gap-2 rounded-lg border border-border/60 bg-muted/15 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-end"
@@ -254,8 +270,12 @@ function PropertyListAnswer({
                 autoComplete="postal-code"
                 placeholder="e.g. 90210"
                 className="sm:w-32"
+                aria-invalid={zipInvalid}
                 onChange={(event) => updateRow(index, { zip: event.target.value })}
               />
+              {zipInvalid ? (
+                <p className="text-xs text-destructive">Enter a 5-digit ZIP (or ZIP+4).</p>
+              ) : null}
             </div>
             <Button
               type="button"
@@ -269,7 +289,8 @@ function PropertyListAnswer({
               <Minus className="size-4" aria-hidden />
             </Button>
           </div>
-        ))}
+          );
+        })}
       </div>
       <Button
         type="button"
