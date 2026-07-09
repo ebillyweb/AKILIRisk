@@ -3,9 +3,13 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AdminEnterpriseLifecyclePanel } from "@/components/admin/AdminEnterpriseLifecyclePanel";
+import { AdminEnterpriseOwnerPanel } from "@/components/admin/AdminEnterpriseOwnerPanel";
 import { AdminEnterpriseSubdomainPanel } from "@/components/admin/AdminEnterpriseSubdomainPanel";
 import { AdminEnterpriseSubscriptionPanel } from "@/components/admin/AdminEnterpriseSubscriptionPanel";
-import { getEnterpriseDetailForAdmin } from "@/lib/admin/queries";
+import {
+  getEnterpriseDetailForAdmin,
+  getEnterpriseOwnerCandidates,
+} from "@/lib/admin/queries";
 import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
 import type { SelfServeTier } from "@/lib/billing/tier-catalog";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +30,8 @@ export default async function AdminEnterpriseDetailPage({ params }: PageProps) {
   const { enterpriseId } = await params;
   const enterprise = await getEnterpriseDetailForAdmin(enterpriseId);
   if (!enterprise) notFound();
+
+  const ownerCandidates = await getEnterpriseOwnerCandidates(enterprise.id);
 
   const isSuspended = enterprise.status === "SUSPENDED";
   const isProvisioning = enterprise.status === "PROVISIONING";
@@ -131,6 +137,25 @@ export default async function AdminEnterpriseDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Firm owner</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AdminEnterpriseOwnerPanel
+            enterpriseId={enterprise.id}
+            currentOwnerName={enterprise.ownerName}
+            currentOwnerEmail={enterprise.ownerEmail}
+            candidates={ownerCandidates.map((c) => ({
+              userId: c.userId,
+              name: c.name,
+              email: c.email,
+              role: c.role,
+            }))}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

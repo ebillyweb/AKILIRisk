@@ -626,3 +626,52 @@ export async function getAdvisorsEligibleForEnterpriseOwner() {
   });
 }
 
+export type EnterpriseOwnerCandidate = {
+  userId: string;
+  advisorProfileId: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+};
+
+/**
+ * Active members of a firm who are eligible to become its new OWNER — every
+ * ACTIVE member except the current owner. Owner transfer stays inside the firm
+ * (existing members already have an AdvisorProfile, which the transfer re-points
+ * the tenant subdomain to), so candidates without an advisorProfileId are
+ * filtered out defensively.
+ */
+export async function getEnterpriseOwnerCandidates(
+  enterpriseId: string
+): Promise<EnterpriseOwnerCandidate[]> {
+  await requireAdminRole();
+  const rows = await prisma.enterpriseMembership.findMany({
+    where: {
+      enterpriseId,
+      status: "ACTIVE",
+      role: { not: "OWNER" },
+      advisorProfileId: { not: null },
+    },
+    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+    select: {
+      userId: true,
+      advisorProfileId: true,
+      role: true,
+      user: { select: { id: true, name: true, emailCiphertext: true } },
+    },
+  });
+
+  return rows.flatMap((row) => {
+    if (!row.advisorProfileId) return [];
+    return [
+      {
+        userId: row.userId,
+        advisorProfileId: row.advisorProfileId,
+        name: row.user.name,
+        email: safeDecryptUserEmail(row.user.emailCiphertext, { rowId: row.user.id }),
+        role: row.role,
+      },
+    ];
+  });
+}
+
