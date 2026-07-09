@@ -55,6 +55,11 @@ export const AUDIT_ACTIONS = {
   ENTERPRISE_SUSPEND: "enterprise.suspend",
   ENTERPRISE_REACTIVATE: "enterprise.reactivate",
   ENTERPRISE_DELETE: "enterprise.delete",
+  /** Platform admin transfers a firm's OWNER role from one active member to
+   *  another. beforeData/afterData capture the old and new owner userIds;
+   *  the demoted owner becomes ADMIN. Also re-points the tenant subdomain's
+   *  advisorId and the firm's billing contact to the new owner. */
+  ENTERPRISE_OWNER_CHANGE: "enterprise.owner_change",
 
   // ── Admin user provisioning actions (super admin only) ────────────────────
   /** Super admin creates a new admin user account. */
