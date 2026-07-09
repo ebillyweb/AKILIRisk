@@ -9,20 +9,30 @@ type BrandedPortalAuthSupplementProps = {
 
 export function BrandedPortalAuthSupplement({ branding }: BrandedPortalAuthSupplementProps) {
   const brandTitle = clientPortalBrandingDisplayTitle(branding);
-  const tagline = branding.tagline?.trim();
+
+  // Honor the advisor-editable landing copy (Branding settings → Landing copy),
+  // falling back to the standard defaults so unconfigured firms are unchanged.
+  const kicker =
+    branding.landingKicker?.trim() ||
+    branding.tagline?.trim() ||
+    "Personal Risk Profile";
+  const headline =
+    branding.landingHeadline?.trim() ||
+    `Governance intelligence through ${brandTitle}.`;
+  const subheadline =
+    branding.landingSubheadline?.trim() ||
+    "A structured personal risk profile designed for high-trust advisory relationships — discreet, encrypted, and tailored to your family's situation.";
 
   return (
     <>
       <div className="space-y-6">
-        <p className="editorial-kicker">{tagline || "Personal Risk Profile"}</p>
+        <p className="editorial-kicker">{kicker}</p>
         <div className="max-w-xl space-y-4">
           <h1 className="text-4xl font-semibold leading-[1.05] text-balance sm:text-5xl">
-            Governance intelligence through {brandTitle}.
+            {headline}
           </h1>
           <p className="text-base leading-7 text-muted-foreground sm:text-lg">
-            A structured personal risk profile designed for high-trust advisory
-            relationships — discreet, encrypted, and tailored to your family&apos;s
-            situation.
+            {subheadline}
           </p>
         </div>
       </div>
