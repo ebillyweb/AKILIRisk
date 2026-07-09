@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AdminEnterpriseLifecyclePanel } from "@/components/admin/AdminEnterpriseLifecyclePanel";
+import { AdminEnterpriseSubdomainPanel } from "@/components/admin/AdminEnterpriseSubdomainPanel";
 import { AdminEnterpriseSubscriptionPanel } from "@/components/admin/AdminEnterpriseSubscriptionPanel";
 import { getEnterpriseDetailForAdmin } from "@/lib/admin/queries";
 import { TIER_DISPLAY_NAME } from "@/lib/billing/tier-catalog";
@@ -130,6 +131,19 @@ export default async function AdminEnterpriseDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Portal subdomain</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AdminEnterpriseSubdomainPanel
+            enterpriseId={enterprise.id}
+            currentSubdomain={enterprise.currentSubdomain}
+            subdomainActive={enterprise.subdomainActive}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
