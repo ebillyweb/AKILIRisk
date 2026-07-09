@@ -4,12 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from '@/lib/advisor/auth';
 import { prisma } from '@/lib/db';
-import {
-  brandingUpdateSchema,
-  landingFeatureCardsSchema,
-  LANDING_FEATURE_CARD_COUNT,
-} from '@/lib/validation/branding';
-import { resolveLandingFeatureCards } from '@/lib/branding/landing-copy';
+import { brandingUpdateSchema } from '@/lib/validation/branding';
 import { auditBrandingUpdate } from '@/lib/audit/branding-audit';
 import { requireAdvisorBrandingAccess, checkRateLimit } from '@/lib/subscription/validation';
 import {
@@ -154,17 +149,6 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
     // Schema expects string | "" — not null (null breaks z.union / .or(z.literal('')))
     const validatedData = brandingUpdateSchema.parse(rawData);
 
-    // Portal feature cards (title/description/visibility) arrive as flat form
-    // fields; assemble, length-validate, then normalize to the fixed card count.
-    const rawCards = Array.from({ length: LANDING_FEATURE_CARD_COUNT }, (_, i) => ({
-      title: (formData.get(`landingCard${i}Title`)?.toString() ?? '').trim(),
-      description: (formData.get(`landingCard${i}Description`)?.toString() ?? '').trim(),
-      visible: formData.get(`landingCard${i}Visible`)?.toString() !== 'false',
-    }));
-    const nextCards = resolveLandingFeatureCards(
-      landingFeatureCardsSchema.parse(rawCards),
-    );
-
     // Feature-gate advanced fields
     if (!features.advancedBrandingEnabled) {
       // Only allow basic fields for STARTER tier
@@ -241,40 +225,19 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
       }
     }
 
-    // Feature-card change detection (JSON column, handled outside the string diff).
-    const currentCardsRow = isEnterpriseManage
-      ? await prisma.advisorEnterprise.findUnique({
-          where: { id: settingsContext.enterpriseId },
-          select: { landingFeatureCards: true },
-        })
-      : await prisma.advisorProfile.findUnique({
-          where: { id: advisorId },
-          select: { landingFeatureCards: true },
-        });
-    const currentCards = resolveLandingFeatureCards(currentCardsRow?.landingFeatureCards);
-    const cardsChanged =
-      JSON.stringify(currentCards) !== JSON.stringify(nextCards);
-    if (cardsChanged) {
-      previousValues.landingFeatureCards = currentCards;
-      newValues.landingFeatureCards = nextCards;
-    }
-
     // Only proceed if there are changes
-    if (Object.keys(updateData).length === 0 && !cardsChanged) {
+    if (Object.keys(updateData).length === 0) {
       return {
         success: true,
         data: currentBranding,
       };
     }
 
-    const cardUpdate = cardsChanged ? { landingFeatureCards: nextCards } : {};
-
     const updatedBranding = isEnterpriseManage
       ? await prisma.advisorEnterprise.update({
           where: { id: settingsContext.enterpriseId },
           data: {
             ...updateData,
-            ...cardUpdate,
             updatedAt: new Date(),
           },
           select: ENTERPRISE_BRANDING_MUTABLE_SELECT,
@@ -283,7 +246,6 @@ export async function updateAdvisorBrandingAction(formData: FormData): Promise<A
           where: { id: advisorId },
           data: {
             ...updateData,
-            ...cardUpdate,
             updatedAt: new Date(),
           },
           select: {

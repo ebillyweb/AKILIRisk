@@ -174,7 +174,6 @@ model AdvisorEnterprise {
   landingHeadline       String?
   landingSubheadline    String?
   landingSubtext        String?
-  landingFeatureCards   Json?
   primaryColor          String?
   secondaryColor        String?
   accentColor           String?
@@ -1079,7 +1078,6 @@ model AdvisorProfile {
   landingHeadline  String?
   landingSubheadline String?
   landingSubtext   String?
-  landingFeatureCards Json?
   primaryColor     String?
   secondaryColor   String?
   accentColor      String?

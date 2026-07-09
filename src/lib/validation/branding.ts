@@ -38,23 +38,6 @@ function validateColorAccessibility(color: string): boolean {
 /**
  * Schema for advisor branding updates
  */
-/** Portal landing feature cards — editable copy with layout-safe length caps. */
-export const LANDING_FEATURE_CARD_COUNT = 3;
-export const LANDING_CARD_TITLE_MAX = 32;
-export const LANDING_CARD_DESCRIPTION_MAX = 120;
-
-export const landingFeatureCardSchema = z.object({
-  title: z.string().trim().max(LANDING_CARD_TITLE_MAX),
-  description: z.string().trim().max(LANDING_CARD_DESCRIPTION_MAX),
-  visible: z.boolean(),
-});
-
-export type LandingFeatureCard = z.infer<typeof landingFeatureCardSchema>;
-
-export const landingFeatureCardsSchema = z
-  .array(landingFeatureCardSchema)
-  .max(LANDING_FEATURE_CARD_COUNT);
-
 export const brandingUpdateSchema = z.object({
   brandName: z.string()
     .min(1, 'Brand name is required')
@@ -188,8 +171,6 @@ export interface AdvisorBrandingData {
   landingHeadline?: string | null;
   landingSubheadline?: string | null;
   landingSubtext?: string | null;
-  /** Editable portal feature cards; null/empty falls back to platform defaults. */
-  landingFeatureCards?: LandingFeatureCard[] | null;
   websiteUrl?: string | null;
 
   // Colors

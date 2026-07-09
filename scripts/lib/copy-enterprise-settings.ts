@@ -16,7 +16,6 @@ export const ENTERPRISE_SETTINGS_UPDATE_SELECT = {
   landingHeadline: true,
   landingSubheadline: true,
   landingSubtext: true,
-  landingFeatureCards: true,
   primaryColor: true,
   secondaryColor: true,
   accentColor: true,

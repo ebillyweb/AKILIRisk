@@ -1,9 +1,6 @@
 import "server-only";
 
-import type {
-  AdvisorBrandingData,
-  LandingFeatureCard,
-} from "@/lib/validation/branding";
+import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 export const ADVISOR_BRANDING_PROFILE_SELECT = {
   firmName: true,
@@ -13,7 +10,6 @@ export const ADVISOR_BRANDING_PROFILE_SELECT = {
   landingHeadline: true,
   landingSubheadline: true,
   landingSubtext: true,
-  landingFeatureCards: true,
   primaryColor: true,
   secondaryColor: true,
   accentColor: true,
@@ -38,7 +34,6 @@ type AdvisorBrandingProfileRow = {
   landingHeadline: string | null;
   landingSubheadline: string | null;
   landingSubtext: string | null;
-  landingFeatureCards: unknown;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -66,8 +61,6 @@ export function mapAdvisorProfileToBrandingData(
     landingHeadline: advisor.landingHeadline,
     landingSubheadline: advisor.landingSubheadline,
     landingSubtext: advisor.landingSubtext,
-    landingFeatureCards:
-      (advisor.landingFeatureCards as LandingFeatureCard[] | null) ?? null,
     primaryColor: advisor.primaryColor,
     secondaryColor: advisor.secondaryColor,
     accentColor: advisor.accentColor,

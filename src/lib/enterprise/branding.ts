@@ -4,10 +4,7 @@ import {
   mapAdvisorProfileToBrandingData,
 } from "@/lib/client/advisor-branding-profile";
 import { prisma } from "@/lib/db";
-import type {
-  AdvisorBrandingData,
-  LandingFeatureCard,
-} from "@/lib/validation/branding";
+import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 export const ENTERPRISE_BRANDING_SELECT = {
   name: true,
@@ -17,7 +14,6 @@ export const ENTERPRISE_BRANDING_SELECT = {
   landingHeadline: true,
   landingSubheadline: true,
   landingSubtext: true,
-  landingFeatureCards: true,
   primaryColor: true,
   secondaryColor: true,
   accentColor: true,
@@ -43,7 +39,6 @@ type EnterpriseBrandingRow = {
   landingHeadline: string | null;
   landingSubheadline: string | null;
   landingSubtext: string | null;
-  landingFeatureCards: unknown;
   primaryColor: string | null;
   secondaryColor: string | null;
   accentColor: string | null;
@@ -114,8 +109,6 @@ export function mapEnterpriseToBrandingData(
     landingHeadline: enterprise.landingHeadline,
     landingSubheadline: enterprise.landingSubheadline,
     landingSubtext: enterprise.landingSubtext,
-    landingFeatureCards:
-      (enterprise.landingFeatureCards as LandingFeatureCard[] | null) ?? null,
     primaryColor: enterprise.primaryColor,
     secondaryColor: enterprise.secondaryColor,
     accentColor: enterprise.accentColor,
@@ -167,7 +160,6 @@ export async function resolveAdvisorBrandingForProfile(
       landingHeadline: true,
       landingSubheadline: true,
       landingSubtext: true,
-      landingFeatureCards: true,
       primaryColor: true,
       secondaryColor: true,
       accentColor: true,

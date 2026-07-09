@@ -47,8 +47,6 @@ export type BrandingSettingsProfile = {
   logoContentType?: string | null;
   logoFileSize?: number | null;
   logoUploadedAt?: Date | null;
-  /** Raw stored cards (JSON); the form normalizes via resolveLandingFeatureCards. */
-  landingFeatureCards?: unknown;
 };
 
 export type AdvisorBrandingSettingsView = {
@@ -85,7 +83,6 @@ function mapResolvedBrandingToProfile(
     logoContentType: branding.logoContentType,
     logoFileSize: branding.logoFileSize,
     logoUploadedAt: branding.logoUploadedAt,
-    landingFeatureCards: branding.landingFeatureCards ?? null,
   };
 }
 
@@ -181,7 +178,6 @@ export async function loadAdvisorBrandingSettingsView(
       landingHeadline: true,
       landingSubheadline: true,
       landingSubtext: true,
-      landingFeatureCards: true,
       primaryColor: true,
       secondaryColor: true,
       accentColor: true,
