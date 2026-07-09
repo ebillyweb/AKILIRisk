@@ -1,5 +1,6 @@
 import { HeroFeatureCard } from "@/components/home/hero/HeroFeatureCard";
 import { HOME_HERO_FEATURES } from "@/components/home/hero/home-hero-features";
+import { resolveLandingFeatureCards } from "@/lib/branding/landing-copy";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
@@ -23,6 +24,11 @@ export function BrandedPortalAuthSupplement({ branding }: BrandedPortalAuthSuppl
     branding.landingSubheadline?.trim() ||
     "A structured personal risk profile designed for high-trust advisory relationships — discreet, encrypted, and tailored to your family's situation.";
 
+  // Editable feature cards (title/description/visibility), icons mapped by index.
+  const cards = resolveLandingFeatureCards(branding.landingFeatureCards)
+    .map((card, index) => ({ ...card, icon: HOME_HERO_FEATURES[index]?.icon }))
+    .filter((card) => card.visible && card.icon);
+
   return (
     <>
       <div className="space-y-6">
@@ -37,16 +43,18 @@ export function BrandedPortalAuthSupplement({ branding }: BrandedPortalAuthSuppl
         </div>
       </div>
 
-      <div className="hidden gap-4 sm:grid-cols-3 lg:grid">
-        {HOME_HERO_FEATURES.map((feature) => (
-          <HeroFeatureCard
-            key={feature.title}
-            title={feature.title}
-            description={feature.description}
-            icon={feature.icon}
-          />
-        ))}
-      </div>
+      {cards.length > 0 ? (
+        <div className="hidden gap-4 sm:grid-cols-3 lg:grid">
+          {cards.map((card, index) => (
+            <HeroFeatureCard
+              key={`${card.title}-${index}`}
+              title={card.title}
+              description={card.description}
+              icon={card.icon!}
+            />
+          ))}
+        </div>
+      ) : null}
     </>
   );
 }
