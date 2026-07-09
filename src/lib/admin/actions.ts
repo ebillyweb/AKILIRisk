@@ -45,6 +45,7 @@ import {
 } from "@/lib/advisor/subdomain";
 import { auditSubdomainClaim } from "@/lib/audit/branding-audit";
 import { notifyEnterpriseSubdomainChanged } from "@/lib/enterprise/notify-subdomain-change";
+import { notifyEnterpriseOwnerChanged } from "@/lib/enterprise/notify-owner-change";
 import {
   passwordComplexitySchema,
   validatePasswordForSet,
@@ -1329,5 +1330,134 @@ export async function changeEnterpriseSubdomainByAdmin(input: unknown) {
   } catch (e) {
     logSafeError("admin/changeEnterpriseSubdomain", e);
     return { success: false as const, error: safeErrorMessage(e, "Failed to change subdomain") };
+  }
+}
+
+const changeEnterpriseOwnerSchema = z.object({
+  enterpriseId: z.string().min(1),
+  newOwnerUserId: z.string().min(1),
+});
+
+/**
+ * Platform-admin: transfer a firm's OWNER role to another ACTIVE member of the
+ * same firm. Ownership stays inside the firm — the new owner must already be an
+ * active member (so they have an AdvisorProfile). One atomic transaction:
+ *   1. demote the current owner to ADMIN (keeps their firm-wide access),
+ *   2. promote the chosen member to OWNER,
+ *   3. re-point the tenant subdomain's advisorId to the new owner's profile,
+ *   4. move the firm's billing-contact pointer to the new owner.
+ * The Stripe customer / subscription stay enterprise-scoped and are untouched.
+ */
+export async function changeEnterpriseOwnerByAdmin(input: unknown) {
+  try {
+    const { userId, email, role } = await requireAdminRole();
+    const parsed = changeEnterpriseOwnerSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false as const,
+        error:
+          Object.values(parsed.error.flatten().fieldErrors).flat().join("; ") ||
+          "Validation failed",
+      };
+    }
+
+    const { enterpriseId, newOwnerUserId } = parsed.data;
+
+    const currentOwner = await prisma.enterpriseMembership.findFirst({
+      where: { enterpriseId, role: "OWNER", status: "ACTIVE" },
+      select: { id: true, userId: true, advisorProfileId: true },
+    });
+    if (!currentOwner) {
+      return { success: false as const, error: "This firm has no active owner to transfer from." };
+    }
+    if (currentOwner.userId === newOwnerUserId) {
+      return { success: false as const, error: "That member is already the firm's owner." };
+    }
+
+    const target = await prisma.enterpriseMembership.findFirst({
+      where: { enterpriseId, userId: newOwnerUserId },
+      select: { id: true, status: true, advisorProfileId: true },
+    });
+    if (!target) {
+      return { success: false as const, error: "That user is not a member of this firm." };
+    }
+    if (target.status !== "ACTIVE") {
+      return {
+        success: false as const,
+        error: "The new owner must be an active member of the firm.",
+      };
+    }
+    if (!target.advisorProfileId) {
+      return {
+        success: false as const,
+        error: "The new owner doesn't have an advisor profile and can't own the firm.",
+      };
+    }
+
+    // The tenant subdomain (if any) points at the owner's advisor profile.
+    // `advisorSubdomain.advisorId` is @unique, so the new owner's profile must
+    // not already own a *different* subdomain row.
+    const subdomain = await prisma.advisorSubdomain.findUnique({
+      where: { enterpriseId },
+      select: { id: true, subdomain: true, advisorId: true },
+    });
+    if (subdomain) {
+      const conflicting = await prisma.advisorSubdomain.findUnique({
+        where: { advisorId: target.advisorProfileId },
+        select: { id: true },
+      });
+      if (conflicting && conflicting.id !== subdomain.id) {
+        return {
+          success: false as const,
+          error: "The new owner already has their own portal subdomain and can't take over this firm's.",
+        };
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.enterpriseMembership.update({
+        where: { id: currentOwner.id },
+        data: { role: "ADMIN" },
+      });
+      await tx.enterpriseMembership.update({
+        where: { id: target.id },
+        data: { role: "OWNER" },
+      });
+      if (subdomain && subdomain.advisorId !== target.advisorProfileId) {
+        await tx.advisorSubdomain.update({
+          where: { id: subdomain.id },
+          data: { advisorId: target.advisorProfileId!, updatedAt: new Date() },
+        });
+      }
+      await tx.advisorEnterprise.update({
+        where: { id: enterpriseId },
+        data: { billingContactUserId: newOwnerUserId },
+      });
+    });
+
+    // The proxy caches slug → tenant (including the owner's branding); bust it.
+    if (subdomain) clearSubdomainCache(subdomain.subdomain);
+
+    await writeAudit({
+      actor: { userId, role: role as UserRole, email },
+      action: AUDIT_ACTIONS.ENTERPRISE_OWNER_CHANGE,
+      entityType: "AdvisorEnterprise",
+      entityId: enterpriseId,
+      beforeData: { ownerUserId: currentOwner.userId },
+      afterData: { ownerUserId: newOwnerUserId },
+      metadata: { previousOwnerDemotedTo: "ADMIN" },
+    });
+
+    revalidateEnterpriseAdminPaths(enterpriseId);
+
+    await notifyEnterpriseOwnerChanged({
+      enterpriseId,
+      previousOwnerUserId: currentOwner.userId,
+    });
+
+    return { success: true as const };
+  } catch (e) {
+    logSafeError("admin/changeEnterpriseOwner", e);
+    return { success: false as const, error: safeErrorMessage(e, "Failed to transfer ownership") };
   }
 }
