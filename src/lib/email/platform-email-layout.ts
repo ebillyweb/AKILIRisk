@@ -3,6 +3,7 @@ import {
   PLATFORM_EMAIL_BRAND_BLUE,
   PLATFORM_EMAIL_BRAND_NAME,
   PLATFORM_EMAIL_CTA_BG,
+  PLATFORM_EMAIL_HEADER_FALLBACK,
   PLATFORM_EMAIL_HEADER_GRADIENT,
   PLATFORM_EMAIL_TAGLINE,
   platformEmailCopyrightYear,
@@ -51,7 +52,7 @@ export function wrapPlatformEmailContent(options: WrapPlatformEmailOptions): str
       <td align="center">
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(15,23,42,0.12);border:1px solid #e2e8f0;">
           <tr>
-            <td style="background:${PLATFORM_EMAIL_HEADER_GRADIENT};padding:28px 28px 24px;text-align:center;border-bottom:3px solid ${PLATFORM_EMAIL_BRAND_BLUE};">
+            <td style="background-color:${PLATFORM_EMAIL_HEADER_FALLBACK};background-image:${PLATFORM_EMAIL_HEADER_GRADIENT};padding:28px 28px 24px;text-align:center;border-bottom:3px solid ${PLATFORM_EMAIL_BRAND_BLUE};">
               ${renderLogoBlock()}
               <div style="color:#94a3b8;font-size:13px;margin-top:4px;line-height:1.45;max-width:28em;margin-left:auto;margin-right:auto;">${escapeHtml(PLATFORM_EMAIL_TAGLINE)}</div>
             </td>

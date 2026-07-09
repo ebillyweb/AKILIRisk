@@ -22,6 +22,15 @@ export const PLATFORM_EMAIL_CTA_BG = AKILI_UI_COLORS.ctaBackground;
 
 export const PLATFORM_EMAIL_HEADER_GRADIENT = AKILI_EMAIL.headerGradient;
 
+/**
+ * Solid dark fallback for the header behind the white AKILI lockup. Many email
+ * clients (Outlook, several iOS/mobile clients) drop CSS `linear-gradient` on
+ * table cells; without a solid `background-color` they fall back to white and
+ * the white wordmark + light tagline disappear. Always pair this with the
+ * gradient as `background-image`.
+ */
+export const PLATFORM_EMAIL_HEADER_FALLBACK = AKILI_UI_COLORS.slateDeep;
+
 /** PNG for broad email-client support (Gmail blocks SVG images). */
 export const PLATFORM_EMAIL_LOGO_PATH = AKILI_EMAIL.logoPublicPath;
 
