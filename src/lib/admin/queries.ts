@@ -527,6 +527,9 @@ export type AdminEnterpriseDetail = {
   ownerName: string | null;
   ownerEmail: string | null;
   ownerUserId: string | null;
+  /** The firm's white-label subdomain slug (routing value), or null if unclaimed. */
+  currentSubdomain: string | null;
+  subdomainActive: boolean;
 };
 
 export async function getEnterpriseDetailForAdmin(
@@ -546,6 +549,9 @@ export async function getEnterpriseDetailForAdmin(
       paymentMethod: true,
       createdAt: true,
       subscription: { select: { status: true, tier: true, billingCycle: true } },
+      subdomain: {
+        select: { subdomain: true, isActive: true },
+      },
       memberships: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
@@ -584,6 +590,8 @@ export async function getEnterpriseDetailForAdmin(
       ? safeDecryptUserEmail(owner.emailCiphertext, { rowId: owner.id })
       : null,
     ownerUserId: owner?.id ?? null,
+    currentSubdomain: enterprise.subdomain?.subdomain ?? null,
+    subdomainActive: enterprise.subdomain?.isActive ?? false,
   };
 }
 

@@ -38,7 +38,13 @@ import {
   reactivateEnterpriseFirmByAdmin,
   suspendEnterpriseFirmByAdmin,
 } from "@/lib/enterprise/firm-lifecycle";
-import { isSubdomainReserved, validateSubdomainFormat } from "@/lib/advisor/subdomain";
+import {
+  clearSubdomainCache,
+  isSubdomainReserved,
+  validateSubdomainFormat,
+} from "@/lib/advisor/subdomain";
+import { auditSubdomainClaim } from "@/lib/audit/branding-audit";
+import { notifyEnterpriseSubdomainChanged } from "@/lib/enterprise/notify-subdomain-change";
 import {
   passwordComplexitySchema,
   validatePasswordForSet,
@@ -1218,5 +1224,110 @@ export async function deleteEnterpriseByAdmin(input: unknown) {
     }
     logSafeError("admin/deleteEnterprise", e);
     return { success: false, error: safeErrorMessage(e, "Failed to delete firm") };
+  }
+}
+
+const changeEnterpriseSubdomainSchema = z.object({
+  enterpriseId: z.string().min(1),
+  subdomain: z.string().trim().min(3).max(20),
+});
+
+/**
+ * Platform-admin: change a firm's white-label subdomain slug (e.g. fix a typo).
+ * Reuses the same format/reserved/uniqueness rules as the advisor claim flow,
+ * keeps `AdvisorEnterprise.slug` in sync, busts the proxy's subdomain cache for
+ * both the old and new slugs, and notifies the firm's owner/admins.
+ */
+export async function changeEnterpriseSubdomainByAdmin(input: unknown) {
+  try {
+    const { userId, email, role } = await requireAdminRole();
+    const parsed = changeEnterpriseSubdomainSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false as const,
+        error:
+          Object.values(parsed.error.flatten().fieldErrors).flat().join("; ") ||
+          "Validation failed",
+      };
+    }
+
+    const enterpriseId = parsed.data.enterpriseId;
+    const newSlug = parsed.data.subdomain.toLowerCase().trim();
+
+    const format = validateSubdomainFormat(newSlug);
+    if (!format.valid) {
+      return { success: false as const, error: format.error ?? "Invalid subdomain" };
+    }
+
+    const reserved = await isSubdomainReserved(newSlug);
+    if (reserved.reserved) {
+      return {
+        success: false as const,
+        error: `That subdomain is reserved${reserved.reason ? `: ${reserved.reason}` : ""}.`,
+      };
+    }
+
+    const current = await prisma.advisorSubdomain.findUnique({
+      where: { enterpriseId },
+      select: { id: true, subdomain: true, advisorId: true },
+    });
+    if (!current) {
+      return {
+        success: false as const,
+        error: "This firm doesn't have a subdomain yet.",
+      };
+    }
+    if (current.subdomain === newSlug) {
+      return { success: false as const, error: "That is already the firm's subdomain." };
+    }
+
+    const takenSubdomain = await prisma.advisorSubdomain.findUnique({
+      where: { subdomain: newSlug },
+      select: { id: true },
+    });
+    if (takenSubdomain && takenSubdomain.id !== current.id) {
+      return { success: false as const, error: `Subdomain '${newSlug}' is already taken.` };
+    }
+    const takenSlug = await prisma.advisorEnterprise.findUnique({
+      where: { slug: newSlug },
+      select: { id: true },
+    });
+    if (takenSlug && takenSlug.id !== enterpriseId) {
+      return { success: false as const, error: `'${newSlug}' is already used by another firm.` };
+    }
+
+    const previousSlug = current.subdomain;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.advisorSubdomain.update({
+        where: { enterpriseId },
+        data: { subdomain: newSlug, updatedAt: new Date() },
+      });
+      await tx.advisorEnterprise.update({
+        where: { id: enterpriseId },
+        data: { slug: newSlug },
+      });
+    });
+
+    // The proxy caches slug → tenant; both old and new must be cleared.
+    clearSubdomainCache(previousSlug);
+    clearSubdomainCache(newSlug);
+
+    await auditSubdomainClaim(current.advisorId, userId, newSlug, {
+      action: "admin_changed",
+      previousSubdomain: previousSlug,
+      enterpriseId,
+      actorRole: role,
+      actorEmail: email,
+    });
+
+    revalidateEnterpriseAdminPaths(enterpriseId);
+
+    await notifyEnterpriseSubdomainChanged({ enterpriseId, previousSlug, newSlug });
+
+    return { success: true as const, previousSubdomain: previousSlug, subdomain: newSlug };
+  } catch (e) {
+    logSafeError("admin/changeEnterpriseSubdomain", e);
+    return { success: false as const, error: safeErrorMessage(e, "Failed to change subdomain") };
   }
 }
