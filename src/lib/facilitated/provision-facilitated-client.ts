@@ -25,7 +25,8 @@ export async function provisionFacilitatedClient(input: {
   if (existing && existing.role !== "USER") {
     return {
       ok: false,
-      error: "This email is associated with a non-client account.",
+      error:
+        "This email is already registered as an advisor or staff account, so it can't be used to sign in as a client. Please use the client's personal email.",
       code: "blocked",
     };
   }
