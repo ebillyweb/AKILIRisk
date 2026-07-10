@@ -115,6 +115,21 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
       },
     ],
   },
+  {
+    id: "practice",
+    title: "Practice",
+    placement: "footer",
+    items: [
+      {
+        href: "/advisor/methodology",
+        label: "Your methodology",
+        icon: BookOpen,
+        requiresMemberVisibility: "methodology",
+        requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
+        hideForEnterpriseTeam: true,
+      },
+    ],
+  },
 ];
 
 export function isAdvisorNavItemTierLocked(

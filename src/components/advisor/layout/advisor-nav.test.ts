@@ -85,7 +85,9 @@ describe("getActiveAdvisorNavHref", () => {
       "Billing",
     ]);
     const { footer } = partitionAdvisorNavSections(sections);
-    expect(footer).toHaveLength(0);
+    expect(footer).toHaveLength(1);
+    expect(footer[0]?.id).toBe("practice");
+    expect(footer[0]?.items.map((item) => item.label)).toEqual(["Your methodology"]);
   });
 
   it("highlights Notifications on notification settings routes", () => {
@@ -123,6 +125,63 @@ describe("getActiveAdvisorNavHref", () => {
     ).toBe(true);
     expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/team")).toBe("firm");
     expect(getAdvisorNavSectionForHref(visible, "/advisor/settings/access-control")).toBe("firm");
+  });
+
+  it("shows Your methodology in the footer for solo advisors", () => {
+    const visible = getVisibleAdvisorNavSections(flags);
+    const { footer } = partitionAdvisorNavSections(visible);
+    expect(footer.some((section) => section.id === "practice")).toBe(true);
+    expect(
+      footer
+        .flatMap((section) => section.items)
+        .some((item) => item.href === "/advisor/methodology"),
+    ).toBe(true);
+  });
+
+  it("shows Your methodology for enterprise team members when firm toggle is on", () => {
+    const visible = getVisibleAdvisorNavSections(flags, {
+      applyEnterpriseMemberVisibility: true,
+      enterpriseMemberVisibility: { methodology: true },
+    });
+    const { footer } = partitionAdvisorNavSections(visible);
+    expect(
+      footer
+        .flatMap((section) => section.items)
+        .some((item) => item.href === "/advisor/methodology"),
+    ).toBe(true);
+  });
+
+  it("hides Your methodology for enterprise team members when firm toggle is off", () => {
+    const visible = getVisibleAdvisorNavSections(flags, {
+      applyEnterpriseMemberVisibility: true,
+      enterpriseMemberVisibility: { methodology: false },
+    });
+    expect(
+      visible
+        .flatMap((section) => section.items)
+        .some((item) => item.href === "/advisor/methodology"),
+    ).toBe(false);
+  });
+
+  it("hides Your methodology for enterprise team managers who use Practice Standards", () => {
+    const visible = getVisibleAdvisorNavSections(flags, { enterpriseTeamEnabled: true });
+    expect(
+      visible
+        .flatMap((section) => section.items)
+        .some((item) => item.href === "/advisor/methodology"),
+    ).toBe(false);
+    expect(
+      visible
+        .flatMap((section) => section.items)
+        .some((item) => item.href === "/advisor/enterprise/methodology"),
+    ).toBe(true);
+  });
+
+  it("highlights Your methodology on advisor methodology routes", () => {
+    const visible = getVisibleAdvisorNavSections(flags);
+    expect(getActiveAdvisorNavHref("/advisor/methodology/questions/governance", visible)).toBe(
+      "/advisor/methodology",
+    );
   });
 
   it("shows Practice Standards for enterprise team managers when team nav is enabled", () => {
