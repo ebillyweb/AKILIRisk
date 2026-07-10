@@ -2,6 +2,7 @@
 
 import { Lightbulb } from "lucide-react";
 import { QuestionTtsPlayButton } from "@/components/common/QuestionTtsPlayButton";
+import { intakeContextForDisplay } from "@/lib/intake/intake-context-display";
 import type { IntakeQuestion } from "@/lib/intake/types";
 
 /**
@@ -23,6 +24,8 @@ export function QuestionDisplay({
   totalQuestions,
   scriptPosition,
 }: QuestionDisplayProps) {
+  const coachingContext = intakeContextForDisplay(question.context);
+
   return (
     <div className="py-8 sm:py-12 max-w-2xl mx-auto">
       {/* Question number - editorial kicker style */}
@@ -46,6 +49,15 @@ export function QuestionDisplay({
           className="shrink-0"
         />
       </div>
+
+      {coachingContext ? (
+        <div className="mb-8 rounded-xl border border-border/60 bg-muted/40 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Context
+          </p>
+          <p className="mt-2 text-sm leading-6 text-foreground/90">{coachingContext}</p>
+        </div>
+      ) : null}
 
       {/* Recording tips with subtle styling */}
       {question.recordingTips && question.recordingTips.length > 0 && (

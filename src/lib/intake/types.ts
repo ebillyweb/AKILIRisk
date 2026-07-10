@@ -25,7 +25,7 @@ export interface IntakeQuestion {
   recommendedActions?: string;
   /** Epic 5.11: canonical pillar ids for advisor recommendations at approval. */
   relatedPillarIds?: string[];
-  /** Guidance for TTS (includes tone fallback when pillar has no rubric text). */
+  /** Coaching prompt for clients (on-screen + TTS). Staff-only rubric copy lives in whyThisMatters. */
   context: string;
   recordingTips: string[];
 }
