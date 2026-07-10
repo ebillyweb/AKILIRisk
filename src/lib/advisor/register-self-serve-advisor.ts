@@ -4,11 +4,7 @@ import type { BillingCycle, SubscriptionTier } from "@prisma/client";
 import { z } from "zod";
 
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
-import {
-  ADVISOR_EMAIL_VERIFY_TTL_MS,
-  buildAdvisorEmailVerifyUrl,
-  issueAdvisorEmailVerificationToken,
-} from "@/lib/auth/advisor-email-verification";
+import { sendAdvisorEmailVerificationInvite } from "@/lib/auth/send-advisor-email-verification-invite";
 import { validatePasswordForSet } from "@/lib/auth/password-policy";
 import { hashPasswordForStorage } from "@/lib/auth/password-update";
 import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
@@ -16,9 +12,7 @@ import { TIER_LIMITS } from "@/lib/billing/constants";
 import { newAdvisorPaidSignupDeadline } from "@/lib/billing/new-advisor-grace";
 import { SELF_SERVE_TIERS, type SelfServeTier } from "@/lib/billing/tier-catalog";
 import { prisma } from "@/lib/db";
-import { sendAdvisorSignupVerificationEmail } from "@/lib/email/advisor-signup-verification";
 import { getPasswordPolicy } from "@/lib/platform/password-policy-settings";
-import { resolvePublicAppUrl } from "@/lib/public-app-url";
 
 const checkoutPlanSchema = z.enum(SELF_SERVE_TIERS);
 const checkoutCycleSchema = z.enum(["MONTHLY", "ANNUAL"]);
@@ -175,28 +169,19 @@ export async function registerSelfServeAdvisor(
     },
   });
 
-  const issued = await issueAdvisorEmailVerificationToken(data.email);
-  const base = (await resolvePublicAppUrl()).replace(/\/$/, "");
-  const verifyUrl = buildAdvisorEmailVerifyUrl(base, issued.rawToken, {
+  const emailResult = await sendAdvisorEmailVerificationInvite({
+    email: data.email,
+    displayName,
     checkoutPlan: data.checkoutPlan,
     checkoutCycle: data.checkoutCycle,
-  });
-
-  const emailResult = await sendAdvisorSignupVerificationEmail({
-    to: data.email,
-    displayName,
-    verifyUrl,
-    expiresHours: Math.round(ADVISOR_EMAIL_VERIFY_TTL_MS / (60 * 60 * 1000)),
+    context: "self_serve",
   });
 
   return {
     success: true,
     email: data.email,
     verificationEmailSent: emailResult.sent,
-    verifyUrlForDev:
-      process.env.NODE_ENV !== "production" && !emailResult.sent
-        ? verifyUrl
-        : undefined,
+    verifyUrlForDev: emailResult.verifyUrlForDev,
   };
 }
 
@@ -230,28 +215,19 @@ async function resendVerificationForPendingAdvisor(opts: {
       : undefined);
   const checkoutCycle = opts.checkoutCycle ?? subscription?.billingCycle;
 
-  const issued = await issueAdvisorEmailVerificationToken(opts.email);
-  const base = (await resolvePublicAppUrl()).replace(/\/$/, "");
-  const verifyUrl = buildAdvisorEmailVerifyUrl(base, issued.rawToken, {
+  const emailResult = await sendAdvisorEmailVerificationInvite({
+    email: opts.email,
+    displayName: user.name?.trim() || "Advisor",
     checkoutPlan,
     checkoutCycle,
-  });
-
-  const emailResult = await sendAdvisorSignupVerificationEmail({
-    to: opts.email,
-    displayName: user.name?.trim() || "Advisor",
-    verifyUrl,
-    expiresHours: Math.round(ADVISOR_EMAIL_VERIFY_TTL_MS / (60 * 60 * 1000)),
+    context: "self_serve",
   });
 
   return {
     success: true,
     email: opts.email,
     verificationEmailSent: emailResult.sent,
-    verifyUrlForDev:
-      process.env.NODE_ENV !== "production" && !emailResult.sent
-        ? verifyUrl
-        : undefined,
+    verifyUrlForDev: emailResult.verifyUrlForDev,
   };
 }
 

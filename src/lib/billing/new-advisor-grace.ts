@@ -81,7 +81,7 @@ export function buildNewAdvisorWelcomeEmailHtml(opts: {
 
   const bodyHtml = `
     <p style="margin:0 0 16px;font-size:16px;color:#0f172a;">Hello ${name},</p>
-    <p style="margin:0 0 20px;">Your <strong style="color:#0f172a;">advisor account</strong> is ready. You are in a <strong style="color:#0f172a;">grace period</strong> for hub access until the start of the next UTC calendar day.</p>
+    <p style="margin:0 0 20px;">Your <strong style="color:#0f172a;">advisor account</strong> is ready. Confirm your email using the separate confirmation message we sent, then sign in. You are in a <strong style="color:#0f172a;">grace period</strong> for hub access until the start of the next UTC calendar day.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(180deg,#fffbeb 0%,#fef3c7 100%);border-radius:14px;border:1px solid #fcd34d;">
       <tr>
         <td style="padding:18px 20px;">
@@ -96,7 +96,7 @@ export function buildNewAdvisorWelcomeEmailHtml(opts: {
     </table>
     ${billingParagraph}
     <div style="text-align:center;">
-      ${renderPlatformEmailCta({ label: "Sign in to your account", href: opts.signInUrl })}
+      ${renderPlatformEmailCta({ label: "Sign in after confirming email", href: opts.signInUrl })}
       ${billingButton}
       ${renderPlatformEmailUrlFallback(opts.signInUrl)}
     </div>`;

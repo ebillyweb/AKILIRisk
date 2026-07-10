@@ -12,14 +12,29 @@ import {
 import { withPlatformLogoAttachment } from "@/lib/email/platform-email-logo";
 import { resolveFromEmail } from "@/lib/email/resolve-from-email";
 
+export type AdvisorSignupVerificationContext = "self_serve" | "admin_provisioned";
+
+function verificationIntroCopy(
+  context: AdvisorSignupVerificationContext,
+  name: string
+): string {
+  if (context === "admin_provisioned") {
+    return `Hi ${name}, an administrator created your AKILI advisor account. Confirm your email to activate sign-in and access the advisor hub.`;
+  }
+
+  return `Hi ${name}, thanks for creating your AKILI advisor account. Confirm your email to continue to plan selection and secure checkout.`;
+}
+
 export function renderAdvisorSignupVerificationEmailHtml(opts: {
   displayName: string;
   verifyUrl: string;
   expiresHours: number;
+  context?: AdvisorSignupVerificationContext;
 }): string {
   const name = escapeHtml(opts.displayName.trim() || "Advisor");
   const verifyUrl = opts.verifyUrl;
   const hours = opts.expiresHours;
+  const context = opts.context ?? "self_serve";
 
   let appOrigin: string | null = null;
   try {
@@ -34,8 +49,7 @@ export function renderAdvisorSignupVerificationEmailHtml(opts: {
     bodyHtml: `
       ${renderPlatformEmailHeadline("Confirm your email to get started")}
       <p style="margin:0 0 16px;font-size:16px;line-height:26px;color:#334155;">
-        Hi ${name}, thanks for creating your AKILI advisor account. Confirm your email
-        to continue to plan selection and secure checkout.
+        ${verificationIntroCopy(context, name)}
       </p>
       <p style="margin:0 0 16px;font-size:16px;line-height:26px;color:#334155;">
         This link expires in <strong style="color:#0f172a;">${hours} hours</strong>.
@@ -53,6 +67,7 @@ export async function sendAdvisorSignupVerificationEmail(opts: {
   displayName: string;
   verifyUrl: string;
   expiresHours?: number;
+  context?: AdvisorSignupVerificationContext;
 }): Promise<{ sent: boolean }> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
@@ -68,6 +83,7 @@ export async function sendAdvisorSignupVerificationEmail(opts: {
     displayName: opts.displayName,
     verifyUrl: opts.verifyUrl,
     expiresHours: opts.expiresHours ?? 24,
+    context: opts.context,
   });
 
   const resend = new Resend(apiKey);

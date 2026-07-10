@@ -25,6 +25,7 @@ import { getAdvisorForAdmin } from "@/lib/admin/queries";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { findUserByEmail, userEmailWriteData } from "@/lib/auth/user-email";
+import { sendAdvisorEmailVerificationInvite } from "@/lib/auth/send-advisor-email-verification-invite";
 import {
   ENTERPRISE_DEFAULT_CLIENT_LIMIT,
   ENTERPRISE_DEFAULT_PER_ADVISOR_CLIENT_LIMIT,
@@ -363,6 +364,7 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
           passwordChangeRequired: false,
           passwordPolicyRevision: policy.revision,
           role: "ADVISOR",
+          emailVerified: null,
           name: parsed.data.name ?? undefined,
           firstName: parsed.data.firstName ?? undefined,
           lastName: parsed.data.lastName ?? undefined,
@@ -411,6 +413,22 @@ export async function createAdvisorByAdmin(input: CreateAdvisorInput) {
 
       return { user: u, profile: p };
     });
+
+    try {
+      const verificationResult = await sendAdvisorEmailVerificationInvite({
+        email: parsed.data.email,
+        displayName,
+        context: "admin_provisioned",
+      });
+      if (!verificationResult.sent) {
+        console.warn("New advisor verification email not sent", {
+          userId: user.id,
+          verifyUrlForDev: verificationResult.verifyUrlForDev,
+        });
+      }
+    } catch (verifyErr) {
+      console.error("New advisor verification email failed:", verifyErr);
+    }
 
     try {
       const base = (await resolvePublicAppUrl()).replace(/\/$/, "");
