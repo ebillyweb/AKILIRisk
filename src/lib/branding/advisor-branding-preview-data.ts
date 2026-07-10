@@ -19,6 +19,7 @@ export function toAdvisorBrandingPreviewData(
     landingHeadline: branding.landingHeadline ?? null,
     landingSubheadline: branding.landingSubheadline ?? null,
     landingSubtext: branding.landingSubtext ?? null,
+    landingFeatureCards: branding.landingFeatureCards ?? null,
     primaryColor: branding.primaryColor ?? null,
     secondaryColor: branding.secondaryColor ?? null,
     accentColor: branding.accentColor ?? null,
