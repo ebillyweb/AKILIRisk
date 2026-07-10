@@ -13,6 +13,7 @@ import {
   syncPasswordChangeRequired,
   syncPasswordPolicyRevision,
 } from "@/lib/auth/user-auth-snapshot";
+import { AdvisorEmailNotVerified } from "@/lib/auth/credentials-errors";
 
 // Round-11 bug-hunt fix: normalize email casing so `findUserByEmail`
 // (deterministic ciphertext, case-sensitive) hits the same row no
@@ -189,7 +190,7 @@ export default {
             entityId: user.id,
             metadata: { reason: "email_not_verified" },
           });
-          return null;
+          throw new AdvisorEmailNotVerified();
         }
 
         console.info("Credentials authorize succeeded", {

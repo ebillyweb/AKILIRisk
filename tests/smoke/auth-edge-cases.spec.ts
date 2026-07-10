@@ -20,11 +20,6 @@ test.describe("auth edge cases", () => {
     await expect(
       page.getByText(/Invalid email or password/i)
     ).toBeVisible();
-    // The advisor credentials form points users at the email confirmation /
-    // account-recovery hint (SignInHub CredentialsPanel copy for role=advisor).
-    await expect(
-      page.getByText(/confirmation link/i)
-    ).toBeVisible();
 
     expect(new URL(page.url()).pathname).toBe("/signin");
   });

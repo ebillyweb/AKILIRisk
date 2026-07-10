@@ -35,6 +35,11 @@ import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-bra
 import { scopePostAuthPath } from "@/lib/client/tenant-path-prefix-client";
 import { useBrandingOptional } from "@/components/providers/BrandingProvider";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
+import { ADVISOR_EMAIL_NOT_VERIFIED_CODE } from "@/lib/auth/credentials-errors";
+import {
+  resendAdvisorVerificationEmail,
+  type AdvisorVerificationResendStatus,
+} from "@/lib/auth/advisor-verification-resend-client";
 import { cn } from "@/lib/utils";
 
 const ROLE_ICONS: Record<SignInRole, typeof UserRound> = {
@@ -197,11 +202,29 @@ function StaffCredentialsPanel({
   const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
+  const [resendStatus, setResendStatus] = useState<AdvisorVerificationResendStatus>("idle");
+  const [resendError, setResendError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleResendVerification = async () => {
+    setResendStatus("sending");
+    setResendError("");
+    const result = await resendAdvisorVerificationEmail(email);
+    if (!result.ok) {
+      setResendStatus("error");
+      setResendError(result.error);
+      return;
+    }
+    setResendStatus("sent");
+  };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+    setEmailVerificationRequired(false);
+    setResendStatus("idle");
+    setResendError("");
     setIsLoading(true);
 
     try {
@@ -212,11 +235,15 @@ function StaffCredentialsPanel({
       });
 
       if (result?.error || result?.ok === false) {
-        setError(
-          role === "advisor"
-            ? "Invalid email or password, or your email may not be confirmed yet. Check your inbox for the confirmation link, or create an account if you're new."
-            : "Invalid email or password. AKILI team platform accounts use this form — client accounts require an email link instead."
-        );
+        if (role === "advisor" && result?.code === ADVISOR_EMAIL_NOT_VERIFIED_CODE) {
+          setEmailVerificationRequired(true);
+        } else {
+          setError(
+            role === "advisor"
+              ? "Invalid email or password. Check your credentials or create an account if you're new."
+              : "Invalid email or password. AKILI team platform accounts use this form — client accounts require an email link instead."
+          );
+        }
         setIsLoading(false);
         return;
       }
@@ -262,7 +289,12 @@ function StaffCredentialsPanel({
           id="email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setEmailVerificationRequired(false);
+            setResendStatus("idle");
+            setResendError("");
+          }}
           required
           autoComplete="email"
           placeholder={role === "advisor" ? "you@firm.com" : "you@akili.com"}
@@ -282,6 +314,30 @@ function StaffCredentialsPanel({
           className="min-h-11"
         />
       </div>
+
+      {emailVerificationRequired ? (
+        <Alert variant="info">
+          <AlertDescription className="space-y-3">
+            <p>
+              Your email address hasn&apos;t been confirmed yet. Open the confirmation link we sent
+              to <span className="font-semibold text-foreground">{email}</span>, then sign in again.
+            </p>
+            {resendStatus === "sent" ? (
+              <p className="text-foreground">Confirmation email sent again. Check your inbox.</p>
+            ) : null}
+            {resendError ? <p className="text-destructive">{resendError}</p> : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!email.trim() || resendStatus === "sending"}
+              onClick={() => void handleResendVerification()}
+            >
+              {resendStatus === "sending" ? "Sending…" : "Resend confirmation email"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {error ? (
         <Alert variant="destructive">
@@ -323,7 +379,11 @@ function StaffCredentialsPanel({
               </Link>
               {" · "}
               <Link
-                href={scopePostAuthPath("/signup/advisor/check-email")}
+                href={scopePostAuthPath(
+                  email.trim()
+                    ? `/signup/advisor/check-email?email=${encodeURIComponent(email.trim())}`
+                    : "/signup/advisor/check-email",
+                )}
                 className="font-semibold text-foreground hover:underline"
               >
                 Resend confirmation
