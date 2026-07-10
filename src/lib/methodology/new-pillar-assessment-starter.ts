@@ -8,9 +8,11 @@
  * `sectionCode` (A, B, C, D…) — keep codes alphabetical to control order.
  *
  * Full pillar depth: each of the four pillars has six sections (A–F) of five
- * scored questions each (30 per pillar). Question numbers 7.1-7.3, 8.1-8.3,
- * 9.1-9.3, 10.1-10.3 are the original v3.0 starters and MUST keep their exact
- * text/number so re-seeding stays idempotent against already-seeded rows.
+ * scored questions each (30 per pillar). `answers` are the tailored 0→3
+ * maturity anchors (0 = absent/critical gap, 3 = institutionalized) shown as
+ * the option labels for each scored_0_3 question. Question numbers 7.1-7.3,
+ * 8.1-8.3, 9.1-9.3, 10.1-10.3 are the original v3.0 starters and MUST keep
+ * their exact text/number so re-seeding stays idempotent.
  */
 
 export type NewPillarQuestionStarter = {
@@ -18,6 +20,8 @@ export type NewPillarQuestionStarter = {
   questionText: string;
   whyThisMatters: string;
   recommendedActions: string;
+  /** Tailored maturity anchors for the 0/1/2/3 options (index 0 = worst). */
+  answers: [string, string, string, string];
 };
 
 export type NewPillarAssessmentStarter = {
@@ -37,9 +41,6 @@ const SCORED_0_3 = {
 };
 
 export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
-  // ==========================================================================
-  // 7 — Liquidity & Cash Management (slug: liquidity-cash)
-  // ==========================================================================
   {
     categoryCode: "7_liquidity",
     categoryName: "Liquidity & Cash Management",
@@ -57,6 +58,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unexpected obligations and market dislocations require ready cash without forced asset sales.",
         recommendedActions:
           "Establish a dedicated reserve account and document replenishment rules with your advisor.",
+        answers: ["No dedicated reserve", "Ad hoc cash, no target", "~6 months held", "6+ months, policy-governed and replenished"],
       },
       {
         questionNumber: "7.2",
@@ -66,6 +68,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Credit capacity is part of liquidity — unused lines can fail when needed most.",
         recommendedActions:
           "Confirm covenants, maturity dates, and draw procedures with your banking team.",
+        answers: ["No committed lines", "Lines exist, unreviewed", "Documented and reviewed annually", "Reviewed and stress-tested for availability"],
       },
       {
         questionNumber: "7.3",
@@ -75,6 +78,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Concentrated private holdings can create liquidity cliffs even when net worth appears strong.",
         recommendedActions:
           "Model liquidity gaps across 12-, 24-, and 36-month horizons.",
+        answers: ["Never assessed", "Rough awareness only", "Stress-tested periodically", "Stress-tested across multiple horizons"],
       },
       {
         questionNumber: "7.4",
@@ -84,6 +88,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Without a policy, reserve decisions are ad hoc and reserves are quietly depleted for non-emergencies.",
         recommendedActions:
           "Document target ranges, permitted uses, and approval authority for the reserve.",
+        answers: ["No policy", "Informal understanding", "Written policy exists", "Policy with targets and approval authority"],
       },
       {
         questionNumber: "7.5",
@@ -93,6 +98,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Liquidity needs drift as spending, family size, and commitments change over time.",
         recommendedActions:
           "Schedule an annual liquidity review tied to the broader financial plan.",
+        answers: ["Never reviewed", "Reviewed irregularly", "Reviewed annually", "Reviewed annually and updated for changes"],
       },
     ],
   },
@@ -113,6 +119,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "A single lender can cut or reprice credit at the worst moment, leaving no fallback.",
         recommendedActions:
           "Maintain relationships and standby capacity with at least two institutions.",
+        answers: ["Single lender", "Mostly one lender", "Two lenders", "Diversified with standby capacity"],
       },
       {
         questionNumber: "7.7",
@@ -122,6 +129,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "A market drop can force a margin call or collateral top-up precisely when liquidity is scarcest.",
         recommendedActions:
           "Track loan-to-value headroom and set alerts well above the maintenance threshold.",
+        answers: ["Unmonitored", "Occasional check", "Monitored with thresholds", "Monitored with alerts above maintenance"],
       },
       {
         questionNumber: "7.8",
@@ -131,6 +139,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Leverage that looks modest against net worth can be extreme against truly liquid assets.",
         recommendedActions:
           "Set and monitor a maximum leverage ratio expressed against liquid assets.",
+        answers: ["No ceiling tracked", "Rough sense of leverage", "Ceiling defined", "Ceiling vs liquid assets, monitored"],
       },
       {
         questionNumber: "7.9",
@@ -140,6 +149,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Maturities that cluster or fall in a bad market force costly refinancing or asset sales.",
         recommendedActions:
           "Maintain a debt-maturity ladder and refinance proactively before deadlines.",
+        answers: ["Not tracked", "Partially tracked", "Tracked", "Maturity ladder, refinanced proactively"],
       },
       {
         questionNumber: "7.10",
@@ -149,6 +159,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Rising rates can sharply increase debt service and strain household cash flow.",
         recommendedActions:
           "Model rate scenarios and consider fixing or hedging material exposures.",
+        answers: ["Unaware of exposure", "Aware but unhedged", "Understood", "Understood and hedged where appropriate"],
       },
     ],
   },
@@ -169,6 +180,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Over-concentration in one illiquid asset ties household stability to a single outcome.",
         recommendedActions:
           "Define concentration limits and a diversification plan for outsized positions.",
+        answers: ["No limits", "Informal awareness", "Limits defined", "Limits with diversification plan"],
       },
       {
         questionNumber: "7.12",
@@ -178,6 +190,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unfunded capital calls can force distressed sales or default on commitments.",
         recommendedActions:
           "Maintain a rolling capital-call calendar and earmark liquidity to meet it.",
+        answers: ["Not forecast", "Rough forecast", "Forecast on calendar", "Forecast and pre-funded"],
       },
       {
         questionNumber: "7.13",
@@ -187,6 +200,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Assumed liquidity often disappears behind lock-ups and gates when it is actually needed.",
         recommendedActions:
           "Catalog redemption terms per holding and factor them into liquidity planning.",
+        answers: ["Not tracked", "Partial list", "Schedule maintained", "Schedule integrated into planning"],
       },
       {
         questionNumber: "7.14",
@@ -196,6 +210,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Stale valuations mask concentration risk and mislead liquidity and estate planning.",
         recommendedActions:
           "Obtain periodic valuations for material illiquid positions.",
+        answers: ["Never valued", "Outdated valuations", "Valued periodically", "Regular independent valuations"],
       },
       {
         questionNumber: "7.15",
@@ -205,6 +220,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Wealth anchored to one security is exposed to a single company's fate.",
         recommendedActions:
           "Use staged selling, hedging, or exchange strategies to reduce concentration.",
+        answers: ["No plan", "Vague intent", "Plan defined", "Staged plan with hedging or selling"],
       },
     ],
   },
@@ -225,6 +241,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Predictable large outflows still cause shortfalls when they are not planned for in advance.",
         recommendedActions:
           "Build a 12-month cash-flow calendar and reconcile it quarterly.",
+        answers: ["No calendar", "Mental tracking only", "Calendar maintained", "Calendar reconciled quarterly"],
       },
       {
         questionNumber: "7.17",
@@ -234,6 +251,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Improvised responses to a shock usually lock in losses and erode long-term wealth.",
         recommendedActions:
           "Pre-decide which levers to pull, and in what order, before a shock occurs.",
+        answers: ["No plan", "Informal ideas", "Documented plan", "Documented and sequenced levers"],
       },
       {
         questionNumber: "7.18",
@@ -243,6 +261,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Large idle balances lose value to inflation and can exceed deposit-insurance protection.",
         recommendedActions:
           "Automate sweeps and spread deposits to optimize yield and insured coverage.",
+        answers: ["Idle balances", "Some optimization", "Swept and optimized", "Automated sweep, yield and insured"],
       },
       {
         questionNumber: "7.19",
@@ -252,6 +271,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Lumpy discretionary spending can quietly drain reserves without a plan.",
         recommendedActions:
           "Budget and pre-fund known large expenditures ahead of time.",
+        answers: ["Unplanned", "Partially planned", "Planned", "Budgeted and pre-funded"],
       },
       {
         questionNumber: "7.20",
@@ -261,6 +281,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Lifestyle creep erodes liquidity and long-term financial sustainability.",
         recommendedActions:
           "Adopt a spending policy and monitor actual spending against it.",
+        answers: ["No budget", "Loose tracking", "Budget in place", "Spending policy monitored vs actuals"],
       },
     ],
   },
@@ -281,6 +302,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Concentrated deposits can exceed insurance and expose cash to a single bank failure.",
         recommendedActions:
           "Diversify custodians and use insured-sweep programs for large balances.",
+        answers: ["Concentrated, uninsured", "Some spreading", "Within insured limits", "Diversified with insured-sweep"],
       },
       {
         questionNumber: "7.22",
@@ -290,6 +312,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Even large institutions can fail or freeze access to funds.",
         recommendedActions:
           "Monitor counterparty ratings and diversify custody arrangements.",
+        answers: ["Never reviewed", "Rarely reviewed", "Reviewed periodically", "Monitored and diversified"],
       },
       {
         questionNumber: "7.23",
@@ -299,6 +322,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Large transfers are prime targets for fraud, interception, and error.",
         recommendedActions:
           "Require call-back verification and dual approval for material wires.",
+        answers: ["No controls", "Basic controls", "Verification in place", "Call-back and dual approval"],
       },
       {
         questionNumber: "7.24",
@@ -308,6 +332,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "A single frozen or compromised account can halt payments entirely.",
         recommendedActions:
           "Maintain backup accounts and alternate payment channels.",
+        answers: ["Single account", "Limited backup", "Backup accounts", "Redundant accounts and channels"],
       },
       {
         questionNumber: "7.25",
@@ -317,6 +342,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Currency timing and cross-border frictions can be costly when liquidity is urgent.",
         recommendedActions:
           "Pre-position currency and confirm cross-border access in advance.",
+        answers: ["Unplanned", "Reactive", "Planned", "Pre-positioned with confirmed access"],
       },
     ],
   },
@@ -337,6 +363,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Accounts controlled by one person can become frozen and inaccessible during an emergency.",
         recommendedActions:
           "Add trusted co-signers or powers of attorney with tested account access.",
+        answers: ["None", "Informal arrangement", "Backup named", "Backup named with tested access"],
       },
       {
         questionNumber: "7.27",
@@ -346,6 +373,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Fragmented reporting hides the household's true available liquidity.",
         recommendedActions:
           "Consolidate reporting into one regularly updated dashboard.",
+        answers: ["Fragmented", "Partial view", "Consolidated", "Single dashboard, regularly updated"],
       },
       {
         questionNumber: "7.28",
@@ -355,6 +383,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Without cadence and thresholds, liquidity problems surface too late to manage well.",
         recommendedActions:
           "Set review cadence and trigger levels with your advisory team.",
+        answers: ["Never reviewed", "Ad hoc", "Set cadence", "Cadence with thresholds and alerts"],
       },
       {
         questionNumber: "7.29",
@@ -364,6 +393,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Individual shocks are survivable; simultaneous shocks are what break plans.",
         recommendedActions:
           "Run a combined-shock liquidity stress test at least annually.",
+        answers: ["Never done", "Single-shock only", "Combined test done", "Combined test run annually"],
       },
       {
         questionNumber: "7.30",
@@ -373,13 +403,10 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Undocumented access strands liquidity when principals are unavailable.",
         recommendedActions:
           "Keep a secure, current directory of accounts, facilities, and access.",
+        answers: ["Undocumented", "Partial notes", "Documented", "Secure, current directory for fiduciaries"],
       },
     ],
   },
-
-  // ==========================================================================
-  // 8 — Tax Exposure (slug: tax-exposure)
-  // ==========================================================================
   {
     categoryCode: "8_tax",
     categoryName: "Tax Exposure",
@@ -397,6 +424,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Residency changes can trigger unexpected filing and withholding obligations.",
         recommendedActions:
           "Maintain a residency dossier and coordinate with investment and estate advisors.",
+        answers: ["Undocumented", "Informal awareness", "Documented", "Documented and reviewed annually with counsel"],
       },
       {
         questionNumber: "8.2",
@@ -406,6 +434,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Large cash events often carry AMT, NIIT, or state-tax surprises without proactive modeling.",
         recommendedActions:
           "Run scenario models before exercising options or selling concentrated positions.",
+        answers: ["Never modeled", "Rough estimates", "Modeled before events", "Scenario-modeled with advisors"],
       },
       {
         questionNumber: "8.3",
@@ -415,6 +444,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Misaligned documents can increase transfer-tax exposure despite prior planning.",
         recommendedActions:
           "Reconcile entity charts, beneficiary forms, and trust funding annually.",
+        answers: ["Not mapped", "Partial view", "Mapped", "Mapped and reconciled annually"],
       },
       {
         questionNumber: "8.4",
@@ -424,6 +454,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Advisors working in silos leave planning gaps and duplicate or conflicting strategies.",
         recommendedActions:
           "Convene an annual joint planning session with all tax-relevant advisors.",
+        answers: ["Advisors siloed", "Occasional coordination", "Annual cycle", "Integrated annual planning session"],
       },
       {
         questionNumber: "8.5",
@@ -433,6 +464,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Underestimated liabilities force asset sales or penalties when payments come due.",
         recommendedActions:
           "Reserve for estimated taxes and reconcile projections each quarter.",
+        answers: ["Not reserved", "Rough reserve", "Reserved", "Reserved and reconciled quarterly"],
       },
     ],
   },
@@ -453,6 +485,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Crossing a day-count threshold can create residency and taxation in a jurisdiction unexpectedly.",
         recommendedActions:
           "Log travel days and review residency status before year-end.",
+        answers: ["Not tracked", "Rough recollection", "Tracked", "Tracked and reviewed before year-end"],
       },
       {
         questionNumber: "8.7",
@@ -462,6 +495,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Income sourced across jurisdictions can be taxed twice without proper credits and structuring.",
         recommendedActions:
           "Map income sources to jurisdictions and confirm available credits with counsel.",
+        answers: ["Not reviewed", "Aware of exposure", "Reviewed", "Reviewed with credits confirmed"],
       },
       {
         questionNumber: "8.8",
@@ -471,6 +505,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Foreign-asset reporting failures carry severe penalties even when no tax is owed.",
         recommendedActions:
           "Inventory foreign holdings and confirm every required disclosure is filed.",
+        answers: ["Non-compliant or unknown", "Partially compliant", "Compliant", "Compliant and inventoried"],
       },
       {
         questionNumber: "8.9",
@@ -480,6 +515,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Moves can trigger exit taxes, changed source-income rules, and other surprises.",
         recommendedActions:
           "Model the full tax impact before establishing a new residence.",
+        answers: ["Not modeled", "Rough sense", "Modeled", "Fully modeled before move"],
       },
       {
         questionNumber: "8.10",
@@ -489,6 +525,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Sub-national and foreign levies add up and are easily overlooked in planning.",
         recommendedActions:
           "Catalog jurisdiction-specific taxes on each property and asset.",
+        answers: ["Unaware", "Partial awareness", "Understood", "Cataloged per property and asset"],
       },
     ],
   },
@@ -509,6 +546,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Tax-inefficient investing quietly erodes after-tax returns year after year.",
         recommendedActions:
           "Apply asset-location and loss-harvesting discipline across accounts.",
+        answers: ["Not managed", "Some awareness", "Managed", "Asset-location and harvesting disciplined"],
       },
       {
         questionNumber: "8.12",
@@ -518,6 +556,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Poorly timed or structured transactions forfeit large, avoidable tax savings.",
         recommendedActions:
           "Plan transaction structure and timing with counsel before closing.",
+        answers: ["Unplanned", "Basic planning", "Planned", "Structured with counsel pre-close"],
       },
       {
         questionNumber: "8.13",
@@ -527,6 +566,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "These surtaxes ambush unprepared taxpayers in high-income years.",
         recommendedActions:
           "Project exposure and plan around the triggering thresholds.",
+        answers: ["Not projected", "Rough sense", "Projected", "Projected and planned around thresholds"],
       },
       {
         questionNumber: "8.14",
@@ -536,6 +576,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "The timing of option and RSU events drives large, avoidable tax bills.",
         recommendedActions:
           "Model each equity-compensation decision before acting.",
+        answers: ["Not evaluated", "Basic awareness", "Evaluated", "Each decision modeled"],
       },
       {
         questionNumber: "8.15",
@@ -545,6 +586,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Under-withholding creates penalties and painful year-end surprises.",
         recommendedActions:
           "Review withholding and estimated payments each quarter.",
+        answers: ["Not monitored", "Annual check", "Monitored", "Reviewed quarterly"],
       },
     ],
   },
@@ -565,6 +607,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Structures built under old law can become inefficient or exposed when tax law shifts.",
         recommendedActions:
           "Reassess entities and trusts whenever material tax legislation is enacted.",
+        answers: ["Never reviewed", "Rarely reviewed", "Reviewed", "Reassessed on legislative change"],
       },
       {
         questionNumber: "8.17",
@@ -574,6 +617,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Suboptimal elections leave money on the table every year.",
         recommendedActions:
           "Review elections annually with your CPA before deadlines.",
+        answers: ["Not reviewed", "Occasional review", "Reviewed annually", "Optimized annually with CPA"],
       },
       {
         questionNumber: "8.18",
@@ -583,6 +627,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Aggressive or careless positions invite audit, reclassification, and penalties.",
         recommendedActions:
           "Document and support entity-level tax positions.",
+        answers: ["Undocumented", "Weakly supported", "Documented", "Documented and fully supported"],
       },
       {
         questionNumber: "8.19",
@@ -592,6 +637,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Related-party dealings draw scrutiny and reclassification risk.",
         recommendedActions:
           "Document terms and valuations for all family transactions.",
+        answers: ["Undocumented", "Informal terms", "Documented", "Arm's length and documented"],
       },
       {
         questionNumber: "8.20",
@@ -601,6 +647,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Growth silently creates new filing, registration, and nexus obligations.",
         recommendedActions:
           "Reassess nexus and registrations as the footprint grows.",
+        answers: ["Not reviewed", "Reactive", "Reviewed", "Reassessed as footprint grows"],
       },
     ],
   },
@@ -621,6 +668,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unused annual and lifetime exemptions are lost and increase future transfer-tax exposure.",
         recommendedActions:
           "Plan gifting annually to use exemptions before they lapse or laws change.",
+        answers: ["Unused", "Occasional gifting", "Used annually", "Planned to use before lapse"],
       },
       {
         questionNumber: "8.22",
@@ -630,6 +678,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unstructured giving forfeits deductions and misses opportunities to advance legacy aims.",
         recommendedActions:
           "Match giving vehicles to income, appreciation, and philanthropic objectives.",
+        answers: ["Unstructured", "Basic giving", "Structured", "Vehicles matched to objectives"],
       },
       {
         questionNumber: "8.23",
@@ -639,6 +688,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Gifting cash instead of appreciated assets wastes available tax benefits.",
         recommendedActions:
           "Prioritize appreciated-asset gifting where appropriate.",
+        answers: ["Cash only", "Sometimes", "Often used", "Prioritized where appropriate"],
       },
       {
         questionNumber: "8.24",
@@ -648,6 +698,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Ignoring basis can cost heirs more than the transfer-tax savings gained.",
         recommendedActions:
           "Coordinate basis strategy with estate counsel.",
+        answers: ["Ignored", "Considered", "Coordinated", "Integrated with estate plan"],
       },
       {
         questionNumber: "8.25",
@@ -657,6 +708,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Failing to use available techniques leaves transfer tax on the table.",
         recommendedActions:
           "Evaluate advanced strategies with estate and tax counsel.",
+        answers: ["Not considered", "Aware", "Evaluated", "Implemented where appropriate"],
       },
     ],
   },
@@ -677,6 +729,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Late or incomplete filings generate penalties, interest, and heightened audit risk.",
         recommendedActions:
           "Maintain a filing calendar covering all entities, trusts, and jurisdictions.",
+        answers: ["Late or missed", "Occasionally late", "On time", "On time, calendar-tracked"],
       },
       {
         questionNumber: "8.27",
@@ -686,6 +739,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Missing records turn a routine audit into an expensive, adverse outcome.",
         recommendedActions:
           "Keep organized, retention-compliant records for every material position.",
+        answers: ["Disorganized", "Partial records", "Organized", "Audit-ready and retention-compliant"],
       },
       {
         questionNumber: "8.28",
@@ -695,6 +749,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Delayed or uncoordinated responses to notices escalate disputes and penalties.",
         recommendedActions:
           "Pre-designate who handles notices and how they are triaged and answered.",
+        answers: ["No process", "Ad hoc", "Defined process", "Defined process and named advisor"],
       },
       {
         questionNumber: "8.29",
@@ -704,6 +759,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unassessed aggressive positions expose the family to penalties and disputes.",
         recommendedActions:
           "Assess and document the risk of each material position before filing.",
+        answers: ["Unassessed", "Loosely considered", "Assessed", "Assessed and documented before filing"],
       },
       {
         questionNumber: "8.30",
@@ -713,13 +769,10 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Fragmented records cause missed filings and compliance gaps.",
         recommendedActions:
           "Maintain a central register of all entities and their obligations.",
+        answers: ["No record", "Fragmented", "Central record", "Central register with obligations"],
       },
     ],
   },
-
-  // ==========================================================================
-  // 9 — Estate & Succession (slug: estate-succession)
-  // ==========================================================================
   {
     categoryCode: "9_estate",
     categoryName: "Estate & Succession",
@@ -737,6 +790,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Stale or inaccessible documents delay authority during incapacity or death.",
         recommendedActions:
           "Confirm document dates, successor fiduciaries, and secure storage locations.",
+        answers: ["Missing or outdated", "Some in place", "Current and signed", "Current, signed and accessible"],
       },
       {
         questionNumber: "9.2",
@@ -746,6 +800,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Beneficiary forms override wills and are a common source of unintended transfers.",
         recommendedActions:
           "Audit all beneficiary designations after major life events.",
+        answers: ["Unaligned or unknown", "Partially aligned", "Aligned", "Aligned and audited after life events"],
       },
       {
         questionNumber: "9.3",
@@ -755,6 +810,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Operating businesses fail transitions without clear decision rights and contingency plans.",
         recommendedActions:
           "Document succession triggers, voting control, and interim leadership authority.",
+        answers: ["None", "Informal", "Documented", "Documented with triggers and authority"],
       },
       {
         questionNumber: "9.4",
@@ -764,6 +820,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Without directives, medical decisions stall and agents are denied information in a crisis.",
         recommendedActions:
           "Execute advance directives and distribute them to agents and providers.",
+        answers: ["None", "Basic form", "In place", "In place and shared with agents"],
       },
       {
         questionNumber: "9.5",
@@ -773,6 +830,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "A rejected or stale power of attorney leaves no one able to act on financial matters.",
         recommendedActions:
           "Confirm institutions will honor the power of attorney and refresh it as needed.",
+        answers: ["None or rejected", "Untested", "Current", "Current and confirmed acceptable"],
       },
     ],
   },
@@ -793,6 +851,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "An unfunded trust is an empty shell that fails to achieve its protection or tax goals.",
         recommendedActions:
           "Verify titling and confirm each trust holds the assets it was designed for.",
+        answers: ["Unfunded", "Partially funded", "Funded", "Fully funded and titled"],
       },
       {
         questionNumber: "9.7",
@@ -802,6 +861,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unprepared or missing trustees create governance gaps and disputes after a death.",
         recommendedActions:
           "Confirm successor trustees and brief them on their responsibilities.",
+        answers: ["None named", "Named only", "Named and qualified", "Named, qualified and briefed"],
       },
       {
         questionNumber: "9.8",
@@ -811,6 +871,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Plans drift out of alignment with reality as families, laws, and assets change.",
         recommendedActions:
           "Schedule periodic reviews and re-review after any triggering event.",
+        answers: ["Never reviewed", "Rarely reviewed", "Periodically reviewed", "Periodic and event-triggered"],
       },
       {
         questionNumber: "9.9",
@@ -820,6 +881,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Outdated trust terms can frustrate current goals and family realities.",
         recommendedActions:
           "Review and, where possible, modernize trust terms.",
+        answers: ["Outdated", "Partly aligned", "Aligned", "Aligned and modernized"],
       },
       {
         questionNumber: "9.10",
@@ -829,6 +891,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "The wrong trustee structure creates conflict, mismanagement, or excessive cost.",
         recommendedActions:
           "Assess the trustee structure for each significant trust.",
+        answers: ["Not considered", "Default choice", "Evaluated", "Evaluated per trust"],
       },
     ],
   },
@@ -849,6 +912,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Surprises in an estate plan are a leading cause of family conflict and litigation.",
         recommendedActions:
           "Hold structured conversations to set expectations while the principals can explain them.",
+        answers: ["Not discussed", "Vaguely discussed", "Communicated", "Communicated with roles explained"],
       },
       {
         questionNumber: "9.12",
@@ -858,6 +922,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Dividing illiquid assets unequally or unclearly breeds resentment and forced sales.",
         recommendedActions:
           "Design equalization strategies (insurance, buyouts, or tailored bequests).",
+        answers: ["No plan", "Informal intent", "Plan defined", "Equalization strategies in place"],
       },
       {
         questionNumber: "9.13",
@@ -867,6 +932,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Without valid guardianship provisions, a court decides who raises minor children.",
         recommendedActions:
           "Name guardians and successors, and revisit the choice as circumstances change.",
+        answers: ["None", "Informal wishes", "Documented", "Documented and current"],
       },
       {
         questionNumber: "9.14",
@@ -876,6 +942,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Direct inheritance can disqualify benefits or expose vulnerable heirs to harm.",
         recommendedActions:
           "Use special-needs trusts and protective structures where appropriate.",
+        answers: ["None", "Considered", "In place", "Protective structures in place"],
       },
       {
         questionNumber: "9.15",
@@ -885,6 +952,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unconstrained inheritance can harm unprepared or at-risk beneficiaries.",
         recommendedActions:
           "Consider staged or incentive-based distribution terms.",
+        answers: ["Not considered", "Discussed", "Considered", "Structured where appropriate"],
       },
     ],
   },
@@ -905,6 +973,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Without a funded buy-sell, an owner's death can trigger disputes or a fire-sale of the business.",
         recommendedActions:
           "Execute and fund a buy-sell agreement with a current valuation method.",
+        answers: ["None", "Unfunded agreement", "Agreement in place", "Executed and funded"],
       },
       {
         questionNumber: "9.17",
@@ -914,6 +983,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Businesses fail transitions without prepared, identified leadership.",
         recommendedActions:
           "Identify and develop successors well ahead of any transition.",
+        answers: ["None", "Informal idea", "Written plan", "Plan with successors in development"],
       },
       {
         questionNumber: "9.18",
@@ -923,6 +993,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Stale valuations distort estate, buy-sell, and transfer outcomes.",
         recommendedActions:
           "Obtain periodic independent business valuations.",
+        answers: ["None", "Outdated", "Periodic", "Regular independent valuations"],
       },
       {
         questionNumber: "9.19",
@@ -932,6 +1003,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Ambiguous transfer mechanics create control disputes among heirs.",
         recommendedActions:
           "Define transfer structure and control provisions in advance.",
+        answers: ["Undefined", "Partly defined", "Defined", "Defined with control provisions"],
       },
       {
         questionNumber: "9.20",
@@ -941,6 +1013,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Loss of a key principal can cripple the enterprise and the estate that depends on it.",
         recommendedActions:
           "Insure key persons and document business-continuity plans.",
+        answers: ["Unaddressed", "Partially addressed", "Addressed", "Insured with continuity plans"],
       },
     ],
   },
@@ -961,6 +1034,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Locked digital accounts can strand assets and disrupt operations after incapacity or death.",
         recommendedActions:
           "Maintain a secure, updated digital-access directory with legal authority to use it.",
+        answers: ["Undocumented", "Partial", "Documented", "Secure directory with legal authority"],
       },
       {
         questionNumber: "9.22",
@@ -970,6 +1044,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Digital assets with lost keys are permanently unrecoverable by heirs.",
         recommendedActions:
           "Document holdings and secure key-recovery instructions for fiduciaries.",
+        answers: ["No plan", "Aware", "Inventoried", "Inventoried with key recovery"],
       },
       {
         questionNumber: "9.23",
@@ -979,6 +1054,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Executors waste months and money reconstructing an estate that was never inventoried.",
         recommendedActions:
           "Keep a current master inventory and share its location with fiduciaries.",
+        answers: ["None", "Partial", "Maintained", "Current master inventory, shared"],
       },
       {
         questionNumber: "9.24",
@@ -988,6 +1064,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Lost originals delay or invalidate estate actions.",
         recommendedActions:
           "Secure original documents and record their storage location.",
+        answers: ["Scattered", "Partially secured", "Secured", "Secured with known location"],
       },
       {
         questionNumber: "9.25",
@@ -997,6 +1074,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Without granted authority, providers deny fiduciaries access to online accounts.",
         recommendedActions:
           "Include digital-asset authority in wills, trusts, and powers of attorney.",
+        answers: ["None", "Unclear", "Granted", "Explicit authority in documents"],
       },
     ],
   },
@@ -1017,6 +1095,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Illiquid estates can force heirs to sell prized assets under time pressure to pay taxes.",
         recommendedActions:
           "Model settlement costs and earmark or insure liquidity to cover them.",
+        answers: ["Insufficient", "Uncertain", "Adequate", "Modeled and earmarked or insured"],
       },
       {
         questionNumber: "9.27",
@@ -1026,6 +1105,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Poorly structured insurance can add to the taxable estate rather than relieve it.",
         recommendedActions:
           "Review policy ownership and beneficiary structure with counsel.",
+        answers: ["None or unstructured", "Owned personally", "Structured", "ILIT-structured for liquidity"],
       },
       {
         questionNumber: "9.28",
@@ -1035,6 +1115,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Undocumented charitable intent is often lost or contested after death.",
         recommendedActions:
           "Formalize legacy goals in the plan and align giving vehicles to them.",
+        answers: ["Undocumented", "Informal", "Documented", "Integrated with giving vehicles"],
       },
       {
         questionNumber: "9.29",
@@ -1044,6 +1125,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unprepared fiduciaries mishandle or delay estate settlement.",
         recommendedActions:
           "Brief fiduciaries and provide an access roadmap to key information.",
+        answers: ["Unaware", "Minimal briefing", "Briefed", "Briefed with access roadmap"],
       },
       {
         questionNumber: "9.30",
@@ -1053,13 +1135,10 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Siloed advisors produce conflicting or duplicative estate strategies.",
         recommendedActions:
           "Coordinate the estate plan across the full advisory team.",
+        answers: ["Siloed", "Loosely coordinated", "Coordinated", "Fully coordinated advisory team"],
       },
     ],
   },
-
-  // ==========================================================================
-  // 10 — Behavioral Resilience (slug: family-governance-behavioral)
-  // ==========================================================================
   {
     categoryCode: "10_family_governance",
     categoryName: "Behavioral Resilience",
@@ -1077,6 +1156,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Governance forums reduce ad-hoc conflict and improve next-generation preparedness.",
         recommendedActions:
           "Schedule quarterly family meetings with a documented agenda and decision log.",
+        answers: ["Never", "Inconsistent", "Regular", "Regular with agenda and decision log"],
       },
       {
         questionNumber: "10.2",
@@ -1086,6 +1166,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Ambiguous authority creates delays, duplicate actions, and interpersonal friction.",
         recommendedActions:
           "Publish a decision-rights matrix and review it when family structure changes.",
+        answers: ["Undefined", "Informal", "Documented", "Documented matrix, reviewed on change"],
       },
       {
         questionNumber: "10.3",
@@ -1095,6 +1176,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Wealth families are vulnerable to emotionally driven decisions that compound risk.",
         recommendedActions:
           "Adopt a pre-commitment checklist for investments above a defined threshold.",
+        answers: ["Never", "Occasionally", "Before major moves", "Checklist-driven pre-commitment"],
       },
       {
         questionNumber: "10.4",
@@ -1104,6 +1186,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unmanaged conflict fractures families and destabilizes shared assets and decisions.",
         recommendedActions:
           "Adopt a conflict-resolution process, including neutral facilitation when needed.",
+        answers: ["None", "Ad hoc", "Agreed norms", "Process with neutral facilitation"],
       },
       {
         questionNumber: "10.5",
@@ -1113,6 +1196,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Poor communication breeds mistrust, rumor, and misalignment over time.",
         recommendedActions:
           "Establish regular, inclusive communication channels across the family.",
+        answers: ["Poor or closed", "Occasional", "Open", "Open, regular and inclusive"],
       },
     ],
   },
@@ -1133,6 +1217,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Heirs who never learn to steward wealth are a primary reason wealth fails to transfer.",
         recommendedActions:
           "Build an age-appropriate financial-education path for each rising family member.",
+        answers: ["None", "Informal", "Structured", "Age-appropriate paths per member"],
       },
       {
         questionNumber: "10.7",
@@ -1142,6 +1227,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Sudden, unprepared inheritance frequently leads to poor decisions and rapid loss.",
         recommendedActions:
           "Introduce responsibility in stages with mentorship and defined milestones.",
+        answers: ["None", "Some exposure", "Graduated", "Graduated with mentorship and milestones"],
       },
       {
         questionNumber: "10.8",
@@ -1151,6 +1237,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Without shared purpose, wealth becomes a source of division rather than cohesion.",
         recommendedActions:
           "Articulate a family mission or values statement and revisit it together.",
+        answers: ["Absent", "Implicit", "Shared", "Articulated and revisited together"],
       },
       {
         questionNumber: "10.9",
@@ -1160,6 +1247,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Heirs excluded from governance disengage and are unprepared to lead when the time comes.",
         recommendedActions:
           "Give the rising generation real roles in family governance and giving.",
+        answers: ["Excluded", "Token roles", "Involved", "Real governance and giving roles"],
       },
       {
         questionNumber: "10.10",
@@ -1169,6 +1257,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unprepared heirs struggle with the social and emotional weight of wealth.",
         recommendedActions:
           "Provide coaching on the personal dimensions of inherited wealth.",
+        answers: ["Unaddressed", "Occasional talk", "Addressed", "Coaching on personal dimensions"],
       },
     ],
   },
@@ -1189,6 +1278,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Decisions made in shock, without a protocol, are frequently regretted and costly.",
         recommendedActions:
           "Pre-define who decides what, and how, when a principal is unavailable.",
+        answers: ["None", "Informal", "Documented", "Documented with clear authority"],
       },
       {
         questionNumber: "10.12",
@@ -1198,6 +1288,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Urgency and pressure tactics drive impulsive commitments that a pause would prevent.",
         recommendedActions:
           "Require a waiting period and independent review above a decision threshold.",
+        answers: ["None", "Sometimes applied", "Required", "Required above a threshold"],
       },
       {
         questionNumber: "10.13",
@@ -1207,6 +1298,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Families that have never rehearsed a crisis improvise badly when one arrives.",
         recommendedActions:
           "Run periodic tabletop exercises for the most consequential scenarios.",
+        answers: ["Never", "Discussed", "Rehearsed", "Periodic tabletop exercises"],
       },
       {
         questionNumber: "10.14",
@@ -1216,6 +1308,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Ambiguous crisis roles cause paralysis, missteps, and mixed messages.",
         recommendedActions:
           "Assign crisis leadership and communication roles in advance.",
+        answers: ["Ambiguous", "Loosely defined", "Defined", "Leadership and comms assigned"],
       },
       {
         questionNumber: "10.15",
@@ -1225,6 +1318,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Grief and acute stress impair judgment precisely when big decisions are made.",
         recommendedActions:
           "Line up counseling and facilitation support ahead of major transitions.",
+        answers: ["None", "Ad hoc", "Available", "Arranged ahead of transitions"],
       },
     ],
   },
@@ -1245,6 +1339,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "A policy set in calm conditions is the best defense against panic and euphoria.",
         recommendedActions:
           "Adopt an investment policy statement and hold decisions accountable to it.",
+        answers: ["None", "Informal", "Written", "Written and enforced"],
       },
       {
         questionNumber: "10.17",
@@ -1254,6 +1349,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Deals framed as rare, time-limited opportunities bypass diligence and concentrate hidden risk.",
         recommendedActions:
           "Require every opportunity to pass a standard diligence checklist first.",
+        answers: ["None", "Informal review", "Checklist used", "Checklist required before capital"],
       },
       {
         questionNumber: "10.18",
@@ -1263,6 +1359,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Wealthy families are prime targets for fraud that exploits trust and social ties.",
         recommendedActions:
           "Route unsolicited offers through advisors and verify counterparties independently.",
+        answers: ["Unguarded", "Some caution", "Guarded", "Advisor-vetted and independently verified"],
       },
       {
         questionNumber: "10.19",
@@ -1272,6 +1369,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "These recurring biases repeatedly drive avoidable, compounding losses.",
         recommendedActions:
           "Add an explicit bias check to major-decision reviews.",
+        answers: ["None", "Occasional", "Checked", "Explicit check in reviews"],
       },
       {
         questionNumber: "10.20",
@@ -1281,6 +1379,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Chasing short-term results or comparing to peers compounds risk-taking.",
         recommendedActions:
           "Anchor decisions to long-term goals and the written financial plan.",
+        answers: ["Short-term or peer-driven", "Mixed focus", "Goal-focused", "Anchored to plan and goals"],
       },
     ],
   },
@@ -1301,6 +1400,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Wealth without a shared purpose loses meaning and weakens family cohesion.",
         recommendedActions:
           "Draft and periodically revisit a family purpose statement.",
+        answers: ["None", "Implicit", "Articulated", "Articulated and revisited"],
       },
       {
         questionNumber: "10.22",
@@ -1310,6 +1410,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Undefined giving priorities cause drift, inconsistency, and conflict.",
         recommendedActions:
           "Define shared philanthropic goals and assign roles.",
+        answers: ["Undefined", "Loosely held", "Defined", "Defined with shared roles"],
       },
       {
         questionNumber: "10.23",
@@ -1319,6 +1420,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "A lost family narrative weakens identity, belonging, and stewardship.",
         recommendedActions:
           "Capture family history and values in a durable, shareable form.",
+        answers: ["Not captured", "Fragmentary", "Documented", "Durable and shareable form"],
       },
       {
         questionNumber: "10.24",
@@ -1328,6 +1430,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Unspoken expectations breed entitlement, confusion, or resentment.",
         recommendedActions:
           "Communicate clear expectations about wealth, work, and independence.",
+        answers: ["Unspoken", "Occasionally shared", "Communicated", "Clear and consistent"],
       },
       {
         questionNumber: "10.25",
@@ -1337,6 +1440,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Misaligned individual and collective goals create ongoing friction.",
         recommendedActions:
           "Reconcile individual aspirations with the shared family vision.",
+        answers: ["Misaligned", "Partly aligned", "Aligned", "Reconciled with shared vision"],
       },
     ],
   },
@@ -1357,6 +1461,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Major transitions (succession, death, divorce) overwhelm families without skilled support.",
         recommendedActions:
           "Identify facilitators or advisors to engage before high-stress transitions.",
+        answers: ["None", "Ad hoc", "Available", "Identified before transitions"],
       },
       {
         questionNumber: "10.27",
@@ -1366,6 +1471,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Advisors without context give ill-fitting advice at critical moments.",
         recommendedActions:
           "Build long-term relationships with context-aware advisors.",
+        answers: ["None", "Transactional", "Trusted advisors", "Deep, context-aware relationships"],
       },
       {
         questionNumber: "10.28",
@@ -1375,6 +1481,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Losing a key advisor without a successor disrupts continuity and institutional memory.",
         recommendedActions:
           "Plan for advisor succession and structured knowledge transfer.",
+        answers: ["None", "Informal", "Planned", "Succession and knowledge transfer planned"],
       },
       {
         questionNumber: "10.29",
@@ -1384,6 +1491,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Undocumented governance is forgotten and re-litigated across generations.",
         recommendedActions:
           "Maintain durable, accessible records of governance decisions.",
+        answers: ["None", "Partial", "Recorded", "Durable and accessible over time"],
       },
       {
         questionNumber: "10.30",
@@ -1393,6 +1501,7 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
           "Governance and resilience atrophy without periodic renewal.",
         recommendedActions:
           "Schedule regular reviews of family governance and resilience.",
+        answers: ["Never", "Irregular", "Regular", "Regular cadence with refresh"],
       },
     ],
   },

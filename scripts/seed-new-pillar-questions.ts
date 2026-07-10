@@ -25,6 +25,7 @@ async function main(): Promise<void> {
     let categoriesUpserted = 0;
     let questionsCreated = 0;
     let questionsSkipped = 0;
+    let questionsLabeled = 0;
 
     for (const starter of NEW_PILLAR_ASSESSMENT_STARTERS) {
       const category = await prisma.pillarCategory.upsert({
@@ -71,8 +72,30 @@ async function main(): Promise<void> {
             questionNumber: q.questionNumber,
           },
         });
+        const answers = q.answers ?? [];
         if (existing) {
-          questionsSkipped++;
+          // Backfill custom maturity labels onto rows seeded before labels
+          // existed — only when all four are still null, so we never clobber
+          // labels an admin may have set.
+          const missingLabels =
+            existing.answer0 == null &&
+            existing.answer1 == null &&
+            existing.answer2 == null &&
+            existing.answer3 == null;
+          if (answers.length === 4 && missingLabels) {
+            await prisma.pillarQuestion.update({
+              where: { id: existing.id },
+              data: {
+                answer0: answers[0] ?? null,
+                answer1: answers[1] ?? null,
+                answer2: answers[2] ?? null,
+                answer3: answers[3] ?? null,
+              },
+            });
+            questionsLabeled++;
+          } else {
+            questionsSkipped++;
+          }
           continue;
         }
 
@@ -84,6 +107,10 @@ async function main(): Promise<void> {
             answerType: SCORED_0_3.answerType,
             whyThisMatters: q.whyThisMatters,
             recommendedActions: q.recommendedActions,
+            answer0: answers[0] ?? null,
+            answer1: answers[1] ?? null,
+            answer2: answers[2] ?? null,
+            answer3: answers[3] ?? null,
             displayOrder: i,
             isVisible: true,
           },
@@ -93,7 +120,7 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      `seed:new-pillar-questions complete — categories ${categoriesUpserted}, created ${questionsCreated}, skipped ${questionsSkipped}`,
+      `seed:new-pillar-questions complete — categories ${categoriesUpserted}, created ${questionsCreated}, labeled ${questionsLabeled}, skipped ${questionsSkipped}`,
     );
   } finally {
     await prisma.$disconnect();
