@@ -31,6 +31,7 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
     select: {
       id: true,
       emailCiphertext: true,
+      emailVerified: true,
       name: true,
       firstName: true,
       lastName: true,

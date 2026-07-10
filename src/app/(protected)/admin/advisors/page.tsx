@@ -1,6 +1,14 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { AlertTriangle, CreditCard, Package, Pencil, UserPlus } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  Package,
+  Pencil,
+  UserPlus,
+} from "lucide-react";
 import {
   advisorBrandInitials,
   pickAdvisorBrandPrimary,
@@ -317,7 +325,26 @@ export default async function AdminAdvisorsPage({
                       >
                         {a.name ?? a.email}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">{a.email}</p>
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                        <span>{a.email}</span>
+                        {a.emailVerified ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-500"
+                            title={`Verified ${a.emailVerified.toLocaleDateString()}`}
+                          >
+                            <CheckCircle className="size-3.5 shrink-0" aria-hidden />
+                            <span>Verified</span>
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500"
+                            title="Email not verified — advisor cannot sign in until they complete first sign-in"
+                          >
+                            <Clock className="size-3.5 shrink-0" aria-hidden />
+                            <span>Pending verification</span>
+                          </span>
+                        )}
+                      </p>
                       {profile ? (
                         <p
                           className={cn(
