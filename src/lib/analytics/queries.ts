@@ -8,15 +8,16 @@ import { decryptUserEmail } from "@/lib/auth/user-email";
 // Pillar weights — legacy map for historical rows; prefer snapshot weights at runtime.
 export const PILLAR_WEIGHTS = {
   governance: 9,
-  "cyber-digital": 16,
+  "cyber-digital": 14,
   "physical-security": 10,
   insurance: 14,
   "geographic-environmental": 10,
-  "reputational-social": 8,
+  "reputational-social": 7,
   "liquidity-cash": 12,
   "tax-exposure": 10,
   "estate-succession": 6,
-  "family-governance-behavioral": 5,
+  // Slug is a legacy identifier; presented as "AI & Emerging Tech Risk".
+  "family-governance-behavioral": 8,
   /** Historical category rows */
   "health-medical-preparedness": 11,
   "decision-making-authority": 13,

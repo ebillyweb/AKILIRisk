@@ -7,12 +7,18 @@
  * by code, sections by `categoryId + sectionCode`). Section ordering is by
  * `sectionCode` (A, B, C, D…) — keep codes alphabetical to control order.
  *
- * Full pillar depth: each of the four pillars has six sections (A–F) of five
- * scored questions each (30 per pillar). `answers` are the tailored 0→3
- * maturity anchors (0 = absent/critical gap, 3 = institutionalized) shown as
- * the option labels for each scored_0_3 question. Question numbers 7.1-7.3,
- * 8.1-8.3, 9.1-9.3, 10.1-10.3 are the original v3.0 starters and MUST keep
- * their exact text/number so re-seeding stays idempotent.
+ * Each pillar has six sections (A–F) of five scored questions each (30 per
+ * pillar). `answers` are the tailored 0→3 maturity anchors (0 = absent/critical
+ * gap, 3 = institutionalized) shown as the option labels for each scored_0_3
+ * question.
+ *
+ * NOTE on the fourth pillar: it is presented as "AI & Emerging Tech Risk" but
+ * intentionally keeps the legacy internal identifiers categoryCode
+ * "10_family_governance" and slug "family-governance-behavioral". A full slug
+ * rename would ripple into ~10 catalog-coupled tests and require a data
+ * migration; that rename is tracked as a follow-up. Question numbers 7.1-7.3,
+ * 8.1-8.3, 9.1-9.3 keep their exact text so re-seeding stays idempotent; the
+ * 10.x numbers overwrite the former Behavioral Resilience rows 1:1 in place.
  */
 
 export type NewPillarQuestionStarter = {
@@ -1141,367 +1147,367 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Behavioral Resilience",
-    sheetName: "Behavioral Resilience",
+    categoryName: "AI & Emerging Tech Risk",
+    sheetName: "AI Risk",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "A",
-    sectionName: "Family dynamics & communication",
+    sectionName: "Impersonation & deepfake fraud",
     questions: [
       {
         questionNumber: "10.1",
         questionText:
-          "Does the family hold structured meetings to review wealth decisions, education, and shared values?",
+          "Are financial and wire-transfer requests verified through a second, out-of-band channel to defend against voice-clone and video deepfake fraud?",
         whyThisMatters:
-          "Governance forums reduce ad-hoc conflict and improve next-generation preparedness.",
+          "Attackers can now clone a principal's voice or likeness to authorize fraudulent transfers.",
         recommendedActions:
-          "Schedule quarterly family meetings with a documented agenda and decision log.",
-        answers: ["Never", "Inconsistent", "Regular", "Regular with agenda and decision log"],
+          "Require call-back verification on a known number for any funds movement or sensitive request.",
+        answers: ["No verification", "Informal call-back sometimes", "Call-back required", "Out-of-band verification enforced and tested"],
       },
       {
         questionNumber: "10.2",
         questionText:
-          "Are decision rights and spending authorities documented for spouses, children, and trusted advisors?",
+          "Has the family established a private code word or phrase to confirm identity during urgent or high-value requests?",
         whyThisMatters:
-          "Ambiguous authority creates delays, duplicate actions, and interpersonal friction.",
+          "A shared secret defeats AI impersonation that mimics a familiar voice or writing style.",
         recommendedActions:
-          "Publish a decision-rights matrix and review it when family structure changes.",
-        answers: ["Undefined", "Informal", "Documented", "Documented matrix, reviewed on change"],
+          "Agree on a verification code word with family members and key staff.",
+        answers: ["None", "Discussed only", "Established", "Established and periodically refreshed"],
       },
       {
         questionNumber: "10.3",
         questionText:
-          "Are behavioral-finance pitfalls (concentration, urgency, social proof) discussed before major investments?",
+          "Are staff, advisors, and family trained to recognize AI-driven social engineering (deepfake calls, cloned emails)?",
         whyThisMatters:
-          "Wealth families are vulnerable to emotionally driven decisions that compound risk.",
+          "Deepfake-enabled social engineering is now a leading vector for high-value fraud.",
         recommendedActions:
-          "Adopt a pre-commitment checklist for investments above a defined threshold.",
-        answers: ["Never", "Occasionally", "Before major moves", "Checklist-driven pre-commitment"],
+          "Run awareness training on AI impersonation for everyone with financial or access authority.",
+        answers: ["No awareness", "Ad hoc warnings", "Trained", "Regular training with simulations"],
       },
       {
         questionNumber: "10.4",
         questionText:
-          "Are there agreed norms for surfacing and resolving family conflict before it escalates?",
+          "Is there a verification protocol for changes to payment instructions or vendor bank details?",
         whyThisMatters:
-          "Unmanaged conflict fractures families and destabilizes shared assets and decisions.",
+          "AI-crafted business-email compromise reroutes payments with convincing forgeries.",
         recommendedActions:
-          "Adopt a conflict-resolution process, including neutral facilitation when needed.",
-        answers: ["None", "Ad hoc", "Agreed norms", "Process with neutral facilitation"],
+          "Independently confirm any change to payment details before acting on it.",
+        answers: ["No protocol", "Informal check", "Protocol in place", "Enforced dual verification"],
       },
       {
         questionNumber: "10.5",
         questionText:
-          "Is communication across generations and branches of the family open and regular?",
+          "Are principals aware that their public voice and video can be harvested to train impersonation models?",
         whyThisMatters:
-          "Poor communication breeds mistrust, rumor, and misalignment over time.",
+          "Public speeches, interviews, and social clips are raw material for voice and video cloning.",
         recommendedActions:
-          "Establish regular, inclusive communication channels across the family.",
-        answers: ["Poor or closed", "Occasional", "Open", "Open, regular and inclusive"],
+          "Limit and monitor the public audio and video exposure of key principals.",
+        answers: ["Unaware", "Some awareness", "Aware and cautious", "Managed with monitoring"],
       },
     ],
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Behavioral Resilience",
-    sheetName: "Behavioral Resilience",
+    categoryName: "AI & Emerging Tech Risk",
+    sheetName: "AI Risk",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "B",
-    sectionName: "Heir preparedness & financial literacy",
+    sectionName: "Synthetic media & reputation",
     questions: [
       {
         questionNumber: "10.6",
         questionText:
-          "Do rising-generation members receive structured financial education appropriate to their age and role?",
+          "Do you monitor for AI-generated fake content (images, video, articles) impersonating or misrepresenting the family?",
         whyThisMatters:
-          "Heirs who never learn to steward wealth are a primary reason wealth fails to transfer.",
+          "Synthetic media can fabricate statements or scandals that spread before they can be countered.",
         recommendedActions:
-          "Build an age-appropriate financial-education path for each rising family member.",
-        answers: ["None", "Informal", "Structured", "Age-appropriate paths per member"],
+          "Deploy monitoring for deepfakes and synthetic content referencing the family.",
+        answers: ["No monitoring", "Manual or occasional", "Active monitoring", "Real-time with alerting"],
       },
       {
         questionNumber: "10.7",
         questionText:
-          "Are heirs given graduated responsibility and mentorship before inheriting significant wealth?",
+          "Is there a rapid-response plan for a synthetic-media reputational attack (a fake video or audio going viral)?",
         whyThisMatters:
-          "Sudden, unprepared inheritance frequently leads to poor decisions and rapid loss.",
+          "The first hours determine whether a fabricated clip is contained or defines the narrative.",
         recommendedActions:
-          "Introduce responsibility in stages with mentorship and defined milestones.",
-        answers: ["None", "Some exposure", "Graduated", "Graduated with mentorship and milestones"],
+          "Prepare a takedown, verification, and communications playbook for synthetic-media incidents.",
+        answers: ["None", "Informal", "Documented plan", "Documented, tested and resourced"],
       },
       {
         questionNumber: "10.8",
         questionText:
-          "Is there a shared understanding of the family's values, purpose, and expectations around wealth?",
+          "Can the family authenticate genuine communications to counter fabricated ones (signed statements, verified channels)?",
         whyThisMatters:
-          "Without shared purpose, wealth becomes a source of division rather than cohesion.",
+          "Provenance and verification let audiences distinguish real messages from AI forgeries.",
         recommendedActions:
-          "Articulate a family mission or values statement and revisit it together.",
-        answers: ["Absent", "Implicit", "Shared", "Articulated and revisited together"],
+          "Establish verified official channels and content-authentication practices.",
+        answers: ["None", "Ad hoc", "Verified channels exist", "Provenance and authentication standardized"],
       },
       {
         questionNumber: "10.9",
         questionText:
-          "Is next-generation involvement in governance and philanthropy actively cultivated?",
+          "Are PR and legal advisors in place who understand synthetic-media threats and cross-platform takedowns?",
         whyThisMatters:
-          "Heirs excluded from governance disengage and are unprepared to lead when the time comes.",
+          "Deepfake incidents need specialists who can act fast across platforms and jurisdictions.",
         recommendedActions:
-          "Give the rising generation real roles in family governance and giving.",
-        answers: ["Excluded", "Token roles", "Involved", "Real governance and giving roles"],
+          "Retain advisors experienced in synthetic-media response and platform takedowns.",
+        answers: ["None", "Generalist only", "Specialist identified", "Specialist retained and briefed"],
       },
       {
         questionNumber: "10.10",
         questionText:
-          "Are heirs prepared for the personal pressures that accompany wealth (relationships, requests, identity)?",
+          "Is the family's digital likeness footprint (photos, voice, video) inventoried and its exposure managed?",
         whyThisMatters:
-          "Unprepared heirs struggle with the social and emotional weight of wealth.",
+          "The larger the likeness footprint, the easier and more convincing impersonation becomes.",
         recommendedActions:
-          "Provide coaching on the personal dimensions of inherited wealth.",
-        answers: ["Unaddressed", "Occasional talk", "Addressed", "Coaching on personal dimensions"],
+          "Inventory public likeness assets and reduce unnecessary exposure.",
+        answers: ["Unknown", "Partial awareness", "Inventoried", "Inventoried and actively minimized"],
       },
     ],
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Behavioral Resilience",
-    sheetName: "Behavioral Resilience",
+    categoryName: "AI & Emerging Tech Risk",
+    sheetName: "AI Risk",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "C",
-    sectionName: "Decision-making under stress",
+    sectionName: "Data exposure to AI tools",
     questions: [
       {
         questionNumber: "10.11",
         questionText:
-          "Is there a documented protocol for making major decisions during a crisis or loss of a principal?",
+          "Is there a policy governing what family or office information may be entered into public AI tools (chatbots, assistants)?",
         whyThisMatters:
-          "Decisions made in shock, without a protocol, are frequently regretted and costly.",
+          "Sensitive data entered into public AI services can be retained, exposed, or used for training.",
         recommendedActions:
-          "Pre-define who decides what, and how, when a principal is unavailable.",
-        answers: ["None", "Informal", "Documented", "Documented with clear authority"],
+          "Set a clear policy on acceptable use of public AI tools and approved alternatives.",
+        answers: ["No policy", "Informal caution", "Written policy", "Policy enforced with approved tools"],
       },
       {
         questionNumber: "10.12",
         questionText:
-          "Are major decisions subject to a cooling-off period or a second-opinion requirement?",
+          "Are staff and advisors restricted from uploading confidential documents to unvetted AI services?",
         whyThisMatters:
-          "Urgency and pressure tactics drive impulsive commitments that a pause would prevent.",
+          "Confidential financial, legal, and personal data leaks through unsanctioned AI uploads.",
         recommendedActions:
-          "Require a waiting period and independent review above a decision threshold.",
-        answers: ["None", "Sometimes applied", "Required", "Required above a threshold"],
+          "Restrict uploads to vetted, contractually protected AI services.",
+        answers: ["Unrestricted", "Informal guidance", "Restricted", "Enforced with vetted tools only"],
       },
       {
         questionNumber: "10.13",
         questionText:
-          "Has the family rehearsed or scenario-planned for emergencies (incapacity, death, reputational event)?",
+          "Do the AI vendors and tools used by the family office meet data-protection and confidentiality standards?",
         whyThisMatters:
-          "Families that have never rehearsed a crisis improvise badly when one arrives.",
+          "AI vendors vary widely in data retention, training use, and security posture.",
         recommendedActions:
-          "Run periodic tabletop exercises for the most consequential scenarios.",
-        answers: ["Never", "Discussed", "Rehearsed", "Periodic tabletop exercises"],
+          "Vet AI vendors for data handling, retention, and no-training-on-your-data terms.",
+        answers: ["Not assessed", "Basic check", "Assessed", "Contractually assured and reviewed"],
       },
       {
         questionNumber: "10.14",
         questionText:
-          "Are roles clear for who leads and who communicates during a family emergency?",
+          "Is sensitive personal data (health, financial, location) protected from being scraped into AI training datasets?",
         whyThisMatters:
-          "Ambiguous crisis roles cause paralysis, missteps, and mixed messages.",
+          "Publicly exposed personal data is harvested at scale to profile and target wealthy families.",
         recommendedActions:
-          "Assign crisis leadership and communication roles in advance.",
-        answers: ["Ambiguous", "Loosely defined", "Defined", "Leadership and comms assigned"],
+          "Minimize public exposure and pursue removal from data brokers and scrapers.",
+        answers: ["Unprotected", "Some steps taken", "Protected", "Actively minimized and monitored"],
       },
       {
         questionNumber: "10.15",
         questionText:
-          "Is emotional and psychological support available to family members during major transitions?",
+          "Are AI features embedded in everyday apps and devices reviewed for privacy before use?",
         whyThisMatters:
-          "Grief and acute stress impair judgment precisely when big decisions are made.",
+          "Assistants and smart devices quietly capture conversations, locations, and documents.",
         recommendedActions:
-          "Line up counseling and facilitation support ahead of major transitions.",
-        answers: ["None", "Ad hoc", "Available", "Arranged ahead of transitions"],
+          "Review and configure AI and assistant features on household devices for privacy.",
+        answers: ["Never reviewed", "Rarely", "Reviewed", "Configured and periodically audited"],
       },
     ],
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Behavioral Resilience",
-    sheetName: "Behavioral Resilience",
+    categoryName: "AI & Emerging Tech Risk",
+    sheetName: "AI Risk",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "D",
-    sectionName: "Behavioral-finance discipline",
+    sectionName: "AI in family-office operations & advice",
     questions: [
       {
         questionNumber: "10.16",
         questionText:
-          "Is there a written investment policy that constrains impulsive or emotionally driven decisions?",
+          "Where AI is used in investment research or decisions, are its outputs independently validated before acting?",
         whyThisMatters:
-          "A policy set in calm conditions is the best defense against panic and euphoria.",
+          "AI can produce confident but wrong or fabricated analysis that misguides large decisions.",
         recommendedActions:
-          "Adopt an investment policy statement and hold decisions accountable to it.",
-        answers: ["None", "Informal", "Written", "Written and enforced"],
+          "Require human expert validation of any AI-influenced investment recommendation.",
+        answers: ["No validation", "Occasional", "Validated", "Independent validation required"],
       },
       {
         questionNumber: "10.17",
         questionText:
-          "Are new investment opportunities screened against a checklist before capital is committed?",
+          "Is there clear human oversight and accountability for any AI-assisted decisions in the family office?",
         whyThisMatters:
-          "Deals framed as rare, time-limited opportunities bypass diligence and concentrate hidden risk.",
+          "Unaccountable automation can execute errors at speed and scale.",
         recommendedActions:
-          "Require every opportunity to pass a standard diligence checklist first.",
-        answers: ["None", "Informal review", "Checklist used", "Checklist required before capital"],
+          "Assign named human accountability for every AI-assisted process.",
+        answers: ["None", "Unclear", "Defined", "Defined with audit trail"],
       },
       {
         questionNumber: "10.18",
         questionText:
-          "Is susceptibility to affinity fraud and unsolicited pitches actively guarded against?",
+          "Are AI tools used for accounting, reporting, or legal work checked for errors and hallucinations?",
         whyThisMatters:
-          "Wealthy families are prime targets for fraud that exploits trust and social ties.",
+          "AI-generated numbers, citations, and clauses can be plausibly but seriously wrong.",
         recommendedActions:
-          "Route unsolicited offers through advisors and verify counterparties independently.",
-        answers: ["Unguarded", "Some caution", "Guarded", "Advisor-vetted and independently verified"],
+          "Review AI-produced work product against source data and expert judgment.",
+        answers: ["Unchecked", "Spot checks", "Reviewed", "Systematically verified"],
       },
       {
         questionNumber: "10.19",
         questionText:
-          "Are concentration, leverage, and urgency biases explicitly checked before major financial moves?",
+          "Is reliance on AI vendors assessed for concentration and business-continuity risk?",
         whyThisMatters:
-          "These recurring biases repeatedly drive avoidable, compounding losses.",
+          "Over-dependence on one AI provider creates operational and lock-in risk.",
         recommendedActions:
-          "Add an explicit bias check to major-decision reviews.",
-        answers: ["None", "Occasional", "Checked", "Explicit check in reviews"],
+          "Avoid single-vendor dependence and plan for tool failure or withdrawal.",
+        answers: ["Not considered", "Aware", "Assessed", "Diversified with contingency"],
       },
       {
         questionNumber: "10.20",
         questionText:
-          "Is performance judged against long-term goals rather than short-term market moves or peers?",
+          "Are the biases and limitations of AI tools understood by those who rely on them?",
         whyThisMatters:
-          "Chasing short-term results or comparing to peers compounds risk-taking.",
+          "Blind trust in AI outputs embeds hidden bias and error into decisions.",
         recommendedActions:
-          "Anchor decisions to long-term goals and the written financial plan.",
-        answers: ["Short-term or peer-driven", "Mixed focus", "Goal-focused", "Anchored to plan and goals"],
+          "Educate decision-makers on where AI tools are unreliable.",
+        answers: ["Not understood", "Vaguely", "Understood", "Understood and documented in process"],
       },
     ],
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Behavioral Resilience",
-    sheetName: "Behavioral Resilience",
+    categoryName: "AI & Emerging Tech Risk",
+    sheetName: "AI Risk",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "E",
-    sectionName: "Values, purpose & legacy",
+    sectionName: "Household & next-generation AI exposure",
     questions: [
       {
         questionNumber: "10.21",
         questionText:
-          "Does the family have an articulated shared purpose or mission for its wealth?",
+          "Are children and young family members guided on the safe use of AI tools and chatbots?",
         whyThisMatters:
-          "Wealth without a shared purpose loses meaning and weakens family cohesion.",
+          "Minors share sensitive family details with AI apps and are targets for manipulation.",
         recommendedActions:
-          "Draft and periodically revisit a family purpose statement.",
-        answers: ["None", "Implicit", "Articulated", "Articulated and revisited"],
+          "Set household guidance and oversight for children's use of AI.",
+        answers: ["No guidance", "Occasional talks", "Guidance in place", "Guidance with active oversight"],
       },
       {
         questionNumber: "10.22",
         questionText:
-          "Are philanthropic values and priorities defined and shared across the family?",
+          "Is the family aware of AI-enabled scams targeting the young and elderly (romance, grandparent, investment)?",
         whyThisMatters:
-          "Undefined giving priorities cause drift, inconsistency, and conflict.",
+          "AI makes these scams far more convincing and personalized.",
         recommendedActions:
-          "Define shared philanthropic goals and assign roles.",
-        answers: ["Undefined", "Loosely held", "Defined", "Defined with shared roles"],
+          "Educate vulnerable family members on AI-enabled scam patterns.",
+        answers: ["Unaware", "Some awareness", "Aware", "Educated and supported"],
       },
       {
         questionNumber: "10.23",
         questionText:
-          "Is the family's story, history, and values documented for future generations?",
+          "Are smart-home and AI-enabled devices in residences secured and privacy-configured?",
         whyThisMatters:
-          "A lost family narrative weakens identity, belonging, and stewardship.",
+          "Cameras, assistants, and sensors can be exploited for surveillance or intrusion.",
         recommendedActions:
-          "Capture family history and values in a durable, shareable form.",
-        answers: ["Not captured", "Fragmentary", "Documented", "Durable and shareable form"],
+          "Harden and privacy-configure all smart-home and AI devices.",
+        answers: ["Unsecured", "Partially", "Secured", "Secured, segmented and monitored"],
       },
       {
         questionNumber: "10.24",
         questionText:
-          "Are expectations around work, self-sufficiency, and wealth communicated to the next generation?",
+          "Is exposure through wearables and AI health apps (location, biometrics, routines) understood and managed?",
         whyThisMatters:
-          "Unspoken expectations breed entitlement, confusion, or resentment.",
+          "Continuous personal data streams reveal patterns useful to fraudsters and physical threats.",
         recommendedActions:
-          "Communicate clear expectations about wealth, work, and independence.",
-        answers: ["Unspoken", "Occasionally shared", "Communicated", "Clear and consistent"],
+          "Review data sharing on wearables and health apps and limit it where sensitive.",
+        answers: ["Unmanaged", "Some awareness", "Managed", "Actively minimized"],
       },
       {
         questionNumber: "10.25",
         questionText:
-          "Is there alignment between individual members' goals and the collective family vision?",
+          "Do family members understand how the data they share with AI apps could be used against them?",
         whyThisMatters:
-          "Misaligned individual and collective goals create ongoing friction.",
+          "Awareness is the first defense against oversharing with AI services.",
         recommendedActions:
-          "Reconcile individual aspirations with the shared family vision.",
-        answers: ["Misaligned", "Partly aligned", "Aligned", "Reconciled with shared vision"],
+          "Build household literacy on AI data risks.",
+        answers: ["No understanding", "Limited", "Good understanding", "Strong, reinforced literacy"],
       },
     ],
   },
   {
     categoryCode: "10_family_governance",
-    categoryName: "Behavioral Resilience",
-    sheetName: "Behavioral Resilience",
+    categoryName: "AI & Emerging Tech Risk",
+    sheetName: "AI Risk",
     displayOrder: 10,
     slug: "family-governance-behavioral",
     sectionCode: "F",
-    sectionName: "Advisory support & continuity",
+    sectionName: "Governance, awareness & response",
     questions: [
       {
         questionNumber: "10.26",
         questionText:
-          "Is professional facilitation or family-therapy support available for sensitive transitions?",
+          "Is there a designated owner (advisor or staff) responsible for tracking AI and emerging-tech risks?",
         whyThisMatters:
-          "Major transitions (succession, death, divorce) overwhelm families without skilled support.",
+          "Fast-moving AI threats need someone accountable to watch and respond.",
         recommendedActions:
-          "Identify facilitators or advisors to engage before high-stress transitions.",
-        answers: ["None", "Ad hoc", "Available", "Identified before transitions"],
+          "Assign ownership of AI and emerging-tech risk monitoring.",
+        answers: ["No owner", "Informal", "Owner assigned", "Owner with a defined mandate"],
       },
       {
         questionNumber: "10.27",
         questionText:
-          "Does the family have trusted advisors who understand its history, dynamics, and goals?",
+          "Does the family stay informed on emerging AI threats relevant to high-net-worth individuals?",
         whyThisMatters:
-          "Advisors without context give ill-fitting advice at critical moments.",
+          "The threat landscape shifts monthly, and static defenses fall behind.",
         recommendedActions:
-          "Build long-term relationships with context-aware advisors.",
-        answers: ["None", "Transactional", "Trusted advisors", "Deep, context-aware relationships"],
+          "Maintain a briefing cadence on emerging AI and tech threats.",
+        answers: ["Not tracked", "Occasional", "Regular updates", "Structured intelligence cadence"],
       },
       {
         questionNumber: "10.28",
         questionText:
-          "Is there continuity planning for key advisor relationships (succession of the advisory team)?",
+          "Is AI and emerging-tech risk integrated into the family's overall risk review and incident planning?",
         whyThisMatters:
-          "Losing a key advisor without a successor disrupts continuity and institutional memory.",
+          "Siloed AI concerns miss cross-cutting fraud, reputation, and privacy links.",
         recommendedActions:
-          "Plan for advisor succession and structured knowledge transfer.",
-        answers: ["None", "Informal", "Planned", "Succession and knowledge transfer planned"],
+          "Fold AI risk into the annual risk review and incident-response plans.",
+        answers: ["Not integrated", "Loosely", "Integrated", "Fully integrated and tested"],
       },
       {
         questionNumber: "10.29",
         questionText:
-          "Are family governance documents and decisions recorded and accessible over time?",
+          "Are AI-related incidents (attempted deepfake fraud, data leaks) logged and reviewed to improve defenses?",
         whyThisMatters:
-          "Undocumented governance is forgotten and re-litigated across generations.",
+          "Near-misses reveal where controls are weak before a costly breach.",
         recommendedActions:
-          "Maintain durable, accessible records of governance decisions.",
-        answers: ["None", "Partial", "Recorded", "Durable and accessible over time"],
+          "Log AI incidents and near-misses and act on the patterns.",
+        answers: ["Not logged", "Informally", "Logged", "Logged and drives improvements"],
       },
       {
         questionNumber: "10.30",
         questionText:
-          "Is the family's resilience and governance reviewed and refreshed on a regular cadence?",
+          "Is there a plan to adopt protective emerging technologies (content authentication, monitoring) as they mature?",
         whyThisMatters:
-          "Governance and resilience atrophy without periodic renewal.",
+          "Defenses must evolve as fast as AI-enabled threats.",
         recommendedActions:
-          "Schedule regular reviews of family governance and resilience.",
-        answers: ["Never", "Irregular", "Regular", "Regular cadence with refresh"],
+          "Track and deliberately adopt maturing protective technologies.",
+        answers: ["No plan", "Reactive", "Planned", "Proactively adopted and reviewed"],
       },
     ],
   },

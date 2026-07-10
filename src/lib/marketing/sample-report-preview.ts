@@ -35,7 +35,7 @@ const SHORT_NAMES: Record<string, string> = {
   "liquidity-cash": "Liquidity",
   "tax-exposure": "Tax",
   "estate-succession": "Estate",
-  "family-governance-behavioral": "Behavioral",
+  "family-governance-behavioral": "AI Risk",
 };
 
 export const SAMPLE_HOUSEHOLD = "Chen Family Office";

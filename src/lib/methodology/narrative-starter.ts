@@ -83,14 +83,15 @@ const NEW_PILLAR_NARRATIVES: Record<string, PillarNarrativeBands> = {
     ],
     midBand: GENERIC_MID_BAND("estate and succession planning"),
   },
+  // Slug is a legacy identifier; presented as "AI & Emerging Tech Risk".
   "family-governance-behavioral": {
     allNegative: [
-      "Behavioral norms and emotional resilience under wealth stress are underdeveloped, increasing inter-generational conflict and reactive decision-making. Invest in next-generation education, shared values forums, and awareness of behavioral-finance pitfalls.",
+      "Defenses against AI-enabled threats are underdeveloped, leaving the family exposed to deepfake and voice-clone fraud, synthetic-media reputational attacks, and data leakage into AI tools. Establish out-of-band verification for financial requests, monitoring for synthetic media, and a policy governing use of AI tools.",
     ],
     allYes: [
-      "The family demonstrates strong behavioral awareness and resilience as complexity grows. Continue structured education and open dialogue as circumstances change.",
+      "The family shows strong awareness and controls around AI and emerging-tech risk, from impersonation defenses to AI-tool data governance. Maintain the monitoring cadence and update defenses as AI-enabled threats evolve.",
     ],
-    midBand: GENERIC_MID_BAND("behavioral resilience"),
+    midBand: GENERIC_MID_BAND("AI and emerging-tech risk"),
   },
 };
 

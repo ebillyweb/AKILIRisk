@@ -30,7 +30,7 @@ const SHORT_CATEGORY_LABELS: Record<string, string> = {
   "liquidity-cash": "Liquidity",
   "tax-exposure": "Tax",
   "estate-succession": "Estate",
-  "family-governance-behavioral": "Behavioral",
+  "family-governance-behavioral": "AI Risk",
 };
 
 export function shortCategoryLabel(categoryId: string, categoryName: string): string {

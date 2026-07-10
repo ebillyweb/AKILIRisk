@@ -25,7 +25,7 @@ async function main(): Promise<void> {
     let categoriesUpserted = 0;
     let questionsCreated = 0;
     let questionsSkipped = 0;
-    let questionsLabeled = 0;
+    let questionsUpdated = 0;
 
     for (const starter of NEW_PILLAR_ASSESSMENT_STARTERS) {
       const category = await prisma.pillarCategory.upsert({
@@ -74,28 +74,25 @@ async function main(): Promise<void> {
         });
         const answers = q.answers ?? [];
         if (existing) {
-          // Backfill custom maturity labels onto rows seeded before labels
-          // existed — only when all four are still null, so we never clobber
-          // labels an admin may have set.
-          const missingLabels =
-            existing.answer0 == null &&
-            existing.answer1 == null &&
-            existing.answer2 == null &&
-            existing.answer3 == null;
-          if (answers.length === 4 && missingLabels) {
-            await prisma.pillarQuestion.update({
-              where: { id: existing.id },
-              data: {
-                answer0: answers[0] ?? null,
-                answer1: answers[1] ?? null,
-                answer2: answers[2] ?? null,
-                answer3: answers[3] ?? null,
-              },
-            });
-            questionsLabeled++;
-          } else {
-            questionsSkipped++;
-          }
+          // The starter is the source of truth for these platform pillars, so
+          // re-seeding syncs content onto existing rows (keyed by section +
+          // questionNumber). This also lets the slot-10 bank be repurposed
+          // from the former Behavioral Resilience questions to the current
+          // AI & Emerging Tech Risk questions in place, 1:1, without orphans.
+          await prisma.pillarQuestion.update({
+            where: { id: existing.id },
+            data: {
+              questionText: q.questionText,
+              whyThisMatters: q.whyThisMatters,
+              recommendedActions: q.recommendedActions,
+              answer0: answers[0] ?? null,
+              answer1: answers[1] ?? null,
+              answer2: answers[2] ?? null,
+              answer3: answers[3] ?? null,
+              displayOrder: i,
+            },
+          });
+          questionsUpdated++;
           continue;
         }
 
@@ -120,7 +117,7 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      `seed:new-pillar-questions complete — categories ${categoriesUpserted}, created ${questionsCreated}, labeled ${questionsLabeled}, skipped ${questionsSkipped}`,
+      `seed:new-pillar-questions complete — categories ${categoriesUpserted}, created ${questionsCreated}, updated ${questionsUpdated}, skipped ${questionsSkipped}`,
     );
   } finally {
     await prisma.$disconnect();
