@@ -2,11 +2,21 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { findUserByEmail } from "@/lib/auth/user-email";
+import {
+  ADVISOR_BRANDING_PROFILE_SELECT,
+  mapAdvisorProfileToBrandingData,
+} from "@/lib/client/advisor-branding-profile";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
 import { buildAdvisorPortalOrigin } from "@/lib/client/client-portal-origin";
 import { getInvitingAdvisorBrandingForInviteCode } from "@/lib/client/resolve-client-portal-branding";
-import { resolveAdvisorBrandingForProfile } from "@/lib/enterprise/branding";
+import {
+  ENTERPRISE_BRANDING_SELECT,
+  hasConfiguredPersonalBrand,
+  mapEnterpriseToBrandingData,
+  resolveAdvisorBrandingForProfile,
+} from "@/lib/enterprise/branding";
 import { getPublicAppUrlFromEnv, getPublicAppUrlStrict } from "@/lib/public-app-url";
+import { getSubscriptionFeatures } from "@/lib/subscription/validation";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 export type ClientEmailContext = {
@@ -127,14 +137,75 @@ function buildContextFromAssignment(input: {
   };
 }
 
+/**
+ * Branding for client-facing emails. The standard resolver requires the
+ * advisor/firm's `brandingEnabled` toggle to be on. Client emails go a step
+ * further: if the toggle is off but the advisor (or their firm) is *entitled*
+ * to branding (a paid tier — `basicBrandingEnabled`) AND has actually
+ * configured brand assets (logo/colors/brand name), we still white-label the
+ * email rather than falling back to the generic AKILI lockup. Scoped to email
+ * so advisor portals/settings keep honoring the explicit toggle.
+ */
+async function resolveClientEmailBrandingForProfile(
+  advisorProfileId: string,
+): Promise<AdvisorBrandingData | null> {
+  const toggled = await resolveAdvisorBrandingForProfile(advisorProfileId, {
+    scope: "client",
+  });
+  if (toggled?.brandingEnabled) return toggled;
+
+  const profile = await prisma.advisorProfile.findUnique({
+    where: { id: advisorProfileId },
+    select: {
+      userId: true,
+      enterpriseId: true,
+      ...ADVISOR_BRANDING_PROFILE_SELECT,
+    },
+  });
+  if (!profile) return null;
+
+  const membership = await prisma.enterpriseMembership.findFirst({
+    where: { advisorProfileId, status: "ACTIVE" },
+    select: { enterpriseId: true, role: true },
+  });
+  const enterpriseId = profile.enterpriseId ?? membership?.enterpriseId ?? null;
+
+  // "Eligible": entitled to branding on the resolved billing context (the firm's
+  // subscription for enterprise members, the advisor's own otherwise).
+  const features = await getSubscriptionFeatures(profile.userId);
+  if (!features?.basicBrandingEnabled) return null;
+
+  if (enterpriseId) {
+    const enterprise = await prisma.advisorEnterprise.findUnique({
+      where: { id: enterpriseId },
+      select: ENTERPRISE_BRANDING_SELECT,
+    });
+    if (enterprise && hasConfiguredPersonalBrand(enterprise)) {
+      return { ...mapEnterpriseToBrandingData(enterprise), brandingEnabled: true };
+    }
+    // Fall back to the member's personal brand only where the firm permits it.
+    if (
+      enterprise?.advisorMemberPersonalBrandingEnabled &&
+      membership?.role === "ADVISOR" &&
+      hasConfiguredPersonalBrand(profile)
+    ) {
+      return { ...mapAdvisorProfileToBrandingData(profile), brandingEnabled: true };
+    }
+    return null;
+  }
+
+  if (hasConfiguredPersonalBrand(profile)) {
+    return { ...mapAdvisorProfileToBrandingData(profile), brandingEnabled: true };
+  }
+  return null;
+}
+
 async function buildClientEmailContextForAdvisorProfile(input: {
   userId: string | null;
   advisorProfileId: string;
   advisorName: string | null;
 }): Promise<ClientEmailContext | null> {
-  const branding = await resolveAdvisorBrandingForProfile(input.advisorProfileId, {
-    scope: "client",
-  });
+  const branding = await resolveClientEmailBrandingForProfile(input.advisorProfileId);
   const { origin, usesTenantHost } = await resolvePortalOriginForAdvisor(
     input.advisorProfileId,
     Boolean(branding?.brandingEnabled),

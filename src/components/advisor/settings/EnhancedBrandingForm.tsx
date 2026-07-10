@@ -24,16 +24,23 @@ import { FileUpload } from '@/components/ui/file-upload';
 import { BrandingLivePreview } from '@/components/advisor/settings/BrandingLivePreview';
 import { TierFeatureLockIcon, TierFeatureUpgradeButton } from '@/components/advisor/billing/TierFeatureUpgrade';
 import { SubdomainManager } from '@/components/advisor/settings/SubdomainManager';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   brandingUpdateSchema,
   BrandingFormData,
+  LANDING_CARD_DESCRIPTION_MAX,
+  LANDING_CARD_TITLE_MAX,
   LOGO_MAX_BYTES,
   SubscriptionFeatures,
+  type LandingFeatureCard,
 } from '@/lib/validation/branding';
 import type { AdvisorSubdomainSettings } from '@/lib/advisor/subdomain';
 import { updateAdvisorBrandingAction } from '@/lib/actions/advisor-branding-actions';
 import { resolveAdvisorLogoSrcForPreview } from '@/lib/branding/advisor-logo-display';
-import { resolveBrandedLandingCopy } from '@/lib/branding/landing-copy';
+import {
+  resolveBrandedLandingCopy,
+  resolveLandingFeatureCards,
+} from '@/lib/branding/landing-copy';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -70,6 +77,7 @@ interface EnhancedBrandingFormProps {
     landingHeadline?: string | null;
     landingSubheadline?: string | null;
     landingSubtext?: string | null;
+    landingFeatureCards?: unknown;
     primaryColor?: string | null;
     secondaryColor?: string | null;
     accentColor?: string | null;
@@ -206,6 +214,23 @@ export function EnhancedBrandingForm({
     logoUrl: profile.logoUrl || '',
   };
 
+  const initialCards = useMemo(
+    () => resolveLandingFeatureCards(profile.landingFeatureCards),
+    [profile.landingFeatureCards],
+  );
+  const [cards, setCards] = useState<LandingFeatureCard[]>(initialCards);
+  const [cardsDirty, setCardsDirty] = useState(false);
+
+  const updateCard = useCallback(
+    (index: number, patch: Partial<LandingFeatureCard>) => {
+      setCards((prev) =>
+        prev.map((card, i) => (i === index ? { ...card, ...patch } : card)),
+      );
+      setCardsDirty(true);
+    },
+    [],
+  );
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSavedFlash, setShowSavedFlash] = useState(false);
   const savedFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -231,8 +256,9 @@ export function EnhancedBrandingForm({
     () => ({
       ...watchedValues,
       logoUrl: resolveAdvisorLogoSrcForPreview(watchedValues.logoUrl || profile.logoUrl || null),
+      landingFeatureCards: cards,
     }),
-    [watchedValues, profile.logoUrl]
+    [watchedValues, profile.logoUrl, cards]
   );
 
   const landingPreviewCopy = useMemo(
@@ -258,10 +284,10 @@ export function EnhancedBrandingForm({
   );
 
   useEffect(() => {
-    if (isDirty) {
+    if (isDirty || cardsDirty) {
       setShowSavedFlash(false);
     }
-  }, [isDirty]);
+  }, [isDirty, cardsDirty]);
 
   useEffect(() => {
     return () => {
@@ -315,12 +341,20 @@ export function EnhancedBrandingForm({
       Object.entries(data).forEach(([key, value]) => {
         if (value) formData.append(key, value);
       });
+      // Feature cards are local state (booleans + hideable), appended explicitly
+      // so a hidden card (visible:false) isn't dropped by the truthy guard above.
+      cards.forEach((card, i) => {
+        formData.append(`landingCard${i}Title`, card.title);
+        formData.append(`landingCard${i}Description`, card.description);
+        formData.append(`landingCard${i}Visible`, String(card.visible));
+      });
 
       const result = await updateAdvisorBrandingAction(formData);
 
       if (result.success) {
         toast.success('Brand updated successfully');
         reset(data);
+        setCardsDirty(false);
         flashSaved();
       } else {
         toast.error(result.error || 'Failed to update branding');
@@ -390,7 +424,7 @@ export function EnhancedBrandingForm({
       <BrandingLivePreview
         branding={brandingForPreview}
         readOnly={readOnly}
-        isDirty={isDirty}
+        isDirty={isDirty || cardsDirty}
         currentSubdomain={currentSubdomain}
         portalConfig={portalConfig}
         customSubdomainEnabled={features.customSubdomainEnabled}
@@ -611,6 +645,81 @@ export function EnhancedBrandingForm({
                     </div>
                   </div>
 
+                  <div className="space-y-4 rounded-xl border border-border/60 bg-muted/15 p-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold tracking-tight">Feature cards</h3>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        The three highlight cards under the hero. Edit the copy, or
+                        hide a card to show fewer. Keep titles short so the layout
+                        stays aligned.
+                      </p>
+                    </div>
+                    {cards.map((card, index) => (
+                      <div
+                        key={index}
+                        className="space-y-3 rounded-lg border border-border/50 bg-background/60 p-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Card {index + 1}
+                          </span>
+                          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                            <Checkbox
+                              checked={card.visible}
+                              onCheckedChange={(value) =>
+                                updateCard(index, { visible: value === true })
+                              }
+                              disabled={readOnly}
+                              aria-label={`Show card ${index + 1} on the portal`}
+                            />
+                            Show on portal
+                          </label>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`landingCard${index}Title`}>Title</Label>
+                            <span className="text-[11px] tabular-nums text-muted-foreground">
+                              {card.title.length}/{LANDING_CARD_TITLE_MAX}
+                            </span>
+                          </div>
+                          <Input
+                            id={`landingCard${index}Title`}
+                            value={card.title}
+                            onChange={(e) =>
+                              updateCard(index, { title: e.target.value })
+                            }
+                            maxLength={LANDING_CARD_TITLE_MAX}
+                            readOnly={readOnly}
+                            disabled={readOnly}
+                            className={readOnly ? 'bg-muted/40' : undefined}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`landingCard${index}Description`}>
+                              Description
+                            </Label>
+                            <span className="text-[11px] tabular-nums text-muted-foreground">
+                              {card.description.length}/{LANDING_CARD_DESCRIPTION_MAX}
+                            </span>
+                          </div>
+                          <Textarea
+                            id={`landingCard${index}Description`}
+                            value={card.description}
+                            onChange={(e) =>
+                              updateCard(index, { description: e.target.value })
+                            }
+                            maxLength={LANDING_CARD_DESCRIPTION_MAX}
+                            rows={2}
+                            readOnly={readOnly}
+                            disabled={readOnly}
+                            className={readOnly ? 'bg-muted/40' : undefined}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="space-y-2">
                     <LabelWithHelp htmlFor="websiteUrl" helpKey="branding-website">
                       Website URL
@@ -779,7 +888,7 @@ export function EnhancedBrandingForm({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-3">
                   <Button
                     type="submit"
-                    disabled={!isDirty || isSubmitting}
+                    disabled={(!isDirty && !cardsDirty) || isSubmitting}
                     aria-busy={isSubmitting}
                     className={cn(
                       'min-h-11 flex-1 gap-2 transition-[color,box-shadow,background-color,border-color] sm:max-w-xs',
@@ -805,8 +914,12 @@ export function EnhancedBrandingForm({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => reset()}
-                    disabled={!isDirty || isSubmitting}
+                    onClick={() => {
+                      reset();
+                      setCards(initialCards);
+                      setCardsDirty(false);
+                    }}
+                    disabled={(!isDirty && !cardsDirty) || isSubmitting}
                     className="min-h-11 shrink-0"
                   >
                     Reset
