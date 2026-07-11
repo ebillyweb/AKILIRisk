@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { getIntakeScriptQuestionsForAdmin } from "@/lib/admin/intake-questions-queries";
-import { setIntakePillarQuestionVisibility } from "@/lib/actions/admin-intake-questions-actions";
+import {
+  moveIntakePillarQuestionOrder,
+  setIntakePillarQuestionVisibility,
+} from "@/lib/actions/admin-intake-questions-actions";
 import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -48,11 +52,12 @@ export default async function AdminIntakeQuestionsPage({
               <span className="font-normal text-muted-foreground">({questions.length})</span>
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Order matches the live interview. Hidden questions are skipped for clients.
+              Order matches the live interview. Use the arrows to reorder, or set an exact
+              position from a question&apos;s Edit page. Hidden questions are skipped for clients.
             </p>
           </CardHeader>
           <CardContent className="space-y-0 divide-y divide-border p-0" data-tour="config-primary-list">
-            {questions.map((q) => (
+            {questions.map((q, index) => (
               <div
                 key={q.id}
                 className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between"
@@ -71,6 +76,36 @@ export default async function AdminIntakeQuestionsPage({
                   <Badge variant={q.isVisible ? "success" : "secondary"} className="shrink-0">
                     {q.isVisible ? "Visible" : "Hidden"}
                   </Badge>
+                  <div className="flex gap-1">
+                    <form action={moveIntakePillarQuestionOrder}>
+                      <input type="hidden" name="questionId" value={q.id} />
+                      <input type="hidden" name="direction" value="up" />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        disabled={index === 0}
+                        aria-label="Move up"
+                      >
+                        <ArrowUp className="size-4" />
+                      </Button>
+                    </form>
+                    <form action={moveIntakePillarQuestionOrder}>
+                      <input type="hidden" name="questionId" value={q.id} />
+                      <input type="hidden" name="direction" value="down" />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        disabled={index === questions.length - 1}
+                        aria-label="Move down"
+                      >
+                        <ArrowDown className="size-4" />
+                      </Button>
+                    </form>
+                  </div>
                   <form action={setIntakePillarQuestionVisibility}>
                     <input type="hidden" name="questionId" value={q.id} />
                     <input type="hidden" name="setVisible" value={q.isVisible ? "0" : "1"} />
