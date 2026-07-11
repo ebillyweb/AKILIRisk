@@ -118,6 +118,7 @@ describe("clampVisibilityToModuleTier", () => {
           skipPostIntakeReview: true,
           documentRequirements: true,
           actionPlan: true,
+          sharedClientVisibility: true,
         },
         "ESSENTIALS",
       ),
@@ -133,6 +134,7 @@ describe("clampVisibilityToModuleTier", () => {
       skipPostIntakeReview: true,
       documentRequirements: true,
       actionPlan: true,
+      sharedClientVisibility: true,
     });
   });
 });

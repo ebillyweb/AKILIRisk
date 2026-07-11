@@ -72,6 +72,12 @@ const VISIBILITY_OPTION_GROUPS: VisibilityOptionGroup[] = [
         description:
           "Hide document request and tracking in the advisor workspace and the Documents link in the client portal.",
       },
+      {
+        key: "sharedClientVisibility",
+        label: "Shared client visibility",
+        description:
+          "Let team members see and work with every client in the firm, not just the ones assigned to them. When off, members see only their own assignments.",
+      },
     ],
   },
   {

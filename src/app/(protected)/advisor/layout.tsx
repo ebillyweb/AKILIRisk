@@ -88,6 +88,7 @@ export default async function AdvisorLayout({
             skipPostIntakeReview: false,
             documentRequirements: true,
             actionPlan: true,
+            sharedClientVisibility: false,
           },
           enterpriseId: null,
           role: null,

@@ -63,6 +63,7 @@ describe("tryAdvanceFacilitatedPastPostIntakeReview", () => {
         skipPostIntakeReview: true,
         documentRequirements: true,
         actionPlan: true,
+        sharedClientVisibility: false,
       },
       enterpriseId: "ent-1",
       role: "ADVISOR",

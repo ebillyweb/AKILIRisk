@@ -4,6 +4,7 @@ import type { EnterpriseRole } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 
+import { getEnterpriseAdvisorMemberVisibilityForEnterprise } from "./advisor-member-visibility";
 import { resolveBillingContext } from "./billing-context";
 
 export type PortfolioScope =
@@ -39,6 +40,22 @@ export async function resolvePortfolioScope(
       advisorProfileId: ctx.advisorProfileId,
       role: ctx.role,
     };
+  }
+
+  // ADVISOR-role members are scoped to their own book unless the firm has opted
+  // into shared client visibility, in which case they see the full firm portfolio.
+  if (ctx.kind === "enterprise" && ctx.role === "ADVISOR") {
+    const visibility = await getEnterpriseAdvisorMemberVisibilityForEnterprise(
+      ctx.enterpriseId,
+    );
+    if (visibility.sharedClientVisibility) {
+      return {
+        mode: "firm",
+        enterpriseId: ctx.enterpriseId,
+        advisorProfileId: ctx.advisorProfileId,
+        role: ctx.role,
+      };
+    }
   }
 
   return {

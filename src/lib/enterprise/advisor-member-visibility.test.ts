@@ -44,6 +44,7 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
         advisorMemberSkipPostIntakeReviewEnabled: false,
         advisorMemberDocumentRequirementsEnabled: true,
         advisorMemberActionPlanEnabled: true,
+        advisorMemberSharedClientVisibilityEnabled: true,
       }),
     ).toEqual({
       portfolio: false,
@@ -57,6 +58,7 @@ describe("mapEnterpriseAdvisorMemberVisibility", () => {
       skipPostIntakeReview: false,
       documentRequirements: true,
       actionPlan: true,
+      sharedClientVisibility: true,
     });
   });
 });
@@ -100,6 +102,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberSkipPostIntakeReviewEnabled: false,
       advisorMemberDocumentRequirementsEnabled: false,
       advisorMemberActionPlanEnabled: false,
+      advisorMemberSharedClientVisibilityEnabled: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
@@ -129,6 +132,7 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
       advisorMemberSkipPostIntakeReviewEnabled: false,
       advisorMemberDocumentRequirementsEnabled: false,
       advisorMemberActionPlanEnabled: false,
+      advisorMemberSharedClientVisibilityEnabled: false,
     });
 
     const result = await resolveEnterpriseMemberVisibilityContext("u1");
@@ -157,6 +161,7 @@ describe("visibilityInputToEnterpriseUpdate", () => {
         skipPostIntakeReview: false,
         documentRequirements: false,
         actionPlan: false,
+        sharedClientVisibility: true,
       }),
     ).toEqual({
       advisorMemberPortfolioVisible: true,
@@ -170,6 +175,7 @@ describe("visibilityInputToEnterpriseUpdate", () => {
       advisorMemberSkipPostIntakeReviewEnabled: false,
       advisorMemberDocumentRequirementsEnabled: false,
       advisorMemberActionPlanEnabled: false,
+      advisorMemberSharedClientVisibilityEnabled: true,
     });
   });
 });

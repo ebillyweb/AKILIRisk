@@ -34,6 +34,7 @@ const visibilitySchema = z.object({
   skipPostIntakeReview: z.boolean(),
   documentRequirements: z.boolean(),
   actionPlan: z.boolean(),
+  sharedClientVisibility: z.boolean(),
 });
 
 const brandingPolicySchema = z.object({

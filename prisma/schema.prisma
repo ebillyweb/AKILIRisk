@@ -206,6 +206,8 @@ model AdvisorEnterprise {
   advisorMemberDocumentRequirementsEnabled Boolean       @default(true)
   /// When true, show Strategic Action Plan in the client portal and advisor guidance workflows.
   advisorMemberActionPlanEnabled             Boolean       @default(true)
+  /// When true, ADVISOR-role team members see every client in the firm, not only their own assignments.
+  advisorMemberSharedClientVisibilityEnabled Boolean       @default(false)
   /// When true, ADVISOR-role members may edit personal branding for assigned clients.
   advisorMemberPersonalBrandingEnabled Boolean           @default(false)
   /// When true (and personal branding enabled), members may claim their own subdomain.
