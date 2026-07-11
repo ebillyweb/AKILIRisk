@@ -11,6 +11,9 @@ const prismaSpies = vi.hoisted(() => ({
   clientAdvisorAssignment: {
     findFirst: vi.fn(),
   },
+  advisorEnterprise: {
+    findUnique: vi.fn(),
+  },
 }));
 
 vi.mock("./billing-context", () => billingSpies);
@@ -60,7 +63,7 @@ describe("resolvePortfolioScope", () => {
     });
   });
 
-  it("returns assigned scope for enterprise ADVISOR", async () => {
+  it("returns assigned scope for enterprise ADVISOR when firm sharing is off", async () => {
     billingSpies.resolveBillingContext.mockResolvedValue({
       kind: "enterprise",
       enterpriseId: "ent-1",
@@ -68,11 +71,44 @@ describe("resolvePortfolioScope", () => {
       advisorProfileId: "profile-advisor",
       subscription: null,
     });
+    // null → default visibility, which has sharedClientVisibility = false.
+    prismaSpies.advisorEnterprise.findUnique.mockResolvedValue(null);
 
     await expect(resolvePortfolioScope("user-1")).resolves.toEqual({
       mode: "assigned",
       advisorProfileId: "profile-advisor",
       enterpriseId: "ent-1",
+      role: "ADVISOR",
+    });
+  });
+
+  it("returns firm scope for enterprise ADVISOR when firm sharing is on", async () => {
+    billingSpies.resolveBillingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "ADVISOR",
+      advisorProfileId: "profile-advisor",
+      subscription: null,
+    });
+    prismaSpies.advisorEnterprise.findUnique.mockResolvedValue({
+      advisorMemberPortfolioVisible: true,
+      advisorMemberAssessmentLeadsVisible: true,
+      advisorMemberMethodologyVisible: true,
+      advisorMemberEngagementsVisible: true,
+      advisorMemberReassessmentVisible: true,
+      advisorMemberProductToursVisible: true,
+      advisorMemberHideTierLockedNav: false,
+      advisorMemberSkipIntakeEnabled: false,
+      advisorMemberSkipPostIntakeReviewEnabled: false,
+      advisorMemberDocumentRequirementsEnabled: true,
+      advisorMemberActionPlanEnabled: true,
+      advisorMemberSharedClientVisibilityEnabled: true,
+    });
+
+    await expect(resolvePortfolioScope("user-1")).resolves.toEqual({
+      mode: "firm",
+      enterpriseId: "ent-1",
+      advisorProfileId: "profile-advisor",
       role: "ADVISOR",
     });
   });
