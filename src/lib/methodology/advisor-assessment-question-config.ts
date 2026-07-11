@@ -9,6 +9,7 @@ export const ADVISOR_ASSESSMENT_ANSWER_TYPES = [
   "yes_no",
   "likert_5",
   "scale_1_5",
+  "multi_select",
   "fillable",
   "number",
   "date",
@@ -25,6 +26,7 @@ export const ADVISOR_ASSESSMENT_ANSWER_TYPE_OPTIONS: ReadonlyArray<{
   { value: "yes_no", label: "Yes / No" },
   { value: "likert_5", label: "Likert (1–5)" },
   { value: "scale_1_5", label: "Scale 1–5 (single choice)" },
+  { value: "multi_select", label: "Select all that apply (multi-choice)" },
   { value: "fillable", label: "Short text" },
   { value: "number", label: "Numeric" },
   { value: "date", label: "Date (calendar)" },
@@ -84,6 +86,7 @@ export function defaultScoreMapForAnswerType(
     case "likert_5":
     case "scale_1_5":
       return { "1": 1, "2": 2, "3": 3, "4": 4, "5": 5 };
+    case "multi_select":
     case "fillable":
     case "number":
     case "date":
@@ -211,6 +214,22 @@ export function advisorAssessmentQuestionToWire(
           description: labels[Math.min(index, labels.length - 1)] ?? String(value),
         })),
         scoreMap,
+      };
+    }
+    case "multi_select": {
+      // answer0–answer3 double as the selectable options; the stored answer is
+      // a JSON array of the selected labels. Informational (empty scoreMap), so
+      // it is excluded from the maturity rollup like fillable/number/date.
+      const options = [row.answer0, row.answer1, row.answer2, row.answer3]
+        .map((label) => (label ?? "").trim())
+        .filter((label) => label.length > 0)
+        .map((label) => ({ value: label, label }));
+      return {
+        ...base,
+        type: "multi-choice",
+        options,
+        weight: 1,
+        scoreMap: {},
       };
     }
     case "fillable": {

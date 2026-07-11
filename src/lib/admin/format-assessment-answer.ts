@@ -40,6 +40,18 @@ export function formatAssessmentAnswerForDisplay(
     return formatMonthYearAnswerForDisplay(answer);
   }
 
+  if (question?.type === "multi-choice" && Array.isArray(answer)) {
+    if (answer.length === 0) return "No answer recorded";
+    return answer
+      .map((selected) => {
+        const match = question.options?.find(
+          (o) => o.value === selected || String(o.value) === String(selected)
+        );
+        return match?.label ?? String(selected);
+      })
+      .join(", ");
+  }
+
   if (question?.options?.length) {
     const match = question.options.find(
       (o) => o.value === answer || String(o.value) === String(answer)

@@ -116,4 +116,32 @@ describe("advisorAssessmentQuestionToWire", () => {
       { value: "no", label: "Not yet" },
     ]);
   });
+
+  it("maps multi_select to a multi-choice question with labeled options", () => {
+    const wire = advisorAssessmentQuestionToWire({
+      id: "q3",
+      displayOrder: 3,
+      questionText: "Which safeguards are in place?",
+      answerType: "multi_select",
+      scoreMap: defaultScoreMapForAnswerType("multi_select"),
+      answer0: "MFA",
+      answer1: "Backups",
+      answer2: "Encryption",
+      answer3: null,
+      whyThisMatters: null,
+      recommendedActions: null,
+      pillarSlug: "cyber",
+    });
+
+    expect(wire.type).toBe("multi-choice");
+    // Blank slots are dropped; remaining labels are both value and label.
+    expect(wire.options).toEqual([
+      { value: "MFA", label: "MFA" },
+      { value: "Backups", label: "Backups" },
+      { value: "Encryption", label: "Encryption" },
+    ]);
+    // Informational — no scoring contribution.
+    expect(wire.scoreMap).toEqual({});
+    expect(defaultScoreMapForAnswerType("multi_select")).toEqual({});
+  });
 });

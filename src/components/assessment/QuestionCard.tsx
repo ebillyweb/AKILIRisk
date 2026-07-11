@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Question } from "@/lib/assessment/types";
 import {
   SingleChoiceCards,
+  MultiChoiceCards,
   YesNoCards,
   MaturityScale,
   LikertScale,
@@ -78,6 +79,12 @@ export function QuestionCard({
             (val) => val !== null && val !== undefined,
             { message: "Please select an answer to continue" }
           ),
+        });
+      case 'multi-choice':
+        return z.object({
+          answer: z
+            .array(z.union([z.string(), z.number()]))
+            .min(1, "Please select at least one answer to continue"),
         });
       case 'maturity-scale':
         return z.object({
@@ -210,6 +217,15 @@ export function QuestionCard({
             options={question.options || []}
             {...base}
             value={currentAnswer != null ? (currentAnswer as string | number) : null}
+          />
+        );
+
+      case 'multi-choice':
+        return (
+          <MultiChoiceCards
+            options={question.options || []}
+            {...base}
+            value={Array.isArray(currentAnswer) ? (currentAnswer as Array<string | number>) : []}
           />
         );
 

@@ -11,6 +11,10 @@ export function buildLowestMaturityAnswers(
   for (const question of questions) {
     if (!visible.has(question.id)) continue;
 
+    // Multi-choice is informational (unscored) and array-valued — it has no
+    // maturity band, so it is not part of a lowest/highest-maturity simulation.
+    if (question.type === "multi-choice") continue;
+
     if (question.type === "yes-no") {
       answers[question.id] = "no";
       continue;
