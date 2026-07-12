@@ -28,6 +28,19 @@ vi.mock("@/lib/advisor/auth", () => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
+// Post-delete bank-mode housekeeping helpers. Mock them so the delete-guard
+// assertions below don't drag in the heavy clone/sync chain these helpers use.
+// Returning a non-zero custom count + PLATFORM mode keeps
+// isCustomOnlyWithoutSavedQuestions() false, so no profile bank-mode switch runs.
+vi.mock("@/lib/methodology/methodology-queries", () => ({
+  countAdvisorCustomAssessmentQuestions: vi.fn(async () => 1),
+  countAdvisorCustomIntakeQuestions: vi.fn(async () => 1),
+}));
+vi.mock("@/lib/methodology/intake-question-bank-mode.server", () => ({
+  resolveAdvisorAssessmentQuestionBankMode: vi.fn(async () => "PLATFORM"),
+  resolveAdvisorIntakeQuestionBankMode: vi.fn(async () => "PLATFORM"),
+}));
+
 import {
   deleteAdvisorIntakeQuestion,
   deleteAdvisorPillarQuestion,

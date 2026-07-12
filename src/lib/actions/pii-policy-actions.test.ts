@@ -115,6 +115,26 @@ vi.mock("@/lib/audit/audit-log", async () => {
   };
 });
 
+// The action consults the enterprise client-data policy to decide whether the
+// firm locks any fields. These tests cover the non-enterprise (unlocked) path,
+// so stub the context to a not-locked result. Mocking at this boundary avoids
+// pulling in resolveBillingContext + its prisma reads.
+vi.mock("@/lib/enterprise/enterprise-client-data-policy", () => ({
+  getAdvisorClientDataPolicyContext: vi.fn(async () => ({
+    enterprisePolicy: null,
+    memberRole: null,
+    advisorPolicy: dbState.advisorPiiPolicy,
+    effective: {
+      pseudonymousWorkspaceLabeling:
+        (dbState.advisorPiiPolicy as { pseudonymousWorkspaceLabeling: boolean })
+          .pseudonymousWorkspaceLabeling,
+      fields: (dbState.advisorPiiPolicy as { fields: Record<string, boolean> })
+        .fields,
+      lockedByEnterprise: false,
+    },
+  })),
+}));
+
 import { updatePiiPolicy } from "./pii-policy-actions";
 
 beforeEach(() => {

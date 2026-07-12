@@ -344,7 +344,12 @@ describe("getClientIntakeForReview advisor-note scoping (US-46c)", () => {
           answeredAt: new Date(),
           updatedAt: new Date(),
           advisorNotes: [
-            { id: "n-1", body: "scoped note", updatedAt: noteUpdatedAt },
+            {
+              id: "n-1",
+              advisorId: "advisor-user-7",
+              body: "scoped note",
+              updatedAt: noteUpdatedAt,
+            },
           ],
         },
       ],

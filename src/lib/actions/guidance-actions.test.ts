@@ -37,6 +37,11 @@ vi.mock("@/lib/recommendations/solution-lifecycle", () => ({
   transitionRecommendationStatus: vi.fn(),
 }));
 
+// Mock enterprise action-plan gate (calls billing/prisma models not in this mock)
+vi.mock("@/lib/enterprise/advisor-member-visibility", () => ({
+  assertAdvisorCanManageActionPlan: vi.fn(),
+}));
+
 // Mock revalidation
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),

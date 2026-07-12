@@ -19,6 +19,19 @@ vi.mock("@/lib/auth/user-email", () => ({
   decryptUserEmail: (ct: string) => `decrypted:${ct}`,
 }));
 
+// Client milestone emails route through the branded client-system-email path,
+// not through sendNotification (which is now advisor-only).
+const clientEmailSpy = vi.fn();
+vi.mock("@/lib/email/client-branded-system-email", () => ({
+  sendClientSystemEmail: (...args: unknown[]) => clientEmailSpy(...args),
+}));
+
+const resolveContext = vi.fn();
+vi.mock("@/lib/client/client-email-context", () => ({
+  resolveClientEmailContext: (...args: unknown[]) => resolveContext(...args),
+  clientPortalUrl: () => "https://portal.example/path",
+}));
+
 const findAssessment = vi.fn();
 const findEngagement = vi.fn();
 const findAssignment = vi.fn();
@@ -44,6 +57,8 @@ import {
 
 beforeEach(() => {
   sendSpy.mockReset();
+  clientEmailSpy.mockReset().mockResolvedValue({ sent: true });
+  resolveContext.mockReset().mockResolvedValue(null);
   findAssessment.mockReset();
   findEngagement.mockReset();
   findAssignment.mockReset();
@@ -66,14 +81,18 @@ describe("triggerPreviewAvailable", () => {
 
     await triggerPreviewAvailable("asmt-1");
 
-    expect(sendSpy).toHaveBeenCalledTimes(2);
-    const clientCall = sendSpy.mock.calls[0][0];
-    const advisorCall = sendSpy.mock.calls[1][0];
-    expect(clientCall.recipientUserId).toBe("client-1");
-    expect(clientCall.recipientEmail).toBe("decrypted:cipher-client");
-    expect(clientCall.category).toBe("milestone");
-    expect(clientCall.referenceId).toBe("asmt-1");
+    // Client gets a branded system email; the advisor gets an in-app notification.
+    expect(clientEmailSpy).toHaveBeenCalledTimes(1);
+    const [clientTo, clientContent] = clientEmailSpy.mock.calls[0];
+    expect(clientTo).toBe("decrypted:cipher-client");
+    expect(clientContent.subject).toContain("Risk Preview");
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    const advisorCall = sendSpy.mock.calls[0][0];
     expect(advisorCall.recipientUserId).toBe("advisor-1");
+    expect(advisorCall.recipientEmail).toBe("decrypted:cipher-advisor");
+    expect(advisorCall.category).toBe("milestone");
+    expect(advisorCall.referenceId).toBe("asmt-1");
     expect(advisorCall.advisorProfileId).toBe("adv-prof-1");
   });
 
@@ -91,8 +110,10 @@ describe("triggerPreviewAvailable", () => {
     });
     findAssignment.mockResolvedValue(null);
     await triggerPreviewAvailable("asmt-1");
-    expect(sendSpy).toHaveBeenCalledTimes(1);
-    expect(sendSpy.mock.calls[0][0].recipientUserId).toBe("client-1");
+    // No advisor assignment → no in-app notification, only the client email.
+    expect(sendSpy).not.toHaveBeenCalled();
+    expect(clientEmailSpy).toHaveBeenCalledTimes(1);
+    expect(clientEmailSpy.mock.calls[0][0]).toBe("decrypted:cipher-client");
   });
 });
 
@@ -104,10 +125,12 @@ describe("triggerProfilePublished", () => {
       user: { name: "Alex", emailCiphertext: "cipher-client" },
     });
     await triggerProfilePublished("asmt-1");
-    expect(sendSpy).toHaveBeenCalledTimes(1);
-    expect(sendSpy.mock.calls[0][0].recipientUserId).toBe("client-1");
-    expect(sendSpy.mock.calls[0][0].category).toBe("milestone");
-    expect(sendSpy.mock.calls[0][0].referenceId).toBe("asmt-1");
+    // Profile-published is a client-only branded email; no advisor notification.
+    expect(sendSpy).not.toHaveBeenCalled();
+    expect(clientEmailSpy).toHaveBeenCalledTimes(1);
+    const [clientTo, clientContent] = clientEmailSpy.mock.calls[0];
+    expect(clientTo).toBe("decrypted:cipher-client");
+    expect(clientContent.subject).toContain("Risk Profile");
   });
 });
 
@@ -159,12 +182,12 @@ describe("triggerMeetingScheduled", () => {
       client: { id: "client-1", name: "Alex", emailCiphertext: "cipher-client" },
     });
     await triggerMeetingScheduled("eng-1");
-    expect(sendSpy).toHaveBeenCalledTimes(1);
-    const call = sendSpy.mock.calls[0][0];
-    expect(call.recipientUserId).toBe("client-1");
-    expect(call.category).toBe("milestone");
-    expect(call.referenceId).toBe("eng-1");
-    expect(call.message).toContain("2026-06-10");
+    // Meeting-scheduled is a client-only branded email carrying the date in the body.
+    expect(sendSpy).not.toHaveBeenCalled();
+    expect(clientEmailSpy).toHaveBeenCalledTimes(1);
+    const [clientTo, clientContent] = clientEmailSpy.mock.calls[0];
+    expect(clientTo).toBe("decrypted:cipher-client");
+    expect(clientContent.bodyHtml).toContain("2026-06-10");
   });
 });
 
