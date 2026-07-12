@@ -50,7 +50,6 @@ describe("getRestartIntakeEligibility", () => {
   });
 
   it("allows restart even after an assessment has started", async () => {
-    // A started/completed assessment no longer blocks — restart archives it.
     const result = await getRestartIntakeEligibility({
       assignmentStatus: "ACTIVE",
       intakeWaived: false,
@@ -95,22 +94,18 @@ describe("restartClientIntakeForUser", () => {
   it("archives interviews + assessments, clears scope, and creates a fresh interview", async () => {
     const result = await restartClientIntakeForUser("client-1");
 
-    // Old interviews archived (soft, via archivedAt).
     expect(mocks.interviewUpdateMany).toHaveBeenCalledWith({
       where: { userId: "client-1", archivedAt: null },
       data: { archivedAt: expect.any(Date) },
     });
-    // Started/completed assessments archived.
     expect(mocks.assessmentUpdateMany).toHaveBeenCalledWith({
       where: { userId: "client-1", status: { in: ["IN_PROGRESS", "COMPLETED"] } },
       data: { status: "ARCHIVED" },
     });
-    // Engagement scope cleared so the assessment re-locks until re-approval.
     expect(mocks.assignmentUpdateMany).toHaveBeenCalledWith({
       where: { clientId: "client-1", status: "ACTIVE" },
       data: { includedPillars: [], focusAreas: [] },
     });
-    // Fresh interview created at the start.
     expect(mocks.interviewCreate).toHaveBeenCalledWith({
       data: { userId: "client-1", status: "NOT_STARTED", currentQuestionIndex: 0 },
     });

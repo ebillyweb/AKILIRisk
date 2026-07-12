@@ -113,6 +113,7 @@ export async function getClientPipeline(
       client: {
         include: {
           assessments: {
+            where: { status: { not: "ARCHIVED" } },
             orderBy: {
               updatedAt: 'desc',
             },
@@ -529,6 +530,7 @@ export async function getClientDetail(
             orderBy: { updatedAt: 'desc' },
           },
           assessments: {
+            where: { status: { not: "ARCHIVED" } },
             orderBy: { completedAt: 'desc' },
             include: {
               scores: {

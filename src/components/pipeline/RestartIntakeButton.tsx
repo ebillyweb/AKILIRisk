@@ -42,16 +42,20 @@ export function RestartIntakeButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      className="w-full justify-start"
-      disabled={pending || disabled}
-      title={disabled ? disabledReason : undefined}
-      onClick={handleClick}
-    >
-      <RotateCcw className="mr-2 h-4 w-4" />
-      {pending ? "Restarting intake…" : "Restart intake"}
-    </Button>
+    <div className="space-y-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-start"
+        disabled={pending || disabled}
+        onClick={handleClick}
+      >
+        <RotateCcw className="mr-2 h-4 w-4" />
+        {pending ? "Restarting intake…" : "Restart intake"}
+      </Button>
+      {disabled && disabledReason ? (
+        <p className="text-xs text-muted-foreground">{disabledReason}</p>
+      ) : null}
+    </div>
   );
 }

@@ -66,11 +66,10 @@ export async function restartClientIntakeForUser(clientId: string): Promise<{
 }> {
   return prisma.$transaction(async (tx) => {
     const archivedAt = new Date();
-    const archived = await tx.intakeInterview.updateMany({
+    const archivedInterviews = await tx.intakeInterview.updateMany({
       where: { userId: clientId, archivedAt: null },
       data: { archivedAt },
     });
-
     const archivedAssessments = await tx.assessment.updateMany({
       where: {
         userId: clientId,
@@ -96,7 +95,7 @@ export async function restartClientIntakeForUser(clientId: string): Promise<{
 
     return {
       interview,
-      archivedCount: archived.count,
+      archivedCount: archivedInterviews.count,
       archivedAssessmentCount: archivedAssessments.count,
     };
   });
