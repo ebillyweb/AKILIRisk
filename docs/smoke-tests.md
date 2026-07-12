@@ -81,16 +81,13 @@ exist on preview with the default passwords.
 
 - The **`playwright-report`** artifact (traces, screenshots, video) is uploaded
   on every run and retained for 14 days.
-- On a scheduled **failure**, the workflow opens a GitHub issue labelled
-  `smoke-failure` (or comments on the existing open one).
-- On the next scheduled **pass**, that issue is auto-closed.
+- Every run posts its **pass/fail** outcome to Slack (see below).
 
 ## Slack notifications
 
-Every run posts its outcome — **pass and fail** — to a Slack channel, in
-addition to the GitHub-issue reporting above. This is optional: if the webhook
-secret is unset the notify steps no-op and the run still succeeds (so forks and
-unconfigured repos aren't broken).
+Every run posts its outcome — **pass and fail** — to a Slack channel. This is
+optional: if the webhook secret is unset the notify steps no-op and the run
+still succeeds (so forks and unconfigured repos aren't broken).
 
 Setup:
 
@@ -108,12 +105,8 @@ run; failures also point at the `playwright-report` artifact.
 | `SLACK_WEBHOOK_URL` | Slack Incoming Webhook URL for pass/fail pings. Unset ⇒ notifications skipped. |
 
 > **Note on cadence:** the scheduled suite runs every 6 hours, so
-> pass-and-fail means ~4 green pings/day. To cut the noise to just failures
-> (plus the next recovery), gate the **Notify Slack (success)** step the same
-> way the issue-resolution step is gated — swap its `if:` for
-> `success() && env.SLACK_ENABLED == 'true' && github.event_name == 'schedule'`
-> and add a check that an open `smoke-failure` issue exists, or simply delete
-> the success step to get failure-only alerts.
+> pass-and-fail means ~4 green pings/day. To get failure-only alerts, delete
+> the **Notify Slack (success)** step in the workflow.
 
 ## Extending scope later
 
