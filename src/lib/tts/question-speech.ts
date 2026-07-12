@@ -5,6 +5,7 @@ import {
   buildQuestionNarrationText,
   questionTtsBodySchema,
 } from "@/lib/tts/question-tts-body";
+import { mapQuestionTtsError } from "@/lib/tts/question-tts-errors";
 
 export { buildQuestionNarrationText, questionTtsBodySchema } from "@/lib/tts/question-tts-body";
 export type { QuestionTtsBody } from "@/lib/tts/question-tts-body";
@@ -76,9 +77,10 @@ export async function handleQuestionTtsRequest(
     });
   } catch (error) {
     console.error("Question TTS error:", error);
+    const mapped = mapQuestionTtsError(error);
     return NextResponse.json(
-      { success: false, error: "Failed to generate speech" },
-      { status: 500 }
+      { success: false, error: mapped.error },
+      { status: mapped.status }
     );
   }
 }

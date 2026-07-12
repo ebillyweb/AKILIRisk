@@ -14,8 +14,8 @@ function playwrightBaseHostname(): string {
   }
 }
 
-/** Remote preview may omit OPENAI_API_KEY; local runs need the app configured. */
-function intakeTtsRemoteE2EAllowed(): boolean {
+/** Local runs need the app configured; preview is the scheduled smoke target. */
+function intakeTtsSynthesisE2EAllowed(): boolean {
   const host = playwrightBaseHostname();
   const isLocal = host === "localhost" || host === "127.0.0.1";
   if (isLocal) return true;
@@ -41,13 +41,37 @@ async function postIntakeTts(
   });
 }
 
-function skipWhenOpenAiUnavailable(status: number, payload: { error?: string }) {
+async function readTtsErrorPayload(response: import("@playwright/test").APIResponse) {
+  try {
+    return (await response.json()) as { error?: string };
+  } catch {
+    return {};
+  }
+}
+
+function skipWhenOpenAiKeyMissing(status: number, payload: { error?: string }) {
   if (status === 503 && payload.error?.includes("OPENAI_API_KEY")) {
     test.skip(
       true,
       "OPENAI_API_KEY is not configured on the target deployment",
     );
   }
+}
+
+function synthesisFailureHint(
+  status: number,
+  payload: { error?: string },
+  rawBody: string,
+): string {
+  return [
+    "intake TTS synthesis failed",
+    `status=${status}`,
+    payload.error ? `error=${payload.error}` : null,
+    "If preview recently exhausted OpenAI quota, replenish credits and rerun smoke.",
+    rawBody ? `body=${rawBody.slice(0, 240)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" — ");
 }
 
 test.describe("intake question TTS endpoint", () => {
@@ -58,16 +82,10 @@ test.describe("intake question TTS endpoint", () => {
     expect(response.status()).toBe(401);
   });
 
-  test.describe("authenticated synthesis", () => {
-    test.skip(
-      !intakeTtsRemoteE2EAllowed(),
-      "Intake TTS synthesis e2e uses localhost by default, or set E2E_INTAKE_TTS_REMOTE=1 when the remote deployment has OPENAI_API_KEY",
-    );
-
-    test("advisor receives mp3 bytes for question text only", async ({
-      page,
-      request,
-    }) => {
+  test(
+    "advisor receives mp3 bytes for question text (quota canary)",
+    { tag: "@smoke" },
+    async ({ page, request }) => {
       test.setTimeout(90_000);
 
       await new SignInPage(page).signInAs("advisor");
@@ -76,23 +94,33 @@ test.describe("intake question TTS endpoint", () => {
       const response = await postIntakeTts(request, cookies, {
         questionText: SMOKE_QUESTION_TEXT,
       });
+      const status = response.status();
+      const contentType = response.headers()["content-type"] ?? "";
+      const body = await response.body();
 
-      if (!response.ok()) {
+      if (status !== 200) {
+        const rawBody = body.toString("utf8");
         let payload: { error?: string } = {};
         try {
-          payload = (await response.json()) as { error?: string };
+          payload = JSON.parse(rawBody) as { error?: string };
         } catch {
           // non-JSON error body
         }
-        skipWhenOpenAiUnavailable(response.status(), payload);
+        skipWhenOpenAiKeyMissing(status, payload);
+        expect(status, synthesisFailureHint(status, payload, rawBody)).toBe(200);
+        return;
       }
 
-      expect(response.status(), await response.text()).toBe(200);
-      expect(response.headers()["content-type"] ?? "").toMatch(/^audio\/mpeg/);
-
-      const body = await response.body();
+      expect(contentType).toMatch(/^audio\/mpeg/);
       expect(body.length).toBeGreaterThan(100);
-    });
+    },
+  );
+
+  test.describe("authenticated synthesis (full e2e)", () => {
+    test.skip(
+      !intakeTtsSynthesisE2EAllowed(),
+      "Full intake TTS e2e uses localhost by default, or set E2E_INTAKE_TTS_REMOTE=1 for remote synthesis checks",
+    );
 
     test("legacy payload fields do not fail validation", async ({ page, request }) => {
       test.setTimeout(90_000);
@@ -109,15 +137,8 @@ test.describe("intake question TTS endpoint", () => {
         totalQuestions: 12,
       });
 
-      if (!response.ok()) {
-        let payload: { error?: string } = {};
-        try {
-          payload = (await response.json()) as { error?: string };
-        } catch {
-          // non-JSON error body
-        }
-        skipWhenOpenAiUnavailable(response.status(), payload);
-      }
+      const payload = await readTtsErrorPayload(response);
+      skipWhenOpenAiKeyMissing(response.status(), payload);
 
       expect(response.status(), await response.text()).toBe(200);
       expect(response.headers()["content-type"] ?? "").toMatch(/^audio\/mpeg/);

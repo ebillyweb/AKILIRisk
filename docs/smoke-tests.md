@@ -45,6 +45,13 @@ Negative (`tests/smoke/auth-edge-cases.spec.ts`):
 - An advisor navigating directly to `/admin` is bounced with
   `error=unauthorized` and sees the "Access denied" notice.
 
+Intake TTS (`tests/smoke/intake-tts-endpoint.spec.ts`):
+
+- Advisor-authenticated `POST /api/intake/tts` returns `audio/mpeg` bytes.
+  Fails when preview's OpenAI quota is exhausted (operator hint in the
+  assertion message) so replenishment issues surface via the scheduled run.
+  Skips only when `OPENAI_API_KEY` is missing on the deployment.
+
 The client-role negative cases (client blocked from `/admin` and `/advisor`)
 are left untagged because they sign in as a client, which needs
 `ENABLE_TEST_AUTH=1` on preview — see [Extending scope](#extending-scope-later).
