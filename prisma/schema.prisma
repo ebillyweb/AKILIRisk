@@ -369,6 +369,8 @@ model PlatformSettings {
   advisorWorkflowTasksEnabled       Boolean @default(false)
   /** Workflow nav: Follow-ups (hidden until super admin enables). */
   advisorWorkflowFollowUpsEnabled   Boolean @default(false)
+  /** Pipeline chevron + post-report monitoring phase (hidden until super admin enables). */
+  advisorMonitoringEnabled          Boolean @default(false)
   /// A2 (BRD §4.2 + §7.1): risk-tier cutoffs in 0–100 resilience-percent space.
   /// Configured at /admin/scoring/thresholds. NEW scoring runs use these;
   /// previously-persisted PillarScore.riskLevel rows are NOT retroactively

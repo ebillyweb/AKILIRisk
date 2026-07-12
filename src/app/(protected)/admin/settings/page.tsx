@@ -96,6 +96,7 @@ export default async function AdminSettingsPage() {
               initialRiskIntelligence={flagsRes.data.advisorRiskIntelligenceEnabled}
               initialWorkflowTasks={flagsRes.data.advisorWorkflowTasksEnabled}
               initialWorkflowFollowUps={flagsRes.data.advisorWorkflowFollowUpsEnabled}
+              initialMonitoring={flagsRes.data.advisorMonitoringEnabled}
             />
           )}
         </CardContent>

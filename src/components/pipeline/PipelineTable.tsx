@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 interface PipelineTableProps {
   clients: PipelineClient[];
   showDocumentsColumn?: boolean;
+  monitoringEnabled?: boolean;
 }
 
 const columnHelper = createColumnHelper<PipelineClient>();
@@ -35,6 +36,7 @@ const columnHelper = createColumnHelper<PipelineClient>();
 export function PipelineTable({
   clients,
   showDocumentsColumn = true,
+  monitoringEnabled = false,
 }: PipelineTableProps) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "lastActivity", desc: true },
@@ -104,6 +106,7 @@ export function PipelineTable({
               <StageProgressBar
                 currentStage={stage}
                 showDocumentsStage={showDocumentsColumn}
+                monitoringEnabled={monitoringEnabled}
               />
             </div>
           );
@@ -168,7 +171,7 @@ export function PipelineTable({
     }
 
     return baseColumns;
-  }, [showDocumentsColumn]);
+  }, [showDocumentsColumn, monitoringEnabled]);
 
   const table = useReactTable({
     data: clients,

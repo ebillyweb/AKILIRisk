@@ -18,6 +18,7 @@ import {
   isEnterpriseDocumentRequirementsWorkspaceEnabled,
   resolveEnterpriseMemberVisibilityContext,
 } from '@/lib/enterprise/advisor-member-visibility';
+import { getPlatformFeatureFlags } from '@/lib/platform/feature-flags';
 import { prisma } from '@/lib/db';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
 
@@ -33,10 +34,11 @@ export async function getClientPipelineData(options?: { inactive?: boolean }) {
       countInactiveClientAssignmentsForAdvisorUser(userId),
     ]);
     const metrics = { ...getPipelineMetrics(clients), inactive: inactiveCount };
-    const [profile, policyContext, visibilityContext] = await Promise.all([
+    const [profile, policyContext, visibilityContext, platformFlags] = await Promise.all([
       getAdvisorProfileOrThrow(userId),
       getAdvisorClientDataPolicyContext(userId),
       resolveEnterpriseMemberVisibilityContext(userId),
+      getPlatformFeatureFlags(),
     ]);
 
     return {
@@ -49,6 +51,7 @@ export async function getClientPipelineData(options?: { inactive?: boolean }) {
           policyContext.effective.pseudonymousWorkspaceLabeling,
         documentRequirementsEnabled:
           isEnterpriseDocumentRequirementsWorkspaceEnabled(visibilityContext),
+        monitoringEnabled: platformFlags.monitoringEnabled,
       },
     };
   } catch (error) {

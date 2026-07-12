@@ -89,7 +89,7 @@ async function PipelineContent({
     );
   }
 
-  const { clients, metrics, pseudonymousWorkspaceLabeling, documentRequirementsEnabled } =
+  const { clients, metrics, pseudonymousWorkspaceLabeling, documentRequirementsEnabled, monitoringEnabled } =
     result.data!;
 
   return (
@@ -113,6 +113,7 @@ async function PipelineContent({
         initialPage={initialPage}
         pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
         documentRequirementsEnabled={documentRequirementsEnabled}
+        monitoringEnabled={monitoringEnabled}
       />
     </div>
   );

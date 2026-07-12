@@ -224,6 +224,70 @@ export function aggregatePipelineMetricsByProcessState(
   return counts;
 }
 
+export const PIPELINE_MONITORING_PHASE = 'monitoring' as const;
+export type PipelineChevronPhase =
+  | PipelineProcessPhase
+  | typeof PIPELINE_MONITORING_PHASE;
+
+export type PipelineChevronStepStatus = 'complete' | 'current' | 'future';
+
+export const PIPELINE_CHEVRON_SHORT_LABELS: Record<PipelineChevronPhase, string> = {
+  intake: 'Intake',
+  assessment: 'Assess',
+  report: 'Report',
+  monitoring: 'Monitor',
+};
+
+/** Ordered chevron phases for the pipeline journey rail. */
+export function getPipelineChevronPhases(
+  monitoringEnabled = false,
+): PipelineChevronPhase[] {
+  return monitoringEnabled
+    ? ['intake', 'assessment', 'report', 'monitoring']
+    : ['intake', 'assessment', 'report'];
+}
+
+/** Maps workflow stage to completed and active chevron indices. */
+export function getPipelineChevronProgress(
+  stage: ClientWorkflowStage,
+  documentRequirementsEnabled = true,
+  monitoringEnabled = false,
+): { completedThrough: number; activeIndex: number } {
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    stage,
+    documentRequirementsEnabled,
+  );
+  const lastIndex = getPipelineChevronPhases(monitoringEnabled).length - 1;
+
+  switch (displayStage) {
+    case 'INVITED':
+    case 'REGISTERED':
+    case 'INTAKE_IN_PROGRESS':
+      return { completedThrough: -1, activeIndex: 0 };
+    case 'INTAKE_COMPLETE':
+      return { completedThrough: 0, activeIndex: 1 };
+    case 'ASSESSMENT_IN_PROGRESS':
+      return { completedThrough: 0, activeIndex: 1 };
+    case 'ASSESSMENT_COMPLETE':
+      return { completedThrough: 1, activeIndex: 2 };
+    case 'DOCUMENTS_REQUIRED':
+      return { completedThrough: 1, activeIndex: 2 };
+    case 'COMPLETE':
+      return { completedThrough: lastIndex, activeIndex: lastIndex };
+    default:
+      return { completedThrough: -1, activeIndex: 0 };
+  }
+}
+
+export function getPipelineChevronStepStatus(
+  phaseIndex: number,
+  progress: { completedThrough: number; activeIndex: number },
+): PipelineChevronStepStatus {
+  if (phaseIndex <= progress.completedThrough) return 'complete';
+  if (phaseIndex === progress.activeIndex) return 'current';
+  return 'future';
+}
+
 /**
  * Returns numeric order for stage sorting
  */

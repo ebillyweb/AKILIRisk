@@ -36,6 +36,7 @@ const updateFlagsSchema = z.object({
   advisorRiskIntelligenceEnabled: z.boolean(),
   advisorWorkflowTasksEnabled: z.boolean(),
   advisorWorkflowFollowUpsEnabled: z.boolean(),
+  advisorMonitoringEnabled: z.boolean(),
 });
 
 const updateMfaPolicySchema = z.object({
@@ -63,6 +64,7 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
         advisorRiskIntelligenceEnabled: true,
         advisorWorkflowTasksEnabled: true,
         advisorWorkflowFollowUpsEnabled: true,
+        advisorMonitoringEnabled: true,
       },
     });
 
@@ -74,12 +76,14 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
         advisorWorkflowTasksEnabled: parsed.data.advisorWorkflowTasksEnabled,
         advisorWorkflowFollowUpsEnabled: parsed.data.advisorWorkflowFollowUpsEnabled,
+        advisorMonitoringEnabled: parsed.data.advisorMonitoringEnabled,
       },
       update: {
         advisorGovernanceDashboardEnabled: parsed.data.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
         advisorWorkflowTasksEnabled: parsed.data.advisorWorkflowTasksEnabled,
         advisorWorkflowFollowUpsEnabled: parsed.data.advisorWorkflowFollowUpsEnabled,
+        advisorMonitoringEnabled: parsed.data.advisorMonitoringEnabled,
       },
     });
 
@@ -94,12 +98,14 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
         advisorRiskIntelligenceEnabled: true,
         advisorWorkflowTasksEnabled: false,
         advisorWorkflowFollowUpsEnabled: false,
+        advisorMonitoringEnabled: false,
       },
       afterData: {
         advisorGovernanceDashboardEnabled: parsed.data.advisorGovernanceDashboardEnabled,
         advisorRiskIntelligenceEnabled: parsed.data.advisorRiskIntelligenceEnabled,
         advisorWorkflowTasksEnabled: parsed.data.advisorWorkflowTasksEnabled,
         advisorWorkflowFollowUpsEnabled: parsed.data.advisorWorkflowFollowUpsEnabled,
+        advisorMonitoringEnabled: parsed.data.advisorMonitoringEnabled,
       },
     });
 
@@ -107,6 +113,7 @@ export async function updatePlatformAdvisorFeatureFlags(input: unknown) {
     revalidatePath("/advisor");
     revalidatePath("/advisor/dashboard");
     revalidatePath("/advisor/intelligence");
+    revalidatePath("/advisor/pipeline");
 
     return { success: true as const };
   } catch (e) {
@@ -129,6 +136,7 @@ export async function getPlatformAdvisorFeatureFlagsForAdmin() {
           advisorRiskIntelligenceEnabled: true,
           advisorWorkflowTasksEnabled: false,
           advisorWorkflowFollowUpsEnabled: false,
+          advisorMonitoringEnabled: false,
           mfaRequiredForAllRoles: false,
         },
       };
@@ -140,6 +148,7 @@ export async function getPlatformAdvisorFeatureFlagsForAdmin() {
         advisorRiskIntelligenceEnabled: row.advisorRiskIntelligenceEnabled,
         advisorWorkflowTasksEnabled: row.advisorWorkflowTasksEnabled,
         advisorWorkflowFollowUpsEnabled: row.advisorWorkflowFollowUpsEnabled,
+        advisorMonitoringEnabled: row.advisorMonitoringEnabled,
         mfaRequiredForAllRoles: row.mfaRequiredForAllRoles,
       },
     };

@@ -9,6 +9,7 @@ export type AdvisorPlatformFeatureFlags = {
   riskIntelligenceEnabled: boolean;
   workflowTasksEnabled: boolean;
   workflowFollowUpsEnabled: boolean;
+  monitoringEnabled: boolean;
 };
 
 /**
@@ -28,6 +29,7 @@ export async function getPlatformFeatureFlags(): Promise<AdvisorPlatformFeatureF
       riskIntelligenceEnabled: true,
       workflowTasksEnabled: false,
       workflowFollowUpsEnabled: false,
+      monitoringEnabled: false,
     };
   }
 
@@ -43,6 +45,7 @@ export async function getPlatformFeatureFlags(): Promise<AdvisorPlatformFeatureF
         advisorRiskIntelligenceEnabled: true,
         advisorWorkflowTasksEnabled: false,
         advisorWorkflowFollowUpsEnabled: false,
+        advisorMonitoringEnabled: false,
       },
     });
   }
@@ -52,5 +55,6 @@ export async function getPlatformFeatureFlags(): Promise<AdvisorPlatformFeatureF
     riskIntelligenceEnabled: row.advisorRiskIntelligenceEnabled,
     workflowTasksEnabled: row.advisorWorkflowTasksEnabled,
     workflowFollowUpsEnabled: row.advisorWorkflowFollowUpsEnabled,
+    monitoringEnabled: row.advisorMonitoringEnabled ?? false,
   };
 }

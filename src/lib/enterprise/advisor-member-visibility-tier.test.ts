@@ -13,6 +13,7 @@ const flags = {
   riskIntelligenceEnabled: true,
   workflowTasksEnabled: false,
   workflowFollowUpsEnabled: false,
+  monitoringEnabled: false,
 };
 
 describe("isVisibilityOptionAtModuleTier", () => {

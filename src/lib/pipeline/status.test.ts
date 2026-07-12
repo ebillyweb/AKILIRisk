@@ -6,7 +6,7 @@ import {
 } from './documents';
 import { validateStoredDocumentMime } from '@/lib/documents/validation';
 
-import { computeClientStage, isStalled, isWorkflowEscalation, aggregatePipelineMetricsByProcessState, getAdvisorPipelineProcessLabel, getAdvisorPipelineProcessStateLabel, getAdvisorPipelineStageLabel, resolveAdvisorPipelineDisplayStage } from './status';
+import { computeClientStage, isStalled, isWorkflowEscalation, aggregatePipelineMetricsByProcessState, getAdvisorPipelineProcessLabel, getAdvisorPipelineProcessStateLabel, getAdvisorPipelineStageLabel, getPipelineChevronPhases, getPipelineChevronProgress, getPipelineChevronStepStatus, resolveAdvisorPipelineDisplayStage } from './status';
 
 describe('aggregateMandatoryDocumentCounts', () => {
   it('counts only required rows per client', () => {
@@ -170,6 +170,39 @@ describe('aggregatePipelineMetricsByProcessState', () => {
       assessment: { 'not started': 0, 'in progress': 0, complete: 2 },
       report: { 'not started': 0, 'in progress': 0, complete: 1 },
     });
+  });
+});
+
+describe('pipeline chevron progress', () => {
+  it('returns three phases when monitoring is disabled', () => {
+    expect(getPipelineChevronPhases(false)).toEqual([
+      'intake',
+      'assessment',
+      'report',
+    ]);
+  });
+
+  it('returns four phases when monitoring is enabled', () => {
+    expect(getPipelineChevronPhases(true)).toEqual([
+      'intake',
+      'assessment',
+      'report',
+      'monitoring',
+    ]);
+  });
+
+  it('marks intake complete and assessment current after intake completes', () => {
+    const progress = getPipelineChevronProgress('INTAKE_COMPLETE');
+    expect(progress).toEqual({ completedThrough: 0, activeIndex: 1 });
+    expect(getPipelineChevronStepStatus(0, progress)).toBe('complete');
+    expect(getPipelineChevronStepStatus(1, progress)).toBe('current');
+    expect(getPipelineChevronStepStatus(2, progress)).toBe('future');
+  });
+
+  it('places completed clients on the monitoring chevron when enabled', () => {
+    const progress = getPipelineChevronProgress('COMPLETE', true, true);
+    expect(progress).toEqual({ completedThrough: 3, activeIndex: 3 });
+    expect(getPipelineChevronStepStatus(3, progress)).toBe('complete');
   });
 });
 

@@ -1,81 +1,107 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import {
-  getStageOrder,
-  resolveAdvisorPipelineDisplayStage,
+  getPipelineChevronPhases,
+  getPipelineChevronProgress,
+  getPipelineChevronStepStatus,
+  PIPELINE_CHEVRON_SHORT_LABELS,
+  type PipelineChevronPhase,
 } from "@/lib/pipeline/status";
 import type { ClientWorkflowStage } from "@prisma/client";
 
 interface StageIndicatorProps {
   currentStage: ClientWorkflowStage;
   className?: string;
-  /** Table rows: badge + segment bar. Detail views can use full stepper later. */
+  /** Table rows: chevron process rail. Detail views can use full stepper later. */
   variant?: "bar" | "stepper";
   /** When false, omit the documents segment from workflow visuals. */
   showDocumentsStage?: boolean;
+  /** When true, include the monitoring chevron (platform admin flag). */
+  monitoringEnabled?: boolean;
 }
 
-const WORKFLOW_SEGMENTS: {
-  stage: ClientWorkflowStage;
-  label: string;
-  shortLabel: string;
-}[] = [
-  { stage: "INVITED", label: "Invited", shortLabel: "Inv" },
-  { stage: "REGISTERED", label: "Registered", shortLabel: "Reg" },
-  { stage: "INTAKE_IN_PROGRESS", label: "Intake", shortLabel: "Intake" },
-  {
-    stage: "ASSESSMENT_IN_PROGRESS",
-    label: "Assessment",
-    shortLabel: "Assess",
+const CHEVRON_STEP_STYLES: Record<
+  PipelineChevronPhase,
+  { complete: string; current: string; future: string }
+> = {
+  intake: {
+    complete: "border-sky-500/35 bg-sky-500/15 text-sky-950 dark:text-sky-100",
+    current:
+      "border-sky-600/50 bg-sky-500/20 text-sky-950 ring-1 ring-sky-500/35 dark:text-sky-50",
+    future: "border-border/70 bg-muted/30 text-muted-foreground",
   },
-  { stage: "DOCUMENTS_REQUIRED", label: "Documents", shortLabel: "Docs" },
-  { stage: "COMPLETE", label: "Complete", shortLabel: "Done" },
-];
+  assessment: {
+    complete:
+      "border-amber-500/35 bg-amber-500/15 text-amber-950 dark:text-amber-100",
+    current:
+      "border-amber-600/50 bg-amber-500/20 text-amber-950 ring-1 ring-amber-500/35 dark:text-amber-50",
+    future: "border-border/70 bg-muted/30 text-muted-foreground",
+  },
+  report: {
+    complete:
+      "border-emerald-500/35 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100",
+    current:
+      "border-emerald-600/50 bg-emerald-500/20 text-emerald-950 ring-1 ring-emerald-500/35 dark:text-emerald-50",
+    future: "border-border/70 bg-muted/30 text-muted-foreground",
+  },
+  monitoring: {
+    complete:
+      "border-violet-500/35 bg-violet-500/15 text-violet-950 dark:text-violet-100",
+    current:
+      "border-violet-600/50 bg-violet-500/20 text-violet-950 ring-1 ring-violet-500/35 dark:text-violet-50",
+    future: "border-border/70 bg-muted/30 text-muted-foreground",
+  },
+};
 
-function workflowSegments(showDocumentsStage: boolean) {
-  return showDocumentsStage
-    ? WORKFLOW_SEGMENTS
-    : WORKFLOW_SEGMENTS.filter((segment) => segment.stage !== "DOCUMENTS_REQUIRED");
-}
-
-/** Slim segmented bar for pipeline table rows. */
+/** Compact intake → assessment → report (+ monitoring) chevron rail for pipeline rows. */
 export function StageProgressBar({
   currentStage,
   className,
   showDocumentsStage = true,
-}: Pick<StageIndicatorProps, "currentStage" | "className" | "showDocumentsStage">) {
-  const segments = workflowSegments(showDocumentsStage);
-  const displayStage = resolveAdvisorPipelineDisplayStage(
+  monitoringEnabled = false,
+}: Pick<
+  StageIndicatorProps,
+  "currentStage" | "className" | "showDocumentsStage" | "monitoringEnabled"
+>) {
+  const phases = getPipelineChevronPhases(monitoringEnabled);
+  const progress = getPipelineChevronProgress(
     currentStage,
     showDocumentsStage,
+    monitoringEnabled,
   );
-  const currentOrder = getStageOrder(displayStage);
+  const activePhase = phases[progress.activeIndex] ?? phases[0]!;
 
   return (
     <div
-      className={cn("flex w-full min-w-0 gap-0.5", className)}
+      className={cn("flex min-w-0 items-center", className)}
       role="img"
-      aria-label={`Workflow progress: ${segments.find((s) => getStageOrder(s.stage) === currentOrder)?.label ?? displayStage}`}
+      aria-label={`Workflow progress: ${PIPELINE_CHEVRON_SHORT_LABELS[activePhase]}`}
     >
-      {segments.map((segment) => {
-        const segmentOrder = getStageOrder(segment.stage);
-        const isComplete = segmentOrder < currentOrder;
-        const isCurrent = segmentOrder === currentOrder;
+      {phases.map((phase, index) => {
+        const stepStatus = getPipelineChevronStepStatus(index, progress);
+        const styles = CHEVRON_STEP_STYLES[phase][stepStatus];
 
         return (
-          <div
-            key={segment.stage}
-            title={segment.label}
-            className={cn(
-              "h-1.5 min-w-0 flex-1 rounded-full transition-colors",
-              isComplete && "bg-primary",
-              isCurrent && "bg-primary ring-1 ring-primary/40 ring-offset-1",
-              !isComplete &&
-                !isCurrent &&
-                "bg-muted-foreground/15"
-            )}
-          />
+          <div key={phase} className="flex min-w-0 flex-1 items-center">
+            <div
+              title={PIPELINE_CHEVRON_SHORT_LABELS[phase]}
+              className={cn(
+                "flex h-5 min-w-0 flex-1 items-center justify-center truncate rounded-md border px-1 text-[9px] font-medium leading-none sm:text-[10px]",
+                styles,
+              )}
+            >
+              <span className="truncate">{PIPELINE_CHEVRON_SHORT_LABELS[phase]}</span>
+            </div>
+            {index < phases.length - 1 ? (
+              <ChevronRight
+                className="mx-0.5 size-3 shrink-0 text-muted-foreground/45"
+                aria-hidden
+              />
+            ) : null}
+          </div>
         );
       })}
     </div>
@@ -87,27 +113,30 @@ function StageStepper({
   currentStage,
   className,
   showDocumentsStage = true,
-}: Pick<StageIndicatorProps, "currentStage" | "className" | "showDocumentsStage">) {
-  const segments = workflowSegments(showDocumentsStage);
-  const displayStage = resolveAdvisorPipelineDisplayStage(
+  monitoringEnabled = false,
+}: Pick<
+  StageIndicatorProps,
+  "currentStage" | "className" | "showDocumentsStage" | "monitoringEnabled"
+>) {
+  const phases = getPipelineChevronPhases(monitoringEnabled);
+  const progress = getPipelineChevronProgress(
     currentStage,
     showDocumentsStage,
+    monitoringEnabled,
   );
-  const currentOrder = getStageOrder(displayStage);
 
   return (
     <div className={cn("flex items-center gap-1.5", className)}>
-      {segments.map((segment, index) => {
-        const segmentOrder = getStageOrder(segment.stage);
-        const isCompleted = segmentOrder < currentOrder;
-        const isCurrent = segmentOrder === currentOrder;
-        const isFuture = segmentOrder > currentOrder;
+      {phases.map((phase, index) => {
+        const stepStatus = getPipelineChevronStepStatus(index, progress);
+        const isCompleted = stepStatus === "complete";
+        const isCurrent = stepStatus === "current";
 
         return (
-          <div key={segment.stage} className="flex items-center">
+          <div key={phase} className="flex items-center">
             <div
               className="flex flex-col items-center gap-0.5"
-              title={segment.label}
+              title={PIPELINE_CHEVRON_SHORT_LABELS[phase]}
             >
               <div
                 className={cn(
@@ -115,21 +144,21 @@ function StageStepper({
                   isCompleted && "bg-primary text-primary-foreground",
                   isCurrent &&
                     "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1",
-                  isFuture &&
-                    "border border-muted-foreground/25 bg-muted"
+                  stepStatus === "future" &&
+                    "border border-muted-foreground/25 bg-muted",
                 )}
               >
                 {isCompleted ? "✓" : null}
               </div>
               <span className="text-[0.6rem] leading-none text-muted-foreground">
-                {segment.shortLabel}
+                {PIPELINE_CHEVRON_SHORT_LABELS[phase]}
               </span>
             </div>
-            {index < segments.length - 1 ? (
+            {index < phases.length - 1 ? (
               <div
                 className={cn(
                   "mx-0.5 h-px w-2 transition-colors",
-                  isCompleted ? "bg-primary" : "bg-muted-foreground/20"
+                  isCompleted ? "bg-primary" : "bg-muted-foreground/20",
                 )}
                 aria-hidden
               />
@@ -146,6 +175,7 @@ export function StageIndicator({
   className,
   variant = "bar",
   showDocumentsStage = true,
+  monitoringEnabled = false,
 }: StageIndicatorProps) {
   if (variant === "stepper") {
     return (
@@ -153,6 +183,7 @@ export function StageIndicator({
         currentStage={currentStage}
         className={className}
         showDocumentsStage={showDocumentsStage}
+        monitoringEnabled={monitoringEnabled}
       />
     );
   }
@@ -162,6 +193,7 @@ export function StageIndicator({
       currentStage={currentStage}
       className={className}
       showDocumentsStage={showDocumentsStage}
+      monitoringEnabled={monitoringEnabled}
     />
   );
 }
