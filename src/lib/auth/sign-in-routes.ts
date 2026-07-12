@@ -1,3 +1,4 @@
+import { stripSpuriousCallbackQuery } from "@/lib/auth-callback-path";
 import { matchesPathPrefix } from "@/lib/auth/mfa-gate";
 import { isSignInRole, type SignInRole } from "@/lib/auth/sign-in-roles";
 import { stripTenantPathPrefix } from "@/lib/client/tenant-path-prefix-client";
@@ -133,7 +134,10 @@ export function buildSignInHref(options: {
   }
 
   if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
-    url.searchParams.set("callbackUrl", callbackUrl);
+    url.searchParams.set(
+      "callbackUrl",
+      stripSpuriousCallbackQuery(callbackUrl),
+    );
   }
 
   if (email?.trim()) {

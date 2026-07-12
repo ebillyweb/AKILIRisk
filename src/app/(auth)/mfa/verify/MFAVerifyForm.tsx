@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signOut } from "next-auth/react";
-import { safeAfterSignInPath } from "@/lib/auth-callback-path";
+import { getSession, signOut } from "next-auth/react";
+import { resolvePostSignInPath } from "@/lib/auth-callback-path";
 import { scopePostAuthPath } from "@/lib/client/tenant-path-prefix-client";
 import { broadcastAuthSessionChange } from "@/lib/auth/session-sync";
 import { AuthPanel } from "@/components/auth/AuthPanel";
@@ -45,7 +45,12 @@ export function MFAVerifyForm({ callbackUrl }: MFAVerifyFormProps) {
       }
 
       broadcastAuthSessionChange();
-      window.location.assign(scopePostAuthPath(safeAfterSignInPath(callbackUrl)));
+      const session = await getSession();
+      window.location.assign(
+        scopePostAuthPath(
+          resolvePostSignInPath(callbackUrl, session?.user?.role),
+        ),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -80,7 +85,12 @@ export function MFAVerifyForm({ callbackUrl }: MFAVerifyFormProps) {
       }
 
       broadcastAuthSessionChange();
-      window.location.assign(scopePostAuthPath(safeAfterSignInPath(callbackUrl)));
+      const session = await getSession();
+      window.location.assign(
+        scopePostAuthPath(
+          resolvePostSignInPath(callbackUrl, session?.user?.role),
+        ),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {

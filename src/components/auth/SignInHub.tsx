@@ -12,10 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  isPlatformAdminRole,
-  normalizeUserRoleString,
-} from "@/lib/auth-roles";
+import { resolvePostSignInPath } from "@/lib/auth-callback-path";
 import {
   buildSignInHref,
   isEnterpriseTeamJoinCallback,
@@ -47,18 +44,6 @@ const ROLE_ICONS: Record<SignInRole, typeof UserRound> = {
   advisor: Briefcase,
   admin: Shield,
 };
-
-function resolvePostSignInPath(
-  callbackUrl: string | null,
-  role: string | undefined
-): string {
-  if (callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
-    return callbackUrl;
-  }
-  if (isPlatformAdminRole(role)) return "/admin";
-  if (normalizeUserRoleString(role) === "ADVISOR") return "/advisor";
-  return "/dashboard";
-}
 
 function rolePanelCopy(role: SignInRole, firmName?: string | null) {
   switch (role) {

@@ -39,6 +39,9 @@ describe("sign-in routes", () => {
     expect(buildSignInHref({ callbackUrl: "/advisor" })).toBe(
       "/signin/advisor?callbackUrl=%2Fadvisor"
     );
+    expect(
+      buildSignInHref({ callbackUrl: "/advisor?error=unauthorized" }),
+    ).toBe("/signin/advisor?callbackUrl=%2Fadvisor");
   });
 
   it("supports explicit role and legacy magic-link constant", () => {
