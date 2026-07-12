@@ -50,6 +50,8 @@ export const AUDIT_ACTIONS = {
   USER_SOFT_DELETE: "user.soft_delete",
   USER_RESTORE: "user.restore",
   USER_PORTAL_ACCESS_TOGGLE: "user.portal_access_toggle",
+  /** Super admin marks or clears a client/advisor test account (excluded from dashboards). */
+  USER_TEST_ACCOUNT_TOGGLE: "user.test_account_toggle",
 
   // ── Admin enterprise firm lifecycle ───────────────────────────────────────
   ENTERPRISE_SUSPEND: "enterprise.suspend",
@@ -198,6 +200,7 @@ export const AUDIT_ACTIONS = {
   /** Advisor approved intake — client notified with a magic link to start assessment. */
   INTAKE_APPROVED_CLIENT_MAGIC_LINK: "intake.approved_client_magic_link",
   INTAKE_REJECT: "intake.reject",
+  INTAKE_RESTART: "intake.restart",
   INTAKE_WAIVER_SET: "intake.waiver_set",
   /** Epic 5.11: advisor-led live session lifecycle. */
   FACILITATED_SESSION_START: "facilitated_session.start",

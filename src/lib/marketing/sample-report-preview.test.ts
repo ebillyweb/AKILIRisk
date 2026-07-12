@@ -18,7 +18,7 @@ describe("sample report preview", () => {
   it("provides short labels and scores for the pillar radar preview", () => {
     const outOfScope = SAMPLE_PILLAR_SCORES.filter((pillar) => !pillar.inScope);
     expect(outOfScope.map((pillar) => pillar.shortName).sort()).toEqual([
-      "Behavioral",
+      "AI Risk",
       "Geographic",
     ]);
 

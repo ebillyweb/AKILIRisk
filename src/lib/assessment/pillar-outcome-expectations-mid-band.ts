@@ -160,18 +160,19 @@ export const ESTATE_SUCCESSION_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
 };
 
 /** Family governance & behavioral — mixed maturity by risk tier. */
-export const FAMILY_GOVERNANCE_BEHAVIORAL_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
+// Slug is a legacy identifier; presented as "AI & Emerging Tech Risk".
+export const AI_EMERGING_TECH_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
   critical: [
-    "Family governance and behavioral alignment lack formal structure, leaving decision-making, conflict resolution, and next-generation engagement largely informal and person-dependent. Establish a written family governance charter, define decision rights and communication protocols, and create structured forums for intergenerational dialogue. Professional facilitation and education programs should be prioritized to build alignment and reduce interpersonal risk.",
+    "Defenses against AI-enabled threats are largely absent, leaving the family highly exposed to deepfake and voice-clone fraud, synthetic-media reputational attacks, and sensitive data leaking into AI tools. Establish out-of-band verification for all financial requests, deploy monitoring for synthetic media, set a policy governing use of public AI tools, and assign ownership for tracking emerging-tech risk.",
   ],
   high: [
-    "Governance norms and behavioral expectations are partially established but not consistently practiced across generations or family branches. We recommend formalizing meeting cadences, documenting shared values and decision frameworks, and implementing structured next-generation education. Closing the gaps below will reduce reliance on individual relationships and improve governance durability.",
+    "Controls for AI and emerging-tech risk are partially in place but inconsistent across the family, staff, and advisors. We recommend formalizing impersonation-verification protocols, training everyone with financial or access authority on AI social engineering, vetting AI vendors for data handling, and preparing a synthetic-media response plan. Closing the gaps below will materially reduce fraud and reputational exposure.",
   ],
   medium: [
-    "Family governance and behavioral practices show moderate maturity with effective elements alongside areas that need formalization. Focus on strengthening conflict resolution mechanisms, documenting governance expectations, and expanding engagement opportunities for rising-generation members. Targeted improvements in the areas flagged below will reinforce family cohesion and governance resilience.",
+    "AI-risk practices show moderate maturity, with some defenses established alongside areas that need formalization. Focus on tightening data-exposure controls for AI tools, extending impersonation defenses to all principals, and integrating AI risk into the family's overall risk review. Targeted improvements in the areas flagged below will strengthen resilience to fast-evolving AI threats.",
   ],
   low: [
-    "Family governance and behavioral alignment are strong overall, with minor opportunities to refine communication protocols, expand education programs, or update governance documents. Address the isolated gaps identified in this assessment and sustain regular family governance reviews to adapt practices as the family evolves.",
+    "Defenses against AI and emerging-tech threats are strong overall, with minor opportunities to refine monitoring, vendor vetting, or household awareness. Address the isolated gaps identified in this assessment and maintain a regular cadence for adopting protective technologies as AI-enabled threats evolve.",
   ],
 };
 
@@ -189,5 +190,5 @@ export const PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS: Record<
   "liquidity-cash": LIQUIDITY_CASH_MID_BAND_NARRATIVES,
   "tax-exposure": TAX_EXPOSURE_MID_BAND_NARRATIVES,
   "estate-succession": ESTATE_SUCCESSION_MID_BAND_NARRATIVES,
-  "family-governance-behavioral": FAMILY_GOVERNANCE_BEHAVIORAL_MID_BAND_NARRATIVES,
+  "family-governance-behavioral": AI_EMERGING_TECH_MID_BAND_NARRATIVES,
 };

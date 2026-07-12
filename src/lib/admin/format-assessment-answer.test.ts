@@ -47,4 +47,31 @@ describe("formatAssessmentAnswerForDisplay", () => {
       )
     ).toBe("March 2024");
   });
+
+  it("joins multi-choice selections into a readable label list", () => {
+    expect(
+      formatAssessmentAnswerForDisplay(
+        {
+          type: "multi-choice",
+          options: [
+            { value: "MFA", label: "Multi-factor auth" },
+            { value: "Backups", label: "Offsite backups" },
+            { value: "Encryption", label: "Full-disk encryption" },
+          ],
+        },
+        ["MFA", "Encryption"],
+        false
+      )
+    ).toBe("Multi-factor auth, Full-disk encryption");
+  });
+
+  it("treats an empty multi-choice selection as no answer", () => {
+    expect(
+      formatAssessmentAnswerForDisplay(
+        { type: "multi-choice", options: [{ value: "MFA", label: "MFA" }] },
+        [],
+        false
+      )
+    ).toBe("No answer recorded");
+  });
 });

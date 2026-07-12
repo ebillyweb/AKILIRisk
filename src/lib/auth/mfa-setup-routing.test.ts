@@ -46,4 +46,14 @@ describe("resolvePostMfaSetupRedirect", () => {
       })
     ).toBe("/assessment");
   });
+
+  it("does not send advisors to platform admin after MFA setup", () => {
+    expect(
+      resolvePostMfaSetupRedirect({
+        role: "ADVISOR",
+        mfaVerified: true,
+        callbackUrl: "/admin",
+      })
+    ).toBe("/advisor");
+  });
 });

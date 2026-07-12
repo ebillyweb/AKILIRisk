@@ -14,6 +14,7 @@ interface AdminAdvisorFeatureFlagsFormProps {
   initialRiskIntelligence: boolean;
   initialWorkflowTasks: boolean;
   initialWorkflowFollowUps: boolean;
+  initialMonitoring: boolean;
 }
 
 export function AdminAdvisorFeatureFlagsForm({
@@ -21,12 +22,14 @@ export function AdminAdvisorFeatureFlagsForm({
   initialRiskIntelligence,
   initialWorkflowTasks,
   initialWorkflowFollowUps,
+  initialMonitoring,
 }: AdminAdvisorFeatureFlagsFormProps) {
   const router = useRouter();
   const [gov, setGov] = useState(initialGovernanceDashboard);
   const [risk, setRisk] = useState(initialRiskIntelligence);
   const [tasks, setTasks] = useState(initialWorkflowTasks);
   const [followUps, setFollowUps] = useState(initialWorkflowFollowUps);
+  const [monitoring, setMonitoring] = useState(initialMonitoring);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -34,18 +37,21 @@ export function AdminAdvisorFeatureFlagsForm({
     setRisk(initialRiskIntelligence);
     setTasks(initialWorkflowTasks);
     setFollowUps(initialWorkflowFollowUps);
+    setMonitoring(initialMonitoring);
   }, [
     initialGovernanceDashboard,
     initialRiskIntelligence,
     initialWorkflowTasks,
     initialWorkflowFollowUps,
+    initialMonitoring,
   ]);
 
   function persist(
     nextGov: boolean,
     nextRisk: boolean,
     nextTasks: boolean,
-    nextFollowUps: boolean
+    nextFollowUps: boolean,
+    nextMonitoring: boolean,
   ) {
     startTransition(async () => {
       const result = await updatePlatformAdvisorFeatureFlags({
@@ -53,12 +59,14 @@ export function AdminAdvisorFeatureFlagsForm({
         advisorRiskIntelligenceEnabled: nextRisk,
         advisorWorkflowTasksEnabled: nextTasks,
         advisorWorkflowFollowUpsEnabled: nextFollowUps,
+        advisorMonitoringEnabled: nextMonitoring,
       });
       if (result.success) {
         setGov(nextGov);
         setRisk(nextRisk);
         setTasks(nextTasks);
         setFollowUps(nextFollowUps);
+        setMonitoring(nextMonitoring);
         toast.success("Feature flags updated");
         router.refresh();
       } else {
@@ -76,7 +84,7 @@ export function AdminAdvisorFeatureFlagsForm({
           disabled={pending}
           onCheckedChange={(v) => {
             const checked = v === true;
-            persist(checked, risk, tasks, followUps);
+            persist(checked, risk, tasks, followUps, monitoring);
           }}
         />
         <div className="grid gap-1">
@@ -102,7 +110,7 @@ export function AdminAdvisorFeatureFlagsForm({
           disabled={pending}
           onCheckedChange={(v) => {
             const checked = v === true;
-            persist(gov, checked, tasks, followUps);
+            persist(gov, checked, tasks, followUps, monitoring);
           }}
         />
         <div className="grid gap-1">
@@ -126,7 +134,7 @@ export function AdminAdvisorFeatureFlagsForm({
           disabled={pending}
           onCheckedChange={(v) => {
             const checked = v === true;
-            persist(gov, risk, checked, followUps);
+            persist(gov, risk, checked, followUps, monitoring);
           }}
         />
         <div className="grid gap-1">
@@ -150,7 +158,7 @@ export function AdminAdvisorFeatureFlagsForm({
           disabled={pending}
           onCheckedChange={(v) => {
             const checked = v === true;
-            persist(gov, risk, tasks, checked);
+            persist(gov, risk, tasks, checked, monitoring);
           }}
         />
         <div className="grid gap-1">
@@ -163,6 +171,30 @@ export function AdminAdvisorFeatureFlagsForm({
           <p className="text-sm text-muted-foreground">
             Shows <span className="font-medium text-foreground">Follow-ups</span> in the advisor Workflow nav. Leave off
             until the follow-ups workspace is ready.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border p-4">
+        <Checkbox
+          id="flag-monitoring"
+          checked={monitoring}
+          disabled={pending}
+          onCheckedChange={(v) => {
+            const checked = v === true;
+            persist(gov, risk, tasks, followUps, checked);
+          }}
+        />
+        <div className="grid gap-1">
+          <div className="flex items-center gap-1">
+            <Label htmlFor="flag-monitoring" className="text-sm font-medium leading-none">
+              Advisor pipeline monitoring
+            </Label>
+            <FieldHelp helpKey="flag-monitoring" triggerLabel="Pipeline monitoring" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Adds a <span className="font-medium text-foreground">Monitoring</span> chevron after
+            Report on the client pipeline journey. Leave off until continuous monitoring is ready.
           </p>
         </div>
       </div>

@@ -14,7 +14,7 @@ import {
   parsePipelinePageFromSearchParams,
 } from "@/lib/pipeline/parse-pipeline-filters";
 import type { PipelineFilters } from "@/lib/pipeline/types";
-import { MetricCard } from "@/components/advisor/workspace/MetricCard";
+import { PipelineOverviewMetrics } from "@/components/pipeline/PipelineOverviewMetrics";
 import { PipelineView } from "./PipelineView";
 import PipelineLoading from "./loading";
 
@@ -65,54 +65,6 @@ function pipelineWorkflowHeading(filters: PipelineFilters): {
   return null;
 }
 
-function MetricsSummary({ metrics }: { metrics: any }) {
-  const metricCards = [
-    {
-      label: "Invited",
-      count: metrics.byStage.INVITED,
-      className:
-        "border-blue-200/70 bg-blue-50/80 dark:border-blue-800/40 dark:bg-blue-950/25",
-    },
-    {
-      label: "Registered",
-      count: metrics.byStage.REGISTERED,
-      className:
-        "border-indigo-200/70 bg-indigo-50/80 dark:border-indigo-800/40 dark:bg-indigo-950/25",
-    },
-    {
-      label: "Intake",
-      count: metrics.byStage.INTAKE_IN_PROGRESS,
-      className:
-        "border-amber-200/70 bg-amber-50/80 dark:border-amber-800/40 dark:bg-amber-950/25",
-    },
-    {
-      label: "Assessment",
-      count: metrics.byStage.ASSESSMENT_IN_PROGRESS,
-      className:
-        "border-orange-200/70 bg-orange-50/80 dark:border-orange-800/40 dark:bg-orange-950/25",
-    },
-    {
-      label: "Completed",
-      count: metrics.byStage.COMPLETE,
-      className:
-        "border-emerald-200/70 bg-emerald-50/80 dark:border-emerald-800/40 dark:bg-emerald-950/25",
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {metricCards.map((metric) => (
-        <MetricCard
-          key={metric.label}
-          label={metric.label}
-          value={metric.count}
-          className={metric.className}
-        />
-      ))}
-    </div>
-  );
-}
-
 // Async component for data-dependent content
 async function PipelineContent({
   initialFilters,
@@ -137,7 +89,7 @@ async function PipelineContent({
     );
   }
 
-  const { clients, metrics, pseudonymousWorkspaceLabeling, documentRequirementsEnabled } =
+  const { clients, metrics, pseudonymousWorkspaceLabeling, documentRequirementsEnabled, monitoringEnabled } =
     result.data!;
 
   return (
@@ -147,7 +99,10 @@ async function PipelineContent({
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">
           Pipeline Overview
         </h2>
-        <MetricsSummary metrics={metrics} />
+        <PipelineOverviewMetrics
+          metrics={metrics}
+          documentRequirementsEnabled={documentRequirementsEnabled}
+        />
       </div>
 
       {/* Pipeline view with real-time updates */}
@@ -158,6 +113,7 @@ async function PipelineContent({
         initialPage={initialPage}
         pseudonymousWorkspaceLabeling={pseudonymousWorkspaceLabeling}
         documentRequirementsEnabled={documentRequirementsEnabled}
+        monitoringEnabled={monitoringEnabled}
       />
     </div>
   );

@@ -21,6 +21,10 @@ vi.mock("@/lib/engagement/publish-action-plan", () => ({
   publishActionPlan: vi.fn(),
 }));
 
+vi.mock("@/lib/enterprise/advisor-member-visibility", () => ({
+  assertAdvisorCanManageActionPlan: vi.fn(),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { withDecryptedEmail } from "@/lib/auth/user-email";
+import { resolvePortfolioScope } from "@/lib/enterprise/portfolio-access";
 import { resolveUser } from "@/lib/mobile/token";
 
-/** GET /api/advisor/clients — assigned clients with intake status (plan §4.3). */
+/** GET /api/advisor/clients — clients in scope with intake status (plan §4.3). */
 export async function GET(request: NextRequest) {
   const user = await resolveUser(request);
   if (!user) {
@@ -13,16 +14,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Advisor access required" }, { status: 403 });
   }
 
-  const profile = await prisma.advisorProfile.findUnique({
-    where: { userId: user.id },
-    select: { id: true },
-  });
-  if (!profile) {
+  const scope = await resolvePortfolioScope(user.id);
+  if (!scope) {
     return NextResponse.json([]);
   }
 
+  // Firm scope (owners/admins, or members when the firm shares client visibility)
+  // sees every assignment in the enterprise; otherwise only the advisor's own book.
+  const assignmentWhere =
+    scope.mode === "firm"
+      ? { advisor: { enterpriseId: scope.enterpriseId }, status: "ACTIVE" as const }
+      : { advisorId: scope.advisorProfileId, status: "ACTIVE" as const };
+
   const assignments = await prisma.clientAdvisorAssignment.findMany({
-    where: { advisorId: profile.id, status: "ACTIVE" },
+    where: assignmentWhere,
     select: {
       client: {
         select: {

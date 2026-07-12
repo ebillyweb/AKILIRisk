@@ -211,6 +211,11 @@ export const FIELD_HELP = {
     description:
       "Shows Follow-ups in the advisor Workflow nav. Leave off until the follow-ups workspace is ready.",
   },
+  "flag-monitoring": {
+    title: "Pipeline monitoring",
+    description:
+      "Shows a Monitoring chevron after Report on the advisor client pipeline (Intake › Assessment › Report › Monitoring). Leave off until continuous monitoring is ready.",
+  },
 
   // Admin — intake question edit
   "intake-question-text": {

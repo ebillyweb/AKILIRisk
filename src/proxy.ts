@@ -26,6 +26,7 @@ import {
   isPagePasswordChangeExempt,
   shouldBlockApiForPasswordChangePending,
 } from "@/lib/auth/password-change-gate";
+import { stripSpuriousCallbackQuery } from "@/lib/auth-callback-path";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 
 /** For server layouts (e.g. advisor) that branch on URL without middleware.
@@ -291,7 +292,9 @@ export default async function proxy(req: NextRequest) {
   if (isWorkspace && !isAuthenticated) {
     // callbackUrl uses the app-level path so `buildSignInHref` infers the
     // correct role tab; the sign-in page itself is tenant-scoped.
-    const callbackUrl = `${effectivePathname}${req.nextUrl.search}`;
+    const callbackUrl = stripSpuriousCallbackQuery(
+      `${effectivePathname}${req.nextUrl.search}`,
+    );
     const signInHref = buildSignInHref({ callbackUrl });
     return NextResponse.redirect(new URL(scopeTarget(signInHref), req.url));
   }

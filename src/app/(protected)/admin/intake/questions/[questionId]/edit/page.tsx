@@ -125,7 +125,8 @@ export default async function AdminIntakeQuestionEditPage({
                   defaultValue={question.displayOrder}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Lower numbers appear earlier within the same section.
+                  Lower numbers appear earlier within the same section. Other questions
+                  shift to make room — e.g. set 1 to make this the second question.
                 </p>
               </div>
               <div className="space-y-2">

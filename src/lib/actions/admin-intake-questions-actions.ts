@@ -7,6 +7,10 @@ import { PillarCategoryKind, type UserRole } from "@prisma/client";
 
 import { requireAdminRole } from "@/lib/admin/auth";
 import { normalizeIncludedPillarIds } from "@/lib/assessment/included-pillars";
+import {
+  reorderIntakePillarQuestion,
+  repositionPillarQuestionWithinSection,
+} from "@/lib/assessment/bank/pillar-question-reorder";
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { prisma } from "@/lib/db";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -101,17 +105,39 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
 
     const existing = await findIntakePillarQuestionOrThrow(questionId);
 
+    // Content update first — do NOT blindly write displayOrder here: within a
+    // section displayOrder is unique, so setting it to an already-taken value
+    // would violate `@@unique([sectionId, displayOrder])`.
     await prisma.pillarQuestion.update({
       where: { id: questionId },
       data: {
         questionText,
         whyThisMatters,
         recommendedActions,
-        displayOrder,
         isVisible,
         relatedPillarIds,
       },
     });
+
+    // Then move to the requested position, shifting siblings as needed. Only
+    // when it actually changed, to avoid a needless full-section renumber.
+    if (displayOrder !== existing.displayOrder) {
+      await repositionPillarQuestionWithinSection({
+        questionId,
+        targetOrder: displayOrder,
+      });
+    }
+
+    // The reposition clamps out-of-range targets, so read back the real order.
+    const finalDisplayOrder =
+      displayOrder === existing.displayOrder
+        ? existing.displayOrder
+        : (
+            await prisma.pillarQuestion.findUnique({
+              where: { id: questionId },
+              select: { displayOrder: true },
+            })
+          )?.displayOrder ?? displayOrder;
 
     await writeAudit({
       actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
@@ -130,7 +156,7 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
         questionText,
         whyThisMatters,
         recommendedActions,
-        displayOrder,
+        displayOrder: finalDisplayOrder,
         isVisible,
         relatedPillarIds,
       },
@@ -144,5 +170,53 @@ export async function updateIntakePillarQuestionContent(formData: FormData) {
     );
   }
 
+  redirect("/admin/intake/questions?saved=1");
+}
+
+export async function moveIntakePillarQuestionOrder(formData: FormData) {
+  const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+
+  let questionId: string;
+  let direction: "up" | "down";
+  try {
+    questionId = z.string().uuid().parse(formData.get("questionId"));
+    direction = z.enum(["up", "down"]).parse(formData.get("direction"));
+  } catch {
+    redirect("/admin/intake/questions");
+  }
+
+  const before = await findIntakePillarQuestionOrThrow(questionId);
+
+  const result = await reorderIntakePillarQuestion({ questionId, direction });
+
+  if (result.ok) {
+    const after = await prisma.pillarQuestion.findUnique({
+      where: { id: questionId },
+      select: { displayOrder: true, sectionId: true },
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.PILLAR_QUESTION_REORDER,
+      entityType: "PillarQuestion",
+      entityId: questionId,
+      beforeData: {
+        displayOrder: before.displayOrder,
+        sectionId: before.sectionId,
+      },
+      afterData: after
+        ? { displayOrder: after.displayOrder, sectionId: after.sectionId }
+        : null,
+      metadata: {
+        direction,
+        categoryKind: "INTAKE",
+        swappedWithId: result.swappedWithId,
+      },
+    });
+
+    revalidateIntakeQuestionContent(questionId);
+  }
+
+  // Boundary / not-found moves are a no-op; still return to the list.
   redirect("/admin/intake/questions?saved=1");
 }

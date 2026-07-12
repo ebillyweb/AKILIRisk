@@ -46,6 +46,19 @@ vi.mock("@/lib/enterprise/team-access", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
+// Post-delete bank-mode housekeeping helpers. Mock them so the delete-guard
+// assertions below don't drag in the heavy clone/sync chain these helpers use.
+// Returning a non-zero custom count + PLATFORM mode keeps
+// isCustomOnlyWithoutSavedQuestions() false, so no enterprise bank-mode switch runs.
+vi.mock("@/lib/methodology/enterprise-methodology-queries", () => ({
+  countEnterpriseCustomAssessmentQuestions: vi.fn(async () => 1),
+  countEnterpriseCustomIntakeQuestions: vi.fn(async () => 1),
+}));
+vi.mock("@/lib/methodology/intake-question-bank-mode.server", () => ({
+  resolveEnterpriseAssessmentQuestionBankMode: vi.fn(async () => "PLATFORM"),
+  resolveEnterpriseIntakeQuestionBankMode: vi.fn(async () => "PLATFORM"),
+}));
+
 import {
   deleteEnterprisePillarQuestion,
   updateEnterprisePillarQuestion,

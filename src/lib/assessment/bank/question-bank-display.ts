@@ -44,6 +44,12 @@ export function getAnswerOptionFields(
       fields[2].label = "Neutral";
       fields[3].label = "Agree";
       return fields;
+    case "multi_select":
+      fields[0].label = "Option 1";
+      fields[1].label = "Option 2";
+      fields[2].label = "Option 3 (optional)";
+      fields[3].label = "Option 4 (optional)";
+      return fields;
     case "fillable":
     case "number":
     case "date_mm_yyyy":

@@ -10,6 +10,7 @@ import { HouseholdProfile } from './personalization';
 // Question Types
 export type QuestionType =
   | 'single-choice'
+  | 'multi-choice'
   | 'yes-no'
   | 'maturity-scale'
   | 'likert'

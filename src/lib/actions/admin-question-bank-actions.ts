@@ -25,6 +25,7 @@ const PILLAR_ANSWER_TYPES = [
   "yes_no",
   "likert_5",
   "scale_1_5",
+  "multi_select",
   "fillable",
   "number",
   "date",

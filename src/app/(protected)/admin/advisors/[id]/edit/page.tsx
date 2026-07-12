@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { subscriptionQualifiesForPortalEnablement } from "@/lib/billing/advisor-portal-subscription";
 import { isBillingEnabled } from "@/lib/billing/config";
+import { isSuperAdmin } from "@/lib/admin/auth";
+import { auth } from "@/lib/auth";
 import { getAdvisorForAdmin } from "@/lib/admin/queries";
 import { AdminEditAdvisorForm } from "@/components/admin/AdminEditAdvisorForm";
 
@@ -13,7 +15,7 @@ export default async function AdminEditAdvisorPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const advisor = await getAdvisorForAdmin(id);
+  const [advisor, session] = await Promise.all([getAdvisorForAdmin(id), auth()]);
   if (!advisor) notFound();
 
   const billingFeaturesEnabled = isBillingEnabled();
@@ -21,6 +23,7 @@ export default async function AdminEditAdvisorPage({
     advisor.subscription,
     billingFeaturesEnabled
   );
+  const superAdmin = isSuperAdmin(session);
 
   return (
     <div className="space-y-6">
@@ -36,6 +39,7 @@ export default async function AdminEditAdvisorPage({
         advisor={advisor}
         billingFeaturesEnabled={billingFeaturesEnabled}
         canEnablePortalAccess={canEnablePortalAccess}
+        superAdmin={superAdmin}
       />
     </div>
   );

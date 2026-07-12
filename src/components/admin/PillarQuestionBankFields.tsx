@@ -45,6 +45,7 @@ const ANSWER_TYPE_OPTIONS = [
   { value: "yes_no", label: "Yes / No" },
   { value: "likert_5", label: "Likert (1–5)" },
   { value: "scale_1_5", label: "Scale 1–5 (single choice)" },
+  { value: "multi_select", label: "Select all that apply (multi-choice)" },
   { value: "fillable", label: "Short text" },
   { value: "number", label: "Numeric" },
   { value: "date", label: "Date (calendar)" },

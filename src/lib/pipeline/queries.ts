@@ -24,6 +24,7 @@ import {
 } from "@/lib/enterprise/portfolio-access";
 import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
 import { resolveClientReferenceCode } from "@/lib/client/client-reference-code.server";
+import { getRestartIntakeEligibility } from "@/lib/intake/restart-intake";
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -112,6 +113,7 @@ export async function getClientPipeline(
       client: {
         include: {
           assessments: {
+            where: { status: { not: "ARCHIVED" } },
             orderBy: {
               updatedAt: 'desc',
             },
@@ -181,7 +183,7 @@ export async function getClientPipeline(
       : Promise.resolve([]),
     clientIds.length > 0
       ? prisma.intakeInterview.findMany({
-          where: { userId: { in: clientIds } },
+          where: { userId: { in: clientIds }, archivedAt: null },
           select: {
             id: true,
             userId: true,
@@ -524,9 +526,11 @@ export async function getClientDetail(
           // Round-11 commit 2.1: clientProfile include removed (no
           // selectable columns remain after the §5.1 minimization).
           intakeInterviews: {
+            where: { archivedAt: null },
             orderBy: { updatedAt: 'desc' },
           },
           assessments: {
+            where: { status: { not: "ARCHIVED" } },
             orderBy: { completedAt: 'desc' },
             include: {
               scores: {
@@ -864,6 +868,12 @@ export async function getClientDetail(
       )
     : { reassessmentEnabled: false, targetedQuestionCount: 0 };
 
+  const restartIntake = await getRestartIntakeEligibility({
+    assignmentStatus: assignment.status,
+    intakeWaived: assignment.intakeWaivedAt != null,
+    clientId,
+  });
+
   return {
     client: pipelineClient,
     assessmentDomains: assessmentDomainPicker.domains,
@@ -891,5 +901,6 @@ export async function getClientDetail(
     intakeDetails,
     assessmentDetails,
     assessmentLifecycle,
+    restartIntake,
   };
 }

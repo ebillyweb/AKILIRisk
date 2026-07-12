@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getOpenAIClient } from "@/lib/openai";
+import {
+  buildQuestionNarrationText,
+  questionTtsBodySchema,
+} from "@/lib/tts/question-tts-body";
+import { mapQuestionTtsError } from "@/lib/tts/question-tts-errors";
 
-export const questionTtsBodySchema = z.object({
-  moduleName: z.string().max(120).optional(),
-  questionText: z.string().min(1).max(2000),
-  context: z.string().max(4000).optional(),
-  learnMore: z.string().max(4000).optional(),
-  recordingTips: z.array(z.string().min(1).max(500)).max(8).default([]),
-  questionNumber: z.number().int().positive(),
-  totalQuestions: z.number().int().positive(),
-});
-
-export type QuestionTtsBody = z.infer<typeof questionTtsBodySchema>;
-
-/** Play Question reads only the question prompt — not module, progress, or guidance. */
-export function buildQuestionNarrationText(input: QuestionTtsBody): string {
-  return input.questionText.trim();
-}
+export { buildQuestionNarrationText, questionTtsBodySchema } from "@/lib/tts/question-tts-body";
+export type { QuestionTtsBody } from "@/lib/tts/question-tts-body";
 
 const INTAKE_INSTRUCTIONS =
   "Speak in a calm, warm, polished voice with natural pauses. Read clearly and conversationally, like a thoughtful interviewer guiding a client through a confidential intake session.";
@@ -87,9 +77,10 @@ export async function handleQuestionTtsRequest(
     });
   } catch (error) {
     console.error("Question TTS error:", error);
+    const mapped = mapQuestionTtsError(error);
     return NextResponse.json(
-      { success: false, error: "Failed to generate speech" },
-      { status: 500 }
+      { success: false, error: mapped.error },
+      { status: mapped.status }
     );
   }
 }

@@ -25,6 +25,7 @@ const defaultPreferences: AdvisorWorkspacePreferences = {
     skipPostIntakeReview: false,
     documentRequirements: true,
     actionPlan: true,
+    sharedClientVisibility: false,
   },
 };
 

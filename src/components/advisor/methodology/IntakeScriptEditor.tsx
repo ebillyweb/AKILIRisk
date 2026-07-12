@@ -4,9 +4,11 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import type { AdvisorQuestionSource, IntakeQuestionBankMode } from "@prisma/client";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import {
   createAdvisorIntakeQuestion,
   deleteAdvisorIntakeQuestion,
+  moveAdvisorIntakeQuestionOrder,
   updateAdvisorIntakeQuestion,
   updateAdvisorIntakeQuestionBankMode,
 } from "@/lib/actions/methodology-actions";
@@ -60,6 +62,7 @@ type IntakeQuestionActions = {
   createQuestion: typeof createAdvisorIntakeQuestion;
   deleteQuestion: typeof deleteAdvisorIntakeQuestion;
   updateBankMode: typeof updateAdvisorIntakeQuestionBankMode;
+  moveQuestion: typeof moveAdvisorIntakeQuestionOrder;
 };
 
 const defaultActions: IntakeQuestionActions = {
@@ -67,6 +70,7 @@ const defaultActions: IntakeQuestionActions = {
   createQuestion: createAdvisorIntakeQuestion,
   deleteQuestion: deleteAdvisorIntakeQuestion,
   updateBankMode: updateAdvisorIntakeQuestionBankMode,
+  moveQuestion: moveAdvisorIntakeQuestionOrder,
 };
 
 function sourceBadgeLabel(sourceKind: AdvisorQuestionSource): string {
@@ -93,6 +97,9 @@ function QuestionCard({
   handleMutationResult,
   refreshAfterSuccess,
   canDelete,
+  canReorder,
+  canMoveUp,
+  canMoveDown,
 }: {
   q: IntakeQuestionRow;
   index: number;
@@ -102,8 +109,22 @@ function QuestionCard({
   handleMutationResult: MutationHandlers["handleMutationResult"];
   refreshAfterSuccess: MutationHandlers["refreshAfterSuccess"];
   canDelete: boolean;
+  canReorder: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }) {
   const isCustom = isCustomIntakeQuestionSource(q.sourceKind);
+
+  const move = (direction: "up" | "down") => {
+    runPending(async () => {
+      const result = await actions.moveQuestion(q.id, direction);
+      if (!result.success) {
+        toast.error(result.error ?? "Failed to reorder question");
+        return;
+      }
+      refreshAfterSuccess();
+    });
+  };
 
   return (
     <Card key={q.id} className={!q.isVisible ? "opacity-70" : undefined}>
@@ -117,32 +138,60 @@ function QuestionCard({
             <Badge variant="outline">{labelForAdvisorIntakeAnswerType(q.answerType)}</Badge>
           </div>
         </div>
-        {canDelete ? (
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            disabled={pending}
-            onClick={() => {
-              if (!window.confirm("Remove this custom question?")) return;
-              runPending(async () => {
-                const result = await actions.deleteQuestion(q.id);
-                if (!result.success) {
-                  toast.error(result.error ?? "Something went wrong");
-                  return;
-                }
-                if (result.switchedToPlatform) {
-                  toast.success(customOnlyEmptyBankMessage("intake"));
-                } else {
-                  toast.success("Custom question removed");
-                }
-                refreshAfterSuccess();
-              });
-            }}
-          >
-            Delete
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1">
+          {canReorder ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                disabled={pending || !canMoveUp}
+                aria-label="Move question up"
+                onClick={() => move("up")}
+              >
+                <ArrowUp className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                disabled={pending || !canMoveDown}
+                aria-label="Move question down"
+                onClick={() => move("down")}
+              >
+                <ArrowDown className="size-4" />
+              </Button>
+            </>
+          ) : null}
+          {canDelete ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={pending}
+              onClick={() => {
+                if (!window.confirm("Remove this custom question?")) return;
+                runPending(async () => {
+                  const result = await actions.deleteQuestion(q.id);
+                  if (!result.success) {
+                    toast.error(result.error ?? "Something went wrong");
+                    return;
+                  }
+                  if (result.switchedToPlatform) {
+                    toast.success(customOnlyEmptyBankMessage("intake"));
+                  } else {
+                    toast.success("Custom question removed");
+                  }
+                  refreshAfterSuccess();
+                });
+              }}
+            >
+              Delete
+            </Button>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
@@ -401,6 +450,12 @@ export function IntakeScriptEditor({
   };
 
   const activeQuestions = filterAndOrderQuestionsByBankMode(questions, bankMode);
+  // Reorderable rows are the scope's OWN custom prompts (sourceKind CUSTOM),
+  // in their displayed order. Platform base and firm-default (ENTERPRISE) rows
+  // are ordered elsewhere and not reorderable here (Scope A: custom block only).
+  const reorderableIds = activeQuestions
+    .filter((q) => q.sourceKind === "CUSTOM")
+    .map((q) => q.id);
   const isPlatformOnlyMode = bankMode === "PLATFORM";
   const isCustomOnlyMode = bankMode === "CUSTOM";
   const savedCustomQuestionCount =
@@ -498,19 +553,27 @@ export function IntakeScriptEditor({
         </p>
       ) : (
         <div className="space-y-4">
-          {activeQuestions.map((q, index) => (
-            <QuestionCard
-              key={q.id}
-              q={q}
-              index={index}
-              pending={pending}
-              actions={actions}
-              runPending={runPending}
-              handleMutationResult={handleMutationResult}
-              refreshAfterSuccess={refreshAfterSuccess}
-              canDelete={canDeleteCustom && isCustomIntakeQuestionSource(q.sourceKind)}
-            />
-          ))}
+          {activeQuestions.map((q, index) => {
+            // Only the scope's own custom rows reorder, within the custom block.
+            const reorderPos = reorderableIds.indexOf(q.id);
+            const canReorder = reorderPos >= 0 && reorderableIds.length > 1;
+            return (
+              <QuestionCard
+                key={q.id}
+                q={q}
+                index={index}
+                pending={pending}
+                actions={actions}
+                runPending={runPending}
+                handleMutationResult={handleMutationResult}
+                refreshAfterSuccess={refreshAfterSuccess}
+                canDelete={canDeleteCustom && isCustomIntakeQuestionSource(q.sourceKind)}
+                canReorder={canReorder}
+                canMoveUp={canReorder && reorderPos > 0}
+                canMoveDown={canReorder && reorderPos < reorderableIds.length - 1}
+              />
+            );
+          })}
         </div>
       )}
 

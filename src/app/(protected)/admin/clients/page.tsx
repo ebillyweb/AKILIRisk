@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 import { AdminClientAccountActions } from "@/components/admin/AdminClientAccountActions";
 import { AdminClientAssignSelect } from "@/components/admin/AdminClientAssignSelect";
+import { AdminTestAccountToggle } from "@/components/admin/AdminTestAccountToggle";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
@@ -115,6 +116,7 @@ export default async function AdminClientsPage({
               {clients.map((c) => {
                 const activeAssignments = c.clientAssignments.filter((a) => a.status === "ACTIVE");
                 const isDeactivated = Boolean(c.deletedAt);
+                const isTestAccount = Boolean(c.isTestAccount);
                 return (
                   <li
                     key={c.id}
@@ -134,6 +136,11 @@ export default async function AdminClientsPage({
                       {isDeactivated ? (
                         <Badge variant="secondary" className="mt-2 text-xs">
                           Deactivated
+                        </Badge>
+                      ) : null}
+                      {isTestAccount ? (
+                        <Badge variant="secondary" className="mt-2 text-xs">
+                          Test account
                         </Badge>
                       ) : null}
                     </div>
@@ -178,6 +185,13 @@ export default async function AdminClientsPage({
                             Unassigned
                           </Badge>
                         )}
+                        {superUser ? (
+                          <AdminTestAccountToggle
+                            userId={c.id}
+                            isTestAccount={isTestAccount}
+                            accountLabel="client"
+                          />
+                        ) : null}
                         <AdminClientAccountActions clientId={c.id} deactivated={isDeactivated} />
                       </div>
                     </div>

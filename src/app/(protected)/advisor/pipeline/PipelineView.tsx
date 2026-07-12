@@ -20,6 +20,7 @@ interface PipelineViewProps {
   initialPage: number;
   pseudonymousWorkspaceLabeling: boolean;
   documentRequirementsEnabled: boolean;
+  monitoringEnabled: boolean;
 }
 
 export function PipelineView({
@@ -29,6 +30,7 @@ export function PipelineView({
   initialPage,
   pseudonymousWorkspaceLabeling,
   documentRequirementsEnabled,
+  monitoringEnabled,
 }: PipelineViewProps) {
   const router = useRouter();
 
@@ -110,6 +112,7 @@ export function PipelineView({
         <PipelineTable
           clients={pagedClients}
           showDocumentsColumn={documentRequirementsEnabled}
+          monitoringEnabled={monitoringEnabled}
         />
       </div>
 

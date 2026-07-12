@@ -40,7 +40,22 @@
       "Bash(awk '/^model ClientAdvisorAssignment /{f=1} f&&/\\(clientId|advisorId|status\\)/{print NR\": \"$0} f&&/^}/{f=0}' prisma/schema.prisma)",
       "Bash(npx --yes knip@5 --no-progress --reporter symbols)",
       "Bash(git rm *)",
-      "Bash(awk '{print $2}')"
+      "Bash(awk '{print $2}')",
+      "Bash(gh auth *)",
+      "Bash(gh api *)",
+      "Bash(GH_HOST=github.com gh auth switch --user buddywood)",
+      "Bash(gh pr *)",
+      "Bash(cd /home/user/AKILIRisk 2>/dev/null; echo \"=== package.json smoke scripts ===\"; grep -iE \"smoke\" package.json; echo; echo \"=== smoke files/dirs ===\"; find . -path ./node_modules -prune -o \\\\\\( -iname \"*smoke*\" -print \\\\\\) 2>/dev/null | grep -v node_modules | head -40)",
+      "Read(//home/user/**)",
+      "Bash(cd /home/user/AKILIRisk; echo \"=== tests/smoke tree ===\"; find tests/smoke -type f | sort; echo; echo \"=== file count ===\"; find tests/smoke -name \"*.spec.ts\" -o -name \"*.test.ts\" | wc -l)",
+      "Read(//home/user/AKILIRisk/tests/**)",
+      "Bash(ls /home/user/AKILIRisk 2>/dev/null && echo \"---HOME EXISTS---\"; ls /Users/bwoodtalton/Projects/AkiliRisk 2>/dev/null | head && echo \"---USERS EXISTS---\")",
+      "Bash(ls /home/user/AKILIRisk 2>/dev/null && echo \"---EXISTS---\" || echo \"---USING CWD---\"; pwd)",
+      "Bash(ls /home/user/AKILIRisk/tests/smoke/ | grep -iE \"question|assessment|pillar|custom\" ; echo \"---\"; ls /home/user/AKILIRisk/tests/page-objects/)",
+      "Read(//home/user/AKILIRisk/**)",
+      "Bash(perl -0pi -e 's/\\\\] as Awaited<ReturnType<typeof prisma\\\\.user\\\\.findMany>>\\\\\\);/] as unknown as Awaited<ReturnType<typeof prisma.user.findMany>>\\);/g' src/lib/admin/control-center-alerts.test.ts)",
+      "Bash(npx playwright *)",
+      "Bash(ls /home/user/AKILIRisk 2>&1 | head; echo \"EXIT:$?\")"
     ]
   }
 }

@@ -13,6 +13,7 @@ const flags = {
   riskIntelligenceEnabled: true,
   workflowTasksEnabled: false,
   workflowFollowUpsEnabled: false,
+  monitoringEnabled: false,
 };
 
 describe("isVisibilityOptionAtModuleTier", () => {
@@ -118,6 +119,7 @@ describe("clampVisibilityToModuleTier", () => {
           skipPostIntakeReview: true,
           documentRequirements: true,
           actionPlan: true,
+          sharedClientVisibility: true,
         },
         "ESSENTIALS",
       ),
@@ -133,6 +135,7 @@ describe("clampVisibilityToModuleTier", () => {
       skipPostIntakeReview: true,
       documentRequirements: true,
       actionPlan: true,
+      sharedClientVisibility: true,
     });
   });
 });

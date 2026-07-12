@@ -20,7 +20,7 @@ import {
 } from "@/lib/db/schema-drift";
 import { sendNotification } from "@/lib/notifications/service";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
-import { requireAdminRole } from "@/lib/admin/auth";
+import { requireAdminRole, requireSuperAdminRole } from "@/lib/admin/auth";
 import { getAdvisorForAdmin } from "@/lib/admin/queries";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -780,6 +780,82 @@ export async function restoreClientByAdmin(input: unknown) {
   } catch (e) {
     logSafeError("admin/restoreClient", e);
     return { success: false, error: safeErrorMessage(e, "Failed to restore client") };
+  }
+}
+
+const setUserTestAccountSchema = z.object({
+  userId: z.string().cuid(),
+  isTestAccount: z.boolean(),
+});
+
+/**
+ * Mark or clear a client/advisor test account (super admin only).
+ * Test accounts remain operational but are excluded from platform dashboards.
+ */
+export async function setUserTestAccountBySuperAdmin(input: unknown) {
+  try {
+    const {
+      userId: actorUserId,
+      email: actorEmail,
+      role: actorRole,
+    } = await requireSuperAdminRole();
+    const parsed = setUserTestAccountSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    const target = await prisma.user.findFirst({
+      where: {
+        id: parsed.data.userId,
+        role: { in: ["USER", "ADVISOR"] },
+      },
+      select: { id: true, role: true, isTestAccount: true },
+    });
+    if (!target) {
+      return { success: false, error: "Client or advisor account not found" };
+    }
+    if (target.isTestAccount === parsed.data.isTestAccount) {
+      return {
+        success: false,
+        error: parsed.data.isTestAccount
+          ? "Account is already marked as a test account"
+          : "Account is not marked as a test account",
+      };
+    }
+
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { isTestAccount: parsed.data.isTestAccount },
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.USER_TEST_ACCOUNT_TOGGLE,
+      entityType: "User",
+      entityId: target.id,
+      beforeData: { isTestAccount: target.isTestAccount },
+      afterData: { isTestAccount: parsed.data.isTestAccount },
+      metadata: { role: target.role },
+    });
+
+    revalidatePath("/admin/clients");
+    revalidatePath("/admin/advisors");
+    revalidatePath(`/admin/advisors/${target.id}/edit`);
+    revalidatePath("/admin");
+    revalidatePath("/admin/analytics");
+    revalidatePath("/admin/risk-signals");
+    return { success: true };
+  } catch (e) {
+    logSafeError("admin/setUserTestAccount", e);
+    return {
+      success: false,
+      error: safeErrorMessage(e, "Failed to update test account flag"),
+    };
   }
 }
 

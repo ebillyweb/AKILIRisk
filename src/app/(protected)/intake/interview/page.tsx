@@ -449,7 +449,9 @@ export default function InterviewPage() {
 
   const hasResponse = hasResponseForNav();
   const responseBusy = uploading || saving || submitting;
-  const typingDisabled = uploading || submitting || saving || Boolean(currentResponse?.skipped);
+  // A skipped question must stay answerable when revisited — skipping defers a
+  // question, it does not lock it. Only in-flight operations disable input.
+  const typingDisabled = uploading || submitting || saving;
   const supportsAudio = intakeQuestionSupportsAudio(currentQuestion);
 
   return (

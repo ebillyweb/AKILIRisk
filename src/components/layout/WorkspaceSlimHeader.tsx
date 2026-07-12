@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { signOut } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 import { AkiliHeaderLockup } from "@/components/home/AkiliLogoLockup";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -31,16 +30,7 @@ export function WorkspaceSlimHeader({
           </p>
         ) : null}
         <ThemeToggle className="shrink-0" />
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/" });
-          }}
-        >
-          <Button type="submit" variant="outline" size="sm" className="min-w-[96px]">
-            Sign Out
-          </Button>
-        </form>
+        <SignOutButton variant="outline" size="sm" className="min-w-[96px]" />
       </div>
     </div>
   );

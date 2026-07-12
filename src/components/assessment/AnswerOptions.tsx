@@ -62,6 +62,71 @@ export function SingleChoiceCards({ options, value, onChange }: SingleChoiceCard
   );
 }
 
+// Multi Choice Cards ("select all that apply")
+interface MultiChoiceCardsProps {
+  options: QuestionOption[];
+  /** Currently-selected option values. */
+  value: Array<string | number>;
+  onChange: (value: Array<string | number>) => void;
+}
+
+export function MultiChoiceCards({ options, value, onChange }: MultiChoiceCardsProps) {
+  const selected = new Set(value.map((v) => String(v)));
+
+  const toggle = (optionValue: string | number) => {
+    const key = String(optionValue);
+    // Preserve authored option order in the stored answer.
+    const next = options
+      .map((o) => o.value)
+      .filter((o) =>
+        String(o) === key ? !selected.has(key) : selected.has(String(o)),
+      );
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      {options.map((option) => {
+        const isSelected = selected.has(String(option.value));
+        return (
+          <Card
+            key={String(option.value)}
+            role="checkbox"
+            aria-checked={isSelected}
+            className={cn(
+              "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40",
+              isSelected && "border-brand/50 bg-brand/10"
+            )}
+            onClick={() => toggle(option.value)}
+          >
+            <CardContent className="flex items-start gap-3 p-4">
+              <div className={cn(
+                // Square (not round) indicator to signal multi-select.
+                "flex h-5 w-5 items-center justify-center rounded-md border-2 mt-0.5 shrink-0",
+                isSelected
+                  ? "border-primary bg-primary"
+                  : "border-border"
+              )}>
+                {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-foreground">
+                  {option.label}
+                </div>
+                {option.description && (
+                  <div className="text-sm text-muted-foreground mt-1 leading-6">
+                    {option.description}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 // Yes/No Cards
 interface YesNoCardsProps {
   value: string | null;

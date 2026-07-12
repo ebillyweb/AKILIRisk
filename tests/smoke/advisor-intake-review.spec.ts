@@ -62,9 +62,12 @@ test.describe("advisor reviews intake", () => {
       page.getByText(/How did your financial advisor describe what we do at Test Advisory Firm/i)
     ).toBeVisible();
 
-    // Each question gets a "Play question" control
-    const playButtons = page.getByRole("button", { name: /play question/i });
-    expect(await playButtons.count()).toBeGreaterThan(0);
+    // Review is read-only: question prompts are shown as text; Play question
+    // lives on the live intake wizard, not on this page.
+    await expect(
+      page.getByRole("button", { name: /play question/i }),
+    ).toHaveCount(0);
+    await expect(page.getByText(/client response/i).first()).toBeVisible();
   });
 
   test("advisor cannot view another advisor's intake review via direct URL", async ({ page }) => {

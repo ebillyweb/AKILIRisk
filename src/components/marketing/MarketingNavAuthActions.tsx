@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { performClientSignOut } from "@/lib/auth/client-sign-out";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +17,12 @@ export function MarketingNavAuthActions({
   className,
 }: MarketingNavAuthActionsProps) {
   const { status } = useSession();
-  const router = useRouter();
   const stacked = layout === "stacked";
 
   async function handleSignOut() {
-    await signOut({ redirect: false });
-    router.refresh();
+    const pathname =
+      typeof window !== "undefined" ? window.location.pathname : undefined;
+    await performClientSignOut({ pathname });
   }
 
   if (status === "loading") {

@@ -19,6 +19,7 @@ export const ENTERPRISE_ADVISOR_MEMBER_VISIBILITY_KEYS = [
   "skipPostIntakeReview",
   "documentRequirements",
   "actionPlan",
+  "sharedClientVisibility",
 ] as const;
 
 export type EnterpriseAdvisorMemberVisibilityKey =
@@ -41,6 +42,7 @@ const enterpriseVisibilitySelect = {
   advisorMemberSkipPostIntakeReviewEnabled: true,
   advisorMemberDocumentRequirementsEnabled: true,
   advisorMemberActionPlanEnabled: true,
+  advisorMemberSharedClientVisibilityEnabled: true,
 } as const;
 
 export function mapEnterpriseAdvisorMemberVisibility(row: {
@@ -55,6 +57,7 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
   advisorMemberSkipPostIntakeReviewEnabled: boolean;
   advisorMemberDocumentRequirementsEnabled: boolean;
   advisorMemberActionPlanEnabled: boolean;
+  advisorMemberSharedClientVisibilityEnabled: boolean;
 }): EnterpriseAdvisorMemberVisibility {
   return {
     portfolio: row.advisorMemberPortfolioVisible,
@@ -68,6 +71,7 @@ export function mapEnterpriseAdvisorMemberVisibility(row: {
     skipPostIntakeReview: row.advisorMemberSkipPostIntakeReviewEnabled,
     documentRequirements: row.advisorMemberDocumentRequirementsEnabled,
     actionPlan: row.advisorMemberActionPlanEnabled,
+    sharedClientVisibility: row.advisorMemberSharedClientVisibilityEnabled,
   };
 }
 
@@ -84,6 +88,8 @@ export const DEFAULT_ENTERPRISE_ADVISOR_MEMBER_VISIBILITY: EnterpriseAdvisorMemb
     skipPostIntakeReview: false,
     documentRequirements: true,
     actionPlan: true,
+    // Default off: preserve today's behavior where members see only their own book.
+    sharedClientVisibility: false,
   };
 
 export type EnterpriseMemberVisibilityContext = {
@@ -252,5 +258,6 @@ export function visibilityInputToEnterpriseUpdate(
     advisorMemberSkipPostIntakeReviewEnabled: input.skipPostIntakeReview,
     advisorMemberDocumentRequirementsEnabled: input.documentRequirements,
     advisorMemberActionPlanEnabled: input.actionPlan,
+    advisorMemberSharedClientVisibilityEnabled: input.sharedClientVisibility,
   };
 }

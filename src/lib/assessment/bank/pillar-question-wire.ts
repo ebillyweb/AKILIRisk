@@ -114,6 +114,39 @@ function wireForScale15(row: PillarQuestionWithHierarchy): GovernanceQuestionWir
   };
 }
 
+/**
+ * Multi-select ("select all that apply"). The answer0–answer3 label slots are
+ * reused as the selectable options; the client's answer is stored as a JSON
+ * array of the selected option labels. Informational/qualitative — it carries
+ * no scoreMap, so `normalizeAnswerToMaturity` skips it in the maturity rollup
+ * (same treatment as fillable/number/date).
+ */
+function wireForMultiSelect(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
+  const options = [row.answer0, row.answer1, row.answer2, row.answer3]
+    .map((label) => (label ?? "").trim())
+    .filter((label) => label.length > 0)
+    .map((label) => ({ value: label, label }));
+
+  return {
+    questionId: row.id,
+    riskAreaId: riskAreaIdForPillarCategory(row.section.category),
+    sortOrderGlobal: 0,
+    text: row.questionText,
+    helpText: row.whyThisMatters,
+    learnMore: row.recommendedActions,
+    riskRelevance: row.whyThisMatters,
+    type: "multi-choice",
+    options,
+    required: true,
+    weight: row.section.weightPct ?? 1,
+    scoreMap: {},
+    branchingDependsOn: null,
+    branchingPredicate: null,
+    profileConditionKey: null,
+    omitMaturityScoreWhenYes: false,
+  };
+}
+
 function wireForYesNo(row: PillarQuestionWithHierarchy): GovernanceQuestionWire {
   return {
     questionId: row.id,
@@ -240,6 +273,8 @@ export function pillarQuestionRowToWire(row: PillarQuestionWithHierarchy): Gover
       return wireForScale15(row);
     case "likert_5":
       return wireForLikert5(row);
+    case "multi_select":
+      return wireForMultiSelect(row);
     case "scored_0_3":
     default:
       return wireForScored03(row);

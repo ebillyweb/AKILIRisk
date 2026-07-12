@@ -81,7 +81,12 @@ beforeEach(() => {
 });
 
 function mockAssessmentRow(overrides?: {
-  advisorNotes?: Array<{ id: string; body: string; updatedAt: Date }>;
+  advisorNotes?: Array<{
+    id: string;
+    advisorId?: string;
+    body: string;
+    updatedAt: Date;
+  }>;
 }) {
   prismaSpies.assessment.findFirst.mockResolvedValue({
     id: "as-1",
@@ -188,6 +193,7 @@ describe("getAssessmentForAdvisorReview — tenant + note scoping (US-46c)", () 
       advisorNotes: [
         {
           id: "note-1",
+          advisorId: "advisor-user-1",
           body: "The note",
           updatedAt: new Date("2026-05-02T00:00:00Z"),
         },

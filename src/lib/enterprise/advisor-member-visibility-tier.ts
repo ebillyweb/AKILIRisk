@@ -26,6 +26,7 @@ export const ENTERPRISE_MEMBER_VISIBILITY_TIER_FEATURE: Record<
   skipPostIntakeReview: null,
   documentRequirements: null,
   actionPlan: null,
+  sharedClientVisibility: null,
 };
 
 export type VisibilityOptionTierState = {
@@ -160,7 +161,8 @@ export function getVisibilityOptionTierState(
     key === "skipPostIntakeReview" ||
     key === "documentRequirements" ||
     key === "actionPlan" ||
-    key === "assessmentLeads"
+    key === "assessmentLeads" ||
+    key === "sharedClientVisibility"
   ) {
     return {
       available: true,
@@ -179,6 +181,8 @@ export function getVisibilityOptionTierState(
                 ? "Clients see the action plan journey step and portal page when enabled."
               : key === "assessmentLeads"
                 ? "Team members can view and follow up on AKILI-assigned assessment leads."
+              : key === "sharedClientVisibility"
+                ? "Team members see every client in the firm, not only their own assignments."
                 : "Included on all module tiers.",
     };
   }
@@ -228,5 +232,6 @@ export function clampVisibilityToModuleTier(
     skipPostIntakeReview: visibility.skipPostIntakeReview,
     documentRequirements: visibility.documentRequirements,
     actionPlan: visibility.actionPlan,
+    sharedClientVisibility: visibility.sharedClientVisibility,
   };
 }

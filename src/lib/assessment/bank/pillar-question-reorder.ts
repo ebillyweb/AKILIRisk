@@ -33,21 +33,18 @@ type ReorderResult =
   | { ok: false; reason: "not_found" | "boundary" | "invalid_area" };
 
 /**
- * Move a pillar question up/down within the flattened risk-area list.
+ * Move one question up/down within an already-sorted flat list.
  * Same-section moves swap `displayOrder`. Cross-section moves insert before/after
  * the neighbor by re-homing the row and renumbering the target section.
+ *
+ * Scope-agnostic: callers pass whatever flattened list defines "adjacent"
+ * (a risk area for assessment, the whole intake script for intake).
  */
-export async function reorderPillarQuestionInRiskArea(input: {
-  riskAreaId: string;
-  questionId: string;
-  direction: "up" | "down";
-}): Promise<ReorderResult> {
-  const { riskAreaId, questionId, direction } = input;
-  if (!(await isPlatformRiskAreaSlug(riskAreaId))) {
-    return { ok: false, reason: "invalid_area" };
-  }
-
-  const sorted = await loadSortedPillarQuestionsForRiskArea(riskAreaId);
+async function reorderWithinSortedList(
+  sorted: PillarQuestionWithHierarchy[],
+  questionId: string,
+  direction: "up" | "down"
+): Promise<ReorderResult> {
   const idx = sorted.findIndex((q) => q.id === questionId);
   if (idx < 0) return { ok: false, reason: "not_found" };
 
@@ -85,6 +82,100 @@ export async function reorderPillarQuestionInRiskArea(input: {
   }
 
   return { ok: true, movedId: current.id, swappedWithId: neighbor.id };
+}
+
+/**
+ * Move a pillar question up/down within the flattened risk-area list.
+ */
+export async function reorderPillarQuestionInRiskArea(input: {
+  riskAreaId: string;
+  questionId: string;
+  direction: "up" | "down";
+}): Promise<ReorderResult> {
+  const { riskAreaId, questionId, direction } = input;
+  if (!(await isPlatformRiskAreaSlug(riskAreaId))) {
+    return { ok: false, reason: "invalid_area" };
+  }
+
+  const sorted = await loadSortedPillarQuestionsForRiskArea(riskAreaId);
+  return reorderWithinSortedList(sorted, questionId, direction);
+}
+
+/** All intake-category questions, sorted the same way the live interview reads them. */
+export async function loadSortedIntakePillarQuestions(): Promise<
+  PillarQuestionWithHierarchy[]
+> {
+  const rows = (await prisma.pillarQuestion.findMany({
+    where: {
+      section: { category: { kind: PillarCategoryKind.INTAKE } },
+    },
+    include: pillarQuestionInclude,
+  })) as PillarQuestionWithHierarchy[];
+
+  return sortPillarQuestionRows(rows);
+}
+
+/**
+ * Move an intake question up/down within the flattened intake script.
+ */
+export async function reorderIntakePillarQuestion(input: {
+  questionId: string;
+  direction: "up" | "down";
+}): Promise<ReorderResult> {
+  const sorted = await loadSortedIntakePillarQuestions();
+  return reorderWithinSortedList(sorted, input.questionId, input.direction);
+}
+
+/**
+ * Place a question at an explicit 0-based position within its own section,
+ * shifting siblings to make room. Renumbers the section 0..n-1 in a single
+ * transaction using a temporary negative pass so the
+ * `@@unique([sectionId, displayOrder])` constraint is never tripped mid-update.
+ *
+ * This is what makes "set this to order 2" safe from the edit form — a blind
+ * write to an already-taken displayOrder would otherwise throw.
+ */
+export async function repositionPillarQuestionWithinSection(input: {
+  questionId: string;
+  targetOrder: number;
+}): Promise<void> {
+  const { questionId, targetOrder } = input;
+  const moving = await prisma.pillarQuestion.findUnique({
+    where: { id: questionId },
+    select: { id: true, sectionId: true },
+  });
+  if (!moving) throw new Error("Question not found");
+
+  await prisma.$transaction(async (tx) => {
+    const rows = await tx.pillarQuestion.findMany({
+      where: { sectionId: moving.sectionId },
+      orderBy: { displayOrder: "asc" },
+      select: { id: true },
+    });
+
+    const others = rows.filter((r) => r.id !== questionId).map((r) => r.id);
+    const clamped = Math.max(0, Math.min(Math.trunc(targetOrder), others.length));
+    const ordered = [
+      ...others.slice(0, clamped),
+      questionId,
+      ...others.slice(clamped),
+    ];
+
+    // Phase 1: park every row at a unique negative slot.
+    for (let i = 0; i < ordered.length; i++) {
+      await tx.pillarQuestion.update({
+        where: { id: ordered[i]! },
+        data: { displayOrder: -(i + 1) },
+      });
+    }
+    // Phase 2: assign final contiguous 0..n-1 order.
+    for (let i = 0; i < ordered.length; i++) {
+      await tx.pillarQuestion.update({
+        where: { id: ordered[i]! },
+        data: { displayOrder: i },
+      });
+    }
+  });
 }
 
 async function insertPillarQuestionBefore(

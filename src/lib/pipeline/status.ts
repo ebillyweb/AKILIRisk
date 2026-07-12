@@ -98,22 +98,63 @@ export function computeProgress(stage: ClientWorkflowStage): number {
   return progressMap[stage];
 }
 
+const PIPELINE_PROCESS_LABEL: Record<ClientWorkflowStage, string> = {
+  INVITED: 'intake',
+  REGISTERED: 'intake',
+  INTAKE_IN_PROGRESS: 'intake',
+  INTAKE_COMPLETE: 'intake',
+  ASSESSMENT_IN_PROGRESS: 'assessment',
+  ASSESSMENT_COMPLETE: 'assessment',
+  DOCUMENTS_REQUIRED: 'report',
+  COMPLETE: 'report',
+};
+
+const PIPELINE_PROCESS_STATE_LABEL: Record<ClientWorkflowStage, string> = {
+  INVITED: 'not started',
+  REGISTERED: 'not started',
+  INTAKE_IN_PROGRESS: 'in progress',
+  INTAKE_COMPLETE: 'complete',
+  ASSESSMENT_IN_PROGRESS: 'in progress',
+  ASSESSMENT_COMPLETE: 'complete',
+  DOCUMENTS_REQUIRED: 'in progress',
+  COMPLETE: 'complete',
+};
+
+/** Advisor pipeline process phase (intake, assessment, report). */
+export function getAdvisorPipelineProcessLabel(
+  stage: ClientWorkflowStage,
+  documentRequirementsEnabled = true,
+): string {
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    stage,
+    documentRequirementsEnabled,
+  );
+  return PIPELINE_PROCESS_LABEL[displayStage];
+}
+
+/** Advisor pipeline process state as plain text (not started, in progress, complete). */
+export function getAdvisorPipelineProcessStateLabel(
+  stage: ClientWorkflowStage,
+  documentRequirementsEnabled = true,
+): string {
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    stage,
+    documentRequirementsEnabled,
+  );
+  return PIPELINE_PROCESS_STATE_LABEL[displayStage];
+}
+
 /**
- * Returns human-friendly stage labels
+ * Returns human-friendly stage labels (process · state) for filters and legacy copy.
  */
 export function getStageLabel(stage: ClientWorkflowStage): string {
-  const labelMap: Record<ClientWorkflowStage, string> = {
-    INVITED: 'Invited',
-    REGISTERED: 'Registered',
-    INTAKE_IN_PROGRESS: 'Intake In Progress',
-    INTAKE_COMPLETE: 'Intake Complete',
-    ASSESSMENT_IN_PROGRESS: 'In Progress',
-    ASSESSMENT_COMPLETE: 'Assessment Complete',
-    DOCUMENTS_REQUIRED: 'Documents Required',
-    COMPLETE: 'Complete',
-  };
+  const process = PIPELINE_PROCESS_LABEL[stage];
+  const state = PIPELINE_PROCESS_STATE_LABEL[stage];
+  return `${capitalizePipelineLabel(process)} · ${state}`;
+}
 
-  return labelMap[stage];
+function capitalizePipelineLabel(label: string): string {
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 /** Maps document-gated stages when firm document requirements are hidden in advisor UI. */
@@ -127,13 +168,127 @@ export function resolveAdvisorPipelineDisplayStage(
   return stage;
 }
 
+/** Combined process · state for tooltips and compact summaries. */
 export function getAdvisorPipelineStageLabel(
   stage: ClientWorkflowStage,
   documentRequirementsEnabled = true,
 ): string {
-  return getStageLabel(
-    resolveAdvisorPipelineDisplayStage(stage, documentRequirementsEnabled),
+  const process = getAdvisorPipelineProcessLabel(stage, documentRequirementsEnabled);
+  const state = getAdvisorPipelineProcessStateLabel(stage, documentRequirementsEnabled);
+  return `${capitalizePipelineLabel(process)} · ${state}`;
+}
+
+export const PIPELINE_PROCESS_PHASES = ['intake', 'assessment', 'report'] as const;
+export type PipelineProcessPhase = (typeof PIPELINE_PROCESS_PHASES)[number];
+
+export const PIPELINE_PROCESS_STATES = [
+  'not started',
+  'in progress',
+  'complete',
+] as const;
+export type PipelineProcessState = (typeof PIPELINE_PROCESS_STATES)[number];
+
+export type PipelineProcessStateCounts = Record<
+  PipelineProcessPhase,
+  Record<PipelineProcessState, number>
+>;
+
+export function createEmptyPipelineProcessStateCounts(): PipelineProcessStateCounts {
+  return {
+    intake: { 'not started': 0, 'in progress': 0, complete: 0 },
+    assessment: { 'not started': 0, 'in progress': 0, complete: 0 },
+    report: { 'not started': 0, 'in progress': 0, complete: 0 },
+  };
+}
+
+/** Roll up raw stage counts into intake / assessment / report by state. */
+export function aggregatePipelineMetricsByProcessState(
+  byStage: Record<ClientWorkflowStage, number>,
+  documentRequirementsEnabled = true,
+): PipelineProcessStateCounts {
+  const counts = createEmptyPipelineProcessStateCounts();
+
+  for (const stage of Object.keys(byStage) as ClientWorkflowStage[]) {
+    const count = byStage[stage] ?? 0;
+    if (count <= 0) continue;
+
+    const displayStage = resolveAdvisorPipelineDisplayStage(
+      stage,
+      documentRequirementsEnabled,
+    );
+    const process = PIPELINE_PROCESS_LABEL[displayStage] as PipelineProcessPhase;
+    const state = PIPELINE_PROCESS_STATE_LABEL[displayStage] as PipelineProcessState;
+    counts[process][state] += count;
+  }
+
+  return counts;
+}
+
+export const PIPELINE_MONITORING_PHASE = 'monitoring' as const;
+export type PipelineChevronPhase =
+  | PipelineProcessPhase
+  | typeof PIPELINE_MONITORING_PHASE;
+
+export type PipelineChevronStepStatus = 'complete' | 'current' | 'future';
+
+export const PIPELINE_CHEVRON_LABELS: Record<PipelineChevronPhase, string> = {
+  intake: 'Intake',
+  assessment: 'Assessment',
+  report: 'Report',
+  monitoring: 'Monitoring',
+};
+
+/** @deprecated Use PIPELINE_CHEVRON_LABELS */
+export const PIPELINE_CHEVRON_SHORT_LABELS = PIPELINE_CHEVRON_LABELS;
+
+/** Ordered chevron phases for the pipeline journey rail. */
+export function getPipelineChevronPhases(
+  monitoringEnabled = false,
+): PipelineChevronPhase[] {
+  return monitoringEnabled
+    ? ['intake', 'assessment', 'report', 'monitoring']
+    : ['intake', 'assessment', 'report'];
+}
+
+/** Maps workflow stage to completed and active chevron indices. */
+export function getPipelineChevronProgress(
+  stage: ClientWorkflowStage,
+  documentRequirementsEnabled = true,
+  monitoringEnabled = false,
+): { completedThrough: number; activeIndex: number } {
+  const displayStage = resolveAdvisorPipelineDisplayStage(
+    stage,
+    documentRequirementsEnabled,
   );
+  const lastIndex = getPipelineChevronPhases(monitoringEnabled).length - 1;
+
+  switch (displayStage) {
+    case 'INVITED':
+    case 'REGISTERED':
+    case 'INTAKE_IN_PROGRESS':
+      return { completedThrough: -1, activeIndex: 0 };
+    case 'INTAKE_COMPLETE':
+      return { completedThrough: 0, activeIndex: 1 };
+    case 'ASSESSMENT_IN_PROGRESS':
+      return { completedThrough: 0, activeIndex: 1 };
+    case 'ASSESSMENT_COMPLETE':
+      return { completedThrough: 1, activeIndex: 2 };
+    case 'DOCUMENTS_REQUIRED':
+      return { completedThrough: 1, activeIndex: 2 };
+    case 'COMPLETE':
+      return { completedThrough: lastIndex, activeIndex: lastIndex };
+    default:
+      return { completedThrough: -1, activeIndex: 0 };
+  }
+}
+
+export function getPipelineChevronStepStatus(
+  phaseIndex: number,
+  progress: { completedThrough: number; activeIndex: number },
+): PipelineChevronStepStatus {
+  if (phaseIndex <= progress.completedThrough) return 'complete';
+  if (phaseIndex === progress.activeIndex) return 'current';
+  return 'future';
 }
 
 /**

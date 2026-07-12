@@ -4,6 +4,14 @@ import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { sortPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import type { RiskLevelPalette } from "@/lib/assessment/risk-color-palette";
+import {
+  PRODUCTION_ADVISOR_SUBSCRIPTION_WHERE,
+  PRODUCTION_ASSESSMENT_RECOMMENDATION_WHERE,
+  PRODUCTION_CLIENT_ASSESSMENT_WHERE,
+  PRODUCTION_CLIENT_ASSIGNMENT_WHERE,
+  PRODUCTION_CLIENT_REPORT_WHERE,
+  productionUserWhere,
+} from "@/lib/admin/metrics-user-filters";
 
 /**
  * §9.1 (BRD): AKILI-side aggregate analytics queries. Server-only;
@@ -52,26 +60,34 @@ export async function getPlatformKpis(): Promise<PlatformKpis> {
     draftReports,
     activeSubscriptions,
   ] = await Promise.all([
-    prisma.user.count({ where: { role: "ADVISOR", deletedAt: null } }),
-    prisma.user.count({ where: { role: "ADVISOR", deletedAt: { not: null } } }),
+    prisma.user.count({ where: productionUserWhere({ role: "ADVISOR", deletedAt: null }) }),
+    prisma.user.count({ where: productionUserWhere({ role: "ADVISOR", deletedAt: { not: null } }) }),
     prisma.advisorEnterprise.count({ where: { status: "ACTIVE" } }),
     prisma.advisorEnterprise.count({ where: { status: "PROVISIONING" } }),
     prisma.advisorEnterprise.count({ where: { status: "SUSPENDED" } }),
-    prisma.user.count({ where: { role: "USER", deletedAt: null } }),
-    prisma.user.count({ where: { role: "USER", deletedAt: { not: null } } }),
+    prisma.user.count({ where: productionUserWhere({ role: "USER", deletedAt: null }) }),
+    prisma.user.count({ where: productionUserWhere({ role: "USER", deletedAt: { not: null } }) }),
     // "Scored assessments" = distinct Assessment rows with at least one
     // PillarScore. groupBy(assessmentId) is the cheapest cross-DB way
     // to count distinct assessment ids that have ≥ 1 score.
     prisma.pillarScore.groupBy({
       by: ["assessmentId"],
+      where: { assessment: PRODUCTION_CLIENT_ASSESSMENT_WHERE },
       _count: { _all: true },
     }),
-    prisma.report.count({ where: { status: "PUBLISHED" } }),
-    prisma.report.count({ where: { status: "DRAFT" } }),
+    prisma.report.count({
+      where: { status: "PUBLISHED", ...PRODUCTION_CLIENT_REPORT_WHERE },
+    }),
+    prisma.report.count({
+      where: { status: "DRAFT", ...PRODUCTION_CLIENT_REPORT_WHERE },
+    }),
     // Active subscriptions: ACTIVE OR GRACE_PERIOD (clients with grace
     // are still serviceable; PAST_DUE/CANCELLED/UNPAID are not).
     prisma.subscription.count({
-      where: { status: { in: ["ACTIVE", "GRACE_PERIOD"] } },
+      where: {
+        status: { in: ["ACTIVE", "GRACE_PERIOD"] },
+        ...PRODUCTION_ADVISOR_SUBSCRIPTION_WHERE,
+      },
     }),
   ]);
 
@@ -125,7 +141,11 @@ export async function loadLatestPillarScoresByClient(): Promise<
   // 1. Most recent COMPLETED assessment per client.
   const latestPerClient = await prisma.assessment.groupBy({
     by: ["userId"],
-    where: { status: "COMPLETED", completedAt: { not: null } },
+    where: {
+      status: "COMPLETED",
+      completedAt: { not: null },
+      ...PRODUCTION_CLIENT_ASSESSMENT_WHERE,
+    },
     _max: { completedAt: true },
   });
   const pairs = latestPerClient
@@ -359,7 +379,7 @@ export async function getTopTenantsByClientCount(): Promise<TopTenantRow[]> {
   // 1. groupBy advisorId on ACTIVE assignments → top N by row count.
   const grouped = await prisma.clientAdvisorAssignment.groupBy({
     by: ["advisorId"],
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", ...PRODUCTION_CLIENT_ASSIGNMENT_WHERE },
     _count: { _all: true },
     orderBy: { _count: { advisorId: "desc" } },
     take: TOP_TENANTS_LIMIT,
@@ -385,7 +405,11 @@ export async function getTopTenantsByClientCount(): Promise<TopTenantRow[]> {
   //    this advisor. One query per advisor would be N+1 — instead, do
   //    a single batched query.
   const assignmentRows = await prisma.clientAdvisorAssignment.findMany({
-    where: { advisorId: { in: advisorIds }, status: "ACTIVE" },
+    where: {
+      advisorId: { in: advisorIds },
+      status: "ACTIVE",
+      ...PRODUCTION_CLIENT_ASSIGNMENT_WHERE,
+    },
     select: { advisorId: true, clientId: true },
   });
   const advisorByClient = new Map<string, string>();
@@ -398,6 +422,7 @@ export async function getTopTenantsByClientCount(): Promise<TopTenantRow[]> {
       where: {
         userId: { in: clientIds },
         scores: { some: {} },
+        ...PRODUCTION_CLIENT_ASSESSMENT_WHERE,
       },
       select: { userId: true, id: true },
     });
@@ -437,6 +462,7 @@ const MISSING_CONTROLS_LIMIT = 10;
 export async function getCommonMissingControls(): Promise<MissingControlRow[]> {
   const grouped = await prisma.assessmentRecommendation.groupBy({
     by: ["serviceRecommendationId"],
+    where: PRODUCTION_ASSESSMENT_RECOMMENDATION_WHERE,
     _count: { _all: true },
     orderBy: { _count: { serviceRecommendationId: "desc" } },
     take: MISSING_CONTROLS_LIMIT,
