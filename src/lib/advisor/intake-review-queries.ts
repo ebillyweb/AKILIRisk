@@ -15,7 +15,7 @@ import {
   updateIntakeApproval,
 } from "@/lib/data/advisor";
 import { prisma } from "@/lib/db";
-import { loadIntakeScriptQuestions } from "@/lib/intake/load-intake-script";
+import { loadIntakeScriptForInterview } from "@/lib/intake/load-intake-script";
 import { personalizeIntakeScript } from "@/lib/intake/personalize-intake-question";
 import { toAdvisorHouseholdMemberViews } from "@/lib/profiles/advisor-household-view";
 import { computePillarRecommendations } from "@/lib/intake/pillar-recommendations";
@@ -105,7 +105,12 @@ export async function getIntakeReviewDataForAdvisorPage(
   }
 
   const [script, firmName] = await Promise.all([
-    loadIntakeScriptQuestions(),
+    // Read the interview's frozen snapshot (what the client actually answered,
+    // including custom/enterprise questions) — NOT the current live platform
+    // bank. Loading the live bank mismatches question IDs against
+    // IntakeResponse.questionId, dropping custom questions, answers, and notes
+    // and letting bank visibility toggles wrongly reshape a historical recap.
+    loadIntakeScriptForInterview(trimmedId),
     getAssignedAdvisorFirmNameForClient(reviewData.interview.userId),
   ]);
   const personalizedScript = personalizeIntakeScript(script, firmName);
@@ -230,7 +235,12 @@ export async function getIntakeReviewDataForAdvisorExport(
   if (!assignmentProfile) return null;
 
   const [script, firmName] = await Promise.all([
-    loadIntakeScriptQuestions(),
+    // Read the interview's frozen snapshot (what the client actually answered,
+    // including custom/enterprise questions) — NOT the current live platform
+    // bank. Loading the live bank mismatches question IDs against
+    // IntakeResponse.questionId, dropping custom questions, answers, and notes
+    // and letting bank visibility toggles wrongly reshape a historical recap.
+    loadIntakeScriptForInterview(trimmedId),
     getAssignedAdvisorFirmNameForClient(reviewData.interview.userId),
   ]);
   const personalizedScript = personalizeIntakeScript(script, firmName);
