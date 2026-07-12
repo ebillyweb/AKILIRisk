@@ -69,6 +69,7 @@ export async function getActiveIntakeInterview(userId: string): Promise<IntakeIn
   return prisma.intakeInterview.findFirst({
     where: {
       userId,
+      archivedAt: null,
       status: {
         not: 'SUBMITTED'
       }
@@ -77,10 +78,10 @@ export async function getActiveIntakeInterview(userId: string): Promise<IntakeIn
   });
 }
 
-/** Most recently touched interview (any status), e.g. to detect SUBMITTED after active filter excludes it. */
+/** Most recently touched non-archived interview (any status). */
 export async function getLatestIntakeInterview(userId: string): Promise<IntakeInterview | null> {
   return prisma.intakeInterview.findFirst({
-    where: { userId },
+    where: { userId, archivedAt: null },
     orderBy: { updatedAt: 'desc' },
   });
 }

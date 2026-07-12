@@ -868,6 +868,8 @@ model IntakeInterview {
   startedAt            DateTime?
   completedAt          DateTime?
   submittedAt          DateTime?
+  /// When set, this interview is hidden from active pipeline/client intake flows.
+  archivedAt           DateTime?   @map("archived_at")
   updatedAt            DateTime    @updatedAt
 
   user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -877,6 +879,7 @@ model IntakeInterview {
 
   @@index([userId])
   @@index([status])
+  @@index([archivedAt])
 }
 
 model IntakeResponse {

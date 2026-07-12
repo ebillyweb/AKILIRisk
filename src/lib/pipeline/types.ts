@@ -95,6 +95,7 @@ export type PipelineFilters = {
 };
 
 import type { AdvisorAssessmentDomainPickerData, AssessmentDomainOption } from "@/lib/advisor/assessment-domain-option";
+import type { RestartIntakeBlockReason } from "@/lib/intake/restart-intake-copy";
 import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 
 // Client detail data for drill-down view
@@ -149,6 +150,10 @@ export type ClientDetail = {
   assessmentLifecycle: {
     reassessmentEnabled: boolean;
     targetedQuestionCount: number;
+  };
+  restartIntake: {
+    allowed: boolean;
+    blockedReason?: RestartIntakeBlockReason;
   };
 };
 

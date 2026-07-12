@@ -22,6 +22,8 @@ import { WorkflowTimeline } from "./WorkflowTimeline";
 import { DocumentRequirements } from "./DocumentRequirements";
 import { ClientAuthControls } from "./ClientAuthControls";
 import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
+import { RestartIntakeButton } from "./RestartIntakeButton";
+import { restartIntakeBlockedMessage } from "@/lib/intake/restart-intake-copy";
 import { PipelineProcessStateLabel } from "./PipelineProcessStateLabel";
 import type { ClientDetail } from "@/lib/pipeline/types";
 import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
@@ -66,7 +68,7 @@ export function ClientDetailView({
   documentRequirementsEnabled = true,
   actionPlanEnabled = true,
 }: ClientDetailViewProps) {
-  const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker } = detail;
+  const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker, restartIntake } = detail;
   const assessmentDomains = assessmentDomainPicker.domains;
   const clientLabels = resolveAdvisorClientPipelineLabels(client);
   const assignmentActive = advisorAssignment.status === "ACTIVE";
@@ -78,6 +80,9 @@ export function ClientDetailView({
     client.awaitingIntakeReview && !assessmentCompleted;
   const intakeReviewId =
     intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
+  const restartIntakeBlockedReason = restartIntake.blockedReason
+    ? restartIntakeBlockedMessage(restartIntake.blockedReason)
+    : undefined;
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -484,6 +489,14 @@ export function ClientDetailView({
                 clientId={client.id}
                 status={advisorAssignment.status}
               />
+
+              {assignmentActive ? (
+                <RestartIntakeButton
+                  clientId={client.id}
+                  disabled={!restartIntake.allowed}
+                  disabledReason={restartIntakeBlockedReason}
+                />
+              ) : null}
 
               <Button variant="outline" className="w-full justify-start" asChild>
                 <Link href={assignmentActive ? "/advisor/pipeline" : "/advisor/pipeline?inactive=1"}>
