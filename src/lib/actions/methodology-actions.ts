@@ -19,6 +19,7 @@ import {
   deleteAdvisorQuestionError,
   nextDisplayOrder,
 } from "@/lib/methodology/advisor-question-policy";
+import { planCustomIntakeReorder } from "@/lib/methodology/intake-clone-reorder";
 import { defaultCustomRecommendationConditions } from "@/lib/methodology/advisor-recommendation-starter";
 import {
   buildAdvisorIntakeQuestionWriteData,
@@ -676,6 +677,48 @@ export async function createAdvisorIntakeQuestion(data: {
     return {
       success: false as const,
       error: advisorHubActionErrorMessage(error, "Failed to add intake question"),
+    };
+  }
+}
+
+export async function moveAdvisorIntakeQuestionOrder(
+  questionId: string,
+  direction: "up" | "down",
+) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const profile = await getAdvisorProfileOrThrow(userId);
+
+    // Only the advisor's own custom rows are reorderable. Firm-sourced
+    // (ENTERPRISE) rows are ordered at the firm level and re-synced from there.
+    const customRows = await prisma.advisorIntakeQuestion.findMany({
+      where: { advisorProfileId: profile.id, sourceKind: AdvisorQuestionSource.CUSTOM },
+      select: { id: true, displayOrder: true },
+    });
+
+    const plan = planCustomIntakeReorder(customRows, questionId, direction);
+    if (!plan.ok) {
+      if (plan.reason === "boundary") return { success: true as const };
+      return { success: false as const, error: "Question not found" };
+    }
+
+    await prisma.$transaction([
+      prisma.advisorIntakeQuestion.update({
+        where: { id: plan.move.id },
+        data: { displayOrder: plan.swapWith.displayOrder },
+      }),
+      prisma.advisorIntakeQuestion.update({
+        where: { id: plan.swapWith.id },
+        data: { displayOrder: plan.move.displayOrder },
+      }),
+    ]);
+
+    revalidatePath("/advisor/methodology/intake");
+    return { success: true as const };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: advisorHubActionErrorMessage(error, "Failed to reorder intake question"),
     };
   }
 }

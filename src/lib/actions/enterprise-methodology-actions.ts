@@ -17,6 +17,7 @@ import {
   nextDisplayOrder,
 } from "@/lib/methodology/advisor-question-policy";
 import { syncEnterpriseMethodologyToMembers } from "@/lib/methodology/clone-enterprise-methodology";
+import { planCustomIntakeReorder } from "@/lib/methodology/intake-clone-reorder";
 import {
   buildAdvisorIntakeQuestionWriteData,
   parseAdvisorIntakeQuestionInput,
@@ -596,6 +597,50 @@ export async function deleteEnterpriseIntakeQuestion(questionId: string) {
     return {
       success: false as const,
       error: advisorHubActionErrorMessage(error, "Failed to delete firm intake question"),
+    };
+  }
+}
+
+export async function moveEnterpriseIntakeQuestionOrder(
+  questionId: string,
+  direction: "up" | "down",
+) {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const team = await requireEnterpriseTeamManager(userId);
+
+    // Only the firm's own custom rows are reorderable; platform-sourced rows
+    // stay first in COMBINED (Scope A: reorder within the custom block).
+    const customRows = await prisma.enterpriseIntakeQuestion.findMany({
+      where: { enterpriseId: team.enterpriseId, sourceKind: AdvisorQuestionSource.CUSTOM },
+      select: { id: true, displayOrder: true },
+    });
+
+    const plan = planCustomIntakeReorder(customRows, questionId, direction);
+    if (!plan.ok) {
+      // Boundary moves (already first/last) are a harmless no-op.
+      if (plan.reason === "boundary") return { success: true as const };
+      return { success: false as const, error: "Question not found" };
+    }
+
+    await prisma.$transaction([
+      prisma.enterpriseIntakeQuestion.update({
+        where: { id: plan.move.id },
+        data: { displayOrder: plan.swapWith.displayOrder },
+      }),
+      prisma.enterpriseIntakeQuestion.update({
+        where: { id: plan.swapWith.id },
+        data: { displayOrder: plan.move.displayOrder },
+      }),
+    ]);
+
+    // Propagate the new order to member advisors' clones so clients see it.
+    await syncAfterEnterpriseMethodologyChange(team.enterpriseId);
+    return { success: true as const };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: advisorHubActionErrorMessage(error, "Failed to reorder firm intake question"),
     };
   }
 }
