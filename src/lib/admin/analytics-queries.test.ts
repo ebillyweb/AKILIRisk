@@ -24,6 +24,7 @@ const { db } = vi.hoisted(() => {
       id: string;
       role: "USER" | "ADVISOR" | "ADMIN" | "SUPER_ADMIN";
       deletedAt: Date | null;
+      isTestAccount: boolean;
       emailCiphertext: string;
     }>,
     advisorProfiles: [] as Array<{
@@ -77,6 +78,7 @@ vi.mock("@/lib/db", () => ({
       count: vi.fn(async ({ where }: { where: Record<string, unknown> }) => {
         return db.users.filter((u) => {
           if (where.role && u.role !== where.role) return false;
+          if (where.isTestAccount === false && u.isTestAccount) return false;
           if (where.deletedAt === null && u.deletedAt !== null) return false;
           if (
             typeof where.deletedAt === "object" &&
@@ -326,7 +328,13 @@ beforeEach(() => {
 
 function seedAdvisor(id: string, firmName: string, email = `advisor-${id}`): void {
   const userId = `user-${id}`;
-  db.users.push({ id: userId, role: "ADVISOR", deletedAt: null, emailCiphertext: email });
+  db.users.push({
+    id: userId,
+    role: "ADVISOR",
+    deletedAt: null,
+    isTestAccount: false,
+    emailCiphertext: email,
+  });
   db.advisorProfiles.push({ id, userId, firmName });
 }
 
@@ -341,6 +349,7 @@ function seedClientWithLatestPillar(
       id: clientId,
       role: "USER",
       deletedAt: null,
+      isTestAccount: false,
       emailCiphertext: `e:${clientId}`,
     });
   }
@@ -365,11 +374,11 @@ function seedClientWithLatestPillar(
 describe("getPlatformKpis", () => {
   it("counts active vs deleted advisors and clients", async () => {
     db.users.push(
-      { id: "a1", role: "ADVISOR", deletedAt: null, emailCiphertext: "e:a1" },
-      { id: "a2", role: "ADVISOR", deletedAt: new Date(), emailCiphertext: "e:a2" },
-      { id: "c1", role: "USER", deletedAt: null, emailCiphertext: "e:c1" },
-      { id: "c2", role: "USER", deletedAt: null, emailCiphertext: "e:c2" },
-      { id: "c3", role: "USER", deletedAt: new Date(), emailCiphertext: "e:c3" }
+      { id: "a1", role: "ADVISOR", deletedAt: null, isTestAccount: false, emailCiphertext: "e:a1" },
+      { id: "a2", role: "ADVISOR", deletedAt: new Date(), isTestAccount: false, emailCiphertext: "e:a2" },
+      { id: "c1", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c1" },
+      { id: "c2", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c2" },
+      { id: "c3", role: "USER", deletedAt: new Date(), isTestAccount: false, emailCiphertext: "e:c3" }
     );
 
     const kpis = await getPlatformKpis();
@@ -477,7 +486,7 @@ describe("getPillarAverages", () => {
     // Same assessment, two PillarScore rows for the same pillar at
     // different times. The older one (LOW) must be ignored; the newer
     // one (CRITICAL) is what counts.
-    db.users.push({ id: "c1", role: "USER", deletedAt: null, emailCiphertext: "e:c1" });
+    db.users.push({ id: "c1", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c1" });
     db.assessments.push({
       id: "asmt-1",
       userId: "c1",
@@ -518,9 +527,9 @@ describe("getTopTenantsByClientCount", () => {
     seedAdvisor("adv-A", "Firm A");
     seedAdvisor("adv-B", "Firm B");
     db.users.push(
-      { id: "c1", role: "USER", deletedAt: null, emailCiphertext: "e:c1" },
-      { id: "c2", role: "USER", deletedAt: null, emailCiphertext: "e:c2" },
-      { id: "c3", role: "USER", deletedAt: null, emailCiphertext: "e:c3" }
+      { id: "c1", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c1" },
+      { id: "c2", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c2" },
+      { id: "c3", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c3" }
     );
     db.assignments.push(
       { advisorId: "adv-A", clientId: "c1", status: "ACTIVE" },
@@ -539,8 +548,8 @@ describe("getTopTenantsByClientCount", () => {
   it("counts scored assessments per advisor's clients", async () => {
     seedAdvisor("adv-A", "Firm A");
     db.users.push(
-      { id: "c1", role: "USER", deletedAt: null, emailCiphertext: "e:c1" },
-      { id: "c2", role: "USER", deletedAt: null, emailCiphertext: "e:c2" }
+      { id: "c1", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c1" },
+      { id: "c2", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c2" }
     );
     db.assignments.push(
       { advisorId: "adv-A", clientId: "c1", status: "ACTIVE" },
@@ -640,7 +649,7 @@ describe("PII invariant", () => {
 
   it("getTopTenantsByClientCount exposes only advisor-level identity (no client-level)", async () => {
     seedAdvisor("adv-A", "Firm A");
-    db.users.push({ id: "c1", role: "USER", deletedAt: null, emailCiphertext: "e:c1" });
+    db.users.push({ id: "c1", role: "USER", deletedAt: null, isTestAccount: false, emailCiphertext: "e:c1" });
     db.assignments.push({ advisorId: "adv-A", clientId: "c1", status: "ACTIVE" });
     const result = await getTopTenantsByClientCount();
     expect(() => assertNoForbiddenKeys(result, "tenants")).not.toThrow();

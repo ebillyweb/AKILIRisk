@@ -51,6 +51,8 @@ model User {
   advisorPortalAccessEnabled Boolean @default(true)
   /// Admin soft-delete: when set, user cannot sign in and should be excluded from active advisor lists.
   deletedAt     DateTime?
+  /// Super-admin flag: test clients/advisors stay operational but are excluded from platform dashboards.
+  isTestAccount Boolean   @default(false)
   /// Set when the user completes a successful sign-in (after MFA when enabled).
   lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())

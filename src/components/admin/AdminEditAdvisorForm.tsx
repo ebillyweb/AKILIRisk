@@ -27,6 +27,7 @@ import {
   updateAdvisorByAdmin,
   type UpdateAdvisorInput,
 } from "@/lib/admin/actions";
+import { AdminTestAccountToggle } from "@/components/admin/AdminTestAccountToggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const formSchema = z.object({
@@ -60,6 +61,7 @@ type Advisor = {
   firstName: string | null;
   lastName: string | null;
   deletedAt: Date | string | null;
+  isTestAccount: boolean;
   advisorPortalAccessEnabled: boolean;
   subscription: AdvisorSubscription | null;
   advisorProfile: {
@@ -95,12 +97,14 @@ interface AdminEditAdvisorFormProps {
   billingFeaturesEnabled: boolean;
   /** Whether the admin is allowed to turn portal access on (subscription rules satisfied). */
   canEnablePortalAccess: boolean;
+  superAdmin: boolean;
 }
 
 export function AdminEditAdvisorForm({
   advisor,
   billingFeaturesEnabled,
   canEnablePortalAccess,
+  superAdmin,
 }: AdminEditAdvisorFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -248,6 +252,32 @@ export function AdminEditAdvisorForm({
             </Button>
           </AlertDescription>
         </Alert>
+      ) : null}
+
+      {superAdmin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Test account</CardTitle>
+            <CardDescription>
+              Test advisors stay fully operational but are excluded from platform dashboards and
+              analytics (control center, analytics, risk signals).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-3">
+            {advisor.isTestAccount ? (
+              <p className="text-sm text-muted-foreground">This advisor is marked as a test account.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                This advisor counts toward production dashboards.
+              </p>
+            )}
+            <AdminTestAccountToggle
+              userId={advisor.id}
+              isTestAccount={advisor.isTestAccount}
+              accountLabel="advisor"
+            />
+          </CardContent>
+        </Card>
       ) : null}
 
       <Card>

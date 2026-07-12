@@ -37,6 +37,7 @@ export async function getAdvisorsForAdmin(opts?: { scope?: AdvisorsAdminScope })
       lastName: true,
       createdAt: true,
       deletedAt: true,
+      isTestAccount: true,
       advisorPortalAccessEnabled: true,
       subscription: {
         select: {
@@ -104,6 +105,7 @@ export async function getAdvisorForAdmin(userId: string) {
       firstName: true,
       lastName: true,
       deletedAt: true,
+      isTestAccount: true,
       advisorPortalAccessEnabled: true,
       subscription: {
         select: {
@@ -214,6 +216,7 @@ export async function getClientsForAdmin(opts?: {
       emailCiphertext: true,
       name: true,
       deletedAt: true,
+      isTestAccount: true,
       createdAt: true,
       _count: {
         select: { intakeInterviews: true, assessments: true },

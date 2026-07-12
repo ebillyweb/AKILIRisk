@@ -50,6 +50,8 @@ export const AUDIT_ACTIONS = {
   USER_SOFT_DELETE: "user.soft_delete",
   USER_RESTORE: "user.restore",
   USER_PORTAL_ACCESS_TOGGLE: "user.portal_access_toggle",
+  /** Super admin marks or clears a client/advisor test account (excluded from dashboards). */
+  USER_TEST_ACCOUNT_TOGGLE: "user.test_account_toggle",
 
   // ── Admin enterprise firm lifecycle ───────────────────────────────────────
   ENTERPRISE_SUSPEND: "enterprise.suspend",

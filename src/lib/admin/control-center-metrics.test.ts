@@ -46,14 +46,21 @@ describe("getControlCenterMetrics", () => {
       .mockResolvedValueOnce([{ actorUserId: "u1" }] as Awaited<
         ReturnType<typeof prisma.auditLog.groupBy>
       >);
-    mockUserCount
-      .mockResolvedValueOnce(5) // activeAdvisors
-      .mockResolvedValueOnce(1) // newAdvisorsLast30d
-      .mockResolvedValueOnce(0) // newAdvisorsPrior30d
-      .mockResolvedValueOnce(10) // activeClients
-      .mockResolvedValueOnce(8) // clientsWithSubmittedIntake
-      .mockResolvedValueOnce(6) // clientsExisted30dAgo
-      .mockResolvedValueOnce(4); // clientsWithIntakeBy30dAgo
+    let dashboardUserCountCall = 0;
+    const dashboardUserCounts = [5, 1, 0, 10, 8, 6, 4];
+    mockUserCount.mockImplementation(async (args) => {
+      const actorIds =
+        args?.where &&
+        typeof args.where === "object" &&
+        "id" in args.where &&
+        args.where.id &&
+        typeof args.where.id === "object" &&
+        "in" in args.where.id
+          ? (args.where.id.in as string[])
+          : null;
+      if (actorIds) return actorIds.length;
+      return dashboardUserCounts[dashboardUserCountCall++] ?? 0;
+    });
     mockAssessmentCount
       .mockResolvedValueOnce(3) // in progress
       .mockResolvedValueOnce(2) // started last 30d

@@ -8,6 +8,7 @@ import type { RiskSeverity } from "@/lib/intelligence/types";
 import type { PillarCatalogEntry } from "@/lib/methodology/pillar-catalog";
 import { sortPillarCatalog } from "@/lib/methodology/pillar-catalog";
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
+import { PRODUCTION_CLIENT_ASSIGNMENT_WHERE } from "@/lib/admin/metrics-user-filters";
 
 /**
  * Platform-wide risk signals — aggregate intelligence-style metrics across
@@ -184,7 +185,7 @@ async function getTopTenantsByRiskExposure(
   byClient: Map<string, Array<{ severity: RiskSeverity }>>
 ): Promise<TenantRiskExposureRow[]> {
   const assignments = await prisma.clientAdvisorAssignment.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", ...PRODUCTION_CLIENT_ASSIGNMENT_WHERE },
     select: { advisorId: true, clientId: true },
   });
   if (assignments.length === 0) return [];

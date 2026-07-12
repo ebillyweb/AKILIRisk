@@ -5,6 +5,12 @@ import type { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { ControlCenterAlert } from "@/lib/admin/control-center-types";
 import type { AlertSeverity } from "@/components/admin/dashboard/NeedsAttentionItem";
+import {
+  PRODUCTION_CLIENT_ASSESSMENT_WHERE,
+  PRODUCTION_CLIENT_INTAKE_APPROVAL_WHERE,
+  PRODUCTION_CLIENT_INTAKE_INTERVIEW_WHERE,
+  productionUserWhere,
+} from "@/lib/admin/metrics-user-filters";
 
 export type {
   ControlCenterAlert,
@@ -130,12 +136,14 @@ export async function getControlCenterAlerts(): Promise<ControlCenterAlert[]> {
       where: {
         status: "IN_PROGRESS",
         updatedAt: { lt: seventyTwoHoursAgo },
+        ...PRODUCTION_CLIENT_ASSESSMENT_WHERE,
       },
     }),
     prisma.assessment.findFirst({
       where: {
         status: "IN_PROGRESS",
         updatedAt: { lt: seventyTwoHoursAgo },
+        ...PRODUCTION_CLIENT_ASSESSMENT_WHERE,
       },
       orderBy: { updatedAt: "asc" },
       select: { updatedAt: true },
@@ -144,12 +152,14 @@ export async function getControlCenterAlerts(): Promise<ControlCenterAlert[]> {
       where: {
         status: { in: ["PENDING", "IN_REVIEW"] },
         updatedAt: { lt: seventyTwoHoursAgo },
+        ...PRODUCTION_CLIENT_INTAKE_APPROVAL_WHERE,
       },
     }),
     prisma.intakeApproval.findFirst({
       where: {
         status: { in: ["PENDING", "IN_REVIEW"] },
         updatedAt: { lt: seventyTwoHoursAgo },
+        ...PRODUCTION_CLIENT_INTAKE_APPROVAL_WHERE,
       },
       orderBy: { updatedAt: "asc" },
       select: { updatedAt: true },
@@ -177,22 +187,24 @@ export async function getControlCenterAlerts(): Promise<ControlCenterAlert[]> {
       where: {
         status: "IN_PROGRESS",
         updatedAt: { lt: sevenDaysAgo },
+        ...PRODUCTION_CLIENT_INTAKE_INTERVIEW_WHERE,
       },
     }),
     prisma.intakeInterview.findFirst({
       where: {
         status: "IN_PROGRESS",
         updatedAt: { lt: sevenDaysAgo },
+        ...PRODUCTION_CLIENT_INTAKE_INTERVIEW_WHERE,
       },
       orderBy: { updatedAt: "asc" },
       select: { updatedAt: true },
     }),
     prisma.user.findMany({
-      where: {
+      where: productionUserWhere({
         role: "ADVISOR",
         deletedAt: null,
         advisorPortalAccessEnabled: true,
-      },
+      }),
       select: {
         updatedAt: true,
         advisorProfile: { select: { firmName: true } },

@@ -14,6 +14,11 @@ import type {
   ControlCenterMetrics,
   MetricTrend,
 } from "@/lib/admin/control-center-types";
+import {
+  PRODUCTION_CLIENT_ASSESSMENT_WHERE,
+  PRODUCTION_CLIENT_INTAKE_APPROVAL_WHERE,
+  productionUserWhere,
+} from "@/lib/admin/metrics-user-filters";
 
 export type { ControlCenterMetrics, MetricTrend } from "@/lib/admin/control-center-types";
 
@@ -38,7 +43,15 @@ async function countUniqueLoginsBetween(start: Date, end: Date): Promise<number>
       NOT: { metadata: { path: ["testOrigin"], equals: true } },
     },
   });
-  return rows.length;
+  const actorUserIds = rows
+    .map((row) => row.actorUserId)
+    .filter((id): id is string => id != null);
+  if (actorUserIds.length === 0) return 0;
+
+  const productionActors = await prisma.user.count({
+    where: productionUserWhere({ id: { in: actorUserIds } }),
+  });
+  return productionActors;
 }
 
 function formatCountDelta(current: number, previous: number): MetricTrend {
@@ -122,52 +135,59 @@ export async function getControlCenterMetrics(): Promise<ControlCenterMetrics> {
     healthSnapshot,
   ] = await Promise.all([
     prisma.user.count({
-      where: {
+      where: productionUserWhere({
         role: "ADVISOR",
         deletedAt: null,
         advisorPortalAccessEnabled: true,
-      },
+      }),
     }),
     prisma.user.count({
-      where: {
+      where: productionUserWhere({
         role: "ADVISOR",
         deletedAt: null,
         createdAt: { gte: thirtyDaysAgo },
-      },
+      }),
     }),
     prisma.user.count({
-      where: {
+      where: productionUserWhere({
         role: "ADVISOR",
         deletedAt: null,
         createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
-      },
+      }),
     }),
     countUniqueLoginsBetween(startOfToday, new Date()),
     countUniqueLoginsBetween(startOfYesterday, startOfToday),
-    prisma.assessment.count({ where: { status: "IN_PROGRESS" } }),
-    prisma.assessment.count({ where: { startedAt: { gte: thirtyDaysAgo } } }),
     prisma.assessment.count({
-      where: { startedAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } },
+      where: { status: "IN_PROGRESS", ...PRODUCTION_CLIENT_ASSESSMENT_WHERE },
     }),
-    prisma.user.count({ where: { role: "USER", deletedAt: null } }),
-    prisma.user.count({
+    prisma.assessment.count({
+      where: { startedAt: { gte: thirtyDaysAgo }, ...PRODUCTION_CLIENT_ASSESSMENT_WHERE },
+    }),
+    prisma.assessment.count({
       where: {
+        startedAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
+        ...PRODUCTION_CLIENT_ASSESSMENT_WHERE,
+      },
+    }),
+    prisma.user.count({ where: productionUserWhere({ role: "USER", deletedAt: null }) }),
+    prisma.user.count({
+      where: productionUserWhere({
         role: "USER",
         deletedAt: null,
         intakeInterviews: {
           some: { status: { in: ["SUBMITTED", "COMPLETED"] } },
         },
-      },
+      }),
     }),
     prisma.user.count({
-      where: {
+      where: productionUserWhere({
         role: "USER",
         deletedAt: null,
         createdAt: { lte: thirtyDaysAgo },
-      },
+      }),
     }),
     prisma.user.count({
-      where: {
+      where: productionUserWhere({
         role: "USER",
         deletedAt: null,
         createdAt: { lte: thirtyDaysAgo },
@@ -180,15 +200,19 @@ export async function getControlCenterMetrics(): Promise<ControlCenterMetrics> {
             ],
           },
         },
-      },
+      }),
     }),
     prisma.intakeApproval.count({
-      where: { status: { in: ["PENDING", "IN_REVIEW"] } },
+      where: {
+        status: { in: ["PENDING", "IN_REVIEW"] },
+        ...PRODUCTION_CLIENT_INTAKE_APPROVAL_WHERE,
+      },
     }),
     prisma.intakeApproval.count({
       where: {
         status: { in: ["PENDING", "IN_REVIEW"] },
         createdAt: { lte: thirtyDaysAgo },
+        ...PRODUCTION_CLIENT_INTAKE_APPROVAL_WHERE,
       },
     }),
     getOperationsHealthSnapshot(),

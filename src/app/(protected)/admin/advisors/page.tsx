@@ -14,9 +14,12 @@ import {
   pickAdvisorBrandPrimary,
   pickAdvisorBrandSecondary,
 } from "@/components/admin/admin-advisor-list-styles";
+import { AdminTestAccountToggle } from "@/components/admin/AdminTestAccountToggle";
 import { resolveAdminAdvisorListBranding } from "@/lib/admin/advisor-list-branding";
 import { isEnterpriseLinkedAdvisor } from "@/lib/admin/advisor-list-filters";
 import { getAdminAdvisorHubDisplay } from "@/lib/admin/advisor-hub-display";
+import { isSuperAdmin } from "@/lib/admin/auth";
+import { auth } from "@/lib/auth";
 import { isBillingEnabled } from "@/lib/billing/config";
 import { getAdvisorsForAdmin, type AdvisorsAdminScope } from "@/lib/admin/queries";
 import { looksLikeAdvisorBrandingS3Url } from "@/lib/branding/advisor-logo-display";
@@ -41,6 +44,8 @@ export default async function AdminAdvisorsPage({
   searchParams: Promise<{ filter?: string }>;
 }) {
   const sp = await searchParams;
+  const session = await auth();
+  const superUser = isSuperAdmin(session);
   const filter: AdvisorsAdminFilter =
     sp.filter === "all"
       ? "all"
@@ -172,6 +177,7 @@ export default async function AdminAdvisorsPage({
         <div className="grid gap-4">
           {advisors.map(({ advisor: a, hub }) => {
             const isDeactivated = Boolean(a.deletedAt);
+            const isTestAccount = Boolean(a.isTestAccount);
             const isWhiteLabel = Boolean(a.subscription?.whiteLabel);
             const profile = a.advisorProfile;
             const displayBranding = profile
@@ -419,7 +425,19 @@ export default async function AdminAdvisorsPage({
                           <span className="truncate">{hub.subscriptionStatusLabel}</span>
                         </Badge>
                       ) : null}
+                      {isTestAccount ? (
+                        <Badge variant="secondary" className="text-xs font-medium normal-case tracking-normal">
+                          Test account
+                        </Badge>
+                      ) : null}
                     </div>
+                    {superUser ? (
+                      <AdminTestAccountToggle
+                        userId={a.id}
+                        isTestAccount={isTestAccount}
+                        accountLabel="advisor"
+                      />
+                    ) : null}
                     <Button variant="outline" size="icon" className="h-9 w-9" asChild>
                       <Link href={`/admin/advisors/${a.id}/edit`} aria-label={`Edit ${a.name ?? a.email}`}>
                         <Pencil className="h-4 w-4" />
