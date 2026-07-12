@@ -25,7 +25,7 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
     canonicalName: "Cyber & Digital Security",
     description: "Digital footprint, data protection, fraud, and online threats.",
     defaultOrder: 2,
-    defaultWeight: 16,
+    defaultWeight: 14,
   },
   {
     slug: "physical-security",
@@ -57,7 +57,7 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
     description:
       "Public footprint, conduct and social media norms, family standards, and reputation-sensitive behavior.",
     defaultOrder: 6,
-    defaultWeight: 8,
+    defaultWeight: 7,
   },
   {
     slug: "liquidity-cash",
@@ -84,12 +84,16 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
     defaultWeight: 6,
   },
   {
+    // Presented as "AI & Emerging Tech Risk". The slug remains
+    // `family-governance-behavioral` (a legacy identifier) so this change
+    // doesn't ripple into catalog-coupled tests or require a data migration;
+    // a proper slug rename + migration is tracked as a follow-up.
     slug: "family-governance-behavioral",
-    canonicalName: "Behavioral Resilience",
+    canonicalName: "AI & Emerging Tech Risk",
     description:
-      "Family dynamics, heir preparedness, emotional resilience, and behavioral-finance pitfalls.",
+      "AI-enabled impersonation and deepfake fraud, synthetic-media reputation attacks, data exposure to AI tools, and governance of AI use across the family and its advisors.",
     defaultOrder: 10,
-    defaultWeight: 5,
+    defaultWeight: 8,
   },
 ] as const;
 

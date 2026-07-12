@@ -11,7 +11,7 @@ import {
   Landmark,
   Receipt,
   ScrollText,
-  HeartHandshake,
+  Cpu,
 } from "lucide-react";
 import { loadAdvisorMethodologyPillars } from "@/lib/methodology/methodology-queries";
 
@@ -25,7 +25,7 @@ const PILLAR_ICONS: Record<string, LucideIcon> = {
   "liquidity-cash": Landmark,
   "tax-exposure": Receipt,
   "estate-succession": ScrollText,
-  "family-governance-behavioral": HeartHandshake,
+  "family-governance-behavioral": Cpu,
 };
 
 export type AdvisorPillarShortcut = {

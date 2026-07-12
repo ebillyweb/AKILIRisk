@@ -27,7 +27,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   'liquidity-cash': 'Liquidity & Cash Management',
   'tax-exposure': 'Tax Exposure',
   'estate-succession': 'Estate & Succession',
-  'family-governance-behavioral': 'Behavioral Resilience',
+  'family-governance-behavioral': 'AI & Emerging Tech Risk',
   /** Historical breakdown rows */
   'health-medical-preparedness': 'Protection & Risk Transfer (prior medical section)',
   // Legacy governance subcategory IDs (scores stored before six-pillar taxonomy)
