@@ -193,9 +193,8 @@ export function AdminAdvisorFeatureFlagsForm({
             <FieldHelp helpKey="flag-monitoring" triggerLabel="Pipeline monitoring" />
           </div>
           <p className="text-sm text-muted-foreground">
-            Adds a <span className="font-medium text-foreground">Monitoring</span> chevron to the
-            client pipeline journey rail after report. Leave off until the monitoring workspace is
-            ready.
+            Adds a <span className="font-medium text-foreground">Monitoring</span> chevron after
+            Report on the client pipeline journey. Leave off until continuous monitoring is ready.
           </p>
         </div>
       </div>

@@ -214,7 +214,7 @@ export const FIELD_HELP = {
   "flag-monitoring": {
     title: "Pipeline monitoring",
     description:
-      "Shows a Monitoring step on the advisor client pipeline journey chevron after report. Leave off until continuous monitoring is ready.",
+      "Shows a Monitoring chevron after Report on the advisor client pipeline (Intake › Assessment › Report › Monitoring). Leave off until continuous monitoring is ready.",
   },
 
   // Admin — intake question edit

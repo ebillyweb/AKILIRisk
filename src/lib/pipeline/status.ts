@@ -231,12 +231,15 @@ export type PipelineChevronPhase =
 
 export type PipelineChevronStepStatus = 'complete' | 'current' | 'future';
 
-export const PIPELINE_CHEVRON_SHORT_LABELS: Record<PipelineChevronPhase, string> = {
+export const PIPELINE_CHEVRON_LABELS: Record<PipelineChevronPhase, string> = {
   intake: 'Intake',
-  assessment: 'Assess',
+  assessment: 'Assessment',
   report: 'Report',
-  monitoring: 'Monitor',
+  monitoring: 'Monitoring',
 };
+
+/** @deprecated Use PIPELINE_CHEVRON_LABELS */
+export const PIPELINE_CHEVRON_SHORT_LABELS = PIPELINE_CHEVRON_LABELS;
 
 /** Ordered chevron phases for the pipeline journey rail. */
 export function getPipelineChevronPhases(
