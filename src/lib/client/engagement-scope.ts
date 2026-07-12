@@ -144,7 +144,9 @@ export async function getClientEngagementScope(
   const approval = await prisma.intakeApproval.findFirst({
     where: {
       status: "APPROVED",
-      interview: { userId: clientUserId },
+      // Ignore approvals on archived (restarted) interviews so a restart
+      // doesn't leave a stale approval unlocking the assessment.
+      interview: { userId: clientUserId, archivedAt: null },
     },
     orderBy: { approvedAt: "desc" },
     select: {

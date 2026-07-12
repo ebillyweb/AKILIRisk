@@ -58,6 +58,7 @@ describe("restartClientIntake", () => {
     mocks.restartClientIntakeForUser.mockResolvedValue({
       interview: { id: "intake-new", status: "NOT_STARTED" },
       archivedCount: 1,
+      archivedAssessmentCount: 1,
     });
   });
 
@@ -77,7 +78,7 @@ describe("restartClientIntake", () => {
   it("returns eligibility errors without mutating intake", async () => {
     mocks.getRestartIntakeEligibility.mockResolvedValue({
       allowed: false,
-      reason: "assessment_started",
+      reason: "facilitated_session_open",
     });
 
     const result = await restartClientIntake({
@@ -86,7 +87,7 @@ describe("restartClientIntake", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "blocked:assessment_started",
+      error: "blocked:facilitated_session_open",
     });
     expect(mocks.restartClientIntakeForUser).not.toHaveBeenCalled();
   });

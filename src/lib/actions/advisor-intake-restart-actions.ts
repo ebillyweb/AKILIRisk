@@ -68,14 +68,18 @@ export async function restartClientIntake(
       };
     }
 
-    const { interview, archivedCount } = await restartClientIntakeForUser(clientId);
+    const { interview, archivedCount, archivedAssessmentCount } =
+      await restartClientIntakeForUser(clientId);
 
     await writeAudit({
       actor: { userId, role: role as UserRole, email },
       action: AUDIT_ACTIONS.INTAKE_RESTART,
       entityType: "IntakeInterview",
       entityId: interview.id,
-      beforeData: { archivedInterviewCount: archivedCount },
+      beforeData: {
+        archivedInterviewCount: archivedCount,
+        archivedAssessmentCount,
+      },
       afterData: {
         interviewId: interview.id,
         status: interview.status,
@@ -91,6 +95,7 @@ export async function restartClientIntake(
     revalidatePath(`/advisor/pipeline/${clientId}`);
     revalidatePath("/dashboard");
     revalidatePath("/intake", "layout");
+    revalidatePath("/assessment", "layout");
 
     return { success: true, interviewId: interview.id };
   } catch (e) {

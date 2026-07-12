@@ -26,7 +26,7 @@ export function RestartIntakeButton({
     if (disabled) return;
 
     const confirmed = window.confirm(
-      "Restart intake for this client? Their current answers will be archived and they will start the updated question set from the beginning.",
+      "Restart intake for this client? Their current intake answers — and any in-progress or completed assessment — will be archived. They start over from the beginning with the current questions, and you'll re-approve their intake before the new assessment unlocks.",
     );
     if (!confirmed) return;
 
