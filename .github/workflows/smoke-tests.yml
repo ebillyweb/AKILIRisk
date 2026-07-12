@@ -9,10 +9,14 @@
 # for `schedule:` triggers) but checks out `staging` to run its tests. The
 # `@smoke` tags therefore live on `staging`, not here — see docs/smoke-tests.md.
 #
+# Reporting: each run posts its pass/fail outcome to Slack via an Incoming
+# Webhook (SLACK_WEBHOOK_URL secret); unset ⇒ the notify steps no-op.
+#
 # Setup (see docs/smoke-tests.md):
 #   - Optional repo secrets override the seeded fallback credentials:
 #       SMOKE_ADVISOR_EMAIL / SMOKE_ADVISOR_PASSWORD
 #       SMOKE_ADMIN_EMAIL   / SMOKE_ADMIN_PASSWORD
+#   - SLACK_WEBHOOK_URL enables the Slack pass/fail notifications.
 #   - Grow the suite by tagging more tests on `staging` with `{ tag: "@smoke" }`.
 name: Smoke Tests (preview)
 
@@ -39,7 +43,6 @@ concurrency:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   login-smoke:
@@ -55,6 +58,12 @@ jobs:
       ADVISOR_PASSWORD: ${{ secrets.SMOKE_ADVISOR_PASSWORD }}
       ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
       ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+      # Slack Incoming Webhook for pass/fail pings. Optional: when the secret
+      # is unset the notify steps no-op instead of failing the job (see
+      # docs/smoke-tests.md → Slack notifications). SLACK_ENABLED gates the
+      # steps without putting the secret value itself in an `if:` expression.
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_ENABLED: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
     steps:
       # Check out the deployed branch (staging), NOT the default branch, so the
       # tests match the app running on preview. Override via the test_ref input.
@@ -88,72 +97,29 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-      # On a scheduled failure, open a tracking issue (or comment on the open
-      # one) so the red run is visible without watching the Actions tab.
-      - name: File failure issue
-        if: ${{ failure() && github.event_name == 'schedule' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const label = "smoke-failure";
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = [
-              "The scheduled login smoke run failed against preview.",
-              "",
-              `- Workflow run: ${runUrl}`,
-              "- Download the `playwright-report` artifact for traces, screenshots, and video.",
-              "",
-              "This issue auto-resolves when a later scheduled run passes.",
-            ].join("\n");
-            const open = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open",
-              labels: label,
-            });
-            if (open.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: open.data[0].number,
-                body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: "🚨 Scheduled login smoke failing against preview",
-                labels: [label],
-                body,
-              });
-            }
+      # Slack notifications (both outcomes). Posts a single message to the
+      # channel wired to the SLACK_WEBHOOK_URL Incoming Webhook. Skipped when
+      # the secret is unset so forks / unconfigured repos don't fail here.
+      # jq (preinstalled on ubuntu-latest) builds the JSON so the run URL and
+      # base URL are escaped safely.
+      - name: Notify Slack (failure)
+        if: ${{ failure() && env.SLACK_ENABLED == 'true' }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          text=":rotating_light: *Smoke tests FAILED* against \`${PLAYWRIGHT_BASE_URL}\`
+          <${RUN_URL}|View workflow run> · download the *playwright-report* artifact for traces, screenshots, and video."
+          payload=$(jq -n --arg text "$text" '{text: $text}')
+          curl -sS --fail-with-body -X POST -H 'Content-type: application/json' \
+            --data "$payload" "$SLACK_WEBHOOK_URL"
 
-      # On a scheduled pass, close any open failure issue so it reflects live state.
-      - name: Resolve failure issue on success
-        if: ${{ success() && github.event_name == 'schedule' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const label = "smoke-failure";
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const open = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open",
-              labels: label,
-            });
-            for (const issue of open.data) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                body: `✅ Login smoke passed again — auto-resolving. Run: ${runUrl}`,
-              });
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                state: "closed",
-                state_reason: "completed",
-              });
-            }
+      - name: Notify Slack (success)
+        if: ${{ success() && env.SLACK_ENABLED == 'true' }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          text=":white_check_mark: *Smoke tests passed* against \`${PLAYWRIGHT_BASE_URL}\`
+          <${RUN_URL}|View workflow run>"
+          payload=$(jq -n --arg text "$text" '{text: $text}')
+          curl -sS --fail-with-body -X POST -H 'Content-type: application/json' \
+            --data "$payload" "$SLACK_WEBHOOK_URL"
