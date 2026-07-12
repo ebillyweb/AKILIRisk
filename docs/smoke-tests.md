@@ -9,7 +9,7 @@ auth regressions between deploys.
   Tests (preview) → Run workflow**.
 - **Selection:** `playwright test --grep @smoke` — only tests tagged `@smoke`.
 - **Test code comes from `staging`** (see below).
-- **Current scope:** advisor + admin login, plus negative auth cases.
+- **Current scope:** advisor + admin login, sign-out header refresh, plus negative auth cases.
 
 ## How it works (branch model)
 
@@ -28,6 +28,14 @@ Positive (`tests/smoke/auth.spec.ts`):
 
 - Advisor signs in with a password and lands on `/advisor`.
 - Admin signs in with a password and lands on `/admin`.
+
+Sign-out (`tests/smoke/sign-out-header.spec.ts`):
+
+- Signed-in advisor visiting `/` sees authenticated marketing header CTAs; after
+  sign-out the header shows the public Sign In / Start Assessment pair (catches
+  stale `useSession()` / soft-refresh regressions).
+- Advisor workspace slim header sign-out clears the session and redirects to
+  sign-in.
 
 Negative (`tests/smoke/auth-edge-cases.spec.ts`):
 

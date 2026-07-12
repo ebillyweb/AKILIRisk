@@ -1,9 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { ProtectedNav } from "@/components/layout/ProtectedNav";
 import { ClientPageHeaderSlot } from "@/components/layout/ClientPageHeaderSlot";
 import { ClientPortalBrandedHeaderMark } from "@/components/layout/ClientPortalBrandedHeaderMark";
@@ -38,6 +37,7 @@ import { buildSignInHref } from "@/lib/auth/sign-in-routes";
 import { redirectIfPendingConsent } from "@/lib/advisor/require-consent-resolved";
 import { getClientPageHeaderConfig } from "@/components/layout/client-page-header-config";
 import { SessionSync } from "@/components/auth/SessionSync";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 /** Shown above the workspace title when the client portal is advisor-branded (not the advisor tagline field). */
 const BRANDED_CLIENT_HEADER_KICKER = "Brought to you by AKILI Risk Intelligence";
@@ -301,29 +301,19 @@ export default async function ProtectedLayout({
                                 : undefined
                             }
                           />
-                          <form
-                            action={async () => {
-                              "use server";
-                              await signOut({ redirectTo: "/" });
-                            }}
-                          >
-                            <Button
-                              type="submit"
-                              variant="outline"
-                              size="sm"
-                              className="min-w-[110px] px-4"
-                              style={
-                                previewHex
-                                  ? {
-                                      borderColor: `${previewHex.primary}55`,
-                                      color: previewHex.primary,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              Sign Out
-                            </Button>
-                          </form>
+                          <SignOutButton
+                            variant="outline"
+                            size="sm"
+                            className="min-w-[110px] px-4"
+                            style={
+                              previewHex
+                                ? {
+                                    borderColor: `${previewHex.primary}55`,
+                                    color: previewHex.primary,
+                                  }
+                                : undefined
+                            }
+                          />
                         </div>
                       </div>
                     </div>
