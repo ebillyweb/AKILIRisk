@@ -55,6 +55,12 @@ jobs:
       ADVISOR_PASSWORD: ${{ secrets.SMOKE_ADVISOR_PASSWORD }}
       ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
       ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+      # Slack Incoming Webhook for pass/fail pings. Optional: when the secret
+      # is unset the notify steps no-op instead of failing the job (see
+      # docs/smoke-tests.md → Slack notifications). SLACK_ENABLED gates the
+      # steps without putting the secret value itself in an `if:` expression.
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_ENABLED: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
     steps:
       # Check out the deployed branch (staging), NOT the default branch, so the
       # tests match the app running on preview. Override via the test_ref input.
@@ -87,6 +93,33 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+      # Slack notifications (both outcomes). Posts a single message to the
+      # channel wired to the SLACK_WEBHOOK_URL Incoming Webhook. Skipped when
+      # the secret is unset so forks / unconfigured repos don't fail here.
+      # jq (preinstalled on ubuntu-latest) builds the JSON so the run URL and
+      # base URL are escaped safely.
+      - name: Notify Slack (failure)
+        if: ${{ failure() && env.SLACK_ENABLED == 'true' }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          text=":rotating_light: *Smoke tests FAILED* against \`${PLAYWRIGHT_BASE_URL}\`
+          <${RUN_URL}|View workflow run> · download the *playwright-report* artifact for traces, screenshots, and video."
+          payload=$(jq -n --arg text "$text" '{text: $text}')
+          curl -sS --fail-with-body -X POST -H 'Content-type: application/json' \
+            --data "$payload" "$SLACK_WEBHOOK_URL"
+
+      - name: Notify Slack (success)
+        if: ${{ success() && env.SLACK_ENABLED == 'true' }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          text=":white_check_mark: *Smoke tests passed* against \`${PLAYWRIGHT_BASE_URL}\`
+          <${RUN_URL}|View workflow run>"
+          payload=$(jq -n --arg text "$text" '{text: $text}')
+          curl -sS --fail-with-body -X POST -H 'Content-type: application/json' \
+            --data "$payload" "$SLACK_WEBHOOK_URL"
 
       # On a scheduled failure, open a tracking issue (or comment on the open
       # one) so the red run is visible without watching the Actions tab.

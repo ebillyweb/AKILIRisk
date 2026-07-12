@@ -85,6 +85,36 @@ exist on preview with the default passwords.
   `smoke-failure` (or comments on the existing open one).
 - On the next scheduled **pass**, that issue is auto-closed.
 
+## Slack notifications
+
+Every run posts its outcome — **pass and fail** — to a Slack channel, in
+addition to the GitHub-issue reporting above. This is optional: if the webhook
+secret is unset the notify steps no-op and the run still succeeds (so forks and
+unconfigured repos aren't broken).
+
+Setup:
+
+1. In Slack, create an **Incoming Webhook** for the target channel
+   (**Slack → Apps → Incoming Webhooks → Add to Slack**, pick the channel, copy
+   the `https://hooks.slack.com/services/...` URL).
+2. Add it as a **repository secret** named **`SLACK_WEBHOOK_URL`**
+   (Settings → Secrets and variables → Actions → New repository secret).
+
+That's all — the next run pings the channel. Messages link back to the workflow
+run; failures also point at the `playwright-report` artifact.
+
+| Secret | Purpose |
+| --- | --- |
+| `SLACK_WEBHOOK_URL` | Slack Incoming Webhook URL for pass/fail pings. Unset ⇒ notifications skipped. |
+
+> **Note on cadence:** the scheduled suite runs every 6 hours, so
+> pass-and-fail means ~4 green pings/day. To cut the noise to just failures
+> (plus the next recovery), gate the **Notify Slack (success)** step the same
+> way the issue-resolution step is gated — swap its `if:` for
+> `success() && env.SLACK_ENABLED == 'true' && github.event_name == 'schedule'`
+> and add a check that an open `smoke-failure` issue exists, or simply delete
+> the success step to get failure-only alerts.
+
 ## Extending scope later
 
 ### Client login (magic link)
