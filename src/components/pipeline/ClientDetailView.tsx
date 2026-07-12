@@ -108,7 +108,7 @@ export function ClientDetailView({
             <PipelineProcessStateLabel
               stage={client.stage}
               documentRequirementsEnabled={documentRequirementsEnabled}
-              className="text-sm"
+              stalled={client.stalled}
             />
           </div>
 

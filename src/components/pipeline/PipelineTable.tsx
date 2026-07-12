@@ -63,24 +63,18 @@ export function PipelineTable({
                     {secondary}
                   </p>
                 ) : null}
-                <PipelineProcessStateLabel
-                  stage={client.stage}
-                  documentRequirementsEnabled={showDocumentsColumn}
-                  show="process"
-                  className="mt-0.5 truncate text-sm text-muted-foreground"
-                />
-                {client.staleScores || client.stalled ? (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <PipelineProcessStateLabel
+                    stage={client.stage}
+                    documentRequirementsEnabled={showDocumentsColumn}
+                    show="process"
+                  />
+                </div>
+                {client.staleScores ? (
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    {client.staleScores ? (
-                      <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
-                        {STALE_SCORES_COPY.tableBadge}
-                      </Badge>
-                    ) : null}
-                    {client.stalled ? (
-                      <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
-                        Stalled
-                      </Badge>
-                    ) : null}
+                    <Badge variant="warning" className="max-w-full truncate text-[0.65rem]">
+                      {STALE_SCORES_COPY.tableBadge}
+                    </Badge>
                   </div>
                 ) : null}
               </Link>
@@ -93,6 +87,7 @@ export function PipelineTable({
         id: "stage",
         header: "Stage",
         cell: (info) => {
+          const client = info.row.original;
           const stage = info.getValue();
           const stageSummary = getAdvisorPipelineStageLabel(
             stage,
@@ -103,8 +98,8 @@ export function PipelineTable({
               <PipelineProcessStateLabel
                 stage={stage}
                 documentRequirementsEnabled={showDocumentsColumn}
+                stalled={client.stalled}
                 show="state"
-                className="truncate text-sm"
               />
               <StageProgressBar
                 currentStage={stage}
