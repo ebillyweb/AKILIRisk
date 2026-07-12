@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PIPELINE_SEARCH_COPY } from "@/lib/advisor/pii-policy";
-import { getStageLabel } from "@/lib/pipeline/status";
+import { getAdvisorPipelineStageLabel } from "@/lib/pipeline/status";
+import { PipelineProcessStateLabel } from "@/components/pipeline/PipelineProcessStateLabel";
 import type { PipelineFilters, PipelineMetrics } from "@/lib/pipeline/types";
 import type { ClientWorkflowStage } from "@prisma/client";
 
@@ -45,6 +46,12 @@ const stages: ClientWorkflowStage[] = [
 
 type IntakeFilterKey = "awaitingIntakeReview";
 
+type WorkflowQueueFilterKey =
+  | IntakeFilterKey
+  | "assessmentInProgress"
+  | "documentsNeeded"
+  | "stalled";
+
 const INTAKE_FILTERS: {
   key: IntakeFilterKey;
   label: string;
@@ -56,6 +63,37 @@ const INTAKE_FILTERS: {
     label: "Awaiting review",
     summaryLabel: "Awaiting Review",
     countKey: "intakesAwaitingReview",
+  },
+];
+
+const WORKFLOW_QUEUE_FILTERS: {
+  key: Exclude<WorkflowQueueFilterKey, IntakeFilterKey>;
+  label: string;
+  summaryLabel: string;
+  countKey: keyof Pick<
+    PipelineMetrics,
+    "assessmentsInProgress" | "documentsNeeded" | "stalled"
+  >;
+  requiresDocuments?: boolean;
+}[] = [
+  {
+    key: "assessmentInProgress",
+    label: "assessment · in progress",
+    summaryLabel: "assessment · in progress",
+    countKey: "assessmentsInProgress",
+  },
+  {
+    key: "documentsNeeded",
+    label: "report · in progress",
+    summaryLabel: "report · in progress",
+    countKey: "documentsNeeded",
+    requiresDocuments: true,
+  },
+  {
+    key: "stalled",
+    label: "Stalled",
+    summaryLabel: "Stalled",
+    countKey: "stalled",
   },
 ];
 
@@ -146,7 +184,7 @@ export function PipelineFilters({
     });
   };
 
-  const toggleIntakeFilter = (key: IntakeFilterKey) => {
+  const toggleWorkflowQueueFilter = (key: WorkflowQueueFilterKey) => {
     onFilterChange({
       ...filters,
       [key]: filters[key] ? undefined : true,
@@ -155,16 +193,19 @@ export function PipelineFilters({
   };
 
   const activeFilterLabels: string[] = [];
-  if (filters.stage) activeFilterLabels.push(getStageLabel(filters.stage));
+  if (filters.stage) {
+    activeFilterLabels.push(
+      getAdvisorPipelineStageLabel(filters.stage, documentRequirementsEnabled),
+    );
+  }
   if (filters.search) activeFilterLabels.push(`"${filters.search}"`);
   for (const { key, summaryLabel } of INTAKE_FILTERS) {
     if (filters[key]) activeFilterLabels.push(summaryLabel);
   }
-  if (filters.documentsNeeded && documentRequirementsEnabled) {
-    activeFilterLabels.push("Documents Needed");
+  for (const { key, summaryLabel, requiresDocuments } of WORKFLOW_QUEUE_FILTERS) {
+    if (requiresDocuments && !documentRequirementsEnabled) continue;
+    if (filters[key]) activeFilterLabels.push(summaryLabel);
   }
-  if (filters.assessmentInProgress) activeFilterLabels.push("Assessments In Progress");
-  if (filters.stalled) activeFilterLabels.push("Stalled");
   if (filters.inactive) activeFilterLabels.push("Inactive");
 
   return (
@@ -232,9 +273,13 @@ export function PipelineFilters({
               </SelectItem>
               {stageOptions.map((stage) => (
                 <SelectItem key={stage} value={stage}>
-                  <div className="flex items-center gap-2">
-                    {getStageLabel(stage)}
-                    <Badge variant="outline" className="ml-1 tabular-nums">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <PipelineProcessStateLabel
+                      stage={stage}
+                      documentRequirementsEnabled={documentRequirementsEnabled}
+                      className="min-w-0 truncate text-sm"
+                    />
+                    <Badge variant="outline" className="ml-auto shrink-0 tabular-nums">
                       {metrics.byStage[stage]}
                     </Badge>
                   </div>
@@ -245,21 +290,42 @@ export function PipelineFilters({
         </div>
       </div>
 
-      {/* Intake-only quick filter; other workflow queues live in the sidebar */}
-      <div className="space-y-2 border-t border-border/50 pt-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Intake
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {INTAKE_FILTERS.map(({ key, label, countKey }) => (
-            <WorkflowFilterChip
-              key={key}
-              label={label}
-              count={metrics[countKey]}
-              active={Boolean(filters[key])}
-              onClick={() => toggleIntakeFilter(key)}
-            />
-          ))}
+      {/* Quick workflow filters */}
+      <div className="space-y-3 border-t border-border/50 pt-4">
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Intake
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {INTAKE_FILTERS.map(({ key, label, countKey }) => (
+              <WorkflowFilterChip
+                key={key}
+                label={label}
+                count={metrics[countKey]}
+                active={Boolean(filters[key])}
+                onClick={() => toggleWorkflowQueueFilter(key)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Workflow
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {WORKFLOW_QUEUE_FILTERS.filter(
+              (filter) => !filter.requiresDocuments || documentRequirementsEnabled,
+            ).map(({ key, label, countKey }) => (
+              <WorkflowFilterChip
+                key={key}
+                label={label}
+                count={metrics[countKey]}
+                active={Boolean(filters[key])}
+                onClick={() => toggleWorkflowQueueFilter(key)}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

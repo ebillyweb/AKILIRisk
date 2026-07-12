@@ -1,8 +1,9 @@
 "use client";
 
 import { format } from "date-fns";
+import { PipelineProcessStateLabel } from "./PipelineProcessStateLabel";
+import { resolveAdvisorPipelineDisplayStage } from "@/lib/pipeline/status";
 import { type WorkflowEvent, type ClientWorkflowStage } from "@/lib/pipeline/types";
-import { getStageLabel, resolveAdvisorPipelineDisplayStage } from "@/lib/pipeline/status";
 
 interface WorkflowTimelineProps {
   events: WorkflowEvent[];
@@ -88,16 +89,16 @@ export function WorkflowTimeline({
 
           {/* Event content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <h3 className="font-semibold text-foreground">{event.label}</h3>
-              <span className="text-xs px-2 py-1 bg-muted text-muted-foreground rounded-full">
-                {getStageLabel(
-                  resolveAdvisorPipelineDisplayStage(
-                    event.stage,
-                    documentRequirementsEnabled,
-                  ),
+              <PipelineProcessStateLabel
+                stage={resolveAdvisorPipelineDisplayStage(
+                  event.stage,
+                  documentRequirementsEnabled,
                 )}
-              </span>
+                documentRequirementsEnabled={documentRequirementsEnabled}
+                className="text-sm"
+              />
             </div>
 
             <p className="text-sm text-muted-foreground mt-1">

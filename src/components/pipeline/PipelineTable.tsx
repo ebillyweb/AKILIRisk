@@ -13,18 +13,16 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
 import { StageProgressBar } from "./StageIndicator";
+import { PipelineProcessStateLabel } from "./PipelineProcessStateLabel";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { STALE_SCORES_COPY } from "@/lib/advisor/assessment-lifecycle-copy";
-import {
-  getAdvisorPipelineStageLabel,
-  resolveAdvisorPipelineDisplayStage,
-} from "@/lib/pipeline/status";
+import { getAdvisorPipelineStageLabel } from "@/lib/pipeline/status";
 import {
   formatPipelineClientRowTitle,
   resolveAdvisorClientPipelineLabels,
 } from "@/lib/pipeline/client-display";
-import type { PipelineClient, ClientWorkflowStage } from "@/lib/pipeline/types";
+import type { PipelineClient } from "@/lib/pipeline/types";
 import { cn } from "@/lib/utils";
 
 interface PipelineTableProps {
@@ -33,29 +31,6 @@ interface PipelineTableProps {
 }
 
 const columnHelper = createColumnHelper<PipelineClient>();
-
-function getStageBadgeVariant(stage: ClientWorkflowStage) {
-  switch (stage) {
-    case "INVITED":
-      return "info" as const;
-    case "REGISTERED":
-      return "info" as const;
-    case "INTAKE_IN_PROGRESS":
-      return "warning" as const;
-    case "INTAKE_COMPLETE":
-      return "success" as const;
-    case "ASSESSMENT_IN_PROGRESS":
-      return "warning" as const;
-    case "ASSESSMENT_COMPLETE":
-      return "success" as const;
-    case "DOCUMENTS_REQUIRED":
-      return "warning" as const;
-    case "COMPLETE":
-      return "success" as const;
-    default:
-      return "outline" as const;
-  }
-}
 
 export function PipelineTable({
   clients,
@@ -88,6 +63,12 @@ export function PipelineTable({
                     {secondary}
                   </p>
                 ) : null}
+                <PipelineProcessStateLabel
+                  stage={client.stage}
+                  documentRequirementsEnabled={showDocumentsColumn}
+                  show="process"
+                  className="mt-0.5 truncate text-sm text-muted-foreground"
+                />
                 {client.staleScores || client.stalled ? (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {client.staleScores ? (
@@ -113,21 +94,18 @@ export function PipelineTable({
         header: "Stage",
         cell: (info) => {
           const stage = info.getValue();
-          const displayStage = resolveAdvisorPipelineDisplayStage(
+          const stageSummary = getAdvisorPipelineStageLabel(
             stage,
             showDocumentsColumn,
           );
-          const stageLabel = getAdvisorPipelineStageLabel(stage, showDocumentsColumn);
           return (
-            <div className="min-w-0 space-y-2">
-              <div className="min-w-0 overflow-hidden" title={stageLabel}>
-                <Badge
-                  variant={getStageBadgeVariant(displayStage)}
-                  className="max-w-full truncate text-[0.65rem] font-semibold uppercase tracking-wide"
-                >
-                  {stageLabel}
-                </Badge>
-              </div>
+            <div className="min-w-0 space-y-2" title={stageSummary}>
+              <PipelineProcessStateLabel
+                stage={stage}
+                documentRequirementsEnabled={showDocumentsColumn}
+                show="state"
+                className="truncate text-sm"
+              />
               <StageProgressBar
                 currentStage={stage}
                 showDocumentsStage={showDocumentsColumn}

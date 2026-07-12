@@ -22,8 +22,8 @@ import { WorkflowTimeline } from "./WorkflowTimeline";
 import { DocumentRequirements } from "./DocumentRequirements";
 import { ClientAuthControls } from "./ClientAuthControls";
 import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
-import { getAdvisorPipelineStageLabel, resolveAdvisorPipelineDisplayStage } from "@/lib/pipeline/status";
-import type { ClientDetail, ClientWorkflowStage } from "@/lib/pipeline/types";
+import { PipelineProcessStateLabel } from "./PipelineProcessStateLabel";
+import type { ClientDetail } from "@/lib/pipeline/types";
 import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
 import { resolveAdvisorClientPipelineLabels } from "@/lib/pipeline/client-display";
@@ -36,24 +36,6 @@ interface ClientDetailViewProps {
   canSkipIntake?: boolean;
   documentRequirementsEnabled?: boolean;
   actionPlanEnabled?: boolean;
-}
-
-function getStageBadgeVariant(stage: ClientWorkflowStage) {
-  switch (stage) {
-    case 'INVITED':
-    case 'REGISTERED':
-      return 'info' as const;
-    case 'INTAKE_IN_PROGRESS':
-    case 'ASSESSMENT_IN_PROGRESS':
-    case 'DOCUMENTS_REQUIRED':
-      return 'warning' as const;
-    case 'INTAKE_COMPLETE':
-    case 'ASSESSMENT_COMPLETE':
-    case 'COMPLETE':
-      return 'success' as const;
-    default:
-      return 'outline' as const;
-  }
 }
 
 /**
@@ -96,14 +78,6 @@ export function ClientDetailView({
     client.awaitingIntakeReview && !assessmentCompleted;
   const intakeReviewId =
     intakeDetails?.interviewId ?? client.intakeReviewInterviewId ?? null;
-  const displayStage = resolveAdvisorPipelineDisplayStage(
-    client.stage,
-    documentRequirementsEnabled,
-  );
-  const stageLabel = getAdvisorPipelineStageLabel(
-    client.stage,
-    documentRequirementsEnabled,
-  );
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -129,11 +103,13 @@ export function ClientDetailView({
       {/* Client Header */}
       <div className="mb-8" data-tour="pipeline-client-header">
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">{clientLabels.headline}</h1>
-            <Badge variant={getStageBadgeVariant(displayStage)} className="text-xs font-semibold uppercase tracking-wide">
-              {stageLabel}
-            </Badge>
+            <PipelineProcessStateLabel
+              stage={client.stage}
+              documentRequirementsEnabled={documentRequirementsEnabled}
+              className="text-sm"
+            />
           </div>
 
           <p className="text-sm text-muted-foreground">

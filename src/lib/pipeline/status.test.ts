@@ -6,7 +6,7 @@ import {
 } from './documents';
 import { validateStoredDocumentMime } from '@/lib/documents/validation';
 
-import { computeClientStage, isStalled, isWorkflowEscalation, getAdvisorPipelineStageLabel, resolveAdvisorPipelineDisplayStage } from './status';
+import { computeClientStage, isStalled, isWorkflowEscalation, aggregatePipelineMetricsByProcessState, getAdvisorPipelineProcessLabel, getAdvisorPipelineProcessStateLabel, getAdvisorPipelineStageLabel, resolveAdvisorPipelineDisplayStage } from './status';
 
 describe('aggregateMandatoryDocumentCounts', () => {
   it('counts only required rows per client', () => {
@@ -101,7 +101,7 @@ describe('resolveAdvisorPipelineDisplayStage', () => {
     ).toBe('ASSESSMENT_COMPLETE');
     expect(
       getAdvisorPipelineStageLabel('DOCUMENTS_REQUIRED', false),
-    ).toBe('Assessment Complete');
+    ).toBe('Assessment · complete');
   });
 
   it('preserves DOCUMENTS_REQUIRED when documents UI is enabled', () => {
@@ -110,7 +110,66 @@ describe('resolveAdvisorPipelineDisplayStage', () => {
     ).toBe('DOCUMENTS_REQUIRED');
     expect(
       getAdvisorPipelineStageLabel('DOCUMENTS_REQUIRED', true),
-    ).toBe('Documents Required');
+    ).toBe('Report · in progress');
+  });
+});
+
+describe('advisor pipeline process labels', () => {
+  it('maps intake stages to intake process', () => {
+    expect(getAdvisorPipelineProcessLabel('INTAKE_IN_PROGRESS')).toBe('intake');
+    expect(getAdvisorPipelineProcessStateLabel('INTAKE_IN_PROGRESS')).toBe('in progress');
+    expect(getAdvisorPipelineProcessStateLabel('INTAKE_COMPLETE')).toBe('complete');
+  });
+
+  it('maps assessment stages to assessment process', () => {
+    expect(getAdvisorPipelineProcessLabel('ASSESSMENT_IN_PROGRESS')).toBe('assessment');
+    expect(getAdvisorPipelineProcessStateLabel('ASSESSMENT_COMPLETE')).toBe('complete');
+  });
+
+  it('maps report stages when documents are required or workflow is complete', () => {
+    expect(getAdvisorPipelineProcessLabel('DOCUMENTS_REQUIRED')).toBe('report');
+    expect(getAdvisorPipelineProcessLabel('COMPLETE')).toBe('report');
+    expect(getAdvisorPipelineProcessStateLabel('COMPLETE')).toBe('complete');
+  });
+});
+
+describe('aggregatePipelineMetricsByProcessState', () => {
+  it('rolls stage counts into process and state buckets', () => {
+    const byStage = {
+      INVITED: 2,
+      REGISTERED: 1,
+      INTAKE_IN_PROGRESS: 3,
+      INTAKE_COMPLETE: 4,
+      ASSESSMENT_IN_PROGRESS: 5,
+      ASSESSMENT_COMPLETE: 2,
+      DOCUMENTS_REQUIRED: 1,
+      COMPLETE: 6,
+    };
+
+    expect(aggregatePipelineMetricsByProcessState(byStage)).toEqual({
+      intake: { 'not started': 3, 'in progress': 3, complete: 4 },
+      assessment: { 'not started': 0, 'in progress': 5, complete: 2 },
+      report: { 'not started': 0, 'in progress': 1, complete: 6 },
+    });
+  });
+
+  it('maps documents-required clients to assessment complete when documents UI is hidden', () => {
+    const byStage = {
+      INVITED: 0,
+      REGISTERED: 0,
+      INTAKE_IN_PROGRESS: 0,
+      INTAKE_COMPLETE: 0,
+      ASSESSMENT_IN_PROGRESS: 0,
+      ASSESSMENT_COMPLETE: 0,
+      DOCUMENTS_REQUIRED: 2,
+      COMPLETE: 1,
+    };
+
+    expect(aggregatePipelineMetricsByProcessState(byStage, false)).toEqual({
+      intake: { 'not started': 0, 'in progress': 0, complete: 0 },
+      assessment: { 'not started': 0, 'in progress': 0, complete: 2 },
+      report: { 'not started': 0, 'in progress': 0, complete: 1 },
+    });
   });
 });
 
