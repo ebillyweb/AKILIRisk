@@ -1,6 +1,7 @@
 import "server-only";
 
 import { formatDistanceToNow } from "date-fns";
+import type { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { ControlCenterAlert } from "@/lib/admin/control-center-types";
 import type { AlertSeverity } from "@/components/admin/dashboard/NeedsAttentionItem";
@@ -48,6 +49,59 @@ function sortAlerts(
     .map(({ occurredAt: _occurredAt, ...alert }) => alert);
 }
 
+/** Subscription statuses that count as covered for onboarding purposes. */
+const COVERED_SUB_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
+  "ACTIVE",
+  "GRACE_PERIOD",
+]);
+
+/**
+ * Shape fetched per portal-enabled advisor to evaluate onboarding completeness.
+ * Mirrors the relations `resolveBillingContext` walks (enterprise membership
+ * first, then solo subscription).
+ */
+type OnboardingAdvisor = {
+  updatedAt: Date;
+  advisorProfile: { firmName: string | null } | null;
+  subscription: { status: SubscriptionStatus } | null;
+  enterpriseMembership: {
+    status: "INVITED" | "ACTIVE" | "SUSPENDED";
+    enterprise: {
+      status: "ACTIVE" | "PROVISIONING" | "SUSPENDED";
+      subscription: { status: SubscriptionStatus } | null;
+    };
+  } | null;
+};
+
+/**
+ * Whether a portal-enabled advisor has completed onboarding.
+ *
+ * Enterprise-aware, mirroring `resolveBillingContext`: an ACTIVE member of a
+ * fully-provisioned firm is covered by the firm's subscription (and inherits
+ * firm identity, so no personal `firmName` is required). Only solo advisors
+ * are held to the personal-subscription + firm-profile checks.
+ */
+function isAdvisorOnboardingComplete(advisor: OnboardingAdvisor): boolean {
+  const membership = advisor.enterpriseMembership;
+  if (membership && membership.status === "ACTIVE") {
+    const enterprise = membership.enterprise;
+    // A firm that is not fully provisioned/active is not yet covering members.
+    if (enterprise.status !== "ACTIVE") {
+      return false;
+    }
+    const firmSub = enterprise.subscription;
+    return firmSub !== null && COVERED_SUB_STATUSES.has(firmSub.status);
+  }
+
+  // Solo advisor: needs a covered personal subscription and firm profile detail.
+  const soloSub = advisor.subscription;
+  const hasCoveredSub =
+    soloSub !== null && COVERED_SUB_STATUSES.has(soloSub.status);
+  const firmName = advisor.advisorProfile?.firmName;
+  const hasFirmDetails = typeof firmName === "string" && firmName.trim() !== "";
+  return hasCoveredSub && hasFirmDetails;
+}
+
 /**
  * Operational alerts for `/admin` (Needs Attention panel).
  *
@@ -68,8 +122,7 @@ export async function getControlCenterAlerts(): Promise<ControlCenterAlert[]> {
     oldestUnassignedLead,
     stalledIntakeCount,
     oldestStalledIntake,
-    incompleteOnboardingCount,
-    newestIncompleteAdvisor,
+    portalAdvisors,
     subscriptionsAtRisk,
     latestAtRiskSubscription,
   ] = await Promise.all([
@@ -134,47 +187,28 @@ export async function getControlCenterAlerts(): Promise<ControlCenterAlert[]> {
       orderBy: { updatedAt: "asc" },
       select: { updatedAt: true },
     }),
-    prisma.user.count({
+    prisma.user.findMany({
       where: {
         role: "ADVISOR",
         deletedAt: null,
         advisorPortalAccessEnabled: true,
-        OR: [
-          { subscription: null },
-          {
-            subscription: {
-              status: { notIn: ["ACTIVE", "GRACE_PERIOD"] },
-            },
-          },
-          {
-            advisorProfile: {
-              OR: [{ firmName: null }, { firmName: "" }],
-            },
-          },
-        ],
       },
-    }),
-    prisma.user.findFirst({
-      where: {
-        role: "ADVISOR",
-        deletedAt: null,
-        advisorPortalAccessEnabled: true,
-        OR: [
-          { subscription: null },
-          {
-            subscription: {
-              status: { notIn: ["ACTIVE", "GRACE_PERIOD"] },
+      select: {
+        updatedAt: true,
+        advisorProfile: { select: { firmName: true } },
+        subscription: { select: { status: true } },
+        enterpriseMembership: {
+          select: {
+            status: true,
+            enterprise: {
+              select: {
+                status: true,
+                subscription: { select: { status: true } },
+              },
             },
           },
-          {
-            advisorProfile: {
-              OR: [{ firmName: null }, { firmName: "" }],
-            },
-          },
-        ],
+        },
       },
-      orderBy: { updatedAt: "desc" },
-      select: { updatedAt: true },
     }),
     prisma.subscription.count({
       where: { status: { in: ["PAST_DUE", "UNPAID", "CANCELLED"] } },
@@ -189,6 +223,19 @@ export async function getControlCenterAlerts(): Promise<ControlCenterAlert[]> {
   const alerts: Array<ControlCenterAlert & { occurredAt: Date }> = [];
   const failedIntegrationCount = failedWebhookRows.length;
   const latestFailedWebhook = failedWebhookRows[0];
+
+  const incompleteAdvisors = portalAdvisors.filter(
+    (advisor) => !isAdvisorOnboardingComplete(advisor)
+  );
+  const incompleteOnboardingCount = incompleteAdvisors.length;
+  const newestIncompleteAdvisor = incompleteAdvisors.reduce<
+    { updatedAt: Date } | null
+  >((newest, advisor) => {
+    if (!newest || advisor.updatedAt > newest.updatedAt) {
+      return advisor;
+    }
+    return newest;
+  }, null);
 
   if (stalledAssessmentCount > 0) {
     const occurredAt = oldestStalledAssessment?.updatedAt ?? seventyTwoHoursAgo;
