@@ -21,7 +21,7 @@ const QUESTION_ID_PILLAR_PREFIXES: readonly { prefix: string; slug: string }[] =
   { prefix: "belvedere-liq-", slug: "liquidity-cash" },
   { prefix: "belvedere-tax-", slug: "tax-exposure" },
   { prefix: "belvedere-est-", slug: "estate-succession" },
-  { prefix: "belvedere-beh-", slug: "family-governance-behavioral" },
+  { prefix: "belvedere-beh-", slug: "ai-emerging-tech" },
   { prefix: "governance_", slug: "governance" },
   { prefix: "cyber_", slug: "cyber-digital" },
   { prefix: "physical_", slug: "physical-security" },
@@ -31,7 +31,7 @@ const QUESTION_ID_PILLAR_PREFIXES: readonly { prefix: string; slug: string }[] =
   { prefix: "liquidity_", slug: "liquidity-cash" },
   { prefix: "tax_", slug: "tax-exposure" },
   { prefix: "estate_", slug: "estate-succession" },
-  { prefix: "behavioral_", slug: "family-governance-behavioral" },
+  { prefix: "behavioral_", slug: "ai-emerging-tech" },
 ];
 
 const SERVICE_ID_PILLAR_PREFIXES: readonly { prefix: string; slug: string }[] = [
@@ -44,7 +44,7 @@ const SERVICE_ID_PILLAR_PREFIXES: readonly { prefix: string; slug: string }[] = 
   { prefix: "liquidity_", slug: "liquidity-cash" },
   { prefix: "tax_", slug: "tax-exposure" },
   { prefix: "estate_", slug: "estate-succession" },
-  { prefix: "behavioral_", slug: "family-governance-behavioral" },
+  { prefix: "behavioral_", slug: "ai-emerging-tech" },
 ];
 
 function slugFromPrefix(

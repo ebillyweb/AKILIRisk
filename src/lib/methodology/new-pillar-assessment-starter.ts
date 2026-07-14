@@ -12,13 +12,13 @@
  * gap, 3 = institutionalized) shown as the option labels for each scored_0_3
  * question.
  *
- * NOTE on the fourth pillar: it is presented as "AI & Emerging Tech Risk" but
- * intentionally keeps the legacy internal identifiers categoryCode
- * "10_family_governance" and slug "family-governance-behavioral". A full slug
- * rename would ripple into ~10 catalog-coupled tests and require a data
- * migration; that rename is tracked as a follow-up. Question numbers 7.1-7.3,
- * 8.1-8.3, 9.1-9.3 keep their exact text so re-seeding stays idempotent; the
- * 10.x numbers overwrite the former Behavioral Resilience rows 1:1 in place.
+ * The fourth pillar is "AI & Emerging Tech Risk" (categoryCode "10_ai", slug
+ * "ai-emerging-tech"). It replaced the former Behavioral Resilience pillar;
+ * question numbers 7.1-7.3, 8.1-8.3, 9.1-9.3 keep their exact text so
+ * re-seeding stays idempotent, and the 10.x numbers overwrite the former
+ * Behavioral Resilience rows 1:1 in place. (The DB rename of the old slug
+ * `family-governance-behavioral` / code `10_family_governance` is handled by
+ * migration `20260714120000_rename_family_governance_behavioral_to_ai`.)
  */
 
 export type NewPillarQuestionStarter = {
@@ -1146,11 +1146,11 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
     ],
   },
   {
-    categoryCode: "10_family_governance",
+    categoryCode: "10_ai",
     categoryName: "AI & Emerging Tech Risk",
     sheetName: "AI Risk",
     displayOrder: 10,
-    slug: "family-governance-behavioral",
+    slug: "ai-emerging-tech",
     sectionCode: "A",
     sectionName: "Impersonation & deepfake fraud",
     questions: [
@@ -1207,11 +1207,11 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
     ],
   },
   {
-    categoryCode: "10_family_governance",
+    categoryCode: "10_ai",
     categoryName: "AI & Emerging Tech Risk",
     sheetName: "AI Risk",
     displayOrder: 10,
-    slug: "family-governance-behavioral",
+    slug: "ai-emerging-tech",
     sectionCode: "B",
     sectionName: "Synthetic media & reputation",
     questions: [
@@ -1268,11 +1268,11 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
     ],
   },
   {
-    categoryCode: "10_family_governance",
+    categoryCode: "10_ai",
     categoryName: "AI & Emerging Tech Risk",
     sheetName: "AI Risk",
     displayOrder: 10,
-    slug: "family-governance-behavioral",
+    slug: "ai-emerging-tech",
     sectionCode: "C",
     sectionName: "Data exposure to AI tools",
     questions: [
@@ -1329,11 +1329,11 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
     ],
   },
   {
-    categoryCode: "10_family_governance",
+    categoryCode: "10_ai",
     categoryName: "AI & Emerging Tech Risk",
     sheetName: "AI Risk",
     displayOrder: 10,
-    slug: "family-governance-behavioral",
+    slug: "ai-emerging-tech",
     sectionCode: "D",
     sectionName: "AI in family-office operations & advice",
     questions: [
@@ -1390,11 +1390,11 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
     ],
   },
   {
-    categoryCode: "10_family_governance",
+    categoryCode: "10_ai",
     categoryName: "AI & Emerging Tech Risk",
     sheetName: "AI Risk",
     displayOrder: 10,
-    slug: "family-governance-behavioral",
+    slug: "ai-emerging-tech",
     sectionCode: "E",
     sectionName: "Household & next-generation AI exposure",
     questions: [
@@ -1451,11 +1451,11 @@ export const NEW_PILLAR_ASSESSMENT_STARTERS: NewPillarAssessmentStarter[] = [
     ],
   },
   {
-    categoryCode: "10_family_governance",
+    categoryCode: "10_ai",
     categoryName: "AI & Emerging Tech Risk",
     sheetName: "AI Risk",
     displayOrder: 10,
-    slug: "family-governance-behavioral",
+    slug: "ai-emerging-tech",
     sectionCode: "F",
     sectionName: "Governance, awareness & response",
     questions: [
