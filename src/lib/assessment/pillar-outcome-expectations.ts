@@ -77,18 +77,31 @@ export const GOVERNANCE_ALL_NEGATIVE_SERVICE_IDS = [
   "governance_family_charter",
   "governance_advisor_coordination",
   "governance_succession_planning",
-  "insurance_estate_planning",
 ] as const;
 
-/** Per-pillar catalog services triggered when only that pillar’s UI questions are at lowest maturity. */
+/**
+ * Per-pillar catalog services triggered when only that pillar’s UI questions are
+ * at lowest maturity (and only that pillar is scored).
+ *
+ * These now reflect the score-threshold-dominant rules: a weak pillar surfaces
+ * all of its own remediation services, and the AI cross-links surface an AI
+ * service for weak Cyber / Reputational posture. (Previously some sets were
+ * shaped by cross-pillar `answer_match` quirks that never fired in production —
+ * e.g. `insurance_estate_planning` fired on a governance question — now removed.)
+ */
 export const PILLAR_ALL_NEGATIVE_EXPECTED_SERVICE_IDS: Record<string, readonly string[]> = {
   governance: GOVERNANCE_ALL_NEGATIVE_SERVICE_IDS,
-  "cyber-digital": ["cyber_security_uplift"],
+  "cyber-digital": ["cyber_security_uplift", "ai_impersonation_defense"],
   "physical-security": [
     "physical_security_assessment",
     "physical_security_implementation",
+    "physical_emergency_planning",
   ],
-  insurance: ["insurance_comprehensive_review", "insurance_asset_protection"],
+  insurance: [
+    "insurance_comprehensive_review",
+    "insurance_estate_planning",
+    "insurance_asset_protection",
+  ],
   "geographic-environmental": [
     "geographic_risk_assessment",
     "geographic_climate_resilience",
@@ -98,5 +111,14 @@ export const PILLAR_ALL_NEGATIVE_EXPECTED_SERVICE_IDS: Record<string, readonly s
     "social_reputation_management",
     "social_media_governance",
     "social_crisis_response",
+    "ai_synthetic_media_response",
+  ],
+  "family-governance-behavioral": [
+    "ai_impersonation_defense",
+    "ai_data_governance",
+    "ai_synthetic_media_response",
+    "ai_operations_oversight",
+    "ai_household_literacy",
+    "ai_risk_governance",
   ],
 };

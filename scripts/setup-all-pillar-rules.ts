@@ -365,6 +365,45 @@ const SERVICE_RECOMMENDATIONS = [
       deliverables: ['Monitoring coverage', 'Crisis-response playbook', 'Verified communication channels']
     }
   },
+  {
+    id: 'ai_operations_oversight',
+    name: 'AI Operations Oversight & Validation',
+    description: 'Human-oversight controls and independent validation for AI used in investment research, accounting, and legal work in the family office',
+    category: 'advisory',
+    priority: 4,
+    estimatedCost: '$12,000 - $35,000',
+    timeframe: '2-3 months',
+    metadata: {
+      services: ['AI-use inventory', 'Human-in-the-loop controls', 'Output validation process', 'Vendor concentration review'],
+      deliverables: ['AI oversight policy', 'Validation checklist', 'Accountability map']
+    }
+  },
+  {
+    id: 'ai_household_literacy',
+    name: 'Household AI Safety & Literacy Program',
+    description: 'Guidance and education for family members on safe AI-tool use, smart-device privacy, and AI-enabled scams targeting the young and elderly',
+    category: 'advisory',
+    priority: 5,
+    estimatedCost: '$6,000 - $18,000',
+    timeframe: '1-2 months',
+    metadata: {
+      services: ['Household AI-use guidance', 'Smart-device privacy hardening', 'Scam-awareness education', 'Next-gen coaching'],
+      deliverables: ['Household AI guidelines', 'Device privacy baseline', 'Awareness curriculum']
+    }
+  },
+  {
+    id: 'ai_risk_governance',
+    name: 'AI Risk Governance & Incident Response',
+    description: "Assigns ownership of AI-risk monitoring, integrates AI risk into the family's risk review, and establishes incident logging and response",
+    category: 'advisory',
+    priority: 6,
+    estimatedCost: '$10,000 - $30,000',
+    timeframe: '2-4 months',
+    metadata: {
+      services: ['AI-risk ownership assignment', 'Emerging-threat briefing cadence', 'Incident logging and review', 'Protective-tech adoption plan'],
+      deliverables: ['AI-risk governance charter', 'Incident-response playbook', 'Monitoring cadence']
+    }
+  },
 ];
 
 const LEGACY_RECOMMENDATION_RULES = [

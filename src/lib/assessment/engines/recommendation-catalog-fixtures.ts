@@ -194,6 +194,9 @@ export const HIGH_RISK_EXPECTED_SERVICE_IDS = [
   "ai_impersonation_defense",
   "ai_data_governance",
   "ai_synthetic_media_response",
+  "ai_operations_oversight",
+  "ai_household_literacy",
+  "ai_risk_governance",
 ] as const;
 
 export const PRODUCTION_CATALOG_SERVICES: CatalogService[] = [
@@ -447,6 +450,33 @@ export const PRODUCTION_CATALOG_SERVICES: CatalogService[] = [
     category: "reputation",
     priority: 80,
     estimatedCost: "$15,000 - $45,000",
+    timeframe: "2-4 months",
+  },
+  {
+    id: "ai_operations_oversight",
+    name: "AI Operations Oversight & Validation",
+    description: "Human-oversight controls and independent validation for AI used in investment research, accounting, and legal work in the family office",
+    category: "advisory",
+    priority: 78,
+    estimatedCost: "$12,000 - $35,000",
+    timeframe: "2-3 months",
+  },
+  {
+    id: "ai_household_literacy",
+    name: "Household AI Safety & Literacy Program",
+    description: "Guidance and education for family members on safe AI-tool use, smart-device privacy, and AI-enabled scams targeting the young and elderly",
+    category: "advisory",
+    priority: 76,
+    estimatedCost: "$6,000 - $18,000",
+    timeframe: "1-2 months",
+  },
+  {
+    id: "ai_risk_governance",
+    name: "AI Risk Governance & Incident Response",
+    description: "Assigns ownership of AI-risk monitoring, integrates AI risk into the family's risk review, and establishes incident logging and response",
+    category: "advisory",
+    priority: 74,
+    estimatedCost: "$10,000 - $30,000",
     timeframe: "2-4 months",
   },
 ];
