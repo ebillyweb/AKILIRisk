@@ -291,35 +291,41 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     priority: 81,
   },
 
-  // Behavioral Resilience rules
+  // AI & Emerging Tech Risk rules
+  // The pillar slug is the legacy identifier `family-governance-behavioral`
+  // (now presented as "AI & Emerging Tech Risk"). These rules are
+  // score-threshold-only ON PURPOSE: at runtime `answer_match` conditions
+  // never fire for this bank (answers are keyed by per-DB question UUIDs, not
+  // stable ids), so score thresholds keyed on the pillar slug are the only
+  // conditions that trigger in production. Thresholds are tiered so a weaker
+  // AI-risk posture surfaces more remediation services.
   {
-    id: "fg_ui_behavioral_meetings",
-    serviceRecommendationId: "behavioral_family_governance_program",
-    ruleName: "Family governance meeting program (Belvedere)",
-    description: "No structured family governance meetings",
+    id: "fg_ui_ai_impersonation_defense",
+    serviceRecommendationId: "ai_impersonation_defense",
+    ruleName: "AI impersonation & deepfake defense (Belvedere)",
+    description: "AI-enabled impersonation and deepfake fraud defenses underdeveloped",
     triggerConditions: [
-      { type: "answer_match", questionId: Q.behA1, operator: "equals", value: 0, weight: 4 },
+      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 2.0, weight: 1 },
     ],
     priority: 91,
   },
   {
-    id: "fg_ui_behavioral_decision_rights",
-    serviceRecommendationId: "behavioral_decision_rights_framework",
-    ruleName: "Decision rights framework (Belvedere)",
-    description: "Decision rights and spending authorities not documented",
+    id: "fg_ui_ai_data_governance",
+    serviceRecommendationId: "ai_data_governance",
+    ruleName: "AI tool data governance (Belvedere)",
+    description: "No policy governing sensitive-data exposure to AI tools",
     triggerConditions: [
-      { type: "answer_match", questionId: Q.behA2, operator: "equals", value: 0, weight: 4 },
+      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.75, weight: 1 },
     ],
     priority: 86,
   },
   {
-    id: "fg_ui_behavioral_discipline",
-    serviceRecommendationId: "behavioral_investment_discipline",
-    ruleName: "Behavioral finance discipline program (Belvedere)",
-    description: "Behavioral finance pitfalls not addressed before major investments",
+    id: "fg_ui_ai_synthetic_media",
+    serviceRecommendationId: "ai_synthetic_media_response",
+    ruleName: "Synthetic media monitoring & response (Belvedere)",
+    description: "No monitoring or response plan for synthetic-media reputational attacks",
     triggerConditions: [
-      { type: "answer_match", questionId: Q.behA3, operator: "equals", value: 0, weight: 4 },
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.5, weight: 3 },
+      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.5, weight: 1 },
     ],
     priority: 81,
   },
@@ -351,7 +357,7 @@ export const FAMILY_GOVERNANCE_ALL_NO_EXPECTED_SERVICE_IDS = [
   "estate_document_review",
   "estate_beneficiary_audit",
   "estate_succession_protocol",
-  "behavioral_family_governance_program",
-  "behavioral_decision_rights_framework",
-  "behavioral_investment_discipline",
+  "ai_impersonation_defense",
+  "ai_data_governance",
+  "ai_synthetic_media_response",
 ] as const;

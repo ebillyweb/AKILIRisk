@@ -325,44 +325,44 @@ const SERVICE_RECOMMENDATIONS = [
     }
   },
 
-  // Behavioral Resilience Services
+  // AI & Emerging Tech Risk Services
   {
-    id: 'behavioral_family_governance_program',
-    name: 'Family Governance Meeting Program',
-    description: 'Structured program establishing regular family meetings with documented agendas and decision logs',
-    category: 'advisory',
+    id: 'ai_impersonation_defense',
+    name: 'AI Impersonation & Deepfake Defense Program',
+    description: 'Out-of-band verification protocols, family code words, and staff training to defend against deepfake and voice-clone fraud',
+    category: 'security',
     priority: 1,
     estimatedCost: '$10,000 - $30,000',
     timeframe: '1-3 months',
     metadata: {
-      services: ['Meeting structure design', 'Agenda template creation', 'Decision log setup', 'Facilitation support'],
-      deliverables: ['Governance meeting framework', 'Agenda templates', 'Decision log system']
+      services: ['Verification protocol design', 'Payment-change controls', 'Deepfake awareness training', 'Family code-word setup'],
+      deliverables: ['Verification playbook', 'Fraud-response checklist', 'Trained household and staff']
     }
   },
   {
-    id: 'behavioral_decision_rights_framework',
-    name: 'Decision Rights Framework Development',
-    description: 'Development and publication of decision-rights matrix for spouses, children, and trusted advisors',
+    id: 'ai_data_governance',
+    name: 'AI Tool Data Governance Program',
+    description: 'Acceptable-use policy, vendor vetting, and upload controls governing what family and office data may be entered into AI tools',
     category: 'advisory',
     priority: 2,
-    estimatedCost: '$8,000 - $20,000',
-    timeframe: '2-4 weeks',
+    estimatedCost: '$8,000 - $25,000',
+    timeframe: '1-2 months',
     metadata: {
-      services: ['Authority mapping', 'Spending limit documentation', 'Matrix publication', 'Review trigger protocol'],
-      deliverables: ['Decision rights matrix', 'Spending authority schedule', 'Update protocol']
+      services: ['AI acceptable-use policy', 'Vendor data-handling review', 'Upload and DLP controls', 'Staff guidance'],
+      deliverables: ['AI-use policy', 'Approved-tools list', 'Vendor assessment']
     }
   },
   {
-    id: 'behavioral_investment_discipline',
-    name: 'Behavioral Finance Discipline Program',
-    description: 'Pre-commitment checklist and education program to address behavioral-finance pitfalls in major investment decisions',
-    category: 'advisory',
+    id: 'ai_synthetic_media_response',
+    name: 'Synthetic Media Monitoring & Response Program',
+    description: 'Monitoring for AI-generated impersonation plus a rapid takedown and communications playbook for synthetic-media reputational attacks',
+    category: 'reputation',
     priority: 3,
-    estimatedCost: '$15,000 - $40,000',
+    estimatedCost: '$15,000 - $45,000',
     timeframe: '2-4 months',
     metadata: {
-      services: ['Behavioral bias assessment', 'Checklist development', 'Family education sessions', 'Decision process design'],
-      deliverables: ['Pre-commitment checklist', 'Decision process guide', 'Education curriculum']
+      services: ['Deepfake and synthetic-media monitoring', 'Takedown and escalation playbook', 'Content-authentication setup', 'PR and legal coordination'],
+      deliverables: ['Monitoring coverage', 'Crisis-response playbook', 'Verified communication channels']
     }
   },
 ];
@@ -769,39 +769,10 @@ const LEGACY_RECOMMENDATION_RULES = [
     priority: 80
   },
 
-  // Behavioral Resilience Rules
-  {
-    id: 'behavioral_governance_program_needed',
-    serviceRecommendationId: 'behavioral_family_governance_program',
-    ruleName: 'Family Governance Meeting Program',
-    description: 'Families without structured governance meetings need a formal program',
-    triggerConditions: [
-      { type: 'answer_match', questionId: 'behavioral_family_meetings', operator: 'in', value: ['none', 'informal'], weight: 4 },
-      { type: 'score_threshold', pillarId: 'family-governance-behavioral', operator: 'less_than', value: 1.5, weight: 3 }
-    ],
-    priority: 90
-  },
-  {
-    id: 'behavioral_decision_rights_needed',
-    serviceRecommendationId: 'behavioral_decision_rights_framework',
-    ruleName: 'Decision Rights Framework Development',
-    description: 'Families with ambiguous authority need a decision-rights matrix',
-    triggerConditions: [
-      { type: 'answer_match', questionId: 'behavioral_decision_rights', operator: 'in', value: ['none', 'informal'], weight: 4 }
-    ],
-    priority: 85
-  },
-  {
-    id: 'behavioral_investment_discipline_needed',
-    serviceRecommendationId: 'behavioral_investment_discipline',
-    ruleName: 'Behavioral Finance Discipline Program',
-    description: 'Families without behavioral discipline protocols are vulnerable to emotionally driven investment decisions',
-    triggerConditions: [
-      { type: 'answer_match', questionId: 'behavioral_investment_discipline', operator: 'in', value: ['none', 'informal'], weight: 4 },
-      { type: 'score_threshold', pillarId: 'family-governance-behavioral', operator: 'less_than', value: 1.8, weight: 3 }
-    ],
-    priority: 80
-  }
+  // AI & Emerging Tech Risk rules live in FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES
+  // (imported above and spread into RECOMMENDATION_RULES), so they are not
+  // duplicated here. The former Behavioral Resilience legacy rules were removed
+  // when that pillar was repurposed to AI & Emerging Tech Risk.
 ];
 
 /** UI worksheet (`dma-*`, `env-*`, …) — see family-governance-recommendation-rules.ts */
