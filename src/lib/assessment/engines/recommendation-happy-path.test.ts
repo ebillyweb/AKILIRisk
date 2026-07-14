@@ -189,22 +189,23 @@ describe("RecommendationEngine — new pillar high-risk triggering", () => {
     expect(ids).toContain("estate_document_review");
   });
 
-  it("family-governance-behavioral high-risk answers trigger behavioral services", async () => {
+  it("low AI & Emerging Tech Risk pillar score triggers AI remediation services", async () => {
     const engine = new RecommendationEngine();
+    // The AI pillar keeps the legacy slug `family-governance-behavioral`. Its
+    // rules are score-threshold-only, so a low pillar score alone triggers the
+    // tiered AI remediation services (no answer-level match required).
     const recs = await engine.matchAndDedupeRecommendations({
-      assessmentId: "as-beh-high",
-      userId: "u-beh",
+      assessmentId: "as-ai-high",
+      userId: "u-ai",
       pillarScores: { "family-governance-behavioral": { score: 0.7, riskLevel: "critical" } },
-      answers: {
-        behavioral_family_meetings: "none",
-        behavioral_decision_rights: "none",
-        behavioral_investment_discipline: "none",
-      },
+      answers: {},
       householdProfile: null,
       missingControls: [],
     });
     const ids = recs.map((r) => r.id);
-    expect(ids).toContain("behavioral_family_governance_program");
+    expect(ids).toContain("ai_impersonation_defense");
+    expect(ids).toContain("ai_data_governance");
+    expect(ids).toContain("ai_synthetic_media_response");
   });
 
   it("advisor rulesOverride restricts recommendations to overridden ruleset", async () => {
