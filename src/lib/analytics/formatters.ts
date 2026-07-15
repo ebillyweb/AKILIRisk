@@ -27,7 +27,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   'liquidity-cash': 'Liquidity & Cash Management',
   'tax-exposure': 'Tax Exposure',
   'estate-succession': 'Estate & Succession',
-  'family-governance-behavioral': 'AI & Emerging Tech Risk',
+  'ai-emerging-tech': 'AI & Emerging Tech Risk',
   /** Historical breakdown rows */
   'health-medical-preparedness': 'Protection & Risk Transfer (prior medical section)',
   // Legacy governance subcategory IDs (scores stored before six-pillar taxonomy)
@@ -55,7 +55,7 @@ export const CHART_COLORS: Record<string, string> = {
   'liquidity-cash': '#059669',
   'tax-exposure': '#dc2626',
   'estate-succession': '#9333ea',
-  'family-governance-behavioral': '#0891b2',
+  'ai-emerging-tech': '#0891b2',
   'health-medical-preparedness': '#e11d48',
   'decision-making-authority': '#78350f',
   'access-controls': '#7c3aed',

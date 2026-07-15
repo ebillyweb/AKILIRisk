@@ -160,7 +160,6 @@ export const ESTATE_SUCCESSION_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
 };
 
 /** Family governance & behavioral — mixed maturity by risk tier. */
-// Slug is a legacy identifier; presented as "AI & Emerging Tech Risk".
 export const AI_EMERGING_TECH_MID_BAND_NARRATIVES: PillarMidBandNarratives = {
   critical: [
     "Defenses against AI-enabled threats are largely absent, leaving the family highly exposed to deepfake and voice-clone fraud, synthetic-media reputational attacks, and sensitive data leaking into AI tools. Establish out-of-band verification for all financial requests, deploy monitoring for synthetic media, set a policy governing use of public AI tools, and assign ownership for tracking emerging-tech risk.",
@@ -190,5 +189,5 @@ export const PILLAR_MID_BAND_NARRATIVE_RECOMMENDATIONS: Record<
   "liquidity-cash": LIQUIDITY_CASH_MID_BAND_NARRATIVES,
   "tax-exposure": TAX_EXPOSURE_MID_BAND_NARRATIVES,
   "estate-succession": ESTATE_SUCCESSION_MID_BAND_NARRATIVES,
-  "family-governance-behavioral": AI_EMERGING_TECH_MID_BAND_NARRATIVES,
+  "ai-emerging-tech": AI_EMERGING_TECH_MID_BAND_NARRATIVES,
 };

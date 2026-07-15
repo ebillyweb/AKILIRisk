@@ -157,7 +157,7 @@ export const HIGH_RISK_PILLAR_SCORES: Record<string, { score: number; riskLevel:
   "liquidity-cash": { score: 0.5, riskLevel: "critical" },
   "tax-exposure": { score: 0.6, riskLevel: "critical" },
   "estate-succession": { score: 0.5, riskLevel: "critical" },
-  "family-governance-behavioral": { score: 0.7, riskLevel: "critical" },
+  "ai-emerging-tech": { score: 0.7, riskLevel: "critical" },
 };
 
 export const GOVERNANCE_REMEDIATION_SERVICE_IDS = [

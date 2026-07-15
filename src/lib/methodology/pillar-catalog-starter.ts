@@ -84,11 +84,11 @@ export const PLATFORM_PILLAR_CATALOG: readonly PlatformPillarStarter[] = [
     defaultWeight: 6,
   },
   {
-    // Presented as "AI & Emerging Tech Risk". The slug remains
-    // `family-governance-behavioral` (a legacy identifier) so this change
-    // doesn't ripple into catalog-coupled tests or require a data migration;
-    // a proper slug rename + migration is tracked as a follow-up.
-    slug: "family-governance-behavioral",
+    // Replaced the former Behavioral Resilience pillar. The DB rename of the
+    // old slug `family-governance-behavioral` (and category code
+    // `10_family_governance`) is handled by migration
+    // `20260714120000_rename_family_governance_behavioral_to_ai`.
+    slug: "ai-emerging-tech",
     canonicalName: "AI & Emerging Tech Risk",
     description:
       "AI-enabled impersonation and deepfake fraud, synthetic-media reputation attacks, data exposure to AI tools, and governance of AI use across the family and its advisors.",

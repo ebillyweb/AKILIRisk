@@ -102,7 +102,7 @@ describe("RecommendationEngine — happy paths (production catalog)", () => {
         "liquidity-cash": { score: 2.8, riskLevel: "low" },
         "tax-exposure": { score: 2.9, riskLevel: "low" },
         "estate-succession": { score: 2.8, riskLevel: "low" },
-        "family-governance-behavioral": { score: 2.9, riskLevel: "low" },
+        "ai-emerging-tech": { score: 2.9, riskLevel: "low" },
       },
       answers: LOW_RISK_FAMILY_ANSWERS,
       householdProfile: { householdSize: 6 },
@@ -191,13 +191,13 @@ describe("RecommendationEngine — new pillar high-risk triggering", () => {
 
   it("low AI & Emerging Tech Risk pillar score triggers AI remediation services", async () => {
     const engine = new RecommendationEngine();
-    // The AI pillar keeps the legacy slug `family-governance-behavioral`. Its
+    // The AI pillar keeps the legacy slug `ai-emerging-tech`. Its
     // rules are score-threshold-only, so a low pillar score alone triggers the
     // tiered AI remediation services (no answer-level match required).
     const recs = await engine.matchAndDedupeRecommendations({
       assessmentId: "as-ai-high",
       userId: "u-ai",
-      pillarScores: { "family-governance-behavioral": { score: 0.7, riskLevel: "critical" } },
+      pillarScores: { "ai-emerging-tech": { score: 0.7, riskLevel: "critical" } },
       answers: {},
       householdProfile: null,
       missingControls: [],

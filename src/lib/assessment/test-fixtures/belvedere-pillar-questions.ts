@@ -66,7 +66,7 @@ const CATEGORY_CODE: Record<string, string> = {
   "liquidity-cash": "7_liquidity",
   "tax-exposure": "8_tax",
   "estate-succession": "9_estate",
-  "family-governance-behavioral": "10_family_governance",
+  "ai-emerging-tech": "10_ai",
 };
 
 function row(
@@ -295,19 +295,19 @@ const BELVEDERE_ROWS: PillarQuestionWithHierarchy[] = [
     answer3: "Current + multi-jurisdictional",
   }),
   // Behavioral Resilience (pillar 10)
-  row(BELVEDERE_TEST_QUESTION_IDS.behA1, "family-governance-behavioral", "Structured family meetings held regularly", "scored_0_3", {
+  row(BELVEDERE_TEST_QUESTION_IDS.behA1, "ai-emerging-tech", "Structured family meetings held regularly", "scored_0_3", {
     answer0: "None",
     answer1: "Informal",
     answer2: "Documented",
     answer3: "Active + enforced",
   }),
-  row(BELVEDERE_TEST_QUESTION_IDS.behA2, "family-governance-behavioral", "Decision rights and spending authorities documented", "scored_0_3", {
+  row(BELVEDERE_TEST_QUESTION_IDS.behA2, "ai-emerging-tech", "Decision rights and spending authorities documented", "scored_0_3", {
     answer0: "None",
     answer1: "Informal",
     answer2: "Documented",
     answer3: "Active + enforced",
   }),
-  row(BELVEDERE_TEST_QUESTION_IDS.behA3, "family-governance-behavioral", "Behavioral-finance pitfalls discussed before major investments", "scored_0_3", {
+  row(BELVEDERE_TEST_QUESTION_IDS.behA3, "ai-emerging-tech", "Behavioral-finance pitfalls discussed before major investments", "scored_0_3", {
     answer0: "None",
     answer1: "Informal",
     answer2: "Documented",

@@ -16,8 +16,7 @@ export const PILLAR_WEIGHTS = {
   "liquidity-cash": 12,
   "tax-exposure": 10,
   "estate-succession": 6,
-  // Slug is a legacy identifier; presented as "AI & Emerging Tech Risk".
-  "family-governance-behavioral": 8,
+  "ai-emerging-tech": 8,
   /** Historical category rows */
   "health-medical-preparedness": 11,
   "decision-making-authority": 13,

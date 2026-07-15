@@ -102,7 +102,7 @@ describe("syncAssessmentCompletionStatus", () => {
         "liquidity-cash",
         "tax-exposure",
         "estate-succession",
-        "family-governance-behavioral",
+        "ai-emerging-tech",
       ],
     });
 

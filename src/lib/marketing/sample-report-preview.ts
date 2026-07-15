@@ -22,7 +22,7 @@ const SAMPLE_MATURITIES: Record<string, { maturity: number; inScope: boolean; em
   "liquidity-cash": { maturity: 2.3, inScope: true },
   "tax-exposure": { maturity: 1.9, inScope: true },
   "estate-succession": { maturity: 1.6, inScope: true, emphasized: true },
-  "family-governance-behavioral": { maturity: 0, inScope: false },
+  "ai-emerging-tech": { maturity: 0, inScope: false },
 };
 
 const SHORT_NAMES: Record<string, string> = {
@@ -35,7 +35,7 @@ const SHORT_NAMES: Record<string, string> = {
   "liquidity-cash": "Liquidity",
   "tax-exposure": "Tax",
   "estate-succession": "Estate",
-  "family-governance-behavioral": "AI Risk",
+  "ai-emerging-tech": "AI Risk",
 };
 
 export const SAMPLE_HOUSEHOLD = "Chen Family Office";

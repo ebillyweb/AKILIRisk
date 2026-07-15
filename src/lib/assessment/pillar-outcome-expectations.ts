@@ -113,7 +113,7 @@ export const PILLAR_ALL_NEGATIVE_EXPECTED_SERVICE_IDS: Record<string, readonly s
     "social_crisis_response",
     "ai_synthetic_media_response",
   ],
-  "family-governance-behavioral": [
+  "ai-emerging-tech": [
     "ai_impersonation_defense",
     "ai_data_governance",
     "ai_synthetic_media_response",

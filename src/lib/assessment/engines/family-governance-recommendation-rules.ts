@@ -332,8 +332,7 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
   },
 
   // AI & Emerging Tech Risk rules
-  // The pillar slug is the legacy identifier `family-governance-behavioral`
-  // (now presented as "AI & Emerging Tech Risk"). These rules are
+  // AI & Emerging Tech Risk pillar (slug `ai-emerging-tech`). These rules are
   // score-threshold-only: at runtime `answer_match` never fires for this bank,
   // so score thresholds keyed on the pillar slug are the only triggers.
   // Thresholds are tiered so a weaker AI-risk posture surfaces more services,
@@ -344,7 +343,7 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     ruleName: "AI impersonation & deepfake defense (Belvedere)",
     description: "AI-enabled impersonation and deepfake fraud defenses underdeveloped",
     triggerConditions: [
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 2.0, weight: 1 },
+      { type: "score_threshold", pillarId: "ai-emerging-tech", operator: "less_than", value: 2.0, weight: 1 },
     ],
     priority: 91,
   },
@@ -354,7 +353,7 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     ruleName: "AI tool data governance (Belvedere)",
     description: "No policy governing sensitive-data exposure to AI tools",
     triggerConditions: [
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.75, weight: 1 },
+      { type: "score_threshold", pillarId: "ai-emerging-tech", operator: "less_than", value: 1.75, weight: 1 },
     ],
     priority: 86,
   },
@@ -364,7 +363,7 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     ruleName: "Synthetic media monitoring & response (Belvedere)",
     description: "No monitoring or response plan for synthetic-media reputational attacks",
     triggerConditions: [
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.5, weight: 1 },
+      { type: "score_threshold", pillarId: "ai-emerging-tech", operator: "less_than", value: 1.5, weight: 1 },
     ],
     priority: 81,
   },
@@ -374,7 +373,7 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     ruleName: "AI operations oversight (Belvedere)",
     description: "AI used in operations, research, or advice without human oversight and validation",
     triggerConditions: [
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 2.0, weight: 1 },
+      { type: "score_threshold", pillarId: "ai-emerging-tech", operator: "less_than", value: 2.0, weight: 1 },
     ],
     priority: 79,
   },
@@ -384,7 +383,7 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     ruleName: "Household AI safety & literacy (Belvedere)",
     description: "Family members lack guidance on safe AI-tool use and AI-enabled scams",
     triggerConditions: [
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.75, weight: 1 },
+      { type: "score_threshold", pillarId: "ai-emerging-tech", operator: "less_than", value: 1.75, weight: 1 },
     ],
     priority: 74,
   },
@@ -394,7 +393,7 @@ export const FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES: FamilyGovernanceUiRule[]
     ruleName: "AI risk governance & incident response (Belvedere)",
     description: "No owner, integration, or incident response for AI and emerging-tech risk",
     triggerConditions: [
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.5, weight: 1 },
+      { type: "score_threshold", pillarId: "ai-emerging-tech", operator: "less_than", value: 1.5, weight: 1 },
     ],
     priority: 71,
   },
