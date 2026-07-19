@@ -219,21 +219,17 @@ export async function loadRecommendationsFromDb(
 export async function loadPillarMetaFromDb(
   assessmentId: string,
 ): Promise<Map<string, PillarMeta>> {
-  // Lazy import: cached-pillar-catalog pulls `server-only`, which keeps this
-  // module (and the CLI dry-run that imports it) out of a non-RSC runtime.
-  const { getPlatformPillarCatalog } = await import(
-    "@/lib/methodology/cached-pillar-catalog"
-  );
-  const [scores, catalog] = await Promise.all([
+  // Read pillar names straight from the `pillars` table rather than the cached
+  // catalog helper — the helper pulls `server-only`, which throws outside an RSC
+  // runtime (breaking the CLI scripts) and adds nothing here.
+  const [scores, pillars] = await Promise.all([
     prisma.pillarScore.findMany({
       where: { assessmentId },
       select: { pillar: true, score: true, riskLevel: true },
     }),
-    getPlatformPillarCatalog(),
+    prisma.pillar.findMany({ select: { slug: true, canonicalName: true } }),
   ]);
-  const nameBySlug = new Map(
-    catalog.map((p: { id: string; name: string }) => [p.id, p.name]),
-  );
+  const nameBySlug = new Map(pillars.map((p) => [p.slug, p.canonicalName]));
   const out = new Map<string, PillarMeta>();
   for (const s of scores) {
     const slug = normalizePillarScoreId(s.pillar);
