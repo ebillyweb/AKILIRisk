@@ -22,7 +22,9 @@ export function RedirectIncompleteIntake({ restrictNavToIntake }: RedirectIncomp
       appPath === "/intake" ||
       appPath.startsWith("/intake/") ||
       appPath === "/support" ||
-      appPath.startsWith("/support/")
+      appPath.startsWith("/support/") ||
+      appPath === "/docs" ||
+      appPath.startsWith("/docs/")
     ) {
       return;
     }

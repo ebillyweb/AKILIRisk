@@ -86,11 +86,13 @@ describe("getActiveAdvisorNavHref", () => {
       "Billing",
     ]);
     const { footer } = partitionAdvisorNavSections(sections);
-    expect(footer).toHaveLength(1);
-    expect(footer[0]?.id).toBe("practice");
+    expect(footer.map((section) => section.id)).toEqual(["practice", "support"]);
     expect(footer[0]?.items.map((item) => item.label)).toEqual([
       "Your methodology",
+    ]);
+    expect(footer[1]?.items.map((item) => item.label)).toEqual([
       "Support",
+      "Docs",
     ]);
   });
 

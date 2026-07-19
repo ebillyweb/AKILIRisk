@@ -5,6 +5,7 @@ import {
   BookOpen,
   CreditCard,
   Home,
+  Library,
   LifeBuoy,
   Palette,
   PlayCircle,
@@ -129,10 +130,22 @@ export const ADVISOR_NAV_SECTIONS: AdvisorNavSection[] = [
         requiresTierFeature: "METHODOLOGY_CUSTOMIZATION",
         hideForEnterpriseTeam: true,
       },
+    ],
+  },
+  {
+    id: "support",
+    title: "Support",
+    placement: "footer",
+    items: [
       {
         href: "/support",
         label: "Support",
         icon: LifeBuoy,
+      },
+      {
+        href: "/docs",
+        label: "Docs",
+        icon: Library,
       },
     ],
   },
