@@ -96,6 +96,36 @@ async function writeAssignmentScope(
   });
 }
 
+/**
+ * When Assessment.included_pillars is a strict superset of the assignment
+ * scope, expand assignment to match. If focus previously covered the full
+ * (old) included set, expand focus too; keep a true emphasis subset as-is.
+ */
+export function widenAssignmentScopeFromAssessment(
+  assignmentIncluded: readonly string[],
+  assignmentFocus: readonly string[],
+  assessmentIncluded: readonly string[] | null | undefined,
+): { includedPillars: string[]; focusAreas: string[] } | null {
+  if (!assessmentIncluded?.length) return null;
+  if (assessmentIncluded.length <= assignmentIncluded.length) return null;
+
+  const assessmentSet = new Set(assessmentIncluded);
+  if (!assignmentIncluded.every((id) => assessmentSet.has(id))) return null;
+
+  const oldIncludedSet = new Set(assignmentIncluded);
+  const focusCoveredAllIncluded =
+    assignmentFocus.length === 0 ||
+    (assignmentFocus.length === assignmentIncluded.length &&
+      assignmentFocus.every((id) => oldIncludedSet.has(id)));
+
+  return {
+    includedPillars: [...assessmentIncluded],
+    focusAreas: focusCoveredAllIncluded
+      ? [...assessmentIncluded]
+      : assignmentFocus.filter((id) => assessmentSet.has(id)),
+  };
+}
+
 export async function persistClientEngagementScope(input: {
   clientId: string;
   includedPillars: string[];
@@ -131,6 +161,37 @@ export async function getClientEngagementScope(
   const intakeWaived = assignment?.intakeWaivedAt != null;
 
   if (assignment && assignment.includedPillars.length > 0) {
+    // Assessment hub progress prefers Assessment.included_pillars when set.
+    // If that row was expanded (e.g. legacy→full catalog) ahead of the
+    // assignment, sync assignment so focus/banner counts stay aligned.
+    if (reconcile) {
+      const assessment = await prisma.assessment.findFirst({
+        where: {
+          userId: clientUserId,
+          status: { in: ["IN_PROGRESS", "COMPLETED"] },
+        },
+        orderBy: { updatedAt: "desc" },
+        select: { includedPillars: true },
+      });
+
+      const widened = widenAssignmentScopeFromAssessment(
+        assignment.includedPillars,
+        assignment.focusAreas,
+        assessment?.includedPillars,
+      );
+      if (widened) {
+        await writeAssignmentScope(assignment.id, widened);
+        return {
+          includedPillars: widened.includedPillars,
+          focusAreas: widened.focusAreas,
+          source: "assignment",
+          approvalId: null,
+          assignmentId: assignment.id,
+          intakeWaived,
+        };
+      }
+    }
+
     return {
       includedPillars: assignment.includedPillars,
       focusAreas: assignment.focusAreas,

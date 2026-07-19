@@ -114,7 +114,7 @@ export function OverallProgress({
           Assessment Progress
         </h3>
         <span className="text-sm text-muted-foreground">
-          {completedPillars.length} of {totalPillars} completed
+          {completedPillars.length} of {pillars.length || totalPillars} completed
         </span>
       </div>
       <div className="flex gap-2">

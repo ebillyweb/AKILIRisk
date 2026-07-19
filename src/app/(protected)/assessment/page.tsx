@@ -385,6 +385,7 @@ function AssessmentHubPageContent() {
         <CustomizationBanner
           advisorName={customizationConfig.advisorName}
           focusAreaCount={focusAreaCount}
+          includedPillarCount={includedPillars.length}
           estimatedMinutes={includedPillars.length * 12}
         />
       )}

@@ -37,7 +37,7 @@ import { generateAndAttachNarratives } from "@/lib/assessment/recommendations/ll
 import { emitAssessmentSignals } from "@/lib/signals/emit";
 import type { PillarScoreSnapshot } from "@/lib/signals/types";
 import { evaluateClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
-import { isPillarInAssessmentScope } from "@/lib/assessment/included-pillars";
+import { isPillarInAssessmentScope, resolveIncludedPillars } from "@/lib/assessment/included-pillars";
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import {
   authorizeAssessmentApiAccess,
@@ -325,6 +325,10 @@ export async function POST(
       customizationMetadata = {
         isCustomized: scoringCustomization.isCustomized,
         focusAreaCount: scoringCustomization.emphasisAreas.length,
+        includedPillarCount: resolveIncludedPillars(
+          assessment.includedPillars,
+          catalog,
+        ).length,
         emphasisMultiplier: scoringCustomization.emphasisMultiplier,
       };
     }

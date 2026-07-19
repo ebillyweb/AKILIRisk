@@ -37,7 +37,49 @@ vi.mock("@/lib/methodology/cached-pillar-catalog", async () => {
 import {
   getClientEngagementScope,
   persistClientEngagementScope,
+  widenAssignmentScopeFromAssessment,
 } from "@/lib/client/engagement-scope";
+
+describe("widenAssignmentScopeFromAssessment", () => {
+  it("expands included and focus when assessment is a strict superset", () => {
+    const result = widenAssignmentScopeFromAssessment(
+      ["governance", "cyber-digital"],
+      ["governance", "cyber-digital"],
+      ["governance", "cyber-digital", "ai-emerging-tech"],
+    );
+    expect(result).toEqual({
+      includedPillars: ["governance", "cyber-digital", "ai-emerging-tech"],
+      focusAreas: ["governance", "cyber-digital", "ai-emerging-tech"],
+    });
+  });
+
+  it("keeps a true emphasis subset when widening included", () => {
+    const result = widenAssignmentScopeFromAssessment(
+      ["governance", "cyber-digital", "physical-security"],
+      ["governance"],
+      ["governance", "cyber-digital", "physical-security", "ai-emerging-tech"],
+    );
+    expect(result).toEqual({
+      includedPillars: [
+        "governance",
+        "cyber-digital",
+        "physical-security",
+        "ai-emerging-tech",
+      ],
+      focusAreas: ["governance"],
+    });
+  });
+
+  it("returns null when assessment is not wider", () => {
+    expect(
+      widenAssignmentScopeFromAssessment(
+        ["governance", "cyber-digital"],
+        ["governance"],
+        ["governance", "cyber-digital"],
+      ),
+    ).toBeNull();
+  });
+});
 
 describe("getClientEngagementScope", () => {
   beforeEach(() => {
@@ -45,6 +87,38 @@ describe("getClientEngagementScope", () => {
     mockAssignmentUpdate.mockResolvedValue({});
     mockApprovalFindFirst.mockResolvedValue(null);
     mockAssessmentFindFirst.mockResolvedValue(null);
+  });
+
+  it("widens assignment when assessment included is a strict superset", async () => {
+    mockAssignmentFindFirst.mockResolvedValue({
+      id: "asg-1",
+      intakeWaivedAt: null,
+      includedPillars: ["governance", "cyber-digital"],
+      focusAreas: ["governance", "cyber-digital"],
+    });
+    mockAssessmentFindFirst.mockResolvedValue({
+      includedPillars: ["governance", "cyber-digital", "ai-emerging-tech"],
+    });
+
+    const scope = await getClientEngagementScope("client-1");
+
+    expect(mockAssignmentUpdate).toHaveBeenCalledWith({
+      where: { id: "asg-1" },
+      data: {
+        includedPillars: ["governance", "cyber-digital", "ai-emerging-tech"],
+        focusAreas: ["governance", "cyber-digital", "ai-emerging-tech"],
+      },
+    });
+    expect(scope.includedPillars).toEqual([
+      "governance",
+      "cyber-digital",
+      "ai-emerging-tech",
+    ]);
+    expect(scope.focusAreas).toEqual([
+      "governance",
+      "cyber-digital",
+      "ai-emerging-tech",
+    ]);
   });
 
   it("returns assignment scope when set (canonical path)", async () => {

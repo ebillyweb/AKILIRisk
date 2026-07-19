@@ -109,3 +109,22 @@ export function estimateCompletionMinutes(visibleSubCategories: string[], allQue
 
   return Math.min(estimatedMinutes, 15);
 }
+
+/**
+ * Client-facing scope/emphasis copy. Matches advisor UI: emphasis is only
+ * called out when focus is a proper subset of included domains.
+ */
+export function scopeEmphasisLabel(
+  focusAreaCount: number,
+  includedPillarCount: number,
+): string {
+  const included = Math.max(includedPillarCount, 0);
+  const focus = Math.max(focusAreaCount, 0);
+
+  if (included > 0 && focus > 0 && focus < included) {
+    return `Emphasizing ${focus} of ${included} risk areas`;
+  }
+
+  const count = included > 0 ? included : focus;
+  return `Includes ${count} risk area${count === 1 ? "" : "s"}`;
+}

@@ -28,6 +28,7 @@ import { Loader2, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { scopeEmphasisLabel } from "@/lib/assessment/customization";
 import { pillarDisplayName as getPillarDisplayName, normalizePillarSlug } from "@/lib/assessment/pillar-registry";
 import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
 import { MATURITY_SCALE_MAX } from "@/lib/assessment/maturity-scale";
@@ -58,6 +59,7 @@ interface ScoreData {
   customization?: {
     isCustomized: boolean;
     focusAreaCount: number;
+    includedPillarCount?: number;
     emphasisMultiplier: number;
   };
 }
@@ -303,7 +305,12 @@ export default function AssessmentResultsPage() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Shield className="h-4 w-4" />
                 <span>
-                  Advisor-customized assessment focused on {scoreData.customization.focusAreaCount} risk {scoreData.customization.focusAreaCount === 1 ? 'area' : 'areas'}
+                  Advisor-customized assessment —{" "}
+                  {scopeEmphasisLabel(
+                    scoreData.customization.focusAreaCount,
+                    scoreData.customization.includedPillarCount ??
+                      scoreData.customization.focusAreaCount,
+                  ).toLowerCase()}
                 </span>
               </div>
             )}

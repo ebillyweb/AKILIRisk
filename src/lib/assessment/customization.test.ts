@@ -8,6 +8,7 @@ import {
   getEmphasisMultipliers,
   getVisibleQuestionIds,
   estimateCompletionMinutes,
+  scopeEmphasisLabel,
   CustomizationConfig
 } from './customization';
 import { pillarCatalogSlugs, starterPillarCatalog } from '@/lib/methodology/pillar-catalog';
@@ -215,5 +216,19 @@ describe('estimateCompletionMinutes', () => {
 
     // 3 questions * 20 seconds = 60 seconds = 1 minute
     expect(minutes).toBe(1);
+  });
+});
+describe('scopeEmphasisLabel', () => {
+  test('calls out emphasis only when focus is a proper subset', () => {
+    expect(scopeEmphasisLabel(9, 10)).toBe('Emphasizing 9 of 10 risk areas');
+  });
+
+  test('uses includes copy when focus covers included scope', () => {
+    expect(scopeEmphasisLabel(10, 10)).toBe('Includes 10 risk areas');
+    expect(scopeEmphasisLabel(9, 9)).toBe('Includes 9 risk areas');
+  });
+
+  test('falls back to focus count when included is zero', () => {
+    expect(scopeEmphasisLabel(3, 0)).toBe('Includes 3 risk areas');
   });
 });
