@@ -17,7 +17,6 @@
 
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { normalizePillarScoreId } from "@/lib/assessment/pillar-registry";
 import { makeOpenAIGenerate } from "./providers/openai-provider";
 import { loadWeakFindingsByPillar, loadServicePillarMap } from "./narrative-data";
@@ -198,7 +197,9 @@ export async function runNarrativeGeneration(
 
 const DEFAULT_MODEL = "gpt-4o";
 
-async function loadRecommendationsFromDb(assessmentId: string): Promise<RecommendationRow[]> {
+export async function loadRecommendationsFromDb(
+  assessmentId: string,
+): Promise<RecommendationRow[]> {
   const rows = await prisma.assessmentRecommendation.findMany({
     where: { assessmentId },
     select: {
@@ -215,7 +216,14 @@ async function loadRecommendationsFromDb(assessmentId: string): Promise<Recommen
   }));
 }
 
-async function loadPillarMetaFromDb(assessmentId: string): Promise<Map<string, PillarMeta>> {
+export async function loadPillarMetaFromDb(
+  assessmentId: string,
+): Promise<Map<string, PillarMeta>> {
+  // Lazy import: cached-pillar-catalog pulls `server-only`, which keeps this
+  // module (and the CLI dry-run that imports it) out of a non-RSC runtime.
+  const { getPlatformPillarCatalog } = await import(
+    "@/lib/methodology/cached-pillar-catalog"
+  );
   const [scores, catalog] = await Promise.all([
     prisma.pillarScore.findMany({
       where: { assessmentId },
