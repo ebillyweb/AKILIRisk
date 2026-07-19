@@ -30,6 +30,12 @@ const CORE_PAGES: LlmsLink[] = [
     description: "Assess, analyze, and act — the AKILI engagement workflow across modular risk domains.",
   },
   {
+    title: "Docs",
+    path: "/docs",
+    description:
+      "Product documentation for families and firms — quickstarts, intake, assessment, pipeline, branding, and sign-in.",
+  },
+  {
     title: "About",
     path: "/about",
     description: "Mission, ethos, and who AKILI serves — family wealth governance for professional-led engagements.",

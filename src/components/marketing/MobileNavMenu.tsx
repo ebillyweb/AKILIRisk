@@ -180,7 +180,10 @@ export function MobileNavMenu({
                   </p>
                   <div className="flex flex-col gap-1">
                     {SITE_PRIMARY_NAV_LINKS.map(({ href, label }) => {
-                      const isActive = pathname === href;
+                      const isActive =
+                        href === "/docs"
+                          ? pathname === "/docs" || pathname.startsWith("/docs/")
+                          : pathname === href;
                       return (
                         <Link
                           key={href}

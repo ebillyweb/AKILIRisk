@@ -97,7 +97,10 @@ export function SiteHeaderNav({
       <span className="mx-2 h-4 w-px bg-border/50" aria-hidden />
 
       {SITE_PRIMARY_NAV_LINKS.map(({ href, label }) => {
-        const isActive = pathname === href;
+        const isActive =
+          href === "/docs"
+            ? pathname === "/docs" || pathname.startsWith("/docs/")
+            : pathname === href;
         return (
           <MarketingNavLink
             key={href}

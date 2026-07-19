@@ -12,6 +12,7 @@ export const SITE_AUDIENCE_NAV: ReadonlyArray<{
 ] as const;
 
 export const SITE_PRIMARY_NAV_LINKS = [
+  { href: "/docs", label: "Docs" },
   { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
 ] as const;
