@@ -11,6 +11,10 @@ import {
   type SupportTicketCategory,
 } from "@/lib/support/categories";
 import {
+  SUPPORT_ATTACHMENT_ALLOWED_TYPES,
+  validateSupportTicketAttachment,
+} from "@/lib/support/attachment";
+import {
   isContactCaptchaBypassEnabled,
   isTurnstileConfigured,
   verifyTurnstileToken,
@@ -38,6 +42,13 @@ const supportTicketSchema = z.object({
     .min(10, "Message must be at least 10 characters")
     .max(5000, "Message is too long"),
   turnstileToken: z.string().optional(),
+  attachment: z
+    .object({
+      filename: z.string().trim().min(1).max(180),
+      contentType: z.enum(SUPPORT_ATTACHMENT_ALLOWED_TYPES),
+      contentBase64: z.string().min(1).max(6_000_000),
+    })
+    .optional(),
 });
 
 function supportTicketRateLimitKey(userId: string, ip: string | null): string {
@@ -93,6 +104,25 @@ export async function submitSupportTicket(
     }
   }
 
+  let attachment:
+    | {
+        filename: string;
+        contentType: (typeof SUPPORT_ATTACHMENT_ALLOWED_TYPES)[number];
+        contentBase64: string;
+      }
+    | undefined;
+  if (parsed.data.attachment) {
+    const validated = validateSupportTicketAttachment(parsed.data.attachment);
+    if (!validated.ok) {
+      return { success: false, error: validated.error };
+    }
+    attachment = {
+      filename: validated.filename,
+      contentType: validated.contentType,
+      contentBase64: validated.contentBase64,
+    };
+  }
+
   const { name, category, subject, message } = parsed.data;
   return sendSupportTicketEmail({
     name,
@@ -102,5 +132,6 @@ export async function submitSupportTicket(
     message,
     userId: session.user.id,
     userRole: session.user.role?.toString() ?? "UNKNOWN",
+    attachment,
   });
 }

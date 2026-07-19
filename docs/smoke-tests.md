@@ -52,6 +52,13 @@ Intake TTS (`tests/smoke/intake-tts-endpoint.spec.ts`):
   assertion message) so replenishment issues surface via the scheduled run.
   Skips only when `OPENAI_API_KEY` is missing on the deployment.
 
+Support ticket (`tests/smoke/support-ticket.spec.ts`):
+
+- Advisor opens `/support`, fills the ticket form, and attaches a tiny PNG
+  screenshot. Does **not** submit (avoids real Resend sends from the canary).
+  Email payload + attachment construction is covered by the mocked unit test
+  `src/lib/email/support-ticket.send.test.ts`.
+
 The client-role negative cases (client blocked from `/admin` and `/advisor`)
 are left untagged because they sign in as a client, which needs
 `ENABLE_TEST_AUTH=1` on preview — see [Extending scope](#extending-scope-later).

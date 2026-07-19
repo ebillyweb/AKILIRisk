@@ -13,6 +13,8 @@ import {
   getSupportTicketCategoryLabel,
   type SupportTicketCategory,
 } from "@/lib/support/categories";
+import type { SupportAttachmentContentType } from "@/lib/support/attachment";
+import type { ResendEmailAttachment } from "@/lib/email/resend-payload";
 
 export type SupportTicketEmailPayload = {
   name: string;
@@ -22,6 +24,11 @@ export type SupportTicketEmailPayload = {
   message: string;
   userId: string;
   userRole: string;
+  attachment?: {
+    filename: string;
+    contentType: SupportAttachmentContentType;
+    contentBase64: string;
+  };
 };
 
 export function getSupportTicketRecipientEmail(): string {
@@ -40,6 +47,10 @@ export function renderSupportTicketEmailHtml(
   const safeCategory = escapeHtml(getSupportTicketCategoryLabel(payload.category));
   const safeRole = escapeHtml(payload.userRole);
   const safeUserId = escapeHtml(payload.userId);
+
+  const attachmentNote = payload.attachment
+    ? `<p style="margin:20px 0 0;font-size:14px;color:#64748b;">An image attachment is included with this message (${escapeHtml(payload.attachment.filename)}).</p>`
+    : "";
 
   const bodyHtml = `
     ${renderPlatformEmailHeadline("New support ticket")}
@@ -71,7 +82,8 @@ export function renderSupportTicketEmailHtml(
       </tr>
     </table>
     <h2 style="font-size:16px;margin:24px 0 8px;color:#0f172a;">Message</h2>
-    <p style="margin:0;font-size:14px;">${safeMessage}</p>`;
+    <p style="margin:0;font-size:14px;">${safeMessage}</p>
+    ${attachmentNote}`;
 
   return wrapPlatformEmailContent({
     documentTitle: "New support ticket",
@@ -107,6 +119,15 @@ export async function sendSupportTicketEmail(
         replyTo: payload.email,
         subject: subjectLine,
         html: renderSupportTicketEmailHtml(payload),
+        attachments: payload.attachment
+          ? ([
+              {
+                filename: payload.attachment.filename,
+                content: payload.attachment.contentBase64,
+                contentType: payload.attachment.contentType,
+              },
+            ] satisfies ResendEmailAttachment[])
+          : undefined,
       })
     );
 

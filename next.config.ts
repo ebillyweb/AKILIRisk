@@ -9,6 +9,12 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 /** Baked at build/dev start for /admin/operations (Vercel has no commit-date env). */
 const nextConfig: NextConfig = {
   env: resolveGitBuildEnv({ cwd: projectRoot }),
+  /** Support ticket screenshots are sent as base64 via server actions (up to ~4 MB raw). */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "6mb",
+    },
+  },
   /** Pin NFT tracing to this app — avoids pulling sibling/home dirs when extra lockfiles exist. */
   outputFileTracingRoot: projectRoot,
   outputFileTracingExcludes: {

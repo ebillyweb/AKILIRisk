@@ -22,6 +22,25 @@ describe("renderSupportTicketEmailHtml", () => {
     expect(html).toContain("user_123");
     expect(html).not.toContain("mailto:");
   });
+
+  it("mentions an attached image when present", () => {
+    const html = renderSupportTicketEmailHtml({
+      name: "Ada",
+      email: "ada@example.com",
+      category: "other",
+      subject: "Help",
+      message: "See the attached screenshot of the document.",
+      userId: "user_1",
+      userRole: "USER",
+      attachment: {
+        filename: "doc-shot.png",
+        contentType: "image/png",
+        contentBase64: "aaaa",
+      },
+    });
+    expect(html).toContain("doc-shot.png");
+    expect(html).toContain("An image attachment is included");
+  });
 });
 
 describe("getSupportTicketRecipientEmail", () => {
