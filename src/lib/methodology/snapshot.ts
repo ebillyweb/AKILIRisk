@@ -282,29 +282,27 @@ export async function loadSnapshotForInterview(
   return row ? parseSnapshotRow(row) : null;
 }
 
+/**
+ * Load the methodology snapshot pinned on the assessment row only.
+ *
+ * Do not fall back to the client's intake-interview snapshot: advisor-cloned
+ * question IDs in that blob differ from the live platform bank. Unpinned
+ * assessments collect answers against live UUIDs; using the interview
+ * snapshot at score time yields 0% completion (question-id mismatch).
+ */
 export async function loadSnapshotForAssessment(
   assessmentId: string,
 ): Promise<ParsedMethodologySnapshot | null> {
   const assessment = await prisma.assessment.findUnique({
     where: { id: assessmentId },
-    select: { snapshotId: true, userId: true },
+    select: { snapshotId: true },
   });
-  if (!assessment) return null;
+  if (!assessment?.snapshotId) return null;
 
-  if (assessment.snapshotId) {
-    const row = await prisma.intakeSnapshot.findUnique({
-      where: { id: assessment.snapshotId },
-    });
-    if (row) return parseSnapshotRow(row);
-  }
-
-  const interview = await prisma.intakeInterview.findFirst({
-    where: { userId: assessment.userId },
-    orderBy: { updatedAt: "desc" },
-    select: { id: true },
+  const row = await prisma.intakeSnapshot.findUnique({
+    where: { id: assessment.snapshotId },
   });
-  if (!interview) return null;
-  return loadSnapshotForInterview(interview.id);
+  return row ? parseSnapshotRow(row) : null;
 }
 
 export function resolvePillarLabel(
