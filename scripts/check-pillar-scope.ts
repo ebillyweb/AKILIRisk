@@ -24,13 +24,18 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const [assessment, pillars, scores] = await Promise.all([
+  const [assessment, pillars, scores, responses] = await Promise.all([
     prisma.assessment.findUnique({
       where: { id: assessmentId },
-      select: { includedPillars: true },
+      select: { includedPillars: true, status: true },
     }),
     prisma.pillar.findMany({ select: { slug: true } }),
     prisma.pillarScore.findMany({ where: { assessmentId }, select: { pillar: true } }),
+    prisma.assessmentResponse.groupBy({
+      by: ["pillar"],
+      where: { assessmentId },
+      _count: { _all: true },
+    }),
   ]);
 
   console.log(`\nScope check — assessment ${assessmentId}\n${"─".repeat(64)}`);
@@ -63,7 +68,18 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\nPillars with scores: ${scores.map((s) => s.pillar).join(", ") || "(none)"}`);
+  console.log(`\nStatus: ${assessment.status ?? "(unknown)"}`);
+  console.log(`Pillars with scores: ${scores.map((s) => s.pillar).join(", ") || "(none)"}`);
+
+  const totalResponses = responses.reduce((n, r) => n + r._count._all, 0);
+  console.log(`Saved responses: ${totalResponses} total`);
+  if (totalResponses === 0) {
+    console.log("  → No answers saved for this assessment. Either it was never started,");
+    console.log("    or responses are not persisting. Answer one question in the app and");
+    console.log("    re-run: if this stays 0, the save path (/api/assessment/[id]/responses) is the issue.");
+  } else {
+    for (const r of responses) console.log(`  • ${r.pillar}: ${r._count._all}`);
+  }
 
   // Blast radius: how many assessments still carry the old slug.
   const staleCount = await prisma.$queryRaw<Array<{ count: bigint }>>`
