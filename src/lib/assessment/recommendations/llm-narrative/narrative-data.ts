@@ -23,6 +23,19 @@ const WEAK_MATURITY_MAX = 1;
 /** Cap findings per pillar so the prompt stays focused and cheap. */
 const MAX_FINDINGS_PER_PILLAR = 6;
 
+/**
+ * Generic 0→3 maturity ladder used when a question's own anchor text is empty
+ * (e.g. some advisor/enterprise-cloned questions store no answer0..3 labels).
+ * The real grounding is the question text + chosen level; these are a neutral
+ * stand-in so a weak answer is never silently dropped for a missing label.
+ */
+const FALLBACK_ANCHORS: [string, string, string, string] = [
+  "Not in place",
+  "Minimal or informal",
+  "Established",
+  "Optimized",
+];
+
 type QuestionRow = {
   id: string;
   questionNumber: string | null;
@@ -117,21 +130,18 @@ export async function loadWeakFindingsByPillar(
     const level = toMaturityLevel(decrypted);
     if (level === null || level > WEAK_MATURITY_MAX) continue;
 
-    const anchors: [string, string, string, string] = [
-      q.answer0 ?? "",
-      q.answer1 ?? "",
-      q.answer2 ?? "",
-      q.answer3 ?? "",
-    ];
-    // Need the chosen label and at least some anchor context to be groundable.
-    const chosenLabel = anchors[level];
-    if (!chosenLabel) continue;
+    // Backfill any empty anchor with the generic ladder so a weak answer is
+    // never dropped just because its label text is missing in the bank. The
+    // question text (always present) carries the real grounding.
+    const anchors = [q.answer0, q.answer1, q.answer2, q.answer3].map((a, i) =>
+      a && a.trim() ? a : FALLBACK_ANCHORS[i],
+    ) as [string, string, string, string];
 
     const finding: WeakFinding & { level: number } = {
       questionNumber: q.questionNumber ?? q.id,
       questionText: q.questionText,
       chosenLevel: level,
-      chosenLabel,
+      chosenLabel: anchors[level],
       maturityAnchors: anchors,
       level,
     };

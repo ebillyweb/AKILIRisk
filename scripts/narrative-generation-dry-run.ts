@@ -176,12 +176,15 @@ async function diagnose(assessmentId: string): Promise<void> {
       (nonInt ? ` (non-0-3: ${nonInt})` : ""),
   );
   console.log(
-    `  Weak (<=1): ${weakCandidates}  → with anchor label: ${weakWithAnchor}  dropped (missing anchor): ${weakMissingAnchor}`,
+    `  Weak (<=1): ${weakCandidates}  → with real anchor label: ${weakWithAnchor}  backfilled generic label: ${weakMissingAnchor}`,
   );
-  if (weakCandidates > 0 && weakWithAnchor === 0) {
-    console.log("  → CAUSE: weak answers exist but their anchor labels are empty in `questions`.");
-  } else if (weakCandidates === 0) {
-    console.log("  → CAUSE: no answer is at maturity <=1 — genuinely nothing to flag here.");
+  if (weakCandidates === 0) {
+    console.log("  → No answer is at maturity <=1 — genuinely nothing to flag here.");
+  } else if (weakMissingAnchor > 0) {
+    console.log(
+      `  → ${weakMissingAnchor} weak answer(s) have empty anchor text in the bank; the loader ` +
+        "backfills a generic label (question text carries the grounding).",
+    );
   }
 }
 
