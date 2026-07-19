@@ -10,6 +10,12 @@ type SyncInput = {
   skippedQuestions: string[];
   questionBank: Question[];
   currentPillar: string | null;
+  /** When set, only sync answers for these pillars (assessment scope). */
+  includedPillars?: string[] | null;
+};
+
+type SyncOptions = {
+  facilitatedSessionId?: string;
 };
 
 async function fetchPillarQuestions(pillarSlug: string): Promise<Question[]> {
@@ -20,14 +26,61 @@ async function fetchPillarQuestions(pillarSlug: string): Promise<Question[]> {
   return data.questions ?? [];
 }
 
+/** Pillars to load when the in-memory bank is empty. Prefer current + scope over full catalog. */
+export function pillarsToLoadForSync(input: {
+  currentPillar: string | null;
+  includedPillars?: string[] | null;
+  catalogSlugs: readonly string[];
+}): string[] {
+  const { currentPillar, includedPillars, catalogSlugs } = input;
+  const pillars = new Set<string>();
+
+  if (currentPillar) {
+    pillars.add(normalizePillarSlug(currentPillar));
+  }
+
+  if (includedPillars?.length) {
+    for (const id of includedPillars) {
+      pillars.add(normalizePillarSlug(id));
+    }
+    return [...pillars];
+  }
+
+  // Completing a single pillar: do not pull the full catalog (out-of-scope
+  // store answers would otherwise be matched and rejected by the API).
+  if (currentPillar) {
+    return [...pillars];
+  }
+
+  return catalogSlugs.map((slug) => normalizePillarSlug(slug));
+}
+
+/** Drop answers outside assessment scope / the pillar being completed. */
+export function filterSyncPayloads<T extends { pillar: string }>(
+  payloads: T[],
+  input: { currentPillar: string | null; includedPillars?: string[] | null },
+): T[] {
+  const { currentPillar, includedPillars } = input;
+
+  if (includedPillars?.length) {
+    const scope = new Set(includedPillars.map((id) => normalizePillarSlug(id)));
+    return payloads.filter((p) => scope.has(normalizePillarSlug(p.pillar)));
+  }
+
+  if (currentPillar) {
+    const target = normalizePillarSlug(currentPillar);
+    return payloads.filter((p) => normalizePillarSlug(p.pillar) === target);
+  }
+
+  return payloads;
+}
+
 async function resolveQuestionBank(
   questionBank: Question[],
-  currentPillar: string | null
+  currentPillar: string | null,
+  includedPillars?: string[] | null,
 ): Promise<Question[]> {
   if (questionBank.length > 0) return questionBank;
-
-  const pillarsWithAnswers = new Set<string>();
-  if (currentPillar) pillarsWithAnswers.add(normalizePillarSlug(currentPillar));
 
   let catalog = starterPillarCatalog();
   try {
@@ -39,12 +92,15 @@ async function resolveQuestionBank(
     // fallback to starter catalog
   }
 
-  for (const pillar of assessmentPillarDefinitions(catalog)) {
-    pillarsWithAnswers.add(pillar.slug);
-  }
+  const catalogSlugs = assessmentPillarDefinitions(catalog).map((p) => p.slug);
+  const pillarsWithAnswers = pillarsToLoadForSync({
+    currentPillar,
+    includedPillars,
+    catalogSlugs,
+  });
 
   const loaded = await Promise.all(
-    [...pillarsWithAnswers].map((slug) => fetchPillarQuestions(slug))
+    pillarsWithAnswers.map((slug) => fetchPillarQuestions(slug)),
   );
   return loaded.flat();
 }
@@ -53,12 +109,13 @@ async function resolveQuestionBank(
 export async function syncStoreAnswersToServer(
   assessmentId: string,
   input: SyncInput,
-  options?: { facilitatedSessionId?: string },
-): Promise<{ syncedCount: number }> {
-  const { answers, skippedQuestions, currentPillar } = input;
+  options?: SyncOptions,
+): Promise<{ syncedCount: number; skippedOutOfScope: number }> {
+  const { answers, skippedQuestions, currentPillar, includedPillars } = input;
   const questionBank = await resolveQuestionBank(
     input.questionBank,
-    currentPillar
+    currentPillar,
+    includedPillars,
   );
   if (questionBank.length === 0) {
     throw new Error("Could not load assessment questions to save your answers.");
@@ -99,13 +156,17 @@ export async function syncStoreAnswersToServer(
     });
   }
 
-  if (saves.length === 0) {
+  const scopedSaves = filterSyncPayloads(saves, { currentPillar, includedPillars });
+  const skippedOutOfScope = saves.length - scopedSaves.length;
+
+  if (scopedSaves.length === 0) {
     throw new Error(
-      "No saved answers found in this browser session. Return to the assessment and re-answer your questions."
+      "No saved answers found in this browser session. Return to the assessment and re-answer your questions.",
     );
   }
 
-  for (const payload of saves) {
+  let syncedCount = 0;
+  for (const payload of scopedSaves) {
     const response = await fetch(`/api/assessment/${assessmentId}/responses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -118,12 +179,25 @@ export async function syncStoreAnswersToServer(
       }),
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(
-        (error as { error?: string }).error ?? "Failed to sync assessment answers"
-      );
+      const error = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+      };
+      // Stale local answers for pillars outside assessment scope must not
+      // block scoring the pillar the client just finished.
+      if (error.code === "PILLAR_OUT_OF_SCOPE") {
+        continue;
+      }
+      throw new Error(error.error ?? "Failed to sync assessment answers");
     }
+    syncedCount += 1;
   }
 
-  return { syncedCount: saves.length };
+  if (syncedCount === 0) {
+    throw new Error(
+      "No saved answers found in this browser session. Return to the assessment and re-answer your questions.",
+    );
+  }
+
+  return { syncedCount, skippedOutOfScope };
 }

@@ -57,7 +57,9 @@ export function FacilitatedAssessmentComplete({
         answers: store.answers,
         skippedQuestions: store.skippedQuestions,
         questionBank: store.familyGovernanceQuestionBank ?? [],
-        currentPillar: store.currentPillar,
+        // Prefer the resolved scoring pillar so out-of-scope store answers
+        // from other domains are not re-posted during complete.
+        currentPillar: store.currentPillar ?? pillar,
       }, { facilitatedSessionId: sessionId });
 
       const response = await fetch(`/api/assessment/${assessmentId}/score`, {

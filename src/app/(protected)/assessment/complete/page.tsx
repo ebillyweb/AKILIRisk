@@ -47,11 +47,25 @@ export default function AssessmentCompletePage() {
       const pillar = await resolveScoringPillar(assessmentId, currentPillar);
       const store = useAssessmentStore.getState();
 
+      let includedPillars: string[] | undefined;
+      try {
+        const scopeRes = await fetch("/api/assessment/summary-access");
+        if (scopeRes.ok) {
+          const scope = (await scopeRes.json()) as { includedPillars?: string[] };
+          if (scope.includedPillars?.length) {
+            includedPillars = scope.includedPillars;
+          }
+        }
+      } catch {
+        // Scope filter is best-effort; currentPillar filtering still applies.
+      }
+
       await syncStoreAnswersToServer(assessmentId, {
         answers: store.answers,
         skippedQuestions: store.skippedQuestions,
         questionBank: store.familyGovernanceQuestionBank ?? [],
-        currentPillar: store.currentPillar,
+        currentPillar: store.currentPillar ?? pillar,
+        includedPillars,
       });
 
       const response = await fetch(`/api/assessment/${assessmentId}/score`, {
