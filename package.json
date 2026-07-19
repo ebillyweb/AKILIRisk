@@ -47,6 +47,7 @@
     "db:backfill-user-email-ciphertext": "npx tsx scripts/backfill-user-email-ciphertext.ts",
     "db:backfill-assignment-engagement-scope": "npx tsx scripts/backfill-assignment-engagement-scope.ts",
     "db:narrative-dry-run": "npx tsx scripts/narrative-generation-dry-run.ts",
+    "db:show-narrative": "npx tsx scripts/show-narrative.ts",
     "db:reset-fixture-mfa": "node scripts/reset-fixture-mfa.js",
     "env:vercel:link": "npx vercel link",
     "env:vercel": "npx vercel env pull .env.local",
