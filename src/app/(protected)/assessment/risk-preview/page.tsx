@@ -105,7 +105,7 @@ export default async function AssessmentPreviewPage() {
             <CardDescription>
               {narrowScope
                 ? formatNarrowScopePreviewCopy(includedPillars, catalog)
-                : "High-level view of your six risk domains. Each cell shows the maturity score and risk level from your completed assessment."}
+                : "High-level view of your household risk domains. Each cell shows the maturity score and risk level from your completed assessment."}
             </CardDescription>
           </CardHeader>
           <CardContent>

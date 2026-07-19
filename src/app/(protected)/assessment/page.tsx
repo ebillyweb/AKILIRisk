@@ -217,7 +217,11 @@ function AssessmentHubPageContent() {
     catalog.length > 0 && isNarrowAssessmentScope(includedPillars, catalog);
   const scopedDomainLabel = narrowScope
     ? `${includedPillars.length} risk domain${includedPillars.length === 1 ? "" : "s"}`
-    : "Six risk domains";
+    : catalog.length > 0
+      ? `${catalog.length} risk domains`
+      : includedPillars.length > 0
+        ? `${includedPillars.length} risk domain${includedPillars.length === 1 ? "" : "s"}`
+        : "Risk domains";
 
   const assessmentPillars = useMemo(
     () =>
