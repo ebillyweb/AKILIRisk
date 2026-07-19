@@ -41,11 +41,14 @@ export type SelectedService = {
   description: string;
 };
 
-/** Non-identifying household shape. No names, emails, or free-text. */
+/**
+ * Non-identifying household shape. No names, emails, or free-text.
+ * `hasMinors` was intentionally removed from what leaves the system — see
+ * docs/llm-recommendation-narratives-data-flow.md.
+ */
 export type HouseholdShape = {
   size?: number;
   hasOperatingBusiness?: boolean;
-  hasMinors?: boolean;
   travelsInternationally?: boolean;
 };
 
@@ -62,8 +65,11 @@ export type NarrativeInput = {
   weakFindings: WeakFinding[];
   /** Rules-selected services. Must be non-empty. */
   selectedServices: SelectedService[];
-  /** Optional advisor/firm voice alignment. */
-  firm?: { name?: string; tone?: string };
+  /**
+   * Optional advisor/firm voice alignment. Only a tone hint is sent — the firm
+   * name is intentionally NOT part of the payload (see the data-flow doc).
+   */
+  firm?: { tone?: string };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -188,10 +194,19 @@ OUTPUT:
  * model grounded and makes the call cacheable by a hash of this string.
  */
 export function renderNarrativeUserMessage(input: NarrativeInput): string {
+  // Reconstruct household and firm from an explicit allowlist so that only
+  // vetted fields can leave the system, regardless of what a caller passes in.
+  // JSON.stringify drops undefined-valued keys, so absent fields are omitted.
+  const household = {
+    size: input.household?.size,
+    hasOperatingBusiness: input.household?.hasOperatingBusiness,
+    travelsInternationally: input.household?.travelsInternationally,
+  };
+  const firm = { tone: input.firm?.tone };
   const payload = {
     pillar: input.pillar,
-    household: input.household ?? {},
-    firm: input.firm ?? {},
+    household,
+    firm,
     weakFindings: input.weakFindings.map((f) => ({
       questionNumber: f.questionNumber,
       question: f.questionText,

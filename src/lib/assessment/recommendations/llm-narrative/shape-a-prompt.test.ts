@@ -10,7 +10,7 @@ import {
 // Realistic AI & Emerging Tech Risk input: two weak findings + two selected services.
 const input: NarrativeInput = {
   pillar: { slug: "ai-emerging-tech", name: "AI & Emerging Tech Risk", score: 0.7, riskLevel: "critical" },
-  household: { size: 5, hasOperatingBusiness: true, hasMinors: true },
+  household: { size: 5, hasOperatingBusiness: true },
   weakFindings: [
     {
       questionNumber: "10.1",
@@ -53,7 +53,7 @@ const input: NarrativeInput = {
         "Acceptable-use policy, vendor vetting, and upload controls governing what family and office data may be entered into AI tools.",
     },
   ],
-  firm: { name: "Belvedere", tone: "measured" },
+  firm: { tone: "measured" },
 };
 
 const goodOutput: NarrativeOutput = {
@@ -103,6 +103,22 @@ describe("Shape A — narrative schema", () => {
     expect(msg).toContain("No verification");
     // No client identity is sent.
     expect(msg).not.toMatch(/email|@|street|ssn/i);
+  });
+
+  it("omits hasMinors and firm.name even when a caller passes them", () => {
+    // Cast past the (now-narrowed) types to simulate a caller sneaking in
+    // removed fields; the allowlist reconstruction must drop them.
+    const sneaky = {
+      ...input,
+      household: { ...input.household, hasMinors: true },
+      firm: { name: "Belvedere", tone: "measured" },
+    } as unknown as NarrativeInput;
+    const msg = renderNarrativeUserMessage(sneaky);
+    expect(msg).not.toMatch(/hasMinors/i);
+    expect(msg).not.toContain("Belvedere");
+    // The vetted fields still make it through.
+    expect(msg).toContain('"size": 5');
+    expect(msg).toContain('"tone": "measured"');
   });
 });
 

@@ -56,14 +56,18 @@ these fields:
 | `pillar.score` / `riskLevel` | `0.7` / `critical` | Low | Sets tone/severity of the summary |
 | `household.size` | `5` | Low–moderate | Tailors phrasing ("your household of five") |
 | `household.hasOperatingBusiness` | `true` | Low–moderate | Relevant to some rationales |
-| `household.hasMinors` | `true` | **Moderate** | Used by household-literacy framing |
 | `household.travelsInternationally` | `false` | Low–moderate | Contextual only |
 | `weakFindings[].questionNumber` | `10.1` | Low | Citation/audit anchor |
 | `weakFindings[].questionText` | "Are wire-transfer requests verified out-of-band…" | Low | The question the client answered weakly |
 | `weakFindings[].chosenLevel` + `chosenLabel` | `0 — No verification` | **Moderate** | The client's actual answer — source of specificity |
 | `weakFindings[].maturityAnchors` | ["No verification", … "enforced and tested"] | Low | Shows the model what "good" looks like |
 | `selectedServices[].serviceId/name/description` | `ai_impersonation_defense` … | Low | The services to write about (catalog copy, not client data) |
-| `firm.name` / `firm.tone` | "Belvedere" / "measured" | Low | Advisor firm voice alignment (optional — see §7) |
+| `firm.tone` | "measured" | Low | Advisor voice alignment (tone hint only — no firm name) |
+
+> **Removed by design:** `household.hasMinors` and `firm.name` were dropped from the
+> payload. They are no longer in the `NarrativeInput` type, the payload is rebuilt from an
+> explicit allowlist so they cannot leak even if a caller passes them, and a unit test
+> asserts neither appears in the rendered message.
 
 ## 4. What explicitly does NOT leave the system
 
@@ -75,6 +79,8 @@ By construction, the payload carries **no direct identifiers**:
 - ❌ No free-text answers, notes, or uploaded documents
 - ❌ No advisor or client user IDs, no assessment/interview IDs
 - ❌ No geolocation beyond the boolean "travels internationally"
+- ❌ No "household includes minors" flag (`hasMinors` removed) and no advisor firm name
+  (`firm.name` removed)
 
 The data sent is the client's **maturity answers** (which control was in place, on a 0–3
 ladder) plus non-identifying **household shape** — never who they are.
@@ -108,22 +114,23 @@ ladder) plus non-identifying **household shape** — never who they are.
 
 ## 7. Residual risks / open questions for sign-off
 
-1. **`hasMinors` + `household.size`** — the most sensitive fields. Confirm sending
-   "household includes minors" as a boolean is acceptable, or drop it and lose that bit of
-   tailoring.
-2. **`firm.name`** — reveals which advisor firm to the processor. Low sensitivity, but it's
-   removable with no loss to grounding. Recommend dropping unless voice alignment needs it.
-3. **Re-identification** — could household shape + specific weak answers, combined with
+1. ~~**`hasMinors`**~~ — **Resolved:** removed from the payload (no longer in the type;
+   allowlist-enforced; test-covered).
+2. ~~**`firm.name`**~~ — **Resolved:** removed from the payload; only a `tone` hint is sent.
+3. **`household.size`** — the most sensitive field still sent. A small integer, no
+   identifiers; assessed low. Confirm acceptable, or coarsen to a band (e.g. 1–2 / 3–5 / 6+)
+   if Privacy prefers.
+4. **Re-identification** — could household shape + specific weak answers, combined with
    other data, re-identify a client? Assessed as low (no identifiers, coarse buckets), but
    Privacy should confirm the threshold for this client base.
-4. **Advisor/client disclosure** — does the client agreement need to disclose that
+5. **Advisor/client disclosure** — does the client agreement need to disclose that
    AI assists in drafting recommendation copy? Product/Legal call.
-5. **Retention decision** — request ZDR, or accept default abuse-monitoring retention?
+6. **Retention decision** — request ZDR, or accept default abuse-monitoring retention?
 
 ## 8. Decision requested
 
-- [ ] Privacy/Legal: confirm the field set in §3 is acceptable (esp. §7.1, §7.2), and that
-      the current OpenAI DPA covers this data category (§5).
+- [ ] Privacy/Legal: confirm the field set in §3 is acceptable (esp. §7.3 `household.size`),
+      and that the current OpenAI DPA covers this data category (§5).
 - [ ] Security: confirm server-side egress + key handling posture.
 - [ ] Product: decide on ZDR and on client-facing AI-assist disclosure.
 

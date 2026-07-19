@@ -24,7 +24,7 @@ export const GOLDEN_CASES: GoldenCase[] = [
     description: "AI & Emerging Tech Risk, critical score, two selected services.",
     input: {
       pillar: { slug: "ai-emerging-tech", name: "AI & Emerging Tech Risk", score: 0.7, riskLevel: "critical" },
-      household: { size: 5, hasOperatingBusiness: true, hasMinors: true },
+      household: { size: 5, hasOperatingBusiness: true },
       weakFindings: [
         {
           questionNumber: "10.1",
