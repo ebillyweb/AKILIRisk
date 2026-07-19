@@ -25,6 +25,8 @@ import { safeDecryptAnswer } from "@/lib/data/response-content";
 import {
   loadWeakFindingsByPillar,
   loadServicePillarMap,
+  loadQuestionBankRows,
+  isUuid,
 } from "@/lib/assessment/recommendations/llm-narrative/narrative-data";
 import {
   runNarrativeGeneration,
@@ -112,7 +114,7 @@ async function diagnose(assessmentId: string): Promise<void> {
     }
   };
   await tableProbe("questions (platform)", () =>
-    prisma.pillarQuestion.findMany({ where: { id: { in: qids } }, select: { id: true } }),
+    prisma.pillarQuestion.findMany({ where: { id: { in: qids.filter(isUuid) } }, select: { id: true } }),
   );
   await tableProbe("advisor_pillar_questions", () =>
     prisma.advisorPillarQuestion.findMany({ where: { id: { in: qids } }, select: { id: true } }),
@@ -137,13 +139,14 @@ async function diagnose(assessmentId: string): Promise<void> {
   console.log(`  Responses by pillar slug: ${tally(nonSkipped.map((r) => r.pillar))}`);
 
   // Staged breakdown: where do weak findings get lost? Level distribution, then
-  // how many weak (<=1) answers survive the anchor-label requirement.
-  const questions = await prisma.pillarQuestion.findMany({
-    where: { id: { in: qids } },
-    select: { id: true, answer0: true, answer1: true, answer2: true, answer3: true },
-  });
+  // how many weak (<=1) answers survive the anchor-label requirement. Uses the
+  // same multi-table resolver as the loader (platform + advisor + enterprise).
+  const questions = await loadQuestionBankRows(qids);
   const anchorsById = new Map(
-    questions.map((q) => [q.id, [q.answer0, q.answer1, q.answer2, q.answer3] as (string | null)[]]),
+    [...questions.values()].map((q) => [
+      q.id,
+      [q.answer0, q.answer1, q.answer2, q.answer3] as (string | null)[],
+    ]),
   );
   const levelCounts = [0, 0, 0, 0];
   let nonInt = 0;

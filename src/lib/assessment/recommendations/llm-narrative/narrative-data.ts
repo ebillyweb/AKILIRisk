@@ -33,6 +33,53 @@ type QuestionRow = {
   answer3: string | null;
 };
 
+const QUESTION_SELECT = {
+  id: true,
+  questionNumber: true,
+  questionText: true,
+  answer0: true,
+  answer1: true,
+  answer2: true,
+  answer3: true,
+} as const;
+
+/** Platform question ids are UUIDs; advisor/enterprise cloned ids are cuids. */
+export function isUuid(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+/**
+ * Resolve question ids to their bank rows across the platform + advisor +
+ * enterprise question tables. Routing by id shape matters: the platform
+ * `questions.id` column is UUID-typed, so passing a cloned cuid to it throws a
+ * Postgres cast error. UUID ids go to the platform table; the rest go to the
+ * cloned tables (whose PKs are cuids).
+ */
+export async function loadQuestionBankRows(
+  ids: string[],
+): Promise<Map<string, QuestionRow>> {
+  const uuidIds = ids.filter(isUuid);
+  const cuidIds = ids.filter((id) => !isUuid(id));
+
+  const [platform, advisor, enterprise] = await Promise.all([
+    uuidIds.length
+      ? prisma.pillarQuestion.findMany({ where: { id: { in: uuidIds } }, select: QUESTION_SELECT })
+      : Promise.resolve([]),
+    cuidIds.length
+      ? prisma.advisorPillarQuestion.findMany({ where: { id: { in: cuidIds } }, select: QUESTION_SELECT })
+      : Promise.resolve([]),
+    cuidIds.length
+      ? prisma.enterprisePillarQuestion.findMany({ where: { id: { in: cuidIds } }, select: QUESTION_SELECT })
+      : Promise.resolve([]),
+  ]);
+
+  const byId = new Map<string, QuestionRow>();
+  for (const q of [...platform, ...advisor, ...enterprise] as QuestionRow[]) {
+    byId.set(q.id, q);
+  }
+  return byId;
+}
+
 /** Coerce a decrypted answer to a 0–3 maturity index, or null if not scored_0_3. */
 function toMaturityLevel(raw: unknown): 0 | 1 | 2 | 3 | null {
   const n = typeof raw === "number" ? raw : Number(raw);
@@ -55,19 +102,7 @@ export async function loadWeakFindingsByPillar(
   if (responses.length === 0) return new Map();
 
   const questionIds = [...new Set(responses.map((r) => r.questionId))];
-  const questions = (await prisma.pillarQuestion.findMany({
-    where: { id: { in: questionIds } },
-    select: {
-      id: true,
-      questionNumber: true,
-      questionText: true,
-      answer0: true,
-      answer1: true,
-      answer2: true,
-      answer3: true,
-    },
-  })) as QuestionRow[];
-  const byId = new Map(questions.map((q) => [q.id, q]));
+  const byId = await loadQuestionBankRows(questionIds);
 
   const grouped = new Map<string, Array<WeakFinding & { level: number }>>();
 
