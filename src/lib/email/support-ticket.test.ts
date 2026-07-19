@@ -20,6 +20,7 @@ describe("renderSupportTicketEmailHtml", () => {
     expect(html).not.toContain('<a href="https://evil">click</a>');
     expect(html).toContain("Technical issue");
     expect(html).toContain("user_123");
+    expect(html).not.toContain("mailto:");
   });
 });
 

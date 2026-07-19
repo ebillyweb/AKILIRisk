@@ -13,5 +13,6 @@ describe("renderContactFormEmailHtml", () => {
     expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
     expect(html).not.toContain('<a href="https://evil">click</a>');
     expect(html).toContain("&lt;a href=&quot;https://evil&quot;&gt;");
+    expect(html).not.toContain("mailto:");
   });
 });

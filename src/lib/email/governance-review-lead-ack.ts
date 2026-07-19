@@ -40,7 +40,7 @@ export function renderGovernanceReviewLeadAckEmailHtml(
     </p>
     <p style="margin:0 0 16px;">
       A member of our team will follow up at
-      <a href="mailto:${safeEmail}" style="color:#18181b;text-decoration:none;">${safeEmail}</a>
+      ${safeEmail}
       to discuss scope, timing, and next steps. This message is not the full intake — that begins
       only when you choose to move forward.
     </p>

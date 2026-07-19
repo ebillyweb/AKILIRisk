@@ -44,7 +44,7 @@ export function renderContactFormEmailHtml(
       </tr>
       <tr>
         <td style="padding:8px 0;font-weight:600;vertical-align:top;color:#0f172a;">Email</td>
-        <td style="padding:8px 0;"><a href="mailto:${safeEmail}" style="color:#18181b;text-decoration:none;">${safeEmail}</a></td>
+        <td style="padding:8px 0;">${safeEmail}</td>
       </tr>
       <tr>
         <td style="padding:8px 0;font-weight:600;vertical-align:top;color:#0f172a;">Subject</td>
