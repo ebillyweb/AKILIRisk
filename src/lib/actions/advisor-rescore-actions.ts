@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdvisorRole, getAdvisorProfileOrThrow } from "@/lib/advisor/auth";
+import { isPlatformAdminRole } from "@/lib/auth-roles";
 import { prisma } from "@/lib/db";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import {
@@ -21,8 +22,7 @@ export async function advisorRescoreAssessment(
   input: z.infer<typeof advisorRescoreSchema>,
 ): Promise<AdvisorRescoreActionResult> {
   try {
-    const { userId } = await requireAdvisorRole();
-    const profile = await getAdvisorProfileOrThrow(userId);
+    const { userId, role } = await requireAdvisorRole();
     const { assessmentId } = advisorRescoreSchema.parse(input);
 
     const assessment = await prisma.assessment.findUnique({
@@ -33,16 +33,21 @@ export async function advisorRescoreAssessment(
       return { success: false, error: "Assessment not found" };
     }
 
-    const assignment = await prisma.clientAdvisorAssignment.findFirst({
-      where: {
-        advisorId: profile.id,
-        clientId: assessment.userId,
-        status: "ACTIVE",
-      },
-      select: { id: true },
-    });
-    if (!assignment) {
-      return { success: false, error: "You do not have access to this client" };
+    // Platform staff may re-score any client from the advisor hub; assigned
+    // advisors still require an ACTIVE assignment (matches report actions).
+    if (!isPlatformAdminRole(role)) {
+      const profile = await getAdvisorProfileOrThrow(userId);
+      const assignment = await prisma.clientAdvisorAssignment.findFirst({
+        where: {
+          advisorId: profile.id,
+          clientId: assessment.userId,
+          status: "ACTIVE",
+        },
+        select: { id: true },
+      });
+      if (!assignment) {
+        return { success: false, error: "You do not have access to this client" };
+      }
     }
 
     const actor = await prisma.user.findUnique({
