@@ -1658,6 +1658,13 @@ model AssessmentRecommendation {
   /// Phase 22: time horizon for SAP grouping: "immediate", "strategic", "ongoing"
   timeHorizon             String?                @db.VarChar(20)
 
+  /// Phase 3 (LLM narratives): audit metadata for AI-drafted recommendation copy.
+  /// Shape: { provider, model, promptHash, validated, generatedAt }. Null when
+  /// generation is disabled or the output was rejected by the grounding validator
+  /// (in which case the client sees the static catalog copy). The narrative text
+  /// itself lives under `customization.aiNarrative`.
+  generationMeta          Json?                  @map("generation_meta")
+
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
