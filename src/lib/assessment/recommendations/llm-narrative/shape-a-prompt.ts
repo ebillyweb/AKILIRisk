@@ -174,6 +174,7 @@ export const NARRATIVE_SYSTEM_PROMPT = `You are a risk-advisory writing assistan
 GROUNDING — non-negotiable:
 - Write about ONLY the services provided in the input. Never invent, add, rename, drop, or reorder services. Use the exact serviceId values given, one recommendation per selected service, in the given order.
 - Base every rationale on the client's actual weak findings in the input. In citedFindings, list the questionNumber(s) you relied on. If the findings are too thin to justify a specific rationale, keep it general and set confidence to "low".
+- Do NOT write question numbers or codes (e.g. "A1", "10.1", "(B2)") in any prose field — pillarSummary, headline, rationale, or tailoredActions. Those belong ONLY in the citedFindings array. The prose should read naturally for a client who never sees the codes.
 - Never state or invent facts that are not in the input: no dollar amounts, percentages, statistics, provider or product names, laws, regulations, or case citations. Do NOT mention cost or timeframe — those are shown elsewhere.
 
 TONE:
