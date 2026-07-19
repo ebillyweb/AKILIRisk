@@ -49,6 +49,7 @@
     "db:narrative-dry-run": "npx tsx scripts/narrative-generation-dry-run.ts",
     "db:show-narrative": "npx tsx scripts/show-narrative.ts",
     "db:generate-narratives-once": "npx tsx scripts/generate-narratives-once.ts",
+    "db:check-pillar-scope": "npx tsx scripts/check-pillar-scope.ts",
     "db:reset-fixture-mfa": "node scripts/reset-fixture-mfa.js",
     "env:vercel:link": "npx vercel link",
     "env:vercel": "npx vercel env pull .env.local",
