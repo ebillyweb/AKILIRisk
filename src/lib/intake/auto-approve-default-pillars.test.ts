@@ -35,6 +35,7 @@ vi.mock("@/lib/client/engagement-scope", () => ({
 vi.mock("@/lib/methodology/advisor-assessment-domains", () => ({
   loadAdvisorAssessmentDomainOptions: vi.fn(),
   assertAdvisorAssessmentDomainSelection: vi.fn(),
+  ensureAllPlatformPillarsActiveForAdvisor: vi.fn(),
 }));
 
 vi.mock("@/lib/methodology/cached-pillar-catalog", () => ({
@@ -69,7 +70,10 @@ vi.mock("next/cache", () => ({
 
 import { prisma } from "@/lib/db";
 import { approveIntakeWithDefaultPillars, tryAutoApproveSelfServiceIntakeAfterSubmit } from "./auto-approve-default-pillars";
-import { loadAdvisorAssessmentDomainOptions } from "@/lib/methodology/advisor-assessment-domains";
+import {
+  ensureAllPlatformPillarsActiveForAdvisor,
+  loadAdvisorAssessmentDomainOptions,
+} from "@/lib/methodology/advisor-assessment-domains";
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import { createIntakeApproval, updateIntakeApproval } from "@/lib/data/advisor";
 import { getIntakeInterview } from "@/lib/data/intake";
@@ -86,6 +90,7 @@ const mockAssignmentFindFirst = vi.mocked(prisma.clientAdvisorAssignment.findFir
 const mockApprovalFindFirst = vi.mocked(prisma.intakeApproval.findFirst);
 const mockVisibilityContext = vi.mocked(resolveEnterpriseMemberVisibilityContext);
 const mockVisibilityEnabled = vi.mocked(isEnterpriseMemberVisibilityEnabled);
+const mockEnsurePlatformActive = vi.mocked(ensureAllPlatformPillarsActiveForAdvisor);
 
 describe("tryAutoApproveSelfServiceIntakeAfterSubmit", () => {
   beforeEach(() => {
@@ -120,9 +125,11 @@ describe("tryAutoApproveSelfServiceIntakeAfterSubmit", () => {
     mockVisibilityEnabled.mockReturnValue(true);
     vi.mocked(loadAdvisorAssessmentDomainOptions).mockResolvedValue([
       { id: "governance", name: "Governance", summary: "" },
+      { id: "cyber-digital", name: "Cyber", summary: "" },
     ]);
     vi.mocked(getPlatformPillarCatalog).mockResolvedValue([
       { id: "governance", name: "Governance", summary: "", displayOrder: 1 },
+      { id: "cyber-digital", name: "Cyber", summary: "", displayOrder: 2 },
     ]);
     vi.mocked(getIntakeInterview).mockResolvedValue({ responses: [] } as never);
     vi.mocked(loadIntakeScriptQuestions).mockResolvedValue([]);
@@ -130,17 +137,24 @@ describe("tryAutoApproveSelfServiceIntakeAfterSubmit", () => {
     vi.mocked(createIntakeApproval).mockResolvedValue({ id: "appr-draft" } as never);
     vi.mocked(updateIntakeApproval).mockResolvedValue({ id: "appr-1" } as never);
     vi.mocked(persistClientEngagementScope).mockResolvedValue({
-      includedPillars: ["governance"],
-      focusAreas: ["governance"],
+      includedPillars: ["governance", "cyber-digital"],
+      focusAreas: ["governance", "cyber-digital"],
     });
+    mockEnsurePlatformActive.mockResolvedValue(undefined);
   });
 
   it("auto-approves self-service intake when policy allows", async () => {
     const approved = await tryAutoApproveSelfServiceIntakeAfterSubmit("int-1", "client-1");
 
     expect(approved).toBe(true);
+    expect(mockEnsurePlatformActive).toHaveBeenCalled();
     expect(writeAudit).toHaveBeenCalled();
-    expect(persistClientEngagementScope).toHaveBeenCalled();
+    expect(persistClientEngagementScope).toHaveBeenCalledWith(
+      expect.objectContaining({
+        includedPillars: ["governance", "cyber-digital"],
+        focusAreas: ["governance", "cyber-digital"],
+      }),
+    );
   });
 
   it("returns false when post-intake review skip is disabled", async () => {
@@ -158,9 +172,11 @@ describe("approveIntakeWithDefaultPillars", () => {
     vi.clearAllMocks();
     vi.mocked(loadAdvisorAssessmentDomainOptions).mockResolvedValue([
       { id: "governance", name: "Governance", summary: "" },
+      { id: "cyber-digital", name: "Cyber", summary: "" },
     ]);
     vi.mocked(getPlatformPillarCatalog).mockResolvedValue([
       { id: "governance", name: "Governance", summary: "", displayOrder: 1 },
+      { id: "cyber-digital", name: "Cyber", summary: "", displayOrder: 2 },
     ]);
     vi.mocked(getIntakeInterview).mockResolvedValue({ responses: [] } as never);
     vi.mocked(loadIntakeScriptQuestions).mockResolvedValue([]);
@@ -168,13 +184,36 @@ describe("approveIntakeWithDefaultPillars", () => {
     vi.mocked(createIntakeApproval).mockResolvedValue({ id: "appr-draft" } as never);
     vi.mocked(updateIntakeApproval).mockResolvedValue({ id: "appr-1" } as never);
     vi.mocked(persistClientEngagementScope).mockResolvedValue({
-      includedPillars: ["governance"],
-      focusAreas: ["governance"],
+      includedPillars: ["governance", "cyber-digital"],
+      focusAreas: ["governance", "cyber-digital"],
     });
+    mockEnsurePlatformActive.mockResolvedValue(undefined);
   });
 
-  it("returns null when advisor has no active default pillars", async () => {
-    vi.mocked(loadAdvisorAssessmentDomainOptions).mockResolvedValue([]);
+  it("defaults to the full platform catalog, not only pre-active advisor domains", async () => {
+    const result = await approveIntakeWithDefaultPillars({
+      interviewId: "int-1",
+      clientUserId: "client-1",
+      advisorProfileId: "adv-1",
+    });
+
+    expect(mockEnsurePlatformActive).toHaveBeenCalledWith("adv-1");
+    expect(result).toEqual({
+      approvalId: "appr-1",
+      includedPillars: ["governance", "cyber-digital"],
+      focusAreas: ["governance", "cyber-digital"],
+    });
+    expect(updateIntakeApproval).toHaveBeenCalledWith(
+      "appr-draft",
+      expect.objectContaining({
+        includedPillars: ["governance", "cyber-digital"],
+        focusAreas: ["governance", "cyber-digital"],
+      }),
+    );
+  });
+
+  it("returns null when the platform catalog is empty", async () => {
+    vi.mocked(getPlatformPillarCatalog).mockResolvedValue([]);
 
     const result = await approveIntakeWithDefaultPillars({
       interviewId: "int-1",

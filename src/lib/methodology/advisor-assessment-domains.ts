@@ -1,10 +1,15 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
 import type {
   AdvisorAssessmentDomainPickerData,
   AssessmentDomainOption,
 } from "@/lib/advisor/assessment-domain-option";
+import { DEFAULT_RISK_THRESHOLDS } from "@/lib/assessment/governance-rubric";
+import { prisma } from "@/lib/db";
 import { loadAdvisorMethodologyPillars } from "@/lib/methodology/methodology-queries";
+import { PLATFORM_PILLAR_CATALOG } from "@/lib/methodology/pillar-catalog-starter";
+import { ensureAdvisorDefaultsCloned } from "@/lib/methodology/snapshot";
 
 function pillarToDomainOption(pillar: {
   slug: string;
@@ -17,6 +22,47 @@ function pillarToDomainOption(pillar: {
     name: pillar.displayName?.trim() || pillar.canonicalName,
     summary: pillar.description?.trim() ?? "",
   };
+}
+
+/**
+ * Ensure every non-archived platform pillar has an active advisor override.
+ * New pillars added after the advisor's initial clone otherwise stay missing
+ * or inactive and cannot be used in default full-catalog engagement scope.
+ */
+export async function ensureAllPlatformPillarsActiveForAdvisor(
+  advisorProfileId: string,
+): Promise<void> {
+  await ensureAdvisorDefaultsCloned(advisorProfileId);
+
+  const pillars = await prisma.pillar.findMany({
+    where: { archivedAt: null },
+    orderBy: { defaultOrder: "asc" },
+  });
+
+  for (const pillar of pillars) {
+    const starter = PLATFORM_PILLAR_CATALOG.find((p) => p.slug === pillar.slug);
+    const weight = starter?.defaultWeight ?? 10;
+    await prisma.advisorPillarOverride.upsert({
+      where: {
+        advisorProfileId_pillarId: {
+          advisorProfileId,
+          pillarId: pillar.id,
+        },
+      },
+      create: {
+        advisorProfileId,
+        pillarId: pillar.id,
+        isActive: true,
+        weight,
+        threshold: DEFAULT_RISK_THRESHOLDS as unknown as Prisma.InputJsonValue,
+        emphasisMultiplier: 1.5,
+        displayOrder: pillar.defaultOrder,
+      },
+      update: {
+        isActive: true,
+      },
+    });
+  }
 }
 
 /**

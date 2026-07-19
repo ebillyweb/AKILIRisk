@@ -4,14 +4,28 @@ import {
   formatIncludedPillarNames,
   formatNarrowScopePreviewCopy,
   isAssessmentScopeComplete,
+  isLegacySixPillarScope,
   isNarrowAssessmentScope,
   isPillarInAssessmentScope,
+  LEGACY_SIX_INCLUDED_PILLARS,
   normalizeIncludedPillarIds,
   resolveIncludedPillars,
 } from "@/lib/assessment/included-pillars";
 import { starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
 
 const catalog = starterPillarCatalog();
+
+describe("isLegacySixPillarScope", () => {
+  it("detects the original Belvedere six regardless of order", () => {
+    expect(isLegacySixPillarScope([...LEGACY_SIX_INCLUDED_PILLARS].reverse())).toBe(
+      true,
+    );
+    expect(isLegacySixPillarScope([...LEGACY_SIX_INCLUDED_PILLARS, "liquidity-cash"])).toBe(
+      false,
+    );
+    expect(isLegacySixPillarScope(["governance", "cyber-digital"])).toBe(false);
+  });
+});
 
 describe("resolveIncludedPillars", () => {
   it("returns all platform pillars when empty or null", () => {

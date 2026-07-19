@@ -20,9 +20,10 @@ import {
 } from "@/lib/enterprise/advisor-member-visibility";
 import {
   assertAdvisorAssessmentDomainSelection,
-  loadAdvisorAssessmentDomainOptions,
+  ensureAllPlatformPillarsActiveForAdvisor,
 } from "@/lib/methodology/advisor-assessment-domains";
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
+import { pillarCatalogSlugs } from "@/lib/methodology/pillar-catalog";
 import { prisma } from "@/lib/db";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
 import { notifyClientOfIntakeApproval } from "@/lib/intake/notify-client-intake-approved";
@@ -46,14 +47,17 @@ export async function approveIntakeWithDefaultPillars(input: {
   clientUserId: string;
   advisorProfileId: string;
 }): Promise<ApproveIntakeWithDefaultPillarsResult | null> {
-  const defaultPillars = (
-    await loadAdvisorAssessmentDomainOptions(input.advisorProfileId)
-  ).map((domain) => domain.id);
+  // Default engagement scope = full active platform catalog (not a legacy
+  // six-domain subset). Activate any missing/inactive advisor overrides first
+  // so validation against methodology succeeds.
+  await ensureAllPlatformPillarsActiveForAdvisor(input.advisorProfileId);
+
+  const catalog = await getPlatformPillarCatalog();
+  const defaultPillars = pillarCatalogSlugs(catalog);
   if (defaultPillars.length === 0) {
     return null;
   }
 
-  const catalog = await getPlatformPillarCatalog();
   const normalizedIncluded = normalizeIncludedPillarIds(defaultPillars, catalog);
   const normalizedFocus = normalizedIncluded;
 

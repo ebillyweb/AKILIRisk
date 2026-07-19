@@ -12,6 +12,30 @@ export const DEFAULT_INCLUDED_PILLARS: readonly string[] = pillarCatalogSlugs(
   starterPillarCatalog(),
 );
 
+/**
+ * Original Belvedere six-domain engagement scope (pre–10-pillar catalog).
+ * Used to detect lock-ins that should expand to the full platform set.
+ */
+export const LEGACY_SIX_INCLUDED_PILLARS: readonly string[] = [
+  "governance",
+  "cyber-digital",
+  "physical-security",
+  "insurance",
+  "geographic-environmental",
+  "reputational-social",
+] as const;
+
+/** True when `included` is exactly the legacy six (order-insensitive). */
+export function isLegacySixPillarScope(
+  included: readonly string[] | null | undefined,
+): boolean {
+  if (!included || included.length !== LEGACY_SIX_INCLUDED_PILLARS.length) {
+    return false;
+  }
+  const set = new Set(included.map((id) => normalizePillarSlug(id)));
+  return LEGACY_SIX_INCLUDED_PILLARS.every((id) => set.has(id));
+}
+
 export function totalPlatformPillarCount(catalog: readonly PillarCatalogEntry[]): number {
   return catalog.length;
 }

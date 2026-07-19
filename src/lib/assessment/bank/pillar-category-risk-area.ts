@@ -20,6 +20,8 @@ export const PILLAR_CATEGORY_CODE_TO_RISK_AREA_ID: Record<string, string> = {
   "8_tax": "tax-exposure",
   "9_estate": "estate-succession",
   "10_ai": "ai-emerging-tech",
+  // Pre-rename category code (migration 20260714120000); keep until all DBs updated.
+  "10_family_governance": "ai-emerging-tech",
 };
 
 export function riskAreaIdForPillarCategory(category: {
