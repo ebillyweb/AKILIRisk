@@ -135,6 +135,51 @@ async function diagnose(assessmentId: string): Promise<void> {
   }
   console.log(`  Decrypted answer shapes (first ${shapes.length}): ${tally(shapes)}`);
   console.log(`  Responses by pillar slug: ${tally(nonSkipped.map((r) => r.pillar))}`);
+
+  // Staged breakdown: where do weak findings get lost? Level distribution, then
+  // how many weak (<=1) answers survive the anchor-label requirement.
+  const questions = await prisma.pillarQuestion.findMany({
+    where: { id: { in: qids } },
+    select: { id: true, answer0: true, answer1: true, answer2: true, answer3: true },
+  });
+  const anchorsById = new Map(
+    questions.map((q) => [q.id, [q.answer0, q.answer1, q.answer2, q.answer3] as (string | null)[]]),
+  );
+  const levelCounts = [0, 0, 0, 0];
+  let nonInt = 0;
+  let weakCandidates = 0;
+  let weakWithAnchor = 0;
+  let weakMissingAnchor = 0;
+  for (const r of nonSkipped) {
+    const v = safeDecryptAnswer(r.answer as unknown as string | null, {
+      rowId: r.questionId,
+      column: "AssessmentResponse.answer",
+    });
+    const n = typeof v === "number" ? v : Number(v);
+    if (!Number.isInteger(n) || n < 0 || n > 3) {
+      nonInt++;
+      continue;
+    }
+    levelCounts[n]++;
+    if (n <= 1) {
+      weakCandidates++;
+      const anchor = anchorsById.get(r.questionId)?.[n];
+      if (anchor && anchor.trim()) weakWithAnchor++;
+      else weakMissingAnchor++;
+    }
+  }
+  console.log(
+    `  Maturity levels: 0=${levelCounts[0]} 1=${levelCounts[1]} 2=${levelCounts[2]} 3=${levelCounts[3]}` +
+      (nonInt ? ` (non-0-3: ${nonInt})` : ""),
+  );
+  console.log(
+    `  Weak (<=1): ${weakCandidates}  → with anchor label: ${weakWithAnchor}  dropped (missing anchor): ${weakMissingAnchor}`,
+  );
+  if (weakCandidates > 0 && weakWithAnchor === 0) {
+    console.log("  → CAUSE: weak answers exist but their anchor labels are empty in `questions`.");
+  } else if (weakCandidates === 0) {
+    console.log("  → CAUSE: no answer is at maturity <=1 — genuinely nothing to flag here.");
+  }
 }
 
 async function main(): Promise<void> {
