@@ -1,11 +1,12 @@
 /**
- * Shared plumbing for the LLM provider adapters (OpenAI + Anthropic).
+ * Shared plumbing for the LLM provider adapter.
  *
- * Both providers speak the same structured-output shape — `buildNarrativeSchema`
- * for generation, `buildJudgeSchema` for the judge — so the only real work is
+ * The provider speaks a structured-output shape — `buildNarrativeSchema` for
+ * generation, `buildJudgeSchema` for the judge — so the only real work is
  * (a) safely parsing the model's JSON and (b) flattening the judge's per-dimension
- * fields back into the rubric's `JudgeScores`. Kept provider-agnostic so neither
- * OpenAI nor Anthropic code is duplicated.
+ * fields back into the rubric's `JudgeScores`. Kept separate from the OpenAI
+ * client so it stays pure and unit-testable, and so a second provider could
+ * reuse it later without duplication.
  */
 
 import type { NarrativeOutput } from "../shape-a-prompt";

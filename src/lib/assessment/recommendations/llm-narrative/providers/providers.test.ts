@@ -7,11 +7,6 @@ import {
   makeOpenAIJudge,
   type OpenAILike,
 } from "./openai-provider";
-import {
-  makeAnthropicGenerate,
-  makeAnthropicJudge,
-  type AnthropicLike,
-} from "./anthropic-provider";
 
 const aiCase = GOLDEN_CASES.find((c) => c.id === "ai-critical-two-services")!;
 
@@ -101,68 +96,5 @@ describe("OpenAI provider", () => {
     const judge = makeOpenAIJudge({ client: { chat: { completions: { create } } } });
     const scores = await judge({ system: "s", user: "u", schema: buildJudgeSchema() });
     expect(scores.scores.tone).toBe(5);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Anthropic provider
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("Anthropic provider", () => {
-  it("generates via output_config json_schema and parses text content", async () => {
-    const create = vi.fn().mockResolvedValue({
-      content: [{ type: "text", text: JSON.stringify(aiCase.referenceGood) }],
-    });
-    const client: AnthropicLike = { messages: { create } };
-
-    const generate = makeAnthropicGenerate({ client, model: "claude-opus-4-8" });
-    const out = await generate(aiCase.input);
-
-    expect(out.recommendations).toHaveLength(2);
-    const args = create.mock.calls[0][0] as {
-      model: string;
-      output_config: { format: { type: string; schema: { properties: Record<string, unknown> } } };
-      system: string;
-    };
-    expect(args.model).toBe("claude-opus-4-8");
-    expect(args.output_config.format.type).toBe("json_schema");
-    // The bare JSON schema (not the {name,strict,schema} wrapper) is passed.
-    expect(args.output_config.format.schema.properties).toHaveProperty("recommendations");
-    expect(typeof args.system).toBe("string");
-  });
-
-  it("joins multiple text blocks and ignores non-text blocks", async () => {
-    const half1 = JSON.stringify(aiCase.referenceGood).slice(0, 40);
-    const half2 = JSON.stringify(aiCase.referenceGood).slice(40);
-    const create = vi.fn().mockResolvedValue({
-      content: [
-        { type: "thinking" },
-        { type: "text", text: half1 },
-        { type: "text", text: half2 },
-      ],
-    });
-    const generate = makeAnthropicGenerate({ client: { messages: { create } } });
-    const out = await generate(aiCase.input);
-    expect(out.recommendations).toHaveLength(2);
-  });
-
-  it("throws when there is no text content", async () => {
-    const create = vi.fn().mockResolvedValue({ content: [{ type: "thinking" }] });
-    const generate = makeAnthropicGenerate({ client: { messages: { create } } });
-    await expect(generate(aiCase.input)).rejects.toThrow(/no text content/i);
-  });
-
-  it("judges and maps scores, passing the bare judge schema", async () => {
-    const create = vi.fn().mockResolvedValue({
-      content: [{ type: "text", text: judgeJson }],
-    });
-    const client: AnthropicLike = { messages: { create } };
-    const judge = makeAnthropicJudge({ client });
-    const scores = await judge({ system: "s", user: "u", schema: buildJudgeSchema() });
-    expect(scores.scores.faithfulness).toBe(5);
-    const args = create.mock.calls[0][0] as {
-      output_config: { format: { schema: { properties: Record<string, unknown> } } };
-    };
-    expect(args.output_config.format.schema.properties).toHaveProperty("faithfulness_score");
   });
 });
