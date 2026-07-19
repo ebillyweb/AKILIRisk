@@ -94,6 +94,38 @@ describe("runNarrativeGeneration", () => {
     expect(persist).not.toHaveBeenCalled();
   });
 
+  it("retries once on a validation miss and succeeds on the second sample", async () => {
+    const bad: NarrativeOutput = {
+      ...aiCase.referenceGood,
+      recommendations: [
+        { ...aiCase.referenceGood.recommendations[0], serviceId: "ai_made_up" },
+        aiCase.referenceGood.recommendations[1],
+      ],
+    };
+    const generate = vi
+      .fn()
+      .mockResolvedValueOnce(bad) // first sample fails the validator
+      .mockResolvedValueOnce(aiCase.referenceGood); // retry passes
+    const { deps, persist } = makeDeps({ generate });
+    const summary = await runNarrativeGeneration("a1", deps);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(summary.pillarsSucceeded).toBe(1);
+    expect(persist).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails closed after the retry is also invalid", async () => {
+    const bad: NarrativeOutput = {
+      ...aiCase.referenceGood,
+      recommendations: [aiCase.referenceGood.recommendations[0]], // missing a service, both times
+    };
+    const generate = vi.fn().mockResolvedValue(bad);
+    const { deps, persist } = makeDeps({ generate });
+    const summary = await runNarrativeGeneration("a1", deps);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(summary.pillarsFailed).toBe(1);
+    expect(persist).not.toHaveBeenCalled();
+  });
+
   it("fails closed when generation throws, without rejecting", async () => {
     const { deps, persist } = makeDeps({
       generate: async () => {

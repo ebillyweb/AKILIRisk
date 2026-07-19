@@ -90,6 +90,9 @@ export type GenerationSummary = {
   pillarsSkipped: number;
 };
 
+/** Total generation attempts per pillar before falling back to static copy. */
+const GENERATE_ATTEMPTS = 2;
+
 const RISK_LEVEL_MAP: Record<string, NarrativeInput["pillar"]["riskLevel"]> = {
   LOW: "low",
   MEDIUM: "medium",
@@ -159,8 +162,15 @@ export async function runNarrativeGeneration(
     };
 
     try {
-      const output = await deps.generate(input);
-      const validation = validateNarrativeOutput(output, input);
+      // Generate + validate, retrying once on a validation miss. The model is
+      // non-deterministic at temperature; a fresh sample usually passes, which
+      // salvages a generation that would otherwise fall back to static copy.
+      let output = await deps.generate(input);
+      let validation = validateNarrativeOutput(output, input);
+      for (let attempt = 2; !validation.ok && attempt <= GENERATE_ATTEMPTS; attempt++) {
+        output = await deps.generate(input);
+        validation = validateNarrativeOutput(output, input);
+      }
       if (!validation.ok) {
         summary.pillarsFailed++;
         deps.onPillarResult?.({ pillar, status: "validation_failed", reasons: validation.reasons, output });
