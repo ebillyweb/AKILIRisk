@@ -38,6 +38,50 @@ export async function normalizeEngagementScopeInput(input: {
   return { includedPillars, focusAreas };
 }
 
+/**
+ * Resolve hub/completion scope. Advisor engagement included pillars are the
+ * source of truth when present. A wider Assessment.included_pillars (stale
+ * migration/auto-approve) must not override a narrower advisor selection.
+ */
+export function pickResolvedIncludedPillars(
+  input: {
+    assessmentIncludedPillars?: string[] | null;
+    engagementIncludedPillars?: string[] | null;
+    hasAssessmentRow: boolean;
+  },
+  catalog: PillarCatalogEntry[],
+): string[] {
+  const engagement = input.engagementIncludedPillars?.length
+    ? resolveIncludedPillars(input.engagementIncludedPillars, catalog)
+    : [];
+  const assessment = input.assessmentIncludedPillars?.length
+    ? resolveIncludedPillars(input.assessmentIncludedPillars, catalog)
+    : [];
+
+  if (engagement.length > 0) {
+    if (assessment.length === 0) return engagement;
+
+    const engagementSet = new Set(engagement);
+    const assessmentIsSubsetOrEqual =
+      assessment.every((id) => engagementSet.has(id)) &&
+      assessment.length <= engagement.length;
+
+    // Assessment may freeze a narrower in-flight subset; never keep a wider
+    // stale assessment over the advisor's engagement selection.
+    return assessmentIsSubsetOrEqual ? assessment : engagement;
+  }
+
+  if (assessment.length > 0) {
+    return assessment;
+  }
+
+  if (input.hasAssessmentRow) {
+    return resolveIncludedPillars([], catalog);
+  }
+
+  return [];
+}
+
 async function resolveClientAssessmentIncludedPillars(
   input: {
     assessmentIncludedPillars?: string[] | null;
@@ -46,19 +90,14 @@ async function resolveClientAssessmentIncludedPillars(
   },
   catalog: PillarCatalogEntry[],
 ): Promise<string[]> {
-  if (input.assessmentIncludedPillars && input.assessmentIncludedPillars.length > 0) {
-    return resolveIncludedPillars(input.assessmentIncludedPillars, catalog);
-  }
-  if (
-    input.approvedScopeIncludedPillars &&
-    input.approvedScopeIncludedPillars.length > 0
-  ) {
-    return resolveIncludedPillars(input.approvedScopeIncludedPillars, catalog);
-  }
-  if (input.hasAssessmentRow) {
-    return resolveIncludedPillars([], catalog);
-  }
-  return [];
+  return pickResolvedIncludedPillars(
+    {
+      assessmentIncludedPillars: input.assessmentIncludedPillars,
+      engagementIncludedPillars: input.approvedScopeIncludedPillars,
+      hasAssessmentRow: input.hasAssessmentRow,
+    },
+    catalog,
+  );
 }
 
 type ActiveAssignment = {
@@ -97,33 +136,20 @@ async function writeAssignmentScope(
 }
 
 /**
- * When Assessment.included_pillars is a strict superset of the assignment
- * scope, expand assignment to match. If focus previously covered the full
- * (old) included set, expand focus too; keep a true emphasis subset as-is.
+ * When Assessment.included_pillars is a strict superset of engagement included,
+ * return the engagement scope so callers can narrow the assessment row.
  */
-export function widenAssignmentScopeFromAssessment(
-  assignmentIncluded: readonly string[],
-  assignmentFocus: readonly string[],
+export function narrowAssessmentScopeFromEngagement(
+  engagementIncluded: readonly string[],
   assessmentIncluded: readonly string[] | null | undefined,
-): { includedPillars: string[]; focusAreas: string[] } | null {
-  if (!assessmentIncluded?.length) return null;
-  if (assessmentIncluded.length <= assignmentIncluded.length) return null;
+): string[] | null {
+  if (!engagementIncluded.length || !assessmentIncluded?.length) return null;
+  if (assessmentIncluded.length <= engagementIncluded.length) return null;
 
   const assessmentSet = new Set(assessmentIncluded);
-  if (!assignmentIncluded.every((id) => assessmentSet.has(id))) return null;
+  if (!engagementIncluded.every((id) => assessmentSet.has(id))) return null;
 
-  const oldIncludedSet = new Set(assignmentIncluded);
-  const focusCoveredAllIncluded =
-    assignmentFocus.length === 0 ||
-    (assignmentFocus.length === assignmentIncluded.length &&
-      assignmentFocus.every((id) => oldIncludedSet.has(id)));
-
-  return {
-    includedPillars: [...assessmentIncluded],
-    focusAreas: focusCoveredAllIncluded
-      ? [...assessmentIncluded]
-      : assignmentFocus.filter((id) => assessmentSet.has(id)),
-  };
+  return [...engagementIncluded];
 }
 
 export async function persistClientEngagementScope(input: {
@@ -161,9 +187,8 @@ export async function getClientEngagementScope(
   const intakeWaived = assignment?.intakeWaivedAt != null;
 
   if (assignment && assignment.includedPillars.length > 0) {
-    // Assessment hub progress prefers Assessment.included_pillars when set.
-    // If that row was expanded (e.g. legacy→full catalog) ahead of the
-    // assignment, sync assignment so focus/banner counts stay aligned.
+    // Narrow a stale wider Assessment.included_pillars down to the advisor
+    // selection so hub progress cannot show domains the advisor excluded.
     if (reconcile) {
       const assessment = await prisma.assessment.findFirst({
         where: {
@@ -174,21 +199,12 @@ export async function getClientEngagementScope(
         select: { includedPillars: true },
       });
 
-      const widened = widenAssignmentScopeFromAssessment(
+      const narrowed = narrowAssessmentScopeFromEngagement(
         assignment.includedPillars,
-        assignment.focusAreas,
         assessment?.includedPillars,
       );
-      if (widened) {
-        await writeAssignmentScope(assignment.id, widened);
-        return {
-          includedPillars: widened.includedPillars,
-          focusAreas: widened.focusAreas,
-          source: "assignment",
-          approvalId: null,
-          assignmentId: assignment.id,
-          intakeWaived,
-        };
+      if (narrowed) {
+        await syncInProgressAssessmentScope(clientUserId, narrowed, null);
       }
     }
 
@@ -226,6 +242,11 @@ export async function getClientEngagementScope(
             ? approval.focusAreas
             : approval.includedPillars,
       });
+      await syncInProgressAssessmentScope(
+        clientUserId,
+        approval.includedPillars,
+        approval.id,
+      );
     }
     return {
       includedPillars: approval.includedPillars,

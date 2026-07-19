@@ -9,7 +9,6 @@ import { syncInProgressAssessmentScope } from "@/lib/assessment/sync-client-asse
 import { syncAssessmentScopeFromApproval } from "@/lib/assessment/sync-scope-from-approval";
 import { facilitatedAssessmentHubPath } from "@/lib/facilitated/paths";
 import { resolveSnapshotIdForClient } from "@/lib/methodology/platform-pillars";
-import { getActivePillars, loadSnapshotForInterview } from "@/lib/methodology/snapshot";
 
 /** Create or reuse a scoped in-progress assessment for facilitated entry (not at approve time). */
 export async function ensureScopedAssessmentForClient(
@@ -37,20 +36,9 @@ export async function ensureScopedAssessmentForClient(
   });
 
   const snapshotId = await resolveSnapshotIdForClient(clientUserId);
-  let includedPillars = scope.includedPillars;
-  if (snapshotId) {
-    const interview = await prisma.intakeInterview.findFirst({
-      where: { userId: clientUserId },
-      orderBy: { updatedAt: "desc" },
-      select: { id: true },
-    });
-    if (interview) {
-      const snap = await loadSnapshotForInterview(interview.id);
-      if (snap) {
-        includedPillars = getActivePillars(snap);
-      }
-    }
-  }
+  // Advisor engagement scope is authoritative. Never replace it with the
+  // full snapshot pillar list (empty includedPillarSlugs → all active).
+  const includedPillars = scope.includedPillars;
 
   if (existing) {
     if (existing.includedPillars.length === 0 && includedPillars.length > 0) {

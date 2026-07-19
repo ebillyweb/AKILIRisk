@@ -36,45 +36,73 @@ vi.mock("@/lib/methodology/cached-pillar-catalog", async () => {
 
 import {
   getClientEngagementScope,
+  narrowAssessmentScopeFromEngagement,
   persistClientEngagementScope,
-  widenAssignmentScopeFromAssessment,
+  pickResolvedIncludedPillars,
 } from "@/lib/client/engagement-scope";
+import { starterPillarCatalog } from "@/lib/methodology/pillar-catalog";
 
-describe("widenAssignmentScopeFromAssessment", () => {
-  it("expands included and focus when assessment is a strict superset", () => {
-    const result = widenAssignmentScopeFromAssessment(
-      ["governance", "cyber-digital"],
-      ["governance", "cyber-digital"],
-      ["governance", "cyber-digital", "ai-emerging-tech"],
-    );
-    expect(result).toEqual({
-      includedPillars: ["governance", "cyber-digital", "ai-emerging-tech"],
-      focusAreas: ["governance", "cyber-digital", "ai-emerging-tech"],
-    });
+const catalog = starterPillarCatalog();
+
+describe("pickResolvedIncludedPillars", () => {
+  it("prefers engagement when assessment is a strict superset", () => {
+    expect(
+      pickResolvedIncludedPillars(
+        {
+          assessmentIncludedPillars: [
+            "governance",
+            "cyber-digital",
+            "ai-emerging-tech",
+          ],
+          engagementIncludedPillars: ["governance", "cyber-digital"],
+          hasAssessmentRow: true,
+        },
+        catalog,
+      ),
+    ).toEqual(["governance", "cyber-digital"]);
   });
 
-  it("keeps a true emphasis subset when widening included", () => {
-    const result = widenAssignmentScopeFromAssessment(
-      ["governance", "cyber-digital", "physical-security"],
-      ["governance"],
-      ["governance", "cyber-digital", "physical-security", "ai-emerging-tech"],
-    );
-    expect(result).toEqual({
-      includedPillars: [
-        "governance",
-        "cyber-digital",
-        "physical-security",
-        "ai-emerging-tech",
-      ],
-      focusAreas: ["governance"],
-    });
+  it("keeps a narrower assessment freeze within engagement", () => {
+    expect(
+      pickResolvedIncludedPillars(
+        {
+          assessmentIncludedPillars: ["governance"],
+          engagementIncludedPillars: ["governance", "cyber-digital"],
+          hasAssessmentRow: true,
+        },
+        catalog,
+      ),
+    ).toEqual(["governance"]);
+  });
+
+  it("uses engagement when assessment is empty", () => {
+    expect(
+      pickResolvedIncludedPillars(
+        {
+          assessmentIncludedPillars: [],
+          engagementIncludedPillars: ["insurance"],
+          hasAssessmentRow: true,
+        },
+        catalog,
+      ),
+    ).toEqual(["insurance"]);
+  });
+});
+
+describe("narrowAssessmentScopeFromEngagement", () => {
+  it("returns engagement when assessment is a strict superset", () => {
+    expect(
+      narrowAssessmentScopeFromEngagement(
+        ["governance", "cyber-digital"],
+        ["governance", "cyber-digital", "ai-emerging-tech"],
+      ),
+    ).toEqual(["governance", "cyber-digital"]);
   });
 
   it("returns null when assessment is not wider", () => {
     expect(
-      widenAssignmentScopeFromAssessment(
+      narrowAssessmentScopeFromEngagement(
         ["governance", "cyber-digital"],
-        ["governance"],
         ["governance", "cyber-digital"],
       ),
     ).toBeNull();
@@ -87,9 +115,10 @@ describe("getClientEngagementScope", () => {
     mockAssignmentUpdate.mockResolvedValue({});
     mockApprovalFindFirst.mockResolvedValue(null);
     mockAssessmentFindFirst.mockResolvedValue(null);
+    mockSyncScope.mockResolvedValue(undefined);
   });
 
-  it("widens assignment when assessment included is a strict superset", async () => {
+  it("narrows a wider assessment down to assignment included", async () => {
     mockAssignmentFindFirst.mockResolvedValue({
       id: "asg-1",
       intakeWaivedAt: null,
@@ -102,23 +131,13 @@ describe("getClientEngagementScope", () => {
 
     const scope = await getClientEngagementScope("client-1");
 
-    expect(mockAssignmentUpdate).toHaveBeenCalledWith({
-      where: { id: "asg-1" },
-      data: {
-        includedPillars: ["governance", "cyber-digital", "ai-emerging-tech"],
-        focusAreas: ["governance", "cyber-digital", "ai-emerging-tech"],
-      },
-    });
-    expect(scope.includedPillars).toEqual([
-      "governance",
-      "cyber-digital",
-      "ai-emerging-tech",
-    ]);
-    expect(scope.focusAreas).toEqual([
-      "governance",
-      "cyber-digital",
-      "ai-emerging-tech",
-    ]);
+    expect(mockSyncScope).toHaveBeenCalledWith(
+      "client-1",
+      ["governance", "cyber-digital"],
+      null,
+    );
+    expect(scope.includedPillars).toEqual(["governance", "cyber-digital"]);
+    expect(mockAssignmentUpdate).not.toHaveBeenCalled();
   });
 
   it("returns assignment scope when set (canonical path)", async () => {
@@ -155,8 +174,6 @@ describe("getClientEngagementScope", () => {
 
     const scope = await getClientEngagementScope("client-1");
 
-    expect(scope.source).toBe("approval");
-    expect(scope.includedPillars).toEqual(["governance", "cyber-digital"]);
     expect(mockAssignmentUpdate).toHaveBeenCalledWith({
       where: { id: "asg-1" },
       data: {
@@ -164,13 +181,20 @@ describe("getClientEngagementScope", () => {
         focusAreas: ["governance"],
       },
     });
+    expect(scope.source).toBe("approval");
+    expect(scope.includedPillars).toEqual(["governance", "cyber-digital"]);
   });
 });
 
 describe("persistClientEngagementScope", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAssignmentFindFirst.mockResolvedValue({ id: "asg-1" });
+    mockAssignmentFindFirst.mockResolvedValue({
+      id: "asg-1",
+      intakeWaivedAt: null,
+      includedPillars: [],
+      focusAreas: [],
+    });
     mockAssignmentUpdate.mockResolvedValue({});
     mockSyncScope.mockResolvedValue(undefined);
   });

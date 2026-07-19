@@ -31,14 +31,28 @@ describe("resolveClientAssessmentIncludedPillars", () => {
     ).toEqual([]);
   });
 
-  it("prefers non-empty assessment scope over approval", async () => {
+  it("keeps a narrower assessment freeze within engagement", async () => {
     expect(
       await resolveClientAssessmentIncludedPillars({
         assessmentIncludedPillars: ["insurance"],
-        approvedScopeIncludedPillars: ["governance"],
+        approvedScopeIncludedPillars: ["governance", "insurance"],
         hasAssessmentRow: true,
       }),
     ).toEqual(["insurance"]);
+  });
+
+  it("prefers engagement when assessment is a wider stale superset", async () => {
+    expect(
+      await resolveClientAssessmentIncludedPillars({
+        assessmentIncludedPillars: [
+          "governance",
+          "cyber-digital",
+          "ai-emerging-tech",
+        ],
+        approvedScopeIncludedPillars: ["governance", "cyber-digital"],
+        hasAssessmentRow: true,
+      }),
+    ).toEqual(["governance", "cyber-digital"]);
   });
 
   it("falls back to all pillars for legacy empty assessment scope", async () => {
@@ -50,3 +64,4 @@ describe("resolveClientAssessmentIncludedPillars", () => {
     ).toEqual([...ASSESSMENT_PILLAR_IDS]);
   });
 });
+
