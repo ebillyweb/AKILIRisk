@@ -148,16 +148,34 @@ describe("cloneAdvisorDefaultsIfNeeded — enterprise branch", () => {
           update: vi.fn(),
         },
         advisorPillarOverride: { count: vi.fn(), upsert },
-        advisorPillarQuestion: { count: vi.fn().mockResolvedValue(0), findMany: vi.fn() },
-        advisorIntakeQuestion: { count: vi.fn().mockResolvedValue(0), findMany: vi.fn() },
+        advisorPillarQuestion: {
+          count: vi.fn().mockResolvedValue(0),
+          findMany: vi.fn().mockResolvedValue([]),
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn(),
+          update: vi.fn(),
+        },
+        advisorIntakeQuestion: {
+          count: vi.fn().mockResolvedValue(0),
+          findMany: vi.fn().mockResolvedValue([]),
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn(),
+          update: vi.fn(),
+        },
         advisorPillarNarrative: {
           findUnique: vi.fn().mockResolvedValue(null),
           upsert: vi.fn(),
         },
-        advisorRecommendationRule: { count: vi.fn().mockResolvedValue(0) },
+        advisorRecommendationRule: {
+          count: vi.fn().mockResolvedValue(0),
+          findMany: vi.fn().mockResolvedValue([]),
+          findFirst: vi.fn().mockResolvedValue(null),
+          create: vi.fn(),
+        },
         pillarQuestion: { findMany: vi.fn().mockResolvedValue([]) },
         intakeQuestion: { findMany: vi.fn().mockResolvedValue([]) },
         recommendationRule: { findMany: vi.fn().mockResolvedValue([]) },
+        enterpriseMembership: { findFirst: vi.fn().mockResolvedValue(null) },
       });
     });
 

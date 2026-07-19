@@ -84,18 +84,14 @@ export async function cloneAdvisorDefaultsIfNeeded(
         const assessCount = await tx.advisorPillarQuestion.count({
           where: { advisorProfileId },
         });
-        if (assessCount === 0) {
-          await cloneAllPlatformAssessmentQuestions(tx, advisorProfileId, slugToPillarId);
-        } else if (options?.force) {
+        if (assessCount === 0 || options?.force) {
           await syncMissingPlatformAssessmentQuestions(tx, advisorProfileId, slugToPillarId);
         }
 
         const intakeCount = await tx.advisorIntakeQuestion.count({
           where: { advisorProfileId },
         });
-        if (intakeCount === 0) {
-          await cloneAllPlatformIntakeQuestions(tx, advisorProfileId, slugToPillarId);
-        } else if (options?.force) {
+        if (intakeCount === 0 || options?.force) {
           await syncMissingPlatformIntakeQuestions(tx, advisorProfileId, slugToPillarId);
         }
 
@@ -206,26 +202,20 @@ export async function syncAdvisorPlatformContent(
 
 type CloneTx = Prisma.TransactionClient;
 
-async function cloneAllPlatformAssessmentQuestions(
-  tx: CloneTx,
-  advisorProfileId: string,
-  slugToPillarId: Map<string, string>,
-): Promise<void> {
-  const assessRows = await loadPlatformAssessmentRows(tx);
-  for (const row of sortPillarQuestionRows(assessRows)) {
-    await createPlatformAssessmentClone(tx, advisorProfileId, row, slugToPillarId);
-  }
-}
-
 export async function syncMissingPlatformAssessmentQuestions(
   tx: CloneTx,
   advisorProfileId: string,
   slugToPillarId: Map<string, string>,
 ): Promise<number> {
+  // Include every source kind — enterprise clones may already carry
+  // platformSourceId, and the partial unique index is on that pair alone.
   const existing = await tx.advisorPillarQuestion.findMany({
     where: {
       advisorProfileId,
-      sourceKind: AdvisorQuestionSource.PLATFORM,
+      OR: [
+        { platformSourceId: { not: null } },
+        { questionNumber: { not: null } },
+      ],
     },
     select: { id: true, platformSourceId: true, pillarId: true, questionNumber: true },
   });
@@ -258,8 +248,16 @@ export async function syncMissingPlatformAssessmentQuestions(
       continue;
     }
 
-    await createPlatformAssessmentClone(tx, advisorProfileId, row, slugToPillarId);
-    added++;
+    const created = await createPlatformAssessmentClone(
+      tx,
+      advisorProfileId,
+      row,
+      slugToPillarId,
+    );
+    if (created) {
+      known.add(row.id);
+      added++;
+    }
   }
   return added;
 }
@@ -279,45 +277,53 @@ async function createPlatformAssessmentClone(
   advisorProfileId: string,
   row: PillarQuestionWithHierarchy,
   slugToPillarId: Map<string, string>,
-): Promise<void> {
+): Promise<boolean> {
   const riskArea = riskAreaIdForPillarCategory(row.section.category);
-  if (!riskArea) return;
+  if (!riskArea) return false;
   const pillarId = slugToPillarId.get(riskArea);
-  if (!pillarId) return;
-  const wire = pillarQuestionRowToWire(row);
-  await tx.advisorPillarQuestion.create({
-    data: {
-      advisorProfileId,
-      pillarId,
-      sourceKind: AdvisorQuestionSource.PLATFORM,
-      platformSourceId: row.id,
-      sectionCode: row.section.code,
-      displayOrder: row.displayOrder,
-      questionNumber: row.questionNumber,
-      questionText: row.questionText,
-      answerType: row.answerType,
-      scoreMap: wire.scoreMap as Prisma.InputJsonValue,
-      answer0: row.answer0,
-      answer1: row.answer1,
-      answer2: row.answer2,
-      answer3: row.answer3,
-      whyThisMatters: row.whyThisMatters,
-      recommendedActions: row.recommendedActions,
-      isVisible: row.isVisible,
-      isKeyRiskIndicator: row.isKeyRiskIndicator,
-      relatedPillarIds: mapRelatedPillarIds(row.relatedPillarIds, slugToPillarId),
-    },
-  });
-}
+  if (!pillarId) return false;
 
-async function cloneAllPlatformIntakeQuestions(
-  tx: CloneTx,
-  advisorProfileId: string,
-  slugToPillarId: Map<string, string>,
-): Promise<void> {
-  const intakeRows = await loadPlatformIntakeRows(tx);
-  for (const row of sortPillarQuestionRows(intakeRows)) {
-    await createPlatformIntakeClone(tx, advisorProfileId, row, slugToPillarId);
+  const already = await tx.advisorPillarQuestion.findFirst({
+    where: { advisorProfileId, platformSourceId: row.id },
+    select: { id: true },
+  });
+  if (already) return false;
+
+  const wire = pillarQuestionRowToWire(row);
+  try {
+    await tx.advisorPillarQuestion.create({
+      data: {
+        advisorProfileId,
+        pillarId,
+        sourceKind: AdvisorQuestionSource.PLATFORM,
+        platformSourceId: row.id,
+        sectionCode: row.section.code,
+        displayOrder: row.displayOrder,
+        questionNumber: row.questionNumber,
+        questionText: row.questionText,
+        answerType: row.answerType,
+        scoreMap: wire.scoreMap as Prisma.InputJsonValue,
+        answer0: row.answer0,
+        answer1: row.answer1,
+        answer2: row.answer2,
+        answer3: row.answer3,
+        whyThisMatters: row.whyThisMatters,
+        recommendedActions: row.recommendedActions,
+        isVisible: row.isVisible,
+        isKeyRiskIndicator: row.isKeyRiskIndicator,
+        relatedPillarIds: mapRelatedPillarIds(row.relatedPillarIds, slugToPillarId),
+      },
+    });
+    return true;
+  } catch (err) {
+    // Concurrent clone/sync on the same advisor (partial unique index).
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return false;
+    }
+    throw err;
   }
 }
 
@@ -329,7 +335,10 @@ export async function syncMissingPlatformIntakeQuestions(
   const existing = await tx.advisorIntakeQuestion.findMany({
     where: {
       advisorProfileId,
-      sourceKind: AdvisorQuestionSource.PLATFORM,
+      OR: [
+        { platformSourceId: { not: null } },
+        { questionNumber: { not: null } },
+      ],
     },
     select: { id: true, platformSourceId: true, questionNumber: true },
   });
@@ -357,8 +366,16 @@ export async function syncMissingPlatformIntakeQuestions(
       continue;
     }
 
-    await createPlatformIntakeClone(tx, advisorProfileId, row, slugToPillarId);
-    added++;
+    const created = await createPlatformIntakeClone(
+      tx,
+      advisorProfileId,
+      row,
+      slugToPillarId,
+    );
+    if (created) {
+      known.add(row.id);
+      added++;
+    }
   }
   return added;
 }
@@ -377,28 +394,45 @@ async function createPlatformIntakeClone(
   advisorProfileId: string,
   row: PillarQuestionWithHierarchy,
   slugToPillarId: Map<string, string>,
-): Promise<void> {
-  await tx.advisorIntakeQuestion.create({
-    data: {
-      advisorProfileId,
-      sourceKind: AdvisorQuestionSource.PLATFORM,
-      platformSourceId: row.id,
-      displayOrder: row.displayOrder,
-      questionNumber: row.questionNumber,
-      questionText: row.questionText,
-      context: row.whyThisMatters,
-      helpText: row.whyThisMatters,
-      learnMore: row.recommendedActions,
-      answerType: row.answerType,
-      answer0: row.answer0,
-      answer1: row.answer1,
-      answer2: row.answer2,
-      answer3: row.answer3,
-      relatedPillarIds: mapRelatedPillarIds(row.relatedPillarIds, slugToPillarId),
-      recommendedActions: row.recommendedActions,
-      isVisible: row.isVisible,
-    },
+): Promise<boolean> {
+  const already = await tx.advisorIntakeQuestion.findFirst({
+    where: { advisorProfileId, platformSourceId: row.id },
+    select: { id: true },
   });
+  if (already) return false;
+
+  try {
+    await tx.advisorIntakeQuestion.create({
+      data: {
+        advisorProfileId,
+        sourceKind: AdvisorQuestionSource.PLATFORM,
+        platformSourceId: row.id,
+        displayOrder: row.displayOrder,
+        questionNumber: row.questionNumber,
+        questionText: row.questionText,
+        context: row.whyThisMatters,
+        helpText: row.whyThisMatters,
+        learnMore: row.recommendedActions,
+        answerType: row.answerType,
+        answer0: row.answer0,
+        answer1: row.answer1,
+        answer2: row.answer2,
+        answer3: row.answer3,
+        relatedPillarIds: mapRelatedPillarIds(row.relatedPillarIds, slugToPillarId),
+        recommendedActions: row.recommendedActions,
+        isVisible: row.isVisible,
+      },
+    });
+    return true;
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return false;
+    }
+    throw err;
+  }
 }
 
 function mapRelatedPillarIds(
@@ -434,7 +468,7 @@ export async function syncMissingPlatformRecommendationRules(
   const existing = await tx.advisorRecommendationRule.findMany({
     where: {
       advisorProfileId,
-      sourceKind: AdvisorQuestionSource.PLATFORM,
+      OR: [{ platformSourceId: { not: null } }, { name: { not: "" } }],
     },
     select: {
       id: true,
@@ -443,6 +477,7 @@ export async function syncMissingPlatformRecommendationRules(
       pillarId: true,
       triggerConditions: true,
       servicePayload: true,
+      sourceKind: true,
     },
   });
   const known = new Set(
@@ -499,8 +534,16 @@ export async function syncMissingPlatformRecommendationRules(
       continue;
     }
 
-    await createPlatformRecommendationClone(tx, advisorProfileId, rule, slugToPillarId);
-    added++;
+    const created = await createPlatformRecommendationClone(
+      tx,
+      advisorProfileId,
+      rule,
+      slugToPillarId,
+    );
+    if (created) {
+      known.add(rule.id);
+      added++;
+    }
   }
   return added;
 }
@@ -523,7 +566,13 @@ async function createPlatformRecommendationClone(
     priority: number;
   },
   slugToPillarId: Map<string, string>,
-): Promise<void> {
+): Promise<boolean> {
+  const already = await tx.advisorRecommendationRule.findFirst({
+    where: { advisorProfileId, platformSourceId: rule.id },
+    select: { id: true },
+  });
+  if (already) return false;
+
   const pillarId = pillarIdForRecommendationRule(
     {
       triggerConditions: rule.triggerConditions,
@@ -532,22 +581,33 @@ async function createPlatformRecommendationClone(
     },
     slugToPillarId,
   );
-  await tx.advisorRecommendationRule.create({
-    data: {
-      advisorProfileId,
-      pillarId: pillarId ?? null,
-      sourceKind: AdvisorQuestionSource.PLATFORM,
-      platformSourceId: rule.id,
-      name: rule.ruleName,
-      triggerConditions: rule.triggerConditions as Prisma.InputJsonValue,
-      servicePayload: {
-        serviceRecommendationId: rule.serviceRecommendationId,
-        serviceId: rule.serviceRecommendationId,
+  try {
+    await tx.advisorRecommendationRule.create({
+      data: {
+        advisorProfileId,
+        pillarId: pillarId ?? null,
+        sourceKind: AdvisorQuestionSource.PLATFORM,
+        platformSourceId: rule.id,
+        name: rule.ruleName,
+        triggerConditions: rule.triggerConditions as Prisma.InputJsonValue,
+        servicePayload: {
+          serviceRecommendationId: rule.serviceRecommendationId,
+          serviceId: rule.serviceRecommendationId,
+        },
+        priority: rule.priority,
+        isActive: true,
       },
-      priority: rule.priority,
-      isActive: true,
-    },
-  });
+    });
+    return true;
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return false;
+    }
+    throw err;
+  }
 }
 
 // --- Enterprise-aware cloning ---
