@@ -5,6 +5,7 @@
  * Optional: FORCE=1 to re-clone
  */
 import "./load-repo-env";
+import "./register-server-only-stub";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";

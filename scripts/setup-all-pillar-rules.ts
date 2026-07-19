@@ -946,94 +946,98 @@ const SCORING_RULES = [
 async function setupAllPillarRules() {
   console.log('⚙️ Setting up recommendation rules and services for all pillars...');
 
-  await prisma.$transaction(async (tx) => {
-    console.log('\n📦 Adding service recommendations...');
+  // Many sequential upserts; default interactive transaction timeout (5s) is too low on Neon.
+  await prisma.$transaction(
+    async (tx) => {
+      console.log('\n📦 Adding service recommendations...');
 
-    // C1 (BRD §4.4): set the new classification fields explicitly so
-    // post-seed catalog has the BRD's tier/complexity dimensions
-    // populated. tier: BASELINE because every seeded entry IS the
-    // automated baseline catalog (manual ENHANCED overlays come from
-    // the admin editor). complexity: MEDIUM as a sensible default —
-    // admins adjust per-service through the UI.
-    for (const service of SERVICE_RECOMMENDATIONS) {
-      const enriched = {
-        ...service,
-        tier: 'BASELINE' as const,
-        complexity: 'MEDIUM' as const,
-      };
-      await tx.serviceRecommendation.upsert({
-        where: { id: service.id },
-        create: enriched,
-        update: enriched
+      // C1 (BRD §4.4): set the new classification fields explicitly so
+      // post-seed catalog has the BRD's tier/complexity dimensions
+      // populated. tier: BASELINE because every seeded entry IS the
+      // automated baseline catalog (manual ENHANCED overlays come from
+      // the admin editor). complexity: MEDIUM as a sensible default —
+      // admins adjust per-service through the UI.
+      for (const service of SERVICE_RECOMMENDATIONS) {
+        const enriched = {
+          ...service,
+          tier: 'BASELINE' as const,
+          complexity: 'MEDIUM' as const,
+        };
+        await tx.serviceRecommendation.upsert({
+          where: { id: service.id },
+          create: enriched,
+          update: enriched
+        });
+      }
+
+      console.log(`   ✅ Added ${SERVICE_RECOMMENDATIONS.length} service recommendations`);
+
+      console.log('\n📋 Adding recommendation rules...');
+
+      for (const rule of RECOMMENDATION_RULES) {
+        await tx.recommendationRule.upsert({
+          where: { id: rule.id },
+          create: rule,
+          update: rule
+        });
+      }
+
+      console.log(
+        `   ✅ Added ${RECOMMENDATION_RULES.length} recommendation rules (${LEGACY_RECOMMENDATION_RULES.length} legacy + ${FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES.length} UI)`
+      );
+
+      console.log('\n🎯 Adding scoring rules...');
+
+      for (const rule of SCORING_RULES) {
+        await tx.scoringRule.upsert({
+          where: { id: rule.id },
+          create: {
+            id: rule.id,
+            questionId: rule.questionId,
+            ruleName: rule.ruleName,
+            description: rule.description,
+            priority: rule.priority,
+            conditions: rule.conditions,
+            scoreModifiers: rule.scoreModifiers,
+            isActive: true
+          },
+          update: {
+            ruleName: rule.ruleName,
+            description: rule.description,
+            priority: rule.priority,
+            conditions: rule.conditions,
+            scoreModifiers: rule.scoreModifiers
+          }
+        });
+      }
+
+      console.log(`   ✅ Added ${SCORING_RULES.length} scoring rules`);
+
+      console.log('\n📊 Summary:');
+      console.log(`   🏛️ Services by category:`);
+
+      const servicesByCategory = SERVICE_RECOMMENDATIONS.reduce((acc, service) => {
+        acc[service.category] = (acc[service.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      Object.entries(servicesByCategory).forEach(([category, count]) => {
+        console.log(`      ${category}: ${count} services`);
       });
-    }
 
-    console.log(`   ✅ Added ${SERVICE_RECOMMENDATIONS.length} service recommendations`);
+      const rulesByPillar = RECOMMENDATION_RULES.reduce((acc, rule) => {
+        const pillar = rule.serviceRecommendationId.split('_')[0];
+        acc[pillar] = (acc[pillar] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
 
-    console.log('\n📋 Adding recommendation rules...');
-
-    for (const rule of RECOMMENDATION_RULES) {
-      await tx.recommendationRule.upsert({
-        where: { id: rule.id },
-        create: rule,
-        update: rule
+      console.log(`   📋 Rules by pillar:`);
+      Object.entries(rulesByPillar).forEach(([pillar, count]) => {
+        console.log(`      ${pillar}: ${count} rules`);
       });
-    }
-
-    console.log(
-      `   ✅ Added ${RECOMMENDATION_RULES.length} recommendation rules (${LEGACY_RECOMMENDATION_RULES.length} legacy + ${FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES.length} UI)`
-    );
-
-    console.log('\n🎯 Adding scoring rules...');
-
-    for (const rule of SCORING_RULES) {
-      await tx.scoringRule.upsert({
-        where: { id: rule.id },
-        create: {
-          id: rule.id,
-          questionId: rule.questionId,
-          ruleName: rule.ruleName,
-          description: rule.description,
-          priority: rule.priority,
-          conditions: rule.conditions,
-          scoreModifiers: rule.scoreModifiers,
-          isActive: true
-        },
-        update: {
-          ruleName: rule.ruleName,
-          description: rule.description,
-          priority: rule.priority,
-          conditions: rule.conditions,
-          scoreModifiers: rule.scoreModifiers
-        }
-      });
-    }
-
-    console.log(`   ✅ Added ${SCORING_RULES.length} scoring rules`);
-
-    console.log('\n📊 Summary:');
-    console.log(`   🏛️ Services by category:`);
-
-    const servicesByCategory = SERVICE_RECOMMENDATIONS.reduce((acc, service) => {
-      acc[service.category] = (acc[service.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    Object.entries(servicesByCategory).forEach(([category, count]) => {
-      console.log(`      ${category}: ${count} services`);
-    });
-
-    const rulesByPillar = RECOMMENDATION_RULES.reduce((acc, rule) => {
-      const pillar = rule.serviceRecommendationId.split('_')[0];
-      acc[pillar] = (acc[pillar] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    console.log(`   📋 Rules by pillar:`);
-    Object.entries(rulesByPillar).forEach(([pillar, count]) => {
-      console.log(`      ${pillar}: ${count} rules`);
-    });
-  });
+    },
+    { timeout: 120_000 },
+  );
 
   console.log('\n🎉 All pillar rules setup completed successfully!');
 }

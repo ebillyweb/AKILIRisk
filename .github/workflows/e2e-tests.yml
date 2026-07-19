@@ -1,0 +1,178 @@
+# Full Playwright e2e suite against a deployed environment.
+#
+# The scheduled `smoke-tests.yml` runs only the tiny `@smoke` login canary.
+# This workflow runs the ENTIRE `tests/` suite (`npx playwright test`) so the
+# feature coverage — intake reorder, skip-then-answer, assessment multi-select,
+# enterprise shared client visibility, etc. — actually executes in CI.
+#
+# WHY IT TARGETS A DEPLOYED URL (not a CI-booted app):
+#   playwright.config.ts has no `webServer`; it drives a live deployment at
+#   PLAYWRIGHT_BASE_URL (default https://preview.akilirisk.com). Preview deploys
+#   from `staging`, so:
+#     - push to `staging`  → preview redeploys → this suite gates the integration
+#       branch against the code that just landed.
+#     - to test a single open PR, dispatch manually with `base_url` pointed at
+#       that PR's own Vercel preview URL (true per-PR-code testing needs the PR's
+#       deployment, since shared preview only ever runs staging).
+#
+# PREREQUISITES (one-time, by a maintainer):
+#   - The deployed app under test must have ENABLE_TEST_AUTH=1 so the client
+#     magic-link and enterprise `/api/test/*` scenario endpoints work.
+#   - Repo secrets (Settings → Secrets → Actions):
+#       E2E_DATABASE_URL   — the target env's DATABASE_URL. Required: several
+#                            specs shell out to `node scripts/*` (e.g.
+#                            reset-fresh-client-intake.js) that hit the DB directly.
+#       E2E_ENCRYPTION_KEY — must match the target env's ENCRYPTION_KEY, or the
+#                            direct-DB scripts fail to encrypt/decrypt.
+#     Optional overrides for the seeded fixture users (else the defaults in
+#     tests/fixtures/users.ts are used):
+#       E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD, E2E_ADVISOR_EMAIL / E2E_ADVISOR_PASSWORD
+#
+# NOTE: the full suite mutates shared preview data; the `concurrency` group
+# serializes runs so two never race. Specs are written to self-undo, but keep
+# runs serialized regardless.
+name: E2E Tests (full suite)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Target base URL (point at a PR's Vercel preview to test that PR's code)"
+        required: false
+        default: "https://preview.akilirisk.com"
+      test_ref:
+        description: "Branch/ref to run the tests from (must match the deployed code)"
+        required: false
+        default: "staging"
+  push:
+    branches: [staging]
+
+# One full-suite run at a time; let an in-flight run finish rather than cancel
+# it (a cancelled run reads as a false failure, and half-run mutations are messy).
+concurrency:
+  group: e2e-tests
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  e2e:
+    name: Full e2e suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI: "true"
+      PLAYWRIGHT_BASE_URL: ${{ github.event.inputs.base_url || 'https://preview.akilirisk.com' }}
+      # Direct-DB test scripts (reset-fresh-client-intake.js, etc.) need these.
+      DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+      ENCRYPTION_KEY: ${{ secrets.E2E_ENCRYPTION_KEY }}
+      # Fixture credential overrides (fall back to seeded defaults when unset —
+      # see tests/fixtures/users.ts).
+      ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      ADVISOR_EMAIL: ${{ secrets.E2E_ADVISOR_EMAIL }}
+      ADVISOR_PASSWORD: ${{ secrets.E2E_ADVISOR_PASSWORD }}
+    steps:
+      # For push, check out the pushed ref (staging). For manual dispatch, honor
+      # test_ref (default staging) so the tests match the deployed code.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.test_ref || '' }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Node 22+: engine-strict + a transitive dep require it (see smoke-tests.yml).
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run full e2e suite
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      # On a push (integration-branch) failure, open/append a tracking issue so
+      # the red run is visible without watching the Actions tab. Mirrors the
+      # smoke workflow's automation. PR/dispatch runs surface in the checks UI.
+      - name: File failure issue
+        if: ${{ failure() && github.event_name == 'push' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = "e2e-failure";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "The full e2e suite failed on `staging` (against preview).",
+              "",
+              `- Workflow run: ${runUrl}`,
+              "- Download the `playwright-report` artifact for traces, screenshots, and video.",
+              "",
+              "This issue auto-resolves when a later push run passes.",
+            ].join("\n");
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: label,
+            });
+            if (open.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open.data[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "🚨 Full e2e suite failing on staging",
+                labels: [label],
+                body,
+              });
+            }
+
+      # On a passing push run, close any open failure issue so it reflects live state.
+      - name: Resolve failure issue on success
+        if: ${{ success() && github.event_name == 'push' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = "e2e-failure";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: label,
+            });
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ Full e2e suite passed again — auto-resolving. Run: ${runUrl}`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "closed",
+                state_reason: "completed",
+              });
+            }
