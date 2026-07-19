@@ -182,9 +182,37 @@ async function diagnose(assessmentId: string): Promise<void> {
   }
 }
 
+/**
+ * List assessments that actually have recommendations — i.e. risk-bearing
+ * subjects where Phase 3 would do something. Use to pick a real validation
+ * target: `npx tsx scripts/narrative-generation-dry-run.ts --find`.
+ */
+async function findCandidates(): Promise<void> {
+  const grouped = await prisma.assessmentRecommendation.groupBy({
+    by: ["assessmentId"],
+    _count: { _all: true },
+    orderBy: { _count: { assessmentId: "desc" } },
+    take: 15,
+  });
+  console.log(`\nAssessments with recommendations (best Phase 3 validation targets):`);
+  if (grouped.length === 0) {
+    console.log("  NONE. No assessment on this DB has recommendations yet — score an");
+    console.log("  assessment that answers some questions at maturity 0–1, then retry.");
+    return;
+  }
+  for (const g of grouped) {
+    console.log(`  ${g.assessmentId}   ${g._count._all} recommendation(s)`);
+  }
+  console.log(`\nRe-run against one: npx tsx scripts/narrative-generation-dry-run.ts <id>\n`);
+}
+
 async function main(): Promise<void> {
+  if (assessmentId === "--find") {
+    await findCandidates();
+    return;
+  }
   if (!assessmentId) {
-    console.error("Usage: npx tsx scripts/narrative-generation-dry-run.ts <assessmentId>");
+    console.error("Usage: npx tsx scripts/narrative-generation-dry-run.ts <assessmentId | --find>");
     process.exit(2);
   }
 
