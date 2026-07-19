@@ -160,13 +160,15 @@ export async function POST(
 
     const catalog = await getPlatformPillarCatalog();
     if (!isPillarInAssessmentScope(pillar, assessment.includedPillars, catalog)) {
-      return NextResponse.json(
-        {
-          error: "This pillar is not included in your assessment scope.",
-          code: "PILLAR_OUT_OF_SCOPE",
-        },
-        { status: 400 },
-      );
+      // Soft-skip: completing a pillar re-syncs local answers, and stale
+      // out-of-scope store entries must not fail the whole sync (clients
+      // that only check response.ok treat 200 as success).
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        code: "PILLAR_OUT_OF_SCOPE",
+        message: "This pillar is not included in your assessment scope.",
+      });
     }
 
     // Round-11 commit 2.5b: only the encrypted answer is persisted.

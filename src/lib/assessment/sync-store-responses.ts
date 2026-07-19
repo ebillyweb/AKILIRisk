@@ -178,17 +178,24 @@ export async function syncStoreAnswersToServer(
           : {}),
       }),
     });
+    const body = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+      code?: string;
+      skipped?: boolean;
+    };
+    // Soft-skip (200) or legacy 400 — either way, out-of-scope must not
+    // block scoring the pillar the client just finished.
+    if (
+      body.code === "PILLAR_OUT_OF_SCOPE" ||
+      body.skipped === true ||
+      body.error?.includes("not included in your assessment scope") ||
+      body.message?.includes("not included in your assessment scope")
+    ) {
+      continue;
+    }
     if (!response.ok) {
-      const error = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        code?: string;
-      };
-      // Stale local answers for pillars outside assessment scope must not
-      // block scoring the pillar the client just finished.
-      if (error.code === "PILLAR_OUT_OF_SCOPE") {
-        continue;
-      }
-      throw new Error(error.error ?? "Failed to sync assessment answers");
+      throw new Error(body.error ?? body.message ?? "Failed to sync assessment answers");
     }
     syncedCount += 1;
   }
