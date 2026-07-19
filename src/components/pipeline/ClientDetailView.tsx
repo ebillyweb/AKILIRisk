@@ -97,10 +97,15 @@ export function ClientDetailView({
 
       {!assignmentActive ? (
         <Alert className="mb-6 border-muted-foreground/30 bg-muted/40">
-          <AlertTitle>Workflow inactive</AlertTitle>
+          <AlertTitle className="flex items-center gap-2">
+            Your workflow is inactive
+            <FieldHelp helpKey="pipeline-assignment-workflow" />
+          </AlertTitle>
           <AlertDescription>
-            This client is not in your active pipeline. History is read-only until you restore
-            the workflow.
+            This household is not in your active pipeline. Their account and
+            history are kept, and another advisor may still have an active
+            workflow with them. Use Restore to pipeline below to resume your
+            work — history stays read-only until then.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -498,7 +503,11 @@ export function ClientDetailView({
                 />
               ) : null}
 
-              <Button variant="outline" className="w-full justify-start" asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-xs sm:text-sm"
+                asChild
+              >
                 <Link href={assignmentActive ? "/advisor/pipeline" : "/advisor/pipeline?inactive=1"}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   {assignmentActive ? "Back to Pipeline" : "Back to inactive clients"}
@@ -506,7 +515,11 @@ export function ClientDetailView({
               </Button>
 
               {assessmentDetails?.completedAt && (
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-xs sm:text-sm"
+                  asChild
+                >
                   <Link href={`/advisor/analytics/${client.id}`}>
                     <BarChart3 className="w-4 h-4 mr-2" />
                     Client Analytics
@@ -515,7 +528,11 @@ export function ClientDetailView({
               )}
 
               {assessmentDetails?.completedAt && actionPlanEnabled ? (
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-xs sm:text-sm"
+                  asChild
+                >
                   <Link href={`/advisor/clients/${client.id}/guidance`}>
                     <ClipboardList className="w-4 h-4 mr-2" />
                     Client Guidance
@@ -527,7 +544,11 @@ export function ClientDetailView({
                   of inline-downloading the latest published. The list page
                   surfaces every version + the Edit Draft + Publish flow. */}
               {assessmentDetails?.id && assessmentDetails.score !== null && (
-                <Button variant="outline" className="w-full justify-start" asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-xs sm:text-sm"
+                  asChild
+                >
                   <Link href={`/advisor/pipeline/${client.id}/report`}>
                     <FileText className="w-4 h-4 mr-2" />
                     Reports

@@ -22,8 +22,8 @@ export function ClientWorkflowStatusControls({ clientId, status }: Props) {
   function run(nextStatus: AssignmentStatus) {
     const confirmMessage =
       nextStatus === "INACTIVE"
-        ? "End this client workflow? The client will leave your active pipeline. Their account and history are kept; you can restore the workflow later."
-        : "Restore this client to your active pipeline?";
+        ? "End your workflow with this client? They leave your active pipeline only — their account and history are kept, and other advisors’ assignments are unchanged. You can restore your workflow later."
+        : "Restore this client to your active pipeline? This only reactivates your assignment with them.";
 
     if (!window.confirm(confirmMessage)) return;
 
@@ -34,7 +34,9 @@ export function ClientWorkflowStatusControls({ clientId, status }: Props) {
         return;
       }
       toast.success(
-        nextStatus === "INACTIVE" ? "Client workflow ended." : "Client workflow restored.",
+        nextStatus === "INACTIVE"
+          ? "Your workflow with this client ended."
+          : "Client restored to your pipeline.",
       );
       router.refresh();
       if (nextStatus === "INACTIVE") {
@@ -47,7 +49,7 @@ export function ClientWorkflowStatusControls({ clientId, status }: Props) {
     <Button
       type="button"
       variant={isActive ? "destructive" : "default"}
-      className="w-full justify-start"
+      className="w-full justify-start text-xs sm:text-sm"
       disabled={pending}
       onClick={() => run(isActive ? "INACTIVE" : "ACTIVE")}
     >

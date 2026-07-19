@@ -430,6 +430,11 @@ export const FIELD_HELP = {
   },
 
   // Advisor — assessment lifecycle (stale scores vs reassessment)
+  "pipeline-assignment-workflow": {
+    title: "Your workflow with this client",
+    description:
+      "ACTIVE / INACTIVE is your assignment to this household — not a global client switch. Ending the workflow removes them from your active pipeline only; their account and history stay, and another advisor may still have an active assignment. Pipeline progress % is stage-based and separate from this status.",
+  },
   "pipeline-stale-scores": {
     title: "Stale scores",
     description:

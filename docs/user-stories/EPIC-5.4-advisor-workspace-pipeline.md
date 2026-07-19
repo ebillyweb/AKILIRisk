@@ -62,6 +62,21 @@ This epic uses **US-28 – US-36**. Older repo docs listed **US-24 – US-28** f
 | URL filters | `parsePipelineFiltersFromSearchParams` — `?stage=`, `?stalled=1`, `?awaitingReview=1`, `?documentsNeeded=1` |
 | Client detail | `/advisor/pipeline/[clientId]` |
 
+### Assignment ACTIVE / INACTIVE (per advisor, not global)
+
+`ClientAdvisorAssignment.status` is **your** relationship with that household — not a platform-wide “client active” flag.
+
+| Concept | Meaning |
+|---------|---------|
+| **ACTIVE** | This advisor’s workflow is in the default pipeline (`/advisor/pipeline`). |
+| **INACTIVE** | This advisor ended the workflow (**End workflow**). The client account and history remain; open inactive list via `?inactive=1` and **Restore to pipeline** to resume. |
+| **Multiple advisors** | A household may have one assignment row per advisor (`@@unique([clientId, advisorId])`). Advisor A can be ACTIVE while Advisor B is INACTIVE on the same client. |
+| **Pipeline progress %** | Stage-based (`computeProgress`) — e.g. assessment complete ≈ 80%. Independent of ACTIVE/INACTIVE. |
+
+**UI copy:** Client detail shows “Workflow inactive” / “not in **your** active pipeline” when *your* assignment is INACTIVE. Another advisor may still have an ACTIVE assignment.
+
+**Actions:** `setClientAssignmentStatus` in `src/lib/actions/advisor-client-assignment-actions.ts`; controls in `ClientWorkflowStatusControls`.
+
 ---
 
 ## US-29 — Act on Advisor Priorities (Advisor)
