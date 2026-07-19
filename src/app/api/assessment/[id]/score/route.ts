@@ -32,6 +32,8 @@ import { triggerMilestoneNotification } from "@/lib/notifications/triggers";
 import { triggerPreviewAvailable } from "@/lib/notifications/deliverable-phase-triggers";
 import { AUDIT_ACTIONS, writeAudit } from "@/lib/audit/audit-log";
 import { RecommendationEngine } from "@/lib/assessment/engines/recommendation-engine";
+import { isNarrativeGenerationEnabled } from "@/lib/assessment/recommendations/llm-narrative/config";
+import { generateAndAttachNarratives } from "@/lib/assessment/recommendations/llm-narrative/generate-narratives";
 import { emitAssessmentSignals } from "@/lib/signals/emit";
 import type { PillarScoreSnapshot } from "@/lib/signals/types";
 import { evaluateClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
@@ -467,6 +469,12 @@ export async function POST(
       void triggerPreviewAvailable(id);
       if (facilitatedSessionId) {
         void markFacilitatedSessionPreviewIfComplete(facilitatedSessionId);
+      }
+      // Phase 3 (LLM narratives): once every pillar is scored, draft AI rationale
+      // for the selected recommendations. Fire-and-forget, flag-gated, fail-closed
+      // — runs outside the scoring transaction and never blocks the response.
+      if (isNarrativeGenerationEnabled()) {
+        void generateAndAttachNarratives(id).catch(() => {});
       }
     }
 

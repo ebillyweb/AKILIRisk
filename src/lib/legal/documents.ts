@@ -1,6 +1,6 @@
 export const LEGAL_ENTITY_NAME = "AKILI Risk Intelligence";
 export const LEGAL_CONTACT_EMAIL = "privacy@akilirisk.com";
-export const LEGAL_LAST_UPDATED = "2026-05-22";
+export const LEGAL_LAST_UPDATED = "2026-07-19";
 
 export interface LegalSection {
   id: string;
@@ -57,6 +57,14 @@ export const termsOfServiceSections: LegalSection[] = [
     paragraphs: [
       "Assessment responses and related outputs may be visible to your assigned advisor and authorized platform administrators according to product configuration and consent settings.",
       "You retain ownership of content you submit. You grant us a limited license to host, process, and display that content solely to operate and improve the Service.",
+    ],
+  },
+  {
+    id: "ai-features",
+    title: "Automated and AI-assisted features",
+    paragraphs: [
+      "Which risk solutions we recommend to you is determined by a deterministic, rules-based scoring engine driven by your assessment answers. To help explain those recommendations, some of the accompanying written rationale and suggested next steps may be drafted with the assistance of third-party artificial-intelligence services, grounded in your assessment answers.",
+      "AI-assisted wording does not change which recommendations you receive. It is subject to automated validation and, where applicable, advisor review, and — like all outputs of the Service — does not constitute legal, tax, investment, or fiduciary advice. If AI-assisted wording cannot be validated, the Service falls back to standard, human-written copy.",
     ],
   },
   {
@@ -158,8 +166,17 @@ export const privacyPolicySections: LegalSection[] = [
     title: "Sharing and processors",
     paragraphs: [
       "We share information with your assigned advisor and authorized administrators as required to deliver the Service.",
-      "We use infrastructure and service providers (for example hosting, email, analytics, and payment processors) under contracts that limit use to providing services to us.",
+      "We use infrastructure and service providers (for example hosting, email, analytics, payment processors, and — for the AI-assisted recommendation wording described below — artificial-intelligence providers) under contracts that limit use to providing services to us.",
       "We may disclose information when required by law, to protect rights and safety, or in connection with a merger, acquisition, or asset sale subject to appropriate safeguards.",
+    ],
+  },
+  {
+    id: "automated-ai",
+    title: "Automated processing and AI features",
+    paragraphs: [
+      "We use automated, rules-based scoring to evaluate your assessment answers and select the risk solutions we recommend to you.",
+      "To generate the written explanations that accompany those recommendations, we may share a limited, privacy-minimized subset of your assessment data — your maturity answers for the relevant risk areas and non-identifying household attributes — with a third-party AI provider acting as our processor. We do not send direct identifiers (such as your name, email address, postal address, account numbers, or financial figures) for this purpose, and the provider is contractually prohibited from using this data to train its models.",
+      "AI-generated wording is validated against your assessment inputs before it is shown, and standard human-written copy is used if that validation does not pass. This processing supports, and does not replace, review by your advisor or other qualified professionals.",
     ],
   },
   {
