@@ -68,6 +68,18 @@ export type NarrativeDeps = {
   persist: (recId: string, narrative: StoredNarrative, meta: GenerationMeta) => Promise<void>;
   model: string;
   now: () => string;
+  /** Optional observability hook (no-op in production). Fired once per pillar. */
+  onPillarResult?: (info: PillarResultInfo) => void;
+};
+
+export type PillarResultInfo = {
+  pillar: string;
+  status: "generated" | "validation_failed" | "skipped" | "error";
+  /** Grounding-validator reasons when status === "validation_failed". */
+  reasons?: string[];
+  /** The model output, present for generated/validation_failed. */
+  output?: NarrativeOutput;
+  error?: string;
 };
 
 export type GenerationSummary = {
@@ -132,6 +144,7 @@ export async function runNarrativeGeneration(
     // No grounding => don't generate; static copy is safer than thin prose.
     if (!meta || weakFindings.length === 0) {
       summary.pillarsSkipped++;
+      deps.onPillarResult?.({ pillar, status: "skipped" });
       continue;
     }
 
@@ -150,6 +163,7 @@ export async function runNarrativeGeneration(
       const validation = validateNarrativeOutput(output, input);
       if (!validation.ok) {
         summary.pillarsFailed++;
+        deps.onPillarResult?.({ pillar, status: "validation_failed", reasons: validation.reasons, output });
         continue; // fail-closed: static copy
       }
 
@@ -182,8 +196,10 @@ export async function runNarrativeGeneration(
       }
       summary.pillarsSucceeded++;
       summary.narrativesWritten += wrote;
-    } catch {
+      deps.onPillarResult?.({ pillar, status: "generated", output });
+    } catch (err) {
       summary.pillarsFailed++;
+      deps.onPillarResult?.({ pillar, status: "error", error: err instanceof Error ? err.message : String(err) });
       // fail-closed: leave static copy
     }
   }

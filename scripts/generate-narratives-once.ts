@@ -20,9 +20,14 @@
 import "./load-repo-env";
 import { prisma } from "@/lib/db";
 import { isNarrativeGenerationEnabled } from "@/lib/assessment/recommendations/llm-narrative/config";
-import { generateAndAttachNarratives } from "@/lib/assessment/recommendations/llm-narrative/generate-narratives";
+import {
+  buildRealDeps,
+  generateAndAttachNarratives,
+} from "@/lib/assessment/recommendations/llm-narrative/generate-narratives";
 
 const assessmentId = process.argv[2] ?? process.env.ASSESSMENT_ID;
+
+const indent = (s: string) => s.split("\n").map((l) => `    ${l}`).join("\n");
 
 async function main(): Promise<void> {
   if (!assessmentId) {
@@ -38,7 +43,24 @@ async function main(): Promise<void> {
   console.log(`Flag LLM_NARRATIVES_ENABLED: ${isNarrativeGenerationEnabled()} (not required for this manual run)`);
   console.log("Calling OpenAI and persisting validated output…\n");
 
-  const summary = await generateAndAttachNarratives(assessmentId);
+  // Real deps + a debug hook that surfaces why a pillar passed/failed.
+  const deps = buildRealDeps();
+  deps.onPillarResult = (info) => {
+    if (info.status === "validation_failed") {
+      console.log(`\n✗ [${info.pillar}] grounding validator REJECTED the model output:`);
+      for (const r of info.reasons ?? []) console.log(`    - ${r}`);
+      console.log(`  Rejected copy (for debugging — no client identifiers):`);
+      console.log(indent(JSON.stringify(info.output, null, 2)));
+    } else if (info.status === "error") {
+      console.log(`\n✗ [${info.pillar}] errored: ${info.error}`);
+    } else if (info.status === "skipped") {
+      console.log(`\n· [${info.pillar}] skipped (no groundable findings).`);
+    } else {
+      console.log(`\n✓ [${info.pillar}] generated and validated.`);
+    }
+  };
+
+  const summary = await generateAndAttachNarratives(assessmentId, deps);
 
   console.log("Result:");
   console.log(`  pillars processed : ${summary.pillarsProcessed}`);
