@@ -18,7 +18,14 @@ export function RedirectIncompleteIntake({ restrictNavToIntake }: RedirectIncomp
   useEffect(() => {
     if (!restrictNavToIntake) return;
     const appPath = stripTenantPathPrefix(pathname);
-    if (appPath === "/intake" || appPath.startsWith("/intake/")) return;
+    if (
+      appPath === "/intake" ||
+      appPath.startsWith("/intake/") ||
+      appPath === "/support" ||
+      appPath.startsWith("/support/")
+    ) {
+      return;
+    }
     router.replace(scopePathToCurrentTenant("/intake", pathname));
   }, [restrictNavToIntake, pathname, router]);
 

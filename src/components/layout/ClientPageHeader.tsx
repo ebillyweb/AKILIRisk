@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   Users,
   Settings,
+  LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -24,6 +25,7 @@ const CLIENT_HEADER_ICONS: Record<ClientPageHeaderIconName, LucideIcon> = {
   "clipboard-check": ClipboardCheck,
   users: Users,
   settings: Settings,
+  "life-buoy": LifeBuoy,
 };
 
 export function ClientPageHeader(

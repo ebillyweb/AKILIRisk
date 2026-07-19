@@ -18,6 +18,7 @@ export const CLIENT_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/documents", label: "Documents" },
   { href: "/profiles", label: "Profiles & Roles" },
   { href: "/settings", label: "Settings" },
+  { href: "/support", label: "Support" },
 ];
 
 export const ADVISOR_NAV_ITEMS: { href: string; label: string }[] = [
@@ -28,6 +29,7 @@ export const ADVISOR_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/advisor/notifications", label: "Notifications" },
   { href: "/advisor/billing", label: "Billing" },
   { href: "/advisor/settings", label: "Settings" },
+  { href: "/support", label: "Support" },
 ];
 
 const ADMIN_NAV_ITEMS: { href: string; label: string }[] = [
@@ -47,6 +49,7 @@ const ADMIN_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/admin/intake/questions", label: "Intake question bank" },
   { href: "/admin/assessment", label: "Assessment Management" },
   { href: "/admin/settings", label: "Settings" },
+  { href: "/support", label: "Support" },
 ];
 
 interface ProtectedNavProps {
@@ -117,9 +120,11 @@ export function ProtectedNav({
     return true;
   });
 
-  // When restrictNavToIntake (client, intake not submitted), only Intake is enabled
+  // When restrictNavToIntake (client, intake not submitted), only Intake + Support
   const isClientRestricted = restrictNavToIntake && !showAdvisor && !showAdmin;
-  const enabledHrefs = isClientRestricted ? new Set(["/intake"]) : null;
+  const enabledHrefs = isClientRestricted
+    ? new Set(["/intake", "/support"])
+    : null;
 
   // For clients with submitted but not approved intake: Assessment is disabled
   const isClientAssessmentLocked =

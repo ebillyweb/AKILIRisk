@@ -3,7 +3,8 @@ export type ClientPageHeaderIconName =
   | "file-text"
   | "clipboard-check"
   | "users"
-  | "settings";
+  | "settings"
+  | "life-buoy";
 
 export interface ClientPageHeaderConfig {
   icon: ClientPageHeaderIconName;
@@ -79,6 +80,15 @@ const CLIENT_HEADER_CONFIG: { path: string; config: ClientPageHeaderConfig }[] =
       title: "Security & Access",
       subtitle:
         "Account identity verification and multi-factor authentication",
+    },
+  },
+  {
+    path: "/support",
+    config: {
+      icon: "life-buoy",
+      kicker: "Help Center",
+      title: "Support",
+      subtitle: "Submit a ticket for account, billing, or technical help",
     },
   },
 ];

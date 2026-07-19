@@ -12,6 +12,7 @@ export const AKILI_BRAND = {
   contact: {
     hello: "hello@akilirisk.com",
     sales: "sales@akilirisk.com",
+    support: "support@akilirisk.com",
     privacy: "privacy@akilirisk.com",
   },
 } as const;

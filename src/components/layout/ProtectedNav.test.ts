@@ -16,8 +16,14 @@ function visibleClientNavItems(options: {
 }
 
 describe("ProtectedNav route sets", () => {
-  it("client nav includes Documents by default", () => {
-    expect(CLIENT_NAV_ITEMS.map((item) => item.href)).toContain("/documents");
+  it("client nav includes Documents and Support by default", () => {
+    const hrefs = CLIENT_NAV_ITEMS.map((item) => item.href);
+    expect(hrefs).toContain("/documents");
+    expect(hrefs).toContain("/support");
+  });
+
+  it("advisor and admin top nav include Support", () => {
+    expect(ADVISOR_NAV_ITEMS.map((item) => item.href)).toContain("/support");
   });
 
   it("advisor nav does not include client-only intake, assessment, documents, or profiles", () => {
