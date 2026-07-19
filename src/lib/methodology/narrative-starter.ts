@@ -83,8 +83,7 @@ const NEW_PILLAR_NARRATIVES: Record<string, PillarNarrativeBands> = {
     ],
     midBand: GENERIC_MID_BAND("estate and succession planning"),
   },
-  // Slug is a legacy identifier; presented as "AI & Emerging Tech Risk".
-  "family-governance-behavioral": {
+  "ai-emerging-tech": {
     allNegative: [
       "Defenses against AI-enabled threats are underdeveloped, leaving the family exposed to deepfake and voice-clone fraud, synthetic-media reputational attacks, and data leakage into AI tools. Establish out-of-band verification for financial requests, monitoring for synthetic media, and a policy governing use of AI tools.",
     ],

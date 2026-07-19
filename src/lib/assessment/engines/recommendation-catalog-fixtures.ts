@@ -157,7 +157,7 @@ export const HIGH_RISK_PILLAR_SCORES: Record<string, { score: number; riskLevel:
   "liquidity-cash": { score: 0.5, riskLevel: "critical" },
   "tax-exposure": { score: 0.6, riskLevel: "critical" },
   "estate-succession": { score: 0.5, riskLevel: "critical" },
-  "family-governance-behavioral": { score: 0.7, riskLevel: "critical" },
+  "ai-emerging-tech": { score: 0.7, riskLevel: "critical" },
 };
 
 export const GOVERNANCE_REMEDIATION_SERVICE_IDS = [
@@ -191,9 +191,12 @@ export const HIGH_RISK_EXPECTED_SERVICE_IDS = [
   "estate_document_review",
   "estate_beneficiary_audit",
   "estate_succession_protocol",
-  "behavioral_family_governance_program",
-  "behavioral_decision_rights_framework",
-  "behavioral_investment_discipline",
+  "ai_impersonation_defense",
+  "ai_data_governance",
+  "ai_synthetic_media_response",
+  "ai_operations_oversight",
+  "ai_household_literacy",
+  "ai_risk_governance",
 ] as const;
 
 export const PRODUCTION_CATALOG_SERVICES: CatalogService[] = [
@@ -421,32 +424,59 @@ export const PRODUCTION_CATALOG_SERVICES: CatalogService[] = [
     timeframe: "3-6 months",
   },
 
-  // Behavioral Resilience services
+  // AI & Emerging Tech Risk services
   {
-    id: "behavioral_family_governance_program",
-    name: "Family Governance Meeting Program",
-    description: "Structured program establishing regular family meetings with documented agendas and decision logs",
-    category: "advisory",
+    id: "ai_impersonation_defense",
+    name: "AI Impersonation & Deepfake Defense Program",
+    description: "Out-of-band verification protocols, family code words, and staff training to defend against deepfake and voice-clone fraud",
+    category: "security",
     priority: 90,
     estimatedCost: "$10,000 - $30,000",
     timeframe: "1-3 months",
   },
   {
-    id: "behavioral_decision_rights_framework",
-    name: "Decision Rights Framework Development",
-    description: "Development and publication of decision-rights matrix for spouses, children, and trusted advisors",
+    id: "ai_data_governance",
+    name: "AI Tool Data Governance Program",
+    description: "Acceptable-use policy, vendor vetting, and upload controls governing what family and office data may be entered into AI tools",
     category: "advisory",
     priority: 85,
-    estimatedCost: "$8,000 - $20,000",
-    timeframe: "2-4 weeks",
+    estimatedCost: "$8,000 - $25,000",
+    timeframe: "1-2 months",
   },
   {
-    id: "behavioral_investment_discipline",
-    name: "Behavioral Finance Discipline Program",
-    description: "Pre-commitment checklist and education program to address behavioral-finance pitfalls in major investment decisions",
-    category: "advisory",
+    id: "ai_synthetic_media_response",
+    name: "Synthetic Media Monitoring & Response Program",
+    description: "Monitoring for AI-generated impersonation plus a rapid takedown and communications playbook for synthetic-media reputational attacks",
+    category: "reputation",
     priority: 80,
-    estimatedCost: "$15,000 - $40,000",
+    estimatedCost: "$15,000 - $45,000",
+    timeframe: "2-4 months",
+  },
+  {
+    id: "ai_operations_oversight",
+    name: "AI Operations Oversight & Validation",
+    description: "Human-oversight controls and independent validation for AI used in investment research, accounting, and legal work in the family office",
+    category: "advisory",
+    priority: 78,
+    estimatedCost: "$12,000 - $35,000",
+    timeframe: "2-3 months",
+  },
+  {
+    id: "ai_household_literacy",
+    name: "Household AI Safety & Literacy Program",
+    description: "Guidance and education for family members on safe AI-tool use, smart-device privacy, and AI-enabled scams targeting the young and elderly",
+    category: "advisory",
+    priority: 76,
+    estimatedCost: "$6,000 - $18,000",
+    timeframe: "1-2 months",
+  },
+  {
+    id: "ai_risk_governance",
+    name: "AI Risk Governance & Incident Response",
+    description: "Assigns ownership of AI-risk monitoring, integrates AI risk into the family's risk review, and establishes incident logging and response",
+    category: "advisory",
+    priority: 74,
+    estimatedCost: "$10,000 - $30,000",
     timeframe: "2-4 months",
   },
 ];
@@ -820,36 +850,10 @@ const LEGACY_CATALOG_RULES: CatalogRule[] = [
     priority: 80,
   },
 
-  // Behavioral Resilience legacy rules
-  {
-    id: "behavioral_governance_program_needed",
-    serviceRecommendationId: "behavioral_family_governance_program",
-    ruleName: "Family Governance Meeting Program",
-    triggerConditions: [
-      { type: "answer_match", questionId: "behavioral_family_meetings", operator: "in", value: ["none", "informal"], weight: 4 },
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.5, weight: 3 },
-    ],
-    priority: 90,
-  },
-  {
-    id: "behavioral_decision_rights_needed",
-    serviceRecommendationId: "behavioral_decision_rights_framework",
-    ruleName: "Decision Rights Framework Development",
-    triggerConditions: [
-      { type: "answer_match", questionId: "behavioral_decision_rights", operator: "in", value: ["none", "informal"], weight: 4 },
-    ],
-    priority: 85,
-  },
-  {
-    id: "behavioral_investment_discipline_needed",
-    serviceRecommendationId: "behavioral_investment_discipline",
-    ruleName: "Behavioral Finance Discipline Program",
-    triggerConditions: [
-      { type: "answer_match", questionId: "behavioral_investment_discipline", operator: "in", value: ["none", "informal"], weight: 4 },
-      { type: "score_threshold", pillarId: "family-governance-behavioral", operator: "less_than", value: 1.8, weight: 3 },
-    ],
-    priority: 80,
-  },
+  // AI & Emerging Tech Risk rules live in FAMILY_GOVERNANCE_UI_RECOMMENDATION_RULES
+  // (spread into PRODUCTION_CATALOG_RULES below). The former Behavioral
+  // Resilience legacy rules were removed when the pillar became AI & Emerging
+  // Tech Risk.
 ];
 
 export const PRODUCTION_CATALOG_RULES: CatalogRule[] = [

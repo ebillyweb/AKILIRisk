@@ -25,7 +25,7 @@ const PILLAR_ICONS: Record<string, LucideIcon> = {
   "liquidity-cash": Landmark,
   "tax-exposure": Receipt,
   "estate-succession": ScrollText,
-  "family-governance-behavioral": Cpu,
+  "ai-emerging-tech": Cpu,
 };
 
 export type AdvisorPillarShortcut = {

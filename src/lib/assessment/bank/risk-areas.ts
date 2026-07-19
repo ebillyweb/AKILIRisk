@@ -35,6 +35,9 @@ const LEGACY_RISK_AREA_ID_REDIRECT: Record<string, string> = {
   "financial-asset-protection": "insurance",
   "environmental-geographic-risk": "geographic-environmental",
   "lifestyle-behavioral-risk": "reputational-social",
+  // Behavioral Resilience pillar was repurposed to AI & Emerging Tech Risk
+  // (slug rename in migration 20260714120000). Redirect old question-bank URLs.
+  "family-governance-behavioral": "ai-emerging-tech",
 };
 
 export function legacyRiskAreaRedirect(id: string): string | null {

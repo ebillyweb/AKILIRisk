@@ -19,7 +19,7 @@ export const PILLAR_CATEGORY_CODE_TO_RISK_AREA_ID: Record<string, string> = {
   "7_liquidity": "liquidity-cash",
   "8_tax": "tax-exposure",
   "9_estate": "estate-succession",
-  "10_family_governance": "family-governance-behavioral",
+  "10_ai": "ai-emerging-tech",
 };
 
 export function riskAreaIdForPillarCategory(category: {
