@@ -92,12 +92,14 @@ async function uploadOwnerAudioWithMime(
 }
 
 test.describe("intake audio streaming endpoint", () => {
-  // Preview env is missing `S3_INTAKE_BUCKET` (see INVENTORY "Surfaced
-  // bugs"). Every upload-dependent assertion here returns 500 from
-  // src/lib/s3/intake-audio-uploads.ts; the streaming reads also fail
-  // because the beforeAll upload never populates an object. test.skip
-  // the entire describe until the var lands on the Vercel Preview env.
-  test.skip(true, "preview env missing S3_INTAKE_BUCKET");
+  // S3_INTAKE_BUCKET is now set on Preview — uploads no longer 500. But this
+  // spec plants its audio fixture by POSTing to the upload endpoint for
+  // `client@test.com`, whose seeded intake is SUBMITTED + Approved. The upload
+  // route correctly rejects that with 409 "Intake already submitted"
+  // (src/app/api/intake/[id]/audio/route.ts:102), so 5/6 tests fail on 409,
+  // NOT on S3. Needs a redesign to plant audio against an editable interview
+  // owned by an advisor-assigned client. See INVENTORY "Surfaced bugs".
+  test.skip(true, "spec uploads to a SUBMITTED intake -> 409; needs editable-interview redesign (S3 env resolved)");
 
   test.beforeAll(() => {
     // Discover the seeded client's interviewId + questionId so we can

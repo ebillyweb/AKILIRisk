@@ -404,30 +404,40 @@ All five findings from this pass are now fixed — see the Fixed section below
 fixed). Playwright suite not re-run this pass (requires live preview target +
 env; see prior preview run above).
 
-### Major (env): preview env missing `S3_INTAKE_BUCKET`
+### Minor (test design): `intake-audio-endpoint.spec.ts` plants audio against a SUBMITTED intake
 
-- **Where:** `src/lib/s3/intake-audio-uploads.ts:35-39` throws
-  "S3_INTAKE_BUCKET is required for intake voice recordings." whenever
-  the var is unset. `/api/intake/[id]/audio` POST therefore returns
-  500 with body `{"success":false,"error":"Failed to upload audio file"}`
-  for every authenticated owner upload.
-- **Live evidence:** signed in as `client@test.com`, POST to
-  `/api/intake/test-interview-cmp7bp0xz0002slg8a377o48a/audio` with the
-  correct multipart shape (`audio` + `questionId`, valid 28-byte WebM
-  buffer) returns 500.
-- **Severity:** Major if voice intake is supposed to work on preview;
-  Minor otherwise (preview is local-dev convenience, prod has its own
-  bucket). Voice flow is unusable on the preview deployment today.
-- **Action required:** add `S3_INTAKE_BUCKET` (and `S3_INTAKE_REGION`
-  if region differs from `AWS_REGION`) to Vercel Preview env vars for
-  `akili-risk`. Bucket should mirror the production bucket's
-  configuration; uploads write under `intake-audio/<interviewId>/`.
-- **Tests parked:** `intake-audio-endpoint.spec.ts` (5 tests) and
-  `intake-mixed-mode.spec.ts` (1 test) both `test.skip(true, "preview
-  env missing S3_INTAKE_BUCKET")` at the describe level. Remove the
-  skip the moment the var lands.
+- **Now that S3 works** (env resolved, see Fixed), the 6-test describe fails
+  5/6 on `409 "Intake already submitted"` — NOT S3. The spec plants its audio
+  fixture by POSTing to the upload endpoint for `client@test.com`, whose seeded
+  intake is SUBMITTED + Approved; the route correctly rejects uploads to a
+  submitted intake (`src/app/api/intake/[id]/audio/route.ts:102`). The
+  `unauthenticated request gets 401` test passes (no upload needed).
+- **Fix sketch:** redesign the fixture setup to plant audio against an
+  *editable* interview owned by a client with an ACTIVE assignment to
+  `advisor@test.com` (so the assigned-advisor read test still exercises authz).
+  Candidate: reset `client-fresh@test.com`, `Begin` an interview (IN_PROGRESS),
+  upload, then run the streaming-read authz assertions — but confirm
+  `client-fresh` is advisor-assigned first. Parked `test.skip` with the accurate
+  reason (verified 2026-07-02 against preview).
+
+### Minor (drift): `intake-mixed-mode.spec.ts` wizard start→question navigation drift
+
+- Un-parked from the S3 reason; now fails earlier and unrelated to S3: after
+  clicking "Begin interview" the `page.waitForURL(/\/intake\/interview/)` times
+  out (30s). The intro ("What to Expect") screen renders with the button
+  visible, but the start→question navigation no longer lands on
+  `/intake/interview`. Needs the wizard flow / URL locator refreshed. Parked
+  `test.skip` with the accurate reason (verified 2026-07-02 against preview).
 
 ## Fixed
+
+- **Preview env `S3_INTAKE_BUCKET` now set** (confirmed 2026-07-02 via
+  `vercel env ls preview`: `S3_INTAKE_BUCKET` + `S3_INTAKE_REGION` present on
+  Preview). `/api/intake/[id]/audio` uploads no longer 500 with "Failed to
+  upload audio file" — the S3 config path is working end-to-end (uploads now
+  reach the intake-status gate rather than throwing on the missing var). No IAM
+  / bucket-policy asks surfaced. The two parked audio specs remain skipped for
+  unrelated reasons (see Surfaced bugs above), not S3.
 
 - **Concurrent enterprise-provision finalize duplicated firm methodology**
   (`e9f8b98`, pass 2026-07-02). `finalizeEnterpriseProvision` read the

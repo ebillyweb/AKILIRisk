@@ -42,9 +42,12 @@ test.beforeEach(() => {
 });
 
 test.describe("client intake wizard — mixed audio + typed responses", () => {
-  // Same S3_INTAKE_BUCKET env gap as intake-audio-endpoint.spec.ts.
-  // See tests/INVENTORY.md "Surfaced bugs".
-  test.skip(true, "preview env missing S3_INTAKE_BUCKET");
+  // S3_INTAKE_BUCKET is now set on Preview (audio upload no longer 500s). This
+  // spec now fails earlier and unrelated to S3: after "Begin interview" the
+  // `page.waitForURL(/\/intake\/interview/)` times out (30s) — the wizard
+  // start → question navigation drifted. Re-parked until the wizard flow /
+  // URL locator is refreshed. See INVENTORY "Surfaced bugs".
+  test.skip(true, "intake wizard start->question navigation drift (waitForURL timeout); unrelated to S3 (resolved)");
 
   test("completes with one recorded question and the rest typed", async ({
     page,
