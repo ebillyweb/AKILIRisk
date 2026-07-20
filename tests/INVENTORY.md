@@ -398,83 +398,11 @@ the user in NOT_STARTED state.
 
 ### Pass 2026-07-02 (enterprise / tenant-routing / visibility churn)
 
-Baseline at start: Vitest **1900 pass / 1 fail / 5 skip**; the single failure was
-stale-copy drift (see Fixed below), now green. Playwright suite not re-run this
-pass (requires live preview target + env; see prior preview run above).
-
-#### Major (concurrency / data-integrity): concurrent enterprise-provision finalize duplicates firm methodology
-
-- **Where:** `src/lib/enterprise/finalize-enterprise-provision.ts:75,88-103`.
-  The `enterprise.status !== "PROVISIONING"` guard is read OUTSIDE the
-  transaction (line 75) while the flip to `ACTIVE` happens INSIDE it
-  (line 97-100). `transferAdvisorAssetsToEnterprise`
-  (`transfer-advisor-assets.ts:196-208`) unconditionally `create`s
-  `enterpriseRecommendationRule` rows and increments advisor-rule versions —
-  idempotent only *sequentially* (it flips `CUSTOM`→`ENTERPRISE`), not
-  *concurrently*.
-- **Reachable via:** the worker route (`api/workers/enterprise-provision`)
-  and cron route (`api/cron/enterprise-provision`) both run
-  `drainEnterpriseProvisionQueue()` **and then unconditionally**
-  `processPendingEnterpriseProvisions()` (the legacy sweep bypasses the
-  BullMQ job lock). A cron drain holding X's BullMQ job (300s tx window) while
-  a separate worker-route request's legacy sweep also picks up X (still
-  PROVISIONING, uncommitted) → both run the transfer. Same race between the
-  admin-create `after()` trigger and the 5-min cron.
-- **Expected vs actual:** second overlapping finalize should be a no-op;
-  actual runs the asset transfer twice → duplicate `EnterpriseRecommendationRule`
-  rows, orphaned `AdvisorRecommendationRule.enterpriseSourceId` links, doubled
-  `version` increments.
-- **Fix sketch:** claim the transition atomically as the FIRST statement inside
-  the transaction — `const { count } = await tx.advisorEnterprise.updateMany({ where: { id, status: "PROVISIONING" }, data: { status: "ACTIVE" } }); if (count === 0) return skipped;` — then run the transfer in the same tx. Also stop
-  running the legacy sweep unconditionally alongside the queue drain.
-- **Probe:** `src/lib/enterprise/finalize-enterprise-provision.idempotency.test.ts`
-  (`it.fixme` — verified red: transfer called 2×; flip to `it` once the atomic
-  claim lands).
-
-#### Minor (firm-policy bypass): NEW_LEAD notifications leak lead PII past the `assessmentLeads` visibility toggle
-
-- **Where:** `src/app/(protected)/advisor/notifications/page.tsx:30` and the
-  header signals source (`src/lib/signals/queries.ts`). The `/advisor/leads`
-  route is gated by `leads/layout.tsx` →
-  `requireAdvisorAssessmentLeadsMemberAccess()`, but NEW_LEAD notifications
-  (which embed lead name/email/complexity/asset range) still render in the
-  member's notification feed and header dropdown regardless of the firm's
-  `advisorMemberAssessmentLeadsVisible=false` setting.
-- **Not cross-tenant:** the lead is assigned to that member's own advisor
-  profile — this is a firm-policy bypass, not tenant leakage.
-- **Fix sketch:** when `resolveEnterpriseMemberVisibilityContext(userId)` reports
-  `assessmentLeads` disabled, filter out `type === "NEW_LEAD"` rows and suppress
-  their header count.
-
-#### Minor (availability / anti-pattern): enterprise recommendations `[slug]` page swallows DB errors into `redirect("/signin")`
-
-- **Where:** `src/app/(protected)/advisor/enterprise/recommendations/[slug]/page.tsx:31-39`.
-  `loadEnterpriseMethodologyPillars(enterpriseId)` sits INSIDE the same
-  `try { requireAdvisorRole(); requireEnterpriseTeamManager(); ... } catch { redirect("/signin") }`
-  block, so a transient DB error bounces an authenticated enterprise manager to
-  the sign-in page (looks logged out) instead of surfacing a 500. The sibling
-  index page (`recommendations/page.tsx:16-26`) already keeps the data load
-  outside the try — this one drifted.
-- **Fix sketch:** move `loadEnterpriseMethodologyPillars` out of the auth
-  try/catch (match the index page); redirect authorization failures to
-  `/advisor`, not `/signin`.
-
-#### Minor/cosmetic (header injection): `x-tenant-force-light` not scrubbed in proxy
-
-- **Where:** `src/proxy.ts` `withAkiliPathname` deletes the branded headers
-  (`x-advisor-id`, `x-subdomain`, `x-branded-mode`, `x-tenant-path-prefix`) but
-  not `x-tenant-force-light`, which the proxy itself sets and the root layout
-  trusts. A client can send `x-tenant-force-light: true` on any request to force
-  tenant-light theme. Same trust boundary as the scrubbed branded headers;
-  impact is cosmetic today. Fix: add `h.delete("x-tenant-force-light")`.
-
-#### Minor (existence oracle): tenant "Not Available" page distinguishes pending-tenant from unknown-slug
-
-- **Where:** `src/proxy.ts` `resolveAdvisorTenantRoute` returns the custom
-  "Subdomain Not Available" 404 for a claimed-but-inactive/unverified tenant vs.
-  a generic 404 for an unknown slug — probing `/t/<guess>` (or the subdomain
-  host) reveals which firm slugs are registered/pending. Low impact. Fix: return
-  an indistinguishable response for both cases.
+All five findings from this pass are now fixed — see the Fixed section below
+(`e9f8b98`, `4213183`, `781e42d`, `73fca4e`). Baseline at start was Vitest
+**1900 pass / 1 fail / 5 skip** (single failure was stale-copy drift, also
+fixed). Playwright suite not re-run this pass (requires live preview target +
+env; see prior preview run above).
 
 ### Major (env): preview env missing `S3_INTAKE_BUCKET`
 
@@ -501,6 +429,41 @@ pass (requires live preview target + env; see prior preview run above).
 
 ## Fixed
 
+- **Concurrent enterprise-provision finalize duplicated firm methodology**
+  (`e9f8b98`, pass 2026-07-02). `finalizeEnterpriseProvision` read the
+  `PROVISIONING` guard outside the transaction while flipping to `ACTIVE`
+  inside it, so two overlapping finalize calls both ran the non-idempotent
+  `transferAdvisorAssetsToEnterprise` — duplicating `EnterpriseRecommendationRule`
+  rows and doubling advisor-rule `version` increments. Now claims the
+  `PROVISIONING → ACTIVE` transition atomically as the first tx statement
+  (`updateMany` with a status filter, bail on `count === 0`); transfer failure
+  rolls back for retry. The worker + cron routes run the legacy DB sweep only
+  when BullMQ isn't configured (the queue's job lock is otherwise the sole
+  concurrency guard). Regression: `finalize-enterprise-provision.idempotency.test.ts`
+  (flipped live — transfer runs once under overlap).
+- **NEW_LEAD notifications bypassed the `assessmentLeads` visibility toggle**
+  (`4213183`, pass 2026-07-02). The `/advisor/leads` route was gated, but
+  NEW_LEAD notifications (lead name/email/complexity/asset range) still rendered
+  in the notifications feed + dashboard unread count for enterprise members whose
+  firm set `advisorMemberAssessmentLeadsVisible=false`. New
+  `resolveHiddenAdvisorNotificationTypes(userId)` returns `[NEW_LEAD]` when the
+  toggle is off; `getAdvisorNotifications` filters it at the query and both
+  callers pass it. (Header signal feed already excluded NEW_LEAD.) Regression:
+  `advisor-member-visibility.test.ts` covers both toggle states + solo advisor.
+- **Enterprise recommendations `[slug]` page swallowed loader DB errors into
+  `redirect("/signin")`** (`781e42d`, pass 2026-07-02). `loadEnterpriseMethodologyPillars`
+  sat inside the auth `try/catch`, so a transient DB error bounced an
+  authenticated manager to sign-in. Moved the load outside the try to match the
+  sibling index page. Regression: `[slug]/page.test.tsx` asserts loader errors
+  propagate and auth failures still redirect.
+- **Tenant "Not Available" existence oracle + `x-tenant-force-light` scrub**
+  (`73fca4e`, pass 2026-07-02). `resolveAdvisorTenantRoute` now returns the same
+  404 "Subdomain Not Available" page for missing, inactive, and unverified
+  subdomains (previously an unknown slug fell through to the main app, letting a
+  prober tell registered-but-pending slugs from unknown ones). `x-tenant-force-light`
+  was already scrubbed in `withAkiliPathname` (landed upstream); added a
+  regression test asserting every proxy-asserted tenant header a client could
+  inject is stripped. Regression: `src/proxy.test.ts`.
 - **Stale email tagline assertion drift** (pass 2026-07-02). `1ac3f06`
   changed `AKILI_TAGLINES.email` to "Intelligent governance for professional
   firms and families" but `src/lib/email/platform-email-layout.test.ts` still
