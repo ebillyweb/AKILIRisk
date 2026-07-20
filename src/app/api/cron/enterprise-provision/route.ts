@@ -19,18 +19,25 @@ export async function GET(request: NextRequest) {
     const authError = verifyCronSecretRequest(request.headers.get("Authorization"));
     if (authError) return authError;
 
+    // Only sweep PROVISIONING rows directly when BullMQ isn't configured —
+    // otherwise the queue drain's job lock is the concurrency guard and a
+    // parallel sweep would bypass it (double-finalize).
+    const queueEnabled = isEnterpriseProvisionQueueEnabled();
     let queue: { processed: number; failed: number } | null = null;
-    if (isEnterpriseProvisionQueueEnabled()) {
+    let legacy: Awaited<
+      ReturnType<typeof processPendingEnterpriseProvisions>
+    > | null = null;
+    if (queueEnabled) {
       queue = await drainEnterpriseProvisionQueue({ maxJobs: 10, maxDurationMs: 240_000 });
+    } else {
+      legacy = await processPendingEnterpriseProvisions({ limit: 10 });
     }
-
-    const legacy = await processPendingEnterpriseProvisions({ limit: 10 });
 
     return NextResponse.json({
       success: true,
-      mode: isEnterpriseProvisionQueueEnabled() ? "queue" : "legacy",
+      mode: queueEnabled ? "queue" : "legacy",
       queue,
-      ...legacy,
+      ...(legacy ?? {}),
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

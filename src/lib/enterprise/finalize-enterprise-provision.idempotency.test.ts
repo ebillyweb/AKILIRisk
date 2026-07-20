@@ -12,12 +12,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * advisor-rule versions — silently duplicating firm methodology.
  *
  * Correct behavior: the second concurrent finalize is a no-op (atomic claim).
- * This test asserts the transfer runs exactly ONCE. It is expected to FAIL
- * against the current non-atomic guard (verified red: transfer called 2x), so it
- * is parked with `it.skip` — Vitest's equivalent of a Playwright `test.fixme`.
- * Flip to `it` once finalize claims the PROVISIONING -> ACTIVE transition
- * atomically (e.g. updateMany with a status filter as the first statement inside
- * the transaction).
+ * This test asserts the transfer runs exactly ONCE. finalize now claims the
+ * PROVISIONING -> ACTIVE transition atomically (updateMany with a status filter
+ * as the first statement inside the transaction), so the losing concurrent call
+ * gets count 0 and skips the transfer.
  */
 
 const ENTERPRISE_ID = "ent-race-1";
@@ -102,8 +100,7 @@ describe("finalizeEnterpriseProvision — concurrent idempotency", () => {
     );
   });
 
-  // Parked (fixme): red against current non-atomic guard — see file header.
-  it.skip(
+  it(
     "runs the asset transfer exactly once when two finalize calls overlap",
     async () => {
       // Both reads happen before either transaction commits — models the race.

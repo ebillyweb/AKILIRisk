@@ -86,21 +86,36 @@ export async function finalizeEnterpriseProvision(
   }
 
   try {
-    await prisma.$transaction(
+    const claimed = await prisma.$transaction(
       async (tx) => {
+        // Atomically claim the PROVISIONING -> ACTIVE transition as the first
+        // statement. A concurrent finalize (BullMQ drain racing the legacy
+        // sweep, or the after() trigger racing the cron) blocks on the row
+        // lock, then sees status already ACTIVE and gets count 0 — so only the
+        // winner runs the non-idempotent asset transfer. On transfer failure
+        // the whole tx rolls back, reverting status to PROVISIONING for retry.
+        const claim = await tx.advisorEnterprise.updateMany({
+          where: { id: enterpriseId, status: "PROVISIONING" },
+          data: { status: "ACTIVE" },
+        });
+        if (claim.count === 0) {
+          return false;
+        }
+
         await transferAdvisorAssetsToEnterprise(
           tx,
           owner.advisorProfileId!,
           enterpriseId,
         );
 
-        await tx.advisorEnterprise.update({
-          where: { id: enterpriseId },
-          data: { status: "ACTIVE" },
-        });
+        return true;
       },
       { timeout: PROVISION_TRANSACTION_TIMEOUT_MS },
     );
+
+    if (!claimed) {
+      return { success: true, enterpriseId, skipped: true };
+    }
 
     const soloStripeSubscriptionId = await resolveOwnerStripeSubscriptionId(owner.userId);
     await cancelStripeSubscriptionBestEffort(soloStripeSubscriptionId);
