@@ -38,7 +38,7 @@ import { buildSignInHref } from "@/lib/auth/sign-in-routes";
  *  layout would otherwise read them as if the proxy had asserted them —
  *  letting any caller render `/branded/...` for any tenant they name.
  *  Stripping here closes that injection vector. */
-function withAkiliPathname(req: NextRequest): Headers {
+export function withAkiliPathname(req: NextRequest): Headers {
   const h = new Headers(req.headers);
   h.set("x-akili-pathname", req.nextUrl.pathname);
   h.delete("x-advisor-id");
@@ -82,7 +82,19 @@ type TenantRouteResolution =
   | { type: "short-circuit"; response: NextResponse }
   | { type: "pass-through"; headers: Headers };
 
-async function resolveAdvisorTenantRoute(
+/**
+ * Renders the tenant "Not Available" page. Returned identically for a missing,
+ * inactive, or unverified subdomain so the response can't be used as an oracle
+ * to distinguish "no such tenant" from "tenant registered but not yet live".
+ */
+function tenantSubdomainNotAvailableResponse(): NextResponse {
+  return new NextResponse(
+    `<!DOCTYPE html><html><head><title>Subdomain Not Available</title></head><body style="font-family: system-ui; text-align: center; padding: 2rem;"><h1>Subdomain Not Available</h1><p>This subdomain is not currently active.</p></body></html>`,
+    { status: 404, headers: { 'Content-Type': 'text/html' } },
+  );
+}
+
+export async function resolveAdvisorTenantRoute(
   req: NextRequest,
   subdomain: string,
   effectivePathname: string,
@@ -125,15 +137,14 @@ async function resolveAdvisorTenantRoute(
       };
     }
 
-    if (advisorSubdomain) {
-      return {
-        type: "short-circuit",
-        response: new NextResponse(
-          `<!DOCTYPE html><html><head><title>Subdomain Not Available</title></head><body style="font-family: system-ui; text-align: center; padding: 2rem;"><h1>Subdomain Not Available</h1><p>This subdomain is not currently active.</p></body></html>`,
-          { status: 404, headers: { 'Content-Type': 'text/html' } }
-        ),
-      };
-    }
+    // Row missing, inactive, or unverified all render the SAME "Not Available"
+    // page: the response must not reveal whether the slug is a registered but
+    // not-yet-live tenant vs. an unknown slug (existence oracle). Only an actual
+    // resolution error falls through to null (main-app handling).
+    return {
+      type: "short-circuit",
+      response: tenantSubdomainNotAvailableResponse(),
+    };
   } catch (error) {
     console.error('Subdomain resolution error:', error);
   }
