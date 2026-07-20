@@ -8,6 +8,12 @@
 
 import "./load-repo-env";
 import { prisma } from "@/lib/db";
+import { safeDecryptUserEmail } from "@/lib/auth/user-email-crypto";
+
+async function emailFor(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { emailCiphertext: true } });
+  return u ? safeDecryptUserEmail(u.emailCiphertext) : "(user not found)";
+}
 
 const assessmentId = process.argv[2] ?? process.env.ASSESSMENT_ID;
 
@@ -30,7 +36,8 @@ async function main(): Promise<void> {
 
   console.log(`\nAssessment ${assessmentId}\n${"─".repeat(64)}`);
   console.log(`status: ${assessment.status}   recommendations: ${recCount}`);
-  console.log(`\nclientId (for the Guidance URL): ${assessment.userId}`);
+  console.log(`\nclient sign-in (magic link): ${await emailFor(assessment.userId)}`);
+  console.log(`clientId (for the Guidance URL): ${assessment.userId}`);
   console.log(`Guidance page: /advisor/clients/${assessment.userId}/guidance`);
 
   const assignments = await prisma.clientAdvisorAssignment.findMany({
@@ -40,12 +47,14 @@ async function main(): Promise<void> {
 
   console.log(`\nActive advisor assignment(s): ${assignments.length}`);
   for (const a of assignments) {
-    console.log(`  • ${a.advisor.firmName ?? "(no firm name)"}  advisorUserId=${a.advisor.userId}`);
+    console.log(
+      `  • ${a.advisor.firmName ?? "(no firm name)"}  → sign in as: ${await emailFor(a.advisor.userId)}`,
+    );
   }
   if (assignments.length === 0) {
     console.log("  ⚠️  No active advisor — no advisor can open this client's Guidance page.");
   } else {
-    console.log("\nSign in as the advisor whose account is that advisorUserId, then open the Guidance URL above.");
+    console.log("\nSign in as that advisor (password Testpass1 for test advisors), then open the Guidance URL.");
   }
 }
 
