@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
 
 import { getClientDetailData } from "@/lib/actions/pipeline-actions";
 import { requireAdvisorRole } from "@/lib/advisor/auth";
@@ -10,12 +9,22 @@ import {
   resolveEnterpriseMemberVisibilityContext,
 } from "@/lib/enterprise/advisor-member-visibility";
 import { ClientDetailView } from "@/components/pipeline/ClientDetailView";
+import { PipelineClientUnavailable } from "@/components/pipeline/PipelineClientUnavailable";
 import ClientDetailLoading from "./loading";
 
 interface ClientDetailPageProps {
   params: Promise<{
     clientId: string;
   }>;
+}
+
+function isPipelineAccessMiss(error: string | undefined): boolean {
+  if (!error) return false;
+  const normalized = error.toLowerCase();
+  return (
+    normalized.includes("not found") ||
+    normalized.includes("not assigned")
+  );
 }
 
 async function ClientDetailContent({ clientId }: { clientId: string }) {
@@ -25,10 +34,10 @@ async function ClientDetailContent({ clientId }: { clientId: string }) {
   ]);
 
   if (!result.success) {
-    if (result.error?.includes('not found')) {
-      notFound();
+    if (isPipelineAccessMiss(result.error)) {
+      return <PipelineClientUnavailable clientId={clientId} />;
     }
-    throw new Error(result.error || 'Failed to load client data');
+    throw new Error(result.error || "Failed to load client data");
   }
 
   const visibilityContext = await resolveEnterpriseMemberVisibilityContext(userId);

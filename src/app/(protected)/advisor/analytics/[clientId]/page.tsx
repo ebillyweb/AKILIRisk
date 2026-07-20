@@ -4,6 +4,9 @@ import { ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { getFamilyAnalyticsData } from '@/lib/actions/advisor-actions';
+import { getAdvisorSubscriptionTier } from '@/lib/advisor/subscription-tier.server';
+import { auth } from '@/lib/auth';
+import { resolveAdvisorDashboardHref } from '@/lib/billing/tier-features';
 import { GovernanceTrendChart } from '@/components/analytics/GovernanceTrendChart';
 import { CategoryBreakdownChart } from '@/components/analytics/CategoryBreakdownChart';
 import { AssessmentComparisonView } from '@/components/analytics/AssessmentComparisonView';
@@ -83,13 +86,18 @@ async function AnalyticsContent({ clientId }: { clientId: string }) {
 
 export default async function AnalyticsPage({ params }: AnalyticsPageProps) {
   const { clientId } = await params;
+  const session = await auth();
+  const subscriptionTier = session?.user?.id
+    ? await getAdvisorSubscriptionTier(session.user.id)
+    : "ESSENTIALS";
+  const dashboardHref = resolveAdvisorDashboardHref(subscriptionTier);
 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero section */}
       <div className="mb-8">
         <Link
-          href="/advisor/dashboard"
+          href={dashboardHref}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeft className="h-4 w-4" />

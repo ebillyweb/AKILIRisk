@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 
 import { setClientAssignmentStatus } from "@/lib/actions/advisor-client-assignment-actions";
 import { Button } from "@/components/ui/button";
+import { SIDEBAR_ACTION_BTN } from "@/components/pipeline/sidebar-action-button";
 import type { AssignmentStatus } from "@prisma/client";
 
 type Props = {
@@ -49,18 +50,18 @@ export function ClientWorkflowStatusControls({ clientId, status }: Props) {
     <Button
       type="button"
       variant={isActive ? "destructive" : "default"}
-      className="w-full justify-start text-xs sm:text-sm"
+      className={SIDEBAR_ACTION_BTN}
       disabled={pending}
       onClick={() => run(isActive ? "INACTIVE" : "ACTIVE")}
     >
       {isActive ? (
         <>
-          <Archive className="mr-2 h-4 w-4" />
+          <Archive className="h-3.5 w-3.5 shrink-0" />
           End workflow
         </>
       ) : (
         <>
-          <ArchiveRestore className="mr-2 h-4 w-4" />
+          <ArchiveRestore className="h-3.5 w-3.5 shrink-0" />
           Restore to pipeline
         </>
       )}

@@ -1,7 +1,9 @@
-import { Lock } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Lock } from "lucide-react";
 import type { SubscriptionTier } from "@prisma/client";
 
 import {
+  resolveAdvisorDashboardHref,
   TIER_FEATURE_COPY,
   tierUpgradeMessage,
   type AdvisorTierFeatureKey,
@@ -23,6 +25,7 @@ export function TierFeatureLockedPage({
   currentTier: SubscriptionTier;
 }) {
   const copy = TIER_FEATURE_COPY[feature];
+  const dashboardHref = resolveAdvisorDashboardHref(currentTier);
 
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center">
@@ -42,7 +45,16 @@ export function TierFeatureLockedPage({
           <p className="text-sm text-muted-foreground">
             {tierUpgradeMessage(feature, currentTier)}
           </p>
-          <TierFeatureUpgradeButton feature={feature} className="w-full sm:w-auto" />
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <TierFeatureUpgradeButton feature={feature} className="w-full sm:w-auto" />
+            <Link
+              href={dashboardHref}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              Back to Dashboard
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

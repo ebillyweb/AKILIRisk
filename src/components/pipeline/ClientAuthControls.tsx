@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SIDEBAR_ACTION_BTN_CENTER } from "@/components/pipeline/sidebar-action-button";
 
 interface ClientAuthControlsProps {
   clientId: string;
@@ -122,7 +123,7 @@ export function ClientAuthControls({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="px-4 pb-3 sm:px-5">
         <CardTitle className="text-base">Client sign-in</CardTitle>
         <p className="text-sm text-muted-foreground font-normal">
           {pseudonymousLabeling
@@ -130,7 +131,7 @@ export function ClientAuthControls({
             : "Saving an email change updates the account only. Send a sign-in link separately when the client should receive a magic-link email."}
         </p>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 px-4 sm:px-5">
         {/* Email reassignment — stacked for narrow sidebar column */}
         <div className="space-y-3">
           <div className="space-y-1">
@@ -154,7 +155,7 @@ export function ClientAuthControls({
           />
           <Button
             type="button"
-            className="w-full justify-center"
+            className={SIDEBAR_ACTION_BTN_CENTER}
             onClick={submitEmail}
             disabled={emailPending || reissuePending || emailDraft.trim() === ""}
           >
@@ -175,11 +176,11 @@ export function ClientAuthControls({
           <Button
             type="button"
             variant="outline"
-            className="w-full justify-center"
+            className={SIDEBAR_ACTION_BTN_CENTER}
             onClick={submitReissue}
             disabled={emailPending || reissuePending}
           >
-            <Send className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+            <Send className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {reissuePending ? "Sending…" : "Send sign-in link"}
           </Button>
           {reissueMessage ? <AuthFeedback message={reissueMessage} /> : null}

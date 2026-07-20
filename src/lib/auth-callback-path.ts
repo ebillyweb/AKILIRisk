@@ -9,7 +9,7 @@ import { stripTenantPathPrefix } from "@/lib/client/tenant-path-prefix-client";
 /** Paths any authenticated role may return to after sign-in / MFA. */
 const POST_SIGN_IN_NEUTRAL_PREFIXES = [
   "/change-password",
-  "/mfa/",
+  "/mfa",
   "/enterprise/join",
 ] as const;
 
@@ -79,6 +79,11 @@ export function isPostSignInPathAllowedForRole(
 /**
  * Role-aware post-credentials destination. Honors callbackUrl only when the
  * signed-in role may access that workspace; strips stale `error=unauthorized`.
+ *
+ * Platform admins (`ADMIN` / `SUPER_ADMIN`) always land in the admin workspace
+ * after sign-in. Sticky `/advisor/*` callbacks (e.g. session expiry on pipeline)
+ * must not override that home — they can still open `/advisor` after login.
+ * `/admin/*` deep links and neutral auth utility paths are still honored.
  */
 export function resolvePostSignInPath(
   callbackUrl: string | null | undefined,
@@ -97,6 +102,16 @@ export function resolvePostSignInPath(
   const cleaned = stripSpuriousCallbackQuery(callbackUrl);
   if (!isPostSignInPathAllowedForRole(cleaned, role)) {
     return fallback;
+  }
+
+  if (isPlatformAdminRole(role)) {
+    const pathOnly = stripTenantPathPrefix(cleaned.split("?")[0] ?? cleaned);
+    const isNeutral = POST_SIGN_IN_NEUTRAL_PREFIXES.some((prefix) =>
+      matchesPathPrefix(pathOnly, prefix),
+    );
+    if (!pathOnly.startsWith("/admin") && !isNeutral) {
+      return fallback;
+    }
   }
 
   return cleaned;

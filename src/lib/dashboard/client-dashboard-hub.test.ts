@@ -69,6 +69,29 @@ describe("buildClientDashboardHeadline", () => {
       "A tailored governance assessment for your household.",
     );
   });
+
+  it("explains complete assessments waiting on preview unlock", () => {
+    const copy = buildClientDashboardHeadline({
+      ...baseInput,
+      assessmentInProgress: false,
+      assessmentComplete: true,
+      canViewRiskPreview: false,
+      canViewSummary: false,
+    });
+    expect(copy.headline).toMatch(/assessment is complete/i);
+    expect(copy.subheadline).toMatch(/risk preview/i);
+  });
+
+  it("directs scored clients to open risk preview", () => {
+    const copy = buildClientDashboardHeadline({
+      ...baseInput,
+      assessmentInProgress: false,
+      assessmentComplete: true,
+      canViewRiskPreview: true,
+    });
+    expect(copy.headline).toMatch(/preview is available/i);
+    expect(copy.subheadline).toMatch(/open risk preview/i);
+  });
 });
 
 describe("buildClientDashboardJourney", () => {

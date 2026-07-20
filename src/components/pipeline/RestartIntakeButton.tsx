@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 
 import { restartClientIntake } from "@/lib/actions/advisor-intake-restart-actions";
 import { Button } from "@/components/ui/button";
+import { SIDEBAR_ACTION_BTN } from "@/components/pipeline/sidebar-action-button";
 
 type Props = {
   clientId: string;
@@ -46,11 +47,11 @@ export function RestartIntakeButton({
       <Button
         type="button"
         variant="outline"
-        className="w-full justify-start"
+        className={SIDEBAR_ACTION_BTN}
         disabled={pending || disabled}
         onClick={handleClick}
       >
-        <RotateCcw className="mr-2 h-4 w-4" />
+        <RotateCcw className="h-3.5 w-3.5 shrink-0" />
         {pending ? "Restarting intake…" : "Restart intake"}
       </Button>
       {disabled && disabledReason ? (

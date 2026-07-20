@@ -20,6 +20,8 @@ import { addDocumentRequirement, removeDocumentRequirement } from "@/lib/actions
 import type { ClientDetail } from "@/lib/pipeline/types";
 import { DocumentUpload } from "@/components/documents/DocumentUpload";
 import { DocumentDownloadButton } from "@/components/documents/DocumentDownloadButton";
+import { SIDEBAR_ACTION_BTN_CENTER } from "@/components/pipeline/sidebar-action-button";
+import { cn } from "@/lib/utils";
 
 interface DocumentRequirementsProps {
   clientId: string;
@@ -117,7 +119,7 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
 
   return (
     <Card>
-      <CardHeader className="space-y-3">
+      <CardHeader className="space-y-3 px-4 sm:px-5">
         <div className="space-y-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <FileText className="h-5 w-5 shrink-0" />
@@ -141,7 +143,7 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
         )}
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 sm:px-5">
         {/* Success/Error Messages */}
         {successMessage && (
           <div className="p-3 bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg">
@@ -166,11 +168,11 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
             {requirements.map((requirement) => (
               <div
                 key={requirement.id}
-                className="space-y-3 rounded-lg border p-4"
+                className="space-y-3 rounded-lg border p-3"
               >
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1 space-y-2">
-                    <h4 className="font-medium leading-snug break-words">
+                    <h4 className="text-sm font-medium leading-snug break-words">
                       {requirement.name}
                     </h4>
                     <div className="flex flex-wrap gap-1.5">
@@ -204,7 +206,7 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
                 </div>
 
                 {requirement.description && (
-                  <p className="text-sm leading-snug text-muted-foreground">
+                  <p className="text-xs leading-snug text-muted-foreground">
                     {requirement.description}
                   </p>
                 )}
@@ -220,12 +222,12 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
                 </div>
 
                 {requirement.fulfilled && requirement.fileName && (
-                  <div className="rounded-md bg-muted/40 px-3 py-2 text-sm">
+                  <div className="rounded-md bg-muted/40 px-3 py-2 text-xs">
                     <p className="truncate font-medium text-foreground">
                       {requirement.fileName}
                     </p>
                     {requirement.fileSize != null && requirement.fileSize > 0 && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
                         {Math.round(requirement.fileSize / 1024)} KB
                       </p>
                     )}
@@ -235,7 +237,7 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
                 {requirement.fulfilled ? (
                   <DocumentDownloadButton
                     requirementId={requirement.id}
-                    className="w-full justify-center"
+                    className={cn(SIDEBAR_ACTION_BTN_CENTER, "[&_span]:ml-0")}
                   />
                 ) : (
                   <DocumentUpload
@@ -288,7 +290,7 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
                     setValue("required", checked === true, { shouldValidate: true })
                   }
                 />
-                <Label htmlFor="required" className="font-normal cursor-pointer">
+                <Label htmlFor="required" className="font-normal cursor-pointer text-xs sm:text-sm">
                   Required for client completion
                 </Label>
               </div>
@@ -297,9 +299,9 @@ export function DocumentRequirements({ clientId, requirements }: DocumentRequire
             <Button
               type="submit"
               disabled={!isValid || isSubmitting}
-              className="w-full"
+              className={SIDEBAR_ACTION_BTN_CENTER}
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="h-3.5 w-3.5 shrink-0" />
               {isSubmitting ? "Adding..." : "Add Requirement"}
             </Button>
           </form>

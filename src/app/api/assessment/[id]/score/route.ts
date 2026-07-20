@@ -532,7 +532,11 @@ export async function POST(
           includedPillars: updatedAssessment.includedPillars,
           catalog,
         })
-      : { canViewSummary: false, allPillarsComplete: false };
+      : {
+          canViewSummary: false,
+          canViewRiskPreview: false,
+          allPillarsComplete: false,
+        };
 
     const responseData: Record<string, unknown> = {
       score: pillarScore.saved.score,
@@ -542,6 +546,7 @@ export async function POST(
       pillarNarratives,
       completedAt: pillarScore.saved.calculatedAt,
       allPillarsScored: pillarScore.allPillarsScored,
+      canViewRiskPreview: summaryAccess.canViewRiskPreview,
       canViewSummary: summaryAccess.canViewSummary,
     };
 

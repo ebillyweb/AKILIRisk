@@ -55,6 +55,8 @@ export type PipelineClient = {
     score: number | null;
     version: number | null;
     answersChangedAfterCompleteAt: Date | null;
+    /** Deliverable phase — PREVIEW until advisor publishes PROFILE. */
+    deliverablePhase: DeliverablePhase;
   } | null;
   // Document tracking
   documents: {

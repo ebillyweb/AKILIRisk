@@ -28,6 +28,7 @@ import {
   isNarrowAssessmentScope,
 } from "@/lib/assessment/included-pillars";
 import { scopedPillarCatalog } from "@/lib/assessment/pillar-registry";
+import { resolvePillarCardStatus } from "@/lib/assessment/pillar-card-status";
 import { usePlatformPillarCatalog } from "@/lib/hooks/usePlatformPillarCatalog";
 import type { RiskLevel } from "@/lib/assessment/types";
 
@@ -99,6 +100,7 @@ function AssessmentHubPageContent() {
         advisorPublishedProfile: boolean;
         includedPillars: string[];
         actionPlanEnabled: boolean;
+        assessmentId: string | null;
       }>;
     },
     staleTime: 30_000,
@@ -114,15 +116,29 @@ function AssessmentHubPageContent() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Keep the Zustand assessmentId aligned with the server's latest assessment.
+  // Without this, cards stay "Not Started" when localStorage has no/stale id
+  // while summary-access (and the next-step banner) correctly report completion.
+  useEffect(() => {
+    if (!persistHydrated) return;
+    const serverId = summaryAccess?.assessmentId;
+    if (!serverId || store.assessmentId === serverId) return;
+
+    store.setAssessmentId(serverId);
+    store.setHydrated(false);
+  }, [persistHydrated, store, summaryAccess?.assessmentId]);
+
   useEffect(() => {
     if (!persistHydrated) return;
 
     if (assessmentData && !store.isHydrated) {
-      store.loadFromServer(assessmentData);
+      store.loadFromServer(assessmentData, { preferServer: true });
       store.setHydrated(true);
     }
 
     if (!store.assessmentId && !store.isHydrated) {
+      // Wait for summary-access when it may still supply the latest assessmentId.
+      if (summaryAccess === undefined) return;
       store.setHydrated(true);
     }
 
@@ -132,7 +148,13 @@ function AssessmentHubPageContent() {
 
     const t = setTimeout(() => setIsInitializing(false), 0);
     return () => clearTimeout(t);
-  }, [assessmentData, assessmentFetchError, persistHydrated, store]);
+  }, [
+    assessmentData,
+    assessmentFetchError,
+    persistHydrated,
+    store,
+    summaryAccess,
+  ]);
 
   const LOADING_MAX_MS = 15_000;
   useEffect(() => {
@@ -164,7 +186,11 @@ function AssessmentHubPageContent() {
   };
 
   const ensureAssessmentAndGo = (pillarSlug: string, questionIndex: number) => {
-    if (store.assessmentId) {
+    const existingId = store.assessmentId ?? summaryAccess?.assessmentId ?? null;
+    if (existingId) {
+      if (store.assessmentId !== existingId) {
+        store.setAssessmentId(existingId);
+      }
       navigateToPillar(pillarSlug, questionIndex);
       return;
     }
@@ -237,17 +263,17 @@ function AssessmentHubPageContent() {
   const pillarStats = assessmentPillars.map(({ pillar, questions }) => {
     const pillarSlug = pillar.slug;
 
-    const getPillarStatus = (): "not-started" | "in-progress" | "completed" => {
-      if (!store.assessmentId) return "not-started";
-      if (scoredPillarIds.has(pillarSlug)) return "completed";
+    const answeredQuestions = questions.filter((q) => {
+      const answer = store.answers[q.id];
+      return answer !== undefined && answer !== null;
+    });
 
-      const answeredQuestions = questions.filter((q) => {
-        const answer = store.answers[q.id];
-        return answer !== undefined && answer !== null;
-      });
-
-      return answeredQuestions.length > 0 ? "in-progress" : "not-started";
-    };
+    const status = resolvePillarCardStatus({
+      pillarSlug,
+      assessmentId: store.assessmentId,
+      scoredPillarIds,
+      hasAnswers: answeredQuestions.length > 0,
+    });
 
     const visibleQuestions = getVisibleQuestions(store.answers, questions, profile);
     const questionsAnswered = visibleQuestions.filter((q) => {
@@ -262,7 +288,7 @@ function AssessmentHubPageContent() {
 
     return {
       pillar,
-      status: getPillarStatus(),
+      status,
       questionsAnswered,
       totalQuestions,
       estimatedDuration: pillar.estimatedMinutes,
@@ -279,12 +305,16 @@ function AssessmentHubPageContent() {
 
   const resumePillar = pillarStats.find((p) => p.status === "in-progress");
   const nextPillar = pillarStats.find((p) => p.status === "not-started");
+  // Only trust completion when we have a loaded assessmentId — never invent
+  // card/banner state from summary-access alone.
   const allPillarsComplete =
-    summaryAccess?.allPillarsComplete ??
-    (completedPillarSlugs.length === includedPillars.length &&
-      includedPillars.every((id) =>
-        completedPillarSlugs.includes(normalizePillarSlug(id)),
-      ));
+    !!store.assessmentId &&
+    (summaryAccess?.allPillarsComplete ??
+      (completedPillarSlugs.length === includedPillars.length &&
+        includedPillars.length > 0 &&
+        includedPillars.every((id) =>
+          completedPillarSlugs.includes(normalizePillarSlug(id)),
+        )));
 
   const progressPillars = useMemo(
     () =>
@@ -295,10 +325,20 @@ function AssessmentHubPageContent() {
     [catalog, includedPillars],
   );
 
+  const serverAssessmentId = summaryAccess?.assessmentId ?? null;
+  const awaitingAssessmentIdSync =
+    !!serverAssessmentId && store.assessmentId !== serverAssessmentId;
+  const missingAssessmentId =
+    summaryAccess !== undefined &&
+    !store.assessmentId &&
+    !serverAssessmentId &&
+    summaryAccess.allPillarsComplete;
+
   if (
     isInitializing ||
     catalogLoading ||
     questionsLoading ||
+    awaitingAssessmentIdSync ||
     (store.assessmentId && !store.isHydrated)
   ) {
     return (
@@ -332,6 +372,28 @@ function AssessmentHubPageContent() {
           </div>
         </div>
       </section>
+
+      {missingAssessmentId ? (
+        <Alert variant="destructive" data-testid="assessment-missing-id-error">
+          <AlertTitle className="text-lg font-semibold">
+            Assessment ID missing
+          </AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>
+              Your risk domains appear scored on the server, but this session
+              has no assessment ID, so domain status cannot be loaded reliably.
+              Refresh the page. If this continues, contact your advisor.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.refresh()}
+            >
+              Refresh
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {scopeExcluded ? (
         <Alert variant="warning">
@@ -390,6 +452,7 @@ function AssessmentHubPageContent() {
         />
       )}
 
+      {missingAssessmentId ? null : (
       <section className="space-y-4">
         <div className="space-y-2">
           <p className="editorial-kicker">Risk domains</p>
@@ -431,9 +494,11 @@ function AssessmentHubPageContent() {
                       ? narrowScope
                         ? `All ${includedPillars.length} selected risk domains are scored. Review your results and action plan, or download your report.`
                         : "All risk domains are scored. Review your results and action plan, or download your report."
-                      : narrowScope
-                        ? `All ${includedPillars.length} selected risk domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it.`
-                        : "All risk domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."}
+                      : summaryAccess?.canViewRiskPreview
+                        ? narrowScope
+                          ? `All ${includedPillars.length} selected risk domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it.`
+                          : "All risk domains are scored. View your Risk Preview now. Your full Risk Profile and action plan will be available once your advisor publishes it."
+                        : "All selected risk domains are scored. Your Risk Preview is almost ready—refresh in a moment, or check your dashboard while scoring finishes."}
                   </p>
                 ) : resumePillar ? (
                   <p className="text-base leading-7 text-muted-foreground">
@@ -473,14 +538,9 @@ function AssessmentHubPageContent() {
                     ) : (
                       <Button
                         size="lg"
-                        disabled
-                        title={
-                          narrowScope
-                            ? `Complete all ${includedPillars.length} selected risk domains to continue`
-                            : "Complete all risk domains to continue"
-                        }
+                        onClick={() => router.push("/assessment/risk-preview")}
                       >
-                        View risk preview
+                        Open risk preview
                       </Button>
                     )}
                     <Button variant="outline" size="lg" onClick={() => router.push("/dashboard")}>
@@ -523,6 +583,7 @@ function AssessmentHubPageContent() {
           </Card>
         </div>
       </section>
+      )}
     </div>
   );
 }

@@ -55,6 +55,7 @@ vi.mock("@/lib/facilitated/assessment-access", () => ({
 vi.mock("@/lib/client/assessment-summary-gate", () => ({
   evaluateClientAssessmentSummaryAccess: vi.fn(() => ({
     canViewSummary: true,
+    canViewRiskPreview: true,
     allPillarsComplete: true,
   })),
 }));

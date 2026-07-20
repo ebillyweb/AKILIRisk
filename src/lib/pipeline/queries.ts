@@ -405,6 +405,7 @@ export async function getClientPipeline(
         score: latestAssessment.scores[0]?.score || null,
         version: latestAssessment.version,
         answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
+        deliverablePhase: latestAssessment.deliverablePhase,
       } : null,
       documents: {
         required: docCounts.required,
@@ -775,6 +776,7 @@ export async function getClientDetail(
       score: latestAssessment.scores[0]?.score || null,
       version: latestAssessment.version,
       answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
+      deliverablePhase: latestAssessment.deliverablePhase,
     } : null,
     documents: {
       required: docCounts.required,

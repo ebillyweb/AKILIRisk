@@ -45,7 +45,24 @@ describe("resolvePostSignInPath", () => {
 
   it("allows platform admins to return to admin destinations", () => {
     expect(resolvePostSignInPath("/admin/leads", "ADMIN")).toBe("/admin/leads");
-    expect(resolvePostSignInPath("/advisor", "SUPER_ADMIN")).toBe("/advisor");
+    expect(resolvePostSignInPath("/admin", "SUPER_ADMIN")).toBe("/admin");
+  });
+
+  it("sends platform admins to admin home despite sticky advisor callbacks", () => {
+    expect(resolvePostSignInPath("/advisor", "SUPER_ADMIN")).toBe("/admin");
+    expect(resolvePostSignInPath("/advisor/pipeline", "ADMIN")).toBe("/admin");
+    expect(
+      resolvePostSignInPath("/advisor/pipeline?awaitingReview=1", "SUPER_ADMIN"),
+    ).toBe("/admin");
+  });
+
+  it("still allows platform admins through neutral auth utility callbacks", () => {
+    expect(resolvePostSignInPath("/mfa/verify", "SUPER_ADMIN")).toBe(
+      "/mfa/verify",
+    );
+    expect(resolvePostSignInPath("/change-password", "ADMIN")).toBe(
+      "/change-password",
+    );
   });
 
   it("blocks clients from staff workspaces", () => {

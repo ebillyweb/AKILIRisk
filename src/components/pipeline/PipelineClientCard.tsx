@@ -20,6 +20,8 @@ import {
   formatPipelineClientRowTitle,
   resolveAdvisorClientPipelineLabels,
 } from "@/lib/pipeline/client-display";
+import { resolveAdvisorAssessmentNextStep } from "@/lib/pipeline/advisor-next-step";
+import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
 import type { PipelineClient } from "@/lib/pipeline/types";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +58,17 @@ export function PipelineClientCard({
     client.awaitingIntakeReview && client.intakeReviewInterviewId
       ? `/advisor/review/${client.intakeReviewInterviewId}`
       : null;
+  const assessmentNextStep = resolveAdvisorAssessmentNextStep({
+    clientId: client.id,
+    assessmentId: client.assessment?.id,
+    assessmentStatus: client.assessment?.status,
+    deliverablePhase: client.assessment?.deliverablePhase,
+    documentsNeeded: client.documentsNeeded,
+  });
+  const needsProfilePublish =
+    client.assessment?.status === "COMPLETED" &&
+    client.assessment.deliverablePhase != null &&
+    !isDeliverableProfilePublished(client.assessment.deliverablePhase);
 
   return (
     <article
@@ -94,6 +107,14 @@ export function PipelineClientCard({
               {client.staleScores ? (
                 <Badge variant="warning" className="text-[0.65rem]">
                   {STALE_SCORES_COPY.tableBadge}
+                </Badge>
+              ) : null}
+              {needsProfilePublish ? (
+                <Badge
+                  variant="outline"
+                  className="border-brand/30 bg-brand/10 text-[0.65rem] text-foreground"
+                >
+                  Publish profile
                 </Badge>
               ) : null}
             </div>
@@ -137,7 +158,18 @@ export function PipelineClientCard({
         </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center self-start lg:self-center">
+        <div className="flex shrink-0 items-center gap-2 self-start lg:self-center">
+          {needsProfilePublish ? (
+            <Button asChild size="sm" className="hidden sm:inline-flex">
+              <Link href={`/advisor/pipeline/${client.id}/report`}>
+                Publish profile
+              </Link>
+            </Button>
+          ) : reviewHref ? (
+            <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+              <Link href={reviewHref}>Review intake</Link>
+            </Button>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -154,6 +186,20 @@ export function PipelineClientCard({
               <DropdownMenuItem asChild>
                 <Link href={`/advisor/pipeline/${client.id}`}>View client</Link>
               </DropdownMenuItem>
+              {needsProfilePublish ? (
+                <DropdownMenuItem asChild>
+                  <Link href={`/advisor/pipeline/${client.id}/report`}>
+                    Publish Risk Profile
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
+              {assessmentNextStep &&
+              assessmentNextStep.href !== `/advisor/pipeline/${client.id}` &&
+              !needsProfilePublish ? (
+                <DropdownMenuItem asChild>
+                  <Link href={assessmentNextStep.href}>{assessmentNextStep.ctaLabel}</Link>
+                </DropdownMenuItem>
+              ) : null}
               {reviewHref ? (
                 <DropdownMenuItem asChild>
                   <Link href={reviewHref}>Review intake</Link>

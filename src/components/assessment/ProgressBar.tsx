@@ -151,7 +151,7 @@ export function OverallProgress({
               key={pillar.id}
               title={pillar.label}
               className={cn(
-                "truncate",
+                "whitespace-normal break-words leading-tight",
                 isCurrent && !isCompleted && "font-medium text-foreground",
                 isCompleted && "text-emerald-600 dark:text-emerald-400"
               )}

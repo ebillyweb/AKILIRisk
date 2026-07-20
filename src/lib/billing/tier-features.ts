@@ -105,3 +105,18 @@ export function advisorTierFeatureBillingHref(
 ): string {
   return advisorBillingDeepLink(minimumTierForFeature(feature), billingCycle);
 }
+
+/**
+ * Home destination for "Back to Dashboard" / Dashboard nav.
+ * Portfolio analytics (`/advisor/dashboard`) is Platinum+; lower tiers use Overview.
+ */
+export function resolveAdvisorDashboardHref(
+  currentTier: SubscriptionTier,
+  options?: { governanceDashboardEnabled?: boolean }
+): string {
+  const flagEnabled = options?.governanceDashboardEnabled !== false;
+  if (flagEnabled && tierIncludesFeature(currentTier, "PORTFOLIO_ANALYTICS")) {
+    return "/advisor/dashboard";
+  }
+  return "/advisor";
+}

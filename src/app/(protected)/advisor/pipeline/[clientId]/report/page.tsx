@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { redirect, notFound } from "next/navigation";
 import { buildSignInHref } from "@/lib/auth/sign-in-routes";
+import { PipelineClientUnavailable } from "@/components/pipeline/PipelineClientUnavailable";
 
 /**
  * §4.5 commit 3 (BRD §4.5) — advisor "Reports" view per client. Lists
@@ -18,8 +19,8 @@ import { buildSignInHref } from "@/lib/auth/sign-in-routes";
  * + SUPERSEDED) with download / edit affordances.
  *
  * Auth: requires an ACTIVE ClientAdvisorAssignment from the calling
- * advisor to the client (otherwise 404 — opaque, mirrors the
- * authorization shape of /advisor/pipeline/[clientId]).
+ * advisor to the client (otherwise PipelineClientUnavailable — mirrors
+ * /advisor/pipeline/[clientId]).
  */
 export default async function AdvisorReportListPage({
   params,
@@ -46,12 +47,16 @@ export default async function AdvisorReportListPage({
       where: { userId: session.user.id },
       select: { id: true },
     });
-    if (!advisor) notFound();
+    if (!advisor) {
+      return <PipelineClientUnavailable clientId={clientId} />;
+    }
     const assignment = await prisma.clientAdvisorAssignment.findFirst({
       where: { advisorId: advisor.id, clientId, status: "ACTIVE" },
       select: { id: true },
     });
-    if (!assignment) notFound();
+    if (!assignment) {
+      return <PipelineClientUnavailable clientId={clientId} />;
+    }
   }
 
   const list = await getReportListForClient(clientId);
@@ -71,7 +76,8 @@ export default async function AdvisorReportListPage({
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Reports</h1>
         <p className="mt-2 text-muted-foreground">
-          Versioned reports for this client&apos;s latest assessment. Drafts are
+          After the assessment is scored, publish a Risk Profile here so the
+          client can unlock full results and their action plan. Drafts are
           editable; published versions are immutable; superseded versions are
           preserved for history.
         </p>
@@ -83,14 +89,14 @@ export default async function AdvisorReportListPage({
             <FileText className="w-8 h-8 mx-auto mb-3 opacity-50" />
             <p>
               No reports yet. Once the client&apos;s assessment is scored, a
-              draft is created automatically — visit{" "}
+              draft is created automatically — open{" "}
               <Link
                 href={`/advisor/pipeline/${clientId}/report/edit`}
                 className="text-primary hover:underline"
               >
                 Edit Draft
               </Link>{" "}
-              to author and publish the first version.
+              to review and publish the Risk Profile.
             </p>
           </CardContent>
         </Card>

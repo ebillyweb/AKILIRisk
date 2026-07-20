@@ -29,9 +29,11 @@ import type { ClientDetail } from "@/lib/pipeline/types";
 import { isDeliverableProfilePublished } from "@/lib/assessment/plan-depth";
 import { paletteForRiskLevel } from "@/lib/assessment/risk-color-palette";
 import { resolveAdvisorClientPipelineLabels } from "@/lib/pipeline/client-display";
+import { resolveAdvisorAssessmentNextStep } from "@/lib/pipeline/advisor-next-step";
 import { PSEUDONYMOUS_CLIENT_LABELING_NOTE } from "@/lib/advisor/pii-policy";
 import { RiskHeatMap } from "@/components/assessment/RiskHeatMap";
 import { TemplateList } from "@/components/reports/TemplateList";
+import { SIDEBAR_ACTION_BTN } from "@/components/pipeline/sidebar-action-button";
 
 interface ClientDetailViewProps {
   detail: ClientDetail;
@@ -83,6 +85,20 @@ export function ClientDetailView({
   const restartIntakeBlockedReason = restartIntake.blockedReason
     ? restartIntakeBlockedMessage(restartIntake.blockedReason)
     : undefined;
+  const assessmentNextStep = resolveAdvisorAssessmentNextStep({
+    clientId: client.id,
+    assessmentId: assessmentDetails?.id,
+    assessmentStatus: assessmentDetails?.status,
+    deliverablePhase: assessmentDetails?.deliverablePhase,
+    documentsNeeded: client.documentsNeeded,
+    actionPlanEnabled,
+  });
+  const nextStepAlertClass =
+    assessmentNextStep?.tone === "primary"
+      ? "border-brand/30 bg-brand/5"
+      : assessmentNextStep?.tone === "success"
+        ? "border-emerald-500/30 bg-emerald-500/5"
+        : "border-border bg-muted/30";
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -106,6 +122,30 @@ export function ClientDetailView({
             history are kept, and another advisor may still have an active
             workflow with them. Use Restore to pipeline below to resume your
             work — history stays read-only until then.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {assignmentActive && assessmentNextStep ? (
+        <Alert
+          className={cn("mb-6", nextStepAlertClass)}
+          data-tour="pipeline-assessment-next-step"
+        >
+          <AlertTitle className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {assessmentNextStep.kicker}
+            </span>
+            <span>{assessmentNextStep.title}</span>
+          </AlertTitle>
+          <AlertDescription className="mt-2 space-y-3">
+            <p>{assessmentNextStep.detail}</p>
+            <Button
+              asChild
+              variant={assessmentNextStep.tone === "primary" ? "default" : "outline"}
+              className="sm:w-auto"
+            >
+              <Link href={assessmentNextStep.href}>{assessmentNextStep.ctaLabel}</Link>
+            </Button>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -388,6 +428,15 @@ export function ClientDetailView({
 
                 {assessmentDetails.completedAt && (
                   <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap">
+                    {assessmentDetails.status === "COMPLETED" &&
+                    !isDeliverableProfilePublished(assessmentDetails.deliverablePhase) ? (
+                      <Button variant="default" className="justify-center sm:w-auto" asChild>
+                        <Link href={`/advisor/pipeline/${client.id}/report`}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Publish Risk Profile
+                        </Link>
+                      </Button>
+                    ) : null}
                     <Button variant="outline" className="justify-center sm:w-auto" asChild>
                       <Link href={`/advisor/analytics/${client.id}`}>
                         <BarChart3 className="mr-2 h-4 w-4" />
@@ -486,10 +535,10 @@ export function ClientDetailView({
 
           {/* Quick Actions */}
           <Card data-tour="pipeline-quick-actions">
-            <CardHeader>
+            <CardHeader className="px-4 sm:px-5">
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 px-4 sm:px-5">
               <ClientWorkflowStatusControls
                 clientId={client.id}
                 status={advisorAssignment.status}
@@ -503,38 +552,26 @@ export function ClientDetailView({
                 />
               ) : null}
 
-              <Button
-                variant="outline"
-                className="w-full justify-start text-xs sm:text-sm"
-                asChild
-              >
+              <Button variant="outline" className={SIDEBAR_ACTION_BTN} asChild>
                 <Link href={assignmentActive ? "/advisor/pipeline" : "/advisor/pipeline?inactive=1"}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
                   {assignmentActive ? "Back to Pipeline" : "Back to inactive clients"}
                 </Link>
               </Button>
 
               {assessmentDetails?.completedAt && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-xs sm:text-sm"
-                  asChild
-                >
+                <Button variant="outline" className={SIDEBAR_ACTION_BTN} asChild>
                   <Link href={`/advisor/analytics/${client.id}`}>
-                    <BarChart3 className="w-4 h-4 mr-2" />
+                    <BarChart3 className="h-3.5 w-3.5 shrink-0" />
                     Client Analytics
                   </Link>
                 </Button>
               )}
 
               {assessmentDetails?.completedAt && actionPlanEnabled ? (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-xs sm:text-sm"
-                  asChild
-                >
+                <Button variant="outline" className={SIDEBAR_ACTION_BTN} asChild>
                   <Link href={`/advisor/clients/${client.id}/guidance`}>
-                    <ClipboardList className="w-4 h-4 mr-2" />
+                    <ClipboardList className="h-3.5 w-3.5 shrink-0" />
                     Client Guidance
                   </Link>
                 </Button>
@@ -545,13 +582,21 @@ export function ClientDetailView({
                   surfaces every version + the Edit Draft + Publish flow. */}
               {assessmentDetails?.id && assessmentDetails.score !== null && (
                 <Button
-                  variant="outline"
-                  className="w-full justify-start text-xs sm:text-sm"
+                  variant={
+                    assessmentDetails.status === "COMPLETED" &&
+                    !isDeliverableProfilePublished(assessmentDetails.deliverablePhase)
+                      ? "default"
+                      : "outline"
+                  }
+                  className={SIDEBAR_ACTION_BTN}
                   asChild
                 >
                   <Link href={`/advisor/pipeline/${client.id}/report`}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Reports
+                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                    {assessmentDetails.status === "COMPLETED" &&
+                    !isDeliverableProfilePublished(assessmentDetails.deliverablePhase)
+                      ? "Publish Risk Profile"
+                      : "Reports"}
                   </Link>
                 </Button>
               )}

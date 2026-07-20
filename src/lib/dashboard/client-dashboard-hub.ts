@@ -118,8 +118,16 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
       return {
         headline: "Your assessment is scored—preview is available",
         subheadline: input.actionPlanEnabled
-          ? "Your advisor waived the intake interview. View your risk preview on the results pages while your advisor finalizes the full profile."
-          : "Your advisor waived the intake interview. View your risk preview on the results pages while your advisor finalizes your profile.",
+          ? "Your advisor waived the intake interview. Open Risk Preview while your advisor finalizes the full profile and action plan."
+          : "Your advisor waived the intake interview. Open Risk Preview while your advisor finalizes your profile.",
+      };
+    }
+
+    if (input.assessmentComplete) {
+      return {
+        headline: "Your assessment is complete",
+        subheadline:
+          "Your advisor waived the intake interview. Scoring just finished—Risk Preview unlocks shortly, then your advisor publishes the full profile.",
       };
     }
 
@@ -161,7 +169,7 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
     return {
       headline: "Your risk profile is ready to review",
       subheadline:
-        "Use this page to see where you are in the process. Open Assessment Results for scores, heat maps, and reports—or return to the assessment hub to continue work in any domain.",
+        "Open Assessment Results for scores, heat maps, and reports. Your advisor can help prioritize next steps on the action plan.",
     };
   }
 
@@ -169,8 +177,16 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
     return {
       headline: "Your assessment is scored—preview is available",
       subheadline: input.actionPlanEnabled
-        ? "View your risk preview and domain heat map on the results pages. Your advisor will publish the full profile and action plan when ready."
-        : "View your risk preview and domain heat map on the results pages. Your advisor will publish your full profile when ready.",
+        ? "Open Risk Preview to see scored domains and top risks. Your advisor will publish the full profile and action plan when ready."
+        : "Open Risk Preview to see scored domains and top risks. Your advisor will publish your full profile when ready.",
+    };
+  }
+
+  if (input.assessmentComplete) {
+    return {
+      headline: "Your assessment is complete",
+      subheadline:
+        "Scoring just finished. Open your dashboard destinations below—Risk Preview unlocks as soon as scores are ready, then your advisor publishes the full profile.",
     };
   }
 
@@ -260,7 +276,7 @@ export function buildClientDashboardJourney(
             ? "Unlocks after your advisor sets assessment scope."
             : "Unlocks after your advisor approves intake and sets assessment scope."
           : assessmentState === "complete"
-            ? "All selected domains are scored. Open the assessment hub for details."
+            ? "All selected domains are scored. Open Risk Preview or Results for what to do next."
             : assessmentState === "current"
               ? "In progress—continue risk domains and autosaved answers on the Assessment page."
               : "Start your personal risk profile when intake requirements are met.",
@@ -395,7 +411,9 @@ export function buildClientDashboardDestinations(
       id: "assessment",
       title: "Personal Risk Profile",
       description:
-        "Work through risk domains, track pillar progress, and resume autosaved answers. This is your main assessment workspace.",
+        input.assessmentComplete
+          ? "Domains are scored. Use Assessment Results (or Risk Preview) for the recommended next step—not this hub."
+          : "Work through risk domains, track pillar progress, and resume autosaved answers. This is your main assessment workspace.",
       href: assessmentHref,
       statusLabel: assessmentStatus,
       statusVariant: assessmentDisabled
@@ -410,9 +428,11 @@ export function buildClientDashboardDestinations(
         : input.intakeWaived
           ? "Your advisor is finishing assessment setup before you can begin."
           : "Your advisor must approve intake and set assessment scope before you can begin.",
-      cta: input.assessmentInProgress
-        ? "Continue assessment"
-        : "Open assessment hub",
+      cta: input.assessmentComplete
+        ? "Open assessment hub"
+        : input.assessmentInProgress
+          ? "Continue assessment"
+          : "Open assessment hub",
     },
     {
       id: "results",
