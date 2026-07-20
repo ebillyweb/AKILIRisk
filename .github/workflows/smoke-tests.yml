@@ -52,6 +52,12 @@ jobs:
     env:
       CI: "true"
       PLAYWRIGHT_BASE_URL: ${{ github.event.inputs.base_url || 'https://preview.akilirisk.com' }}
+      # Platform app origin for path-based tenant portals. The white-label
+      # routing smokes build {origin}/t/{slug} via resolvePlatformAppOrigin(),
+      # which reads NEXT_PUBLIC_URL and otherwise falls back to
+      # http://localhost:3000 (nonexistent in CI). Point it at the same target
+      # as PLAYWRIGHT_BASE_URL so tenant-portal tests hit the live deployment.
+      NEXT_PUBLIC_URL: ${{ github.event.inputs.base_url || 'https://preview.akilirisk.com' }}
       # Credentials fall back to the seeded preview test users when the secrets
       # are unset (tests/fixtures/users.ts reads these env vars).
       ADVISOR_EMAIL: ${{ secrets.SMOKE_ADVISOR_EMAIL }}
