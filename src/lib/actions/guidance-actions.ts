@@ -29,6 +29,8 @@ import {
   adjustPrioritySchema,
   updateNotesSchema,
   validationStatusSchema,
+  narrativeEditSchema,
+  narrativeApprovalSchema,
   updateTimeHorizonSchema,
   updateRolesSchema,
   updateAssigneesSchema,
@@ -39,10 +41,19 @@ import {
   type AdjustPriorityInput,
   type UpdateNotesInput,
   type ValidationStatusInput,
+  type NarrativeEditInput,
+  type NarrativeApprovalInput,
   type UpdateTimeHorizonInput,
   type UpdateRolesInput,
   type UpdateAssigneesInput,
 } from "./guidance-schemas";
+import {
+  applyNarrativeEdit,
+  approveNarrative,
+  unapproveNarrative,
+  parseReview,
+  type EditableNarrative,
+} from "@/lib/assessment/recommendations/llm-narrative/narrative-review";
 
 // ── Result types ─────────────────────────────────────────────────────────
 
@@ -436,6 +447,117 @@ export async function updateValidationStatus(
   } catch (err) {
     logSafeError("updateValidationStatus", err);
     return fail(safeErrorMessage(err, "Failed to update validation status"));
+  }
+}
+
+/**
+ * Phase 4: edit an AI-generated recommendation narrative. Preserves the model's
+ * original copy the first time and marks the review edited. Does not change
+ * approval status (editing published copy keeps it published).
+ */
+export async function updateRecommendationNarrative(
+  input: NarrativeEditInput
+): Promise<ActionResult<void>> {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const parsed = narrativeEditSchema.parse(input);
+
+    const owns = await verifyAdvisorOwnsRecommendation(userId, parsed.recommendationId);
+    if (!owns) return fail("Recommendation not found or not authorized");
+
+    const rec = await prisma.assessmentRecommendation.findUnique({
+      where: { id: parsed.recommendationId },
+      select: { customization: true },
+    });
+    const customization = (rec?.customization as Record<string, unknown> | null) ?? {};
+    const current = customization.aiNarrative as EditableNarrative | undefined;
+    if (!current) return fail("No AI narrative to edit");
+
+    const review = parseReview(customization.aiNarrativeReview);
+    const { narrative, review: nextReview } = applyNarrativeEdit(current, review, {
+      headline: parsed.headline,
+      rationale: parsed.rationale,
+      tailoredActions: parsed.tailoredActions,
+    });
+
+    await prisma.assessmentRecommendation.update({
+      where: { id: parsed.recommendationId },
+      data: {
+        customization: {
+          ...customization,
+          aiNarrative: { ...current, ...narrative },
+          aiNarrativeReview: nextReview,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    await prisma.solutionActivity.create({
+      data: {
+        assessmentRecommendationId: parsed.recommendationId,
+        actorId: userId,
+        action: "narrative_edited",
+        detail: { edited: true },
+      },
+    });
+
+    revalidate();
+    return ok(undefined);
+  } catch (err) {
+    logSafeError("updateRecommendationNarrative", err);
+    return fail(safeErrorMessage(err, "Failed to update narrative"));
+  }
+}
+
+/**
+ * Phase 4: approve (or un-approve) an AI narrative. Only an approved narrative is
+ * shown to the client.
+ */
+export async function setNarrativeApproval(
+  input: NarrativeApprovalInput
+): Promise<ActionResult<void>> {
+  try {
+    const { userId } = await requireAdvisorRole();
+    const parsed = narrativeApprovalSchema.parse(input);
+
+    const owns = await verifyAdvisorOwnsRecommendation(userId, parsed.recommendationId);
+    if (!owns) return fail("Recommendation not found or not authorized");
+
+    const rec = await prisma.assessmentRecommendation.findUnique({
+      where: { id: parsed.recommendationId },
+      select: { customization: true },
+    });
+    const customization = (rec?.customization as Record<string, unknown> | null) ?? {};
+    if (!customization.aiNarrative) return fail("No AI narrative to approve");
+
+    const review = parseReview(customization.aiNarrativeReview);
+    const nextReview = parsed.approved
+      ? approveNarrative(review, userId, new Date().toISOString())
+      : unapproveNarrative(review);
+
+    await prisma.assessmentRecommendation.update({
+      where: { id: parsed.recommendationId },
+      data: {
+        customization: {
+          ...customization,
+          aiNarrativeReview: nextReview,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    await prisma.solutionActivity.create({
+      data: {
+        assessmentRecommendationId: parsed.recommendationId,
+        actorId: userId,
+        action: parsed.approved ? "narrative_approved" : "narrative_unapproved",
+        detail: { approved: parsed.approved },
+      },
+    });
+
+    revalidate();
+    return ok(undefined);
+  } catch (err) {
+    logSafeError("setNarrativeApproval", err);
+    return fail(safeErrorMessage(err, "Failed to update narrative approval"));
   }
 }
 

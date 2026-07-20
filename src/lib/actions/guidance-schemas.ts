@@ -58,6 +58,21 @@ export const validationStatusSchema = z.object({
 });
 export type ValidationStatusInput = z.infer<typeof validationStatusSchema>;
 
+// Phase 4: advisor review of AI-generated recommendation narratives.
+export const narrativeEditSchema = z.object({
+  recommendationId: z.string().cuid(),
+  headline: z.string().max(200).optional(),
+  rationale: z.string().max(4000).optional(),
+  tailoredActions: z.array(z.string().max(500)).max(6).optional(),
+});
+export type NarrativeEditInput = z.infer<typeof narrativeEditSchema>;
+
+export const narrativeApprovalSchema = z.object({
+  recommendationId: z.string().cuid(),
+  approved: z.boolean(),
+});
+export type NarrativeApprovalInput = z.infer<typeof narrativeApprovalSchema>;
+
 export const updateTimeHorizonSchema = z.object({
   recommendationId: z.string().cuid(),
   timeHorizon: z.enum(["immediate", "strategic", "ongoing"]),
