@@ -41,6 +41,7 @@ import {
   resolveAdvisorClientIdentity,
 } from '@/lib/advisor/field-visibility';
 import { getIntakeReviewDataForAdvisorPage } from '@/lib/advisor/intake-review-queries';
+import { resolveHiddenAdvisorNotificationTypes } from '@/lib/enterprise/advisor-member-visibility';
 import { getAdvisorInvitations } from '@/lib/invitations/service';
 import { InvitationStatus } from '@prisma/client';
 import { writeAudit, AUDIT_ACTIONS } from '@/lib/audit/audit-log';
@@ -53,7 +54,8 @@ export async function getAdvisorDashboardData() {
     const profile = await getAdvisorProfileOrThrow(userId);
 
     const clients = await getAssignedClients(profile.id);
-    const notifications = await getAdvisorNotifications(profile.id);
+    const hiddenNotificationTypes = await resolveHiddenAdvisorNotificationTypes(userId);
+    const notifications = await getAdvisorNotifications(profile.id, undefined, hiddenNotificationTypes);
     const unreadNotificationCount = notifications.filter(n => !n.read).length;
 
     // Get pending invitations count (SENT or OPENED status)
@@ -424,7 +426,8 @@ export async function getAdvisorNotificationsAction() {
     const { userId } = await requireAdvisorRole();
     const profile = await getAdvisorProfileOrThrow(userId);
 
-    const notifications = await getAdvisorNotifications(profile.id);
+    const hiddenNotificationTypes = await resolveHiddenAdvisorNotificationTypes(userId);
+    const notifications = await getAdvisorNotifications(profile.id, undefined, hiddenNotificationTypes);
 
     return {
       success: true,

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma, type IntakeInterview, type IntakeResponse } from "@prisma/client";
+import { Prisma, type IntakeInterview, type IntakeResponse, type NotificationType } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import {
@@ -441,11 +441,18 @@ export async function updateIntakeApproval(
   });
 }
 
-export async function getAdvisorNotifications(advisorProfileId: string, unreadOnly?: boolean) {
+export async function getAdvisorNotifications(
+  advisorProfileId: string,
+  unreadOnly?: boolean,
+  excludeTypes?: NotificationType[],
+) {
   return prisma.advisorNotification.findMany({
     where: {
       advisorId: advisorProfileId,
       ...(unreadOnly ? { read: false } : {}),
+      ...(excludeTypes && excludeTypes.length > 0
+        ? { type: { notIn: excludeTypes } }
+        : {}),
     },
     orderBy: {
       createdAt: 'desc',

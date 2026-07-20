@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { EnterpriseRole } from "@prisma/client";
+import type { EnterpriseRole, NotificationType } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/db";
@@ -195,6 +195,24 @@ export async function requireEnterpriseMemberVisibility(
 }
 
 export type EnterpriseAdvisorMemberVisibilityInput = EnterpriseAdvisorMemberVisibility;
+
+/**
+ * Notification types that must be hidden from an advisor because their firm has
+ * turned off the corresponding member-visibility toggle. NEW_LEAD embeds lead
+ * PII (name, email, complexity, asset range), so it has to respect the
+ * assessmentLeads toggle even though it arrives via the notification feed
+ * rather than the guarded /advisor/leads route.
+ */
+export async function resolveHiddenAdvisorNotificationTypes(
+  userId: string,
+): Promise<NotificationType[]> {
+  const context = await resolveEnterpriseMemberVisibilityContext(userId);
+  const hidden: NotificationType[] = [];
+  if (!isEnterpriseMemberVisibilityEnabled(context, "assessmentLeads")) {
+    hidden.push("NEW_LEAD");
+  }
+  return hidden;
+}
 
 export async function assertAdvisorCanSkipIntake(userId: string): Promise<void> {
   const context = await resolveEnterpriseMemberVisibilityContext(userId);

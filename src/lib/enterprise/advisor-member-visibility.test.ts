@@ -23,8 +23,29 @@ import {
   isEnterpriseSkipIntakeWorkspaceEnabled,
   mapEnterpriseAdvisorMemberVisibility,
   resolveEnterpriseMemberVisibilityContext,
+  resolveHiddenAdvisorNotificationTypes,
   visibilityInputToEnterpriseUpdate,
 } from "./advisor-member-visibility";
+
+function enterpriseVisibilityRow(
+  overrides: Partial<Record<string, boolean>> = {},
+) {
+  return {
+    advisorMemberPortfolioVisible: true,
+    advisorMemberAssessmentLeadsVisible: true,
+    advisorMemberMethodologyVisible: true,
+    advisorMemberEngagementsVisible: true,
+    advisorMemberReassessmentVisible: true,
+    advisorMemberProductToursVisible: true,
+    advisorMemberHideTierLockedNav: false,
+    advisorMemberSkipIntakeEnabled: false,
+    advisorMemberSkipPostIntakeReviewEnabled: false,
+    advisorMemberDocumentRequirementsEnabled: true,
+    advisorMemberActionPlanEnabled: true,
+    advisorMemberSharedClientVisibilityEnabled: true,
+    ...overrides,
+  };
+}
 
 const mockFindUnique = vi.mocked(prisma.advisorEnterprise.findUnique);
 const mockBillingContext = vi.mocked(resolveBillingContext);
@@ -143,6 +164,53 @@ describe("resolveEnterpriseMemberVisibilityContext", () => {
     expect(isEnterpriseSkipIntakeWorkspaceEnabled(result)).toBe(false);
     expect(isEnterpriseDocumentRequirementsWorkspaceEnabled(result)).toBe(false);
     expect(isEnterpriseActionPlanWorkspaceEnabled(result)).toBe(false);
+  });
+});
+
+describe("resolveHiddenAdvisorNotificationTypes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("hides NEW_LEAD when an enterprise member's firm disables assessment leads", async () => {
+    mockBillingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "ADVISOR",
+      advisorProfileId: "p1",
+      subscription: null,
+    });
+    mockFindUnique.mockResolvedValue(
+      enterpriseVisibilityRow({ advisorMemberAssessmentLeadsVisible: false }),
+    );
+
+    expect(await resolveHiddenAdvisorNotificationTypes("u1")).toEqual(["NEW_LEAD"]);
+  });
+
+  it("hides nothing when the firm leaves assessment leads visible", async () => {
+    mockBillingContext.mockResolvedValue({
+      kind: "enterprise",
+      enterpriseId: "ent-1",
+      role: "ADVISOR",
+      advisorProfileId: "p1",
+      subscription: null,
+    });
+    mockFindUnique.mockResolvedValue(
+      enterpriseVisibilityRow({ advisorMemberAssessmentLeadsVisible: true }),
+    );
+
+    expect(await resolveHiddenAdvisorNotificationTypes("u1")).toEqual([]);
+  });
+
+  it("hides nothing for a solo advisor even with the toggle conceptually off", async () => {
+    mockBillingContext.mockResolvedValue({
+      kind: "solo",
+      userId: "u1",
+      advisorProfileId: "p1",
+      subscription: null,
+    });
+
+    expect(await resolveHiddenAdvisorNotificationTypes("u1")).toEqual([]);
   });
 });
 
