@@ -35,6 +35,9 @@ export function DependencyStatusList({
           {dependencies.map((dep) => (
             <li
               key={dep.id}
+              data-testid={`ops-dep-${dep.id}`}
+              data-status={dep.status}
+              data-configured={dep.configured ? "true" : "false"}
               className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between"
             >
               <div className="min-w-0 space-y-1">

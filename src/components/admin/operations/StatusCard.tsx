@@ -26,7 +26,12 @@ export function StatusCard({
   const message = statusHeroMessage(status);
 
   return (
-    <Card className="border-border/80">
+    <Card
+      className="border-border/80"
+      data-testid="ops-overall-status"
+      data-status={status}
+      data-environment={environment}
+    >
       <CardContent className="flex flex-col gap-6 pt-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-3">

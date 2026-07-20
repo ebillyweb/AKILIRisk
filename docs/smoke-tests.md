@@ -59,6 +59,43 @@ Support ticket (`tests/smoke/support-ticket.spec.ts`):
   Email payload + attachment construction is covered by the mocked unit test
   `src/lib/email/support-ticket.send.test.ts`.
 
+AI recommendation narratives (`tests/smoke/ai-recommendation-narratives.spec.ts`):
+
+- Advisor-authenticated `POST /api/ai-narratives/smoke-probe` runs one OpenAI
+  structured-output call against a fixed synthetic input (no assessment DB
+  reads, no writes) and asserts catalog-constrained recommendation shape.
+  Fails when preview's OpenAI quota is exhausted (operator hint in the
+  assertion message). Skips only when `OPENAI_API_KEY` is missing.
+  Does **not** require `LLM_NARRATIVES_ENABLED` — the probe exercises the
+  generator directly so the canary stays useful while the flag is off.
+
+White-label PDF branding (`tests/smoke/white-label-pdf-branding.spec.ts`):
+
+- Advisor-authenticated `POST /api/pdf/white-label-smoke-probe` renders a
+  synthetic AssessmentReport PDF with fixed firm branding (no assessment DB
+  reads, no writes). Asserts `application/pdf`, `%PDF` magic, Content-
+  Disposition slug, response headers, and that the firm name is embedded in
+  the PDF bytes (cover / confidentiality path). Catches regressions that
+  drop white-label copy or fall back to platform defaults.
+
+Operations health (`tests/smoke/operations-health.spec.ts`):
+
+- Admin opens `/admin/operations` and asserts core services (app, database,
+  auth) are healthy, and Stripe / OpenAI / Resend / S3 are configured and
+  not `down`. Catches credential and provider outages between deploys.
+  Redis and white-label DNS are intentionally soft (env-specific).
+
+Tenant portal (`tests/smoke/subdomain-routing.spec.ts`):
+
+- Active fixture tenant (`independent-wealth`) serves the branded client
+  portal on the preview path host (`/t/{slug}` or subdomain).
+- Unverified tenant (`inactive-tenant`) returns the Subdomain Not Available
+  404 shell. Catches proxy / tenant-routing regressions.
+- If the active tenant drifts off preview DB, restore with
+  `node scripts/restore-independent-wealth-fixture.js` (same `DATABASE_URL` /
+  `ENCRYPTION_KEY` as Preview), then wait briefly for warm-instance subdomain
+  cache misses to expire before re-running.
+
 The client-role negative cases (client blocked from `/admin` and `/advisor`)
 are left untagged because they sign in as a client, which needs
 `ENABLE_TEST_AUTH=1` on preview — see [Extending scope](#extending-scope-later).

@@ -1,6 +1,9 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { AssessmentReport } from "@/lib/pdf/components/AssessmentReport";
-import { createBrandedPDFMetadata } from "@/lib/pdf/branding-integration";
+import {
+  createBrandedPDFMetadata,
+  pdfDisplayNameFromBranding,
+} from "@/lib/pdf/branding-integration";
 import {
   buildReportSnapshot,
   buildBrandingSnapshot,
@@ -36,9 +39,14 @@ export interface RenderResult {
 export async function renderReportPdf(input: RenderInput): Promise<RenderResult> {
   const { snapshot, branding, draft } = input;
 
+  // Prefer advisorFirmName over brandName — same rule as client portal /
+  // PDF metadata (`pdfDisplayNameFromBranding`) so white-label cover copy,
+  // Info dictionary, and download filename stay aligned.
+  const displayFirm = pdfDisplayNameFromBranding(branding);
+
   const coverBranding = branding
     ? {
-        firmName: branding.brandName || branding.advisorFirmName || undefined,
+        firmName: displayFirm,
         logoUrl: branding.logoUrl ?? undefined,
       }
     : undefined;
@@ -55,9 +63,7 @@ export async function renderReportPdf(input: RenderInput): Promise<RenderResult>
     />
   );
 
-  const brandName =
-    branding?.brandName || branding?.advisorFirmName || "akili-risk";
-  const firmSlug = brandName
+  const firmSlug = displayFirm
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");

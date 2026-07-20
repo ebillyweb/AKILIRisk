@@ -11,7 +11,12 @@ import type { ServiceHealth } from "@/lib/admin/operations-health";
  */
 export function ServiceHealthCard({ service }: { service: ServiceHealth }) {
   return (
-    <Card className="border-border/80">
+    <Card
+      className="border-border/80"
+      data-testid={`ops-service-${service.id}`}
+      data-status={service.status}
+      data-configured={service.configured ? "true" : "false"}
+    >
       <CardContent className="flex flex-col gap-2 pt-6">
         <div className="flex items-center gap-2">
           <StatusDot status={service.status} className="size-2.5" />

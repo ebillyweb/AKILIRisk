@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isPlatformAdminRole } from "@/lib/auth-roles";
-import { renderToBuffer } from "@react-pdf/renderer";
-import { AssessmentReport } from "@/lib/pdf/components/AssessmentReport";
-import { createBrandedPDFMetadata } from "@/lib/pdf/branding-integration";
 import {
   buildReportSnapshot,
   buildBrandingSnapshot,
   type ReportSnapshot,
 } from "@/lib/pdf/build-report-snapshot";
+import { renderReportPdf } from "@/lib/pdf/render-report";
 import type { AdvisorBrandingData } from "@/lib/validation/branding";
 
 /**
@@ -123,40 +121,17 @@ export async function GET(
       branding = (report.brandingSnapshot ?? null) as AdvisorBrandingData | null;
     }
 
-    // Build cover-branding shape (same selection the legacy route uses).
-    const coverBranding = branding
-      ? {
-          firmName: branding.brandName || branding.advisorFirmName || undefined,
-          logoUrl: branding.logoUrl ?? undefined,
-        }
-      : undefined;
-
-    const pdfMetadata = createBrandedPDFMetadata(branding ?? undefined);
-
-    const pdfBuffer = await renderToBuffer(
-      <AssessmentReport
-        data={snapshot.reportData}
-        householdProfile={snapshot.householdProfile ?? undefined}
-        advisorBranding={coverBranding}
-        documentMetadata={pdfMetadata}
-        draft={isDraft}
-      />
-    );
-
-    const brandName =
-      branding?.brandName ||
-      branding?.advisorFirmName ||
-      "akili-risk";
-    const firmSlug = brandName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
+    const { bytes, filenameSlugFirm } = await renderReportPdf({
+      snapshot,
+      branding,
+      draft: isDraft,
+    });
     const versionSlug = `v${report.version}${isDraft ? "-draft" : ""}`;
 
-    return new NextResponse(pdfBuffer as unknown as BodyInit, {
+    return new NextResponse(Buffer.from(bytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${firmSlug}-${versionSlug}-report.pdf"`,
+        "Content-Disposition": `attachment; filename="${filenameSlugFirm}-${versionSlug}-report.pdf"`,
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",
         Expires: "0",

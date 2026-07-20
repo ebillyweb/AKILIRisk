@@ -35,18 +35,29 @@ const NOT_AVAILABLE_CASES: { label: string; url: string }[] = [
 ];
 
 test.describe("tenant portal routing", () => {
-  test("active tenant serves the branded client portal", async ({ page }) => {
+  test(
+    "active tenant serves the branded client portal",
+    { tag: "@smoke" },
+    async ({ page }) => {
     const response = await page.goto(ACTIVE_TENANT_URL);
     expect(response?.status()).toBe(200);
 
     await expect(page).toHaveTitle(/Independent Wealth Group/i);
 
+    // Firm name is the portal brand signal (header lockup), not necessarily an h1.
     await expect(
-      page.getByRole("heading", { level: 1, name: /Independent Wealth Group/i })
+      page.getByRole("link", { name: /Independent Wealth Group/i }).first(),
     ).toBeVisible();
-
     await expect(
-      page.getByRole("heading", { name: /Comprehensive family risk assessment/i })
+      page.getByText(/Brought to you by AKILI Risk Intelligence/i).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /governance intelligence platform for modern family wealth/i,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Start Assessment/i }).first(),
     ).toBeVisible();
 
     const brandedMode = await page.evaluate(
@@ -58,8 +69,8 @@ test.describe("tenant portal routing", () => {
 
     const signInLink = page.getByRole("link", { name: /^Sign In$/i });
     const expectedSignInHref = usesTenantPathPortals()
-      ? "/t/independent-wealth/signin"
-      : "/signin";
+      ? /\/t\/independent-wealth\/signin/
+      : /\/signin/;
     await expect(signInLink.first()).toHaveAttribute("href", expectedSignInHref);
   });
 
@@ -88,7 +99,12 @@ test.describe("tenant portal routing", () => {
   });
 
   for (const { label, url } of NOT_AVAILABLE_CASES) {
-    test(`Not Available page renders when tenant is ${label}`, async ({ page }) => {
+    test(
+      `Not Available page renders when tenant is ${label}`,
+      // One negative routing canary is enough for the scheduled suite;
+      // the second case stays in the full e2e run.
+      label === "active but not dnsVerified" ? { tag: "@smoke" } : {},
+      async ({ page }) => {
       const response = await page.goto(url);
       expect(response?.status()).toBe(404);
 

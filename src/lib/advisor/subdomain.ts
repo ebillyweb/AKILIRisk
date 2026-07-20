@@ -44,7 +44,11 @@ export interface AdvisorSubdomainData {
  * In production, use Redis or similar
  */
 const subdomainCache = new Map<string, AdvisorSubdomainData | null>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes (positive / known-tenant hits)
+// Misses (unknown slug or branding off) stay short so restoring a fixture
+// tenant (or enabling branding) recovers across warm Fluid instances quickly
+// instead of serving a stale generic 404 for the full positive TTL.
+const CACHE_MISS_TTL = 30 * 1000; // 30 seconds
 // Errors are cached only briefly: a transient DB blip should not make an active
 // tenant 404 for the full TTL after the DB recovers. Short enough to recover
 // fast, long enough to dampen hammering during an outage.
@@ -110,8 +114,7 @@ export async function getAdvisorBySubdomain(subdomain: string): Promise<AdvisorS
         }
       : null;
 
-    // Cache result
-    setCacheWithTTL(subdomain, result);
+    setCacheWithTTL(subdomain, result, result ? CACHE_TTL : CACHE_MISS_TTL);
 
     return result;
   } catch (error) {
