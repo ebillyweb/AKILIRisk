@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EvidenceAccordion } from "@/components/guidance/EvidenceAccordion";
 import { DeferDialog } from "@/components/guidance/DeferDialog";
+import { NarrativeReviewPanel } from "@/components/guidance/NarrativeReviewPanel";
 import {
   includeInActionPlan,
   deferRecommendation,
@@ -341,6 +342,9 @@ export function RecommendationCard({
               </button>
             )}
           </div>
+
+          {/* AI-drafted narrative — advisor review + approve (Phase 4) */}
+          <NarrativeReviewPanel item={item} />
         </CardContent>
       </Card>
 

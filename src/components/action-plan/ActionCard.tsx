@@ -22,6 +22,7 @@ import {
   Building2,
   ChevronDown,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 import { extractRecommendationReasons } from "@/lib/recommendations/format-trigger";
 import type {
@@ -189,6 +190,28 @@ export function ActionCard({ item, showCadence }: ActionCardProps) {
               )}
               <CollapsibleContent />
             </Collapsible>
+          </div>
+        )}
+
+        {/* AI-drafted rationale — advisor-approved (Phase 4) */}
+        {item.aiNarrative && (
+          <div className="space-y-2 rounded-[1rem] border section-divider bg-background/55 p-4">
+            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" /> Why this matters for you
+            </p>
+            <p className="text-sm font-medium text-foreground">
+              {item.aiNarrative.headline}
+            </p>
+            <p className="text-sm text-foreground/90 leading-relaxed">
+              {item.aiNarrative.rationale}
+            </p>
+            {item.aiNarrative.tailoredActions.length > 0 && (
+              <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
+                {item.aiNarrative.tailoredActions.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
