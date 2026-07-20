@@ -27,16 +27,19 @@ export default async function EnterpriseRecommendationsPage({
 
   let enterpriseName: string;
   let enterpriseId: string;
-  let pillars: Awaited<ReturnType<typeof loadEnterpriseMethodologyPillars>>;
   try {
     const { userId } = await requireAdvisorRole();
     const team = await requireEnterpriseTeamManager(userId);
     enterpriseName = team.enterpriseName;
     enterpriseId = team.enterpriseId;
-    pillars = await loadEnterpriseMethodologyPillars(enterpriseId);
   } catch {
     redirect("/signin");
   }
+
+  // Keep data loading OUTSIDE the auth try/catch: a transient DB error here must
+  // surface as a real 500 (error boundary), not be swallowed into a bogus
+  // "you're signed out" redirect for an authenticated enterprise manager.
+  const pillars = await loadEnterpriseMethodologyPillars(enterpriseId);
 
   const pillar = pillars.find((p) => p.slug === slug);
   if (!pillar) notFound();
