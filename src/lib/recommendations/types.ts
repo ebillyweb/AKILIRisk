@@ -6,6 +6,8 @@ import type {
   TaskStatus,
   ValidationStatus,
 } from "@prisma/client";
+import type { DisplayNarrative } from "@/lib/assessment/recommendations/llm-narrative/narrative-display";
+import type { NarrativeReview } from "@/lib/assessment/recommendations/llm-narrative/narrative-review";
 
 export type PortfolioRecommendationItem = {
   id: string;
@@ -73,6 +75,10 @@ export type GuidancePackageItem = PortfolioRecommendationItem & {
   assessmentSources: string[];
   /** Union of trigger reasons from all source assessments. */
   mergedEvidence: unknown[];
+  /** AI-drafted narrative for advisor review (null when none generated). */
+  aiNarrative: DisplayNarrative | null;
+  /** Review state of the AI narrative (pending/approved, edited flag). */
+  aiNarrativeReview: NarrativeReview | null;
 };
 
 /** Aggregate counts for the guidance package. */

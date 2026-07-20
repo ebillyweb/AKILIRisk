@@ -10,6 +10,8 @@
 
 import { revalidatePath } from "next/cache";
 import { extractRecommendationReasons } from "@/lib/recommendations/format-trigger";
+import { clientNarrative } from "@/lib/assessment/recommendations/llm-narrative/narrative-display";
+import type { DisplayNarrative } from "@/lib/assessment/recommendations/llm-narrative/narrative-display";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
@@ -148,6 +150,8 @@ export type ActionPlanItem = {
   deferredRevisitDate: string | null;
   milestones: MilestoneItem[];
   milestoneCompletionPct: number;
+  /** AI-drafted narrative — present only when an advisor has approved it. */
+  aiNarrative: DisplayNarrative | null;
 };
 
 export type ClientActionPlanData = {
@@ -271,6 +275,8 @@ export async function getClientActionPlan(): Promise<
                   100
               )
             : 0,
+        // Client sees the AI narrative only once the advisor has approved it.
+        aiNarrative: clientNarrative(rec.customization),
       };
     });
 

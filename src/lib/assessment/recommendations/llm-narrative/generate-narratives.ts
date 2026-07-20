@@ -20,6 +20,7 @@ import { prisma } from "@/lib/db";
 import { normalizePillarScoreId } from "@/lib/assessment/pillar-registry";
 import { makeOpenAIGenerate } from "./providers/openai-provider";
 import { loadWeakFindingsByPillar, loadServicePillarMap } from "./narrative-data";
+import { PENDING_REVIEW, parseReview } from "./narrative-review";
 import {
   renderNarrativeUserMessage,
   validateNarrativeOutput,
@@ -277,9 +278,17 @@ async function persistNarrativeToDb(
     where: { id: recId },
     select: { customization: true },
   });
+  const customizationObj = (existing?.customization as Record<string, unknown> | null) ?? {};
+
+  // Preserve advisor investment: if the advisor has already edited or approved a
+  // prior narrative, a re-score must NOT clobber their work with fresh AI copy.
+  const priorReview = parseReview(customizationObj.aiNarrativeReview);
+  if (priorReview.edited || priorReview.status === "approved") return;
+
   const customization = {
-    ...((existing?.customization as Record<string, unknown> | null) ?? {}),
+    ...customizationObj,
     aiNarrative: narrative,
+    aiNarrativeReview: PENDING_REVIEW,
   };
   await prisma.assessmentRecommendation.update({
     where: { id: recId },

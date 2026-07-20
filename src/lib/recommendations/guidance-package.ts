@@ -5,6 +5,7 @@ import { resolveClientDisplayName } from "@/lib/signals/emit";
 import { composeSolution } from "@/lib/recommendations/compose-solution";
 import { formatTriggerSummary } from "@/lib/recommendations/format-trigger";
 import { getRecommendationPolicies } from "@/lib/recommendations/override-policy";
+import { advisorNarrative } from "@/lib/assessment/recommendations/llm-narrative/narrative-display";
 import type {
   GuidancePackage,
   GuidancePackageItem,
@@ -59,6 +60,7 @@ export type AssessmentRecommendationWithService = {
   responsibleRoles: string[];
   assignees: unknown;
   timeHorizon: string | null;
+  customization?: unknown;
   serviceRecommendation: {
     id: string;
     name: string;
@@ -268,6 +270,11 @@ export async function getGuidancePackageForClient(
       timeHorizon: primary.timeHorizon,
       assessmentSources: merged.assessmentSources,
       mergedEvidence: merged.mergedEvidence,
+      // AI narrative for advisor review (always visible to the advisor).
+      ...(() => {
+        const { narrative, review } = advisorNarrative(primary.customization);
+        return { aiNarrative: narrative, aiNarrativeReview: narrative ? review : null };
+      })(),
     };
   });
 
