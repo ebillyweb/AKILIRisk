@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function IntelligenceLoading() {
   return (
@@ -8,8 +9,8 @@ export default function IntelligenceLoading() {
         {[...Array(4)].map((_, i) => (
           <div key={i} className="hero-surface rounded-lg p-4">
             <div className="space-y-2">
-              <div className="h-4 w-20 bg-muted rounded animate-pulse" />
-              <div className="h-8 w-16 bg-muted rounded animate-pulse" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-16" />
             </div>
           </div>
         ))}
@@ -21,8 +22,8 @@ export default function IntelligenceLoading() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="space-y-2">
-              <div className="h-6 w-48 bg-muted rounded animate-pulse" />
-              <div className="h-4 w-96 bg-muted rounded animate-pulse" />
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-96 max-w-full" />
             </div>
           </CardHeader>
           <CardContent>
@@ -30,10 +31,10 @@ export default function IntelligenceLoading() {
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="space-y-2">
-                    <div className="h-4 w-32 bg-muted rounded animate-pulse" />
-                    <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
                   </div>
-                  <div className="h-6 w-16 bg-muted rounded animate-pulse" />
+                  <Skeleton className="h-6 w-16" />
                 </div>
               ))}
             </div>
@@ -43,10 +44,10 @@ export default function IntelligenceLoading() {
         {/* Chart skeleton */}
         <Card>
           <CardHeader>
-            <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+            <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent>
-            <div className="h-64 bg-muted rounded animate-pulse" />
+            <Skeleton className="h-64 w-full" />
           </CardContent>
         </Card>
       </div>

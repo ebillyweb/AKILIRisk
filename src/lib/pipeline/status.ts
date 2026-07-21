@@ -1,4 +1,6 @@
 import { ClientWorkflowStage, InvitationStatus, IntakeStatus, AssessmentStatus } from '@prisma/client';
+import type { DeliverablePhase } from '@prisma/client';
+import { isDeliverableProfilePublished } from '@/lib/assessment/plan-depth';
 
 interface ClientRawData {
   invitation?: {
@@ -17,6 +19,8 @@ interface ClientRawData {
     status: AssessmentStatus;
     completedAt?: Date | null;
     updatedAt: Date;
+    /** When PREVIEW, assessment is scored but Risk Profile is not published yet. */
+    deliverablePhase?: DeliverablePhase | null;
   };
   /** Mandatory (`required: true`) document counts for stage gating */
   documents?: {
@@ -36,12 +40,16 @@ export function computeClientStage(data: ClientRawData): ClientWorkflowStage {
   // Check assessment status first (highest priority)
   if (assessment) {
     if (assessment.status === 'COMPLETED') {
+      // Scored but not yet published → stay on assessment complete, not report.
+      if (!isDeliverableProfilePublished(assessment.deliverablePhase ?? 'PREVIEW')) {
+        return 'ASSESSMENT_COMPLETE';
+      }
       if (documents && documents.required > 0) {
         return documents.fulfilled < documents.required
           ? 'DOCUMENTS_REQUIRED'
           : 'COMPLETE';
       }
-      // Assessment finished and no mandatory documents (or none outstanding)
+      // Profile published and no mandatory documents outstanding
       return 'COMPLETE';
     }
     if (assessment.status === 'IN_PROGRESS') {

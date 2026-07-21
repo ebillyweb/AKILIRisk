@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function AdvisorDashboardLoadingPage() {
+export default function AdvisorHubLoading() {
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Hero skeleton */}
@@ -25,33 +25,26 @@ export default function AdvisorDashboardLoadingPage() {
         ))}
       </div>
 
-      {/* Table skeleton */}
-      <Card>
-        <CardHeader>
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-96 max-w-full" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Table header */}
-            <div className="grid grid-cols-5 gap-4 pb-2 border-b">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-4" />
-              ))}
-            </div>
-            {/* Table rows */}
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="grid grid-cols-5 gap-4 py-2">
-                {[...Array(5)].map((_, j) => (
-                  <Skeleton key={j} className="h-6" />
-                ))}
+      {/* Workspace cards skeleton */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="space-y-3 pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <Skeleton className="size-10 rounded-lg" />
+                <Skeleton className="h-5 w-16 rounded-full" />
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-1">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Skeleton className="h-4 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

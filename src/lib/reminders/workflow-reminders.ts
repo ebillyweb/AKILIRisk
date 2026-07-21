@@ -102,6 +102,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
                 status: true,
                 completedAt: true,
                 updatedAt: true,
+                deliverablePhase: true,
               },
               orderBy: {
                 updatedAt: 'desc',
@@ -165,6 +166,7 @@ export async function processWorkflowReminders(): Promise<ProcessResult> {
             status: latestAssessment.status,
             completedAt: latestAssessment.completedAt,
             updatedAt: latestAssessment.updatedAt,
+            deliverablePhase: latestAssessment.deliverablePhase,
           } : undefined,
           documents:
             aggregateMandatoryDocumentCounts(clientData.documentRequirements).get(

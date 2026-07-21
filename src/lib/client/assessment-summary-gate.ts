@@ -12,6 +12,7 @@ import {
   getClientAssessmentScope,
   resolveClientAssessmentIncludedPillars,
 } from "@/lib/client/assessment-scope";
+import { pickLatestAssessmentForPipeline } from "@/lib/pipeline/pick-latest-assessment-for-pipeline";
 
 export type ClientAssessmentSummaryAccess = {
   /** Heat-map Risk Preview once every included pillar is scored (PREVIEW phase). */
@@ -78,20 +79,33 @@ export function evaluateClientAssessmentSummaryAccess(input: {
 export async function getClientAssessmentSummaryAccess(
   clientUserId: string,
 ): Promise<ClientAssessmentSummaryAccess> {
-  const [latest, approvedScope, catalog] = await Promise.all([
-    prisma.assessment.findFirst({
-      where: { userId: clientUserId },
-      orderBy: { startedAt: "desc" },
+  const [assessments, approvedScope, catalog] = await Promise.all([
+    prisma.assessment.findMany({
+      where: { userId: clientUserId, status: { not: "ARCHIVED" } },
+      orderBy: [{ startedAt: "desc" }, { updatedAt: "desc" }],
       select: {
         id: true,
+        status: true,
+        startedAt: true,
+        updatedAt: true,
+        completedAt: true,
         deliverablePhase: true,
         includedPillars: true,
         scores: { select: { pillar: true } },
+        _count: { select: { responses: true } },
       },
     }),
     getClientAssessmentScope(clientUserId),
     getPlatformPillarCatalog(),
   ]);
+
+  const latest = pickLatestAssessmentForPipeline(
+    assessments.map((row) => ({
+      ...row,
+      scoreCount: row.scores.length,
+      responseCount: row._count.responses,
+    })),
+  );
 
   const includedPillars = await resolveClientAssessmentIncludedPillars({
     assessmentIncludedPillars: latest?.includedPillars,

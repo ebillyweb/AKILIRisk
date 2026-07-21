@@ -7,6 +7,9 @@ import { aggregateMandatoryDocumentCounts, hasUnfulfilledMandatoryDocuments } fr
 import { assessmentNeedsRescore } from "@/lib/assessment/answers-changed-after-complete";
 import { indexAwaitingIntakeReviewByClient, isIntakeAwaitingAdvisorReview } from "./intake-review";
 import { pickIntakeForPipeline } from "./pick-intake-for-pipeline";
+import { pickLatestAssessmentForPipeline } from "./pick-latest-assessment-for-pipeline";
+import type { AssessmentPipelineSnapshot } from "./pick-latest-assessment-for-pipeline";
+import { reconcileAssessmentCompletionIfNeeded } from "./reconcile-assessment-completion";
 import { computeClientStage, computeProgress, isStalled } from "./status";
 import { decryptUserEmail } from "@/lib/auth/user-email";
 import {
@@ -16,6 +19,7 @@ import {
 import {
   getClientEngagementScope,
 } from "@/lib/client/engagement-scope";
+import { resolveClientAssessmentIncludedPillars } from "@/lib/client/assessment-scope";
 import type { PortfolioScope } from "@/lib/enterprise/portfolio-access";
 import {
   listAdvisorProfileIdsForScope,
@@ -25,6 +29,28 @@ import {
 import { loadAdvisorAssessmentDomainPickerData } from "@/lib/methodology/advisor-assessment-domains";
 import { resolveClientReferenceCode } from "@/lib/client/client-reference-code.server";
 import { getRestartIntakeEligibility } from "@/lib/intake/restart-intake";
+import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
+
+type AssessmentWithCounts = AssessmentPipelineSnapshot & {
+  scores?: unknown[];
+  _count?: { scores?: number; responses?: number };
+};
+
+function withAssessmentProgressCounts<T extends AssessmentWithCounts>(
+  assessments: T[],
+): Array<T & { scoreCount: number; responseCount: number }> {
+  return assessments.map((assessment) => ({
+    ...assessment,
+    scoreCount: assessment._count?.scores ?? assessment.scores?.length ?? 0,
+    responseCount: assessment._count?.responses ?? 0,
+  }));
+}
+
+function pickAssessmentForPipeline<T extends AssessmentWithCounts>(
+  assessments: T[],
+): T | null {
+  return pickLatestAssessmentForPipeline(withAssessmentProgressCounts(assessments));
+}
 
 /** Voice answers often omit `answeredAt` until later; typed answers set it. */
 function whereIntakeResponseHasAnswer(interviewId: string): Prisma.IntakeResponseWhereInput {
@@ -114,17 +140,17 @@ export async function getClientPipeline(
         include: {
           assessments: {
             where: { status: { not: "ARCHIVED" } },
-            orderBy: {
-              updatedAt: 'desc',
-            },
-            take: 1,
+            orderBy: [{ startedAt: "desc" }, { updatedAt: "desc" }],
             include: {
               scores: {
                 orderBy: {
                   calculatedAt: 'desc'
                 },
                 take: 1,
-              }
+              },
+              _count: {
+                select: { scores: true, responses: true },
+              },
             }
           }
         }
@@ -250,10 +276,10 @@ export async function getClientPipeline(
     assignments.map((a) => [a.client.id, a.intakeWaivedAt != null]),
   );
   const assessmentCompletedByClientId = new Map(
-    assignments.map((a) => [
-      a.client.id,
-      a.client.assessments[0]?.status === "COMPLETED",
-    ]),
+    assignments.map((a) => {
+      const latest = pickAssessmentForPipeline(a.client.assessments);
+      return [a.client.id, latest?.status === "COMPLETED"] as const;
+    }),
   );
   const intakeReviewByClient = indexAwaitingIntakeReviewByClient(
     intakeInterviews,
@@ -302,7 +328,7 @@ export async function getClientPipeline(
 
     // Get the most recent activity date
     const latestIntake = effectiveIntakeByUserId.get(client.id) ?? null;
-    const latestAssessment = client.assessments[0];
+    const latestAssessment = pickAssessmentForPipeline(client.assessments);
 
     const activityDates = [
       assignment.assignedAt,
@@ -344,6 +370,7 @@ export async function getClientPipeline(
         status: latestAssessment.status,
         completedAt: latestAssessment.completedAt,
         updatedAt: latestAssessment.updatedAt,
+        deliverablePhase: latestAssessment.deliverablePhase,
       } : undefined,
       documents: {
         required: docCounts.required,
@@ -532,12 +559,15 @@ export async function getClientDetail(
           },
           assessments: {
             where: { status: { not: "ARCHIVED" } },
-            orderBy: { completedAt: 'desc' },
+            orderBy: [{ startedAt: "desc" }, { updatedAt: "desc" }],
             include: {
               scores: {
                 orderBy: { calculatedAt: 'desc' },
                 take: 1,
-              }
+              },
+              _count: {
+                select: { scores: true, responses: true },
+              },
             }
           }
         }
@@ -583,7 +613,49 @@ export async function getClientDetail(
 
   // Get the effective intake and assessment for stage/timeline display
   const latestIntake = pickIntakeForPipeline(client.intakeInterviews);
-  const latestAssessment = client.assessments[0];
+  const latestAssessment = pickAssessmentForPipeline(client.assessments);
+  const engagementScope = await getClientEngagementScope(clientId);
+  const pillarCatalog = await getPlatformPillarCatalog();
+
+  let assessmentPillarScores: {
+    pillar: string;
+    score: number;
+    riskLevel: string;
+  }[] = [];
+  let effectiveAssessmentStatus = latestAssessment?.status;
+  let effectiveAssessmentCompletedAt = latestAssessment?.completedAt ?? null;
+  let effectiveDeliverablePhase = latestAssessment?.deliverablePhase;
+
+  if (latestAssessment) {
+    const pillarScoreRows = await prisma.pillarScore.findMany({
+      where: { assessmentId: latestAssessment.id },
+      orderBy: { pillar: "asc" },
+    });
+    assessmentPillarScores = pillarScoreRows.map((pillar) => ({
+      pillar: pillar.pillar,
+      score: pillar.score,
+      riskLevel: pillar.riskLevel,
+    }));
+
+    const includedPillars = await resolveClientAssessmentIncludedPillars({
+      assessmentIncludedPillars: latestAssessment.includedPillars,
+      approvedScopeIncludedPillars: engagementScope.includedPillars,
+      hasAssessmentRow: true,
+    });
+
+    const reconciled = await reconcileAssessmentCompletionIfNeeded({
+      assessmentId: latestAssessment.id,
+      status: latestAssessment.status,
+      completedAt: latestAssessment.completedAt,
+      deliverablePhase: latestAssessment.deliverablePhase,
+      pillarIds: pillarScoreRows.map((row) => row.pillar),
+      includedPillars,
+      catalog: pillarCatalog,
+    });
+    effectiveAssessmentStatus = reconciled.status;
+    effectiveAssessmentCompletedAt = reconciled.completedAt;
+    effectiveDeliverablePhase = reconciled.deliverablePhase;
+  }
 
   // Build timeline events
   const events: WorkflowEvent[] = [];
@@ -645,12 +717,12 @@ export async function getClientDetail(
       detail: 'Risk assessment began'
     });
 
-    if (latestAssessment.completedAt) {
+    if (effectiveAssessmentCompletedAt) {
       const score = latestAssessment.scores[0]?.score;
       events.push({
         stage: 'ASSESSMENT_COMPLETE',
         label: 'Assessment Completed',
-        date: latestAssessment.completedAt,
+        date: effectiveAssessmentCompletedAt,
         detail: score ? `Risk score: ${score}` : 'Assessment finished'
       });
     }
@@ -693,9 +765,10 @@ export async function getClientDetail(
     } : undefined,
     intake: intakeForStageDetail,
     assessment: latestAssessment ? {
-      status: latestAssessment.status,
-      completedAt: latestAssessment.completedAt,
+      status: effectiveAssessmentStatus!,
+      completedAt: effectiveAssessmentCompletedAt,
       updatedAt: latestAssessment.updatedAt,
+      deliverablePhase: effectiveDeliverablePhase,
     } : undefined,
     documents: docCounts
   });
@@ -723,7 +796,7 @@ export async function getClientDetail(
     latestIntake,
     intakeApproval,
     intakeWaived,
-    { assessmentCompleted: latestAssessment?.status === "COMPLETED" },
+    { assessmentCompleted: effectiveAssessmentStatus === "COMPLETED" },
   );
   const documentsNeededFlag = hasUnfulfilledMandatoryDocuments(docCounts);
   const staleScoresFlag = latestAssessment
@@ -771,12 +844,12 @@ export async function getClientDetail(
         : null,
     assessment: latestAssessment ? {
       id: latestAssessment.id,
-      status: latestAssessment.status,
-      completedAt: latestAssessment.completedAt,
+      status: effectiveAssessmentStatus!,
+      completedAt: effectiveAssessmentCompletedAt,
       score: latestAssessment.scores[0]?.score || null,
       version: latestAssessment.version,
       answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
-      deliverablePhase: latestAssessment.deliverablePhase,
+      deliverablePhase: effectiveDeliverablePhase!,
     } : null,
     documents: {
       required: docCounts.required,
@@ -807,52 +880,24 @@ export async function getClientDetail(
 
   // Build assessment details
   let assessmentDetails = null;
-  if (latestAssessment && latestAssessment.scores[0]) {
-    const score = latestAssessment.scores[0];
-
-    // Get all pillar scores for this assessment
-    const pillarScores = await prisma.pillarScore.findMany({
-      where: { assessmentId: latestAssessment.id },
-      orderBy: { pillar: 'asc' }
-    });
-
+  if (latestAssessment) {
+    const headlineScore = latestAssessment.scores[0];
     assessmentDetails = {
       id: latestAssessment.id,
-      status: latestAssessment.status,
-      score: score.score,
-      riskLevel: score.riskLevel,
-      completedAt: latestAssessment.completedAt,
+      status: effectiveAssessmentStatus!,
+      score: headlineScore?.score ?? null,
+      riskLevel: headlineScore?.riskLevel ?? null,
+      completedAt: effectiveAssessmentCompletedAt,
       version: latestAssessment.version,
       answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
-      deliverablePhase: latestAssessment.deliverablePhase,
-      pillarScores: pillarScores.map((pillar) => ({
-        pillar: pillar.pillar,
-        score: pillar.score,
-        riskLevel: pillar.riskLevel,
-      })),
-    };
-  } else if (latestAssessment) {
-    assessmentDetails = {
-      id: latestAssessment.id,
-      status: latestAssessment.status,
-      score: null,
-      riskLevel: null,
-      completedAt: latestAssessment.completedAt,
-      version: latestAssessment.version,
-      answersChangedAfterCompleteAt: latestAssessment.answersChangedAfterCompleteAt,
-      deliverablePhase: latestAssessment.deliverablePhase,
-      pillarScores: [],
+      deliverablePhase: effectiveDeliverablePhase!,
+      pillarScores: assessmentPillarScores,
     };
   }
 
-  const engagementScope = await getClientEngagementScope(clientId);
   const assessmentDomainPicker = await loadAdvisorAssessmentDomainPickerData(
     assignmentAdvisorProfileId,
   );
-  const { getPlatformPillarCatalog } = await import(
-    "@/lib/methodology/cached-pillar-catalog"
-  );
-  const pillarCatalog = await getPlatformPillarCatalog();
 
   const advisorProfile = await prisma.advisorProfile.findUnique({
     where: { id: assignmentAdvisorProfileId },
@@ -865,7 +910,7 @@ export async function getClientDetail(
     ? await getAdvisorAssessmentLifecycleContext(
         advisorProfile.userId,
         latestAssessment
-          ? { id: latestAssessment.id, status: latestAssessment.status }
+          ? { id: latestAssessment.id, status: effectiveAssessmentStatus! }
           : null,
       )
     : { reassessmentEnabled: false, targetedQuestionCount: 0 };

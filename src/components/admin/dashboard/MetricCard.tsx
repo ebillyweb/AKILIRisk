@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 export type MetricStatus = "healthy" | "warning" | "critical" | "neutral";
@@ -69,6 +70,31 @@ function isStatusStringValue(value: string | number): value is string {
   if (trimmed.length === 0 || trimmed === "—") return false;
   const numericLead = parseFloat(trimmed);
   return Number.isNaN(numericLead);
+}
+
+/**
+ * Loading placeholder that mirrors {@link MetricCard}'s layout so the metrics
+ * grid keeps its shape while a snapshot is being fetched.
+ */
+export function MetricCardSkeleton({ className }: { className?: string }) {
+  return (
+    <article
+      aria-hidden
+      className={cn(
+        "hero-surface relative flex min-h-[9.5rem] flex-col rounded-2xl border border-border/80 bg-card p-4 shadow-sm",
+        className
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        <Skeleton className="mt-0.5 size-8 shrink-0 rounded-lg" />
+        <Skeleton className="mt-1 h-4 w-24" />
+      </div>
+      <div className="mt-3 flex flex-1 flex-col justify-end gap-2">
+        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-3 w-28" />
+      </div>
+    </article>
+  );
 }
 
 export function MetricCard({

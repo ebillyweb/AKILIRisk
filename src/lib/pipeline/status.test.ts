@@ -29,31 +29,69 @@ describe('computeClientStage — documents', () => {
     },
   };
 
-  it('returns DOCUMENTS_REQUIRED when mandatory docs remain', () => {
+  it('returns ASSESSMENT_COMPLETE when scored but Risk Profile is still PREVIEW', () => {
     expect(
       computeClientStage({
         ...base,
+        assessment: {
+          ...base.assessment,
+          deliverablePhase: 'PREVIEW',
+        },
+        documents: { required: 0, fulfilled: 0 },
+      }),
+    ).toBe('ASSESSMENT_COMPLETE');
+  });
+
+  it('returns COMPLETE when profile is published and there are no mandatory documents', () => {
+    expect(
+      computeClientStage({
+        ...base,
+        assessment: {
+          ...base.assessment,
+          deliverablePhase: 'PROFILE',
+        },
+        documents: { required: 0, fulfilled: 0 },
+      }),
+    ).toBe('COMPLETE');
+  });
+
+  it('returns DOCUMENTS_REQUIRED when profile is published and mandatory docs remain', () => {
+    expect(
+      computeClientStage({
+        ...base,
+        assessment: {
+          ...base.assessment,
+          deliverablePhase: 'PROFILE',
+        },
         documents: { required: 2, fulfilled: 1 },
       }),
     ).toBe('DOCUMENTS_REQUIRED');
   });
 
-  it('returns COMPLETE when all mandatory docs are fulfilled', () => {
+  it('returns COMPLETE when all mandatory docs are fulfilled and profile is published', () => {
     expect(
       computeClientStage({
         ...base,
+        assessment: {
+          ...base.assessment,
+          deliverablePhase: 'PORTFOLIO',
+        },
         documents: { required: 2, fulfilled: 2 },
       }),
     ).toBe('COMPLETE');
   });
 
-  it('returns COMPLETE when there are no mandatory documents', () => {
+  it('keeps ASSESSMENT_COMPLETE for PREVIEW even when documents remain', () => {
     expect(
       computeClientStage({
         ...base,
-        documents: { required: 0, fulfilled: 0 },
+        assessment: {
+          ...base.assessment,
+          deliverablePhase: 'PREVIEW',
+        },
+        documents: { required: 2, fulfilled: 0 },
       }),
-    ).toBe('COMPLETE');
+    ).toBe('ASSESSMENT_COMPLETE');
   });
 
   it('returns ASSESSMENT_IN_PROGRESS when latest assessment is in progress', () => {

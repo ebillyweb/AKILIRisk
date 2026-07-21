@@ -423,6 +423,7 @@ export function ClientDetailView({
                       riskLevel: p.riskLevel,
                     }))}
                     catalog={detail.pillarCatalog}
+                    includedPillarIds={advisorAssignment.includedPillars}
                   />
                 </div>
 
