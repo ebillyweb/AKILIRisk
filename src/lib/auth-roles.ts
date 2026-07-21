@@ -45,3 +45,20 @@ export function isAdvisorHubNavRole(role: string | null | undefined): boolean {
   const r = normalizeUserRoleString(role);
   return r === "ADVISOR" || r === "ADMIN" || r === "SUPER_ADMIN";
 }
+
+/**
+ * Canonical home for a non-client role that lands on the client portal
+ * (`/dashboard`). Platform admins → `/admin`, advisor-hub roles → `/advisor`,
+ * clients (`USER`) → `null` (they stay on the client dashboard).
+ *
+ * Used by the proxy to redirect advisor/admin roles off `/dashboard` before the
+ * client shell renders. `/advisor` and `/admin` enforce their own access gates.
+ */
+export function clientHomeRedirectTargetForRole(
+  role: string | null | undefined
+): "/admin" | "/advisor" | null {
+  const r = normalizeUserRoleString(role);
+  if (isPlatformAdminRole(r)) return "/admin";
+  if (isAdvisorHubNavRole(r)) return "/advisor";
+  return null;
+}

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  clientHomeRedirectTargetForRole,
   isAdvisorHubNavRole,
   isPlatformAdminRole,
   isSuperAdminRole,
@@ -39,5 +40,26 @@ describe("role helpers use normalization", () => {
     expect(isPlatformAdminRole("admin")).toBe(true);
     expect(isAdvisorHubNavRole("Advisor")).toBe(true);
     expect(isSuperAdminRole("Super_Admin")).toBe(true);
+  });
+});
+
+describe("clientHomeRedirectTargetForRole", () => {
+  it("keeps clients on the dashboard (null)", () => {
+    expect(clientHomeRedirectTargetForRole("USER")).toBeNull();
+    expect(clientHomeRedirectTargetForRole(null)).toBeNull();
+    expect(clientHomeRedirectTargetForRole(undefined)).toBeNull();
+    // Unknown roles normalize to USER, so they also stay (no open redirect).
+    expect(clientHomeRedirectTargetForRole("GARBAGE")).toBeNull();
+  });
+
+  it("routes advisors to /advisor", () => {
+    expect(clientHomeRedirectTargetForRole("ADVISOR")).toBe("/advisor");
+    expect(clientHomeRedirectTargetForRole("advisor")).toBe("/advisor");
+  });
+
+  it("routes platform admins to /admin", () => {
+    expect(clientHomeRedirectTargetForRole("ADMIN")).toBe("/admin");
+    expect(clientHomeRedirectTargetForRole("SUPER_ADMIN")).toBe("/admin");
+    expect(clientHomeRedirectTargetForRole("Super_Admin")).toBe("/admin");
   });
 });

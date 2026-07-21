@@ -1,12 +1,8 @@
 import { auth } from "@/lib/auth";
-import { getAdvisorHubAccessForUserId } from "@/lib/advisor/auth";
-import { resolveAdvisorCheckoutBillingHref } from "@/lib/advisor/checkout-billing-redirect";
 import { getClientIntakeGateState } from "@/lib/client/intake-gate";
 import { hasClientAssessmentStarted } from "@/lib/client/intake-edit-gate";
 import { getClientAssessmentSummaryAccess } from "@/lib/client/assessment-summary-gate";
 import { prisma } from "@/lib/db";
-import { isPlatformAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
-import { redirect } from "next/navigation";
 import { countVisibleGovernanceQuestions } from "@/lib/assessment/bank/load-bank";
 import { UnauthorizedNotice } from "@/components/layout/UnauthorizedNotice";
 import { ClientDashboardOverview } from "@/components/dashboard/ClientDashboardOverview";
@@ -34,29 +30,10 @@ export default async function DashboardPage({
   }
 
   const sp = await searchParams;
-  const errorSuffix =
-    sp.error === "unauthorized" ? "?error=unauthorized" : "";
 
-  const role = normalizeUserRoleString(session.user.role);
-  if (role === "ADVISOR") {
-    const hub = await getAdvisorHubAccessForUserId(session.user.id);
-    if (!hub.allowed) {
-      if (hub.blockReason === "deactivated") {
-        redirect(
-          `/api/auth/signout?callbackUrl=${encodeURIComponent("/signin?notice=account_deactivated")}`
-        );
-      }
-      redirect(
-        hub.blockReason === "disabled"
-          ? "/settings?notice=advisor_portal_disabled"
-          : await resolveAdvisorCheckoutBillingHref(session.user.id)
-      );
-    }
-    redirect(`/advisor${errorSuffix}`);
-  }
-  if (isPlatformAdminRole(role)) {
-    redirect(`/admin${errorSuffix}`);
-  }
+  // Role-home routing (advisor-hub / platform-admin → their own home) is
+  // enforced in the proxy before this renders — see src/proxy.ts. This page
+  // only serves the client (USER) role.
 
   let intakeHeroLabel = "Not started";
 
