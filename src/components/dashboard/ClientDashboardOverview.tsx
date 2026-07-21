@@ -135,12 +135,12 @@ function JourneyTracker({ steps }: { steps: JourneyStep[] }) {
         }
 
         return (
-          <li key={step.id}>
+          <li key={step.id} className="h-full">
             <Link
               href={step.href}
               className={cn(
                 className,
-                "block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               )}
               data-journey-step={step.id}
               data-journey-state={step.state}
