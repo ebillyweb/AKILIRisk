@@ -50,8 +50,18 @@ async function main() {
   }
 
   const result = await prisma.intakeInterview.deleteMany({ where: { userId: user.id } });
+
+  // Also clear any assessment the client may have started in a prior run.
+  // Without this, `hasClientAssessmentStarted` stays true and the intake-edit
+  // gate (assertClientIntakeAnswersEditable) 409s audio/answer uploads even
+  // after the interview is wiped. All Assessment children (responses, scores,
+  // recommendations, reports, intelligence events) cascade on delete.
+  const assessments = await prisma.assessment.deleteMany({ where: { userId: user.id } });
+
   console.log(
-    `Reset ${FRESH_EMAIL}: deleted ${result.count} intake interview row(s) (responses + approvals cascade).`
+    `Reset ${FRESH_EMAIL}: deleted ${result.count} intake interview row(s) ` +
+      `(responses + approvals cascade) and ${assessments.count} assessment row(s) ` +
+      `(scores + responses + reports cascade).`
   );
 }
 

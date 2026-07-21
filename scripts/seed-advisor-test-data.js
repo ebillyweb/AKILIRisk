@@ -536,6 +536,14 @@ async function main() {
       firstName: 'Second',
       lastName: 'Advisor',
       role: 'ADVISOR',
+      // Self-heal a soft-deleted / deactivated fixture: advisor2 must be an
+      // active advisor with portal access for the cross-tenant isolation specs
+      // (tenant-isolation, admin-api-authz, intake-audio-endpoint, etc.).
+      // A stray soft-delete also flips advisorPortalAccessEnabled off, which
+      // bounces sign-in to /settings?notice=advisor_portal_disabled; restore
+      // both so re-seeding fully recovers the fixture.
+      deletedAt: null,
+      advisorPortalAccessEnabled: true,
       ...VERIFIED_EMAIL,
       ...MFA_OFF_FIELDS,
     },

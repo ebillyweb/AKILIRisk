@@ -4,9 +4,9 @@ import { SignInPage } from "../page-objects/SignInPage";
 import { USERS } from "../fixtures/users";
 
 /**
- * Auth gating on the new authenticated streaming route at
- * `/api/intake/[interviewId]/audio/[questionId]` (introduced when intake
- * audio moved off `public/uploads/...` into private S3).
+ * Auth gating on the authenticated streaming route at
+ * `/api/intake/[interviewId]/audio/[questionId]` (intake audio moved off
+ * `public/uploads/...` into private S3).
  *
  * Coverage:
  *  - Owner (client) gets 200 with the right Content-Type
@@ -16,13 +16,17 @@ import { USERS } from "../fixtures/users";
  *    against the original "everything in public/" architecture
  *  - Unauthenticated request gets 401
  *
- * Setup: we round-trip through the upload endpoint with a tiny webm blob
- * so we don't depend on S3 having any pre-seeded content. The seed fixture
- * `client@test.com` has an existing IntakeInterview row; we discover the
- * interview id with `scripts/get-client-intake-fixture.js`.
+ * Fixture: everything runs on `client-fresh@test.com`, who is seeded with an
+ * ACTIVE assignment to `advisor@test.com` (see scripts/seed-advisor-test-data.js)
+ * and can be reset to a clean, editable intake state. `beforeEach` wipes their
+ * interview rows; each test then `beginFreshInterview()`s a NOT_STARTED
+ * interview via `GET /api/intake/script` (the same get-or-create the wizard
+ * uses) so the upload route accepts audio for it. We deliberately do NOT touch
+ * `client@test.com`, whose SUBMITTED+Approved intake other specs depend on and
+ * which the upload route (correctly) rejects with 409.
  */
 
-// 27 bytes — minimum webm EBML header. Just enough that the upload route's
+// 28 bytes — minimum webm EBML header. Just enough that the upload route's
 // MIME validation accepts it as `audio/webm` and S3 doesn't reject empty.
 const TINY_WEBM = Buffer.from([
   0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01, 0x42, 0xf7, 0x81,
@@ -30,13 +34,37 @@ const TINY_WEBM = Buffer.from([
   0x77, 0x65, 0x62, 0x6d,
 ]);
 
-let interviewId: string;
-let questionId: string;
-let audioPath: string;
-
 async function cookieHeaderFromPage(page: import("@playwright/test").Page) {
   const cookies = await page.context().cookies();
   return cookies.map((c) => `${c.name}=${c.value}`).join("; ");
+}
+
+/**
+ * Deterministic "Begin interview": `GET /api/intake/script` returns the
+ * question set and get-or-creates a NOT_STARTED interview when none is active.
+ * Uses the API the wizard itself relies on, so it doesn't depend on the intake
+ * wizard UI (whose start→question navigation has drifted — see
+ * intake-mixed-mode.spec.ts). Returns an editable interview owned by the caller.
+ */
+async function beginFreshInterview(
+  request: APIRequestContext,
+  cookies: string
+): Promise<{ interviewId: string; questionId: string }> {
+  const resp = await request.get("/api/intake/script", {
+    headers: { cookie: cookies },
+  });
+  expect(resp.status(), await resp.text()).toBe(200);
+  const body = (await resp.json()) as {
+    interviewId: string;
+    status: string;
+    questions: { id: string }[];
+  };
+  expect(body.interviewId).toBeTruthy();
+  expect(
+    body.questions.length,
+    "intake script should expose at least one question"
+  ).toBeGreaterThan(0);
+  return { interviewId: body.interviewId, questionId: body.questions[0].id };
 }
 
 async function uploadOwnerAudio(
@@ -92,40 +120,24 @@ async function uploadOwnerAudioWithMime(
 }
 
 test.describe("intake audio streaming endpoint", () => {
-  // S3_INTAKE_BUCKET is now set on Preview — uploads no longer 500. But this
-  // spec plants its audio fixture by POSTing to the upload endpoint for
-  // `client@test.com`, whose seeded intake is SUBMITTED + Approved. The upload
-  // route correctly rejects that with 409 "Intake already submitted"
-  // (src/app/api/intake/[id]/audio/route.ts:102), so 5/6 tests fail on 409,
-  // NOT on S3. Needs a redesign to plant audio against an editable interview
-  // owned by an advisor-assigned client. See INVENTORY "Surfaced bugs".
-  test.skip(true, "spec uploads to a SUBMITTED intake -> 409; needs editable-interview redesign (S3 env resolved)");
-
-  test.beforeAll(() => {
-    // Discover the seeded client's interviewId + questionId so we can
-    // exercise the upload + streaming round-trip without coupling to a
-    // particular question in the bank.
-    const out = execSync("node scripts/get-client-intake-fixture.js", {
+  // Reset client-fresh to a clean (no-interview) state before each test so
+  // beginFreshInterview always creates a fresh, editable interview. Reuses the
+  // existing helper (also used by client-intake.spec.ts / intake-mixed-mode).
+  test.beforeEach(() => {
+    execSync("node scripts/reset-fresh-client-intake.js", {
       cwd: process.cwd(),
       env: process.env,
-    })
-      .toString()
-      .trim();
-    const parsed = JSON.parse(out) as {
-      interviewId: string;
-      questionId: string;
-    };
-    interviewId = parsed.interviewId;
-    questionId = parsed.questionId;
-    audioPath = `/api/intake/${interviewId}/audio/${questionId}`;
+      stdio: "inherit",
+    });
   });
 
   test("accepts parameterized MediaRecorder MIME types (200)", async ({
     page,
     request,
   }) => {
-    await new SignInPage(page).signInAs("client");
+    await new SignInPage(page).signInAs("clientFresh");
     const cookies = await cookieHeaderFromPage(page);
+    const { interviewId, questionId } = await beginFreshInterview(request, cookies);
 
     await uploadOwnerAudioWithMime(
       request,
@@ -144,16 +156,13 @@ test.describe("intake audio streaming endpoint", () => {
   });
 
   test("owner receives the audio bytes (200)", async ({ page, request }) => {
-    await new SignInPage(page).signInAs("client");
+    await new SignInPage(page).signInAs("clientFresh");
     const cookies = await cookieHeaderFromPage(page);
+    const { interviewId, questionId } = await beginFreshInterview(request, cookies);
+    const audioPath = `/api/intake/${interviewId}/audio/${questionId}`;
 
     // Plant a known audio object first — round-trips through S3.
-    const upload = await uploadOwnerAudio(
-      request,
-      cookies,
-      interviewId,
-      questionId
-    );
+    const upload = await uploadOwnerAudio(request, cookies, interviewId, questionId);
     expect(upload.audioUrl).toBe(audioPath);
 
     const resp = await request.get(audioPath, {
@@ -170,13 +179,14 @@ test.describe("intake audio streaming endpoint", () => {
     page,
     request,
   }) => {
-    // Make sure an audio object is in S3 for this question (the prior
-    // test may not have run if filtered, and tests should be order-independent).
-    await new SignInPage(page).signInAs("client");
+    // Plant audio as the owner (client-fresh).
+    await new SignInPage(page).signInAs("clientFresh");
     const ownerCookies = await cookieHeaderFromPage(page);
+    const { interviewId, questionId } = await beginFreshInterview(request, ownerCookies);
     await uploadOwnerAudio(request, ownerCookies, interviewId, questionId);
+    const audioPath = `/api/intake/${interviewId}/audio/${questionId}`;
 
-    // Switch identity to the advisor (has ACTIVE assignment to client@test.com).
+    // Switch identity to the advisor (ACTIVE assignment to client-fresh).
     await page.context().clearCookies();
     await new SignInPage(page).signInAs("advisor");
     const advisorCookies = await cookieHeaderFromPage(page);
@@ -192,9 +202,11 @@ test.describe("intake audio streaming endpoint", () => {
     page,
     request,
   }) => {
-    await new SignInPage(page).signInAs("client");
+    await new SignInPage(page).signInAs("clientFresh");
     const ownerCookies = await cookieHeaderFromPage(page);
+    const { interviewId, questionId } = await beginFreshInterview(request, ownerCookies);
     await uploadOwnerAudio(request, ownerCookies, interviewId, questionId);
+    const audioPath = `/api/intake/${interviewId}/audio/${questionId}`;
 
     await page.context().clearCookies();
     await new SignInPage(page).signInAs("admin");
@@ -212,12 +224,14 @@ test.describe("intake audio streaming endpoint", () => {
     request,
   }) => {
     // Plant audio as the owner first.
-    await new SignInPage(page).signInAs("client");
+    await new SignInPage(page).signInAs("clientFresh");
     const ownerCookies = await cookieHeaderFromPage(page);
+    const { interviewId, questionId } = await beginFreshInterview(request, ownerCookies);
     await uploadOwnerAudio(request, ownerCookies, interviewId, questionId);
+    const audioPath = `/api/intake/${interviewId}/audio/${questionId}`;
 
     // advisor2 is the seeded-no-assignments fixture (independent advisor,
-    // their own subdomain, no link to client@test.com).
+    // their own subdomain, no link to client-fresh@test.com).
     await page.context().clearCookies();
     await new SignInPage(page).signInAs("advisor2");
     const otherCookies = await cookieHeaderFromPage(page);
@@ -232,9 +246,11 @@ test.describe("intake audio streaming endpoint", () => {
   });
 
   test("unauthenticated request gets 401", async ({ request }) => {
-    // No sign-in, no cookies. Should 401 — auth check fires before the
-    // existence check, so this also doesn't leak whether the path exists.
-    const resp = await request.get(audioPath);
+    // No sign-in, no cookies. Auth check fires before the existence check, so a
+    // valid-format but nonexistent path still 401s (doesn't leak existence).
+    const resp = await request.get(
+      "/api/intake/test-interview-000000000000000000000000/audio/q1"
+    );
     expect(resp.status()).toBe(401);
   });
 });

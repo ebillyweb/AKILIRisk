@@ -404,22 +404,6 @@ All five findings from this pass are now fixed — see the Fixed section below
 fixed). Playwright suite not re-run this pass (requires live preview target +
 env; see prior preview run above).
 
-### Minor (test design): `intake-audio-endpoint.spec.ts` plants audio against a SUBMITTED intake
-
-- **Now that S3 works** (env resolved, see Fixed), the 6-test describe fails
-  5/6 on `409 "Intake already submitted"` — NOT S3. The spec plants its audio
-  fixture by POSTing to the upload endpoint for `client@test.com`, whose seeded
-  intake is SUBMITTED + Approved; the route correctly rejects uploads to a
-  submitted intake (`src/app/api/intake/[id]/audio/route.ts:102`). The
-  `unauthenticated request gets 401` test passes (no upload needed).
-- **Fix sketch:** redesign the fixture setup to plant audio against an
-  *editable* interview owned by a client with an ACTIVE assignment to
-  `advisor@test.com` (so the assigned-advisor read test still exercises authz).
-  Candidate: reset `client-fresh@test.com`, `Begin` an interview (IN_PROGRESS),
-  upload, then run the streaming-read authz assertions — but confirm
-  `client-fresh` is advisor-assigned first. Parked `test.skip` with the accurate
-  reason (verified 2026-07-02 against preview).
-
 ### Minor (drift): `intake-mixed-mode.spec.ts` wizard start→question navigation drift
 
 - Un-parked from the S3 reason; now fails earlier and unrelated to S3: after
@@ -431,6 +415,24 @@ env; see prior preview run above).
 
 ## Fixed
 
+- **`intake-audio-endpoint.spec.ts` redesigned onto an editable interview —
+  all 6 tests green on preview** (2026-07-21). The spec previously planted its
+  audio fixture by uploading to `client@test.com`'s SUBMITTED intake (409). It
+  now runs entirely on `client-fresh@test.com` (seeded ACTIVE-assigned to
+  `advisor@test.com`): `beforeEach` resets the fresh client, each test
+  `beginFreshInterview()`s a NOT_STARTED interview via `GET /api/intake/script`
+  (the get-or-create the wizard uses — avoids the drifted wizard UI), then
+  uploads + exercises the streaming-read authz (owner 200, assigned advisor 200,
+  admin 200, MIME 200, unassigned advisor 404, unauth 401). Two supporting fixes:
+  (1) `scripts/reset-fresh-client-intake.js` now also deletes the fresh client's
+  `Assessment` rows — otherwise `assertClientIntakeAnswersEditable` 409s uploads
+  even after the interview is wiped; (2) **advisor2 fixture drift**: advisor2 was
+  soft-deleted (`deletedAt` set) AND had `advisorPortalAccessEnabled=false` on
+  preview (a stray deactivation on 2026-07-19), which broke advisor2 credential
+  sign-in **suite-wide** (tenant-isolation, admin-api-authz, etc.). Restored both
+  fields on preview and made `scripts/seed-advisor-test-data.js` self-heal them
+  on re-seed. `client@test.com` was left untouched (other specs depend on its
+  SUBMITTED+Approved state).
 - **Preview env `S3_INTAKE_BUCKET` now set** (confirmed 2026-07-02 via
   `vercel env ls preview`: `S3_INTAKE_BUCKET` + `S3_INTAKE_REGION` present on
   Preview). `/api/intake/[id]/audio` uploads no longer 500 with "Failed to
