@@ -14,6 +14,8 @@ export type ClientIntakeGateState = {
   assessmentScopePending: boolean;
   restrictNavToIntake: boolean;
   assessmentUnlocked: boolean;
+  /** When set, assessment was waived — client skips directly to reporting. */
+  assessmentWaived: boolean;
 };
 
 /**
@@ -41,6 +43,7 @@ export async function getClientIntakeGateState(
   ]);
 
   const intakeWaived = engagementScope.intakeWaived;
+  const assessmentWaived = engagementScope.assessmentWaived;
   const hasSubmittedInterview = !!submittedInterview;
   const intakeApproved = latestApproval?.status === "APPROVED";
   const assessmentUnlocked = isEngagementAssessmentUnlocked(engagementScope);
@@ -54,5 +57,6 @@ export async function getClientIntakeGateState(
     assessmentScopePending,
     restrictNavToIntake,
     assessmentUnlocked,
+    assessmentWaived,
   };
 }

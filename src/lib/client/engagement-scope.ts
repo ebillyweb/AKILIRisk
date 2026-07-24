@@ -16,6 +16,8 @@ export type ClientEngagementScope = {
   approvalId: string | null;
   assignmentId: string | null;
   intakeWaived: boolean;
+  /** When set, assessment was waived — client skips directly to reporting. */
+  assessmentWaived: boolean;
 };
 
 /** Normalize scope writes; emphasis defaults to all included. */
@@ -103,6 +105,7 @@ async function resolveClientAssessmentIncludedPillars(
 type ActiveAssignment = {
   id: string;
   intakeWaivedAt: Date | null;
+  assessmentWaivedAt: Date | null;
   includedPillars: string[];
   focusAreas: string[];
 };
@@ -116,6 +119,7 @@ async function loadActiveAssignment(
     select: {
       id: true,
       intakeWaivedAt: true,
+      assessmentWaivedAt: true,
       includedPillars: true,
       focusAreas: true,
     },
@@ -215,8 +219,11 @@ export async function getClientEngagementScope(
       approvalId: null,
       assignmentId: assignment.id,
       intakeWaived,
+      assessmentWaived: assignment.assessmentWaivedAt != null,
     };
   }
+
+  const assessmentWaived = assignment?.assessmentWaivedAt != null;
 
   const approval = await prisma.intakeApproval.findFirst({
     where: {
@@ -258,6 +265,7 @@ export async function getClientEngagementScope(
       approvalId: approval.id,
       assignmentId: assignment?.id ?? null,
       intakeWaived,
+      assessmentWaived,
     };
   }
 
@@ -292,6 +300,7 @@ export async function getClientEngagementScope(
       approvalId: null,
       assignmentId: assignment?.id ?? null,
       intakeWaived,
+      assessmentWaived,
     };
   }
 
@@ -302,6 +311,7 @@ export async function getClientEngagementScope(
     approvalId: null,
     assignmentId: assignment?.id ?? null,
     intakeWaived,
+    assessmentWaived,
   };
 }
 

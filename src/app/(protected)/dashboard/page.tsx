@@ -122,6 +122,7 @@ export default async function DashboardPage({
     assessmentScopePending: intakeGate.assessmentScopePending,
     assessmentInProgress,
     assessmentComplete,
+    assessmentWaived: intakeGate.assessmentWaived,
     canViewRiskPreview: summaryAccess.canViewRiskPreview,
     canViewSummary: summaryAccess.canViewSummary,
     canViewActionPlan: summaryAccess.canViewSummary && actionPlanEnabled,

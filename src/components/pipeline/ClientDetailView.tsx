@@ -24,6 +24,7 @@ import { ClientAuthControls } from "./ClientAuthControls";
 import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
 import { RestartIntakeButton } from "./RestartIntakeButton";
 import { ManualCompletionButton } from "./ManualCompletionButton";
+import { AssessmentWaiverButton } from "./AssessmentWaiverButton";
 import { PermanentDeleteClientButton } from "./PermanentDeleteClientButton";
 import { restartIntakeBlockedMessage } from "@/lib/intake/restart-intake-copy";
 import { PipelineProcessStateLabel } from "./PipelineProcessStateLabel";
@@ -554,6 +555,15 @@ export function ClientDetailView({
                 <ManualCompletionButton
                   clientId={client.id}
                   manuallyCompletedAt={advisorAssignment.manuallyCompletedAt}
+                />
+              ) : null}
+
+              {assignmentActive ? (
+                <AssessmentWaiverButton
+                  clientId={client.id}
+                  assessmentWaivedAt={advisorAssignment.assessmentWaivedAt}
+                  intakeComplete={intakeSubmitted || intakeWaived}
+                  assessmentStarted={assessmentStarted}
                 />
               ) : null}
 

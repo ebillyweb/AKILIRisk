@@ -204,6 +204,10 @@ export const AUDIT_ACTIONS = {
   INTAKE_REJECT: "intake.reject",
   INTAKE_RESTART: "intake.restart",
   INTAKE_WAIVER_SET: "intake.waiver_set",
+  /** Advisor waived assessment — client skips directly to reporting after intake. */
+  ASSESSMENT_WAIVER_SET: "assessment.waiver_set",
+  /** Advisor removed assessment waiver — client must complete assessment. */
+  ASSESSMENT_WAIVER_UNDO: "assessment.waiver_undo",
   /** Advisor manually marked engagement complete, skipping remaining workflow steps. */
   ENGAGEMENT_MANUAL_COMPLETE: "engagement.manual_complete",
   /** Advisor undid manual completion, returning engagement to workflow-determined state. */

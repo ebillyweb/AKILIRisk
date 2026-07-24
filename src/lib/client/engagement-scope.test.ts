@@ -122,6 +122,7 @@ describe("getClientEngagementScope", () => {
     mockAssignmentFindFirst.mockResolvedValue({
       id: "asg-1",
       intakeWaivedAt: null,
+      assessmentWaivedAt: null,
       includedPillars: ["governance", "cyber-digital"],
       focusAreas: ["governance", "cyber-digital"],
     });
@@ -144,6 +145,7 @@ describe("getClientEngagementScope", () => {
     mockAssignmentFindFirst.mockResolvedValue({
       id: "asg-1",
       intakeWaivedAt: new Date(),
+      assessmentWaivedAt: null,
       includedPillars: ["cyber-digital"],
       focusAreas: ["cyber-digital"],
     });
@@ -155,6 +157,7 @@ describe("getClientEngagementScope", () => {
       source: "assignment",
       assignmentId: "asg-1",
       intakeWaived: true,
+      assessmentWaived: false,
     });
     expect(mockApprovalFindFirst).not.toHaveBeenCalled();
   });
@@ -163,6 +166,7 @@ describe("getClientEngagementScope", () => {
     mockAssignmentFindFirst.mockResolvedValue({
       id: "asg-1",
       intakeWaivedAt: null,
+      assessmentWaivedAt: null,
       includedPillars: [],
       focusAreas: [],
     });
@@ -192,6 +196,7 @@ describe("persistClientEngagementScope", () => {
     mockAssignmentFindFirst.mockResolvedValue({
       id: "asg-1",
       intakeWaivedAt: null,
+      assessmentWaivedAt: null,
       includedPillars: [],
       focusAreas: [],
     });
