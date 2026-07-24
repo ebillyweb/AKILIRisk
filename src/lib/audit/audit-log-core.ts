@@ -204,6 +204,10 @@ export const AUDIT_ACTIONS = {
   INTAKE_REJECT: "intake.reject",
   INTAKE_RESTART: "intake.restart",
   INTAKE_WAIVER_SET: "intake.waiver_set",
+  /** Advisor manually marked engagement complete, skipping remaining workflow steps. */
+  ENGAGEMENT_MANUAL_COMPLETE: "engagement.manual_complete",
+  /** Advisor undid manual completion, returning engagement to workflow-determined state. */
+  ENGAGEMENT_MANUAL_COMPLETE_UNDO: "engagement.manual_complete_undo",
   /** Epic 5.11: advisor-led live session lifecycle. */
   FACILITATED_SESSION_START: "facilitated_session.start",
   FACILITATED_SESSION_RESUME: "facilitated_session.resume",

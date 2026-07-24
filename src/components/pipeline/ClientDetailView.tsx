@@ -23,6 +23,7 @@ import { DocumentRequirements } from "./DocumentRequirements";
 import { ClientAuthControls } from "./ClientAuthControls";
 import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
 import { RestartIntakeButton } from "./RestartIntakeButton";
+import { ManualCompletionButton } from "./ManualCompletionButton";
 import { restartIntakeBlockedMessage } from "@/lib/intake/restart-intake-copy";
 import { PipelineProcessStateLabel } from "./PipelineProcessStateLabel";
 import type { ClientDetail } from "@/lib/pipeline/types";
@@ -544,6 +545,13 @@ export function ClientDetailView({
                 clientId={client.id}
                 status={advisorAssignment.status}
               />
+
+              {assignmentActive ? (
+                <ManualCompletionButton
+                  clientId={client.id}
+                  manuallyCompletedAt={advisorAssignment.manuallyCompletedAt}
+                />
+              ) : null}
 
               {assignmentActive ? (
                 <RestartIntakeButton
