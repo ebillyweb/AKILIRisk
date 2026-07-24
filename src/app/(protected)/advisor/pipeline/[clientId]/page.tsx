@@ -47,6 +47,8 @@ async function ClientDetailContent({ clientId }: { clientId: string }) {
     isEnterpriseDocumentRequirementsWorkspaceEnabled(visibilityContext);
   const actionPlanEnabled =
     isEnterpriseActionPlanWorkspaceEnabled(visibilityContext);
+  const canPermanentlyDelete =
+    visibilityContext.role === "OWNER" || visibilityContext.role === "ADMIN";
 
   return (
     <ClientDetailView
@@ -54,6 +56,7 @@ async function ClientDetailContent({ clientId }: { clientId: string }) {
       canSkipIntake={canSkipIntake}
       documentRequirementsEnabled={documentRequirementsEnabled}
       actionPlanEnabled={actionPlanEnabled}
+      canPermanentlyDelete={canPermanentlyDelete}
     />
   );
 }

@@ -21,6 +21,8 @@ import {
 import { sendNotification } from "@/lib/notifications/service";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
 import { requireAdminRole, requireSuperAdminRole } from "@/lib/admin/auth";
+import { auth } from "@/lib/auth";
+import { isSuperAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
 import { getAdvisorForAdmin } from "@/lib/admin/queries";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -784,12 +786,24 @@ export async function restoreClientByAdmin(input: unknown) {
 }
 
 /**
- * Permanently delete a client account and all related data (super admin only).
+ * Permanently delete a client account and all related data.
+ * Allowed for:
+ * - Platform super admins (can delete any client)
+ * - Enterprise OWNER/ADMIN (can delete clients assigned to their firm)
  * Intended for removing test/demo records. This action cannot be undone.
  */
 export async function permanentlyDeleteClientByAdmin(input: unknown) {
   try {
-    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireSuperAdminRole();
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const actorUserId = session.user.id;
+    const actorEmail = session.user.email ?? null;
+    const actorRole = normalizeUserRoleString(session.user.role);
+    const isPlatformSuperAdmin = isSuperAdminRole(actorRole);
+
     const parsed = adminClientUserIdSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -802,6 +816,19 @@ export async function permanentlyDeleteClientByAdmin(input: unknown) {
 
     if (parsed.data.userId === actorUserId) {
       return { success: false, error: "You cannot delete your own account." };
+    }
+
+    // Check if user is an enterprise OWNER or ADMIN
+    let enterpriseContext: { enterpriseId: string; role: string } | null = null;
+    if (!isPlatformSuperAdmin) {
+      const { resolveEnterpriseTeamContext } = await import("@/lib/enterprise/team-access");
+      enterpriseContext = await resolveEnterpriseTeamContext(actorUserId);
+      if (!enterpriseContext) {
+        return {
+          success: false,
+          error: "Unauthorized: This action requires firm admin or platform super admin role.",
+        };
+      }
     }
 
     const target = await prisma.user.findFirst({
@@ -822,6 +849,23 @@ export async function permanentlyDeleteClientByAdmin(input: unknown) {
     });
     if (!target) {
       return { success: false, error: "Client not found" };
+    }
+
+    // For enterprise admins, verify the client is assigned to their firm
+    if (enterpriseContext) {
+      const firmAssignment = await prisma.clientAdvisorAssignment.findFirst({
+        where: {
+          clientId: target.id,
+          advisor: { enterpriseId: enterpriseContext.enterpriseId },
+        },
+        select: { id: true },
+      });
+      if (!firmAssignment) {
+        return {
+          success: false,
+          error: "This client is not assigned to your firm.",
+        };
+      }
     }
 
     const deletedDataSummary = {
@@ -886,8 +930,11 @@ export async function permanentlyDeleteClientByAdmin(input: unknown) {
       },
       afterData: { deleted: true },
       metadata: {
-        reason: "Permanent deletion by super admin",
+        reason: isPlatformSuperAdmin
+          ? "Permanent deletion by platform super admin"
+          : `Permanent deletion by firm admin (${enterpriseContext?.role})`,
         cascade: deletedDataSummary,
+        enterpriseId: enterpriseContext?.enterpriseId ?? null,
       },
     });
 

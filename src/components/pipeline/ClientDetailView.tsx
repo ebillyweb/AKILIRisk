@@ -24,6 +24,7 @@ import { ClientAuthControls } from "./ClientAuthControls";
 import { ClientWorkflowStatusControls } from "./ClientWorkflowStatusControls";
 import { RestartIntakeButton } from "./RestartIntakeButton";
 import { ManualCompletionButton } from "./ManualCompletionButton";
+import { PermanentDeleteClientButton } from "./PermanentDeleteClientButton";
 import { restartIntakeBlockedMessage } from "@/lib/intake/restart-intake-copy";
 import { PipelineProcessStateLabel } from "./PipelineProcessStateLabel";
 import type { ClientDetail } from "@/lib/pipeline/types";
@@ -41,6 +42,8 @@ interface ClientDetailViewProps {
   canSkipIntake?: boolean;
   documentRequirementsEnabled?: boolean;
   actionPlanEnabled?: boolean;
+  /** Enterprise OWNER/ADMIN can permanently delete clients in their firm */
+  canPermanentlyDelete?: boolean;
 }
 
 /**
@@ -70,6 +73,7 @@ export function ClientDetailView({
   canSkipIntake = false,
   documentRequirementsEnabled = true,
   actionPlanEnabled = true,
+  canPermanentlyDelete = false,
 }: ClientDetailViewProps) {
   const { client, timeline, documentRequirements, intakeDetails, assessmentDetails, advisorAssignment, assessmentDomainPicker, restartIntake } = detail;
   const assessmentDomains = assessmentDomainPicker.domains;
@@ -609,6 +613,13 @@ export function ClientDetailView({
                   </Link>
                 </Button>
               )}
+
+              {canPermanentlyDelete ? (
+                <PermanentDeleteClientButton
+                  clientId={client.id}
+                  clientName={clientLabels.headline}
+                />
+              ) : null}
 
             </CardContent>
           </Card>

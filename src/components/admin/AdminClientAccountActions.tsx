@@ -14,10 +14,14 @@ import {
 type Props = {
   clientId: string;
   deactivated: boolean;
+  /** @deprecated Use canPermanentlyDelete instead */
   isSuperAdmin?: boolean;
+  /** Whether the current user can permanently delete this client (firm admin or super admin) */
+  canPermanentlyDelete?: boolean;
 };
 
-export function AdminClientAccountActions({ clientId, deactivated, isSuperAdmin = false }: Props) {
+export function AdminClientAccountActions({ clientId, deactivated, isSuperAdmin = false, canPermanentlyDelete }: Props) {
+  const showDeleteButton = canPermanentlyDelete ?? isSuperAdmin;
   const [pending, startTransition] = useTransition();
 
   return (
@@ -39,7 +43,7 @@ export function AdminClientAccountActions({ clientId, deactivated, isSuperAdmin 
           >
             Restore client
           </Button>
-          {isSuperAdmin && (
+          {showDeleteButton && (
             <Button
               type="button"
               size="sm"
