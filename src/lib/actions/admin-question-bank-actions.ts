@@ -7,7 +7,10 @@ import type { UserRole } from "@prisma/client";
 import { requireAdminRole } from "@/lib/admin/auth";
 import { parsePillarDbUuid, pillarDbUuidSchema } from "@/lib/assessment/bank/pillar-db-uuid";
 import { riskAreaIdForPillarCategory } from "@/lib/assessment/bank/pillar-category-risk-area";
-import { reorderPillarQuestionInRiskArea } from "@/lib/assessment/bank/pillar-question-reorder";
+import {
+  reorderPillarQuestionInRiskArea,
+  loadSortedPillarQuestionsForRiskArea,
+} from "@/lib/assessment/bank/pillar-question-reorder";
 import { isPillarQuestionBankActive } from "@/lib/assessment/bank/question-bank-source";
 import { isRiskAreaId } from "@/lib/assessment/bank/risk-areas";
 import { prisma } from "@/lib/db";
@@ -505,4 +508,95 @@ export async function movePillarQuestionOrder(formData: FormData) {
 
   revalidateQuestionBankPaths(riskAreaId);
   redirectAreaSaved(riskAreaId);
+}
+
+/**
+ * Reorder a question to a specific position within a risk area.
+ * Used for drag-and-drop reordering where questions can be moved to any position.
+ */
+export async function reorderPillarQuestionToPosition(
+  questionId: string,
+  riskAreaId: string,
+  newIndex: number,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { userId: actorUserId, email: actorEmail, role: actorRole } = await requireAdminRole();
+
+    const catalog = await getPlatformPillarCatalog();
+    if (!isRiskAreaId(riskAreaId, catalog)) {
+      return { success: false, error: "Invalid risk area" };
+    }
+
+    const question = await prisma.pillarQuestion.findUnique({
+      where: { id: questionId },
+      include: { section: { include: { category: true } } },
+    });
+
+    if (!question) {
+      return { success: false, error: "Question not found" };
+    }
+
+    if (riskAreaIdForPillarCategory(question.section.category) !== riskAreaId) {
+      return { success: false, error: "Question does not belong to this risk area" };
+    }
+
+    const beforeOrder = question.displayOrder;
+    const beforeSection = question.sectionId;
+
+    const sortedQuestions = await loadSortedPillarQuestionsForRiskArea(riskAreaId);
+    const currentIndex = sortedQuestions.findIndex((q) => q.id === questionId);
+
+    if (currentIndex === -1) {
+      return { success: false, error: "Question not found in risk area" };
+    }
+
+    if (currentIndex === newIndex) {
+      return { success: true };
+    }
+
+    const direction = newIndex < currentIndex ? "up" : "down";
+    const steps = Math.abs(newIndex - currentIndex);
+
+    for (let i = 0; i < steps; i++) {
+      const result = await reorderPillarQuestionInRiskArea({
+        riskAreaId,
+        questionId,
+        direction,
+      });
+      if (!result.ok) {
+        break;
+      }
+    }
+
+    const after = await prisma.pillarQuestion.findUnique({
+      where: { id: questionId },
+      select: { displayOrder: true, sectionId: true },
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.PILLAR_QUESTION_REORDER,
+      entityType: "PillarQuestion",
+      entityId: questionId,
+      beforeData: {
+        displayOrder: beforeOrder,
+        sectionId: beforeSection,
+      },
+      afterData: after
+        ? { displayOrder: after.displayOrder, sectionId: after.sectionId }
+        : null,
+      metadata: {
+        riskAreaId,
+        categoryKind: "ASSESSMENT",
+        fromIndex: currentIndex,
+        toIndex: newIndex,
+        dragAndDrop: true,
+      },
+    });
+
+    revalidateQuestionBankPaths(riskAreaId);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: formatActionError(e) };
+  }
 }

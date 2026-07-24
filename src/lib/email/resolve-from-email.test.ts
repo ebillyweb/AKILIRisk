@@ -15,15 +15,15 @@ afterEach(() => {
 });
 
 describe("sanitizeFromEmailAvoidingNoReply", () => {
-  it("rewrites plain noreply local parts to hello@", () => {
+  it("rewrites plain noreply local parts to notifications@", () => {
     expect(
       sanitizeFromEmailAvoidingNoReply("akilirisk-noreply@mail.example.com")
-    ).toBe("hello@mail.example.com");
+    ).toBe("notifications@mail.example.com");
     expect(sanitizeFromEmailAvoidingNoReply("no-reply@example.com")).toBe(
-      "hello@example.com"
+      "notifications@example.com"
     );
     expect(sanitizeFromEmailAvoidingNoReply("noreply@example.com")).toBe(
-      "hello@example.com"
+      "notifications@example.com"
     );
   });
 
@@ -32,7 +32,7 @@ describe("sanitizeFromEmailAvoidingNoReply", () => {
       sanitizeFromEmailAvoidingNoReply(
         "AKILI Risk <akilirisk-noreply@mail.example.com>"
       )
-    ).toBe("AKILI Risk <hello@mail.example.com>");
+    ).toBe("AKILI Risk <notifications@mail.example.com>");
   });
 
   it("leaves monitored addresses unchanged", () => {
@@ -48,7 +48,7 @@ describe("sanitizeFromEmailAvoidingNoReply", () => {
 describe("resolveFromEmail", () => {
   it("returns sanitized FROM_EMAIL when set", () => {
     process.env.FROM_EMAIL = "akilirisk-noreply@mail.example.com";
-    expect(resolveFromEmail()).toBe("hello@mail.example.com");
+    expect(resolveFromEmail()).toBe("notifications@mail.example.com");
   });
 
   it("throws when RESEND_API_KEY is set but FROM_EMAIL is missing", () => {
