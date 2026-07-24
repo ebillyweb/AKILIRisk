@@ -54,12 +54,14 @@ export function BrandedPortalHeader({
             homeHref={homeHref}
             titleAsHeading={titleAsHeading}
           />
-          <p
-            className="editorial-kicker !text-[0.65rem] !tracking-[0.12em]"
-            style={previewHex ? { color: previewHex.primary, opacity: 0.78 } : undefined}
-          >
-            Brought to you by AKILI Risk Intelligence
-          </p>
+          {branding.tagline ? (
+            <p
+              className="editorial-kicker !text-[0.65rem] !tracking-[0.12em]"
+              style={previewHex ? { color: previewHex.primary, opacity: 0.78 } : undefined}
+            >
+              {branding.tagline}
+            </p>
+          ) : null}
         </div>
 
         <nav

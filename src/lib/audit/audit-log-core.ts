@@ -49,6 +49,8 @@ export const AUDIT_ACTIONS = {
   USER_UPDATE: "user.update",
   USER_SOFT_DELETE: "user.soft_delete",
   USER_RESTORE: "user.restore",
+  /** Super admin permanently deletes a client account and all related data. */
+  USER_HARD_DELETE: "user.hard_delete",
   USER_PORTAL_ACCESS_TOGGLE: "user.portal_access_toggle",
   /** Super admin marks or clears a client/advisor test account (excluded from dashboards). */
   USER_TEST_ACCOUNT_TOGGLE: "user.test_account_toggle",
