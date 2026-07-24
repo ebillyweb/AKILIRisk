@@ -27,13 +27,20 @@ interface ClientRawData {
     required: number;
     fulfilled: number;
   };
+  /** When set, engagement was manually marked complete by advisor (bypasses workflow). */
+  manuallyCompletedAt?: Date | null;
 }
 
 /**
  * Determines the appropriate ClientWorkflowStage based on raw client data
  */
 export function computeClientStage(data: ClientRawData): ClientWorkflowStage {
-  const { invitation, intake, assessment, documents } = data;
+  const { invitation, intake, assessment, documents, manuallyCompletedAt } = data;
+
+  // Manual completion override: advisor explicitly marked engagement as complete
+  if (manuallyCompletedAt) {
+    return 'COMPLETE';
+  }
 
   // Priority: later stages override earlier ones (assessment > intake > invitation)
 

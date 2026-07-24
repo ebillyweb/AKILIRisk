@@ -126,6 +126,8 @@ export type ClientDetail = {
     id: string;
     status: AssignmentStatus;
     intakeWaivedAt: Date | null;
+    /** When set, engagement was manually marked complete by advisor. */
+    manuallyCompletedAt: Date | null;
     includedPillars: string[];
     focusAreas: string[];
   };
