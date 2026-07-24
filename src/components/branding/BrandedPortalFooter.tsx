@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Mail, Phone, Globe } from "lucide-react";
-import { AkiliLogoLockup } from "@/components/home/AkiliLogoLockup";
+import { AkiliIcon } from "@/components/home/AkiliLogoLockup";
 import { MarketingSurfaceCard } from "@/components/marketing/MarketingSurfaceCard";
 import { clientPortalBrandingDisplayTitle } from "@/lib/client/client-portal-branding";
 import { buildTenantScopedPublicPath } from "@/lib/advisor/tenant-path-portals";
@@ -41,10 +41,10 @@ export function BrandedPortalFooter({
               Comprehensive risk assessment and governance insights, delivered with care.
             </p>
           )}
-          <div className="flex items-center gap-2.5 pt-1">
-            <AkiliLogoLockup className="h-auto w-[100px] opacity-70" />
-            <span className="text-[11px] leading-5 text-muted-foreground">
-              Powered by AkiliRisk
+          <div className="flex items-center gap-2 pt-1">
+            <AkiliIcon size={24} className="opacity-75" />
+            <span className="text-xs leading-5 text-muted-foreground">
+              Powered by AkiliRisk Platform
             </span>
           </div>
         </div>
