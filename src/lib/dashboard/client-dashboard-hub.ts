@@ -23,6 +23,8 @@ type BuildHubInput = {
   assessmentScopePending: boolean;
   assessmentInProgress: boolean;
   assessmentComplete: boolean;
+  /** When set, assessment was waived — client skips directly to reporting. */
+  assessmentWaived: boolean;
   canViewRiskPreview: boolean;
   canViewSummary: boolean;
   canViewActionPlan: boolean;
@@ -50,6 +52,7 @@ function intakeJourneyState(input: BuildHubInput): JourneyStepState {
 }
 
 function assessmentJourneyState(input: BuildHubInput): JourneyStepState {
+  if (input.assessmentWaived) return "complete";
   if (!input.assessmentUnlocked) return "locked";
   if (input.assessmentComplete) return "complete";
   if (input.assessmentInProgress) return "current";
@@ -57,6 +60,10 @@ function assessmentJourneyState(input: BuildHubInput): JourneyStepState {
 }
 
 function resultsJourneyState(input: BuildHubInput): JourneyStepState {
+  if (input.assessmentWaived) {
+    if (input.canViewSummary) return "complete";
+    return "current";
+  }
   if (!input.assessmentUnlocked || !input.assessmentComplete) return "locked";
   if (input.canViewSummary) return "complete";
   if (input.canViewRiskPreview) return "current";
@@ -64,6 +71,10 @@ function resultsJourneyState(input: BuildHubInput): JourneyStepState {
 }
 
 function actionPlanJourneyState(input: BuildHubInput): JourneyStepState {
+  if (input.assessmentWaived) {
+    if (input.canViewActionPlan) return "complete";
+    return "current";
+  }
   if (!input.assessmentUnlocked || !input.assessmentComplete) return "locked";
   if (input.canViewActionPlan) return "complete";
   return "waiting";
@@ -89,6 +100,28 @@ export function buildClientDashboardHeadline(input: BuildHubInput): {
   headline: string;
   subheadline: string;
 } {
+  if (input.assessmentWaived) {
+    if (input.canViewSummary) {
+      return {
+        headline: "Your recommendations are ready",
+        subheadline:
+          "Your advisor opted to skip the personal risk profile and proceed directly to reporting. Open Assessment Results for recommendations and reports.",
+      };
+    }
+    if (input.canViewRiskPreview) {
+      return {
+        headline: "Your preliminary results are available",
+        subheadline:
+          "Your advisor opted to skip the assessment questionnaire. Open Risk Preview to see preliminary recommendations while your advisor finalizes the full report.",
+      };
+    }
+    return {
+      headline: "Your advisor is preparing your recommendations",
+      subheadline:
+        "The detailed personal risk profile questionnaire was skipped for your engagement. Your advisor will publish recommendations and reports when ready.",
+    };
+  }
+
   if (input.intakeWaived) {
     if (input.assessmentScopePending) {
       return {

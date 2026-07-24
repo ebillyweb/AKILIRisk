@@ -49,6 +49,8 @@ export const AUDIT_ACTIONS = {
   USER_UPDATE: "user.update",
   USER_SOFT_DELETE: "user.soft_delete",
   USER_RESTORE: "user.restore",
+  /** Super admin permanently deletes a client account and all related data. */
+  USER_HARD_DELETE: "user.hard_delete",
   USER_PORTAL_ACCESS_TOGGLE: "user.portal_access_toggle",
   /** Super admin marks or clears a client/advisor test account (excluded from dashboards). */
   USER_TEST_ACCOUNT_TOGGLE: "user.test_account_toggle",
@@ -202,6 +204,14 @@ export const AUDIT_ACTIONS = {
   INTAKE_REJECT: "intake.reject",
   INTAKE_RESTART: "intake.restart",
   INTAKE_WAIVER_SET: "intake.waiver_set",
+  /** Advisor waived assessment — client skips directly to reporting after intake. */
+  ASSESSMENT_WAIVER_SET: "assessment.waiver_set",
+  /** Advisor removed assessment waiver — client must complete assessment. */
+  ASSESSMENT_WAIVER_UNDO: "assessment.waiver_undo",
+  /** Advisor manually marked engagement complete, skipping remaining workflow steps. */
+  ENGAGEMENT_MANUAL_COMPLETE: "engagement.manual_complete",
+  /** Advisor undid manual completion, returning engagement to workflow-determined state. */
+  ENGAGEMENT_MANUAL_COMPLETE_UNDO: "engagement.manual_complete_undo",
   /** Epic 5.11: advisor-led live session lifecycle. */
   FACILITATED_SESSION_START: "facilitated_session.start",
   FACILITATED_SESSION_RESUME: "facilitated_session.resume",

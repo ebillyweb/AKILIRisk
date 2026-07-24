@@ -14,6 +14,7 @@ import { isImplementationTrackingEnabledForUser } from "@/lib/engagement/feature
 import { isAdvisorBrandingNavEnabled } from "@/lib/advisor/branding-settings-page";
 import {
   isEnterpriseMemberVisibilityEnabled,
+  isEnterpriseProductToursEnabledForRole,
   resolveEnterpriseMemberVisibilityContext,
 } from "@/lib/enterprise/advisor-member-visibility";
 import { getPlatformFeatureFlags } from "@/lib/platform/feature-flags";
@@ -103,9 +104,8 @@ export default async function AdvisorLayout({
     : 0;
 
   const workspacePreferences = {
-    productToursEnabled: isEnterpriseMemberVisibilityEnabled(
+    productToursEnabled: isEnterpriseProductToursEnabledForRole(
       memberVisibilityContext,
-      "productTours",
     ),
     // Sidebar reflects firm visibility for every enterprise login; route guards still
     // exempt OWNER/ADMIN via isEnterpriseMemberVisibilityEnabled(applyRestrictions).

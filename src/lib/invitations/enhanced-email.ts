@@ -5,7 +5,7 @@ import { AdvisorBrandingData } from '@/lib/validation/branding';
 import { escapeHtml } from '@/lib/escape-html';
 import { clientPortalBrandingDisplayTitle } from '@/lib/client/client-portal-branding';
 import type { SendEmailResult } from '@/lib/invitations/email';
-import { resolveFromEmail } from "@/lib/email/resolve-from-email";
+import { resolveFromEmailWithName } from "@/lib/email/resolve-from-email";
 import { formatEmailSubject } from "@/lib/email/format-email-subject";
 
 /**
@@ -233,7 +233,7 @@ export function renderEnhancedInvitationTemplate(data: EnhancedEmailTemplateData
 
               <!-- Main Description -->
               <p style="margin: 24px 0; font-size: 16px; line-height: 1.6;">
-                You've been invited to complete a comprehensive family risk assessment. This secure platform will help identify potential vulnerabilities and provide personalized recommendations for your family's protection.
+                Your Risk Manager has invited you to complete your initial risk assessment. This secure platform will help identify potential vulnerabilities and provide personalized recommendations for your family's protection.
               </p>
 
               <!-- Call to Action -->
@@ -487,8 +487,14 @@ export async function sendEnhancedAdvisorInvitationEmail(
       templateType: "invitation",
     });
 
+    const senderName =
+      data.branding.advisorFirmName ||
+      data.branding.firmName ||
+      data.branding.brandName ||
+      advisorName;
+    
     const result = await resend.emails.send({
-      from: resolveFromEmail(),
+      from: resolveFromEmailWithName(senderName),
       to: data.clientEmail,
       subject: formatEmailSubject(
         `Invitation from ${advisorName} - Personal Risk Profile`,

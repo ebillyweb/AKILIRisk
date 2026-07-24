@@ -32,6 +32,7 @@ describe("getClientIntakeGateState", () => {
       approvalId: null,
       assignmentId: "asg-1",
       intakeWaived: false,
+      assessmentWaived: false,
     });
     mockFindInterview.mockResolvedValue({ id: "iv-1" });
     mockFindApproval.mockResolvedValue(null);
@@ -51,6 +52,7 @@ describe("getClientIntakeGateState", () => {
       approvalId: null,
       assignmentId: "asg-1",
       intakeWaived: false,
+      assessmentWaived: false,
     });
     mockFindApproval.mockResolvedValue({ status: "APPROVED" });
 
@@ -67,6 +69,7 @@ describe("getClientIntakeGateState", () => {
       approvalId: null,
       assignmentId: "asg-1",
       intakeWaived: true,
+      assessmentWaived: false,
     });
 
     const gate = await getClientIntakeGateState("client-1");
@@ -83,12 +86,28 @@ describe("getClientIntakeGateState", () => {
       approvalId: null,
       assignmentId: "asg-1",
       intakeWaived: true,
+      assessmentWaived: false,
     });
 
     const gate = await getClientIntakeGateState("client-1");
     expect(gate.intakeWaived).toBe(true);
     expect(gate.assessmentUnlocked).toBe(true);
     expect(gate.assessmentScopePending).toBe(false);
+  });
+
+  it("returns assessmentWaived when set on engagement scope", async () => {
+    mockGetEngagementScope.mockResolvedValue({
+      includedPillars: ["governance"],
+      focusAreas: ["governance"],
+      source: "assignment",
+      approvalId: null,
+      assignmentId: "asg-1",
+      intakeWaived: false,
+      assessmentWaived: true,
+    });
+
+    const gate = await getClientIntakeGateState("client-1");
+    expect(gate.assessmentWaived).toBe(true);
   });
 
   it("does not unlock when approved but engagement scope empty", async () => {

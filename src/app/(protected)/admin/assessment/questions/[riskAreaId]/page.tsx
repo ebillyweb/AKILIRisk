@@ -7,24 +7,15 @@ import { isRiskAreaId, legacyRiskAreaRedirect, riskAreaFromCatalog } from "@/lib
 import { getPlatformPillarCatalog } from "@/lib/methodology/cached-pillar-catalog";
 import {
   adminAssessmentQuestionsAreaPath,
-  adminAssessmentQuestionsEditPath,
   adminAssessmentQuestionsNewPath,
 } from "@/lib/admin/assessment-questions-paths";
 import { loadQuestionBankDashboardRows } from "@/lib/assessment/bank/question-bank-dashboard";
-import { formatQuestionTextForDisplay } from "@/lib/assessment/bank/question-bank-display";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  deletePillarQuestion,
-  movePillarQuestionOrder,
-  updatePillarQuestionVisibility,
-} from "@/lib/actions/admin-question-bank-actions";
-import { DeleteQuestionBankButton } from "@/components/admin/DeleteQuestionBankButton";
 import { QuestionBankRiskAreaFilter } from "@/components/admin/QuestionBankRiskAreaFilter";
 import { QuestionBankTypeFilter } from "@/components/admin/QuestionBankTypeFilter";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { SortableQuestionListWrapper } from "@/components/admin/SortableQuestionListWrapper";
 
 export default async function AdminQuestionBankAreaPage({
   params,
@@ -96,109 +87,26 @@ export default async function AdminQuestionBankAreaPage({
             new assessments.
           </p>
         </CardHeader>
-        <CardContent className="space-y-0 divide-y divide-border p-0" data-tour="config-primary-list">
-          {questions.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">
-              No questions in this area yet.
-            </p>
-          ) : filteredQuestions.length === 0 ? (
+        <CardContent className="p-0" data-tour="config-primary-list">
+          {filteredQuestions.length === 0 && questions.length > 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
               No questions match this type filter. Choose &quot;All types&quot; or pick another
               question type.
             </p>
           ) : (
-            filteredQuestions.map((q, index) => (
-              <div
-                key={q.questionId}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between"
-              >
-                <div className="min-w-0 flex-1 space-y-2">
-                  <p className="text-sm font-medium leading-relaxed text-foreground">
-                    {formatQuestionTextForDisplay(q.text)}
-                  </p>
-                  {q.helpText ? (
-                    <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Why this matters
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed text-foreground/90">
-                        {formatQuestionTextForDisplay(q.helpText)}
-                      </p>
-                    </div>
-                  ) : null}
-                  {q.learnMore ? (
-                    <div className="rounded-lg border-2 border-dashed border-brand/35 bg-brand/5 px-3 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-                        Recommended actions
-                      </p>
-                      <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-                        {formatQuestionTextForDisplay(String(q.learnMore))}
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                  <Badge
-                    variant={q.isVisible ? "success" : "secondary"}
-                    className="shrink-0"
-                  >
-                    {q.isVisible ? "Visible" : "Hidden"}
-                  </Badge>
-                  <div className="flex gap-1">
-                    <form action={movePillarQuestionOrder}>
-                      <input type="hidden" name="questionId" value={q.questionId} />
-                      <input type="hidden" name="riskAreaId" value={riskAreaId} />
-                      <input type="hidden" name="direction" value="up" />
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        disabled={index === 0 || reorderDisabled}
-                        aria-label="Move up"
-                      >
-                        <ArrowUp className="size-4" />
-                      </Button>
-                    </form>
-                    <form action={movePillarQuestionOrder}>
-                      <input type="hidden" name="questionId" value={q.questionId} />
-                      <input type="hidden" name="riskAreaId" value={riskAreaId} />
-                      <input type="hidden" name="direction" value="down" />
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        disabled={index === filteredQuestions.length - 1 || reorderDisabled}
-                        aria-label="Move down"
-                      >
-                        <ArrowDown className="size-4" />
-                      </Button>
-                    </form>
-                  </div>
-                  <form action={updatePillarQuestionVisibility}>
-                    <input type="hidden" name="questionId" value={q.questionId} />
-                    <input type="hidden" name="riskAreaId" value={riskAreaId} />
-                    <input type="hidden" name="isVisible" value={q.isVisible ? "false" : "true"} />
-                    <Button type="submit" variant="outline" size="sm">
-                      {q.isVisible ? "Hide" : "Show"}
-                    </Button>
-                  </form>
-                  <Button variant="default" size="sm" asChild>
-                    <Link
-                      href={`${adminAssessmentQuestionsEditPath(riskAreaId, q.questionId)}${typeQuery}`}
-                    >
-                      Edit
-                    </Link>
-                  </Button>
-                  <DeleteQuestionBankButton
-                    formAction={deletePillarQuestion}
-                    questionId={q.questionId}
-                    extraHidden={[{ name: "riskAreaId", value: riskAreaId }]}
-                  />
-                </div>
-              </div>
-            ))
+            <SortableQuestionListWrapper
+              questions={filteredQuestions.map((q) => ({
+                questionId: q.questionId,
+                text: q.text,
+                helpText: q.helpText,
+                learnMore: q.learnMore,
+                isVisible: q.isVisible,
+                type: q.type,
+              }))}
+              riskAreaId={riskAreaId}
+              typeQuery={typeQuery}
+              reorderDisabled={reorderDisabled}
+            />
           )}
         </CardContent>
       </Card>

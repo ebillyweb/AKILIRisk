@@ -21,6 +21,8 @@ import {
 import { sendNotification } from "@/lib/notifications/service";
 import { resolvePublicAppUrl } from "@/lib/public-app-url";
 import { requireAdminRole, requireSuperAdminRole } from "@/lib/admin/auth";
+import { auth } from "@/lib/auth";
+import { isSuperAdminRole, normalizeUserRoleString } from "@/lib/auth-roles";
 import { getAdvisorForAdmin } from "@/lib/admin/queries";
 import { logSafeError, safeErrorMessage } from "@/lib/log-safe-error";
 import { writeAudit, AUDIT_ACTIONS } from "@/lib/audit/audit-log";
@@ -780,6 +782,171 @@ export async function restoreClientByAdmin(input: unknown) {
   } catch (e) {
     logSafeError("admin/restoreClient", e);
     return { success: false, error: safeErrorMessage(e, "Failed to restore client") };
+  }
+}
+
+/**
+ * Permanently delete a client account and all related data.
+ * Allowed for:
+ * - Platform super admins (can delete any client)
+ * - Enterprise OWNER/ADMIN (can delete clients assigned to their firm)
+ * Intended for removing test/demo records. This action cannot be undone.
+ */
+export async function permanentlyDeleteClientByAdmin(input: unknown) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const actorUserId = session.user.id;
+    const actorEmail = session.user.email ?? null;
+    const actorRole = normalizeUserRoleString(session.user.role);
+    const isPlatformSuperAdmin = isSuperAdminRole(actorRole);
+
+    const parsed = adminClientUserIdSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.flatten().fieldErrors
+          ? Object.values(parsed.error.flatten().fieldErrors).flat().join("; ")
+          : "Validation failed",
+      };
+    }
+
+    if (parsed.data.userId === actorUserId) {
+      return { success: false, error: "You cannot delete your own account." };
+    }
+
+    // Check if user is an enterprise OWNER or ADMIN
+    let enterpriseContext: { enterpriseId: string; role: string } | null = null;
+    if (!isPlatformSuperAdmin) {
+      const { resolveEnterpriseTeamContext } = await import("@/lib/enterprise/team-access");
+      enterpriseContext = await resolveEnterpriseTeamContext(actorUserId);
+      if (!enterpriseContext) {
+        return {
+          success: false,
+          error: "Unauthorized: This action requires firm admin or platform super admin role.",
+        };
+      }
+    }
+
+    const target = await prisma.user.findFirst({
+      where: { id: parsed.data.userId, role: "USER" },
+      select: {
+        id: true,
+        name: true,
+        emailCiphertext: true,
+        isTestAccount: true,
+        _count: {
+          select: {
+            assessments: true,
+            intakeInterviews: true,
+            clientAssignments: true,
+          },
+        },
+      },
+    });
+    if (!target) {
+      return { success: false, error: "Client not found" };
+    }
+
+    // For enterprise admins, verify the client is assigned to their firm
+    if (enterpriseContext) {
+      const firmAssignment = await prisma.clientAdvisorAssignment.findFirst({
+        where: {
+          clientId: target.id,
+          advisor: { enterpriseId: enterpriseContext.enterpriseId },
+        },
+        select: { id: true },
+      });
+      if (!firmAssignment) {
+        return {
+          success: false,
+          error: "This client is not assigned to your firm.",
+        };
+      }
+    }
+
+    const deletedDataSummary = {
+      assessments: target._count.assessments,
+      intakeInterviews: target._count.intakeInterviews,
+      assignments: target._count.clientAssignments,
+    };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.session.deleteMany({ where: { userId: target.id } });
+      await tx.account.deleteMany({ where: { userId: target.id } });
+
+      const intakeInterviewIds = await tx.intakeInterview.findMany({
+        where: { userId: target.id },
+        select: { id: true },
+      });
+      if (intakeInterviewIds.length > 0) {
+        const ids = intakeInterviewIds.map((i) => i.id);
+        await tx.intakeResponseAdminNote.deleteMany({ where: { response: { interviewId: { in: ids } } } });
+        await tx.intakeResponseAdvisorNote.deleteMany({ where: { response: { interviewId: { in: ids } } } });
+        await tx.intakeResponse.deleteMany({ where: { interviewId: { in: ids } } });
+        await tx.intakeApproval.deleteMany({ where: { interviewId: { in: ids } } });
+      }
+      await tx.intakeInterview.deleteMany({ where: { userId: target.id } });
+
+      const assessmentIds = await tx.assessment.findMany({
+        where: { userId: target.id },
+        select: { id: true },
+      });
+      if (assessmentIds.length > 0) {
+        const ids = assessmentIds.map((a) => a.id);
+        await tx.assessmentResponseAdminNote.deleteMany({ where: { response: { assessmentId: { in: ids } } } });
+        await tx.assessmentResponseAdvisorNote.deleteMany({ where: { response: { assessmentId: { in: ids } } } });
+        await tx.assessmentResponse.deleteMany({ where: { assessmentId: { in: ids } } });
+        await tx.pillarScore.deleteMany({ where: { assessmentId: { in: ids } } });
+        await tx.assessmentScore.deleteMany({ where: { assessmentId: { in: ids } } });
+        await tx.report.deleteMany({ where: { assessmentId: { in: ids } } });
+      }
+      await tx.assessment.deleteMany({ where: { userId: target.id } });
+
+      await tx.clientAdvisorAssignment.deleteMany({ where: { clientId: target.id } });
+      await tx.advisorSignal.deleteMany({ where: { userId: target.id } });
+      await tx.householdMember.deleteMany({ where: { userId: target.id } });
+      await tx.documentRequirement.deleteMany({ where: { clientId: target.id } });
+      await tx.notificationPreference.deleteMany({ where: { userId: target.id } });
+      await tx.clientProfile.deleteMany({ where: { userId: target.id } });
+      await tx.portfolioEngagement.deleteMany({ where: { clientUserId: target.id } });
+      await tx.facilitatedSession.deleteMany({ where: { clientId: target.id } });
+
+      await tx.user.delete({ where: { id: target.id } });
+    });
+
+    await writeAudit({
+      actor: { userId: actorUserId, role: actorRole as UserRole, email: actorEmail },
+      action: AUDIT_ACTIONS.USER_HARD_DELETE,
+      entityType: "User",
+      entityId: target.id,
+      beforeData: {
+        name: target.name,
+        isTestAccount: target.isTestAccount,
+        ...deletedDataSummary,
+      },
+      afterData: { deleted: true },
+      metadata: {
+        reason: isPlatformSuperAdmin
+          ? "Permanent deletion by platform super admin"
+          : `Permanent deletion by firm admin (${enterpriseContext?.role})`,
+        cascade: deletedDataSummary,
+        enterpriseId: enterpriseContext?.enterpriseId ?? null,
+      },
+    });
+
+    revalidatePath("/admin/clients");
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (e) {
+    if (isPrismaSchemaDriftError(e)) {
+      return { success: false, error: SCHEMA_DRIFT_USER_MESSAGE };
+    }
+    logSafeError("admin/permanentlyDeleteClient", e);
+    return { success: false, error: safeErrorMessage(e, "Failed to permanently delete client") };
   }
 }
 

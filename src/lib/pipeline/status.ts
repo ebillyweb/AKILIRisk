@@ -27,13 +27,22 @@ interface ClientRawData {
     required: number;
     fulfilled: number;
   };
+  /** When set, engagement was manually marked complete by advisor (bypasses workflow). */
+  manuallyCompletedAt?: Date | null;
+  /** When set, advisor waived assessment — client skips directly to reporting after intake. */
+  assessmentWaivedAt?: Date | null;
 }
 
 /**
  * Determines the appropriate ClientWorkflowStage based on raw client data
  */
 export function computeClientStage(data: ClientRawData): ClientWorkflowStage {
-  const { invitation, intake, assessment, documents } = data;
+  const { invitation, intake, assessment, documents, manuallyCompletedAt, assessmentWaivedAt } = data;
+
+  // Manual completion override: advisor explicitly marked engagement as complete
+  if (manuallyCompletedAt) {
+    return 'COMPLETE';
+  }
 
   // Priority: later stages override earlier ones (assessment > intake > invitation)
 
@@ -59,14 +68,22 @@ export function computeClientStage(data: ClientRawData): ClientWorkflowStage {
 
   // Check intake status (medium priority)
   if (intake) {
-    if (intake.waived) {
-      return 'INTAKE_COMPLETE';
-    }
-    if (
+    const intakeComplete =
+      intake.waived ||
       intake.submittedAt != null ||
       intake.status === 'COMPLETED' ||
-      intake.status === 'SUBMITTED'
-    ) {
+      intake.status === 'SUBMITTED';
+
+    if (intakeComplete) {
+      // Assessment waiver: skip assessment phase → go directly to report/complete
+      if (assessmentWaivedAt) {
+        if (documents && documents.required > 0) {
+          return documents.fulfilled < documents.required
+            ? 'DOCUMENTS_REQUIRED'
+            : 'COMPLETE';
+        }
+        return 'COMPLETE';
+      }
       return 'INTAKE_COMPLETE';
     }
     if (intake.status === 'IN_PROGRESS') {

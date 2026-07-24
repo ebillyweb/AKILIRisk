@@ -126,6 +126,10 @@ export type ClientDetail = {
     id: string;
     status: AssignmentStatus;
     intakeWaivedAt: Date | null;
+    /** When set, engagement was manually marked complete by advisor. */
+    manuallyCompletedAt: Date | null;
+    /** When set, assessment was waived — client skips directly to reporting. */
+    assessmentWaivedAt: Date | null;
     includedPillars: string[];
     focusAreas: string[];
   };

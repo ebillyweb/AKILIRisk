@@ -376,6 +376,8 @@ export async function getClientPipeline(
         required: docCounts.required,
         fulfilled: docCounts.fulfilled,
       },
+      manuallyCompletedAt: assignment.manuallyCompletedAt,
+      assessmentWaivedAt: assignment.assessmentWaivedAt,
     });
 
     const stalled = isStalled(lastActivity, stage);
@@ -770,7 +772,9 @@ export async function getClientDetail(
       updatedAt: latestAssessment.updatedAt,
       deliverablePhase: effectiveDeliverablePhase,
     } : undefined,
-    documents: docCounts
+    documents: docCounts,
+    manuallyCompletedAt: assignment.manuallyCompletedAt,
+    assessmentWaivedAt: assignment.assessmentWaivedAt,
   });
 
   // Get most recent activity
@@ -930,6 +934,8 @@ export async function getClientDetail(
       id: assignment.id,
       status: assignment.status,
       intakeWaivedAt: assignment.intakeWaivedAt,
+      manuallyCompletedAt: assignment.manuallyCompletedAt,
+      assessmentWaivedAt: assignment.assessmentWaivedAt,
       includedPillars: engagementScope.includedPillars,
       focusAreas: engagementScope.focusAreas,
     },

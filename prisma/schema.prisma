@@ -1151,6 +1151,8 @@ model AdvisorProfile {
   updatedAt        DateTime                   @updatedAt
   clientAssignments ClientAdvisorAssignment[] @relation("AdvisorAssignments")
   intakeWaiversSet  ClientAdvisorAssignment[] @relation("IntakeWaiverSetBy")
+  manualCompletionsSet ClientAdvisorAssignment[] @relation("ManualCompletionSetBy")
+  assessmentWaiversSet ClientAdvisorAssignment[] @relation("AssessmentWaiverSetBy")
   approvals        IntakeApproval[]
   notifications    AdvisorNotification[]
   signals            AdvisorSignal[]
@@ -1209,6 +1211,12 @@ model ClientAdvisorAssignment {
   /// When set, client may skip submitted/approved intake for nav and /assessment access.
   intakeWaivedAt             DateTime?
   intakeWaivedByAdvisorId    String?
+  /// When set, advisor manually marked engagement as complete (bypasses normal workflow).
+  manuallyCompletedAt        DateTime?
+  manuallyCompletedByAdvisorId String?
+  /// When set, advisor waived assessment phase — client goes directly to reporting after intake.
+  assessmentWaivedAt         DateTime?
+  assessmentWaivedByAdvisorId String?
   /// Epic 5.11: assessment scope when intake is waived (1–6 pillar ids). Required to unlock assessment.
   includedPillars            String[]         @default([]) @map("included_pillars")
   /// Scoring emphasis within included pillars; empty means all included at waiver scope save.
@@ -1226,6 +1234,8 @@ model ClientAdvisorAssignment {
   /// assignments created during the migration window.
   fieldVisibility            Json?
   intakeWaivedBy             AdvisorProfile? @relation("IntakeWaiverSetBy", fields: [intakeWaivedByAdvisorId], references: [id], onDelete: SetNull)
+  manuallyCompletedBy        AdvisorProfile? @relation("ManualCompletionSetBy", fields: [manuallyCompletedByAdvisorId], references: [id], onDelete: SetNull)
+  assessmentWaivedBy         AdvisorProfile? @relation("AssessmentWaiverSetBy", fields: [assessmentWaivedByAdvisorId], references: [id], onDelete: SetNull)
   client     User             @relation("ClientAssignments", fields: [clientId], references: [id], onDelete: Cascade)
   advisor    AdvisorProfile   @relation("AdvisorAssignments", fields: [advisorId], references: [id], onDelete: Cascade)
 

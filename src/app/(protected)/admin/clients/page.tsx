@@ -1,14 +1,21 @@
 import Link from "next/link";
-import { Files, Search } from "lucide-react";
+import { Files, Search, X } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { isSuperAdmin } from "@/lib/admin/auth";
 import { getClientAssignmentTargetsForAdmin } from "@/lib/admin/client-assignment-queries";
-import { getClientsForAdmin, type ClientsAdminScope } from "@/lib/admin/queries";
+import { getClientsForAdmin, getAdvisorsForClientFilter, type ClientsAdminScope } from "@/lib/admin/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DownloadReportButton } from "@/components/reports/DownloadReportButton";
 import { AdminClientAccountActions } from "@/components/admin/AdminClientAccountActions";
 import { AdminClientAssignSelect } from "@/components/admin/AdminClientAssignSelect";
@@ -23,11 +30,17 @@ function toPositiveInt(raw: string | undefined, fallback: number): number {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function clientsPageHref(scope: ClientsAdminScope, page: number, q?: string): string {
+function clientsPageHref(
+  scope: ClientsAdminScope,
+  page: number,
+  q?: string,
+  advisorId?: string
+): string {
   const sp = new URLSearchParams();
   if (scope === "all") sp.set("filter", "all");
   if (page > 1) sp.set("page", String(page));
   if (q?.trim()) sp.set("q", q.trim());
+  if (advisorId?.trim()) sp.set("advisor", advisorId.trim());
   const query = sp.toString();
   return `/admin/clients${query ? `?${query}` : ""}`;
 }
@@ -35,27 +48,32 @@ function clientsPageHref(scope: ClientsAdminScope, page: number, q?: string): st
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; page?: string; q?: string }>;
+  searchParams: Promise<{ filter?: string; page?: string; q?: string; advisor?: string }>;
 }) {
   const sp = await searchParams;
   const scope: ClientsAdminScope = sp.filter === "all" ? "all" : "active";
   const requestedPage = toPositiveInt(sp.page, 1);
   const query = sp.q?.trim() ?? "";
+  const advisorFilter = sp.advisor?.trim() ?? "";
   const session = await auth();
   const superUser = isSuperAdmin(session);
-  const [clientsResult, assignmentTargetGroups] = await Promise.all([
+  const [clientsResult, assignmentTargetGroups, advisorOptions] = await Promise.all([
     getClientsForAdmin({
       scope,
       page: requestedPage,
       pageSize: PAGE_SIZE,
       q: query || undefined,
+      advisorId: advisorFilter || undefined,
     }),
     superUser ? getClientAssignmentTargetsForAdmin() : Promise.resolve([]),
+    getAdvisorsForClientFilter(),
   ]);
   const { clients, totalCount, page: currentPage, pageSize } = clientsResult;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasNextPage = currentPage * pageSize < totalCount;
   const hasActiveSearch = Boolean(query);
+  const hasAdvisorFilter = Boolean(advisorFilter);
+  const selectedAdvisor = advisorOptions.find((a) => a.id === advisorFilter);
 
   return (
     <div className="space-y-6">
@@ -67,39 +85,84 @@ export default async function AdminClientsPage({
           </h1>
           <div className="flex flex-wrap gap-2 text-sm">
             <Button variant={scope === "active" ? "default" : "outline"} size="sm" className="h-8" asChild>
-              <Link href={clientsPageHref("active", 1, query)}>Active</Link>
+              <Link href={clientsPageHref("active", 1, query, advisorFilter)}>Active</Link>
             </Button>
             <Button variant={scope === "all" ? "default" : "outline"} size="sm" className="h-8" asChild>
-              <Link href={clientsPageHref("all", 1, query)}>All</Link>
+              <Link href={clientsPageHref("all", 1, query, advisorFilter)}>All</Link>
             </Button>
           </div>
         </div>
-        <form method="GET" className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-md">
-          {scope === "all" ? <input type="hidden" name="filter" value="all" /> : null}
-          <div className="relative min-w-0 flex-1">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              name="q"
-              defaultValue={query}
-              placeholder="Search name, ID, or email"
-              className="h-9 pl-9"
-              aria-label="Search clients by name, ID, or email"
-            />
+        <div className="flex w-full flex-col gap-3 lg:max-w-2xl">
+          {/* Advisor filter */}
+          <div className="flex items-center gap-2">
+            <label className="shrink-0 text-sm text-muted-foreground">Team Member:</label>
+            <div className="flex-1">
+              {hasAdvisorFilter ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="h-8 px-3 text-sm normal-case tracking-normal">
+                    {selectedAdvisor?.firmName || selectedAdvisor?.userName || selectedAdvisor?.email || "Unknown"}
+                    <span className="ml-1 text-muted-foreground">({selectedAdvisor?.activeClientCount ?? 0})</span>
+                  </Badge>
+                  <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
+                    <Link href={clientsPageHref(scope, 1, query)} aria-label="Clear advisor filter">
+                      <X className="size-4" />
+                    </Link>
+                  </Button>
+                </div>
+              ) : advisorOptions.length > 0 ? (
+                <form method="GET" className="w-full max-w-xs">
+                  {scope === "all" && <input type="hidden" name="filter" value="all" />}
+                  {query && <input type="hidden" name="q" value={query} />}
+                  <Select name="advisor" onValueChange={(v) => {
+                    window.location.href = clientsPageHref(scope, 1, query, v);
+                  }}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="All advisors" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {advisorOptions.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.firmName || a.userName || a.email} ({a.activeClientCount})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </form>
+              ) : (
+                <span className="text-sm text-muted-foreground">No advisors with clients</span>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button type="submit" size="sm" className="h-9">
-              Search
-            </Button>
-            {hasActiveSearch ? (
-              <Button variant="ghost" size="sm" className="h-9" asChild>
-                <Link href={clientsPageHref(scope, 1)}>Clear</Link>
+
+          {/* Search */}
+          <form method="GET" className="flex w-full flex-col gap-2 sm:flex-row">
+            {scope === "all" ? <input type="hidden" name="filter" value="all" /> : null}
+            {advisorFilter ? <input type="hidden" name="advisor" value={advisorFilter} /> : null}
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                name="q"
+                defaultValue={query}
+                placeholder="Search name, ID, or email"
+                className="h-9 pl-9"
+                aria-label="Search clients by name, ID, or email"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" className="h-9">
+                Search
               </Button>
-            ) : null}
-          </div>
-        </form>
+              {hasActiveSearch ? (
+                <Button variant="ghost" size="sm" className="h-9" asChild>
+                  <Link href={clientsPageHref(scope, 1, undefined, advisorFilter)}>Clear search</Link>
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        </div>
       </div>
 
       <Card>
@@ -192,7 +255,7 @@ export default async function AdminClientsPage({
                             accountLabel="client"
                           />
                         ) : null}
-                        <AdminClientAccountActions clientId={c.id} deactivated={isDeactivated} />
+                        <AdminClientAccountActions clientId={c.id} deactivated={isDeactivated} isSuperAdmin={superUser} />
                       </div>
                     </div>
                   </li>
@@ -215,12 +278,12 @@ export default async function AdminClientsPage({
           <div className="flex flex-wrap items-center gap-2">
             {currentPage > 1 ? (
               <Button variant="outline" size="sm" asChild>
-                <Link href={clientsPageHref(scope, currentPage - 1, query)}>← Previous page</Link>
+                <Link href={clientsPageHref(scope, currentPage - 1, query, advisorFilter)}>← Previous page</Link>
               </Button>
             ) : null}
             {hasNextPage ? (
               <Button variant="outline" size="sm" asChild>
-                <Link href={clientsPageHref(scope, currentPage + 1, query)}>Next page →</Link>
+                <Link href={clientsPageHref(scope, currentPage + 1, query, advisorFilter)}>Next page →</Link>
               </Button>
             ) : null}
           </div>
