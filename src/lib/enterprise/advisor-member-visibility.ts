@@ -153,6 +153,29 @@ export function isEnterpriseMemberVisibilityEnabled(
 }
 
 /**
+ * Product tours are shown to team members but hidden for firm admins (OWNER/ADMIN).
+ * Solo advisors always see product tours.
+ * 
+ * Rationale: Firm admins (OWNER/ADMIN) are experienced users who configure the
+ * platform for their team. They don't need onboarding pop-ups. Team members
+ * benefit from the guided tours when first exploring features.
+ */
+export function isEnterpriseProductToursEnabledForRole(
+  context: EnterpriseMemberVisibilityContext,
+): boolean {
+  // Solo advisors (no enterprise) always see product tours
+  if (!context.enterpriseId) return true;
+  
+  // Firm admins (OWNER/ADMIN) don't see product tours
+  if (context.role === "OWNER" || context.role === "ADMIN") {
+    return false;
+  }
+  
+  // Team members see product tours based on firm settings
+  return context.settings.productTours;
+}
+
+/**
  * Firm-level skip intake flag for invitations and pipeline waiver UI.
  * Applies to owners/admins as well — when disabled, the feature is hidden for the whole firm.
  * Solo advisors are unaffected.
