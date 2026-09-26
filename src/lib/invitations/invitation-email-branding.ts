@@ -40,7 +40,7 @@ export function invitationFirmDisplayName(
     } as AdvisorBrandingData);
     return title === "Partner portal" ? null : title;
   }
-  return profile.brandName?.trim() || profile.firmName?.trim() || null;
+  return profile.firmName?.trim() || profile.brandName?.trim() || null;
 }
 
 export function buildInvitationEmailBranding(
