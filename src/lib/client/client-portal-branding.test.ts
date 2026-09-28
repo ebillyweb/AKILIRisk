@@ -47,23 +47,23 @@ describe("clientPortalLogoImgSrc", () => {
 });
 
 describe("clientPortalBrandingDisplayTitle", () => {
-  it("prefers public brandName over stale firmName", () => {
+  it("prefers advisorFirmName over brandName", () => {
     expect(
       clientPortalBrandingDisplayTitle(
         branding({
+          advisorFirmName: "eBilly Wealth Group",
           brandName: "eBilly Wealth",
-          advisorFirmName: "Test Advisor Firm",
         }),
       ),
-    ).toBe("eBilly Wealth");
+    ).toBe("eBilly Wealth Group");
   });
 
-  it("falls back to firmName when brandName is empty", () => {
+  it("falls back to brandName when advisorFirmName is empty", () => {
     expect(
       clientPortalBrandingDisplayTitle(
         branding({
-          brandName: null,
-          advisorFirmName: "Solo Practice",
+          advisorFirmName: null,
+          brandName: "Solo Practice",
         }),
       ),
     ).toBe("Solo Practice");

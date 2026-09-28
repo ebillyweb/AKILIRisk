@@ -23,15 +23,15 @@ export function clientPortalLogoImgSrc(branding: AdvisorBrandingData): string | 
 /**
  * Header / portal display name — must match `(protected)/layout` `brandTitle`.
  *
- * Prefer **`brandName`** (Branding → “Public brand name”) over **`advisorFirmName`**
- * (`firmName`). Profile `firmName` is often an older seed/signup value and is not
- * always synced when enterprise members update branding. Fall back to firmName
- * when no public brand name is set.
+ * Prefer **`advisorFirmName`** (live profile value) over **`brandName`** (the
+ * legacy branding seed). `advisorFirmName` reflects the current firm name from
+ * the advisor profile; `brandName` may be a stale value from initial setup.
+ * Fall back to brandName when advisorFirmName is not set.
  */
 export function clientPortalBrandingDisplayTitle(branding: AdvisorBrandingData): string {
-  const brand = branding.brandName?.trim() ?? "";
   const firm = branding.advisorFirmName?.trim() ?? "";
-  if (brand) return brand;
+  const brand = branding.brandName?.trim() ?? "";
   if (firm) return firm;
+  if (brand) return brand;
   return "Partner portal";
 }
