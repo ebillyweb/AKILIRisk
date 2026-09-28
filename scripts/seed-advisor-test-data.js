@@ -35,7 +35,8 @@ const VERIFIED_EMAIL = { emailVerified: new Date() };
 
 function gracePeriodEnd() {
   const end = new Date();
-  end.setDate(end.getDate() + 30);
+  // Use 365 days instead of 30 to prevent smoke test failures from expired subscriptions
+  end.setDate(end.getDate() + 365);
   return end;
 }
 
