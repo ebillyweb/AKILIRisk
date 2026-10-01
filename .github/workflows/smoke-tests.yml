@@ -17,6 +17,9 @@
 #       SMOKE_ADVISOR_EMAIL / SMOKE_ADVISOR_PASSWORD
 #       SMOKE_ADMIN_EMAIL   / SMOKE_ADMIN_PASSWORD
 #   - SLACK_WEBHOOK_URL enables the Slack pass/fail notifications.
+#   - SMOKE_DATABASE_URL + SMOKE_ENCRYPTION_KEY (Preview values) let each run
+#     refresh the fixture advisors' grace subscriptions, which otherwise
+#     expire 30 days after seeding and bounce advisors to /advisor/billing.
 #   - Grow the suite by tagging more tests on `staging` with `{ tag: "@smoke" }`.
 name: Smoke Tests (preview)
 
@@ -70,6 +73,7 @@ jobs:
       # steps without putting the secret value itself in an `if:` expression.
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       SLACK_ENABLED: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+      FIXTURE_REPAIR_ENABLED: ${{ secrets.SMOKE_DATABASE_URL != '' && secrets.SMOKE_ENCRYPTION_KEY != '' }}
     steps:
       # Check out the deployed branch (staging), NOT the default branch, so the
       # tests match the app running on preview. Override via the test_ref input.
@@ -88,6 +92,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Only targets the shared Preview DB, so skip when pointed elsewhere.
+      - name: Refresh advisor fixture subscriptions
+        if: ${{ env.FIXTURE_REPAIR_ENABLED == 'true' && env.PLAYWRIGHT_BASE_URL == 'https://preview.akilirisk.com' }}
+        env:
+          DATABASE_URL: ${{ secrets.SMOKE_DATABASE_URL }}
+          ENCRYPTION_KEY: ${{ secrets.SMOKE_ENCRYPTION_KEY }}
+        run: npx tsx scripts/fix-advisor-playwright-fixtures.ts
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
