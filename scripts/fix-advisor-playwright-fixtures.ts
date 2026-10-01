@@ -41,6 +41,13 @@ function graceSubscriptionPayload(tier: "ESSENTIALS" | "PROFESSIONAL") {
     billingCycle: "MONTHLY" as const,
     currentPeriodEnd: gracePeriodEnd(),
     cancelAtPeriodEnd: false,
+    // With billing on, Stripe-less GRACE_PERIOD access also ends 30 days after
+    // the row's createdAt (isPastPaidSignupDeadline), so restart that window too.
+    createdAt: new Date(),
+    // Detach any Stripe sub from manual checkout testing on preview; webhooks
+    // match rows by stripeSubscriptionId and would re-cancel the fixture.
+    stripeSubscriptionId: null,
+    stripePriceId: null,
   };
 }
 

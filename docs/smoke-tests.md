@@ -136,6 +136,17 @@ If a secret is unset the workflow passes an empty value and the fixture uses its
 seeded fallback, so the run works out of the box as long as the seeded users
 exist on preview with the default passwords.
 
+### Fixture subscriptions
+
+Fixture advisors run on Stripe-less `GRACE_PERIOD` subscriptions, which lose hub
+access 30 days after the row's `createdAt` (advisors land on `/advisor/billing`).
+Set **`SMOKE_DATABASE_URL`** and **`SMOKE_ENCRYPTION_KEY`** (Preview values) and
+each run refreshes them via `scripts/fix-advisor-playwright-fixtures.ts`. Manual:
+
+```bash
+npx tsx scripts/fix-advisor-playwright-fixtures.ts
+```
+
 ## Failure reporting
 
 - The **`playwright-report`** artifact (traces, screenshots, video) is uploaded
